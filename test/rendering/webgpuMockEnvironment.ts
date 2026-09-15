@@ -43,6 +43,8 @@ export interface MockWebGpuEnvironment {
   pipelineTargetCounts(): readonly number[];
   /** How many `beginRenderPass` descriptors carried a depth/stencil attachment. */
   depthAttachmentPasses(): number;
+  /** `depthLoadOp` of every pass that carried a writable depth aspect, in call order. */
+  depthLoadOps(): readonly string[];
   /** `depthWriteEnabled` of every synchronously created pipeline that declared depth/stencil state. */
   pipelineDepthWrites(): readonly boolean[];
   /** Format and usage of every `device.createTexture` call, in call order. */
@@ -72,6 +74,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const renderPassAttachmentCounts: number[] = [];
   const pipelineTargetCounts: number[] = [];
   const pipelineDepthWrites: boolean[] = [];
+  const depthLoadOps: string[] = [];
   const textureDescriptors: Array<{ format: string; usage: number }> = [];
   let depthAttachmentPasses = 0;
 
@@ -97,6 +100,12 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
 
       if (descriptor.depthStencilAttachment !== undefined) {
         depthAttachmentPasses++;
+
+        const { depthLoadOp } = descriptor.depthStencilAttachment;
+
+        if (depthLoadOp !== undefined) {
+          depthLoadOps.push(depthLoadOp);
+        }
       }
 
       return pass;
@@ -203,6 +212,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     renderPassAttachmentCounts: () => renderPassAttachmentCounts,
     pipelineTargetCounts: () => pipelineTargetCounts,
     depthAttachmentPasses: () => depthAttachmentPasses,
+    depthLoadOps: () => depthLoadOps,
     pipelineDepthWrites: () => pipelineDepthWrites,
     textureDescriptors: () => textureDescriptors,
     restore: (): void => {

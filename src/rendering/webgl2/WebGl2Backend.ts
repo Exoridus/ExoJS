@@ -3011,6 +3011,9 @@ export class WebGl2Backend implements RenderBackend {
       });
     }
 
+    // Cached whole: a depth texture's sampling state is fixed at construction
+    // (see DepthTexture) and its filter/wrap parameters were set on the handle
+    // when the attachment was allocated, so nothing here is ever re-resolved.
     let state = this._depthTextureStates.get(texture);
 
     if (state?.handle !== handle) {

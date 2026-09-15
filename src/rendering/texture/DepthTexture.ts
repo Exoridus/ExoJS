@@ -4,8 +4,8 @@ import { ScaleModes, WrapModes } from '#rendering/types';
 import { Texture } from './Texture';
 
 /**
- * The depth attachment of a render target, bindable wherever a {@link Texture}
- * is - a material texture slot, a filter input.
+ * The depth attachment of a render target, bindable as a named texture of a
+ * custom {@link MeshMaterial} or {@link SpriteMaterial}.
  *
  * It is created by the target that opted into depth (`{ depth: true }`), owned
  * by it, resized with it and destroyed with it; there is no way to construct
@@ -17,10 +17,19 @@ import { Texture } from './Texture';
  * `[0, 1]` where WebGPU's NDC z already is `[0, 1]`. Compare depths, do not
  * hard-code them.
  *
+ * That one slot is the whole of where it fits. It is NOT interchangeable with a
+ * colour texture: a drawable's own `texture`, a filter input, and every built-in
+ * renderer's texture binding expect a filterable colour format, which on WebGPU
+ * makes a depth view there a bind-group validation error rather than a wrong
+ * picture. Put it in the material's `textures` map and read it from the custom
+ * shader.
+ *
  * Sampling constraints, both backends alike:
  *
- * - Nearest only. A depth format is not filterable, so the sampler is forced to
- *   `nearest` regardless of {@link Texture.scaleMode}.
+ * - Fixed sampling state: `nearest` filtering, `clamp-to-edge` wrapping. A depth
+ *   format is not filterable and the attachment's parameters are set once with
+ *   the attachment, so {@link setScaleMode} and {@link setWrapMode} are no-ops
+ *   here rather than changes that would silently fail to take.
  * - One channel. GLSL reads it as `texture(sampler, uv).r`; WGSL declares the
  *   binding as `texture_depth_2d` and reads it as `textureSample(t, s, uv)`,
  *   which yields the bare `f32`. Comparison sampling (`sampler_comparison`,
@@ -57,6 +66,16 @@ export class DepthTexture extends Texture {
    * inherited implementation would resize it to the null source's `0x0`.
    */
   public override updateSource(): this {
+    return this;
+  }
+
+  /** No-op: a depth attachment is sampled `nearest` on both backends. */
+  public override setScaleMode(): this {
+    return this;
+  }
+
+  /** No-op: a depth attachment is sampled `clamp-to-edge` on both backends. */
+  public override setWrapMode(): this {
     return this;
   }
 }

@@ -18,12 +18,14 @@ import type { RendererBinding } from '#extensions/Extension';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { Drawable } from '#rendering/Drawable';
+import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { type RetainedBatchCapableRenderer, RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
@@ -219,6 +221,74 @@ interface ForeignFixture {
   readonly createDrawable: () => Drawable;
 }
 
+/** Whether `binding` already claims {@link Mesh}, so the core mesh binding must not be added again. */
+const ownsMesh = (binding: RendererBinding): boolean => binding.targets.includes(Mesh as DrawableConstructor<Drawable>);
+
+/** The core binding that renders `target`. */
+const coreBindingFor = (target: DrawableConstructor): RendererBinding =>
+  buildCoreRendererBindings({}).find(candidate => candidate.targets.includes(target as DrawableConstructor<Drawable>))!;
+
+/**
+ * A mesh material that writes depth - the only thing in the engine that does.
+ * The sources are never compiled here (the fake context stubs that away); what
+ * matters is that the material reaches the renderer with `writesDepth` set.
+ */
+const depthWritingMeshMaterial = (): MeshMaterial =>
+  new MeshMaterial({
+    writesDepth: true,
+    shader: new Shader({
+      glsl: {
+        vertex: `#version 300 es
+layout(location = 0) in vec2 a_position;
+uniform mat3 u_projection;
+uniform mat3 u_translation;
+void main() { gl_Position = vec4((u_projection * u_translation * vec3(a_position, 1.0)).xy, 0.5, 1.0); }`,
+        fragment: `#version 300 es
+precision mediump float;
+layout(location = 0) out vec4 fragColor;
+void main() { fragColor = vec4(1.0); }`,
+      },
+    }),
+  });
+
+/** Non-static geometry, so the draw takes the immediate path a bare `backend.draw` reaches. */
+const depthWritingMesh = (material: MeshMaterial): Mesh =>
+  new Mesh({
+    vertices: new Float32Array([0, 0, 32, 0, 32, 32, 0, 32]),
+    indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
+    uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+    material,
+  });
+
+/**
+ * The depth-mask state in force at each GPU draw, in draw order.
+ *
+ * The draw entry points are wrapped rather than replaced so the recorder still
+ * counts them; `depthMask` has no recorder of its own, so the value is tracked
+ * here.
+ */
+const recordDepthMaskPerDraw = (harness: ConformanceHarness): boolean[] => {
+  const masks: boolean[] = [];
+  const context = harness.context as unknown as Record<string, (...args: never[]) => unknown>;
+  let depthMask = false;
+
+  context['depthMask'] = (flag: never): void => {
+    depthMask = flag as unknown as boolean;
+  };
+
+  for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced'] as const) {
+    const original = context[name]!.bind(harness.context);
+
+    context[name] = (...args: never[]): unknown => {
+      masks.push(depthMask);
+
+      return original(...args);
+    };
+  }
+
+  return masks;
+};
+
 /**
  * A core renderer to contend for GL state with the one under test. Sprite by
  * default; Mesh when the binding under test already owns Sprite, since two
@@ -286,7 +356,7 @@ const probeSupport = (binding: RendererBinding): BindingSupport => {
  *   while a redundant flush issues none;
  * - a batch that overruns its capacity flushes and keeps going, dropping nothing;
  * - it draws into a target that owns a sampleable depth attachment without
- *   disturbing it;
+ *   inheriting the depth writes of a draw that came before it;
  * - the renderer re-establishes its own program and vertex array after a foreign
  *   renderer has owned the GL state, as `AbstractWebGl2Renderer` requires;
  * - what it acquired on connect is released again on teardown;
@@ -522,27 +592,44 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
     });
   }
 
-  test('draws into a target that owns a depth attachment, and leaves it samplable', () => {
-    withRun(binding, options, run => {
-      // Depth is a data source, not a visibility model: a target may own a depth
-      // attachment while nothing in the binding knows about it, and every
-      // renderer has to keep drawing into it exactly as before.
-      const target = new RenderTexture(64, 64, { depth: true });
+  test('draws into a target that owns a depth attachment without picking up its depth writes', () => {
+    const harness = createConformanceHarness();
+    const target = new RenderTexture(64, 64, { depth: true });
 
-      try {
-        run.backend.setRenderTarget(target);
-        drawFrame(run.harness, run.drawables);
+    try {
+      const meshBinding = ownsMesh(binding) ? null : coreBindingFor(Mesh);
+      const bindings = meshBinding === null ? [binding] : [binding, meshBinding];
 
-        expect(run.harness.recorder.drawCalls, 'a depth attachment on the target must not suppress the draws of this binding').toBeGreaterThan(0);
+      materializeRendererBindings(harness.backend, bindings);
 
-        // The attachment is allocated by the target bind, so it is readable as
-        // soon as anything has drawn into the target - whatever drew.
-        expect(() => run.backend.bindTexture(target.depthTexture)).not.toThrow();
-      } finally {
-        run.backend.setRenderTarget(null);
-        target.destroy();
-      }
-    });
+      const drawables = options.drawables(harness.backend);
+      const depthMaterial = depthWritingMeshMaterial();
+      const depthMesh = depthWritingMesh(depthMaterial);
+      const masks = recordDepthMaskPerDraw(harness);
+
+      harness.backend.setRenderTarget(target);
+      // The depth-writing mesh goes FIRST, so the binding under test draws in a
+      // frame where depth writes were just switched on by someone else. Depth is
+      // a data source, not a visibility model: whoever wrote depth owns turning
+      // it off again, and a binding that inherits the raised mask stamps its own
+      // z over the data the pass was opened to produce.
+      drawFrame(harness, [depthMesh, ...drawables]);
+
+      expect(masks.length, 'the depth-writing mesh and the binding under test must both reach a GPU draw').toBeGreaterThan(1);
+      expect(masks[0], 'the depth-writing mesh must draw with depth writes on - otherwise this scenario proves nothing').toBe(true);
+      expect(masks.slice(1), 'every draw after a depth-writing one must run with depth writes off again').not.toContain(true);
+
+      // The attachment is allocated by the target bind, so it is readable as
+      // soon as anything has drawn into the target - whatever drew.
+      expect(() => harness.backend.bindTexture(target.depthTexture)).not.toThrow();
+
+      depthMesh.destroy();
+      depthMaterial.destroy();
+    } finally {
+      harness.backend.setRenderTarget(null);
+      target.destroy();
+      harness.destroy();
+    }
   });
 
   test('re-establishes its own program and vertex array after a foreign renderer drew', () => {

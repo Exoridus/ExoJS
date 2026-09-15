@@ -131,7 +131,11 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private _stencilConnected = false;
   private _stencilWriteInProgress = false;
   private _depthWritesRequested = false;
-  private readonly _depthCleared = new Set<RenderTarget>();
+  /**
+   * Targets whose depth aspect must be cleared by the next pass that writes
+   * depth, because their colour attachment was cleared since the last one.
+   */
+  private readonly _depthClearPending = new Set<RenderTarget>();
   private _stencilLoadOp: GPULoadOp = 'load';
   private _stencilRef = 0;
   private _active: WebGpuActiveRenderPass | null = null;
@@ -266,11 +270,6 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     const backend = this._backend;
     const stencilEnabled = this.stencilActive;
     const depthWrites = this.depthWritesActive;
-    // Read before the colour attachments are built: creating slot 0 resolves the
-    // load op and marks the target as holding content, so afterwards there is no
-    // way left to tell a fresh frame from a continued one - and the depth aspect
-    // has to be cleared exactly when the colour is.
-    const targetHadContent = depthWrites && backend._targetHasContent(backend.renderTarget);
     // Descriptor and attachment list are reused: `beginRenderPass` and
     // `createCommandEncoder` read their descriptors synchronously, so neither
     // has to survive the call. An effect-heavy frame opens hundreds of passes
@@ -291,7 +290,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       this._colorAttachments[index] = backend.createColorAttachment(index);
     }
     descriptor.depthStencilAttachment =
-      stencilEnabled || depthWrites ? this._createDepthStencilAttachment(backend.renderTarget, stencilEnabled, depthWrites, targetHadContent) : undefined;
+      stencilEnabled || depthWrites ? this._createDepthStencilAttachment(backend.renderTarget, stencilEnabled, depthWrites) : undefined;
     // Written unconditionally for the same reason as the attachment above: the
     // descriptor is reused, so a `timestampWrites` left on it by the last timed
     // pass would follow it into untimed passes and overwrite query slots whose
@@ -478,7 +477,17 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     // Clear when explicitly requested or when the target holds no content to
     // preserve; otherwise load, so a render texture keeps its prior contents
     // across multiple passes in the same frame.
-    return clearRequested || !this._backend._targetHasContent(target) ? 'clear' : 'load';
+    const load: RenderPassLoad = clearRequested || !this._backend._targetHasContent(target) ? 'clear' : 'load';
+
+    // Depth follows the colour attachment. The decision is recorded rather than
+    // acted on because this runs while the colour attachments are being built,
+    // one step ahead of the depth attachment - and because the pass that clears
+    // the colour is very often not the one that writes depth.
+    if (load === 'clear' && target.depthTexture !== null) {
+      this._depthClearPending.add(target);
+    }
+
+    return load;
   }
 
   /**
@@ -493,7 +502,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
     this._stencilDepths.delete(target);
     this._stencilStacks.delete(target);
-    this._depthCleared.delete(target);
+    this._depthClearPending.delete(target);
   }
 
   /**
@@ -517,7 +526,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       this._stencilConnected = false;
     }
 
-    this._depthCleared.clear();
+    this._depthClearPending.clear();
     this._depthWritesRequested = false;
     this._stencilDepths.clear();
     this._stencilStacks.clear();
@@ -581,12 +590,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     return stack;
   }
 
-  private _createDepthStencilAttachment(
-    target: RenderTarget,
-    stencilEnabled: boolean,
-    depthWrites: boolean,
-    targetHadContent: boolean,
-  ): GPURenderPassDepthStencilAttachment {
+  private _createDepthStencilAttachment(target: RenderTarget, stencilEnabled: boolean, depthWrites: boolean): GPURenderPassDepthStencilAttachment {
     // Size the attachment to the colour attachment's physical pixels, not the
     // target's logical size. The root canvas backing store is logical ×
     // pixelRatio, so a logical-sized buffer would mismatch the
@@ -600,15 +604,14 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     const attachment: GPURenderPassDepthStencilAttachment = { view };
 
     if (depthWrites) {
-      // Clear on the first pass into a target whose colour is also being
-      // cleared, load afterwards, so several passes accumulate depth instead of
-      // erasing each other.
-      if (targetHadContent && this._depthCleared.has(target)) {
-        attachment.depthLoadOp = 'load';
-      } else {
+      // Clear once per colour clear, load afterwards, so the depth passes of one
+      // frame accumulate instead of erasing each other while a new frame still
+      // starts from the far plane.
+      if (this._depthClearPending.delete(target)) {
         attachment.depthLoadOp = 'clear';
         attachment.depthClearValue = 1;
-        this._depthCleared.add(target);
+      } else {
+        attachment.depthLoadOp = 'load';
       }
 
       attachment.depthStoreOp = 'store';
@@ -625,8 +628,12 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       this._stencilLoadOp = 'load';
     } else {
       // The format carries a stencil aspect whether a clip is active or not, and
-      // a pass has to say what becomes of it.
-      attachment.stencilReadOnly = true;
+      // a pass has to say what becomes of it. Load/store rather than
+      // `stencilReadOnly`: a combined format whose two aspects disagree about
+      // read-only is rejected by implementations predating that allowance, and
+      // preserving the aspect costs nothing here.
+      attachment.stencilLoadOp = 'load';
+      attachment.stencilStoreOp = 'store';
     }
 
     return attachment;

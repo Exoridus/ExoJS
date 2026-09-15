@@ -1465,14 +1465,25 @@ export class WebGpuBackend implements RenderBackend {
 
     if (this._renderTarget === this._rootRenderTarget) {
       this._hasPresentedFrame = true;
-    } else if (this._renderTarget instanceof RenderTexture) {
-      const state = this._syncTexture(this._renderTarget);
-
-      state.hasContent = true;
-
-      if (state.mipLevelCount > 1) {
-        this._generateMipmaps(state.texture, state.mipLevelCount);
+    } else if (this._renderTarget instanceof MultiRenderTarget) {
+      // Every attachment of one target is written by the same pass, so they
+      // gain content together.
+      for (const attachment of this._renderTarget.attachments) {
+        this._markTargetContent(attachment);
       }
+    } else if (this._renderTarget instanceof RenderTexture) {
+      this._markTargetContent(this._renderTarget);
+    }
+  }
+
+  /** Book a render texture as holding this frame's content, and refresh its mips. */
+  private _markTargetContent(texture: RenderTexture): void {
+    const state = this._syncTexture(texture);
+
+    state.hasContent = true;
+
+    if (state.mipLevelCount > 1) {
+      this._generateMipmaps(state.texture, state.mipLevelCount);
     }
   }
 
@@ -1485,6 +1496,13 @@ export class WebGpuBackend implements RenderBackend {
   public _targetHasContent(target: RenderTarget): boolean {
     if (target === this._rootRenderTarget) {
       return this._hasPresentedFrame;
+    }
+
+    // A multi-attachment target has no texture of its own; its attachments are
+    // written together, so the first one answers for all of them. Without this
+    // an MRT reported "no content" on every pass, so every pass cleared it.
+    if (target instanceof MultiRenderTarget) {
+      return this._getTextureState(target.attachment(0)).hasContent;
     }
 
     if (target instanceof RenderTexture) {
@@ -2727,11 +2745,6 @@ export class WebGpuBackend implements RenderBackend {
     return this._ensureDepthAttachment(target).attachmentView;
   }
 
-  /** Whether `target` currently holds an allocated depth attachment. @internal */
-  public _hasDepthAttachment(target: RenderTarget): boolean {
-    return this._depthAttachments.has(target);
-  }
-
   private _ensureDepthAttachment(target: RenderTarget): ManagedDepthAttachment {
     const { width, height } = this._getAttachmentPixelSize(target);
     const safeWidth = Math.max(1, width);
@@ -2805,6 +2818,8 @@ export class WebGpuBackend implements RenderBackend {
       });
     }
 
+    // Resolved once and kept: a depth texture's sampling state is fixed at
+    // construction (see DepthTexture), so there is nothing to re-resolve.
     const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, true);
     let state = this._depthTextureStates.get(texture);
 

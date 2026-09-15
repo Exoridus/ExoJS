@@ -11,6 +11,8 @@
 
 import { afterEach, describe, expect, test } from 'vitest';
 
+import { Color } from '#core/Color';
+import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
@@ -18,6 +20,7 @@ import { MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import { RenderError } from '#rendering/RenderError';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { Shader } from '#rendering/shader/Shader';
+import { Sprite } from '#rendering/sprite/Sprite';
 import { DepthTexture } from '#rendering/texture/DepthTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { ScaleModes, TextureFormat } from '#rendering/types';
@@ -43,6 +46,38 @@ void main() { outColor = vec4(1.0); }`,
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
   return vec4<f32>(1.0);
+}
+`.trim(),
+    }),
+  });
+
+/** The same thing for a two-attachment target, which needs one output per attachment. */
+const twoOutputDepthMaterial = (): MeshMaterial =>
+  new MeshMaterial({
+    writesDepth: true,
+    shader: new Shader({
+      glsl: {
+        vertex: `#version 300 es
+in vec2 a_position;
+void main() { gl_Position = vec4(a_position, 0.5, 1.0); }`,
+        fragment: `#version 300 es
+precision mediump float;
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outId;
+void main() { outColor = vec4(1.0); outId = vec4(0.5); }`,
+      },
+      wgsl: `
+struct FragmentOut {
+  @location(0) color: vec4<f32>,
+  @location(1) id: vec4<f32>,
+};
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> FragmentOut {
+  var out: FragmentOut;
+  out.color = vec4<f32>(1.0);
+  out.id = vec4<f32>(0.5);
+  return out;
 }
 `.trim(),
     }),
@@ -169,6 +204,9 @@ describe('WebGL2 depth attachment', () => {
     const depthAttachments: unknown[] = [];
     const renderbufferAttachments: unknown[] = [];
     const depthStateCalls: string[] = [];
+    /** The depth-mask state in force at each GPU draw, in draw order. */
+    const drawDepthMasks: boolean[] = [];
+    let depthMask = false;
     const mutable = base.context as unknown as Record<string, unknown>;
     const gl = base.context;
 
@@ -183,17 +221,25 @@ describe('WebGL2 depth attachment', () => {
       }
     };
     mutable['depthMask'] = (flag: boolean): void => {
+      depthMask = flag;
       depthStateCalls.push(`depthMask:${flag ? 1 : 0}`);
     };
     mutable['depthFunc'] = (func: number): void => {
       depthStateCalls.push(`depthFunc:${func === gl.ALWAYS ? 'always' : String(func)}`);
     };
 
+    for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced'] as const) {
+      mutable[name] = (): void => {
+        drawDepthMasks.push(depthMask);
+      };
+    }
+
     return {
       backend: base.backend,
       depthAttachments,
       renderbufferAttachments,
       depthStateCalls,
+      drawDepthMasks,
       destroy: (): void => {
         base.destroy();
       },
@@ -231,6 +277,32 @@ describe('WebGL2 depth attachment', () => {
     // Left on, every later sprite would write depth too.
     expect(harness.depthStateCalls.at(-1)).toBe('depthMask:0');
 
+    target.destroy();
+  });
+
+  test('a drawable after a depth-writing mesh draws with depth writes off again', () => {
+    harness = createDepthGlHarness();
+
+    const context = new RenderingContext(harness.backend);
+    const target = new RenderTexture(64, 64, { depth: true });
+    const scene = new Container();
+    const mesh = new Mesh({ geometry: triangleGeometry(), material: depthWritingMaterial(), texture: null });
+    const sprite = new Sprite(new RenderTexture(8, 8));
+
+    sprite.setPosition(8, 8);
+    scene.addChild(mesh, sprite);
+
+    context.renderTo(scene, { target });
+    harness.backend.flush();
+
+    // The mesh writes depth; everything drawn after it must not - the sprite
+    // batch carries no depth of its own and would otherwise stamp the mesh's
+    // last value over the whole target.
+    expect(harness.drawDepthMasks.length).toBeGreaterThanOrEqual(2);
+    expect(harness.drawDepthMasks[0]).toBe(true);
+    expect(harness.drawDepthMasks.at(-1)).toBe(false);
+
+    scene.destroy();
     target.destroy();
   });
 
@@ -303,6 +375,81 @@ describe('WebGPU depth attachment', () => {
       // Without TEXTURE_BINDING the attachment exists but cannot be sampled,
       // which is the whole point of opting in.
       expect((depth!.usage & GPUTextureUsage.TEXTURE_BINDING) !== 0).toBe(true);
+
+      target.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('the depth aspect is cleared again on the next frame, not only on the first', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const context = new RenderingContext(backend);
+      const target = new RenderTexture(64, 64, { depth: true });
+      const mesh = new Mesh({ geometry: triangleGeometry(), material: depthWritingMaterial(), texture: createCanvasTexture() });
+
+      for (let frame = 0; frame < 2; frame++) {
+        context.renderTo(mesh, { target, clear: Color.black });
+        backend.flush();
+      }
+
+      // A target keeps its `hasContent` flag across frames, so "have we cleared
+      // this target before" cannot answer this - the second frame clears the
+      // colour and must clear the depth with it.
+      expect(environment.depthLoadOps()).toEqual(['clear', 'clear']);
+
+      target.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('a second pass in the same frame accumulates depth instead of erasing it', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const context = new RenderingContext(backend);
+      const target = new RenderTexture(64, 64, { depth: true });
+      const mesh = new Mesh({ geometry: triangleGeometry(), material: depthWritingMaterial(), texture: createCanvasTexture() });
+
+      context.renderTo(mesh, { target, clear: Color.black });
+      backend.flush();
+      context.renderTo(mesh, { target });
+      backend.flush();
+
+      expect(environment.depthLoadOps()).toEqual(['clear', 'load']);
+
+      target.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('a multi-attachment target accumulates depth across passes too', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const context = new RenderingContext(backend);
+      const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8], depth: true });
+      const mesh = new Mesh({ geometry: triangleGeometry(), material: twoOutputDepthMaterial(), texture: createCanvasTexture() });
+
+      context.renderTo(mesh, { target, clear: Color.black });
+      backend.flush();
+      context.renderTo(mesh, { target });
+      backend.flush();
+
+      // An MRT owns no texture of its own, so "does this target hold content"
+      // has to answer through its attachments - otherwise every pass reports a
+      // blank target, clears the colour, and takes the depth down with it.
+      expect(environment.depthLoadOps()).toEqual(['clear', 'load']);
 
       target.destroy();
       backend.destroy();
