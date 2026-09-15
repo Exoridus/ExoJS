@@ -157,6 +157,29 @@ A custom material is held to the same rule. The engine reads the declared output
 
 If one pass only ever produces one image, a plain `RenderTexture` is the right tool — this exists for the case where it genuinely produces two.
 
+## Depth as a data source
+
+A render target can also keep the depth its draws produce, so a later pass can read it: fog thickness, depth of field, a screen-space occlusion term. Pass `depth: true` to a `RenderTexture` or a `MultiRenderTarget` and it owns a depth attachment, resized and destroyed with it and exposed as `target.depthTexture` — a texture like any other, bindable in a material slot. Filling it is opt-in per material: a `MeshMaterial` constructed with `writesDepth: true` writes the clip-space z its vertex stage produces, and nothing else in the scene writes depth at all. There is **no depth test** — the comparison is fixed to "always pass", so what is in front of what still follows from draw order, exactly as before. A depth-writing material drawn into a target without the opt-in draws normally and writes depth nowhere.
+
+```ts
+import { MeshMaterial, RenderTexture, Shader, type RenderNode, type RenderingContext } from '@codexo/exojs';
+
+declare const context: RenderingContext;
+declare const scene: RenderNode;
+declare const depthShader: Shader;
+
+const target = new RenderTexture(512, 512, { depth: true });
+const material = new MeshMaterial({ shader: depthShader, writesDepth: true });
+
+context.renderTo(scene, { target });
+
+const depth = target.depthTexture;
+```
+
+<Callout type="warning" title="Compare depths, do not hard-code them">
+The stored value is each backend's own window-space mapping of the clip-space z: WebGL2 maps NDC `[-1, 1]` onto `[0, 1]`, while WebGPU's NDC z already is `[0, 1]`. Nearer is the smaller value on both, and the ordering is the portable part; the absolute numbers are not. Sampling is nearest-only — a depth format is not filterable — and single-channel: GLSL reads `texture(u_depth, uv).r`, while WGSL declares the binding as `texture_depth_2d` and reads `textureSample(u_depth, u_depthSampler, uv)`. Sample it in a pass after the one that wrote it, never in the same pass, and expect a depth-writing draw to sit in its own batch.
+</Callout>
+
 ## RenderTexture vs. cacheAsTexture
 
 `cacheAsTexture` on a `RenderNode` bakes the node's subtree into an internal texture automatically. Use `cacheAsTexture` when the cached content doesn't need to be repositioned, scaled, filtered, or displayed in multiple places — it's a simple on/off toggle. Use a `RenderTexture` when you need explicit control over when the cache updates, what view it uses, or how the result is displayed (multiple sprites, custom sampler settings, composited with blend modes).

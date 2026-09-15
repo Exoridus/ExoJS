@@ -25,6 +25,7 @@ import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { type GlEvent, GlEventLog } from '../perf/rendering/fakeWebGl2';
@@ -284,6 +285,8 @@ const probeSupport = (binding: RendererBinding): BindingSupport => {
  * - a flushed frame issues draws and books exactly those draws in `RenderStats`,
  *   while a redundant flush issues none;
  * - a batch that overruns its capacity flushes and keeps going, dropping nothing;
+ * - it draws into a target that owns a sampleable depth attachment without
+ *   disturbing it;
  * - the renderer re-establishes its own program and vertex array after a foreign
  *   renderer has owned the GL state, as `AbstractWebGl2Renderer` requires;
  * - what it acquired on connect is released again on teardown;
@@ -518,6 +521,29 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
       });
     });
   }
+
+  test('draws into a target that owns a depth attachment, and leaves it samplable', () => {
+    withRun(binding, options, run => {
+      // Depth is a data source, not a visibility model: a target may own a depth
+      // attachment while nothing in the binding knows about it, and every
+      // renderer has to keep drawing into it exactly as before.
+      const target = new RenderTexture(64, 64, { depth: true });
+
+      try {
+        run.backend.setRenderTarget(target);
+        drawFrame(run.harness, run.drawables);
+
+        expect(run.harness.recorder.drawCalls, 'a depth attachment on the target must not suppress the draws of this binding').toBeGreaterThan(0);
+
+        // The attachment is allocated by the target bind, so it is readable as
+        // soon as anything has drawn into the target - whatever drew.
+        expect(() => run.backend.bindTexture(target.depthTexture)).not.toThrow();
+      } finally {
+        run.backend.setRenderTarget(null);
+        target.destroy();
+      }
+    });
+  });
 
   test('re-establishes its own program and vertex array after a foreign renderer drew', () => {
     const harness = createConformanceHarness();
