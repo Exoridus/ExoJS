@@ -27,6 +27,8 @@ import { Texture } from './Texture';
  *   `sampler2DShadow`) is not used and not available.
  * - Live. The texture is the attachment itself, not a copy, so sampling it in
  *   the same pass that writes it is undefined; sample it in a later pass.
+ * - Cleared with the colour attachment, to the far plane. A pass that preserves
+ *   the target's colour preserves its depth too.
  *
  * Reading one before the owning target has ever been rendered into throws a
  * `RenderError` - there is no attachment to sample yet.

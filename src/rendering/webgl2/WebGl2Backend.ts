@@ -2816,14 +2816,14 @@ export class WebGl2Backend implements RenderBackend {
       // rendering. A target that opted into a sampleable depth attachment
       // always carries one, clip or no clip.
       if (target.depthTexture !== null || target.needsStencil || state.stencilRenderbuffer !== null) {
-        this._syncStencilAttachment(target, state);
+        this._syncDepthStencilAttachment(target, state);
       }
     }
 
     return state;
   }
 
-  /** Attach a depth/stencil renderbuffer to the active target if it lacks one. */
+  /** Attach a depth/stencil buffer to the active target if it lacks one. */
   private _ensureTargetStencil(): void {
     const target = this._renderTarget;
 
@@ -2833,10 +2833,10 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     target.needsStencil = true;
-    this._syncStencilAttachment(target, this._getRenderTargetState(target));
+    this._syncDepthStencilAttachment(target, this._getRenderTargetState(target));
   }
 
-  private _syncStencilAttachment(target: RenderTarget, state: ManagedRenderTargetState): void {
+  private _syncDepthStencilAttachment(target: RenderTarget, state: ManagedRenderTargetState): void {
     if (state.framebuffer === null) {
       return;
     }
@@ -2998,7 +2998,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * There is nothing to upload or re-parameterize: the GL texture is the
    * framebuffer's depth attachment, created and sized by
-   * {@link _syncStencilAttachment} with its sampler parameters already set.
+   * {@link _syncDepthStencilAttachment} with its sampler parameters already set.
    */
   private _syncDepthTexture(texture: DepthTexture): ManagedTextureState {
     const handle = this._renderTargetStates.get(texture.target)?.depthStencilTexture ?? null;
