@@ -930,11 +930,14 @@ export class PhysicsWorld implements BodyOwner {
    * paid - once per step instead of once per body per sub-step.
    *
    * Nothing between this call and the end of the step changes a body's sleep
-   * state, so one snapshot serves every pass. Skipping the finalize pass for
-   * the rest rests on three things that cannot change while a body is out of
-   * this set: forces only reach a body through an API that wakes it, only
-   * `setTransform` (which also wakes) marks a teleport, and `_setSleeping`
-   * collapses the previous transform the way a finalize would.
+   * state, so one snapshot serves every pass.
+   *
+   * A sleeping body needs nothing from the finalize pass: every API that puts a
+   * force on a body or teleports it wakes the body first, so it cannot reach
+   * this set carrying either, and `_setSleeping` does the rest as it goes to
+   * sleep. A static body can, because nothing ever takes it out of this set, so
+   * its per-step inputs are dropped here instead - at the same point in the step
+   * the finalize pass used to, after the island pass has read the teleport flag.
    */
   private _collectSteppedBodies(): readonly PhysicsBody[] {
     const stepped = this._steppedBodies;
@@ -942,7 +945,9 @@ export class PhysicsWorld implements BodyOwner {
     stepped.length = 0;
 
     for (const body of this._bodies) {
-      if (body.type !== 'static' && !body.isSleeping) {
+      if (body.type === 'static') {
+        body._clearStepInputs();
+      } else if (!body.isSleeping) {
         stepped.push(body);
       }
     }
@@ -1124,9 +1129,13 @@ export class PhysicsWorld implements BodyOwner {
     const parent = this._islandParent;
     const minSleep = this._islandMinSleep;
     const timeToSleep = this.timeToSleep;
-    // Every dynamic body already sleeps past the threshold, so no island can
-    // hold a member below it and the whole island pass would re-decide what is
-    // already decided. Tracked while the loop below runs anyway.
+    // Whether every dynamic body is already asleep. A sleeping body's timer is
+    // frozen at or above `timeToSleep` - the only thing that lowers it is
+    // `_unionContactIslands`, which wakes it in the same pass - and
+    // `timeToSleep` cannot be raised under it. So no island can hold a member
+    // below the threshold, every sleep decision below would come out as it
+    // already stands, and the pass has nothing left to do. Tracked while the
+    // loop below runs anyway.
     let settled = true;
 
     // Assign dense indices, reset the union-find, and accumulate sleep timers for
@@ -1138,15 +1147,9 @@ export class PhysicsWorld implements BodyOwner {
       parent[i] = i;
       minSleep[i] = Infinity;
 
-      if (body.type === 'dynamic') {
-        if (!body.isSleeping) {
-          body._accumulateSleepTime(dt, this.sleepLinearVelocity, this.sleepAngularVelocity);
-          settled = false;
-        } else if (body._sleepTime < timeToSleep) {
-          // Only reachable after `timeToSleep` was raised past a sleeper's
-          // frozen timer, which has to wake it.
-          settled = false;
-        }
+      if (body.type === 'dynamic' && !body.isSleeping) {
+        body._accumulateSleepTime(dt, this.sleepLinearVelocity, this.sleepAngularVelocity);
+        settled = false;
       }
     }
 
