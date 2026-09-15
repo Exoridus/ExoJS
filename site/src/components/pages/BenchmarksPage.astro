@@ -311,8 +311,20 @@ const leading = browsers[0];
      * and no plane behind it. Scoped here rather than retuned in the theme: the
      * tokens are the whole site's, and this is one page's layering.
      */
+    /*
+     * Narrower than the shell the full measurement table needs.
+     *
+     * That table is one wide grid and uses every pixel it is given; this page
+     * is two columns of cards whose rows are a label, a bar and a figure. Given
+     * 1720px they stretch to almost 700px each, where the bar carries the same
+     * comparison over twice the distance and the eye has to travel it. The
+     * width is the API reference's, so the site keeps one measure for its
+     * non-prose pages.
+     */
     .bench-prose {
+        width: min(1320px, 100%);
         max-width: none;
+        margin-inline: auto;
     }
 
     /* Light only: the dark theme's canvas and surface already sit a readable step apart. */
