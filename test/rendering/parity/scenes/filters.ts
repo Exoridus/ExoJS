@@ -16,11 +16,13 @@
  * from whatever follows the block.
  *
  * The bloom scene is the only one here whose result is not a single shader pass.
- * It runs an extraction, a chain of half-resolution sprite blits, a separable
- * blur and an additive composite, and it is the AGREEMENT of that sequence that
- * matters: the two backends store a render texture the other way up and resolve
- * a scaled sprite through their own samplers, so a chain that is bit-equal end
- * to end says both walked it identically.
+ * It runs an extraction, a chain of half-resolution sprite blits down and back
+ * up, a separable blur at the smallest level and an additive composite, and it
+ * is the AGREEMENT of that sequence that matters: the two backends store a
+ * render texture the other way up and resolve a scaled sprite through their own
+ * samplers, so a chain that is bit-equal end to end says both walked it
+ * identically. Its halo also carries no alpha, which makes the scene the one
+ * place the matrix compares a target holding colour where there is no coverage.
  */
 
 import { Color } from '#core/Color';

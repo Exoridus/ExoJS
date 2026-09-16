@@ -17,7 +17,8 @@ import wgslFragment from './shaders/bloom-threshold.wgsl';
 /**
  * Halvings the chain may take. Five takes a 1280-wide frame down to 40 texels,
  * past which a further level carries too few texels to describe a falloff, and
- * it bounds the render textures one application borrows at six.
+ * it bounds the render textures one application borrows at seven: five levels,
+ * the blur's output, and the scratch the blur's own two sweeps need.
  */
 const MAX_LEVELS = 5;
 
@@ -64,9 +65,13 @@ export interface BloomFilterOptions {
    */
   readonly strength?: number;
   /**
-   * Halvings between the input and the blurred level, `1..5`. Raising it widens
-   * the soft base of the glow and makes the blur cheaper; lowering it keeps the
-   * glow tighter around the highlight. Default `3`.
+   * Halvings between the input and the level the blur runs on, `1..5`.
+   *
+   * A cost knob rather than a shape knob: the same `strength` covers the same
+   * distance at every setting, and raising it buys that distance at a quarter
+   * of the fill rate per level. What it does change is the base of the glow,
+   * which gets softer and coarser as the blur runs on fewer texels. A node too
+   * small to take every halving takes as many as it can. Default `3`.
    */
   readonly levels?: number;
   /** Tap cap for the blur, see {@link BlurFilterOptions.quality}. Derived when omitted. */
@@ -78,10 +83,14 @@ export interface BloomFilterOptions {
  * bloom, in the engine's ordinary sRGB path.
  *
  * Pixels whose luminance passes {@link threshold} are extracted through a soft
- * knee, spread over a chain of {@link levels} half-resolution targets, blurred
- * by {@link strength}, and added back on top of the unchanged input. Only the
- * EXCESS over the threshold glows, so a scene keeps its own colours instead of
- * washing out.
+ * knee, carried down a chain of {@link levels} halvings, blurred by
+ * {@link strength} on the smallest of them, carried back up, and added on top
+ * of the unchanged input. Only the EXCESS over the threshold glows, so a scene
+ * keeps its own colours instead of washing out.
+ *
+ * The glow is added LIGHT: it carries no alpha of its own, so it brightens
+ * whatever it spreads onto and never darkens it, and a half-transparent subject
+ * keeps exactly the alpha it came in with.
  *
  * ```ts
  * // A glow around the lamps, leaving everything below 70% luminance alone.
@@ -132,7 +141,6 @@ export class BloomFilter extends Filter {
   private _passBloom: RenderTexture | null = null;
   private _passTarget: RenderTexture | null = null;
   private _passChainInput: RenderTexture | null = null;
-  private _chainBlendMode: BlendModes = BlendModes.Normal;
 
   public constructor(options: BloomFilterOptions = {}) {
     super();
@@ -186,7 +194,7 @@ export class BloomFilter extends Filter {
     }
   }
 
-  /** Halvings between the input and the blurred level, `1..5`. */
+  /** Halvings between the input and the level the blur runs on, `1..5`. A cost knob. */
   public get levels(): number {
     return this._levels;
   }
@@ -218,23 +226,43 @@ export class BloomFilter extends Filter {
   /**
    * The blur's own truncated reach, plus what the halving chain spreads by
    * itself: each bilinear halving pulls light one texel further and the
-   * upsample walks the same distance back, which lands inside `2^levels`
-   * logical units at a resolution of one - the widest case, since a higher
-   * resolution only makes those texels smaller.
+   * upsample walks the same distance back, which lands inside `2^levels` TEXELS
+   * of the pass target.
+   *
+   * Those texels are logical units only at a resolution of one. A declared
+   * resolution BELOW one makes each of them cover more than a logical unit, so
+   * a reach stated in logical units has to grow to match or the halo is cut off
+   * at the capture edge. `'inherit'` is treated as one: the surface it inherits
+   * from is at least that, and assuming less would only over-declare.
    */
   public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void {
     // Asked of the blur rather than recomputed here, so the two can never
     // disagree about how far a given strength reaches.
     this._blur.getOutputBounds(input, output);
 
-    const chainReach = 2 ** this._levels;
+    const declared = typeof this.resolution === 'number' ? this.resolution : 1;
+    const chainReach = 2 ** this._levels / Math.min(1, declared);
 
     output.set(output.x - chainReach, output.y - chainReach, output.width + chainReach * 2, output.height + chainReach * 2);
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
-    const levels = this._levels;
+    if (this._intensity === 0) {
+      // Nothing the chain could produce would survive the composite, and the
+      // chain is seven borrowed targets and eight passes. The declared bounds
+      // stay as they are, so animating the intensity through zero does not make
+      // the capture domain jump.
+      this._blit(backend, input, output);
+      // The staged fields outlive the blit, and both textures are the caller's
+      // to release the moment this returns.
+      this._passChainInput = null;
+      this._passTarget = null;
+
+      return;
+    }
+
     const held = this._levelTextures;
+    let built = 0;
     let blurred: RenderTexture | null = null;
 
     // Every intermediate is borrowed from the backend's pool rather than owned:
@@ -245,10 +273,19 @@ export class BloomFilter extends Filter {
       let width = output.width;
       let height = output.height;
 
-      for (let level = 0; level < levels; level++) {
+      for (let level = 0; level < this._levels; level++) {
+        // Stop before a dimension would sit on the floor. A level clamped to a
+        // single texel is not half of its predecessor, which would break the
+        // scale the blur below derives from the sizes, and it carries no
+        // falloff worth blurring in the first place.
+        if (level > 0 && (width < 2 || height < 2)) {
+          break;
+        }
+
         width = Math.max(1, width >> 1);
         height = Math.max(1, height >> 1);
         held[level] = backend.acquireRenderTexture(width, height);
+        built = level + 1;
       }
 
       // Extraction and the first halving are one draw: the fullscreen quad
@@ -256,23 +293,28 @@ export class BloomFilter extends Filter {
       // separate full-resolution extraction target would only cost fill rate.
       this._extraction.apply(backend, input, held[0]!, resolution);
 
-      for (let level = 1; level < levels; level++) {
-        this._blit(backend, held[level - 1]!, held[level]!, BlendModes.Normal, Color.transparentBlack);
+      for (let level = 1; level < built; level++) {
+        this._blit(backend, held[level - 1]!, held[level]!);
       }
 
-      const smallest = held[levels - 1]!;
+      const smallest = held[built - 1]!;
 
       blurred = backend.acquireRenderTexture(smallest.width, smallest.height);
       // `strength` is logical units of the FINAL image, while the level it runs
-      // on carries `resolution / 2^levels` texels per logical unit. Handing the
-      // blur the unscaled resolution would double the glow's width for every
-      // level added, so `levels` could not be a cost knob.
-      this._blur.apply(backend, smallest, blurred, resolution / 2 ** levels);
+      // on carries fewer texels per logical unit by exactly the factor it was
+      // shrunk by. Measured from the sizes rather than assumed to be `2^built`:
+      // integer truncation and the floor above both move the real factor, and
+      // an assumed one narrows the blur on a small node without saying so.
+      this._blur.apply(backend, smallest, blurred, (resolution * smallest.width) / output.width);
 
+      // Only the BLURRED level travels back up. Accumulating into each level on
+      // the way would add that level's own unblurred extraction again, which
+      // multiplies the glow inside a bright region by the number of levels and
+      // leaves a sharp rim of the down-chain image around every highlight.
       let accumulated = blurred;
 
-      for (let level = levels - 1; level > 0; level--) {
-        this._blit(backend, accumulated, held[level - 1]!, BlendModes.Additive, null);
+      for (let level = built - 1; level > 0; level--) {
+        this._blit(backend, accumulated, held[level - 1]!);
         accumulated = held[level - 1]!;
       }
 
@@ -290,8 +332,8 @@ export class BloomFilter extends Filter {
         backend.releaseRenderTexture(blurred);
       }
 
-      for (let level = levels - 1; level >= 0; level--) {
-        // In-bounds: `level` < `levels` <= MAX_LEVELS, the array's own length.
+      for (let level = built - 1; level >= 0; level--) {
+        // In-bounds: `level` < `built` <= MAX_LEVELS, the array's own length.
         const texture = held[level]!;
 
         held[level] = null;
@@ -322,20 +364,19 @@ export class BloomFilter extends Filter {
 
   /**
    * Draw `input` across the whole of `target`, which is what makes one chain
-   * step a bilinear halving or doubling. A `clearColor` of `null` keeps what
-   * the target already holds, so an additive step accumulates into it.
+   * step a bilinear halving or doubling. Always a replacing draw into a cleared
+   * target: the composite is the only place this filter adds anything.
    */
-  private _blit(backend: RenderBackend, input: RenderTexture, target: RenderTexture, blendMode: BlendModes, clearColor: Color | null): void {
+  private _blit(backend: RenderBackend, input: RenderTexture, target: RenderTexture): void {
     this._passChainInput = input;
     this._passTarget = target;
-    this._chainBlendMode = blendMode;
-    backend.execute(this._chainPass.retarget(target, target.view, clearColor));
+    backend.execute(this._chainPass.retarget(target, target.view, Color.transparentBlack));
   }
 
   private _drawChain(backend: RenderBackend): void {
     const target = this._passTarget!;
 
-    drawDrawableDirect(this._stage(this._chainSprite, this._passChainInput!, target.width, target.height, this._chainBlendMode), backend);
+    drawDrawableDirect(this._stage(this._chainSprite, this._passChainInput!, target.width, target.height, BlendModes.Normal), backend);
   }
 
   private _drawComposite(backend: RenderBackend): void {

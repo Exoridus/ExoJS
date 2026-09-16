@@ -25,5 +25,9 @@ void main() {
     // any intensity above one saturate the halo at the first bright pixel.
     float excess = clamp(max(soft, luma - uniforms.uThreshold) / max(luma, 1e-5), 0.0, 1.0);
 
-    fragColor = premultiplied * (excess * uniforms.uIntensity);
+    // Zero alpha, on purpose: a glow is light the scene EMITS, not coverage it
+    // adds. Carrying the extracted alpha instead would composite the halo
+    // source-over, so a coloured glow would darken the backdrop it spreads onto
+    // and a half-transparent subject would come back opaque.
+    fragColor = vec4(premultiplied.rgb * (excess * uniforms.uIntensity), 0.0);
 }

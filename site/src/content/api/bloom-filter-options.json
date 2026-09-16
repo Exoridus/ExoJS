@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Halvings between the input and the blurred level, 1..5. Raising it widens the soft base of the glow and makes the blur cheaper; lowering it keeps the glow tighter around the highlight. Default 3."
+          "description": "Halvings between the input and the level the blur runs on, 1..5. A cost knob rather than a shape knob: the same strength covers the same distance at every setting, and raising it buys that distance at a quarter of the fill rate per level. What it does change is the base of the glow, which gets softer and coarser as the blur runs on fewer texels. A node too small to take every halving takes as many as it can. Default 3."
         },
         {
           "name": "quality",

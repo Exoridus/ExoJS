@@ -1,6 +1,6 @@
 {
   "title": "BloomFilter",
-  "description": "A Filter that adds a soft glow around the bright parts of its input - bloom, in the engine's ordinary sRGB path. Pixels whose luminance passes threshold are extracted through a soft knee, spread over a chain of levels half-resolution targets, blurred by strength, and added back on top of the unchanged input. Only the EXCESS over the threshold glows, so a scene keeps its own colours instead of washing out. ```ts // A glow around the lamps, leaving everything below 70% luminance alone. world.filters = [new BloomFilter({ threshold: 0.7, intensity: 1.4, strength: 12 })]; ``` The glow reaches `strength * 3` logical units outside its input - the blur's truncation point - plus the spread the halving chain adds on its own, so a subject at rest keeps the room its glow needs. ## Range There is no HDR anywhere in the chain: the input, every intermediate and the result are eight-bit sRGB. The extraction keeps headroom for an intensity of roughly `1 / (1 - threshold)` before the glow saturates to white, which is where the effect stops getting brighter and starts getting flatter. Grading belongs to LutFilter, before or after this one. Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one.",
+  "description": "A Filter that adds a soft glow around the bright parts of its input - bloom, in the engine's ordinary sRGB path. Pixels whose luminance passes threshold are extracted through a soft knee, carried down a chain of levels halvings, blurred by strength on the smallest of them, carried back up, and added on top of the unchanged input. Only the EXCESS over the threshold glows, so a scene keeps its own colours instead of washing out. The glow is added LIGHT: it carries no alpha of its own, so it brightens whatever it spreads onto and never darkens it, and a half-transparent subject keeps exactly the alpha it came in with. ```ts // A glow around the lamps, leaving everything below 70% luminance alone. world.filters = [new BloomFilter({ threshold: 0.7, intensity: 1.4, strength: 12 })]; ``` The glow reaches `strength * 3` logical units outside its input - the blur's truncation point - plus the spread the halving chain adds on its own, so a subject at rest keeps the room its glow needs. ## Range There is no HDR anywhere in the chain: the input, every intermediate and the result are eight-bit sRGB. The extraction keeps headroom for an intensity of roughly `1 / (1 - threshold)` before the glow saturates to white, which is where the effect stops getting brighter and starts getting flatter. Grading belongs to LutFilter, before or after this one. Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one.",
   "symbol": "BloomFilter",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "A Filter that adds a soft glow around the bright parts of its input - bloom, in the engine's ordinary sRGB path.",
-        "Pixels whose luminance passes threshold are extracted through a soft knee, spread over a chain of levels half-resolution targets, blurred by strength, and added back on top of the unchanged input. Only the EXCESS over the threshold glows, so a scene keeps its own colours instead of washing out.",
+        "Pixels whose luminance passes threshold are extracted through a soft knee, carried down a chain of levels halvings, blurred by strength on the smallest of them, carried back up, and added on top of the unchanged input. Only the EXCESS over the threshold glows, so a scene keeps its own colours instead of washing out.",
+        "The glow is added LIGHT: it carries no alpha of its own, so it brightens whatever it spreads onto and never darkens it, and a half-transparent subject keeps exactly the alpha it came in with.",
         "```ts // A glow around the lamps, leaving everything below 70% luminance alone. world.filters = [new BloomFilter({ threshold: 0.7, intensity: 1.4, strength: 12 })]; ```",
         "The glow reaches `strength * 3` logical units outside its input - the blur's truncation point - plus the spread the halving chain adds on its own, so a subject at rest keeps the room its glow needs.",
         "## Range",
@@ -295,7 +296,7 @@
             }
           ],
           "returnType": "void",
-          "description": "The blur's own truncated reach, plus what the halving chain spreads by itself: each bilinear halving pulls light one texel further and the upsample walks the same distance back, which lands inside 2^levels logical units at a resolution of one - the widest case, since a higher resolution only makes those texels smaller."
+          "description": "The blur's own truncated reach, plus what the halving chain spreads by itself: each bilinear halving pulls light one texel further and the upsample walks the same distance back, which lands inside 2^levels TEXELS of the pass target. Those texels are logical units only at a resolution of one. A declared resolution BELOW one makes each of them cover more than a logical unit, so a reach stated in logical units has to grow to match or the halo is cut off at the capture edge. 'inherit' is treated as one: the surface it inherits from is at least that, and assuming less would only over-declare."
         },
         {
           "name": "invalidate",
@@ -396,7 +397,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Halvings between the input and the blurred level, 1..5."
+          "description": "Halvings between the input and the level the blur runs on, 1..5. A cost knob."
         },
         {
           "name": "quality",

@@ -15,6 +15,29 @@ describe('BloomFilter bounds', () => {
     filter.destroy();
   });
 
+  test('a resolution below one texel per unit widens the reach the chain needs', () => {
+    const filter = new BloomFilter({ strength: 4, levels: 3 });
+    const output = new Rectangle();
+
+    filter.resolution = 0.5;
+    filter.getOutputBounds(new Rectangle(0, 0, 10, 10), output);
+
+    // 12 for the Gaussian, and the chain's 8 texels are two logical units each.
+    expect([output.x, output.y, output.width, output.height]).toEqual([-28, -28, 66, 66]);
+    filter.destroy();
+  });
+
+  test('a resolution above one does not shrink it - the chain still spans whole units', () => {
+    const filter = new BloomFilter({ strength: 4, levels: 3 });
+    const output = new Rectangle();
+
+    filter.resolution = 2;
+    filter.getOutputBounds(new Rectangle(0, 0, 10, 10), output);
+
+    expect([output.x, output.y, output.width, output.height]).toEqual([-20, -20, 50, 50]);
+    filter.destroy();
+  });
+
   test('a glow without blur still reaches as far as its chain', () => {
     const filter = new BloomFilter({ strength: 0, levels: 1 });
     const output = new Rectangle();
