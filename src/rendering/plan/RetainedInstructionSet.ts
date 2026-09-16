@@ -299,7 +299,6 @@ export class RetainedInstructionSet {
  * Structural-flag convention, as with {@link SharedTransformRenderer}: the
  * engine reads the members off the renderer instance and treats an absent one
  * as the conservative answer.
- * @internal
  */
 export interface RetainedBatchCapableRenderer {
   readonly supportsRetainedBatches?: boolean;
