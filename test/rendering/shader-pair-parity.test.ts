@@ -14,6 +14,7 @@
  * checks that they agree on the interface the renderer binds against, which is
  * where silent drift produces a wrong-looking or outright broken second backend.
  */
+import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
 import { displacementShader } from '#rendering/filters/DisplacementFilter';
@@ -27,6 +28,7 @@ import type { AnyShader } from '#rendering/shader/Shader';
 
 const pairs: ReadonlyArray<{ readonly name: string; readonly source: AnyShader; readonly fragment: string }> = [
   { name: 'BlurFilter', source: blurShader, fragment: 'blur.frag' },
+  { name: 'BloomFilter', source: bloomThresholdShader, fragment: 'bloom-threshold.frag' },
   { name: 'ColorMatrixFilter', source: colorMatrixShader, fragment: 'color-matrix.frag' },
   { name: "LutFilter 'rgb1d'", source: lutRgb1dShaderSource, fragment: 'lut-rgb1d.frag' },
   { name: "LutFilter '3d'", source: lut3dShaderSource, fragment: 'lut-3d.frag' },

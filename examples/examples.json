@@ -392,6 +392,16 @@
       "level": "intro"
     },
     {
+      "slug": "bloom-filter",
+      "path": "filters/bloom-filter.js",
+      "language": "typescript",
+      "title": "Bloom Filter",
+      "description": "Add a soft glow to the bright parts of a scene with BloomFilter — sliders drive the luminance threshold, the intensity, how far the glow spreads and how many halvings it takes.",
+      "backend": "core",
+      "tags": ["fx", "bloom", "filter"],
+      "level": "intro"
+    },
+    {
       "slug": "blur-filter",
       "path": "filters/blur-filter.js",
       "language": "typescript",

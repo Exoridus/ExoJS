@@ -106,6 +106,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "BitmapText: class",
   "BitmapTextOptions: interface",
   "BlendModes: enum",
+  "BloomFilter: class",
+  "BloomFilterOptions: interface",
   "BlurFilter: class",
   "BlurFilterOptions: interface",
   "BmFont: class",

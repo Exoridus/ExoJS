@@ -110,6 +110,30 @@ orb.filters = [glow];
 
 All lengths are logical units, so the shadow keeps its on-screen size at every pixel ratio and filter resolution, and the filter declares the extra reach it needs through `getOutputBounds`, so a shadow is never clipped by the sprite's own bounds. Every setter (`offsetX`, `offsetY`, `blur`, `quality`, `color`, `shadowOnly`) invalidates, so the shadow can be animated.
 
+## BloomFilter
+
+A soft glow around the bright parts of the image. Pixels whose Rec. 709 luminance passes `threshold` are extracted through a soft knee, carried down a chain of `levels` halvings, blurred by `strength` on the smallest of them, carried back up, and added on top of the unchanged input:
+
+```ts
+import { BloomFilter, Container } from '@codexo/exojs';
+
+declare const world: Container;
+
+const bloom = new BloomFilter({ threshold: 0.7, intensity: 1.4, strength: 12 });
+world.filters = [bloom];
+
+// Live - every setter invalidates, so the glow can be animated or tuned
+bloom.intensity = 2;
+```
+
+Only the *excess* over the threshold glows, not the whole pixel, so a scene keeps its own colours instead of washing out. The soft knee puts `threshold` in the middle of the transition rather than at a hard cut, which is why light a little below it still contributes a little glow.
+
+The glow is added **light**, not coverage: it carries no alpha of its own. A halo spreading onto the scene behind it can only brighten that scene, never dim it, and a half-transparent subject comes back with exactly the alpha it went in with — which is what lets a glowing sprite stay a fade target.
+
+`strength` is the Gaussian standard deviation in logical units, exactly as `BlurFilter` defines it. `levels` is purely a cost knob: the same `strength` covers the same distance at every setting, and each halving buys that distance at a quarter of the fill rate, at the price of a softer and coarser base as the blur runs on fewer texels. A node too small to take every halving takes as many as it can. The filter declares the reach it needs — `strength * 3` for the blur plus what the halving chain spreads on its own — so a glow is never clipped by the subject's own bounds.
+
+Everything in the chain is eight-bit sRGB; there is no HDR and no tone mapping. The extraction leaves headroom for an `intensity` of roughly `1 / (1 - threshold)` before the glow saturates to white, past which the effect stops getting brighter and starts getting flatter. Colour grading is [`LutFilter`](#lutfilter)'s job, before or after this one.
+
 ## LutFilter
 
 Maps every pixel through a Look-Up Table texture. Two modes:
@@ -284,6 +308,11 @@ The next chapter, [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shad
 <ExamplePreview chapter="filters" slug="blur-filter" />
 
 A single `BlurFilter` with an interactive strength slider — the basic filter pattern.
+
+<a id="bloom-filter"></a>
+<ExamplePreview chapter="filters" slug="bloom-filter" />
+
+Six discs of rising luminance under one `BloomFilter`, with live threshold, intensity, strength and level sliders.
 
 <a id="filter-stack"></a>
 <ExamplePreview chapter="filters" slug="filter-stack" />

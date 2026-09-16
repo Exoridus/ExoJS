@@ -48,6 +48,8 @@ export {
 } from './types';
 export type { ViewFollowOptions, ViewFollowTarget, ViewOptions, ViewShakeOptions } from './View';
 export { View } from './View';
+export type { BloomFilterOptions } from '#rendering/filters/BloomFilter';
+export { BloomFilter } from '#rendering/filters/BloomFilter';
 export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';
 export { BlurFilter } from '#rendering/filters/BlurFilter';
 export type { ColorMatrixEntries } from '#rendering/filters/ColorMatrixFilter';
