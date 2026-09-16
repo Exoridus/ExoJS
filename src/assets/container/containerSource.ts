@@ -1,5 +1,6 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { AssetNetworkError } from '#assets/AssetNetworkError';
+import { logger } from '#core/Logger';
 
 import { CONTAINER_HEADER_SIZE, containerHeadLength } from './assetContainer';
 
@@ -132,6 +133,18 @@ export const openContainerSource = async (url: string, init?: RequestInit): Prom
   const body = await probe.arrayBuffer();
 
   if (probe.status !== 206 || !addressableByOffset(probe)) {
+    if (__DEV__) {
+      const reason =
+        probe.status !== 206
+          ? 'the server answered the byte-range request with the whole file'
+          : 'the response is content-encoded, so its byte offsets address the encoded stream';
+
+      logger.warn(
+        `"${url}" is read whole because ${reason}. Block-wise loading needs byte ranges (Accept-Ranges: bytes, 206) on an uncompressed response; until the server provides them every load fetches the entire pack.`,
+        { source: 'Loader' },
+      );
+    }
+
     // The whole file, either because the server sent it or because its offsets
     // cannot be trusted. Both end at the same place: read from memory.
     return { source: bufferContainerSource(body), headPrefix: body };
