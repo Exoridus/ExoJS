@@ -55,8 +55,6 @@ export interface DrawCommand {
  * Declare `false` only when the renderer's vertex stage never reads the shared
  * rows. A renderer that carries `TRANSFORM_TEXTURE_GLSL_INCLUDE` reads them and
  * must leave this unset.
- *
- * @internal
  */
 export interface SharedTransformRenderer {
   readonly consumesSharedTransform?: boolean;
