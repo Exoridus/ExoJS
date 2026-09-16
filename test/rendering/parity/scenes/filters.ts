@@ -20,9 +20,14 @@
  * up, a separable blur at the smallest level and an additive composite, and it
  * is the AGREEMENT of that sequence that matters: the two backends store a
  * render texture the other way up and resolve a scaled sprite through their own
- * samplers, so a chain that is bit-equal end to end says both walked it
- * identically. Its halo also carries no alpha, which makes the scene the one
- * place the matrix compares a target holding colour where there is no coverage.
+ * samplers, so a chain that agrees end to end says both walked it identically.
+ * On a discrete GPU the two are bit-equal; the software rasterizer's bilinear
+ * filter rounds the half-resolution blits a step apart between its GL and
+ * Dawn paths, which is a property of that adapter and not of the chain, so the
+ * scene declares a narrow tolerance instead of claiming bit-exactness it can
+ * only show on hardware. Its halo also carries no alpha, which makes the scene
+ * the one place the matrix compares a target holding colour where there is no
+ * coverage.
  */
 
 import { Color } from '#core/Color';
@@ -74,6 +79,10 @@ export const filterScenes: readonly Scene[] = [
     size: CANVAS,
     fixture: 'opaque-solid',
     nearestSampled: false,
+    // Delta 2 on at least one channel was measured on the software rasterizer
+    // with 0 on a discrete GPU; the glow covers most of the frame, so the
+    // pixel bound is set by the halo's extent rather than by a sparse rim.
+    crossBackendTolerance: { delta: 4, maxPixelFraction: 0.6 },
     build: () => {
       const root = new Container();
 
