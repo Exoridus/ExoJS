@@ -28,6 +28,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, extname, join, resolve } from 'node:path';
 
 import { isProfileSlug, SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS } from '../packages/exojs-bench/src/profile/schema.ts';
+import { scenariosFor } from '../packages/exojs-bench/src/suite/catalog.ts';
 import { computeProfileSignature, PROFILE_SIGNATURE_ALGORITHM } from '../packages/exojs-bench/src/profile/signature.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
@@ -207,6 +208,46 @@ const CELL_FIELDS = ['competitor', 'referenceMs', 'competitorMs', 'verdict', 'ti
  * qualification - which reads exactly like a document that was never meant to.
  */
 const ROW_FIELDS_SINCE = 7;
+
+/**
+ * Cells the `reference` plan selects for one domain, as `archetype/loadId`.
+ */
+const referencePlanOf = (domain: 'rendering' | 'physics'): ReadonlySet<string> =>
+  new Set(scenariosFor(domain).flatMap(scenario => scenario.loads.filter(load => load.reference).map(load => `${scenario.scenarioId}/${load.loadId}`)));
+
+/**
+ * A published profile has to be a `reference` run. The `full` suite adds the
+ * development rungs and the ExoJS-internal probes, whose competitor arms render
+ * some other scene - publishing them would put a comparison on the page that was
+ * never one. Nothing else in this gate can tell the two suites apart: both carry
+ * the same shape, the same provenance and a signature that recomputes, because
+ * both were measured rather than typed.
+ *
+ * Only the extra rows fail. A profile may hold fewer cells than the plan - an arm
+ * that refused a scenario leaves a gap, and that is a measurement outcome.
+ */
+const checkReferencePlan = (domain: 'rendering' | 'physics', section: unknown, where: string, problems: string[]): void => {
+  const rows = isRecord(section) ? section['rows'] : undefined;
+
+  if (!Array.isArray(rows)) return;
+
+  const plan = referencePlanOf(domain);
+
+  for (const [index, row] of rows.entries()) {
+    if (!isRecord(row)) continue;
+
+    const archetype = row['archetype'];
+    const loadId = row['loadId'];
+
+    if (typeof archetype !== 'string' || typeof loadId !== 'string') continue;
+
+    if (!plan.has(`${archetype}/${loadId}`)) {
+      problems.push(
+        `${where}.rows[${String(index)}] publishes '${archetype}/${loadId}', which the reference plan does not select - this looks like a 'full' run`,
+      );
+    }
+  }
+};
 
 /** Every row and cell of one published section carries the fields its schema version promises. */
 const checkModelRows = (section: unknown, where: string, problems: string[]): void => {
@@ -405,7 +446,10 @@ const checkProfile = (path: string): string[] => {
           const sections = isRecord(block) ? block['sections'] : undefined;
 
           for (const [sectionIndex, section] of (Array.isArray(sections) ? sections : []).entries()) {
-            checkModelRows(section, `rendering.backends[${String(index)}].sections[${String(sectionIndex)}]`, problems);
+            const sectionWhere = `rendering.backends[${String(index)}].sections[${String(sectionIndex)}]`;
+
+            checkModelRows(section, sectionWhere, problems);
+            checkReferencePlan('rendering', section, sectionWhere, problems);
           }
         }
       }
@@ -436,6 +480,7 @@ const checkProfile = (path: string): string[] => {
         problems.push('physics.section is missing');
       } else if (version >= ROW_FIELDS_SINCE) {
         checkModelRows(physics['section'], 'physics.section', problems);
+        checkReferencePlan('physics', physics['section'], 'physics.section', problems);
       }
 
       armVersions.push(...checkLibraries(physics, 'physics', problems));

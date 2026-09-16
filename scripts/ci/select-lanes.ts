@@ -34,6 +34,7 @@ export interface LaneAreas {
   benchStructural: boolean;
   release: boolean;
   guides: boolean;
+  siteData: boolean;
   createExoApp: boolean;
 }
 
@@ -260,6 +261,41 @@ const isBenchStructuralPath = (file: string): boolean => {
 const isGuidesPath = (file: string): boolean => file.startsWith('site/src/content/');
 
 /**
+ * Site-data area: the sources the remaining `test/site/**` suites read. Same
+ * reasoning as `isGuidesPath` - those suites live under `test/`, so they run on
+ * every engine change and would otherwise never run on the change they exist to
+ * check.
+ *
+ *   - `site/src/lib/`                    every site suite that is not a guide
+ *                                        suite imports from here (bench cards
+ *                                        and profiles, playground navigation,
+ *                                        URL state, the example catalog, source
+ *                                        snippets, footgun diagnostics).
+ *   - `examples/`                        the catalog sources and their generated
+ *                                        twins, which `examples-sync`,
+ *                                        `runtime-dts` and `assets-global-dts`
+ *                                        read directly.
+ *   - `packages/exojs-bench/results/`    the committed profiles, which
+ *                                        `site/src/lib/bench-profiles` globs and
+ *                                        three suites validate. The bench
+ *                                        package is not a runtime package and
+ *                                        the structural gate covers only `src/`,
+ *                                        `test/` and `baselines/`, so a
+ *                                        profile-only commit reaches no other
+ *                                        area that runs a test.
+ *
+ * Deliberately not `site/src/pages/` or `site/src/components/`: no suite reads
+ * them, and the site build already gates on the wider `site` area.
+ */
+const isSiteDataPath = (file: string): boolean => {
+  if (isDocPath(file)) return false;
+  if (file.startsWith('site/src/lib/')) return true;
+  if (file.startsWith('examples/')) return true;
+  if (file.startsWith('packages/exojs-bench/results/')) return true;
+  return false;
+};
+
+/**
  * create-exo-app area: the scaffolding CLI is a standalone package with no
  * engine or browser impact, so it is deliberately outside `RUNTIME_PACKAGES`
  * and outside `engine`. Gates its own verify script instead.
@@ -294,6 +330,7 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let benchStructural = false;
   let release = false;
   let guides = false;
+  let siteData = false;
   let createExoApp = false;
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
@@ -307,10 +344,11 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
     if (!benchStructural && isBenchStructuralPath(file)) benchStructural = true;
     if (!release && isReleasePath(file)) release = true;
     if (!guides && isGuidesPath(file)) guides = true;
+    if (!siteData && isSiteDataPath(file)) siteData = true;
     if (!createExoApp && isCreateExoAppPath(file)) createExoApp = true;
-    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural && release && guides && createExoApp) break;
+    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural && release && guides && siteData && createExoApp) break;
   }
-  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, createExoApp };
+  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, siteData, createExoApp };
 };
 
 /**
@@ -328,16 +366,17 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
  *   - bench-structural-gate gates on `benchStructural` (rendering source, the
  *     bench harness, or the committed counter baseline);
  *   - the unit lane also gates on `guides` (guide content under
- *     `site/src/content/**`, which the `test/site/guide-*` suites validate);
+ *     `site/src/content/**`, which the `test/site/guide-*` suites validate) and
+ *     on `siteData` (the sources the remaining `test/site/**` suites read);
  *   - create-exo-app-verify gates on `createExoApp`, independent of `engine`
  *     (the scaffolder has no engine or browser impact of its own).
  */
 export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
-  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, createExoApp } = areas;
+  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, siteData, createExoApp } = areas;
   return {
     typecheck: true,
     lint: true,
-    unit: engine || guides,
+    unit: engine || guides || siteData,
     coverage: engine,
     browserWebgl2: engine,
     browserWebgpu: engine,

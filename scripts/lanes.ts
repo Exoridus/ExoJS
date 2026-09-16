@@ -62,6 +62,7 @@ const ALL_AREAS: LaneAreas = {
   benchStructural: true,
   release: true,
   guides: true,
+  siteData: true,
   createExoApp: true,
 };
 

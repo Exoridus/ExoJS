@@ -342,8 +342,11 @@ describe('CI lane selection - example-smoke lane', () => {
     expect(lanes.siteBuild).toBe(true);
     // The catalog is not engine code.
     expect(areas.engine).toBe(false);
-    expect(lanes.unit).toBe(false);
     expect(lanes.browserWebgl2).toBe(false);
+    // It IS site data: `examples-sync` fails a `.ts` edit whose generated `.js`
+    // twin was not regenerated, and that suite runs in the unit lane.
+    expect(areas.siteData).toBe(true);
+    expect(lanes.unit).toBe(true);
   });
 
   it('the generated `.js` twin and the catalog manifest run the lane too', () => {
@@ -476,5 +479,46 @@ describe('CI lane selection - bench structural gate', () => {
 
   it('a workflow change revalidates it, since a workflow edit can alter any lane', () => {
     expect(decide('.github/workflows/ci.yml').lanes.benchStructural).toBe(true);
+  });
+});
+
+describe('CI lane selection — site data gates the unit lane', () => {
+  it('a committed bench profile runs the unit lane that validates it', () => {
+    const { areas, lanes } = decide('packages/exojs-bench/results/rtx-5070-ti-windows-11-chromium.json');
+    expect(areas.siteData).toBe(true);
+    expect(areas.engine).toBe(false);
+    expect(areas.benchStructural).toBe(false);
+    expect(lanes.unit).toBe(true);
+    expect(lanes.coverage).toBe(false);
+    expect(lanes.packageVerify).toBe(false);
+    expect(lanes.browserWebgl2).toBe(false);
+  });
+
+  it('a site library change runs the unit lane, without pulling in the rest of engine', () => {
+    const { areas, lanes } = decide('site/src/lib/bench-cards.ts');
+    expect(areas.siteData).toBe(true);
+    expect(areas.engine).toBe(false);
+    expect(lanes.unit).toBe(true);
+    expect(lanes.browserWebgl2).toBe(false);
+  });
+
+  it('an example source change runs the unit lane alongside the smoke', () => {
+    const { areas, lanes } = decide('examples/rendering/sprites/basic.ts');
+    expect(areas.siteData).toBe(true);
+    expect(lanes.unit).toBe(true);
+    expect(lanes.exampleSmoke).toBe(true);
+  });
+
+  it('site pages and components stay out of the area: no suite reads them', () => {
+    const { areas, lanes } = decide('site/src/pages/index.astro', 'site/src/components/Nav.astro');
+    expect(areas.siteData).toBe(false);
+    expect(lanes.unit).toBe(false);
+    expect(lanes.siteBuild).toBe(true);
+  });
+
+  it('a bench package README stays prose: no unit lane', () => {
+    const { areas, lanes } = decide('packages/exojs-bench/README.md');
+    expect(areas.siteData).toBe(false);
+    expect(lanes.unit).toBe(false);
   });
 });
