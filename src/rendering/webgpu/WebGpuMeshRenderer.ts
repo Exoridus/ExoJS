@@ -5,6 +5,7 @@ import { packAffineMat3Std140 } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMaterial } from '#rendering/material/Material';
+import { drawWritesDepth } from '#rendering/material/MeshMaterial';
 import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 import { createIndexArray, meshIndexBytes } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -29,7 +30,7 @@ import type {
 import meshShaderSourceModule from './shaders/mesh.wgsl';
 import instancedMeshShaderSourceModule from './shaders/mesh-instanced.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { stencilContentDepthStencilState } from './stencilState';
+import { contentDepthStencilState } from './stencilState';
 import {
   addUserUniformBuffersInPass,
   applyUserUniformUpload,
@@ -99,18 +100,48 @@ interface MeshDrawCall {
   customDrawIndex: number; // index within the per-shader custom queue, -1 for default
 }
 
+/**
+ * How a pipeline relates to the depth aspect of the pass it runs in.
+ *
+ * A pipeline may only be used in a pass whose depth/stencil attachment matches
+ * its own declaration, so this is a cache dimension rather than a per-draw
+ * switch.
+ */
+const enum MeshDepthMode {
+  /** No depth attachment in the pass (unless a stencil clip adds one). */
+  None = 0,
+  /** The pass carries the target's depth attachment; this draw leaves it alone. */
+  Present = 1,
+  /** The pass carries it and this draw writes its window-space z into it. */
+  Write = 2,
+}
+
+/**
+ * The depth variant a draw needs: none unless the pass carries the target's
+ * depth attachment, and `Write` only for the draws that asked for it.
+ */
+const meshDepthMode = (attachmentPresent: boolean, writes: boolean): MeshDepthMode => {
+  if (!attachmentPresent) {
+    return MeshDepthMode.None;
+  }
+
+  return writes ? MeshDepthMode.Write : MeshDepthMode.Present;
+};
+
 interface MeshPipelineKey {
   readonly blendMode: BlendModes;
   readonly format: GPUTextureFormat;
   // Stencil-enabled variant: carries the depth/stencil state matching the
   // attachment the coordinator adds while a geometric clip is active.
   readonly stencil: boolean;
+  readonly depth: MeshDepthMode;
 }
 
 interface InstancedPipelineKey {
   readonly blendMode: BlendModes;
   readonly format: GPUTextureFormat;
   readonly stencil: boolean;
+  readonly depth: MeshDepthMode;
 }
 
 /**
@@ -138,7 +169,8 @@ const instanceAttributeBufferLayout = (instances: InstanceDataView): GPUVertexBu
   })),
 });
 
-const meshPipelineCacheKey = (blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): string => `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+const meshPipelineCacheKey = (blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean, depth: MeshDepthMode = MeshDepthMode.None): string =>
+  `${blendMode}:${format}:${stencil ? 's' : 'n'}:${depth}`;
 
 interface GeometryCacheEntry {
   readonly geometry: Geometry;
@@ -481,6 +513,38 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const coordinator = backend.passCoordinator;
     const material = mesh.material;
+    const writesDepth = drawWritesDepth(material, backend.renderTarget);
+
+    // Before the pass is acquired below: a depth attachment cannot be added to a
+    // pass already open, so the switch ends it and the batch draws into a fresh
+    // one.
+    if (writesDepth) {
+      coordinator.beginDepthWrites();
+    }
+
+    try {
+      this._drawInstancedBatchInPass(mesh, startNodeIndex, count, instances, backend, device, coordinator, writesDepth);
+    } finally {
+      // The depth aspect closes with the batch that asked for it: every other
+      // renderer's pipelines are built for a pass without one, so a throw that
+      // left it open would break the next unrelated flush rather than this one.
+      if (writesDepth) {
+        coordinator.endDepthWrites();
+      }
+    }
+  }
+
+  private _drawInstancedBatchInPass(
+    mesh: Mesh,
+    startNodeIndex: number,
+    count: number,
+    instances: InstanceDataView | null,
+    backend: WebGpuBackend,
+    device: GPUDevice,
+    coordinator: WebGpuBackend['passCoordinator'],
+    writesDepth: boolean,
+  ): void {
+    const material = mesh.material;
     const texture = mesh.texture ?? TextureClass.white;
     const premultiplySample = backend.shouldPremultiplyTextureSample(texture);
     const resources = material === null ? null : this._getOrCreateCustomShaderResources(material);
@@ -559,13 +623,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const attributeByteOffset = attributeBytes > 0 ? this._uploadInstanceAttributes(instances!, attributeBytes) : 0;
     const renderTargetFormat = backend.renderTargetFormat;
     const stencil = coordinator.stencilActive;
+    const depth = meshDepthMode(coordinator.depthWritesActive, writesDepth);
     // The material owns its blend mode; the mesh's own overrides it when set
     // away from the default - same rule as the node and WebGL2 batch paths.
     const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
     const pass = active.pass;
 
     if (resources === null) {
-      pass.setPipeline(this._getInstancedPipeline({ blendMode, format: renderTargetFormat, stencil }));
+      pass.setPipeline(this._getInstancedPipeline({ blendMode, format: renderTargetFormat, stencil, depth }));
       pass.setBindGroup(1, this._getTextureBindGroup(backend, texture));
     } else {
       // Planned before the pass was settled; writes only when the material's
@@ -573,7 +638,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       applyUserUniformUpload(material!, resources, device);
       addUserUniformBuffersInPass(resources.userUniform, this._instancedBatchUniformBuffersInPass);
 
-      pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, blendMode, renderTargetFormat, stencil, instances));
+      pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, blendMode, renderTargetFormat, stencil, instances, depth));
       pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, texture, material!.sampler));
       pass.setBindGroup(2, this._getUserBindGroup(backend, material!, resources));
     }
@@ -881,209 +946,237 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       coordinator.endPass();
     }
 
-    // Phase 5: single render pass with one drawIndexed per mesh, switching
-    // pipeline+bind groups between default and custom paths as needed. The
-    // coordinator owns the GPU pass (load/clear resolution, pass count and
-    // scissor are applied there); it stays OPEN afterwards so a following
-    // sprite/text flush merges into the same submit.
-    const active = coordinator.acquirePass();
-    const pass = active.pass;
+    // Decided for the flush as a whole, not per draw: one pass either carries a
+    // depth attachment or it does not, and the draws below share a pass. Every
+    // pipeline recorded into it therefore declares depth/stencil state, whether
+    // that particular draw writes depth or not.
+    const depthPass = this._pendingWritesDepth(backend);
 
-    const renderTargetFormat = backend.renderTargetFormat;
-    // A clip scope flushes the active renderer on push/pop, so every draw call
-    // in this batch shares one stencil state - read it once. While active, the
-    // coordinator's pass carries a depth/stencil attachment, so the default,
-    // static-batch, and custom-material pipelines must all select their
-    // stencil-enabled variants to match it.
-    const stencil = backend.passCoordinator.stencilActive;
+    if (depthPass) {
+      coordinator.beginDepthWrites();
+    }
 
-    let lastShader: AnyMaterial | 'default' | 'instanced' | null = null;
-    let lastBlendMode: BlendModes | null = null;
-    let lastFormat: GPUTextureFormat | null = null;
-    let lastTexture: Texture | RenderTexture | null = null;
-    let defaultDrawCursor = 0;
-    let instancedDrawCursor = 0;
-    const customDrawCursors = new Map<AnyMaterial, number>();
+    try {
+      // Phase 5: single render pass with one drawIndexed per mesh, switching
+      // pipeline+bind groups between default and custom paths as needed. The
+      // coordinator owns the GPU pass (load/clear resolution, pass count and
+      // scissor are applied there); it stays OPEN afterwards so a following
+      // sprite/text flush merges into the same submit.
+      const active = coordinator.acquirePass();
+      const pass = active.pass;
 
-    for (let i = 0; i < this._drawCallCount; i++) {
-      // i < _drawCallCount, and slots 0.._drawCallCount-1 are always populated.
-      const dc = this._drawCalls[i]!;
+      const renderTargetFormat = backend.renderTargetFormat;
+      // A clip scope flushes the active renderer on push/pop, so every draw call
+      // in this batch shares one stencil state - read it once. While active, the
+      // coordinator's pass carries a depth/stencil attachment, so the default,
+      // static-batch, and custom-material pipelines must all select their
+      // stencil-enabled variants to match it.
+      const stencil = backend.passCoordinator.stencilActive;
+      const passDepth = depthPass ? MeshDepthMode.Present : MeshDepthMode.None;
 
-      if (dc.customShader === null) {
-        const batchLength = this._getStaticBatchLength(i);
+      let lastShader: AnyMaterial | 'default' | 'instanced' | null = null;
+      let lastBlendMode: BlendModes | null = null;
+      let lastFormat: GPUTextureFormat | null = null;
+      let lastTexture: Texture | RenderTexture | null = null;
+      let defaultDrawCursor = 0;
+      let instancedDrawCursor = 0;
+      const customDrawCursors = new Map<AnyMaterial, number>();
 
-        if (batchLength >= 2) {
-          const needsPipeline = lastShader !== 'instanced' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
+      for (let i = 0; i < this._drawCallCount; i++) {
+        // i < _drawCallCount, and slots 0.._drawCallCount-1 are always populated.
+        const dc = this._drawCalls[i]!;
+
+        if (dc.customShader === null) {
+          const batchLength = this._getStaticBatchLength(i);
+
+          if (batchLength >= 2) {
+            const needsPipeline = lastShader !== 'instanced' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
+
+            if (needsPipeline) {
+              pass.setPipeline(this._getInstancedPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil, depth: passDepth }));
+              lastShader = 'instanced';
+              lastBlendMode = dc.blendMode;
+              lastFormat = renderTargetFormat;
+              lastTexture = null;
+            }
+
+            const maxNodeIndex = this._uploadInstancedNodeIndices(i, batchLength);
+            const nodeIndexByteOffset = this._instancedNodeIndexByteOffset;
+            const storage = backend.getTransformStorageBuffer(maxNodeIndex + 1);
+
+            const instancedUniformSlot = instancedUniformSlotBase + instancedDrawCursor;
+
+            this._writeInstancedUniformSlot(instancedUniformSlot, backend, dc.premultiplySample);
+            pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [
+              instancedUniformSlot * this._uniformAlignment,
+            ]);
+
+            if (dc.texture !== lastTexture) {
+              lastTexture = dc.texture;
+              pass.setBindGroup(1, this._getTextureBindGroup(backend, dc.texture));
+            }
+
+            const staticGeometry = this._getOrCreateGeometryEntry(dc.mesh);
+            const instanceNodeIndexBuffer = this._instancedNodeIndexBuffer;
+
+            if (instanceNodeIndexBuffer === null) {
+              throw new Error('Instanced node-index buffer must be initialized before drawing.');
+            }
+
+            pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
+            pass.setVertexBuffer(1, instanceNodeIndexBuffer, nodeIndexByteOffset);
+            pass.setIndexBuffer(staticGeometry.indexBuffer, staticGeometry.indexFormat);
+            pass.drawIndexed(staticGeometry.indexCount, batchLength);
+
+            backend.stats.batches++;
+            backend.stats.drawCalls++;
+
+            // Retained recording (mesh opt-in): hand this instanced flush's
+            // per-instance node-index stream + a reference to the SHARED,
+            // persistent geometry to the recorder. Geometry bytes are never
+            // copied into the group bundle - only the node-index words are
+            // group-owned. `staticGeometry` is structurally a
+            // WebGpuRetainedGeometryRef (vertexBuffer/indexBuffer/indexCount).
+            if (backend._retainedCaptureActive) {
+              this._retainedTextureScratch[0] = dc.texture;
+              backend.recordRetainedBatch(
+                this,
+                // Real ArrayBuffer: `_instancedNodeIndexData` is a plain Uint32Array.
+                this._instancedNodeIndexData.buffer as ArrayBuffer,
+                batchLength * Uint32Array.BYTES_PER_ELEMENT,
+                batchLength,
+                dc.blendMode,
+                this._retainedTextureScratch,
+                1,
+                staticGeometry,
+              );
+            }
+
+            defaultDrawCursor += batchLength;
+            instancedDrawCursor++;
+            i += batchLength - 1;
+            continue;
+          }
+
+          // ----- Default path -----
+          // A single (non-batched) mesh renders through the CPU-baked default
+          // pipeline (view * group folded into vertex positions), which is
+          // view-dependent and cannot be cached - poison any open capture so the
+          // group degrades to entry replay. Belt-and-braces (mirrors WebGL2's
+          // dynamic-single poison); the predicate admits material-less meshes.
+          if (backend._retainedCaptureActive) {
+            backend._poisonActiveRetainedCaptures();
+          }
+
+          const needsPipeline = lastShader !== 'default' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
           if (needsPipeline) {
-            pass.setPipeline(this._getInstancedPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil }));
-            lastShader = 'instanced';
+            pass.setPipeline(this._getPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil, depth: passDepth }));
+            lastShader = 'default';
             lastBlendMode = dc.blendMode;
             lastFormat = renderTargetFormat;
+            // Pipeline switch invalidates bind group state assumptions.
             lastTexture = null;
           }
 
-          const maxNodeIndex = this._uploadInstancedNodeIndices(i, batchLength);
-          const nodeIndexByteOffset = this._instancedNodeIndexByteOffset;
-          const storage = backend.getTransformStorageBuffer(maxNodeIndex + 1);
-
-          const instancedUniformSlot = instancedUniformSlotBase + instancedDrawCursor;
-
-          this._writeInstancedUniformSlot(instancedUniformSlot, backend, dc.premultiplySample);
-          pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [
-            instancedUniformSlot * this._uniformAlignment,
-          ]);
+          pass.setBindGroup(0, this._uniformBindGroup, [(uniformSlotBase + defaultDrawCursor) * this._uniformAlignment]);
 
           if (dc.texture !== lastTexture) {
             lastTexture = dc.texture;
             pass.setBindGroup(1, this._getTextureBindGroup(backend, dc.texture));
           }
 
-          const staticGeometry = this._getOrCreateGeometryEntry(dc.mesh);
-          const instanceNodeIndexBuffer = this._instancedNodeIndexBuffer;
+          pass.setVertexBuffer(0, this._vertexBuffer, vertexBase + dc.vertexByteOffset);
+          pass.setIndexBuffer(this._indexBuffer!, dc.indexFormat, indexBase + dc.indexByteOffset);
+          pass.drawIndexed(dc.indexCount);
 
-          if (instanceNodeIndexBuffer === null) {
-            throw new Error('Instanced node-index buffer must be initialized before drawing.');
-          }
-
-          pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
-          pass.setVertexBuffer(1, instanceNodeIndexBuffer, nodeIndexByteOffset);
-          pass.setIndexBuffer(staticGeometry.indexBuffer, staticGeometry.indexFormat);
-          pass.drawIndexed(staticGeometry.indexCount, batchLength);
-
-          backend.stats.batches++;
-          backend.stats.drawCalls++;
-
-          // Retained recording (mesh opt-in): hand this instanced flush's
-          // per-instance node-index stream + a reference to the SHARED,
-          // persistent geometry to the recorder. Geometry bytes are never
-          // copied into the group bundle - only the node-index words are
-          // group-owned. `staticGeometry` is structurally a
-          // WebGpuRetainedGeometryRef (vertexBuffer/indexBuffer/indexCount).
+          defaultDrawCursor++;
+        } else {
+          // ----- Custom path -----
+          // Custom-material meshes re-upload user uniforms live at flush; the
+          // recordability predicate excludes them, but poison defensively so a
+          // capture that slipped through never replays a stale, uncaptured draw.
           if (backend._retainedCaptureActive) {
-            this._retainedTextureScratch[0] = dc.texture;
-            backend.recordRetainedBatch(
-              this,
-              // Real ArrayBuffer: `_instancedNodeIndexData` is a plain Uint32Array.
-              this._instancedNodeIndexData.buffer as ArrayBuffer,
-              batchLength * Uint32Array.BYTES_PER_ELEMENT,
-              batchLength,
-              dc.blendMode,
-              this._retainedTextureScratch,
-              1,
-              staticGeometry,
-            );
+            backend._poisonActiveRetainedCaptures();
           }
 
-          defaultDrawCursor += batchLength;
-          instancedDrawCursor++;
-          i += batchLength - 1;
-          continue;
+          const resources = this._customShaders.get(dc.customShader)!;
+          const needsPipeline = lastShader !== dc.customShader || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
+
+          // Wrap each custom-shader draw in a debug group so capture tools
+          // (Spector.js, Chrome DevTools' WebGPU panel) show meaningful
+          // labels for the otherwise-anonymous mesh draws inside the
+          // batched render pass.
+          pass.pushDebugGroup('MeshMaterial (custom)');
+
+          if (needsPipeline) {
+            pass.setPipeline(
+              this._getOrCreateCustomPipeline(
+                resources,
+                dc.blendMode,
+                backend.renderTargetFormats,
+                stencil,
+                drawWritesDepth(dc.customShader, backend.renderTarget) ? MeshDepthMode.Write : passDepth,
+              ),
+            );
+            lastShader = dc.customShader;
+            lastBlendMode = dc.blendMode;
+            lastFormat = renderTargetFormat;
+            lastTexture = null;
+            // User bind group is shader-scoped; rebind once per shader switch.
+            // Reused across frames unless the UBO or a bound texture view changed.
+            pass.setBindGroup(2, this._getUserBindGroup(backend, dc.customShader, resources));
+          }
+
+          const cursor = customDrawCursors.get(dc.customShader) ?? 0;
+          pass.setBindGroup(0, resources.meshUniformBindGroup, [cursor * meshUniformAlignment]);
+
+          // This draw reads the material's user-uniform buffer for as long as the
+          // pass stays open - which it now does past the end of this flush. A
+          // later `drawInstancedBatch` with the same material consults exactly
+          // this set before writing that buffer.
+          addUserUniformBuffersInPass(resources.userUniform, this._instancedBatchUniformBuffersInPass);
+
+          if (dc.texture !== lastTexture) {
+            lastTexture = dc.texture;
+            pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, dc.texture, dc.customShader.sampler));
+          }
+
+          pass.setVertexBuffer(0, resources.vertexBuffer, dc.vertexByteOffset);
+          pass.setIndexBuffer(resources.indexBuffer!, dc.indexFormat, dc.indexByteOffset);
+          pass.drawIndexed(dc.indexCount);
+
+          pass.popDebugGroup();
+
+          customDrawCursors.set(dc.customShader, cursor + 1);
         }
 
-        // ----- Default path -----
-        // A single (non-batched) mesh renders through the CPU-baked default
-        // pipeline (view * group folded into vertex positions), which is
-        // view-dependent and cannot be cached - poison any open capture so the
-        // group degrades to entry replay. Belt-and-braces (mirrors WebGL2's
-        // dynamic-single poison); the predicate admits material-less meshes.
-        if (backend._retainedCaptureActive) {
-          backend._poisonActiveRetainedCaptures();
-        }
-
-        const needsPipeline = lastShader !== 'default' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
-
-        if (needsPipeline) {
-          pass.setPipeline(this._getPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil }));
-          lastShader = 'default';
-          lastBlendMode = dc.blendMode;
-          lastFormat = renderTargetFormat;
-          // Pipeline switch invalidates bind group state assumptions.
-          lastTexture = null;
-        }
-
-        pass.setBindGroup(0, this._uniformBindGroup, [(uniformSlotBase + defaultDrawCursor) * this._uniformAlignment]);
-
-        if (dc.texture !== lastTexture) {
-          lastTexture = dc.texture;
-          pass.setBindGroup(1, this._getTextureBindGroup(backend, dc.texture));
-        }
-
-        pass.setVertexBuffer(0, this._vertexBuffer, vertexBase + dc.vertexByteOffset);
-        pass.setIndexBuffer(this._indexBuffer!, dc.indexFormat, indexBase + dc.indexByteOffset);
-        pass.drawIndexed(dc.indexCount);
-
-        defaultDrawCursor++;
-      } else {
-        // ----- Custom path -----
-        // Custom-material meshes re-upload user uniforms live at flush; the
-        // recordability predicate excludes them, but poison defensively so a
-        // capture that slipped through never replays a stale, uncaptured draw.
-        if (backend._retainedCaptureActive) {
-          backend._poisonActiveRetainedCaptures();
-        }
-
-        const resources = this._customShaders.get(dc.customShader)!;
-        const needsPipeline = lastShader !== dc.customShader || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
-
-        // Wrap each custom-shader draw in a debug group so capture tools
-        // (Spector.js, Chrome DevTools' WebGPU panel) show meaningful
-        // labels for the otherwise-anonymous mesh draws inside the
-        // batched render pass.
-        pass.pushDebugGroup('MeshMaterial (custom)');
-
-        if (needsPipeline) {
-          pass.setPipeline(this._getOrCreateCustomPipeline(resources, dc.blendMode, backend.renderTargetFormats, stencil));
-          lastShader = dc.customShader;
-          lastBlendMode = dc.blendMode;
-          lastFormat = renderTargetFormat;
-          lastTexture = null;
-          // User bind group is shader-scoped; rebind once per shader switch.
-          // Reused across frames unless the UBO or a bound texture view changed.
-          pass.setBindGroup(2, this._getUserBindGroup(backend, dc.customShader, resources));
-        }
-
-        const cursor = customDrawCursors.get(dc.customShader) ?? 0;
-        pass.setBindGroup(0, resources.meshUniformBindGroup, [cursor * meshUniformAlignment]);
-
-        // This draw reads the material's user-uniform buffer for as long as the
-        // pass stays open - which it now does past the end of this flush. A
-        // later `drawInstancedBatch` with the same material consults exactly
-        // this set before writing that buffer.
-        addUserUniformBuffersInPass(resources.userUniform, this._instancedBatchUniformBuffersInPass);
-
-        if (dc.texture !== lastTexture) {
-          lastTexture = dc.texture;
-          pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, dc.texture, dc.customShader.sampler));
-        }
-
-        pass.setVertexBuffer(0, resources.vertexBuffer, dc.vertexByteOffset);
-        pass.setIndexBuffer(resources.indexBuffer!, dc.indexFormat, dc.indexByteOffset);
-        pass.drawIndexed(dc.indexCount);
-
-        pass.popDebugGroup();
-
-        customDrawCursors.set(dc.customShader, cursor + 1);
+        backend.stats.batches++;
+        backend.stats.drawCalls++;
       }
 
-      backend.stats.batches++;
-      backend.stats.drawCalls++;
+      // The pass stays open. Its cursors carry the flush's own consumption
+      // forward so a following `drawInstancedBatch` OR flush in the same pass
+      // appends AFTER these draws' slices instead of overwriting the bytes they
+      // read. `_instancedNodeIndexFrameBytes` was advanced per batch by
+      // `_uploadInstancedNodeIndices`; the rest is this flush's base plus what it
+      // consumed.
+      this._instancedBatchPass = active;
+      this._ownDrawsPass = active;
+      this._instancedBatchUniformSlots = instancedUniformSlotBase + instancedDrawCursor;
+      this._defaultVertexPassBytes = vertexBase + defaultVertexBytes;
+      this._defaultIndexPassBytes = indexBase + defaultIndexBytes;
+      this._defaultUniformPassSlots = uniformSlotBase + defaultDrawCalls;
+      this._instancedAttributeArena.syncPass(active);
+      coordinator.markPassDraws();
+    } finally {
+      // Restored even when a draw threw: the flag decides the shape of every
+      // pass opened afterwards, and every other renderer builds pipelines for a
+      // pass without a depth attachment.
+      if (depthPass) {
+        coordinator.endDepthWrites();
+      }
     }
-
-    // The pass stays open. Its cursors carry the flush's own consumption
-    // forward so a following `drawInstancedBatch` OR flush in the same pass
-    // appends AFTER these draws' slices instead of overwriting the bytes they
-    // read. `_instancedNodeIndexFrameBytes` was advanced per batch by
-    // `_uploadInstancedNodeIndices`; the rest is this flush's base plus what it
-    // consumed.
-    this._instancedBatchPass = active;
-    this._ownDrawsPass = active;
-    this._instancedBatchUniformSlots = instancedUniformSlotBase + instancedDrawCursor;
-    this._defaultVertexPassBytes = vertexBase + defaultVertexBytes;
-    this._defaultIndexPassBytes = indexBase + defaultIndexBytes;
-    this._defaultUniformPassSlots = uniformSlotBase + defaultDrawCalls;
-    this._instancedAttributeArena.syncPass(active);
-    coordinator.markPassDraws();
 
     this._resetFrame();
   }
@@ -1351,18 +1444,23 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   private _getPipeline(key: MeshPipelineKey): GPURenderPipeline {
-    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil);
+    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil, key.depth);
     let pipeline = this._pipelines.get(cacheKey);
 
     if (!pipeline) {
-      pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(key.blendMode, key.format, key.stencil));
+      pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(key.blendMode, key.format, key.stencil, key.depth));
       this._pipelines.set(cacheKey, pipeline);
     }
 
     return pipeline;
   }
 
-  private _buildPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+  private _buildPipelineDescriptor(
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil = false,
+    depth: MeshDepthMode = MeshDepthMode.None,
+  ): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
       label: 'mesh:render-pipeline',
       layout: this._pipelineLayout!,
@@ -1398,8 +1496,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
     }
 
     return descriptor;
@@ -1490,6 +1588,17 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
+  /** Whether any pending draw of this flush writes depth into the bound target. */
+  private _pendingWritesDepth(backend: WebGpuBackend): boolean {
+    for (let i = 0; i < this._drawCallCount; i++) {
+      if (drawWritesDepth(this._drawCalls[i]!.customShader, backend.renderTarget)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private _flushWouldMutateTexture(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._drawCallCount; i++) {
       if (backend.textureUploadWouldMutate(this._drawCalls[i]!.texture)) {
@@ -1611,8 +1720,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     format: GPUTextureFormat,
     stencil: boolean,
     instances: InstanceDataView | null,
+    depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipeline {
-    const cacheKey = `${meshPipelineCacheKey(blendMode, format, stencil)}:${instances?.layoutKey ?? ''}`;
+    const cacheKey = `${meshPipelineCacheKey(blendMode, format, stencil, depth)}:${instances?.layoutKey ?? ''}`;
     let pipeline = resources.instancedPipelines.get(cacheKey);
 
     if (pipeline !== undefined) {
@@ -1652,8 +1762,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       primitive: { topology: 'triangle-list', cullMode: 'none' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
     }
 
     pipeline = this._device!.createRenderPipeline(descriptor);
@@ -1878,7 +1988,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    pass.setPipeline(this._getInstancedPipeline({ blendMode: payload.blendMode, format: backend.renderTargetFormat, stencil: coordinator.stencilActive }));
+    pass.setPipeline(
+      this._getInstancedPipeline({
+        blendMode: payload.blendMode,
+        format: backend.renderTargetFormat,
+        stencil: coordinator.stencilActive,
+        depth: MeshDepthMode.None,
+      }),
+    );
     pass.setBindGroup(0, bindGroup, [slot * this._uniformAlignment]);
     pass.setBindGroup(1, textureBindGroup);
     pass.setVertexBuffer(0, geometry.vertexBuffer);
@@ -2004,18 +2121,23 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   private _getInstancedPipeline(key: InstancedPipelineKey): GPURenderPipeline {
-    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil);
+    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil, key.depth);
     let pipeline = this._instancedPipelines.get(cacheKey);
 
     if (!pipeline) {
-      pipeline = this._device!.createRenderPipeline(this._buildInstancedPipelineDescriptor(key.blendMode, key.format, key.stencil));
+      pipeline = this._device!.createRenderPipeline(this._buildInstancedPipelineDescriptor(key.blendMode, key.format, key.stencil, key.depth));
       this._instancedPipelines.set(cacheKey, pipeline);
     }
 
     return pipeline;
   }
 
-  private _buildInstancedPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+  private _buildInstancedPipelineDescriptor(
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil = false,
+    depth: MeshDepthMode = MeshDepthMode.None,
+  ): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
       label: 'mesh:instanced-render-pipeline',
       layout: this._instancedPipelineLayout!,
@@ -2056,8 +2178,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
     }
 
     return descriptor;
@@ -2533,6 +2655,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     blendMode: BlendModes,
     formats: readonly GPUTextureFormat[],
     stencil: boolean,
+    depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipeline {
     // The stencil dimension keeps the clip and no-clip variants distinct,
     // mirroring the default and static-batch caches: a stencil pipeline carries
@@ -2543,7 +2666,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // pipeline must declare one target per attachment of the pass it runs in, so
     // the same material in a one-attachment and a two-attachment pass needs two
     // pipelines.
-    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}`;
+    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}:${depth}`;
     let pipeline = resources.pipelines.get(cacheKey);
 
     if (pipeline === undefined) {
@@ -2580,11 +2703,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         },
       };
 
-      // While a geometric clip is active the coordinator's pass carries a
-      // depth/stencil attachment; the content pipeline must test stencil ==
-      // reference and leave depth/stencil otherwise inert to match it.
-      if (stencil) {
-        descriptor.depthStencil = stencilContentDepthStencilState();
+      // While a geometric clip is active - or while the target's own depth
+      // attachment is bound - the coordinator's pass carries a depth/stencil
+      // attachment, and the content pipeline has to declare matching state.
+      if (stencil || depth !== MeshDepthMode.None) {
+        descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
       }
 
       pipeline = this._device!.createRenderPipeline(descriptor);

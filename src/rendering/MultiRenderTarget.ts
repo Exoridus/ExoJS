@@ -12,6 +12,13 @@ export interface MultiRenderTargetOptions extends Partial<TextureOptions> {
    * the backend that will draw into it.
    */
   readonly formats: readonly ColorTextureFormat[];
+
+  /**
+   * Allocate a depth attachment for the target as a whole - one for the pass,
+   * not one per colour attachment - sampleable afterwards through
+   * {@link RenderTarget.depthTexture}. Defaults to `false`.
+   */
+  readonly depth?: boolean;
 }
 
 /**
@@ -61,9 +68,16 @@ export class MultiRenderTarget extends RenderTarget {
     assert(options.formats.length > 0, 'MultiRenderTarget needs at least one colour format.');
     super(width, height, false);
 
-    const { formats, ...textureOptions } = options;
+    // `depth` is peeled off rather than forwarded: a pass has one depth
+    // attachment, so an attachment that allocated its own would be 4 bytes per
+    // pixel nothing ever writes into.
+    const { formats, depth, ...textureOptions } = options;
 
     this.attachments = Object.freeze(formats.map(format => new RenderTexture(width, height, { ...textureOptions, format })));
+
+    if (depth === true) {
+      this._enableDepthTexture();
+    }
   }
 
   /** Colour format of each attachment, in declaration order. */

@@ -1,6 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import { type AnyMaterial, isTextureUniformValue, type UniformValue } from '#rendering/material/Material';
+import { DepthTexture } from '#rendering/texture/DepthTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -392,6 +393,7 @@ export const userUniformWriteWouldAlias = (state: UserUniformState, inPass: Read
 export const userUniformLayoutEntries = (material: AnyMaterial, textureCount: number): GPUBindGroupLayoutEntry[] => {
   const entries: GPUBindGroupLayoutEntry[] = [];
   const uniformBindings = userUniformBindingCount(material);
+  const bound = collectTextureBindings(material);
 
   for (let binding = 0; binding < uniformBindings; binding++) {
     entries.push({ binding, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } });
@@ -400,9 +402,14 @@ export const userUniformLayoutEntries = (material: AnyMaterial, textureCount: nu
   let bindingIndex = uniformBindings;
 
   for (let texture = 0; texture < textureCount; texture++) {
-    entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } });
+    // A depth attachment is neither a colour texture nor filterable: its shader
+    // binding is `texture_depth_2d`, which the layout has to declare as such, and
+    // a filtering sampler against it is a validation error.
+    const depth = bound[texture] instanceof DepthTexture;
+
+    entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: depth ? 'depth' : 'float' } });
     bindingIndex++;
-    entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } });
+    entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, sampler: { type: depth ? 'non-filtering' : 'filtering' } });
     bindingIndex++;
   }
 

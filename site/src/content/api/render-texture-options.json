@@ -1,7 +1,7 @@
 {
-  "title": "MultiRenderTargetOptions",
-  "description": "Construction options for MultiRenderTarget.",
-  "symbol": "MultiRenderTargetOptions",
+  "title": "RenderTextureOptions",
+  "description": "Construction options for RenderTexture.",
+  "symbol": "RenderTextureOptions",
   "kind": "interface",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Construction options for MultiRenderTarget."
+        "Construction options for RenderTexture."
       ],
-      "importLine": "import { MultiRenderTargetOptions } from '@codexo/exojs'",
+      "importLine": "import { RenderTextureOptions } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Allocate a depth attachment for the target as a whole - one for the pass, not one per colour attachment - sampleable afterwards through RenderTarget.depthTexture. Defaults to false."
+          "description": "Allocate a depth attachment that survives the pass and can be sampled afterwards through RenderTarget.depthTexture. Defaults to false, in which case the target has no depth of its own and RenderTarget.depthTexture is null. It costs 4 bytes per pixel and buys nothing on its own: depth is written only by a MeshMaterial that asks for it, and never tested - what is in front of what still follows from draw order."
         },
         {
           "name": "flipY",
@@ -79,37 +79,29 @@
           "description": "Whether the source content is stored bottom-up. Resolved when UVs are packed rather than by flipping pixels at upload time, so it costs nothing per frame but does invalidate geometry recorded against the old value."
         },
         {
-          "name": "formats",
-          "signature": "formats: readonly ColorTextureFormat[]",
+          "name": "format",
+          "signature": "format?: ColorTextureFormat",
           "signatureTokens": [
             {
-              "text": "formats",
+              "text": "format",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "readonly",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
               "text": "ColorTextureFormat",
               "kind": "type"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Colour format per attachment, in the order the fragment shader's outputs are declared. At least one; at most RenderBackend.maxColorAttachments on the backend that will draw into it."
+          "description": "Color attachment format. Defaults to TextureFormat.Rgba8. The float formats (TextureFormat.Rgba16F / TextureFormat.Rgba32F) allocate a floating-point offscreen target for rendering values outside [0, 1] - they require EXT_color_buffer_float at render time (throws otherwise) and default to nearest sampling. The format is immutable for the texture's lifetime."
         },
         {
           "name": "generateMipMap",
@@ -223,11 +215,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/MultiRenderTarget.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/MultiRenderTarget.ts"
+        "label": "src/rendering/texture/RenderTexture.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/RenderTexture.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/MultiRenderTarget.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/MultiRenderTarget.ts"
+  "sourcePath": "src/rendering/texture/RenderTexture.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/RenderTexture.ts"
 }

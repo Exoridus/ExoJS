@@ -20,7 +20,7 @@ import type { UniformValue } from './Material';
  * `JSON.stringify` over objects with unstable key order.
  *
  * Two key spaces:
- * - {@link derivePipelineKey}: shader identity + blend state.
+ * - {@link derivePipelineKey}: shader identity + blend state + depth writes.
  *   Drives GPU pipeline/program reuse and material grouping. Independent of
  *   the owning material instance, so identically configured materials share
  *   a pipeline key.
@@ -76,11 +76,11 @@ const isTextureBinding = (value: UniformValue): value is Texture | RenderTexture
   typeof value === 'object' && value !== null && !Array.isArray(value) && !ArrayBuffer.isView(value);
 
 /**
- * Pipeline key from shader identity and blend mode.
+ * Pipeline key from shader identity, blend mode and depth-write state.
  * @internal
  */
-export const derivePipelineKey = (shaderId: number, blendMode: BlendModes): number => {
-  const descriptor = `${shaderId}|${blendMode}`;
+export const derivePipelineKey = (shaderId: number, blendMode: BlendModes, writesDepth = false): number => {
+  const descriptor = `${shaderId}|${blendMode}|${writesDepth ? 'd' : '-'}`;
 
   return intern(pipelineKeyRegistry, descriptor, () => nextPipelineKey++);
 };

@@ -43,6 +43,7 @@ import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
 import { compressedBlockLayout, compressedBlocksAcross, compressedBlocksDown, type CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
+import { DepthTexture } from '#rendering/texture/DepthTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
@@ -61,6 +62,7 @@ import {
   type WebGpuRetainedNodeIndexRange,
 } from './retainedGroupResources';
 import mipmapWgslModule from './shaders/mipmap.wgsl';
+import { depthStencilAttachmentFormat as depthAttachmentFormat } from './stencilState';
 import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './storageLimits';
 import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuGpuTimer } from './WebGpuGpuTimer';
@@ -72,6 +74,21 @@ import { WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
 import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
+
+/**
+ * A target's own depth/stencil attachment, allocated because the target opted
+ * into a sampleable depth texture.
+ *
+ * Two views over one texture: the pass binds all aspects, a sampler can only
+ * see the depth one.
+ */
+interface ManagedDepthAttachment {
+  texture: GPUTexture;
+  attachmentView: GPUTextureView;
+  sampleView: GPUTextureView;
+  width: number;
+  height: number;
+}
 
 interface ManagedWebGpuTextureState {
   texture: GPUTexture;
@@ -217,6 +234,8 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _samplers = new Map<number, GPUSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
+  private readonly _depthAttachments: Map<RenderTarget, ManagedDepthAttachment> = new Map<RenderTarget, ManagedDepthAttachment>();
+  private readonly _depthTextureStates: Map<DepthTexture, ManagedWebGpuTextureState> = new Map<DepthTexture, ManagedWebGpuTextureState>();
   /**
    * Resolved scissor rectangles in target pixels, innermost at
    * `_clipDepth - 1`. Grow-only and reused; {@link _clipDepth}, not `length`,
@@ -1391,6 +1410,13 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     if (index === 0) {
+      if (renderTarget.depthTexture !== null) {
+        // Allocated on the first pass into the target rather than on the first
+        // depth-writing draw, so `depthTexture` is samplable after any render
+        // into the target - which is what the WebGL2 framebuffer does too.
+        this._ensureDepthAttachment(renderTarget);
+      }
+
       this._loadOpForPass = this.passCoordinator.resolveLoad(renderTarget, this._clearRequested);
       this._clearRequested = false;
 
@@ -1439,14 +1465,25 @@ export class WebGpuBackend implements RenderBackend {
 
     if (this._renderTarget === this._rootRenderTarget) {
       this._hasPresentedFrame = true;
-    } else if (this._renderTarget instanceof RenderTexture) {
-      const state = this._syncTexture(this._renderTarget);
-
-      state.hasContent = true;
-
-      if (state.mipLevelCount > 1) {
-        this._generateMipmaps(state.texture, state.mipLevelCount);
+    } else if (this._renderTarget instanceof MultiRenderTarget) {
+      // Every attachment of one target is written by the same pass, so they
+      // gain content together.
+      for (const attachment of this._renderTarget.attachments) {
+        this._markTargetContent(attachment);
       }
+    } else if (this._renderTarget instanceof RenderTexture) {
+      this._markTargetContent(this._renderTarget);
+    }
+  }
+
+  /** Book a render texture as holding this frame's content, and refresh its mips. */
+  private _markTargetContent(texture: RenderTexture): void {
+    const state = this._syncTexture(texture);
+
+    state.hasContent = true;
+
+    if (state.mipLevelCount > 1) {
+      this._generateMipmaps(state.texture, state.mipLevelCount);
     }
   }
 
@@ -1459,6 +1496,13 @@ export class WebGpuBackend implements RenderBackend {
   public _targetHasContent(target: RenderTarget): boolean {
     if (target === this._rootRenderTarget) {
       return this._hasPresentedFrame;
+    }
+
+    // A multi-attachment target has no texture of its own; its attachments are
+    // written together, so the first one answers for all of them. Without this
+    // an MRT reported "no content" on every pass, so every pass cleared it.
+    if (target instanceof MultiRenderTarget) {
+      return this._getTextureState(target.attachment(0)).hasContent;
     }
 
     if (target instanceof RenderTexture) {
@@ -2537,6 +2581,13 @@ export class WebGpuBackend implements RenderBackend {
     // lazily rebuilt against the fresh device on the next clip.
     this._passCoordinatorInstance?.destroyStencil();
 
+    // Same for the depth attachments: the handles are the dead device's, and
+    // the next bind of each target allocates a fresh one.
+    for (const target of [...this._depthAttachments.keys()]) {
+      this._depthAttachments.delete(target);
+      this._dropDepthTextureState(target);
+    }
+
     this._context?.unconfigure();
     this._context = null;
     this._device = null;
@@ -2677,6 +2728,123 @@ export class WebGpuBackend implements RenderBackend {
     for (const texture of [...this._textureStates.keys()]) {
       this._evictTexture(texture);
     }
+
+    // Depth attachments are keyed by target, not by texture, so the loop above
+    // never reaches them - and each one is a full-size GPU texture.
+    for (const target of [...this._depthAttachments.keys()]) {
+      this._releaseDepthAttachment(target);
+    }
+  }
+
+  /**
+   * The depth/stencil attachment view for a target that owns a depth texture,
+   * allocated (or re-allocated after a resize) on demand.
+   * @internal
+   */
+  public _getDepthAttachmentView(target: RenderTarget): GPUTextureView {
+    return this._ensureDepthAttachment(target).attachmentView;
+  }
+
+  private _ensureDepthAttachment(target: RenderTarget): ManagedDepthAttachment {
+    const { width, height } = this._getAttachmentPixelSize(target);
+    const safeWidth = Math.max(1, width);
+    const safeHeight = Math.max(1, height);
+    const existing = this._depthAttachments.get(target);
+
+    if (existing !== undefined) {
+      if (existing.width === safeWidth && existing.height === safeHeight) {
+        return existing;
+      }
+
+      existing.texture.destroy();
+      this._depthAttachments.delete(target);
+      this._dropDepthTextureState(target);
+    }
+
+    const texture = this.device.createTexture({
+      label: 'backend:depth-attachment',
+      size: { width: safeWidth, height: safeHeight },
+      format: depthAttachmentFormat,
+      // TEXTURE_BINDING is the whole point of the opt-in; without it the
+      // attachment works and cannot be read back.
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    const attachment: ManagedDepthAttachment = {
+      texture,
+      attachmentView: texture.createView(),
+      // A combined depth/stencil texture is only ever sampleable one aspect at
+      // a time, and the stencil half is the clip bookkeeping, not data.
+      sampleView: texture.createView({ aspect: 'depth-only' }),
+      width: safeWidth,
+      height: safeHeight,
+    };
+
+    this._depthAttachments.set(target, attachment);
+
+    return attachment;
+  }
+
+  private _releaseDepthAttachment(target: RenderTarget): void {
+    const attachment = this._depthAttachments.get(target);
+
+    if (attachment !== undefined) {
+      attachment.texture.destroy();
+      this._depthAttachments.delete(target);
+    }
+
+    this._dropDepthTextureState(target);
+  }
+
+  private _dropDepthTextureState(target: RenderTarget): void {
+    if (target.depthTexture !== null) {
+      this._depthTextureStates.delete(target.depthTexture);
+    }
+  }
+
+  /**
+   * Resolve a target's depth attachment for sampling. Nothing is created here:
+   * a depth texture read before anything was ever rendered into its target has
+   * no attachment behind it, and silently handing out an empty one would show
+   * up as a black depth buffer rather than as a mistake.
+   */
+  private _syncDepthTexture(texture: DepthTexture): ManagedWebGpuTextureState {
+    const attachment = this._depthAttachments.get(texture.target);
+
+    if (attachment === undefined) {
+      throw new RenderError({
+        code: 'validation',
+        backendType: RenderBackendType.WebGpu,
+        message: 'This render target has no depth attachment yet. Render into the target once before sampling its `depthTexture`.',
+      });
+    }
+
+    // Resolved once and kept: a depth texture's sampling state is fixed at
+    // construction (see DepthTexture), so there is nothing to re-resolve.
+    const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, true);
+    let state = this._depthTextureStates.get(texture);
+
+    if (state?.texture !== attachment.texture) {
+      state = {
+        texture: attachment.texture,
+        view: attachment.sampleView,
+        sampler,
+        samplerKey: this._samplerKey(texture.scaleMode, texture.wrapMode, true),
+        version: texture.version,
+        width: attachment.width,
+        height: attachment.height,
+        mipLevelCount: 1,
+        format: depthAttachmentFormat,
+        hasContent: true,
+        accountedBytes: 0,
+        partialUploadScratch: null,
+        partialUploadView: null,
+        contiguousUploadView: null,
+        binding: { view: attachment.sampleView, sampler },
+      };
+      this._depthTextureStates.set(texture, state);
+    }
+
+    return state;
   }
 
   private _getTextureState(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
@@ -2906,6 +3074,10 @@ export class WebGpuBackend implements RenderBackend {
 
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
     assertLiveTexture(texture);
+
+    if (texture instanceof DepthTexture) {
+      return this._syncDepthTexture(texture);
+    }
 
     // A texture whose image has not arrived yet is a lifecycle state, not a
     // caller error: the upload is skipped and the version left unstamped, so
@@ -3174,6 +3346,7 @@ export class WebGpuBackend implements RenderBackend {
         }
 
         this._passCoordinatorInstance?.releaseStencilTarget(target);
+        this._releaseDepthAttachment(target);
         this._renderTargetDestroyHandlers.delete(target);
       };
 
@@ -3236,6 +3409,10 @@ export class WebGpuBackend implements RenderBackend {
    * feature, which this backend does not expose yet.
    */
   private _isNonFilterable(texture: Texture | RenderTexture): boolean {
+    if (texture instanceof DepthTexture) {
+      return true;
+    }
+
     return texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
   }
 
@@ -3281,6 +3458,9 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _getGpuTextureFormat(texture: Texture | RenderTexture): GPUTextureFormat {
+    if (texture instanceof DepthTexture) {
+      return depthAttachmentFormat;
+    }
     if (texture instanceof DataTexture) {
       // `instanceof DataTexture` erases the generic, widening `format` to `any`;
       // the class invariant guarantees it is a `DataTextureFormat`.
