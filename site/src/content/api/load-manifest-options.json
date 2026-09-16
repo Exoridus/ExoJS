@@ -1,0 +1,100 @@
+{
+  "title": "LoadManifestOptions",
+  "description": "How Loader.loadManifest fetches a manifest.",
+  "symbol": "LoadManifestOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How Loader.loadManifest fetches a manifest."
+      ],
+      "importLine": "import { LoadManifestOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cache",
+          "signature": "cache?: RequestCache",
+          "signatureTokens": [
+            {
+              "text": "cache",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RequestCache",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "HTTP cache mode for this one request, overriding the 'no-cache' a manifest is read with. The application's fetchOptions.cache deliberately does not reach it: a manifest held by an HTTP cache pins the application to an earlier deployment, which is the one thing content-addressed packs exist to prevent."
+        },
+        {
+          "name": "signal",
+          "signature": "signal?: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Abandons the request; the rejection is an abort error, as everywhere else in the loader."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+}

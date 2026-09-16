@@ -12,7 +12,8 @@ Commands:
                          cross-origin isolation headers
   create [name]          Scaffold a new app
   doctor [dir]           Check an installed project's environment
-  assets pack <manifest> Pack assets into an .exoa container
+  assets pack <file>     Pack assets into an .exoa container, optionally under a
+                         content-addressed name plus an asset manifest
 
 Options:
   -h, --help             Show this help, or a command's help after the command
@@ -31,11 +32,11 @@ const runAssets = (argv: readonly string[]): number => {
   const subcommand = argv[0];
 
   if (subcommand === undefined) {
-    throw new CliError('assets needs a subcommand', { hint: 'The only one is `exo assets pack <manifest>`.' });
+    throw new CliError('assets needs a subcommand', { hint: 'The only one is `exo assets pack <pack-description>`.' });
   }
 
   if (subcommand !== 'pack') {
-    throw new CliError(`unknown assets subcommand "${subcommand}"`, { hint: 'The only one is `exo assets pack <manifest>`.' });
+    throw new CliError(`unknown assets subcommand "${subcommand}"`, { hint: 'The only one is `exo assets pack <pack-description>`.' });
   }
 
   return runAssetsPack(argv.slice(1));

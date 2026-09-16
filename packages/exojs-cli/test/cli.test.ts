@@ -78,7 +78,7 @@ describe('exo command dispatch', () => {
     const { out } = captureOutput();
 
     await expect(runCli(['--help'])).resolves.toBe(0);
-    expect(out.join('\n')).toContain('assets pack <manifest>');
+    expect(out.join('\n')).toContain('assets pack <file>');
   });
 
   test('--version prints this package version', async () => {
@@ -106,7 +106,7 @@ describe('exo command dispatch', () => {
     const { err } = captureOutput();
 
     await expect(runCli(['assets'])).resolves.toBe(1);
-    expect(err).toEqual(['exo: assets needs a subcommand', 'The only one is `exo assets pack <manifest>`.']);
+    expect(err).toEqual(['exo: assets needs a subcommand', 'The only one is `exo assets pack <pack-description>`.']);
   });
 
   test('an unknown assets subcommand names it', async () => {

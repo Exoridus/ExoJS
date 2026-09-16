@@ -12,6 +12,15 @@ export {
   encodeContainer,
   type EncodeContainerOptions,
 } from './assetContainer.js';
+export {
+  ASSET_MANIFEST_VERSION,
+  type AssetManifestDocument,
+  type AssetManifestPack,
+  type ContainerPackDescription,
+  containerPackFileName,
+  describeContainerPack,
+  mergeAssetManifest,
+} from './assetManifest.js';
 export { exojs, type ExojsPluginOptions } from './exojs.js';
 export type { InlineSourcePlugin, PluginLoadContext, SourcePlugin } from './pluginTypes.js';
 export { createShaderPlugin, type ShaderPluginOptions } from './shaderPlugin.js';

@@ -4,6 +4,7 @@ import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { parseContainer } from '#assets/container/assetContainer';
 import type { ContainerBlockStore } from '#assets/container/containerBlockStore';
 import { ContainerReader } from '#assets/container/ContainerReader';
+import { logger } from '#core/Logger';
 
 const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
 const text = (bytes: ArrayBuffer): string => new TextDecoder().decode(bytes);
@@ -161,12 +162,16 @@ describe('ContainerReader over a range-capable server', () => {
 });
 
 describe('ContainerReader degradation', () => {
-  test('a server that ignores ranges leaves the reader on the whole file', async () => {
+  test('a server that ignores ranges leaves the reader on the whole file, and says so in development', async () => {
     const container = encodeContainer(threeBlockInputs(), { blockSize: 1024 });
     const { requests } = serve(container, { ranges: false });
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
     const reader = await ContainerReader.open('/pack.exoa');
 
     expect(reader.ranged).toBe(false);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]?.[0]).toMatch(/read whole because the server answered/);
+    warnSpy.mockRestore();
 
     await reader.readEntry(reader.entry('a.bin')!);
 
@@ -174,13 +179,17 @@ describe('ContainerReader degradation', () => {
     expect(requests).toHaveLength(1);
   });
 
-  test('a content-encoded response is refused for range use', async () => {
+  test('a content-encoded response is refused for range use, and says so in development', async () => {
     const container = encodeContainer(threeBlockInputs(), { blockSize: 1024 });
     const { requests } = serve(container, { contentEncoding: 'gzip' });
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
     const reader = await ContainerReader.open('/pack.exoa');
 
     // Offsets would address the encoded stream, so the reader must not trust them.
     expect(reader.ranged).toBe(false);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]?.[0]).toMatch(/content-encoded/);
+    warnSpy.mockRestore();
     expect(requests).toHaveLength(1);
 
     const bytes = await reader.readEntry(reader.entry('b.bin')!);

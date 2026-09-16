@@ -1,4 +1,6 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
+import { AssetNetworkError } from '#assets/AssetNetworkError';
+import { logger } from '#core/Logger';
 
 import { CONTAINER_HEADER_SIZE, containerHeadLength } from './assetContainer';
 
@@ -45,6 +47,22 @@ type Fail = (detail: string) => never;
 
 const fail: Fail = detail => {
   throw new AssetDecodeError({ message: `Invalid asset container: ${detail}.`, assetType: 'container' });
+};
+
+/**
+ * A container that did not arrive fails the way every other asset does.
+ *
+ * The block-wise path fetches for itself rather than through `fetchAsset`, and
+ * a transport failure it reported as a decode failure would tell a caller that
+ * the file is broken when the reaction it needs is a retry.
+ */
+const failTransport = (url: string, response: Response, detail: string): never => {
+  throw new AssetNetworkError({
+    url,
+    message: `Failed to fetch ${detail} of "${url}" (${response.status} ${response.statusText}).`,
+    status: response.status,
+    statusText: response.statusText,
+  });
 };
 
 /** A source over a container already held whole in memory. */
@@ -109,12 +127,24 @@ export const openContainerSource = async (url: string, init?: RequestInit): Prom
   const probe = await fetch(url, { ...init, headers: withRange(init, `bytes=0-${PROBE_LENGTH - 1}`) });
 
   if (!probe.ok) {
-    fail(`"${url}" could not be fetched (HTTP ${probe.status})`);
+    failTransport(url, probe, 'the head');
   }
 
   const body = await probe.arrayBuffer();
 
   if (probe.status !== 206 || !addressableByOffset(probe)) {
+    if (__DEV__) {
+      const reason =
+        probe.status !== 206
+          ? 'the server answered the byte-range request with the whole file'
+          : 'the response is content-encoded, so its byte offsets address the encoded stream';
+
+      logger.warn(
+        `"${url}" is read whole because ${reason}. Block-wise loading needs byte ranges (Accept-Ranges: bytes, 206) on an uncompressed response; until the server provides them every load fetches the entire pack.`,
+        { source: 'Loader' },
+      );
+    }
+
     // The whole file, either because the server sent it or because its offsets
     // cannot be trusted. Both end at the same place: read from memory.
     return { source: bufferContainerSource(body), headPrefix: body };
@@ -135,7 +165,7 @@ export const openContainerSource = async (url: string, init?: RequestInit): Prom
       const response = await fetch(url, { ...init, headers: withRange(init, `bytes=${offset}-${offset + length - 1}`) });
 
       if (!response.ok) {
-        fail(`"${url}" refused bytes ${offset}..${offset + length - 1} (HTTP ${response.status})`);
+        failTransport(url, response, `bytes ${offset}..${offset + length - 1}`);
       }
 
       const bytes = new Uint8Array(await response.arrayBuffer());
