@@ -1,6 +1,7 @@
 import { describePhysicsScene, rayForStep } from '../src/physics/adapters/scene';
 import { PHYSICS_ARCHETYPES, seedFor, warmupStepsFor, warmupStepsForArchetype } from '../src/physics/archetypes';
 import type { PhysicsArchetypeId, PhysicsArchetypeSpec } from '../src/physics/PhysicsAdapter';
+import { selectMutationIndices } from '../src/shared/mutation';
 
 const byId = Object.fromEntries(PHYSICS_ARCHETYPES.map(archetype => [archetype.id, archetype])) as Record<PhysicsArchetypeId, PhysicsArchetypeSpec>;
 
@@ -148,6 +149,27 @@ describe('joints', () => {
       expect(scene.bodies[joint.bodyA]).toBeDefined();
       expect(scene.bodies[joint.bodyB]).toBeDefined();
     }
+  });
+
+  test('drives a tenth of its links on a fixed cadence, so the chains never settle inside the timed window', () => {
+    expect(byId.joints.perturbFraction).toBeGreaterThan(0);
+    expect(byId.joints.kickEverySteps).toBeGreaterThan(0);
+  });
+
+  test('gives the perturbed links a velocity in the shared descriptor', () => {
+    const scene = sceneFor('joints', 9_000);
+    const driven = scene.bodies.filter(body => body.perturb !== undefined);
+
+    expect(driven.length).toBe(selectMutationIndices(9_000, byId.joints.perturbFraction, seedFor(byId.joints.scene, 9_000)).length);
+    expect(driven.every(body => body.type === 'dynamic')).toBe(true);
+  });
+
+  test('builds the identical driven set on a re-run, which is what lets every arm drive the same links', () => {
+    const first = sceneFor('joints', 4_500);
+    const second = sceneFor('joints', 4_500);
+
+    expect(first.perturbedSignature).toBe(second.perturbedSignature);
+    expect(first.bodies.map(body => body.perturb)).toEqual(second.bodies.map(body => body.perturb));
   });
 });
 

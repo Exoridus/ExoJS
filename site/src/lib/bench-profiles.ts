@@ -566,45 +566,45 @@ export const orderArms = <T>(arms: readonly T[], idOf: (arm: T) => string): read
  * harness and this page; an id with no line here simply prints without one.
  */
 const ARCHETYPE_DESCRIPTIONS: Readonly<Record<string, string>> = {
-  'static-heavy': 'Mostly unchanged sprites; stresses retained scene reuse.',
-  'dynamic-heavy': 'A lightly mutating sprite field; stresses transform and update work.',
-  'deep-hierarchy': 'Deep parent-child nesting; stresses world-transform propagation.',
-  overdraw: 'Full-viewport sprites; stresses fragment fill and overdraw.',
-  'batch-breaking': 'Many texture changes; stresses batch breaks and state submission.',
-  'batch-breaking-atlased': 'Atlased texture changes; isolates batching without texture uploads.',
-  'split-screen': 'Several simultaneous views; stresses multi-viewport traversal.',
-  'mixed-blend': 'Long runs of blend modes; stresses state changes and batching.',
-  'mixed-material': 'Several custom materials; stresses shader/material switches.',
-  'mixed-material-atlased': 'Custom materials over atlased sprites; combines material and texture variety.',
-  'instanced-batch': 'Explicit instance batches; stresses immediate submission cost.',
-  'mixed-sprite-mesh-array': 'Sprites interleaved with mesh-array leaves; stresses renderer path switches.',
-  'mixed-sprite-mesh-static': 'Sprites interleaved with static meshes; stresses mixed draw paths.',
-  'scrolling-world': 'A moving camera over mostly off-screen content; stresses culling and retained reuse.',
-  'text-static': 'Static labels with repeated glyphs; stresses text layout and glyph generation.',
-  'text-dynamic': 'Changing labels; stresses per-frame text invalidation and layout.',
-  'lifecycle-churn': 'A small fraction of leaves rebuilt each frame; stresses resource lifecycle work.',
-  'filter-chain-1': 'One filter pass per scene; stresses offscreen composition.',
-  'filter-chain-2': 'Two filter passes per scene; stresses chained offscreen composition.',
-  'filter-chain-4': 'Four filter passes per scene; stresses deep filter composition.',
-  'mask-clip': 'Clipped content; stresses mask setup and compositing.',
-  'mask-clip-animated': 'Animated clipped content; stresses mask invalidation.',
-  composite: 'Nested render targets; stresses multi-pass composition.',
-  'box-stack': 'Dense resting contacts; stresses collision detection, solving and sleeping.',
-  'many-dynamic': 'Many active bodies in a bounded field; stresses broad-phase and live contacts.',
-  'mixed-static-dynamic': 'Dynamic bodies falling onto static level geometry; models a common game mix.',
-  raycast: 'A mixed scene plus repeated rays; isolates query throughput.',
-  'body-churn': 'Bodies rebuilt every step; stresses broad-phase repair and lifecycle work.',
-  joints: 'Constraint chains; stresses impulse propagation through joints.',
-  'settling-pile': 'A dissipating pile; exposes steady-state settling and sleeping behavior.',
-  'dynamic-all': 'Every sprite moving every frame; stresses transform and upload work at full mutation.',
-  'fill-layers': 'Stacked translucent full-screen layers; stresses blended fill.',
-  'tilemap-scroll': 'A large tile map scrolling past a fixed window; stresses the tile draw path.',
-  'tilemap-edit': 'Tile ids replaced every frame; stresses getting a tile change to the GPU.',
-  'particles-draw': 'A fixed set of quads submitted through the particle path; no simulation.',
+  'static-heavy': 'Mostly unchanged sprites. Stresses retained scene reuse.',
+  'dynamic-heavy': 'A lightly mutating sprite field. Stresses transform and update work.',
+  'deep-hierarchy': 'Deep parent-child nesting. Stresses world-transform propagation.',
+  overdraw: 'Full-viewport sprites. Stresses fragment fill and overdraw.',
+  'batch-breaking': 'Many texture changes. Stresses batch breaks and state submission.',
+  'batch-breaking-atlased': 'Atlased texture changes. Isolates batching without texture uploads.',
+  'split-screen': 'Several simultaneous views. Stresses multi-viewport traversal.',
+  'mixed-blend': 'Long runs of blend modes. Stresses state changes and batching.',
+  'mixed-material': 'Several custom materials. Stresses shader/material switches.',
+  'mixed-material-atlased': 'Custom materials over atlased sprites. Combines material and texture variety.',
+  'instanced-batch': 'Explicit instance batches. Stresses immediate submission cost.',
+  'mixed-sprite-mesh-array': 'Sprites interleaved with mesh-array leaves. Stresses renderer path switches.',
+  'mixed-sprite-mesh-static': 'Sprites interleaved with static meshes. Stresses mixed draw paths.',
+  'scrolling-world': 'A moving camera over mostly off-screen content. Stresses culling and retained reuse.',
+  'text-static': 'Static labels with repeated glyphs. Stresses text layout and glyph generation.',
+  'text-dynamic': 'Changing labels. Stresses per-frame text invalidation and layout.',
+  'lifecycle-churn': 'A small fraction of leaves rebuilt each frame. Stresses resource lifecycle work.',
+  'filter-chain-1': 'One filter pass per scene. Stresses offscreen composition.',
+  'filter-chain-2': 'Two filter passes per scene. Stresses chained offscreen composition.',
+  'filter-chain-4': 'Four filter passes per scene. Stresses deep filter composition.',
+  'mask-clip': 'Clipped content. Stresses mask setup and compositing.',
+  'mask-clip-animated': 'Animated clipped content. Stresses mask invalidation.',
+  composite: 'Nested render targets. Stresses multi-pass composition.',
+  'box-stack': 'Dense resting contacts. Stresses collision detection, solving and sleeping.',
+  'many-dynamic': 'Many active bodies in a bounded field. Stresses broad-phase and live contacts.',
+  'mixed-static-dynamic': 'Dynamic bodies falling onto static level geometry. Models a common game mix.',
+  raycast: 'A mixed scene plus repeated rays. Isolates query throughput.',
+  'body-churn': 'Bodies rebuilt every step. Stresses broad-phase repair and lifecycle work.',
+  joints: 'Constraint chains, periodically re-driven so the arms never settle to sleep. Stresses impulse propagation through joints.',
+  'settling-pile': 'A dissipating pile. Exposes steady-state settling and sleeping behavior.',
+  'dynamic-all': 'Every sprite moving every frame. Stresses transform and upload work at full mutation.',
+  'fill-layers': 'Stacked translucent full-screen layers. Stresses blended fill.',
+  'tilemap-scroll': 'A large tile map scrolling past a fixed window. Stresses the tile draw path.',
+  'tilemap-edit': 'Tile ids replaced every frame. Stresses getting a tile change to the GPU.',
+  'particles-draw': 'A fixed set of quads submitted through the particle path. No simulation.',
   'particles-lifecycle': 'A steady particle effect: ageing, movement, fading and respawning.',
-  'interaction-picking': 'A block of point queries against a field of interactive rectangles; stresses the hit-test index.',
-  'fx-blur': 'A separable two-pass Gaussian over a fixed area; stresses the target passes a filter runs.',
-  'ui-layout-update': 'Nested boxes of fixed-size widgets re-solved after a tenth of them resize; stresses the layout engine, and nothing is drawn.',
+  'interaction-picking': 'A block of point queries against a field of interactive rectangles. Stresses the hit-test index.',
+  'fx-blur': 'A separable two-pass Gaussian over a fixed area. Stresses the target passes a filter runs.',
+  'ui-layout-update': 'Nested boxes of fixed-size widgets re-solved after a tenth of them resize. Stresses the layout engine, and nothing is drawn.',
 };
 
 /**
@@ -672,7 +672,7 @@ const ARCHETYPE_TITLES: Readonly<Record<string, string>> = {
  */
 const WITHHELD_SCENARIOS: Readonly<Record<string, string>> = {
   joints:
-    'The published profiles were measured before the arms agreed on whether two jointed links also collide with each other. Each library defaulted differently, so ExoJS resolved one contact per jointed pair where Matter.js, Planck and Nape-JS resolved none and Rapier one per chain, and the arms were not doing the same work. The harness now configures every arm explicitly, and the comparison returns with the next reference measurement; until then these times stand on their own.',
+    'On the published profiles the chains had settled and every arm that sleeps was idle: Nape-JS took less than the clock resolved, and the other figures set a solver at work against one at rest. The scene now keeps the chains moving, and the comparison returns with the next reference measurement.',
 };
 
 /** Why a scenario publishes no cross-arm comparison, or `undefined` where it publishes one. */
@@ -829,8 +829,18 @@ const RUNG_LABELS: Readonly<Record<string, string>> = {
 };
 
 /** What each run concluded, in run order, as a readable list. */
-export const describeRungs = (rungs: readonly string[]): string =>
-  rungs.map((rung, index) => `run ${String(index + 1)}: ${RUNG_LABELS[rung] ?? rung}`).join(', ');
+export const describeRungs = (rungs: readonly string[]): string => {
+  const first = rungs[0];
+
+  // Three runs that agreed are one finding, and naming each of them prints that
+  // finding three times. They are only worth listing where they differ, which
+  // is also the only case a reader has to look at run by run.
+  if (first !== undefined && rungs.every(rung => rung === first)) {
+    return rungs.length === 1 ? (RUNG_LABELS[first] ?? first) : `all ${String(rungs.length)} runs: ${RUNG_LABELS[first] ?? first}`;
+  }
+
+  return rungs.map((rung, index) => `run ${String(index + 1)}: ${RUNG_LABELS[rung] ?? rung}`).join(', ');
+};
 
 /** Which way one run's rung fell, for showing the pooled runs as marks rather than as a sentence. */
 export type RungSide = 'exojs' | 'neither' | 'competitor';
@@ -1051,14 +1061,16 @@ export const isQuantitative = (outcome: CellOutcome): boolean => outcome !== 'ti
  * comparison the clock refused also publishes a figure that cannot be read as a
  * duration: the harness writes the arm's raw sample there, and below the grid
  * the clock resolved that sample is as likely to be zero as to be the time the
- * arm took.
+ * arm took. Such a sample is withheld whenever the page could print it only as
+ * a bound: a figure under a thousandth of a millisecond in a comparison the
+ * clock did not resolve is the clock's tick, not the arm's time.
  */
 export const publishedMs = (cell: ProfileCell, ms: number | null): number | null => {
   const measured = measuredMs(cell, ms);
 
   if (measured === null) return null;
 
-  return outcomeOf(cell) === 'timer-limited' && measured === 0 ? null : measured;
+  return outcomeOf(cell) === 'timer-limited' && Number.parseFloat(significant(measured)) === 0 ? null : measured;
 };
 
 /** The lowest and highest `exojs / competitor` ratio the pooled runs can have produced. */

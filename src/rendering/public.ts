@@ -87,7 +87,7 @@ export type {
   UniformValue,
 } from '#rendering/material/Material';
 export { Material } from '#rendering/material/Material';
-export type { AnyMeshMaterial } from '#rendering/material/MeshMaterial';
+export type { AnyMeshMaterial, MeshMaterialOptions } from '#rendering/material/MeshMaterial';
 export { MeshMaterial } from '#rendering/material/MeshMaterial';
 export type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 export { SpriteMaterial } from '#rendering/material/SpriteMaterial';
@@ -160,6 +160,8 @@ export {
 } from '#rendering/texture/CompressedTextureFormat';
 export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
 export { DataTexture } from '#rendering/texture/DataTexture';
+export { DepthTexture } from '#rendering/texture/DepthTexture';
+export type { RenderTextureOptions } from '#rendering/texture/RenderTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';
 export type { RepeatFit, RepeatMode, RepeatPlan, RepeatSegment } from '#rendering/texture/repeat';
 export { Texture } from '#rendering/texture/Texture';

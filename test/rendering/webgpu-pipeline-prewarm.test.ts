@@ -41,6 +41,9 @@ const formats: readonly GPUTextureFormat[] = ['bgra8unorm', 'rgba8unorm'];
 // a key without it can never be found again.
 const lookupKeyPattern = /:(s|n)$/;
 
+// The mesh renderer appends a depth dimension after the stencil one.
+const meshLookupKeyPattern = /:(s|n):\d$/;
+
 interface StubDevice {
   readonly device: GPUDevice;
   syncCreates(): number;
@@ -196,7 +199,7 @@ describe('WebGpuMeshRenderer pipeline prewarm', () => {
     expect(instancedPipelines.size).toBe(prewarmedBlendModes.length * formats.length);
 
     for (const key of [...pipelines.keys(), ...instancedPipelines.keys()]) {
-      expect(key).toMatch(lookupKeyPattern);
+      expect(key).toMatch(meshLookupKeyPattern);
     }
   });
 });

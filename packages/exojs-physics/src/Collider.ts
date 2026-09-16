@@ -96,6 +96,15 @@ export class Collider {
    */
   public _treeProxy = -1;
 
+  /**
+   * @internal - whether {@link aabb} has changed since the owning broad phase
+   * last looked at it. Set by every write to the AABB ({@link synchronize} is
+   * the only one) and cleared when the broad phase has taken the new box, so a
+   * resting collider costs nothing to re-sync. Single-owner like
+   * {@link _treeProxy}, and for the same reason.
+   */
+  public _treeDirty = true;
+
   public constructor(options: ColliderOptions) {
     const density = options.density ?? 1;
 
@@ -197,6 +206,8 @@ export class Collider {
    */
   public synchronize(bodyTransform: Transform): void {
     const world = composeTransforms(bodyTransform, this._localTransform, this._worldTransform);
+
+    this._treeDirty = true;
 
     switch (this.shape.type) {
       case 'circle':

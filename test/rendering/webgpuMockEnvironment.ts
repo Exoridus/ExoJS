@@ -41,6 +41,14 @@ export interface MockWebGpuEnvironment {
   renderPassAttachmentCounts(): readonly number[];
   /** Fragment-target count of every synchronously created render pipeline, in call order. */
   pipelineTargetCounts(): readonly number[];
+  /** How many `beginRenderPass` descriptors carried a depth/stencil attachment. */
+  depthAttachmentPasses(): number;
+  /** `depthLoadOp` of every pass that carried a writable depth aspect, in call order. */
+  depthLoadOps(): readonly string[];
+  /** `depthWriteEnabled` of every synchronously created pipeline that declared depth/stencil state. */
+  pipelineDepthWrites(): readonly boolean[];
+  /** Format and usage of every `device.createTexture` call, in call order. */
+  textureDescriptors(): ReadonlyArray<{ readonly format: string; readonly usage: number }>;
   restore(): void;
 }
 
@@ -65,6 +73,10 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const indexBufferBindings: Array<{ format: string; offset: number }> = [];
   const renderPassAttachmentCounts: number[] = [];
   const pipelineTargetCounts: number[] = [];
+  const pipelineDepthWrites: boolean[] = [];
+  const depthLoadOps: string[] = [];
+  const textureDescriptors: Array<{ format: string; usage: number }> = [];
+  let depthAttachmentPasses = 0;
 
   const pass = {
     setPipeline: (): void => {},
@@ -85,6 +97,16 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const encoder = {
     beginRenderPass: (descriptor: GPURenderPassDescriptor) => {
       renderPassAttachmentCounts.push([...descriptor.colorAttachments].length);
+
+      if (descriptor.depthStencilAttachment !== undefined) {
+        depthAttachmentPasses++;
+
+        const { depthLoadOp } = descriptor.depthStencilAttachment;
+
+        if (depthLoadOp !== undefined) {
+          depthLoadOps.push(depthLoadOp);
+        }
+      }
 
       return pass;
     },
@@ -117,6 +139,10 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
       syncPipelineCount++;
       pipelineTargetCounts.push(descriptor.fragment?.targets.length ?? 0);
 
+      if (descriptor.depthStencil !== undefined) {
+        pipelineDepthWrites.push(descriptor.depthStencil.depthWriteEnabled === true);
+      }
+
       return {} as GPURenderPipeline;
     },
     createRenderPipelineAsync: async (): Promise<GPURenderPipeline> => ({}) as GPURenderPipeline,
@@ -129,7 +155,9 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
         destroy: (): void => {},
       } as unknown as GPUBuffer;
     },
-    createTexture: (): GPUTexture => {
+    createTexture: (descriptor: GPUTextureDescriptor): GPUTexture => {
+      textureDescriptors.push({ format: descriptor.format, usage: descriptor.usage });
+
       // A stable view per GPU texture, matching the backend's cached-view
       // contract (a fresh view identity means "texture was recreated").
       const view = {} as GPUTextureView;
@@ -183,6 +211,10 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     indexBufferBindings: () => indexBufferBindings,
     renderPassAttachmentCounts: () => renderPassAttachmentCounts,
     pipelineTargetCounts: () => pipelineTargetCounts,
+    depthAttachmentPasses: () => depthAttachmentPasses,
+    depthLoadOps: () => depthLoadOps,
+    pipelineDepthWrites: () => pipelineDepthWrites,
+    textureDescriptors: () => textureDescriptors,
     restore: (): void => {
       if (previousGpu) {
         Object.defineProperty(navigator, 'gpu', previousGpu);

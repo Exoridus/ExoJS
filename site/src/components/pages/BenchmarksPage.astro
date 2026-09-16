@@ -11,11 +11,11 @@
  * `bench-cards.ts` before any run happens, so the top of the page cannot become
  * a selection of whatever ExoJS won.
  *
- * The page carries cards and nothing else. Every row's own terms are one
- * disclosure inside that row's card, and the full per-row report, the
- * methodology and the raw profiles are their own pages: carrying them here made
- * a reader scroll past several screens of prose that say the same thing
- * whichever card raised the question.
+ * The page carries cards and nothing else. A withheld comparison states its own
+ * reason on the card that withholds it, and the full per-row report - every
+ * measured load, its spread and the rows the harness left out - is its own
+ * page, linked once rather than repeated on every card that would otherwise
+ * say the same thing.
  *
  * The page's axis is the BROWSER, not the machine. Switching machines changes
  * the CPU, the GPU, the operating system, the driver stack and the browser
@@ -32,10 +32,8 @@
  */
 
 import BenchResultCard from '../BenchResultCard.astro';
-import BenchLocalProbe from '../BenchLocalProbe.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
-import { appInfo } from '../../lib/app-info';
 import { PHYSICS_HEADLINE_SCENARIOS, physicsCards, RENDERING_HEADLINE_SCENARIOS, renderingCards, selectCards } from '../../lib/bench-cards';
 import {
     BACKEND_LABELS,
@@ -91,8 +89,7 @@ const leading = browsers[0];
         {leading === undefined ? (
             <p class="empty">
                 No measurements are published yet. The reference measurement is {REPRODUCTION_RUNS} separate runs on one machine after a release is tagged,
-                pooled into a single profile file in the repository; until then there is nothing here to read.{' '}
-                <a href={`${base}${locale}/benchmarks/methodology/`}>The terms they will be published under</a> already apply.
+                pooled into a single profile file in the repository. Until then there is nothing here to read.
             </p>
         ) : (
             <>
@@ -134,6 +131,18 @@ const leading = browsers[0];
                         );
                     })}
                 </div>
+
+                {/*
+                  * One legend for the page, above the cards rather than after
+                  * them. The mark it explains is on a figure in almost every
+                  * card, so repeating the sentence per card would put it on
+                  * screen more often than the thing it describes - but printed
+                  * below the last card it arrived long after the first amber
+                  * figure had already been read as a warning.
+                  */}
+                <p class="legend">
+                    <b>Orange</b> marks a time over the 16.7 ms frame budget at 60 fps. The measurement is valid. The scene does not fit in one frame.
+                </p>
 
                 {browsers.map((entry, index) => (
                     <div class="browser-panel" data-browser={entry.browser} hidden={index !== 0}>
@@ -220,23 +229,21 @@ const leading = browsers[0];
                 ))}
 
                 {/*
-                  * One legend for the page. The mark it explains is on a figure
-                  * in almost every card, and repeating the sentence there would
-                  * put it on screen more often than the thing it describes.
+                  * Why a card holds three rows where its neighbour holds four,
+                  * said once for the page.
+                  *
+                  * It was on every card that left an arm out, which put the
+                  * same sentence on screen 27 times to explain a rule that does
+                  * not change between them - and a reader can already see which
+                  * libraries a card lists. What they cannot see is why the
+                  * others are absent, and that is what this says.
                   */}
-                <p class="legend">
-                    <b>Amber time</b> = over a 16.7 ms frame budget at 60 fps. The measurement is valid; the scene does not fit in one frame.
+                <p class="scope">
+                    A library appears in a scenario where its own API covers it and its arm does the same work as the others. One that sits a scenario out, or that would
+                    render something else in it, is left out of that card rather than compared on unequal terms. Nothing measured is discarded. <a
+                        href={`${base}${locale}/benchmarks/full/`}>All measurements</a
+                    > lists every arm and every load.
                 </p>
-
-                {/* Four destinations and no explanatory paragraphs: what each one is is what its name says. */}
-                <nav class="tools" aria-label="Benchmark data">
-                    <a href={`${base}${locale}/benchmarks/full/`}>All measurements</a>
-                    <a href={`${base}${locale}/benchmarks/methodology/`}>Methodology</a>
-                    <a href="#run-locally">Run locally</a>
-                    <a href={`${appInfo.repositoryUrl}/tree/main/packages/exojs-bench/results`}>JSON</a>
-                </nav>
-
-                <BenchLocalProbe />
             </>
         )}
     </div>
@@ -291,8 +298,20 @@ const leading = browsers[0];
      * and no plane behind it. Scoped here rather than retuned in the theme: the
      * tokens are the whole site's, and this is one page's layering.
      */
+    /*
+     * Narrower than the shell the full measurement table needs.
+     *
+     * That table is one wide grid and uses every pixel it is given; this page
+     * is two columns of cards whose rows are a label, a bar and a figure. Given
+     * 1720px they stretch to almost 700px each, where the bar carries the same
+     * comparison over twice the distance and the eye has to travel it. The
+     * width is the API reference's, so the site keeps one measure for its
+     * non-prose pages.
+     */
     .bench-prose {
+        width: min(1320px, 100%);
         max-width: none;
+        margin-inline: auto;
     }
 
     /* Light only: the dark theme's canvas and surface already sit a readable step apart. */
@@ -504,8 +523,16 @@ const leading = browsers[0];
         margin-top: var(--s-4);
     }
 
+    .scope {
+        margin-top: var(--s-5);
+        font-size: 0.82rem;
+        color: var(--fg-muted);
+        max-width: 68ch;
+    }
+
     .legend {
-        margin-top: var(--s-5) !important;
+        margin-top: var(--s-4) !important;
+        margin-bottom: var(--s-4);
         font-size: 0.82rem;
         color: var(--fg-muted);
     }
@@ -514,16 +541,5 @@ const leading = browsers[0];
         color: var(--amber);
         font-weight: 650;
     }
-
-    .tools {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--s-2) var(--s-4);
-        margin-top: var(--s-4);
-        padding-top: var(--s-3);
-        border-top: 1px solid var(--line-soft);
-        font-size: 0.88rem;
-    }
-
 
 </style>

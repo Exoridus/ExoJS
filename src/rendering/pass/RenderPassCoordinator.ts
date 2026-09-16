@@ -63,7 +63,6 @@ export interface RenderPassCoordinator {
  * orchestration treats the accessor as optional and falls back to an inline
  * target/view save-restore when a backend (a test stub, say) has none, so a
  * renderer that needs a pass must tolerate its absence the same way.
- * @internal
  */
 export interface RenderPassCoordinatorHost {
   readonly passCoordinator: RenderPassCoordinator;

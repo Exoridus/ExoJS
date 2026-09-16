@@ -1,16 +1,16 @@
 {
-  "title": "RenderTexture",
-  "description": "An off-screen render target that can also be sampled as a texture. Combines RenderTarget (framebuffer attachment) with the sampler parameters of a Texture (scale mode, wrap mode, mip generation). A `textureVersion` counter is incremented on every mutation so backends can detect when to re-create the underlying GPU texture object. Mipmap generation is disabled by default because render targets are typically updated every frame and mip generation is expensive.",
-  "symbol": "RenderTexture",
+  "title": "DepthTexture",
+  "description": "The depth attachment of a render target, bindable as a named texture of a custom MeshMaterial or SpriteMaterial. It is created by the target that opted into depth (`{ depth: true }`), owned by it, resized with it and destroyed with it; there is no way to construct one on its own and no source to upload. The value behind each texel is the window-space depth the last draw with a depth-writing material left there, which is the backend's mapping of the clip-space z that draw's vertex stage produced: nearer geometry is always the smaller value, but the absolute numbers differ between backends because WebGL2 maps NDC `[-1, 1]` onto `[0, 1]` where WebGPU's NDC z already is `[0, 1]`. Compare depths, do not hard-code them. That one slot is the whole of where it fits. It is NOT interchangeable with a colour texture: a drawable's own `texture`, a filter input, and every built-in renderer's texture binding expect a filterable colour format, which on WebGPU makes a depth view there a bind-group validation error rather than a wrong picture. Put it in the material's `textures` map and read it from the custom shader. Sampling constraints, both backends alike: - Fixed sampling state: `nearest` filtering, `clamp-to-edge` wrapping. A depth format is not filterable and the attachment's parameters are set once with the attachment, so setScaleMode and setWrapMode are no-ops here rather than changes that would silently fail to take. - One channel. GLSL reads it as `texture(sampler, uv).r`; WGSL declares the binding as `texture_depth_2d` and reads it as `textureSample(t, s, uv)`, which yields the bare `f32`. Comparison sampling (`sampler_comparison`, `sampler2DShadow`) is not used and not available. - Live. The texture is the attachment itself, not a copy, so sampling it in the same pass that writes it is undefined; sample it in a later pass. - Cleared with the colour attachment, to the far plane. A pass that preserves the target's colour preserves its depth too. Reading one before the owning target has ever been rendered into throws a `RenderError` - there is no attachment to sample yet.",
+  "symbol": "DepthTexture",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
-  "tier": "stable",
-  "memberCount": 39,
+  "tier": "advanced",
+  "memberCount": 36,
   "counts": {
-    "constructors": 1,
-    "methods": 19,
-    "properties": 19,
+    "constructors": 0,
+    "methods": 12,
+    "properties": 24,
     "events": 0
   },
   "sections": [
@@ -19,206 +19,20 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "An off-screen render target that can also be sampled as a texture.",
-        "Combines RenderTarget (framebuffer attachment) with the sampler parameters of a Texture (scale mode, wrap mode, mip generation). A `textureVersion` counter is incremented on every mutation so backends can detect when to re-create the underlying GPU texture object.",
-        "Mipmap generation is disabled by default because render targets are typically updated every frame and mip generation is expensive."
+        "The depth attachment of a render target, bindable as a named texture of a custom MeshMaterial or SpriteMaterial.",
+        "It is created by the target that opted into depth (`{ depth: true }`), owned by it, resized with it and destroyed with it; there is no way to construct one on its own and no source to upload. The value behind each texel is the window-space depth the last draw with a depth-writing material left there, which is the backend's mapping of the clip-space z that draw's vertex stage produced: nearer geometry is always the smaller value, but the absolute numbers differ between backends because WebGL2 maps NDC `[-1, 1]` onto `[0, 1]` where WebGPU's NDC z already is `[0, 1]`. Compare depths, do not hard-code them.",
+        "That one slot is the whole of where it fits. It is NOT interchangeable with a colour texture: a drawable's own `texture`, a filter input, and every built-in renderer's texture binding expect a filterable colour format, which on WebGPU makes a depth view there a bind-group validation error rather than a wrong picture. Put it in the material's `textures` map and read it from the custom shader.",
+        "Sampling constraints, both backends alike:",
+        "- Fixed sampling state: `nearest` filtering, `clamp-to-edge` wrapping. A depth format is not filterable and the attachment's parameters are set once with the attachment, so setScaleMode and setWrapMode are no-ops here rather than changes that would silently fail to take. - One channel. GLSL reads it as `texture(sampler, uv).r`; WGSL declares the binding as `texture_depth_2d` and reads it as `textureSample(t, s, uv)`, which yields the bare `f32`. Comparison sampling (`sampler_comparison`, `sampler2DShadow`) is not used and not available. - Live. The texture is the attachment itself, not a copy, so sampling it in the same pass that writes it is undefined; sample it in a later pass. - Cleared with the colour attachment, to the far plane. A pass that preserves the target's colour preserves its depth too.",
+        "Reading one before the owning target has ever been rendered into throws a `RenderError` - there is no attachment to sample yet."
       ],
-      "importLine": "import { RenderTexture } from '@codexo/exojs'",
-      "sourceLink": null
-    },
-    {
-      "id": "constructors",
-      "title": "Constructors",
-      "members": [
-        {
-          "name": "new",
-          "signature": "new(width: number, height: number, options?: RenderTextureOptions): RenderTexture",
-          "signatureTokens": [
-            {
-              "text": "new",
-              "kind": "keyword"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "width",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "height",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "RenderTextureOptions",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "RenderTexture",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "width",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "height",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "RenderTextureOptions",
-              "optional": true
-            }
-          ],
-          "returnType": "RenderTexture",
-          "description": ""
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
+      "importLine": "import { DepthTexture } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "_enableDepthTexture",
-          "signature": "_enableDepthTexture(): void",
-          "signatureTokens": [
-            {
-              "text": "_enableDepthTexture",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Give this target a sampleable depth attachment. Called once, from the constructor of a subclass whose options asked for one."
-        },
-        {
-          "name": "_syncDepthSize",
-          "signature": "_syncDepthSize(): void",
-          "signatureTokens": [
-            {
-              "text": "_syncDepthSize",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Keep the depth attachment at the target's size. A subclass that resizes through a path other than resize calls this itself - a depth attachment left at the old size makes the whole framebuffer incomplete."
-        },
-        {
-          "name": "_touch",
-          "signature": "_touch(): void",
-          "signatureTokens": [
-            {
-              "text": "_touch",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": ""
-        },
         {
           "name": "addDestroyListener",
           "signature": "addDestroyListener(listener: () => void): this",
@@ -272,7 +86,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Subscribe to the moment this target (or any subclass - including RenderTexture) is destroyed. Backends use this to release GPU-side resources (framebuffer + attached texture) tied to the target. Listeners fire exactly once."
+          "description": "Register a callback to be invoked just before this texture is destroyed. Useful for backends to release their GPU-side texture objects."
         },
         {
           "name": "destroy",
@@ -301,189 +115,6 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
-        },
-        {
-          "name": "getViewport",
-          "signature": "getViewport(view: View): Rectangle",
-          "signatureTokens": [
-            {
-              "text": "getViewport",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "view",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "View",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Rectangle",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "view",
-              "type": "View",
-              "optional": false
-            }
-          ],
-          "returnType": "Rectangle",
-          "description": ""
-        },
-        {
-          "name": "mapCoordsToPixel",
-          "signature": "mapCoordsToPixel(point: Vector, view: View): Vector",
-          "signatureTokens": [
-            {
-              "text": "mapCoordsToPixel",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "point",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Vector",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "view",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "View",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Vector",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "point",
-              "type": "Vector",
-              "optional": false
-            },
-            {
-              "name": "view",
-              "type": "View",
-              "optional": false
-            }
-          ],
-          "returnType": "Vector",
-          "description": ""
-        },
-        {
-          "name": "mapPixelToCoords",
-          "signature": "mapPixelToCoords(point: Vector, view: View): Vector",
-          "signatureTokens": [
-            {
-              "text": "mapPixelToCoords",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "point",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Vector",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "view",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "View",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Vector",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "point",
-              "type": "Vector",
-              "optional": false
-            },
-            {
-              "name": "view",
-              "type": "View",
-              "optional": false
-            }
-          ],
-          "returnType": "Vector",
           "description": ""
         },
         {
@@ -539,14 +170,14 @@
             }
           ],
           "returnType": "this",
-          "description": "Remove a previously registered destroy listener. No-op if absent."
+          "description": ""
         },
         {
-          "name": "resize",
-          "signature": "resize(width: number, height: number): this",
+          "name": "setCompressed",
+          "signature": "setCompressed(payload: CompressedTexturePayload | null): this",
           "signatureTokens": [
             {
-              "text": "resize",
+              "text": "setCompressed",
               "kind": "name"
             },
             {
@@ -554,7 +185,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "width",
+              "text": "payload",
               "kind": "param"
             },
             {
@@ -562,23 +193,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "CompressedTexturePayload",
+              "kind": "type"
             },
             {
-              "text": ", ",
+              "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "height",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             },
             {
@@ -596,18 +219,13 @@
           ],
           "params": [
             {
-              "name": "width",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "height",
-              "type": "number",
+              "name": "payload",
+              "type": "CompressedTexturePayload | null",
               "optional": false
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Install a compressed payload, replacing any pixel source, and resize to its base level. Pass null to drop it. Bumps version, so backends re-create their GPU texture - a format change cannot be patched into an existing one."
         },
         {
           "name": "setGenerateMipMap",
@@ -705,7 +323,7 @@
         },
         {
           "name": "setScaleMode",
-          "signature": "setScaleMode(scaleMode: ScaleModes): this",
+          "signature": "setScaleMode(): this",
           "signatureTokens": [
             {
               "text": "setScaleMode",
@@ -714,18 +332,6 @@
             {
               "text": "(",
               "kind": "punctuation"
-            },
-            {
-              "text": "scaleMode",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ScaleModes",
-              "kind": "type"
             },
             {
               "text": ")",
@@ -740,15 +346,9 @@
               "kind": "keyword"
             }
           ],
-          "params": [
-            {
-              "name": "scaleMode",
-              "type": "ScaleModes",
-              "optional": false
-            }
-          ],
+          "params": [],
           "returnType": "this",
-          "description": ""
+          "description": "No-op: a depth attachment is sampled nearest on both backends."
         },
         {
           "name": "setSize",
@@ -820,7 +420,7 @@
         },
         {
           "name": "setSource",
-          "signature": "setSource(source: DataView<ArrayBufferLike> | null): this",
+          "signature": "setSource(source: TextureSource): this",
           "signatureTokens": [
             {
               "text": "setSource",
@@ -839,28 +439,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "DataView",
+              "text": "TextureSource",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ArrayBufferLike",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
             },
             {
               "text": ")",
@@ -878,7 +458,7 @@
           "params": [
             {
               "name": "source",
-              "type": "DataView<ArrayBufferLike> | null",
+              "type": "TextureSource",
               "optional": false
             }
           ],
@@ -886,63 +466,8 @@
           "description": ""
         },
         {
-          "name": "setView",
-          "signature": "setView(view: View | null): this",
-          "signatureTokens": [
-            {
-              "text": "setView",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "view",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "View",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "view",
-              "type": "View | null",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Point this target at view, or back at its own default view when passed null. The view is caller-owned - neither this call nor destroy releases it."
-        },
-        {
           "name": "setWrapMode",
-          "signature": "setWrapMode(wrapMode: WrapModes): this",
+          "signature": "setWrapMode(): this",
           "signatureTokens": [
             {
               "text": "setWrapMode",
@@ -953,18 +478,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "wrapMode",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "WrapModes",
-              "kind": "type"
-            },
-            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -977,15 +490,9 @@
               "kind": "keyword"
             }
           ],
-          "params": [
-            {
-              "name": "wrapMode",
-              "type": "WrapModes",
-              "optional": false
-            }
-          ],
+          "params": [],
           "returnType": "this",
-          "description": ""
+          "description": "No-op: a depth attachment is sampled clamp-to-edge on both backends."
         },
         {
           "name": "updateSource",
@@ -1014,19 +521,55 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": ""
+          "description": "No-op: a depth attachment has no CPU-side source to refresh from, and the inherited implementation would resize it to the null source's 0x0."
         },
         {
-          "name": "updateViewport",
-          "signature": "updateViewport(): this",
+          "name": "fromColor",
+          "signature": "fromColor(color: Color | string, size: number): Texture",
           "signatureTokens": [
             {
-              "text": "updateViewport",
+              "text": "fromColor",
               "kind": "name"
             },
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "color",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "size",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             },
             {
               "text": ")",
@@ -1037,13 +580,24 @@
               "kind": "punctuation"
             },
             {
-              "text": "this",
-              "kind": "keyword"
+              "text": "Texture",
+              "kind": "type"
             }
           ],
-          "params": [],
-          "returnType": "this",
-          "description": ""
+          "params": [
+            {
+              "name": "color",
+              "type": "Color | string",
+              "optional": false
+            },
+            {
+              "name": "size",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Texture",
+          "description": "Create a solid-colour texture of the given square size (default 1×1). Accepts a Color instance or any CSS colour string; a Color with alpha below 1 is rendered with that alpha. Generalizes the fixed Texture.black/Texture.white helpers."
         }
       ],
       "paragraphs": [],
@@ -1055,11 +609,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "needsStencil",
-          "signature": "needsStencil: boolean",
+          "name": "target",
+          "signature": "target: RenderTarget",
           "signatureTokens": [
             {
-              "text": "needsStencil",
+              "text": "target",
               "kind": "name"
             },
             {
@@ -1067,13 +621,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "boolean",
-              "kind": "keyword"
+              "text": "RenderTarget",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether this target needs a stencil attachment for geometric stencil clipping (RenderNode.clip with a Geometry clipShape). Set by the WebGL2 backend when such a clip is rendered into an offscreen RenderTexture, so its framebuffer gets a depth/stencil renderbuffer; the WebGL2 on-screen root uses the default framebuffer's stencil (requested at context creation), so the flag only affects offscreen WebGL2 targets. The WebGPU backend does not consult this flag: it allocates a separate depth24plus-stencil8 attachment per clipped target (root included) on demand, sized to the colour attachment's physical pixels."
+          "description": "The render target this attachment belongs to."
         },
         {
           "name": "defaultOptions",
@@ -1097,11 +651,11 @@
           "description": ""
         },
         {
-          "name": "depthTexture",
-          "signature": "depthTexture: DepthTexture | null",
+          "name": "empty",
+          "signature": "empty: Texture",
           "signatureTokens": [
             {
-              "text": "depthTexture",
+              "text": "empty",
               "kind": "name"
             },
             {
@@ -1109,7 +663,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "DepthTexture",
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "compressed",
+          "signature": "compressed: CompressedTexturePayload | null",
+          "signatureTokens": [
+            {
+              "text": "compressed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTexturePayload",
               "kind": "type"
             },
             {
@@ -1123,7 +698,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Sampleable depth attachment, or null on a target that did not opt in - the on-screen root target always answers null. Opting in ({ depth: true } on a RenderTexture or a MultiRenderTarget) buys a depth buffer that survives the pass and can be read back as a texture; a MeshMaterial with writesDepth fills it. Without the opt-in a depth-writing material still draws, it just writes depth nowhere."
+          "description": "Hardware-compressed payload this texture uploads instead of a pixel source, or null for the ordinary case. Mutually exclusive with source: installing one clears the other, so a texture is never ambiguous about what it uploads. A handle that arrives empty from the loader can become either, which is what lets an asset variant swap a PNG for a KTX2 file without changing what a caller holds."
         },
         {
           "name": "destroyed",
@@ -1144,7 +719,36 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true once destroy has run. A destroyed target must not be rendered into - the backend throws rather than drawing into released GPU state."
+          "description": "true once destroy has run - a destroyed texture must not be bound."
+        },
+        {
+          "name": "error",
+          "signature": "error: Error | null",
+          "signatureTokens": [
+            {
+              "text": "error",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The error the last load failed with, or null outside 'failed'."
         },
         {
           "name": "flipY",
@@ -1166,27 +770,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "format",
-          "signature": "format: ColorTextureFormat",
-          "signatureTokens": [
-            {
-              "text": "format",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ColorTextureFormat",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Color attachment format, fixed at construction. Defaults to TextureFormat.Rgba8."
         },
         {
           "name": "generateMipMap",
@@ -1231,6 +814,60 @@
           "description": ""
         },
         {
+          "name": "loaded",
+          "signature": "loaded: Promise<this>",
+          "signatureTokens": [
+            {
+              "text": "loaded",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Promise that settles with this texture once its payload has loaded - resolved immediately for 'ready' textures, rejected with the load error for 'failed' ones. Re-materialized when a failed load is retried, so read it fresh from this getter rather than caching it across load cycles."
+        },
+        {
+          "name": "loadState",
+          "signature": "loadState: LoadStateValue",
+          "signatureTokens": [
+            {
+              "text": "loadState",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadStateValue",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Load lifecycle of this texture. Directly constructed textures are 'ready'; deferred handles returned by loader.get('hero.png') / loader.get(Asset.type('texture', src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' (showing the Texture.missing checker) when the load errors."
+        },
+        {
           "name": "powerOfTwo",
           "signature": "powerOfTwo: boolean",
           "signatureTokens": [
@@ -1249,7 +886,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether both dimensions are powers of two."
+          "description": "Whether both dimensions are powers of two. Non-power-of-two textures may have limited wrap-mode support on some hardware."
         },
         {
           "name": "premultiplyAlpha",
@@ -1273,11 +910,11 @@
           "description": ""
         },
         {
-          "name": "root",
-          "signature": "root: boolean",
+          "name": "ready",
+          "signature": "ready: boolean",
           "signatureTokens": [
             {
-              "text": "root",
+              "text": "ready",
               "kind": "name"
             },
             {
@@ -1291,7 +928,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "true exactly when state is 'ready'."
         },
         {
           "name": "scaleMode",
@@ -1337,7 +974,7 @@
         },
         {
           "name": "source",
-          "signature": "source: DataView<ArrayBufferLike> | null",
+          "signature": "source: TextureSource",
           "signatureTokens": [
             {
               "text": "source",
@@ -1348,28 +985,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "DataView",
+              "text": "TextureSource",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ArrayBufferLike",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
             }
           ],
           "params": [],
@@ -1377,11 +994,11 @@
           "description": ""
         },
         {
-          "name": "textureVersion",
-          "signature": "textureVersion: number",
+          "name": "state",
+          "signature": "state: LoadStateValue",
           "signatureTokens": [
             {
-              "text": "textureVersion",
+              "text": "state",
               "kind": "name"
             },
             {
@@ -1389,13 +1006,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "LoadStateValue",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Monotonically increasing counter incremented whenever the source data or an upload parameter changes. Filter and wrap changes do not bump it - backends resolve sampling state separately."
+          "description": "Load lifecycle: 'idle' | 'loading' | 'ready' | 'failed'."
         },
         {
           "name": "version",
@@ -1416,28 +1033,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "view",
-          "signature": "view: View",
-          "signatureTokens": [
-            {
-              "text": "view",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "View",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
+          "description": "Monotonically increasing version counter. Incremented by any mutation that requires a GPU re-upload: a source, size, or upload-parameter change. Filter and wrap changes do not bump it - backends resolve sampling state separately, so changing it costs no upload."
         },
         {
           "name": "width",
@@ -1480,6 +1076,69 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "black",
+          "signature": "black: Texture",
+          "signatureTokens": [
+            {
+              "text": "black",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "missing",
+          "signature": "missing: Texture",
+          "signatureTokens": [
+            {
+              "text": "missing",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shared 8×8 magenta/black checkerboard shown in place of assets that failed to load - a visible error beats an invisible hole, in production too. Lazily created; every access returns the same instance."
+        },
+        {
+          "name": "white",
+          "signature": "white: Texture",
+          "signatureTokens": [
+            {
+              "text": "white",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
         }
       ],
       "paragraphs": [],
@@ -1493,11 +1152,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/texture/RenderTexture.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/RenderTexture.ts"
+        "label": "src/rendering/texture/DepthTexture.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DepthTexture.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/texture/RenderTexture.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/RenderTexture.ts"
+  "sourcePath": "src/rendering/texture/DepthTexture.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DepthTexture.ts"
 }

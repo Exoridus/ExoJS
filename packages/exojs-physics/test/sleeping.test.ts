@@ -231,6 +231,53 @@ describe('sleeping', () => {
     expect(boxes[2]!.y).toBeGreaterThan(topRestingY + 16);
   });
 
+  it('lets a pile sleep again after the static floor under it was teleported', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const floor = addFloor(world, 300);
+    const boxes = addStack(world, 4, 300);
+
+    advance(world, 4);
+
+    expect(boxes.every(box => box.isSleeping)).toBe(true);
+
+    // A teleport marks the floor as moved for exactly the step that sees it:
+    // the pile wakes, rides out the discontinuity and settles again. A flag that
+    // outlived its step would leave the floor reading as a moving boundary for
+    // ever, and nothing resting on it could bank sleep time again.
+    floor.setTransform({ x: 0, y: 320 }, 0);
+
+    advance(world, 4);
+
+    expect(boxes.every(box => box.isSleeping)).toBe(true);
+  });
+
+  it('drops a force a body never integrated before falling asleep', () => {
+    // `timeToSleep` below one step: a body woken only by the force reaches the
+    // threshold on its first accumulate and is asleep again before the sub-steps
+    // run, so the force is never integrated. It must not be banked either.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, timeToSleep: FRAME / 2 });
+    const body = addBox(world, 0, 0);
+
+    advance(world, 1);
+
+    expect(body.isSleeping).toBe(true);
+
+    body.applyForce(1_000_000, 0);
+    world.step(FRAME);
+
+    expect(body.isSleeping).toBe(true);
+    expect(body.linearVelocityX).toBe(0);
+
+    // Awake and moving fast enough to stay awake, so the sub-steps do integrate
+    // whatever the accumulator holds.
+    body.wake();
+    body.linearVelocityY = 500;
+
+    advance(world, 0.5);
+
+    expect(body.linearVelocityX).toBe(0);
+  });
+
   it('sleep transitions are deterministic across identical runs', () => {
     const run = (): string => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });

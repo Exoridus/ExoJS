@@ -56,6 +56,7 @@ const createMockBackend = (
   const createColorAttachment = vi.fn(() => ({}) as GPURenderPassColorAttachment);
   const getScissorRect = vi.fn(() => options.scissorRect ?? null);
   const getAttachmentPixelSize = vi.fn((target: RenderTarget) => ({ width: target.width, height: target.height }));
+  const getDepthAttachmentView = vi.fn(() => ({}) as GPUTextureView);
   const stats = createRenderStats();
 
   const backend: WebGpuPassBackend = {
@@ -82,6 +83,7 @@ const createMockBackend = (
     submit,
     _targetHasContent: targetHasContent,
     _getAttachmentPixelSize: getAttachmentPixelSize,
+    _getDepthAttachmentView: getDepthAttachmentView,
   };
 
   return {

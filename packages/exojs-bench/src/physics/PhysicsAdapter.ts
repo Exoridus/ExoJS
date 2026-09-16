@@ -40,6 +40,19 @@ export interface PhysicsArchetypeSpec {
    */
   readonly perturbFraction: number;
   /**
+   * Steps between re-applying every perturbed body's initial velocity, or
+   * `undefined` for an archetype whose impulse is given once at setup.
+   *
+   * An impulse given once dissipates, and a scene without contacts to keep it
+   * alive comes to rest inside the warmup: every arm that sleeps then times an
+   * empty step, and the one that sleeps most eagerly wins a comparison of
+   * nothing. Re-driving the same bodies with the same velocities keeps the
+   * timed window on the work the archetype names, and stays deterministic
+   * across arms because the selection and the velocities are the shared
+   * descriptor's own.
+   */
+  readonly kickEverySteps?: number;
+  /**
    * Rays cast per step, or `undefined` for an archetype that runs no queries.
    *
    * Queries exercise the broad-phase acceleration structure rather than the

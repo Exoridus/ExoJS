@@ -25,33 +25,27 @@
  * pair, so tagging four arms says the same thing four times about a comparison
  * only some of them are in.
  *
- * The detail each load opens is rendered from that load's own comparisons, so
- * the load, the backend and the profile a reader is looking at cannot come
- * apart from the ones the numbers were read out of.
- *
  * Below the width at which the grid becomes one column, the card gives up its
  * own frame and becomes a SECTION of the domain's single card, separated from
  * its neighbours by a rule. Six framed cards in a column is six visual restarts
  * of the same structure - border, padding, title block, gap - where the frame
  * has nothing left to separate horizontally, and the section headings carry the
  * grouping on their own. The chrome is only dropped, not the structure: the
- * rows, the load control and the per-scenario detail are identical at both
- * widths, and nothing here becomes a table.
+ * rows and the load control are identical at both widths, and nothing here
+ * becomes a table.
  */
 
-import BenchMeasurementDetail from './BenchMeasurementDetail.astro';
-import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NOTE, formatMs, OUTCOME_NOTES, OUTCOME_STATUS } from '../lib/bench-profiles';
+import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NOTE, formatMs, OUTCOME_STATUS } from '../lib/bench-profiles';
 import type { BenchCard } from '../lib/bench-cards';
 import { openingLoad } from '../lib/bench-cards';
 
-/** A scenario description split into what the scene is and what it loads, at the semicolon the descriptions carry. */
+/** A scenario description split into what the scene is and what it loads, at the full stop between the two. */
 const splitAtClause = (text: string): readonly [string, string | undefined] => {
-    const at = text.indexOf('; ');
+    const at = text.indexOf('. ');
 
-    // The lead keeps no sentence-ending period: at full width the two clauses
-    // are printed back together as the one sentence they were written as, and
-    // the period belongs only to the shortened form.
-    return at === -1 ? [text, undefined] : [text.slice(0, at), text.slice(at + 2)];
+    // The lead keeps its full stop: both clauses are whole sentences, so the
+    // shortened phone form is the first of them and needs nothing added.
+    return at === -1 ? [text, undefined] : [text.slice(0, at + 1), text.slice(at + 2)];
 };
 
 interface Props {
@@ -68,16 +62,14 @@ const [descriptionLead, descriptionRest] = description === undefined ? [undefine
 /**
  * True where the lead clause only repeats the title.
  *
- * `Changing labels; stresses per-frame text invalidation and layout.` reduces
- * to `Changing labels` under a heading that already says it. At full width the
+ * `Changing labels. Stresses per-frame text invalidation and layout.` reduces
+ * to `Changing labels.` under a heading that already says it. At full width the
  * sentence is printed whole regardless - it was written as one sentence and
  * reads as one - and only the shortened phone form has a line to lose to it.
  */
 const leadRepeatsTitle =
     descriptionLead !== undefined && descriptionLead.replace(/\.$/, '').toLowerCase() === archetypeTitle(card.id).toLowerCase();
 
-/** True where the shortened description would end without punctuation, so the phone layout can supply it. */
-const leadNeedsStop = descriptionLead !== undefined && !descriptionLead.endsWith('.');
 const anchor = `${domain}-${card.id}${card.backend === undefined ? '' : `-${card.backend}`}`;
 
 /**
@@ -107,38 +99,6 @@ const timeCharacters = Math.max(
     ...card.loads.flatMap(load => load.arms.map(arm => (arm.ms === null ? OUTCOME_STATUS[arm.outcome].length : formatMs(arm.ms).length))),
 );
 
-/** True where any row of the card carries a marker beside its figure, which the column has to leave room for. */
-const hasMarkers = card.loads.some(load => load.arms.some(arm => arm.overFrameBudget));
-
-/** The states this card has to explain, so the notes are written once per card rather than per row. */
-const explained = [
-    ...(hasMarkers ? [{ id: 'frame-budget', label: 'Past the frame', note: FRAME_BUDGET_NOTE }] : []),
-    ...(card.loads.some(load => load.withheld !== undefined)
-        ? [
-              {
-                  id: 'withheld',
-                  label: 'Not comparable',
-                  note: "Every library's own time is published; the comparison between them is not. See the reason below.",
-              },
-          ]
-        : []),
-    ...[...new Set(card.loads.flatMap(load => load.arms.filter(arm => !arm.quantitative).map(arm => arm.outcome)))].map(outcome => ({
-        id: outcome,
-        label: OUTCOME_STATUS[outcome],
-        note: OUTCOME_NOTES[outcome],
-    })),
-];
-
-/**
- * Anchor for one note, unique across the page.
- *
- * Keyed by the LOAD as well as the card: every load renders its own copy of the
- * notes, so an id carrying only the card's name appeared three times on a card
- * with three loads - and the marker then opened the first copy, which sits in a
- * load panel the reader is not looking at.
- */
-const noteId = (loadId: string, id: string): string => `${anchor}-${loadId}-note-${id}`;
-
 /**
  * The states of one load, in the card's own order.
  *
@@ -155,30 +115,39 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     <header>
         <h3>{archetypeTitle(card.id)}</h3>
         {/*
-          * Split at the semicolon the descriptions already carry: the clause
+          * Split at the full stop the descriptions already carry: the clause
           * before it says what the scene is, the clause after it says which
           * part of the renderer it loads. Narrow, only the first is worth two
-          * lines of a phone screen, and the second is one tap away - so nothing
-          * is rewritten and nothing is lost.
+          * lines of a phone screen, so the second is dropped there and read in
+          * full at the width where it fits.
           */}
         {description !== undefined && (
             <p class:list={['what', { 'repeats-title': leadRepeatsTitle }]}>
-                {descriptionLead !== undefined && <span class:list={['what-lead', { stop: leadNeedsStop }]}>{descriptionLead}</span>}
-                {descriptionRest !== undefined && <span class="what-rest">; {descriptionRest}</span>}
+                {descriptionLead !== undefined && <span class="what-lead">{descriptionLead}</span>}
+                {descriptionRest !== undefined && <span class="what-rest"> {descriptionRest}</span>}
             </p>
         )}
     </header>
 
-    {/* The chips are the control; the load a single-load card sits on is stated once, in the meta row below. */}
-    {card.loads.length > 1 && (
-        <div class="loads" role="group" aria-label="Load">
-            {card.loads.map(load => (
+    {/*
+      * The load reads as a chip whatever the card holds. A single load printed
+      * as running text beside the figures put the same fact in two shapes on
+      * one page - a control on cards that scale, a sentence on cards that do
+      * not - and a reader comparing two cards had to notice which shape they
+      * were looking at before they could read the load off either. One load is
+      * not a control, so it is not a button; it is the same chip, inert.
+      */}
+    <div class="loads" role={card.loads.length > 1 ? 'group' : undefined} aria-label={card.loads.length > 1 ? 'Load' : undefined}>
+        {card.loads.length > 1 ? (
+            card.loads.map(load => (
                 <button type="button" class="load" data-load={load.id} aria-pressed={load.id === opening?.id ? 'true' : 'false'}>
                     {load.label}
                 </button>
-            ))}
-        </div>
-    )}
+            ))
+        ) : (
+            <span class="load solo">{opening?.label}</span>
+        )}
+    </div>
 
     {/*
       * `bench-load-panel` rather than `panel`: the global stylesheet gives
@@ -189,46 +158,47 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     {card.loads.map(load => (
         <div class="bench-load-panel" data-load={load.id} hidden={load.id !== opening?.id}>
             {/*
-              * One meta row: what the load is on the left, what to know about it
-              * on the right. These were three stacked paragraphs, which on a
-              * phone spent three lines saying what belongs on one - and the
-              * explanation each of them carried is one tap away in the details.
+              * The load's own note about itself: why its comparison is
+              * withheld, or what state every arm on it shares. Nothing to say
+              * leaves no row, so the paragraph is only rendered where there
+              * is something to read - an always-present element with nothing
+              * inside it is invisible on screen but still there for `:empty`
+              * and similar checks to miss.
               */}
-            <p class="meta">
-                <span class="at">{card.loads.length > 1 ? '' : load.label}</span>
-                {load.withheld !== undefined ? (
-                    <button type="button" class="status withheld" data-explains={noteId(load.id, 'withheld')} aria-describedby={noteId(load.id, 'withheld')}>
-                        Not comparable
-                    </button>
-                ) : statesOf(load).length > 0 ? (
-                    <button type="button" class="status" data-explains={noteId(load.id, statesOf(load)[0] ?? 'absent')} aria-describedby={noteId(load.id, statesOf(load)[0] ?? 'absent')}>
-                        {OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}
-                    </button>
-                ) : (
-                    load.measuredArms !== null && <span class="status quiet">{load.measuredArms} libraries</span>
-                )}
-            </p>
+            {(load.withheld !== undefined || statesOf(load).length > 0) && (
+                <p class="meta">
+                    {load.withheld !== undefined ? (
+                        <>
+                            <span class="status withheld">Not comparable</span>
+                            <span class="reason">{load.withheld}</span>
+                        </>
+                    ) : (
+                        <span class="status">{OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}</span>
+                    )}
+                </p>
+            )}
 
             <ul class="arms">
                 {load.arms.map(arm => (
                     <li class:list={['arm', { reference: arm.reference, absent: arm.ms === null }]}>
                         <span class="name">{arm.label}</span>
-                        <span class="track">
-                            {/*
-                              * A withheld row draws nothing. Its bars would be
-                              * durations like any other, but side by side on one
-                              * track they are read as the comparison the row is
-                              * published without.
-                              */}
-                            {load.withheld === undefined && widthOf(arm.ms, load.maxMs) !== null && (
-                                <span class="bar" style={`width:${String(widthOf(arm.ms, load.maxMs))}%`} />
-                            )}
-                        </span>
+                        {/*
+                          * A withheld row draws no track at all. Its bars would
+                          * be durations like any other, but side by side they
+                          * are read as the comparison the row is published
+                          * without, and an empty track under every row reads as
+                          * a chart that failed to draw.
+                          */}
+                        {load.withheld === undefined ? (
+                            <span class="track">
+                                {widthOf(arm.ms, load.maxMs) !== null && <span class="bar" style={`width:${String(widthOf(arm.ms, load.maxMs))}%`} />}
+                            </span>
+                        ) : (
+                            <span />
+                        )}
                         <span class="time">
                             {arm.ms === null ? (
-                                <button type="button" class="state" data-explains={noteId(load.id, arm.outcome)} aria-describedby={noteId(load.id, arm.outcome)}>
-                                    {OUTCOME_STATUS[arm.outcome]}
-                                </button>
+                                <span class="state">{OUTCOME_STATUS[arm.outcome]}</span>
                             ) : (
                                 <>
                                     {/*
@@ -239,15 +209,10 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                                       * what it is, a time larger than one frame.
                                       */}
                                     {arm.overFrameBudget ? (
-                                        <button
-                                            type="button"
-                                            class="figure over"
-                                            data-explains={noteId(load.id, 'frame-budget')}
-                                            aria-describedby={noteId(load.id, 'frame-budget')}
-                                        >
+                                        <b class="over">
                                             {formatMs(arm.ms)}
                                             <span class="sr">{FRAME_BUDGET_NOTE}</span>
-                                        </button>
+                                        </b>
                                     ) : (
                                         <b>{formatMs(arm.ms)}</b>
                                     )}
@@ -260,37 +225,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                 ))}
             </ul>
 
-            {/*
-              * One chip per state the load actually carries, and the state is
-              * read off the outcome rather than off "not quantitative": a
-              * comparison nothing measured and one whose clock demonstrably
-              * could not separate two durations are different findings, and
-              * labelling the first as timing-limited claims a measurement.
-              * The sentence lives in the note the chip opens.
-              */}
-            <details class="more">
-                <summary>Details</summary>
-                <p class="context">
-                    {load.label}
-                    {load.unit === undefined && ' load'} · {card.backend === undefined ? 'Physics' : card.backend === 'webgl2' ? 'WebGL2' : 'WebGPU'}
-                </p>
-
-                {/* What every marker and state word on this card means, as text rather than as a tooltip a touch reader cannot reach. */}
-                {load.withheld !== undefined && <p class="why">{load.withheld}</p>}
-
-                {explained.length > 0 && (
-                    <dl class="notes">
-                        {explained.map(entry => (
-                            <div id={noteId(load.id, entry.id)} tabindex="-1">
-                                <dt>{entry.label}</dt>
-                                <dd>{entry.note}</dd>
-                            </div>
-                        ))}
-                    </dl>
-                )}
-
-                <BenchMeasurementDetail comparisons={load.comparisons} withheld={load.withheld !== undefined} />
-            </details>
         </div>
     ))}
 </article>
@@ -348,15 +282,16 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         display: flex;
         flex-wrap: wrap;
         align-items: baseline;
-        justify-content: space-between;
+        justify-content: flex-end;
         gap: 0.3rem 0.75rem;
         margin: 0 0 0.45rem;
         font-size: 0.78rem;
         color: var(--color-text-muted);
     }
 
-    .at {
-        margin: 0;
+    /* Inert by construction: the single-load chip states the load and controls nothing. */
+    .load.solo {
+        cursor: default;
     }
 
     /* The row's one fact about itself, on the right where the times end. */
@@ -372,17 +307,12 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         margin-left: auto;
     }
 
-    .status.quiet {
-        border-color: transparent;
-        padding-inline: 0;
-        cursor: default;
-    }
-
-    .why {
-        margin: 0 0 0.7rem;
-        font-size: 0.78rem;
+    /* Forced onto its own line under the status badge: the reason reads as a caption to it, not a second fact beside it. */
+    .reason {
+        flex-basis: 100%;
+        font-size: 0.74rem;
         line-height: 1.45;
-        color: var(--color-text-muted);
+        text-wrap: pretty;
     }
 
     /* No frame, no ground: the card is already the box, and the global `.panel` rule is what used to draw a second one here. */
@@ -411,7 +341,7 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
      */
     .arm {
         display: grid;
-        grid-template-columns: 5.5rem 1fr calc(var(--bench-time-ch, 4) * 1ch + 3.4rem);
+        grid-template-columns: 5.5rem 1fr calc(var(--bench-time-ch, 4) * 1ch + 2.1rem);
         align-items: center;
         gap: 0.5rem;
         font-size: 0.82rem;
@@ -463,14 +393,8 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     }
 
     /* A figure past the frame budget, drawn as the same figure in the warning hue - same box, same alignment, no glyph. */
-    .figure.over {
-        font: inherit;
-        font-weight: 650;
-        padding: 0;
-        border: 0;
-        background: none;
+    .time b.over {
         color: var(--amber);
-        cursor: pointer;
     }
 
     .arm.absent .time {
@@ -493,23 +417,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         font-size: 0.76rem;
     }
 
-    /*
-     * A real control, not a glyph with a `title`: pressing it opens the card's
-     * details and moves the reader to the note that says what the mark means,
-     * which is reachable by touch and by keyboard. A `title` is neither.
-     */
-    .mark {
-        font: inherit;
-        font-size: 0.68rem;
-        line-height: 1;
-        padding: 0.15rem 0.35rem;
-        border-radius: 0.3rem;
-        border: 1px solid currentcolor;
-        background: transparent;
-        color: var(--color-text-muted);
-        cursor: pointer;
-    }
-
     .sr {
         position: absolute;
         width: 1px;
@@ -519,56 +426,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         white-space: nowrap;
     }
 
-    .notes {
-        margin: 0 0 0.7rem;
-        display: grid;
-        gap: 0.25rem;
-        font-size: 0.78rem;
-    }
-
-    .notes > div {
-        display: grid;
-        grid-template-columns: 8.5rem 1fr;
-        gap: 0.5rem;
-        align-items: baseline;
-    }
-
-    /* The note the marker sends the reader to is marked while it holds focus, so the jump is visible rather than silent. */
-    .notes > div:focus-visible {
-        outline: 2px solid var(--color-accent);
-        outline-offset: 2px;
-    }
-
-    .notes dt {
-        color: var(--color-text-muted);
-    }
-
-    .notes dd {
-        margin: 0;
-    }
-
-    /* Its own disclosure section, not a line trailing the results above it. */
-    .more {
-        margin-top: 0.65rem;
-        font-size: 0.82rem;
-    }
-
-    .more > summary {
-        cursor: pointer;
-        color: var(--color-text-muted);
-        width: fit-content;
-    }
-
-    .more[open] > summary {
-        margin-bottom: 0.5rem;
-    }
-
-    .context {
-        margin: 0 0 0.5rem;
-        font-size: 0.78rem;
-        color: var(--color-text-muted);
-    }
-
     @media (max-width: 34rem) {
         .arm {
             font-size: 0.78rem;
@@ -576,11 +433,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
 
         .time {
             font-size: 0.86rem;
-        }
-
-        .notes > div {
-            grid-template-columns: 1fr;
-            gap: 0.1rem;
         }
     }
 
@@ -615,11 +467,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
             display: none;
         }
 
-        /* The clause that carried the sentence's period is hidden here, so the half that remains ends itself. */
-        .what-lead.stop::after {
-            content: '.';
-        }
-
         /* Nothing worth a line once the lead clause is only the title again and the rest is hidden. */
         .what.repeats-title {
             display: none;
@@ -632,10 +479,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         .load {
             font-size: 0.72rem;
             padding: 0.15rem 0.45rem;
-        }
-
-        .more > summary {
-            font-size: 0.78rem;
         }
 
         /*
@@ -678,32 +521,11 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
 </style>
 
 <script>
-    /**
-     * Pressing a marker opens the card's details and moves the reader to the
-     * note that explains it.
-     *
-     * A `title` attribute is not an answer here: it is unreachable by touch and
-     * awkward by keyboard, and the sentence a reader needs is the one thing the
-     * marker cannot carry itself. The note already exists in the details, so
-     * the control reveals it rather than duplicating it into a tooltip.
-     */
-    for (const marker of document.querySelectorAll<HTMLElement>('[data-explains]')) {
-        marker.addEventListener('click', () => {
-            const note = document.getElementById(marker.dataset['explains'] ?? '');
-            const disclosure = note?.closest('details');
-
-            if (disclosure instanceof HTMLDetailsElement) disclosure.open = true;
-
-            note?.focus();
-            note?.scrollIntoView({ block: 'nearest' });
-        });
-    }
-
     // Load switching is per card and nothing else on the page depends on it, so
     // it stays a listener on the card rather than shared state. Without
     // JavaScript every panel but the opening one is `hidden`, which is the same
-    // thing the buttons toggle - so the card still shows a real measured load,
-    // with the detail of that same load inside it.
+    // thing the buttons toggle - so the card still shows one real measured
+    // load's rows rather than an empty panel.
     for (const card of document.querySelectorAll<HTMLElement>('.card')) {
         const buttons = card.querySelectorAll<HTMLButtonElement>('.load');
         const panels = card.querySelectorAll<HTMLElement>('.bench-load-panel');

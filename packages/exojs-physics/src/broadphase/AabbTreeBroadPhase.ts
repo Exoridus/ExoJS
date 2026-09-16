@@ -28,12 +28,19 @@ const byPairId = (p: CandidatePair, q: CandidatePair): number => p.a.id - q.a.id
  *
  * Three phases per `computePairs` call: (1) sync every live collider (insert
  * new ones, reinsert moved ones, querying only around reinsertions to discover
- * NEW fat-overlap candidates); (2) one full pass over the persistent pair set
- * dropping any pair whose fat AABBs no longer overlap - cheap (O(1) per pair)
- * and run every step regardless of movement, exactly mirroring Box2D's own
- * `b2ContactManager::Collide` (see the design's correctness argument for why a
- * single global pass, not a per-moved-leaf rescan, is both correct and the
- * right complexity); (3) emit, keeping only pairs whose *tight* AABBs overlap.
+ * NEW fat-overlap candidates; a collider whose AABB has not been rewritten
+ * since its last sync is skipped outright via `Collider._treeDirty`, so a
+ * sleeping world pays one flag read per collider); (2) one full pass over the
+ * persistent pair set dropping any pair whose fat AABBs no longer overlap -
+ * cheap (O(1) per pair) and run every step regardless of movement, exactly
+ * mirroring Box2D's own `b2ContactManager::Collide` (see the design's
+ * correctness argument for why a single global pass, not a per-moved-leaf
+ * rescan, is both correct and the right complexity); (3) emit, keeping only
+ * pairs whose *tight* AABBs overlap.
+ *
+ * Phases 2 and 3 are skipped whole when nothing they read has changed since the
+ * last call: the emitted list is a function of the pair set and the tight AABBs
+ * alone, and a step that rewrote no collider geometry touched neither.
  *
  * The persistent set is intentionally keyed on *fat* overlap so temporal
  * coherence carries across steps (a leaf that stays inside its fat AABB is
@@ -60,6 +67,17 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
 
   private _syncingCollider: Collider | null = null;
   private _syncingProxy = -1;
+
+  /**
+   * Whether anything the emitted candidate list is a function of has changed
+   * since it was built: a collider AABB taken into the tree, or a pair added or
+   * dropped. While it stays `false` the previous list is still exactly right.
+   */
+  private _emitStale = true;
+  /** The buffer the current candidate list was emitted into, so a caller that swaps or clears its own buffer still gets a rebuild. */
+  private _emitTarget: CandidatePair[] | null = null;
+  private _emitLength = -1;
+
   private readonly _onNeighborFound = (payload: Collider, proxy: number): void => {
     if (proxy === this._syncingProxy) {
       return;
@@ -71,6 +89,7 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   private readonly _dropIfStale = (pair: CandidatePair, key: number): void => {
     if (!this._tree.fatOverlaps(pair.a._treeProxy, pair.b._treeProxy)) {
       this._pairs.delete(key);
+      this._emitStale = true;
     }
   };
 
@@ -95,12 +114,24 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   public computePairs(colliders: readonly Collider[], out: CandidatePair[]): CandidatePair[] {
     this.sync(colliders);
 
+    // The candidate list is a function of the pair set and the tight AABBs
+    // alone. A step in which no collider's geometry was rewritten and no pair
+    // moved leaves both untouched, so the list already in `out` is the one both
+    // passes below would rebuild - and a settled world is every such step.
+    if (!this._emitStale && out === this._emitTarget && out.length === this._emitLength) {
+      return out;
+    }
+
     this._pairs.forEach(this._dropIfStale);
 
     out.length = 0;
     this._collectTarget = out;
     this._pairs.forEach(this._collectPair);
     sortInPlace(out, byPairId);
+
+    this._emitStale = false;
+    this._emitTarget = out;
+    this._emitLength = out.length;
 
     return out;
   }
@@ -136,6 +167,7 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
       return;
     }
 
+    this._emitStale = true;
     this._tree.remove(collider._treeProxy);
     collider._treeProxy = -1;
 
@@ -156,17 +188,30 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
     this._tree.query(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, this._resetTreeProxy);
     this._tree.destroy();
     this._pairs.clear();
+    this._emitStale = true;
+    this._emitTarget = null;
   }
 
   private _sync(collider: Collider): void {
     const box = collider.aabb;
 
     if (collider._treeProxy === -1) {
+      collider._treeDirty = false;
+      this._emitStale = true;
       collider._treeProxy = this._tree.insert(box.minX, box.minY, box.maxX, box.maxY, collider);
       this._discoverNeighbors(collider);
 
       return;
     }
+
+    // The leaf already holds this box, so `update` would do nothing but repeat
+    // the containment test. A settled world is almost entirely this case.
+    if (!collider._treeDirty) {
+      return;
+    }
+
+    collider._treeDirty = false;
+    this._emitStale = true;
 
     const moved = this._tree.update(collider._treeProxy, box.minX, box.minY, box.maxX, box.maxY);
 
@@ -199,6 +244,7 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
 
     if (!this._pairs.has(key)) {
       this._pairs.set(key, { a: lo, b: hi });
+      this._emitStale = true;
     }
   }
 }
