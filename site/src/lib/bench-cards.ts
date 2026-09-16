@@ -13,7 +13,7 @@
  * assembled to suit the numbers inside it.
  */
 
-import type { BenchProfileDocument, LoadUnit, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
+import type { BenchProfileDocument, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
 import { armLabel, formatLoad, isQuantitative, orderArms, outcomeOf, publishedMs, withheldScenario } from './bench-profiles';
 
 /** One arm's time on one load of one scenario. */
@@ -42,17 +42,6 @@ export interface CardArm {
   readonly quantitative: boolean;
 }
 
-/** One competitor's comparison on one load, for the detail a card opens. */
-export interface CardComparison {
-  /** Arm id, e.g. `pixi`. */
-  readonly id: string;
-  /** Human label, e.g. `PixiJS`. */
-  readonly label: string;
-  /** The published cell, verbatim - the detail and the row are the same measurement by construction. */
-  readonly cell: ProfileCell;
-  readonly outcome: ReturnType<typeof outcomeOf>;
-}
-
 /** One selectable load of one scenario. */
 export interface CardLoad {
   /** Stable id within the scenario, used as the control's value. */
@@ -65,12 +54,6 @@ export interface CardLoad {
   readonly arms: readonly CardArm[];
   /** Largest plottable figure on this load, for scaling the bars. */
   readonly maxMs: number;
-  /** Scene size this load was measured at. */
-  readonly count: number;
-  /** What `count` counts, where the row states one. */
-  readonly unit?: LoadUnit;
-  /** The published comparisons behind the row, in the same arm order. */
-  readonly comparisons: readonly CardComparison[];
   /**
    * Why this load publishes no cross-arm comparison, or `undefined` where it
    * publishes one; see `withheldScenario`.
@@ -80,16 +63,6 @@ export interface CardLoad {
    * which a bar length would assert they were.
    */
   readonly withheld: string | undefined;
-  /**
-   * How many libraries this load compares, where that is fewer than the block's
-   * widest row; `null` where it compares all of them.
-   *
-   * A card that silently shows two rows where its neighbours show four reads as
-   * a page that lost a library. The figure says how many were measured; why an
-   * arm is missing is a property of that arm's adapter and coverage and stays
-   * in the full results.
-   */
-  readonly measuredArms: number | null;
 }
 
 /** One scenario's card. */
@@ -159,17 +132,16 @@ const headlineOrFirst = (cards: readonly BenchCard[], preferred: readonly string
 };
 
 /**
- * The arms of one comparable load, quickest first.
+ * The arms of one load, quickest first.
  *
  * The section says "lower is better", so the row reads top-down as best to
- * worst; ExoJS is found by its colour rather than by always being the first
- * line. Arms without a figure to rank by keep their canonical order behind
- * the ranked ones, and a withheld load is never handed to this at all - it
- * publishes no ranking, so it prints none.
+ * worst. ExoJS is found by its colour rather than by always being the first
+ * line, and arms without a figure to rank by keep their canonical order behind
+ * the ranked ones.
  */
 const fastestFirst = (arms: readonly CardArm[]): readonly CardArm[] =>
   [...arms]
-    .map((arm, index) => ({ arm, index, ms: arm.quantitative && arm.ms !== null && Number.isFinite(arm.ms) ? arm.ms : null }))
+    .map((arm, index) => ({ arm, index, ms: arm.ms !== null && Number.isFinite(arm.ms) ? arm.ms : null }))
     .sort((a, b) => {
       if (a.ms === null || b.ms === null) {
         return (a.ms === null ? 1 : 0) - (b.ms === null ? 1 : 0) || a.index - b.index;
@@ -227,7 +199,12 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
   // A withheld row loses its quantitative treatment wholesale rather than per
   // arm: the doubt is about the comparison, so no arm in it may keep a bar.
   const canonical = [reference, ...cells.map(competitorArm)].map(arm => (withheld === undefined ? arm : { ...arm, quantitative: false }));
-  const arms = withheld === undefined ? fastestFirst(canonical) : canonical;
+  // Sorted even where the comparison is withheld. The order is the reader's way
+  // through the rows and the same one on every card, and leaving a withheld
+  // load in canonical order does not stop anyone ranking four printed numbers,
+  // it only makes them do it by eye. That these times are not a ranking is said
+  // where it belongs, on the load's own marker.
+  const arms = fastestFirst(canonical);
   // Every published figure sets the scale, because the bars are durations: an
   // arm whose PAIR the clock could not separate still took the time it reports,
   // and leaving it out of the maximum would draw it past the end of its track.
@@ -240,10 +217,6 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     primary: row.primary ?? false,
     arms,
     maxMs: plotted.length > 0 ? Math.max(...plotted) : 0,
-    count: row.count,
-    ...(row.unit !== undefined && { unit: row.unit }),
-    comparisons: cells.map(cell => ({ id: cell.competitor, label: armLabel(cell.competitor), cell, outcome: outcomeOf(cell) })),
-    measuredArms: null,
     withheld,
   };
 };
@@ -267,17 +240,10 @@ const cardsOf = (sections: readonly ProfileSection[], backend?: ProfileBackendNa
     }
   }
 
-  // Marked against the widest row the same block published, not against a list
-  // of arms the page holds: what a comparison "should" carry is whatever that
-  // machine's run actually measured, and a profile taken against three arms
-  // must not report every one of its rows as short of a fourth.
-  const cards = [...byScenario.entries()].map(([id, card]) => ({ id, category: card.category, loads: card.loads, ...(backend !== undefined && { backend }) }));
-  const widest = Math.max(0, ...cards.flatMap(card => card.loads.map(load => load.arms.length)));
-
-  return cards.map(card => ({
-    ...card,
-    loads: card.loads.map(load => ({ ...load, measuredArms: load.arms.length < widest ? load.arms.length : null })),
-  }));
+  // Which arms a load leaves out is stated once for the page rather than on
+  // every card that leaves one out: the rule is the same everywhere, and a
+  // reader who wants the absent arm's own story has the full results.
+  return [...byScenario.entries()].map(([id, card]) => ({ id, category: card.category, loads: card.loads, ...(backend !== undefined && { backend }) }));
 };
 
 /** The rendering cards of one profile on one backend, or an empty list where it measured none. */

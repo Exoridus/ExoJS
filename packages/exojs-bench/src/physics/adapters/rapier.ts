@@ -161,6 +161,7 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter> => {
       perStep = createPerStepWork(spec, scene, table, {
         createBody,
         removeBody: body => created.removeRigidBody(body),
+        setVelocity: (body, vx, vy) => body.setLinvel({ x: vx, y: vy }, true),
         // `maxToi` is measured in multiples of the ray direction, and the shared
         // descriptor's direction is a unit vector, so it is the distance in px.
         // `solid: true` counts a ray starting inside a shape as a hit, matching the

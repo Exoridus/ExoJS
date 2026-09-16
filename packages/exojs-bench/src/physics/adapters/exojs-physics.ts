@@ -78,6 +78,12 @@ export const createExoJsPhysicsAdapter = (): PhysicsAdapter => {
         createBody: desc => createBody(w, desc),
         removeBody: body => w.destroyBody(body),
         castRay: ray => w.rayCast({ x: ray.x, y: ray.y }, { x: ray.dx, y: ray.dy }, undefined, ray.maxDistance) !== null,
+        // The velocity fields are plain writes and rouse nothing on their own.
+        setVelocity: (body, vx, vy) => {
+          body.linearVelocityX = vx;
+          body.linearVelocityY = vy;
+          body.wake();
+        },
       });
       world = w;
     },

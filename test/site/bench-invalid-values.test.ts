@@ -49,6 +49,18 @@ describe('a figure the comparison never established', () => {
     expect(formatMs(publishedMs(cell, cell.competitorMs))).toBe('-');
   });
 
+  it('is withheld where the page could print it only as a bound', () => {
+    const cell = cellOf(0.0004, 'limited');
+
+    expect(publishedMs(cell, cell.competitorMs)).toBeNull();
+  });
+
+  it('is published where the clock refused the pair but the figure itself is printable', () => {
+    const cell = cellOf(0.2, 'limited');
+
+    expect(publishedMs(cell, cell.competitorMs)).toBe(0.2);
+  });
+
   it('is withheld even where the ladder did reach a factor from it', () => {
     // The harness can compute 23750x from a zero-ish sample; the timer check is
     // what says the two durations were never separated, and it outranks it.
@@ -119,41 +131,26 @@ describe('every published profile', () => {
     }
   });
 
-  it('lists the arms of a comparable load quickest first, and a withheld load in canonical order', () => {
+  it('lists the arms of every load quickest first, with the unpublished ones behind in canonical order', () => {
     for (const load of loads) {
-      const ranked = load.arms.filter(arm => arm.quantitative && arm.ms !== null).map(arm => arm.ms ?? 0);
-
-      if (load.withheld !== undefined) {
-        // No ranking is published for a withheld row, so none is printed: ExoJS
-        // leads the canonical order whatever its time.
-        expect(load.arms[0]?.reference).toBe(true);
-        continue;
-      }
+      const published = load.arms.filter(arm => arm.ms !== null).map(arm => arm.ms ?? 0);
 
       // The section reads "lower is better", so the rows read best to worst.
-      expect(ranked).toStrictEqual([...ranked].sort((a, b) => a - b));
-      // Arms with nothing to rank by sit behind the ranked ones, never between them.
-      const firstUnranked = load.arms.findIndex(arm => !(arm.quantitative && arm.ms !== null));
+      // A withheld load is sorted the same way: its times are real durations,
+      // and the marker on the load, not the order, says they are no ranking.
+      expect(published).toStrictEqual([...published].sort((a, b) => a - b));
+      // Arms without a figure sit behind the published ones, never between them.
+      const firstUnpublished = load.arms.findIndex(arm => arm.ms === null);
 
-      if (firstUnranked !== -1) {
-        expect(load.arms.slice(firstUnranked).every(arm => !(arm.quantitative && arm.ms !== null))).toBe(true);
+      if (firstUnpublished !== -1) {
+        expect(load.arms.slice(firstUnpublished).every(arm => arm.ms === null)).toBe(true);
       }
     }
   });
 
-  it('opens every card on a load whose detail describes that same load', () => {
+  it('opens every card on a load it actually carries', () => {
     for (const card of benchProfiles.flatMap(document => (['webgl2', 'webgpu'] as const).flatMap(backend => renderingCards(document, backend)))) {
-      const opening = openingLoad(card);
-
-      expect(opening).toBeDefined();
-      // The detail is rendered from the load's own comparisons, so identity is
-      // structural: every comparison the detail can show belongs to this load.
-      expect(opening?.comparisons.map(entry => entry.id).sort()).toStrictEqual(
-        opening?.arms
-          .filter(arm => !arm.reference)
-          .map(arm => arm.id)
-          .sort(),
-      );
+      expect(openingLoad(card)).toBeDefined();
     }
   });
 });

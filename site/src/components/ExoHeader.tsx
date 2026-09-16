@@ -60,11 +60,15 @@ export const ExoHeader = ({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
           </span>
         </a>
         <nav className={css(styles, 'nav')} aria-label="Primary">
-          <a href={guideHref} data-active={currentPath.startsWith(guideHref) ? 'true' : 'false'}>
-            Guide
+          {/* Exact match, never a prefix: every other destination sits under the home path and would keep it lit. */}
+          <a href={homeHref} data-active={currentPath === homeHref ? 'true' : 'false'}>
+            Home
           </a>
           <a href={playgroundHref} data-active={currentPath.startsWith(playgroundHref) ? 'true' : 'false'}>
             Playground
+          </a>
+          <a href={guideHref} data-active={currentPath.startsWith(guideHref) ? 'true' : 'false'}>
+            Guide
           </a>
           <a href={apiHref} data-active={currentPath.startsWith(apiHref) ? 'true' : 'false'}>
             API
