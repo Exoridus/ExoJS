@@ -423,6 +423,19 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _leafScratch: Collider[] = [];
   private readonly _joints: Joint[] = [];
   /**
+   * The joints `_prepare` left active this fixed step, in `_joints` order -
+   * what the sub-step warm-start and solve passes iterate instead of the full
+   * list. Reused across steps; a scene whose joints are all asleep leaves it
+   * empty and the sub-steps touch no joint at all.
+   */
+  private readonly _activeJoints: Joint[] = [];
+  /**
+   * The bodies this fixed step's sub-steps integrate (non-static and awake),
+   * collected once per step. Reused across steps; sleep state cannot change
+   * between the sub-steps, so the snapshot stays valid for all of them.
+   */
+  private readonly _steppedBodies: PhysicsBody[] = [];
+  /**
    * Body pairs the live joints have taken out of collision, reference-counted:
    * several joints may connect one pair, and the pair collides again only once
    * the last of them is gone.
@@ -857,10 +870,12 @@ export class PhysicsWorld implements BodyOwner {
       this._recordBulletPositions();
     }
 
+    const stepped = this._collectSteppedBodies();
+
     for (let subStep = 0; subStep < subStepCount; subStep++) {
       // Integrate gravity/forces over the sub-step (forces persist across
       // sub-steps; cleared once per frame by `_finalizePosition`).
-      for (const body of this._bodies) {
+      for (const body of stepped) {
         body._integrateVelocity(h, gravityX, gravityY);
       }
 
@@ -884,7 +899,7 @@ export class PhysicsWorld implements BodyOwner {
         this._solveJoints(true);
       }
 
-      for (const body of this._bodies) {
+      for (const body of stepped) {
         body._integratePosition(h);
       }
 
@@ -899,13 +914,45 @@ export class PhysicsWorld implements BodyOwner {
     // body's transform and re-sync collider geometry.
     this._backend.applyRestitution();
 
-    for (const body of this._bodies) {
+    for (const body of stepped) {
       body._finalizePosition();
     }
 
     if (hasBullets) {
       this._advanceBullets();
     }
+  }
+
+  /**
+   * Collect the bodies this step touches: non-static and awake. The sub-step
+   * integrators and the finalize pass all reject a static or sleeping body
+   * anyway, so filtering here changes nothing but how often the rejection is
+   * paid - once per step instead of once per body per sub-step.
+   *
+   * Nothing between this call and the end of the step changes a body's sleep
+   * state, so one snapshot serves every pass.
+   *
+   * A sleeping body needs nothing from the finalize pass: every API that puts a
+   * force on a body or teleports it wakes the body first, so it cannot reach
+   * this set carrying either, and `_setSleeping` does the rest as it goes to
+   * sleep. A static body can, because nothing ever takes it out of this set, so
+   * its per-step inputs are dropped here instead - at the same point in the step
+   * the finalize pass used to, after the island pass has read the teleport flag.
+   */
+  private _collectSteppedBodies(): readonly PhysicsBody[] {
+    const stepped = this._steppedBodies;
+
+    stepped.length = 0;
+
+    for (const body of this._bodies) {
+      if (body.type === 'static') {
+        body._clearStepInputs();
+      } else if (!body.isSleeping) {
+        stepped.push(body);
+      }
+    }
+
+    return stepped;
   }
 
   // ── binding ────────────────────────────────────────────────────────────
@@ -1081,6 +1128,15 @@ export class PhysicsWorld implements BodyOwner {
     const count = bodies.length;
     const parent = this._islandParent;
     const minSleep = this._islandMinSleep;
+    const timeToSleep = this.timeToSleep;
+    // Whether every dynamic body is already asleep. A sleeping body's timer is
+    // frozen at or above `timeToSleep` - the only thing that lowers it is
+    // `_unionContactIslands`, which wakes it in the same pass - and
+    // `timeToSleep` cannot be raised under it. So no island can hold a member
+    // below the threshold, every sleep decision below would come out as it
+    // already stands, and the pass has nothing left to do. Tracked while the
+    // loop below runs anyway.
+    let settled = true;
 
     // Assign dense indices, reset the union-find, and accumulate sleep timers for
     // awake dynamic bodies (a sleeping body's timer stays frozen ≥ timeToSleep).
@@ -1093,13 +1149,18 @@ export class PhysicsWorld implements BodyOwner {
 
       if (body.type === 'dynamic' && !body.isSleeping) {
         body._accumulateSleepTime(dt, this.sleepLinearVelocity, this.sleepAngularVelocity);
+        settled = false;
       }
     }
 
     parent.length = count;
     minSleep.length = count;
 
-    this._unionContactIslands(dt);
+    // A contact that zeroes a sleep timer is the one way a fully settled world
+    // still has a wake decision to make, so it cancels the shortcut.
+    if (!this._unionContactIslands(dt) && settled) {
+      return;
+    }
 
     // Joints couple their two bodies into the same island (sleep/wake together).
     for (const joint of this._joints) {
@@ -1126,8 +1187,6 @@ export class PhysicsWorld implements BodyOwner {
 
     // Sleep an island iff every member has rested for `timeToSleep`; otherwise
     // wake it (which also wakes any member dragged awake by a fresh contact).
-    const timeToSleep = this.timeToSleep;
-
     for (let i = 0; i < count; i++) {
       const body = bodies[i]!;
 
@@ -1148,8 +1207,12 @@ export class PhysicsWorld implements BodyOwner {
    * push-out is still working off (see {@link isUnresolved}), so the island it
    * belongs to stays awake until the overlap has reached the depth the contact's
    * own load holds it at.
+   *
+   * Returns whether any sleep timer was reset.
    */
-  private _unionContactIslands(dt: number): void {
+  private _unionContactIslands(dt: number): boolean {
+    let reset = false;
+
     for (const contact of this._backend.contactGraph.solidContacts) {
       // A contact the modifier disabled carries no load this step, so it neither
       // forms an island, nor keeps a passenger of a moving platform awake, nor
@@ -1167,8 +1230,10 @@ export class PhysicsWorld implements BodyOwner {
         this._union(bodyA._islandIndex, bodyB._islandIndex);
       } else if (dynamicA && isMovingBoundary(bodyB)) {
         bodyA._sleepTime = 0;
+        reset = true;
       } else if (dynamicB && isMovingBoundary(bodyA)) {
         bodyB._sleepTime = 0;
+        reset = true;
       }
 
       // Unresolved overlap only matters where there is a dynamic body to hold
@@ -1182,8 +1247,12 @@ export class PhysicsWorld implements BodyOwner {
         if (dynamicB) {
           bodyB._sleepTime = 0;
         }
+
+        reset = true;
       }
     }
+
+    return reset;
   }
 
   /** Union-find union by lower index (deterministic roots). */
@@ -1211,27 +1280,37 @@ export class PhysicsWorld implements BodyOwner {
     return index;
   }
 
-  /** Build each joint's per-frame constraint data (once per fixed step). */
+  /** Build each joint's per-frame constraint data and collect the active ones (once per fixed step). */
   private _prepareJoints(h: number, contactHertz: number, dampingRatio: number): void {
     // Twice the contact stiffness: a joint is the harder constraint of the two,
     // and the pair has to stay separable or the softer one is solved away.
     const rigid = softConstraint(2 * contactHertz, dampingRatio, h);
+    const active = this._activeJoints;
+
+    active.length = 0;
 
     for (const joint of this._joints) {
       joint._prepare(h, rigid);
+
+      // Read after `_prepare` rather than derived from the body states before
+      // it: a joint may find nothing to solve while preparing (a slack rope
+      // limit) and clear the flag itself.
+      if (joint._active) {
+        active.push(joint);
+      }
     }
   }
 
-  /** Re-apply each joint's accumulated impulse (each sub-step). */
+  /** Re-apply each active joint's accumulated impulse (each sub-step). */
   private _warmStartJoints(): void {
-    for (const joint of this._joints) {
+    for (const joint of this._activeJoints) {
       joint._warmStart();
     }
   }
 
-  /** One joint velocity pass (each sub-step, after the contacts). */
+  /** One joint velocity pass over the active joints (each sub-step, after the contacts). */
   private _solveJoints(useBias: boolean): void {
-    for (const joint of this._joints) {
+    for (const joint of this._activeJoints) {
       joint._solve(useBias);
     }
   }

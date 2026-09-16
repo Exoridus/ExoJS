@@ -980,4 +980,46 @@ describe('revolute chain stability', () => {
 
     expect(chain.every(body => body.isSleeping)).toBe(true);
   });
+
+  it('solves a slept chain again once one of its links is woken', () => {
+    // The sub-steps iterate only the joints the last prepare pass found active,
+    // so a chain that dropped out of that list while it slept has to be picked
+    // back up - otherwise the woken link is integrated with nothing holding it
+    // and simply leaves.
+    const { world, chain } = hangChain(6);
+
+    advance(world, WINDOW * FRAME);
+
+    expect(chain.every(body => body.isSleeping)).toBe(true);
+
+    const pulled = chain[0]!;
+    const pivotY = 200 + 8; // the seam this link is pinned to the static anchor at
+
+    pulled.applyImpulse(40_000, 0);
+
+    let swing = 0;
+    let offPivot = 0;
+
+    for (let step = 0; step < 60; step++) {
+      world.step(FRAME);
+      swing = Math.max(swing, Math.abs(pulled.x));
+      offPivot = Math.max(offPivot, Math.hypot(pulled.x, pulled.y - pivotY));
+    }
+
+    // Moved at all - an unsolved joint would still let it move, so this only
+    // says the measurement is not vacuous.
+    expect(swing).toBeGreaterThan(4);
+
+    // Unconstrained, the impulse carries the link over 300px in this window.
+    // Held on its pivot, it can only swing about it at arm's length.
+    expect(offPivot).toBeLessThan(24);
+
+    // Waking one link wakes its island, so the joints below it solve too.
+    expect(chain.some(body => body !== pulled && Math.abs(body.x) > 4)).toBe(true);
+
+    for (const body of chain) {
+      expect(Number.isFinite(body.x)).toBe(true);
+      expect(Number.isFinite(body.y)).toBe(true);
+    }
+  });
 });

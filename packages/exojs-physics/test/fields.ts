@@ -5,7 +5,7 @@
  * on a static floor, so the steady state is persistent contacts plus the
  * broad-phase load of one AABB per body.
  */
-import { BoxShape, PhysicsWorld } from '../src/index';
+import { BoxShape, PhysicsWorld, RevoluteJoint } from '../src/index';
 import { PhysicsBody } from '../src/PhysicsBody';
 
 export const FRAME = 1 / 60;
@@ -41,6 +41,52 @@ export const buildField = (columns: number, rows: number, worldOptions: { enable
   return { world, bodies };
 };
 
+/**
+ * `chains` revolute chains of `links` boxes, each hanging from its own static
+ * anchor, spaced so neighbouring chains never touch. Every link starts on the
+ * seam below the one above it, so the chains hang at zero joint error and the
+ * steady state is constraint bookkeeping with no contacts at all - the scene in
+ * which per-joint and per-body per-step work is the whole cost.
+ */
+export const buildChains = (chains: number, links: number, worldOptions: { enableSleeping?: boolean } = {}): { world: PhysicsWorld; links: PhysicsBody[] } => {
+  const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 }, ...worldOptions });
+  const size = 16;
+  const spacing = size * 4;
+  const anchorY = 200;
+  const bodies: PhysicsBody[] = [];
+
+  for (let chain = 0; chain < chains; chain++) {
+    const x = 120 + chain * spacing;
+    let previous = world.add(new PhysicsBody({ type: 'static', position: { x, y: anchorY }, colliders: [{ shape: new BoxShape(size, size), friction: 0.5 }] }));
+
+    for (let link = 0; link < links; link++) {
+      const y = anchorY + (link + 1) * size;
+      const body = world.add(
+        new PhysicsBody({ type: 'dynamic', position: { x, y }, colliders: [{ shape: new BoxShape(size, size), density: 1, friction: 0.5 }] }),
+      );
+
+      world.addJoint(new RevoluteJoint({ bodyA: previous, bodyB: body, anchor: { x, y: y - size / 2 }, collideConnected: false }));
+      bodies.push(body);
+      previous = body;
+    }
+  }
+
+  return { world, links: bodies };
+};
+
+/** Step until every dynamic body sleeps, or until `limit` steps have passed; returns the steps taken. */
+export const settle = (world: PhysicsWorld, limit: number): number => {
+  for (let step = 0; step < limit; step++) {
+    if (world.bodies.every(body => body.type !== 'dynamic' || body.isSleeping)) {
+      return step;
+    }
+
+    world.step(FRAME);
+  }
+
+  return limit;
+};
+
 export const stepTimes = (world: PhysicsWorld, steps: number): number => {
   const start = performance.now();
 
@@ -49,4 +95,23 @@ export const stepTimes = (world: PhysicsWorld, steps: number): number => {
   }
 
   return (performance.now() - start) / steps;
+};
+
+/**
+ * The cheapest of `samples` consecutive {@link stepTimes} windows.
+ *
+ * A gate that compares two arms has to compare what each of them costs, not
+ * what the machine did to it: a single GC pause or a descheduled slice inside
+ * one window inflates that window's mean, and on a light arm it inflates it
+ * proportionally far more than on a heavy one. Taking the cheapest window keeps
+ * the interference out of both sides of the ratio.
+ */
+export const bestStepTime = (world: PhysicsWorld, steps: number, samples = 3): number => {
+  let best = Infinity;
+
+  for (let sample = 0; sample < samples; sample++) {
+    best = Math.min(best, stepTimes(world, steps));
+  }
+
+  return best;
 };
