@@ -20,7 +20,8 @@ import type { UniformValue } from './Material';
  * `JSON.stringify` over objects with unstable key order.
  *
  * Two key spaces:
- * - {@link derivePipelineKey}: shader identity + blend state + depth writes.
+ * - {@link derivePipelineKey}: shader identity + blend state (whole-draw and
+ *   per-attachment) + depth writes.
  *   Drives GPU pipeline/program reuse and material grouping. Independent of
  *   the owning material instance, so identically configured materials share
  *   a pipeline key.
@@ -76,11 +77,14 @@ const isTextureBinding = (value: UniformValue): value is Texture | RenderTexture
   typeof value === 'object' && value !== null && !Array.isArray(value) && !ArrayBuffer.isView(value);
 
 /**
- * Pipeline key from shader identity, blend mode and depth-write state.
+ * Pipeline key from shader identity, blend mode, depth-write state and the
+ * per-attachment blend modes, the last as a descriptor of the list.
  * @internal
  */
-export const derivePipelineKey = (shaderId: number, blendMode: BlendModes, writesDepth = false): number => {
-  const descriptor = `${shaderId}|${blendMode}|${writesDepth ? 'd' : '-'}`;
+// The list arrives pre-joined because this runs per draw while the list never
+// changes over a material's lifetime, so its owner builds that string once.
+export const derivePipelineKey = (shaderId: number, blendMode: BlendModes, writesDepth = false, blendModes = ''): number => {
+  const descriptor = `${shaderId}|${blendMode}|${writesDepth ? 'd' : '-'}|${blendModes}`;
 
   return intern(pipelineKeyRegistry, descriptor, () => nextPipelineKey++);
 };

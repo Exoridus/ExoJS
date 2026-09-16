@@ -1,7 +1,7 @@
 import type { RenderTarget } from '#rendering/RenderTarget';
 import { Shader } from '#rendering/shader/Shader';
 import type { SamplerOptions } from '#rendering/texture/TextureOptions';
-import type { BlendModes } from '#rendering/types';
+import { BlendModes } from '#rendering/types';
 import type { UniformBlockRecord, UniformFields } from '#rendering/uniforms/uniformDeclarations';
 
 import type { AnyMaterial, MaterialOptions, UniformValue } from './Material';
@@ -34,6 +34,34 @@ export interface MeshMaterialOptions<
    * render pass, so it does not merge with the batches around it.
    */
   readonly writesDepth?: boolean;
+
+  /**
+   * Blend mode per colour attachment, in the order the fragment shader's
+   * outputs are declared. Defaults to the draw's own blend mode everywhere.
+   *
+   * What a multi-attachment pass usually wants: the albedo slot composited with
+   * alpha, the normal or id slot written straight through, because a blended
+   * normal or a blended id is not a value. An entry past the target's
+   * attachment count is ignored, and an attachment past the end of the list
+   * keeps the blend mode the draw would have used anyway - so `[Normal, Additive]`
+   * and a one-attachment target is just a normal draw.
+   *
+   * Where the list has an entry it wins over a drawable's own `blendMode`
+   * override; the attachments it does not cover are where that override still
+   * decides, as it does for a material without a list at all.
+   *
+   * Only the fixed-function modes (`Normal`, `Additive`, `Subtract`, `Multiply`,
+   * `Screen`) can differ per attachment; a backdrop-aware mode composites
+   * through a pass of its own and blends as `Normal` here, exactly as it does
+   * inside a captured backdrop.
+   *
+   * On WebGL2 entries that differ from each other need the
+   * `OES_draw_buffers_indexed` extension, reported as
+   * {@link RenderBackend.supportsPerAttachmentBlend}; such a draw throws a
+   * {@link RenderError} on a device without it rather than picking one mode for
+   * every attachment. WebGPU always supports it.
+   */
+  readonly blendModes?: readonly BlendModes[];
 }
 
 /**
@@ -52,14 +80,24 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
   /** Whether draws with this material write into the target's depth attachment. */
   public readonly writesDepth: boolean;
 
+  /** Blend mode per colour attachment, or `null` when the draw blends as a whole. */
+  public readonly blendModes: readonly BlendModes[] | null;
+
+  // The list is fixed for the material's lifetime, so its contribution to the
+  // pipeline descriptor is built once rather than on every key read - and
+  // `pipelineKey` is read per draw.
+  private readonly _blendModesDescriptor: string;
+
   public constructor(options: MeshMaterialOptions<F, B>) {
     super(options);
 
     this.writesDepth = options.writesDepth ?? false;
+    this.blendModes = options.blendModes ?? null;
+    this._blendModesDescriptor = this.blendModes !== null ? this.blendModes.join(',') : '';
   }
 
   public override get pipelineKey(): number {
-    return derivePipelineKey(this.shader.id, this.blendMode, this.writesDepth);
+    return derivePipelineKey(this.shader.id, this.blendMode, this.writesDepth, this._blendModesDescriptor);
   }
 
   /**
@@ -84,6 +122,7 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
       readonly blendMode?: BlendModes;
       readonly sampler?: SamplerOptions | null;
       readonly writesDepth?: boolean;
+      readonly blendModes?: readonly BlendModes[];
     },
   ): MeshMaterial;
   public static from(
@@ -95,6 +134,7 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
       readonly blendMode?: BlendModes;
       readonly sampler?: SamplerOptions | null;
       readonly writesDepth?: boolean;
+      readonly blendModes?: readonly BlendModes[];
     },
   ): MeshMaterial<UniformFields | undefined, UniformBlockRecord | undefined> {
     if (sourceOrGlslVertex instanceof Shader) {
@@ -121,6 +161,7 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
       ...(glslOptions?.blendMode !== undefined ? { blendMode: glslOptions.blendMode } : {}),
       ...(glslOptions?.sampler !== undefined ? { sampler: glslOptions.sampler } : {}),
       ...(glslOptions?.writesDepth !== undefined ? { writesDepth: glslOptions.writesDepth } : {}),
+      ...(glslOptions?.blendModes !== undefined ? { blendModes: glslOptions.blendModes } : {}),
     });
   }
 }
@@ -138,3 +179,43 @@ export type AnyMeshMaterial = MeshMaterial<UniformFields | undefined, UniformBlo
  */
 export const drawWritesDepth = (material: AnyMaterial | null, target: RenderTarget): boolean =>
   material instanceof MeshMaterial && material.writesDepth && target.depthTexture !== null;
+
+/**
+ * The per-attachment blend modes a draw with `material` carries, or `null` when
+ * it blends as a whole. Returns the material's own list rather than a resolved
+ * one, so a draw that never opted in costs a type check and no allocation.
+ * @internal
+ */
+export const attachmentBlendModes = (material: AnyMaterial | null): readonly BlendModes[] | null =>
+  material instanceof MeshMaterial ? material.blendModes : null;
+
+/**
+ * The blend mode a draw runs with as a whole: the material owns it, and the
+ * drawable's own `blendMode` overrides it once set away from the default.
+ *
+ * One definition because the refusal in {@link assertPerAttachmentBlendSupported}
+ * has to reach the same answer as the renderer it guards - the two decide from
+ * different sides of the draw, and a disagreement would refuse a draw the
+ * renderer accepts or let one through that it cannot issue.
+ * @internal
+ */
+export const resolveBlendMode = (blendMode: BlendModes, material: AnyMaterial | null): BlendModes =>
+  material !== null && blendMode === BlendModes.Normal ? material.blendMode : blendMode;
+
+/**
+ * Whether the first `attachments` entries of `modes` do not all resolve to the
+ * same blend mode, `fallback` standing in wherever the list has no entry. Only
+ * such a draw needs per-attachment blend state from the device.
+ * @internal
+ */
+export const attachmentBlendModesDiffer = (modes: readonly BlendModes[], attachments: number, fallback: BlendModes): boolean => {
+  const first = modes[0] ?? fallback;
+
+  for (let index = 1; index < attachments; index++) {
+    if ((modes[index] ?? fallback) !== first) {
+      return true;
+    }
+  }
+
+  return false;
+};

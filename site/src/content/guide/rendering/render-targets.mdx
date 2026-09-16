@@ -150,9 +150,26 @@ fn fragmentMain(input: VertexOutput) -> FragmentOut {
 
 The GLSL counterpart declares `layout(location = 0) out vec4 outColor;` and `layout(location = 1) out vec4 outId;`.
 
-A `SpriteMaterial` takes the same fragment shader, which is what a 2D G-buffer usually wants: the scene is already authored as sprites, so it needs no mesh geometry to write a normal or id buffer.
+A `SpriteMaterial` takes the same fragment shader, which is what a 2D G-buffer usually wants: the scene is already authored as sprites, so it needs no mesh geometry to write a normal or id buffer. Per-attachment blend modes are the one thing it does not carry — `blendModes` below is a `MeshMaterial` option, so a G-buffer that needs its slots blended differently draws through a `MeshMaterial`.
 
 A custom material is held to the same rule. The engine reads the declared output count off the shader source, and a material that declares fewer than the target has attachments is refused on both backends rather than writing slot 0 only on WebGL2 while WebGPU rejects the pipeline. Where the source uses a shape the reader cannot resolve — an array output, a return struct declared elsewhere — the draw proceeds and a development build logs a warning instead.
+</Callout>
+
+Attachments can also be blended on different terms. One blend mode for the whole draw is rarely what a G-buffer wants: the albedo slot is composited with alpha, while a blended normal vector or a blended selection id is not a value at all. A `MeshMaterial` constructed with `blendModes` gives one mode per attachment, in the order the fragment shader declares its outputs; an attachment past the end of the list keeps the blend mode the draw would have used anyway, and entries past the target's attachment count are ignored. Only the fixed-function modes (`Normal`, `Additive`, `Subtract`, `Multiply`, `Screen`) can differ per attachment, since a backdrop-aware mode composites through a pass of its own.
+
+```ts
+import { BlendModes, MeshMaterial, type Shader } from '@codexo/exojs';
+
+declare const gbufferShader: Shader;
+
+const material = new MeshMaterial({
+    shader: gbufferShader,
+    blendModes: [BlendModes.Normal, BlendModes.Additive],
+});
+```
+
+<Callout type="warning" title="WebGL2 needs an extension for this one">
+Modes that differ from one another need `OES_draw_buffers_indexed` on WebGL2, which desktop drivers generally have and older mobile GPUs may not; WebGPU carries the state in the pipeline and always supports it. Read `app.backend.supportsPerAttachmentBlend` before relying on it. Where it is missing, such a draw throws rather than picking one mode for every attachment — splitting the pass per blend group would cost exactly the single rasterisation a multi-attachment target exists for, and a fragment shader cannot read its own attachment to blend there itself. Entries that all agree, or a single-attachment target, need no extension.
 </Callout>
 
 If one pass only ever produces one image, a plain `RenderTexture` is the right tool — this exists for the case where it genuinely produces two.

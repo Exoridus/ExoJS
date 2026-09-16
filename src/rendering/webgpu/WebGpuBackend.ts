@@ -16,7 +16,7 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
+import { assertBatchSingleAttachment, assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
@@ -422,6 +422,12 @@ export class WebGpuBackend implements RenderBackend {
     const reported = limits?.maxColorAttachments;
 
     return typeof reported === 'number' && reported > 0 ? reported : 1;
+  }
+
+  public get supportsPerAttachmentBlend(): boolean {
+    // Blend state is declared per fragment target in a pipeline descriptor, so
+    // there is no capability behind this beyond having a device at all.
+    return this._device !== null;
   }
 
   public get device(): GPUDevice {
@@ -927,6 +933,10 @@ export class WebGpuBackend implements RenderBackend {
     if (count <= 0 || mesh.vertexCount === 0 || this._deviceLost || this._device === null) {
       this._activeDrawCommand = null;
       return this;
+    }
+
+    if (this._multiAttachmentTarget) {
+      assertBatchSingleAttachment((this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
     }
 
     const renderer = this.rendererRegistry.resolve(mesh);

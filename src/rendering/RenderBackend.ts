@@ -97,6 +97,19 @@ export interface RenderBackend {
   readonly maxColorAttachments: number;
 
   /**
+   * Whether this device can give each colour attachment of one draw its own
+   * blend state, which is what {@link MeshMaterial.blendModes} asks for.
+   *
+   * `false` before the backend is initialized. WebGPU always reports `true` -
+   * blend state is per target in a pipeline descriptor. WebGL2 reports whether
+   * `OES_draw_buffers_indexed` is available, which desktop drivers generally
+   * have and older mobile GPUs may not; a draw whose attachments would blend
+   * differently throws a {@link RenderError} without it, because there is no
+   * fallback that keeps what a multi-attachment pass is for.
+   */
+  readonly supportsPerAttachmentBlend: boolean;
+
+  /**
    * Dispatched when the backend detects a GPU error that does not surface as a
    * synchronous exception - WGSL compilation errors, WebGPU uncaptured
    * validation/OOM/internal errors. Synchronous failures (WebGL2 shader

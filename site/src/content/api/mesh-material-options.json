@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -52,6 +52,43 @@
           "params": [],
           "returnType": null,
           "description": "Compositing blend mode; defaults to BlendModes.Normal."
+        },
+        {
+          "name": "blendModes",
+          "signature": "blendModes?: readonly BlendModes[]",
+          "signatureTokens": [
+            {
+              "text": "blendModes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BlendModes",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Blend mode per colour attachment, in the order the fragment shader's outputs are declared. Defaults to the draw's own blend mode everywhere. What a multi-attachment pass usually wants: the albedo slot composited with alpha, the normal or id slot written straight through, because a blended normal or a blended id is not a value. An entry past the target's attachment count is ignored, and an attachment past the end of the list keeps the blend mode the draw would have used anyway - so [Normal, Additive] and a one-attachment target is just a normal draw. Where the list has an entry it wins over a drawable's own blendMode override; the attachments it does not cover are where that override still decides, as it does for a material without a list at all. Only the fixed-function modes (Normal, Additive, Subtract, Multiply, Screen) can differ per attachment; a backdrop-aware mode composites through a pass of its own and blends as Normal here, exactly as it does inside a captured backdrop. On WebGL2 entries that differ from each other need the OES_draw_buffers_indexed extension, reported as RenderBackend.supportsPerAttachmentBlend; such a draw throws a RenderError on a device without it rather than picking one mode for every attachment. WebGPU always supports it."
         },
         {
           "name": "sampler",
