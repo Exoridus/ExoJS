@@ -317,6 +317,18 @@ export const EditorCode = ({
     onDirty(false);
   };
 
+  /**
+   * Monaco's own document formatter, which for TypeScript and JavaScript is the
+   * language service's - the same one an editor formats with. It follows the
+   * model's own tab size, which is why that is two here: the catalog's sources
+   * are, and a format that reindented them to four would report every example as
+   * modified the moment it was opened.
+   */
+  const formatCode = (): void => {
+    setShowMenu(false);
+    void editorRef.current?.getAction('editor.action.formatDocument')?.run();
+  };
+
   const exportCode = (): void => {
     setShowMenu(false);
     const code = editorRef.current?.getValue() ?? editorValue;
@@ -404,6 +416,9 @@ export const EditorCode = ({
           </button>
           {showMenu && (
             <div className={css(styles, 'menu-dropdown')} role="menu">
+              <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={formatCode}>
+                Format Code
+              </button>
               <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
                 Export Code
               </button>
@@ -451,7 +466,7 @@ export const EditorCode = ({
                 readOnly,
                 renderValidationDecorations: 'on',
                 scrollBeyondLastLine: false,
-                tabSize: 4,
+                tabSize: 2,
               }}
               path={getModelUrl(sourcePath)}
               theme="vs-dark"
