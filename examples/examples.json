@@ -747,6 +747,18 @@
       "tags": ["lighting", "material", "shader", "performance"],
       "capabilities": [],
       "level": "advanced"
+    },
+    {
+      "slug": "shadow-casters",
+      "path": "lighting/shadow-casters.js",
+      "language": "typescript",
+      "title": "Shadow Casters",
+      "description": "Soft shadows nobody modelled: the walls hand over the rectangle they are drawn as, the cross hands over the outline traced from its alpha channel, and the lightmap renderer shadows every light against them in one draw. Toggle the occluder debug view to see exactly what was collected.",
+      "backend": "core",
+      "featured": true,
+      "tags": ["lighting", "shadows", "shader"],
+      "capabilities": [],
+      "level": "advanced"
     }
   ],
   "particles": [
