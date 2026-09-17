@@ -257,6 +257,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "FadeSceneTransition: class",
   "FadeSceneTransitionOptions: interface",
   "Filter: class",
+  "FilterPass: class",
+  "FilterPassOptions: interface",
   "FixedResolutionCanvasSizing: class",
   "Flags: class",
   "FocusDirection: type alias",

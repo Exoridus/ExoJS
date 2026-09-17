@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 55,
+  "memberCount": 57,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 36,
+    "properties": 38,
     "events": 8
   },
   "sections": [
@@ -1411,6 +1411,27 @@
           "description": ""
         },
         {
+          "name": "framePasses",
+          "signature": "framePasses: RenderPipeline",
+          "signatureTokens": [
+            {
+              "text": "framePasses",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPipeline",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Passes that run after the frame has been drawn, with the frame itself as their input - the seam for a screen-wide effect (bloom over everything, a deferred lighting composite, a CRT filter) that a per-node filter cannot express. While this pipeline holds at least one pass, the scene, the systems' draw hooks and any scene transition render into Application.frameTexture instead of the canvas, and the pipeline is played afterwards; the last pass to write the active target produces the picture. An empty pipeline is the frame as it is drawn without this feature, at no cost. ts app.framePasses.addPass(new FilterPass(app.frameTexture, [new BloomFilter()]));  Owned by the application: its passes are destroyed with it. Remove a pass before destroying an extension that owns it, the same contract every RenderPipeline has."
+        },
+        {
           "name": "frameSeconds",
           "signature": "frameSeconds: Seconds",
           "signatureTokens": [
@@ -1430,6 +1451,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "frameTexture",
+          "signature": "frameTexture: RenderTexture",
+          "signatureTokens": [
+            {
+              "text": "frameTexture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The off-screen target the frame is drawn into while framePasses holds passes - the source a frame pass reads. Sized to the logical surface times pixelRatio in texels, with a view in logical units, so the frame is rasterized at the density the canvas is and a pass sees the coordinates the scene was drawn in. It follows every resize, so a pass built once against it stays valid for the application's life. Reading this allocates it. An application that never adds a frame pass never pays for it."
         },
         {
           "name": "height",
