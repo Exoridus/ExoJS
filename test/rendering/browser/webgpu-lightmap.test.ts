@@ -739,4 +739,45 @@ describe('lightmap renderer WebGPU browser', () => {
       host.destroy();
     }
   });
+  test('the distance field grows away from the wall the mask drew', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // Asymmetric in both axes on purpose: a field built in the wrong space
+    // would still look plausible on a wall through the middle.
+    lighting.add(new PointLight({ radius: 60, intensity: 1 })).setPosition(20, 24);
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 44, y: 4 },
+          { x: 44, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    lighting.debug = 'distance';
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      const atWall = at(44, 32);
+      const near = at(36, 32);
+
+      // Zero at the wall, and further the further off it, as a fraction of the
+      // view's own diagonal.
+      expect(atWall).toBeLessThan(10);
+      expect(near).toBeGreaterThan(atWall);
+      expect(at(8, 32)).toBeGreaterThan(near);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
 });

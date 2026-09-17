@@ -824,4 +824,42 @@ describe('WebGL2 lightmap renderer', () => {
       host.destroy();
     }
   });
+  test('the distance field grows away from the wall the mask drew', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // Asymmetric in both axes on purpose: a field built in the wrong space
+    // would still look plausible on a wall through the middle.
+    lighting.add(new PointLight({ radius: 60, intensity: 1 })).setPosition(20, 24);
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 44, y: 4 },
+          { x: 44, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    lighting.debug = 'distance';
+
+    try {
+      runFrame(host, lighting);
+
+      const atWall = readPixel(host.backend, 44, 32)[0]!;
+      const near = readPixel(host.backend, 36, 32)[0]!;
+      const far = readPixel(host.backend, 8, 32)[0]!;
+
+      // Zero at the wall, and further the further off it, as a fraction of the
+      // view's own diagonal.
+      expect(atWall).toBeLessThan(10);
+      expect(near).toBeGreaterThan(atWall);
+      expect(far).toBeGreaterThan(near);
+      // Off the end of the wall the nearest blocking texel is its corner, not
+      // the column it stands in, so the distance there is the diagonal one.
+      expect(readPixel(host.backend, 44, 1)[0]!).toBeGreaterThan(atWall);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
 });

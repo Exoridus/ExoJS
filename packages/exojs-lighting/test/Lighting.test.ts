@@ -334,8 +334,8 @@ describe('Lighting', () => {
 
     expect(forwardApp.framePasses.size).toBe(1);
     expect(lightmap.post).toEqual([grade]);
-    // The lightmap renderer's own six, plus the chain.
-    expect(lightmapApp.framePasses.size).toBe(7);
+    // The lightmap renderer's own seven, plus the chain.
+    expect(lightmapApp.framePasses.size).toBe(8);
 
     forward.destroy();
     lightmap.destroy();
@@ -377,7 +377,8 @@ describe('Lighting', () => {
     const lighting = new Lighting({ quality: 'lightmap', app });
     const backend = lighting.backend as LightmapBackend;
 
-    // One pass fewer than the float-capable renderer, and the request for the
+    // Two passes fewer than the float-capable renderer - neither the march nor
+    // the distance field it shares the mask with - and the request for the
     // marching filler resolves back to the segment walk rather than failing.
     expect(app.framePasses.size).toBe(5);
 

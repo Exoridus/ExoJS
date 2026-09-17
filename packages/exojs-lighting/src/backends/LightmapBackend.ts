@@ -29,6 +29,7 @@ import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
 import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
+import { DistanceField } from './distanceField';
 import type { LightingBackend } from './LightingBackend';
 import lightCompositeFragment from './shaders/light-composite.frag';
 import lightCompositeVertex from './shaders/light-composite.vert';
@@ -235,6 +236,8 @@ export class LightmapBackend implements LightingBackend {
   private _sunShadowMap: DataTexture<TextureFormat.R32F>;
   /** Built only where a float render target exists; `null` pins the renderer to the CPU filler. */
   private readonly _filler: ShadowMarchFiller | null;
+  /** The distance field over the mask. Built on the same condition as the filler, and read by the `distance` view. */
+  private readonly _distanceField: DistanceField | null;
   private _fillerRequest: ShadowFillerOption = 'auto';
   private _activeCount = 0;
   private _surfaceCount = 0;
@@ -330,6 +333,7 @@ ${sunQuadWgsl}`,
     // the accumulation in the frame slot: the pipeline appends, and a filler
     // switched on later would otherwise march after the light field read it.
     this._filler = this.hdr ? new ShadowMarchFiller(this._maskTarget, this._shadowResolution) : null;
+    this._distanceField = this.hdr ? new DistanceField(this._maskTarget) : null;
     this._normalTarget = new RenderTexture(1, 1);
     this._normalPass = new CallbackRenderPass(pass => this._drawNormals(pass), {
       target: this._normalTarget,
@@ -362,6 +366,10 @@ ${sunQuadWgsl}`,
       this._app.framePasses.addPass(this._filler.pass);
     }
 
+    if (this._distanceField !== null) {
+      this._app.framePasses.addPass(this._distanceField.pass);
+    }
+
     this._app.framePasses.addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
 
     if (this._postPass !== null) {
@@ -391,7 +399,7 @@ ${sunQuadWgsl}`,
     // Showing an intermediate is multiplying a white frame by it, so the debug
     // views swap the composite's two inputs rather than carrying a second
     // shader that would have to be kept in step with the first.
-    const intermediate = view === 'light' || view === 'normals' || view === 'mask';
+    const intermediate = view === 'light' || view === 'normals' || view === 'mask' || view === 'distance';
 
     this._syncMask();
     this._compositeMaterial.setTexture('u_frame', intermediate ? whiteTexture() : this._app.frameTexture);
@@ -402,6 +410,10 @@ ${sunQuadWgsl}`,
   private _debugTexture(view: LightingDebugView): RenderTexture {
     if (view === 'normals') {
       return this._normalTarget;
+    }
+
+    if (view === 'distance' && this._distanceField !== null) {
+      return this._distanceField.texture;
     }
 
     return view === 'mask' ? this._maskTarget : this._target;
@@ -539,8 +551,25 @@ ${sunQuadWgsl}`,
     this._writeMask(occluders);
     this._writeOccluderDebug(occluders);
 
-    if (casting && marching) {
-      this._filler!.end(this._app.rendering.view.getBounds(), this._maskTexel());
+    this._updateFields(casting && marching);
+  }
+
+  /**
+   * Point whatever reads the mask at this frame's camera, once the mask itself
+   * has been written: the marcher steps in mask texels, and the distance field
+   * normalizes against what the camera can see.
+   */
+  private _updateFields(marching: boolean): void {
+    const texel = this._maskTexel();
+
+    if (marching) {
+      this._filler!.end(this._app.rendering.view.getBounds(), texel);
+    }
+
+    if (this._distanceField?.pass.enabled === true) {
+      const view = this._app.rendering.view.getBounds();
+
+      this._distanceField.update(texel, Math.hypot(view.width, view.height));
     }
   }
 
@@ -676,6 +705,11 @@ ${sunQuadWgsl}`,
     if (this._filler !== null) {
       this._app.framePasses.removePass(this._filler.pass);
       this._filler.destroy();
+    }
+
+    if (this._distanceField !== null) {
+      this._app.framePasses.removePass(this._distanceField.pass);
+      this._distanceField.destroy();
     }
     this._app.framePasses.removePass(this._normalPass);
     this._app.framePasses.removePass(this._lightPass);
@@ -906,11 +940,16 @@ ${sunQuadWgsl}`,
    */
   private _syncMask(): void {
     const marching = this.shadowFiller === 'gpu';
+    const distance = this._debug === 'distance' && this._distanceField !== null;
 
-    this._maskPass.enabled = this._debug === 'mask' || marching;
+    this._maskPass.enabled = this._debug === 'mask' || marching || distance;
 
     if (this._filler !== null) {
       this._filler.pass.enabled = marching;
+    }
+
+    if (this._distanceField !== null) {
+      this._distanceField.pass.enabled = distance;
     }
 
     this._resize();
@@ -1132,6 +1171,14 @@ ${normalPrepassWgsl}`,
     // On the light field's own grid, so a fragment's place in one is its place
     // in the other - which is what a marcher reading both needs.
     this._maskTarget.setSize(this._maskPass.enabled ? width : 1, this._maskPass.enabled ? height : 1);
+
+    if (this._distanceField !== null) {
+      // On the mask's own grid, so a texel of one is a texel of the other, and
+      // parked at one texel while nothing reads it.
+      const wanted = this._distanceField.pass.enabled;
+
+      this._distanceField.setSize(wanted ? width : 1, wanted ? height : 1);
+    }
 
     if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0) {
       return;

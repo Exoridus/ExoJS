@@ -46,6 +46,11 @@ export type LightingQualityOption = LightingQuality | 'auto';
  *   widened so none of them can fall between two texels. It is the input a
  *   GPU-resident occluder field marches, and the view that says whether a wall
  *   is thick enough to be seen at that resolution.
+ * - `'distance'` shows the distance field built from that mask: how far the
+ *   nearest occluder is, as a ramp from black at a wall to white at the far end
+ *   of what the camera can see. It is what a ray steps along instead of
+ *   marching a texel at a time, and the view that says whether the field found
+ *   the walls at all.
  * - `'normals'` shows the normal prepass: the world-space normals the
  *   registered surfaces described this frame, encoded the way a normal map is.
  *   Black is where nothing described a surface, and light lands there with no
@@ -57,7 +62,7 @@ export type LightingQualityOption = LightingQuality | 'auto';
  * A renderer with no such intermediate - `forward` shades inside the sprite
  * shader and casts no shadows - ignores it.
  */
-export type LightingDebugView = 'light' | 'mask' | 'normals' | 'occluders' | null;
+export type LightingDebugView = 'distance' | 'light' | 'mask' | 'normals' | 'occluders' | null;
 
 const scratchPosition = { x: 0, y: 0 };
 
