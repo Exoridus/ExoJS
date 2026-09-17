@@ -62,17 +62,7 @@
 .tag-row {
   display: flex;
   gap: 0.28rem;
-  flex-wrap: wrap;
   margin-top: 0.58rem;
-  max-height: 74px;
-  overflow: hidden;
-  align-content: flex-start;
-}
-
-.tag-row[data-expanded] {
-  max-height: 170px;
-  overflow-y: auto;
-  padding-right: 2px;
 }
 
 .tag-button {
@@ -105,28 +95,6 @@
   border-color: var(--accent-line);
 }
 
-.tag-toggle {
-  appearance: none;
-  margin-top: 0.42rem;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: var(--fg-faint);
-  font-family: var(--f-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-}
-
-.tag-toggle:hover {
-  color: var(--fg);
-}
-
-.tag-toggle:focus-visible {
-  outline: 2px solid var(--accent-line);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
 
 nav {
   flex: 1 1 auto;
