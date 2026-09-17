@@ -15,7 +15,7 @@ npm install @codexo/exojs @codexo/exojs-lighting
 - `PointLight`, `SpotLight` - scene nodes that emit rather than draw. Position comes from the node's transform, a spot's cone points along its rotation, and every field is an ordinary property, so the engine's tweens animate a light with no lighting-specific animation concept.
 - `Lighting` - the system: collects the registered lights, packs them into one `rgba32f` data texture per frame, and carries the ambient term with them. Registers on a `SystemRegistry` like any other system.
 - `LitMaterial` - a `SpriteMaterial` (GLSL + WGSL) that shades a sprite against those lights. Normals are optional: without them the surface is lit as a plane rather than left black.
-- `Normals` - where a material's surface normals come from. `Normals.map(texture)` binds an authored tangent-space map; the interface is open, so a source of your own is a valid argument without this package knowing about it.
+- `Normals` - where a material's surface normals come from. `Normals.map(texture)` binds an authored tangent-space map, `Normals.fromAlpha(texture)` derives one from the texture's own silhouette; the interface is open, so a source of your own is a valid argument without this package knowing about it.
 
 ## Usage
 
@@ -62,7 +62,7 @@ The shaded result is `albedo * (ambient + sum over lights)`. Each light falls of
 
 ## Normal maps
 
-Normals are optional. A `LitMaterial` without them binds a shared flat normal and the surface is lit as a plane - a project with no authored maps is lit rather than black, and normals are an upgrade instead of an entry fee.
+Normals are optional, in three steps. A `LitMaterial` without them binds a shared flat normal and the surface is lit as a plane - a project with no authored maps is lit rather than black. `Normals.fromAlpha(texture)` reads the alpha channel as a height field and derives a map once at load: the silhouette gains edges that turn away from the light, which knows nothing about the interior of a shape but is the difference between art that reacts to light and art that does not. `Normals.map(texture)` binds an authored map, which is what a project with real art direction ships.
 
 A normal map is a **material** binding, not a per-sprite one: every sprite drawn with a given `LitMaterial` shares it, so in practice there is one material per atlas. The map must have the same layout as the albedo atlas, frame for frame, and encodes tangent-space normals as `rgb = n * 0.5 + 0.5` with `+x` right and `+y` down the texture. Rotation and mirroring are handled in the shader: the normal is rotated by the sprite's local-to-world basis, so a spinning or negatively-scaled sprite keeps its bumps facing the right way.
 

@@ -796,6 +796,17 @@ export default defineConfig([
     },
   },
 
+  // The normal derivation walks its own alpha field by an index it just built
+  // from the loop bounds, clamped to the field at the sampling site, so every
+  // read is in range by construction and `noUncheckedIndexedAccess` would only
+  // add a branch per texel to a load-time pass over every pixel of a texture.
+  {
+    files: ['packages/exojs-lighting/src/normals/deriveNormals.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+
   // The pathfinding search reads its own typed-array state by an index it just
   // derived - a heap slot, a node id, a cell offset it bounds-checked one line
   // earlier. `noUncheckedIndexedAccess` widens every one of those reads to
