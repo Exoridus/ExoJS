@@ -179,7 +179,7 @@
         },
         {
           "name": "quality",
-          "signature": "quality?: LightingQuality",
+          "signature": "quality?: LightingQualityOption",
           "signatureTokens": [
             {
               "text": "quality",
@@ -194,13 +194,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "LightingQuality",
+              "text": "LightingQualityOption",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Renderer to shade with. Defaults to 'forward', which needs nothing else; 'lightmap' needs LightingOptions.app, because it works on the frame the application drew."
+          "description": "Renderer to shade with, or 'auto' to take the best one the other options allow. Defaults to 'auto', which means 'lightmap' when LightingOptions.app was passed and 'forward' when it was not. It resolves at construction and never changes afterwards; Lighting.quality reports what it resolved to. Naming a renderer outright is what a scene does when it needs a property only that one has - 'forward' for normal maps on a LitMaterial, 'lightmap' for shadows and an uncapped light count."
         },
         {
           "name": "shadowResolution",

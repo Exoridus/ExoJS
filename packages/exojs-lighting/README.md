@@ -52,7 +52,7 @@ class LitScene extends Scene {
 
 The scene describes what emits; `quality` decides how that becomes pixels. Nothing else changes between them - the same lights, the same materials.
 
-|                         | `forward` (default)                | `lightmap`                                          |
+|                         | `forward`                          | `lightmap`                                          |
 | ----------------------- | ---------------------------------- | --------------------------------------------------- |
 | Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame   |
 | Normal mapping          | per material, on `LitMaterial`     | per drawable, through a prepass                     |
@@ -65,6 +65,8 @@ The scene describes what emits; `quality` decides how that becomes pixels. Nothi
 ```ts
 const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20, 20, 30) });
 ```
+
+`quality` defaults to `'auto'`, which takes `lightmap` when you passed `app` and `forward` when you did not - so a scene that describes what it wants rather than how gets shadows wherever it can have them. It resolves once, at construction, and `lighting.quality` reports what it settled on. Name a renderer outright when you need a property only that one has: `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count.
 
 `lightmap` needs the application, because it works on the frame the application drew: it installs its passes in `app.framePasses` and removes them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
 

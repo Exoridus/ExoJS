@@ -19,11 +19,21 @@ import type { OccluderSource } from './occluders/OccluderSource';
  *   texture. One draw, no extra targets, and the only renderer that does normal
  *   mapping - but every lit fragment walks every light, so the count is capped.
  * - `lightmap` accumulates the lights into a target of their own and multiplies
- *   the frame by it. No light cap, and the accumulated field is what a shadow
- *   pass writes into; it gives up normal mapping in exchange, because the frame
- *   it multiplies is already flat.
+ *   the frame by it. No light cap, shadows from the registered occluder
+ *   sources, and normals from a prepass over the registered surfaces rather
+ *   than from a material.
  */
 export type LightingQuality = 'forward' | 'lightmap';
+
+/**
+ * What {@link LightingOptions.quality} accepts: a renderer by name, or
+ * `'auto'` to let the system pick one from what it has been given.
+ *
+ * `'auto'` resolves once, at construction, and {@link Lighting.quality} then
+ * reports what it settled on - so a scene still never has to name a renderer,
+ * and asking which one ran is still answerable.
+ */
+export type LightingQualityOption = LightingQuality | 'auto';
 
 /**
  * Intermediate to draw instead of the shaded frame. `null` shades normally.
@@ -52,7 +62,12 @@ const scratchPosition = { x: 0, y: 0 };
  * and so is a filter chain with nowhere to run.
  */
 const createBackend = (options: LightingOptions, post: readonly Filter[]): LightingBackend => {
-  const quality = options.quality ?? 'forward';
+  // `auto` resolves on what the caller actually handed over: the lightmap
+  // renderer works on the application's frame, so an application is the whole
+  // of what it needs, and without one there is no frame to light.
+  const requested = options.quality ?? 'auto';
+  const resolved: LightingQuality = options.app === undefined ? 'forward' : 'lightmap';
+  const quality = requested === 'auto' ? resolved : requested;
 
   // A filter chain is a frame pass whichever renderer is in use, and a frame
   // pass needs the frame slot to install itself in. Refusing it is the only
@@ -81,11 +96,17 @@ const createBackend = (options: LightingOptions, post: readonly Filter[]): Light
 /** Construction options for {@link Lighting}. */
 export interface LightingOptions {
   /**
-   * Renderer to shade with. Defaults to `'forward'`, which needs nothing else;
-   * `'lightmap'` needs {@link LightingOptions.app}, because it works on the
-   * frame the application drew.
+   * Renderer to shade with, or `'auto'` to take the best one the other options
+   * allow. Defaults to `'auto'`, which means `'lightmap'` when
+   * {@link LightingOptions.app} was passed and `'forward'` when it was not.
+   *
+   * It resolves at construction and never changes afterwards;
+   * {@link Lighting.quality} reports what it resolved to. Naming a renderer
+   * outright is what a scene does when it needs a property only that one has -
+   * `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows
+   * and an uncapped light count.
    */
-  readonly quality?: LightingQuality;
+  readonly quality?: LightingQualityOption;
   /**
    * The application whose frame is lit. Required by `'lightmap'` and by a
    * non-empty {@link LightingOptions.post}; a `'forward'` system without

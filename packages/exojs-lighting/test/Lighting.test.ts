@@ -284,6 +284,16 @@ describe('Lighting', () => {
     expect(new Lighting({ maxLights: 4 }).hdr).toBe(false);
   });
 
+  test('auto takes the lightmap renderer when there is a frame to light, and forward when there is not', () => {
+    expect(new Lighting({ app: fakeApp() }).quality).toBe('lightmap');
+    expect(new Lighting({}).quality).toBe('forward');
+    // The default, so a scene that names nothing still gets shadows where it
+    // can have them.
+    expect(new Lighting({ app: fakeApp(), quality: 'auto' }).quality).toBe('lightmap');
+    // Naming one still wins over what auto would have picked.
+    expect(new Lighting({ app: fakeApp(), quality: 'forward' }).quality).toBe('forward');
+  });
+
   test('a filter chain with no application to run in is refused rather than ignored', () => {
     const post: readonly Filter[] = [new ColorMatrixFilter()];
 
@@ -296,7 +306,7 @@ describe('Lighting', () => {
     const lightmapApp = fakeApp();
     const grade = new ColorMatrixFilter();
 
-    const forward = new Lighting({ app: forwardApp, post: [grade] });
+    const forward = new Lighting({ app: forwardApp, quality: 'forward', post: [grade] });
     const lightmap = new Lighting({ quality: 'lightmap', app: lightmapApp, post: [grade] });
 
     expect(forwardApp.framePasses.size).toBe(1);
@@ -314,7 +324,7 @@ describe('Lighting', () => {
   test('no filters means no pass at all, which is what keeps forward free of them', () => {
     const app = fakeApp();
 
-    new Lighting({ app });
+    new Lighting({ app, quality: 'forward' });
 
     expect(app.framePasses.size).toBe(0);
   });

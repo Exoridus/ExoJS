@@ -2,7 +2,7 @@
 // Importing this entry performs no registration: a Lighting system is
 // constructed directly and added to the system registry that should tick it.
 
-export type { LightingDebugView, LightingOptions, LightingQuality } from './Lighting';
+export type { LightingDebugView, LightingOptions, LightingQuality, LightingQualityOption } from './Lighting';
 export { Lighting } from './Lighting';
 export type { LightOptions } from './lights/Light';
 export { Light } from './lights/Light';
