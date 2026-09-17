@@ -1,0 +1,72 @@
+{
+  "title": "NormalSource",
+  "description": "Where a LitMaterial takes its surface normals from. An object rather than a name, so a source carries its own parameters and a user can add one: anything that produces a tangent-space normal texture - derived from a height map, from two photographs, from a generator - is a valid source without this package knowing about it.",
+  "symbol": "NormalSource",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Where a LitMaterial takes its surface normals from.",
+        "An object rather than a name, so a source carries its own parameters and a user can add one: anything that produces a tangent-space normal texture - derived from a height map, from two photographs, from a generator - is a valid source without this package knowing about it."
+      ],
+      "importLine": "import { NormalSource } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "texture",
+          "signature": "texture: Texture",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The tangent-space normal map to bind."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/normals/Normals.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/Normals.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/normals/Normals.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/Normals.ts"
+}

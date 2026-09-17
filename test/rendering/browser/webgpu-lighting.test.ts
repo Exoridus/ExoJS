@@ -7,7 +7,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { LightingSystem, LitSpriteMaterial, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, Normals, PointLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -73,8 +73,8 @@ describe('lighting WebGPU browser', () => {
     const device = getBackendDevice(backend);
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
-    const lighting = new LightingSystem({ maxLights: 4, ambient: Color.black });
-    const material = new LitSpriteMaterial({ lighting, normalMap });
+    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const material = new LitMaterial({ lighting, normals: Normals.map(normalMap) });
     const root = new Container();
     const upright = new Sprite(albedo);
     const mirrored = new Sprite(albedo);
@@ -88,8 +88,8 @@ describe('lighting WebGPU browser', () => {
     root.addChild(upright);
     root.addChild(mirrored);
 
-    lighting.add(new PointLight({ x: 32, y: 32, radius: 64, intensity: 1, height: 20 }));
-    lighting.commit();
+    lighting.add(new PointLight({ radius: 64, intensity: 1, height: 20 })).setPosition(32, 32);
+    lighting.update();
 
     const cleanup = (): void => {
       root.destroy();
@@ -147,8 +147,8 @@ describe('lighting WebGPU browser', () => {
     const device = getBackendDevice(backend);
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
-    const lighting = new LightingSystem({ maxLights: 4, ambient: new Color(64, 64, 64) });
-    const material = new LitSpriteMaterial({ lighting, normalMap });
+    const lighting = new Lighting({ maxLights: 4, ambient: new Color(64, 64, 64) });
+    const material = new LitMaterial({ lighting, normals: Normals.map(normalMap) });
     const root = new Container();
     const sprite = new Sprite(albedo);
 
@@ -181,8 +181,8 @@ describe('lighting WebGPU browser', () => {
       expect(ambientOnly[0]).toBeGreaterThan(50);
       expect(ambientOnly[0]).toBeLessThan(80);
 
-      lighting.add(new PointLight({ x: 32, y: 32, radius: 64, intensity: 1, height: 16 }));
-      lighting.commit();
+      lighting.add(new PointLight({ radius: 64, intensity: 1, height: 16 })).setPosition(32, 32);
+      lighting.update();
       await render();
 
       const lit = readWebGpuPixels(backend, canvasSize)(32, 32);

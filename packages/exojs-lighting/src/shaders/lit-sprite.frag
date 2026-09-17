@@ -2,7 +2,7 @@
 precision highp float;
 precision highp int;
 
-// Forward point lighting for one sprite fragment. The engine splices its
+// Forward lighting for one sprite fragment: point and cone lights. The engine splices its
 // base-texture slot table and `sampleBase()` in below the precision block.
 in vec2 v_texcoord;
 in vec4 v_color;
@@ -33,11 +33,18 @@ void main(void) {
     for (int index = 0; index < count; index++) {
         vec4 light = texelFetch(u_lights, ivec2(index + 1, 0), 0);
         vec4 tint = texelFetch(u_lights, ivec2(index + 1, 1), 0);
+        vec4 cone = texelFetch(u_lights, ivec2(index + 1, 2), 0);
         vec2 toLight = light.xy - v_worldPosition;
         float falloff = clamp(1.0 - length(toLight) / light.z, 0.0, 1.0);
         vec3 direction = normalize(vec3(toLight, tint.w));
 
-        lit += tint.rgb * (max(dot(normal, direction), 0.0) * falloff * falloff * light.w);
+        // A point light writes both cone cosines as -1, which no direction can
+        // fail, so the cone term is 1 for it and the loop never branches.
+        vec2 fromLight = normalize(-toLight);
+        float alignment = dot(fromLight, cone.xy);
+        float coneTerm = cone.z == cone.w ? step(cone.z, alignment) : smoothstep(cone.z, cone.w, alignment);
+
+        lit += tint.rgb * (max(dot(normal, direction), 0.0) * falloff * falloff * light.w * coneTerm);
     }
 
     fragColor = vec4(base.rgb * lit, base.a) * v_color;

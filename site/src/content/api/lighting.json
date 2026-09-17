@@ -1,7 +1,7 @@
 {
-  "title": "LightingSystem",
-  "description": "Collects PointLights and publishes them to shaders as a single floating-point data texture. The texture is `rgba32f`, `maxLights + 1` texels wide and 2 rows tall: | column | row 0 | row 1 | | -------- | ------------------------------ | ---------------------------------- | | `0` | `(activeLightCount, 0, 0, 0)` | `(ambientR, ambientG, ambientB, 0)` | | `i + 1` | `(x, y, radius, intensity)` | `(r, g, b, height)` | Colour channels are normalized to `0..1`. Because the light count and the ambient term travel in the texture as well, a material that samples it needs no per-frame uniform update, and any number of materials can share one system. # Lifecycle `LightingSystem` is a `System`: register it with the registry that ticks *after* the code that moves the lights, so the packed texture describes the frame that is about to be drawn. ```ts const lighting = new LightingSystem({ ambient: new Color(30, 30, 45) }); scene.systems.add(lighting); // scene systems update after Scene.update() ``` `app.systems` runs its update phase *before* the active scene's, so a system registered there sees lights that scene code has not moved yet. Register on the scene, or call commit yourself at the point that suits the app. The system owns its light texture and destroys it in destroy; the lights themselves are plain data and are not owned.",
-  "symbol": "LightingSystem",
+  "title": "Lighting",
+  "description": "The lighting system: lights, materials and occluders in, a shaded frame out. ```ts const lighting = new Lighting({ ambient: Color.fromCss('#0b1020') }); app.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); ``` # What it owns The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Filters passed as `post` are the caller's. # Ordering Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want.",
+  "symbol": "Lighting",
   "kind": "class",
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
@@ -9,8 +9,8 @@
   "memberCount": 12,
   "counts": {
     "constructors": 1,
-    "methods": 6,
-    "properties": 5,
+    "methods": 5,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -19,18 +19,15 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Collects PointLights and publishes them to shaders as a single floating-point data texture.",
-        "The texture is `rgba32f`, `maxLights + 1` texels wide and 2 rows tall:",
-        "| column | row 0 | row 1 | | -------- | ------------------------------ | ---------------------------------- | | `0` | `(activeLightCount, 0, 0, 0)` | `(ambientR, ambientG, ambientB, 0)` | | `i + 1` | `(x, y, radius, intensity)` | `(r, g, b, height)` |",
-        "Colour channels are normalized to `0..1`. Because the light count and the ambient term travel in the texture as well, a material that samples it needs no per-frame uniform update, and any number of materials can share one system.",
-        "# Lifecycle",
-        "`LightingSystem` is a `System`: register it with the registry that ticks *after* the code that moves the lights, so the packed texture describes the frame that is about to be drawn.",
-        "```ts const lighting = new LightingSystem({ ambient: new Color(30, 30, 45) });",
-        "scene.systems.add(lighting); // scene systems update after Scene.update() ```",
-        "`app.systems` runs its update phase *before* the active scene's, so a system registered there sees lights that scene code has not moved yet. Register on the scene, or call commit yourself at the point that suits the app.",
-        "The system owns its light texture and destroys it in destroy; the lights themselves are plain data and are not owned."
+        "The lighting system: lights, materials and occluders in, a shaded frame out.",
+        "```ts const lighting = new Lighting({ ambient: Color.fromCss('#0b1020') });",
+        "app.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); ```",
+        "# What it owns",
+        "The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Filters passed as `post` are the caller's.",
+        "# Ordering",
+        "Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want."
       ],
-      "importLine": "import { LightingSystem } from '@codexo/exojs-lighting'",
+      "importLine": "import { Lighting } from '@codexo/exojs-lighting'",
       "sourceLink": null
     },
     {
@@ -39,7 +36,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: LightingSystemOptions): LightingSystem",
+          "signature": "new(options: LightingOptions): Lighting",
           "signatureTokens": [
             {
               "text": "new",
@@ -58,7 +55,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "LightingSystemOptions",
+              "text": "LightingOptions",
               "kind": "type"
             },
             {
@@ -70,18 +67,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "LightingSystem",
+              "text": "Lighting",
               "kind": "type"
             }
           ],
           "params": [
             {
               "name": "options",
-              "type": "LightingSystemOptions",
+              "type": "LightingOptions",
               "optional": false
             }
           ],
-          "returnType": "LightingSystem",
+          "returnType": "Lighting",
           "description": ""
         }
       ],
@@ -95,7 +92,7 @@
       "members": [
         {
           "name": "add",
-          "signature": "add(light: PointLight): this",
+          "signature": "add(light: T): T",
           "signatureTokens": [
             {
               "text": "add",
@@ -114,7 +111,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointLight",
+              "text": "T",
               "kind": "type"
             },
             {
@@ -126,19 +123,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "this",
-              "kind": "keyword"
+              "text": "T",
+              "kind": "type"
             }
           ],
           "params": [
             {
               "name": "light",
-              "type": "PointLight",
+              "type": "T",
               "optional": false
             }
           ],
-          "returnType": "this",
-          "description": "Register a light. Registering the same light twice shades it twice."
+          "returnType": "T",
+          "description": "Register a light and return it, so it can be created, parented and registered in one expression. Registering the same light twice shades it twice; the second registration is ignored instead."
         },
         {
           "name": "clear",
@@ -170,35 +167,6 @@
           "description": "Unregister every light."
         },
         {
-          "name": "commit",
-          "signature": "commit(): this",
-          "signatureTokens": [
-            {
-              "text": "commit",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "this",
-          "description": "Pack the registered lights and the ambient term into the light texture and mark it for upload. Lights are plain mutable data, so there is nothing to observe: every call rewrites the whole header and light range unconditionally. Surplus lights beyond maxLights are skipped."
-        },
-        {
           "name": "destroy",
           "signature": "destroy(): void",
           "signatureTokens": [
@@ -225,11 +193,11 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release the light texture. The registered lights are untouched."
+          "description": "Release the renderer's resources. Registered lights are unregistered, not destroyed."
         },
         {
           "name": "remove",
-          "signature": "remove(light: PointLight): boolean",
+          "signature": "remove(light: Light): boolean",
           "signatureTokens": [
             {
               "text": "remove",
@@ -248,7 +216,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointLight",
+              "text": "Light",
               "kind": "type"
             },
             {
@@ -267,12 +235,12 @@
           "params": [
             {
               "name": "light",
-              "type": "PointLight",
+              "type": "Light",
               "optional": false
             }
           ],
           "returnType": "boolean",
-          "description": "Unregister a light. Returns false when it was not registered."
+          "description": "Unregister a light. Returns false when it was not registered here."
         },
         {
           "name": "update",
@@ -301,7 +269,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "System update phase - equivalent to commit."
+          "description": "System update phase: publish this frame's lights to the renderer."
         }
       ],
       "paragraphs": [],
@@ -331,14 +299,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Baseline colour applied to every lit fragment. Mutable; re-read on each commit."
+          "description": "Baseline colour applied to every lit fragment. Mutable; re-read every frame."
         },
         {
-          "name": "maxLights",
-          "signature": "maxLights: number",
+          "name": "debug",
+          "signature": "debug: LightingDebugView",
           "signatureTokens": [
             {
-              "text": "maxLights",
+              "text": "debug",
               "kind": "name"
             },
             {
@@ -346,13 +314,46 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "LightingDebugView",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Lights the texture is sized for."
+          "description": "Intermediate to show instead of the shaded frame. 'occluders' is the one that explains the feature: it draws the silhouettes the shadow pass reads, which is how you see that they came from colliders rather than from hand work."
+        },
+        {
+          "name": "post",
+          "signature": "post: readonly Filter[]",
+          "signatureTokens": [
+            {
+              "text": "post",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Filter",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Filters applied to the shaded frame, in order. Caller-owned."
         },
         {
           "name": "activeLightCount",
@@ -373,11 +374,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Lights the last commit actually published - min(lights.length, maxLights)."
+          "description": "Lights the last frame actually shaded with. Lower than lights when some are disabled, have no intensity, or fall beyond what the renderer in use can carry."
         },
         {
           "name": "lights",
-          "signature": "lights: readonly PointLight[]",
+          "signature": "lights: readonly Light[]",
           "signatureTokens": [
             {
               "text": "lights",
@@ -396,7 +397,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointLight",
+              "text": "Light",
               "kind": "type"
             },
             {
@@ -406,14 +407,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Currently registered lights, in registration order."
+          "description": "Registered lights, in registration order."
         },
         {
-          "name": "lightTexture",
-          "signature": "lightTexture: DataTexture<Rgba32F>",
+          "name": "quality",
+          "signature": "quality: \"forward\"",
           "signatureTokens": [
             {
-              "text": "lightTexture",
+              "text": "quality",
               "kind": "name"
             },
             {
@@ -421,25 +422,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "DataTexture",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Rgba32F",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
+              "text": "\"forward\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The packed light texture, to be bound as a material texture. Its identity is stable for the system's lifetime."
+          "description": "The renderer in use."
         }
       ],
       "paragraphs": [],
@@ -453,11 +442,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/LightingSystem.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LightingSystem.ts"
+        "label": "packages/exojs-lighting/src/Lighting.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/LightingSystem.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LightingSystem.ts"
+  "sourcePath": "packages/exojs-lighting/src/Lighting.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
 }

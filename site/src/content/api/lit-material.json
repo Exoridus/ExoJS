@@ -1,7 +1,7 @@
 {
-  "title": "LitSpriteMaterial",
-  "description": "A SpriteMaterial that shades sprites with a tangent-space normal map against the point lights of a LightingSystem. Lighting happens in the sprite's own fragment stage, so a lit sprite costs no extra pass and no extra draw call: every sprite sharing this material and a base-texture slot stays in one batch. The shaded result is `albedo * (ambient + sum over lights)`, with each light falling off quadratically to nothing at its radius. # One normal map per material The normal map is a material binding, not a per-sprite one, so all sprites drawn with a given `LitSpriteMaterial` must share its layout - in practice one material per atlas. Sprites from a second atlas need a second material, which breaks the batch at the material boundary. Both materials can shade against the same `LightingSystem`. # Ownership The material owns neither the lighting system nor the textures. SpriteMaterial.destroy releases only the GPU resources cached against this material. ```ts const lighting = new LightingSystem(); const material = new LitSpriteMaterial({ lighting, normalMap }); scene.systems.add(lighting); lighting.add(new PointLight({ x: 400, y: 300, radius: 320 })); sprite.material = material; ```",
-  "symbol": "LitSpriteMaterial",
+  "title": "LitMaterial",
+  "description": "Makes a sprite respond to the lights of a Lighting system. ```ts crate.material = new LitMaterial({ lighting }); hero.material = new LitMaterial({ lighting, normals: Normals.map(heroNormalMap) }); ``` The shaded result is `albedo * (ambient + sum over lights)`, each light falling off quadratically to nothing at its radius and, for a cone light, fading across its edge. # One normal source per material Normals are a material binding, not a per-sprite one, so every sprite drawn with a given material shares them - in practice one material per atlas. Sprites from a second atlas need a second material, which breaks the batch at the material boundary. Both shade against the same system. # Ownership The material owns neither the lighting system nor the textures. `destroy()` releases only the GPU resources cached against this material.",
+  "symbol": "LitMaterial",
   "kind": "class",
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
@@ -19,16 +19,15 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A SpriteMaterial that shades sprites with a tangent-space normal map against the point lights of a LightingSystem.",
-        "Lighting happens in the sprite's own fragment stage, so a lit sprite costs no extra pass and no extra draw call: every sprite sharing this material and a base-texture slot stays in one batch. The shaded result is `albedo * (ambient + sum over lights)`, with each light falling off quadratically to nothing at its radius.",
-        "# One normal map per material",
-        "The normal map is a material binding, not a per-sprite one, so all sprites drawn with a given `LitSpriteMaterial` must share its layout - in practice one material per atlas. Sprites from a second atlas need a second material, which breaks the batch at the material boundary. Both materials can shade against the same `LightingSystem`.",
+        "Makes a sprite respond to the lights of a Lighting system.",
+        "```ts crate.material = new LitMaterial({ lighting }); hero.material = new LitMaterial({ lighting, normals: Normals.map(heroNormalMap) }); ```",
+        "The shaded result is `albedo * (ambient + sum over lights)`, each light falling off quadratically to nothing at its radius and, for a cone light, fading across its edge.",
+        "# One normal source per material",
+        "Normals are a material binding, not a per-sprite one, so every sprite drawn with a given material shares them - in practice one material per atlas. Sprites from a second atlas need a second material, which breaks the batch at the material boundary. Both shade against the same system.",
         "# Ownership",
-        "The material owns neither the lighting system nor the textures. SpriteMaterial.destroy releases only the GPU resources cached against this material.",
-        "```ts const lighting = new LightingSystem(); const material = new LitSpriteMaterial({ lighting, normalMap });",
-        "scene.systems.add(lighting); lighting.add(new PointLight({ x: 400, y: 300, radius: 320 })); sprite.material = material; ```"
+        "The material owns neither the lighting system nor the textures. `destroy()` releases only the GPU resources cached against this material."
       ],
-      "importLine": "import { LitSpriteMaterial } from '@codexo/exojs-lighting'",
+      "importLine": "import { LitMaterial } from '@codexo/exojs-lighting'",
       "sourceLink": null
     },
     {
@@ -37,7 +36,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: LitSpriteMaterialOptions): LitSpriteMaterial",
+          "signature": "new(options: LitMaterialOptions): LitMaterial",
           "signatureTokens": [
             {
               "text": "new",
@@ -56,7 +55,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "LitSpriteMaterialOptions",
+              "text": "LitMaterialOptions",
               "kind": "type"
             },
             {
@@ -68,18 +67,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "LitSpriteMaterial",
+              "text": "LitMaterial",
               "kind": "type"
             }
           ],
           "params": [
             {
               "name": "options",
-              "type": "LitSpriteMaterialOptions",
+              "type": "LitMaterialOptions",
               "optional": false
             }
           ],
-          "returnType": "LitSpriteMaterial",
+          "returnType": "LitMaterial",
           "description": ""
         }
       ],
@@ -704,7 +703,7 @@
         },
         {
           "name": "lighting",
-          "signature": "lighting: LightingSystem",
+          "signature": "lighting: Lighting",
           "signatureTokens": [
             {
               "text": "lighting",
@@ -715,7 +714,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "LightingSystem",
+              "text": "Lighting",
               "kind": "type"
             }
           ],
@@ -1012,11 +1011,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/LitSpriteMaterial.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LitSpriteMaterial.ts"
+        "label": "packages/exojs-lighting/src/LitMaterial.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LitMaterial.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/LitSpriteMaterial.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LitSpriteMaterial.ts"
+  "sourcePath": "packages/exojs-lighting/src/LitMaterial.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LitMaterial.ts"
 }

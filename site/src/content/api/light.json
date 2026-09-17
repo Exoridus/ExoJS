@@ -1,16 +1,16 @@
 {
-  "title": "PointLight",
-  "description": "A point light: equal in every direction, falling off quadratically to nothing at radius. ```ts player.addChild(new PointLight({ radius: 260, color: Color.amber, intensity: 1.4 })); ```",
-  "symbol": "PointLight",
+  "title": "Light",
+  "description": "Base class for every light: a scene node that emits rather than draws. Being a node is the point. A light parents to whatever carries it - a torch to the player, a headlight to the car - and follows that thing's transform with no per-frame bookkeeping, and every field is an ordinary property, so the engine's tweens animate a light without any lighting-specific animation concept: ```ts player.addChild(torch); app.tweens.to(torch, { intensity: 1.6 }, seconds(0.4)); ``` A light draws nothing itself and has no bounds, so it is never culled, batched or captured; what it costs is one row in the lighting system's data for as long as it is registered. Registration is explicit (Lighting.add), because a package has no business scanning a scene tree it does not own. Destroying a registered light unregisters it.",
+  "symbol": "Light",
   "kind": "class",
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 85,
+  "memberCount": 83,
   "counts": {
     "constructors": 1,
     "methods": 34,
-    "properties": 36,
+    "properties": 34,
     "events": 14
   },
   "sections": [
@@ -19,10 +19,13 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A point light: equal in every direction, falling off quadratically to nothing at radius.",
-        "```ts player.addChild(new PointLight({ radius: 260, color: Color.amber, intensity: 1.4 })); ```"
+        "Base class for every light: a scene node that emits rather than draws.",
+        "Being a node is the point. A light parents to whatever carries it - a torch to the player, a headlight to the car - and follows that thing's transform with no per-frame bookkeeping, and every field is an ordinary property, so the engine's tweens animate a light without any lighting-specific animation concept:",
+        "```ts player.addChild(torch); app.tweens.to(torch, { intensity: 1.6 }, seconds(0.4)); ```",
+        "A light draws nothing itself and has no bounds, so it is never culled, batched or captured; what it costs is one row in the lighting system's data for as long as it is registered.",
+        "Registration is explicit (Lighting.add), because a package has no business scanning a scene tree it does not own. Destroying a registered light unregisters it."
       ],
-      "importLine": "import { PointLight } from '@codexo/exojs-lighting'",
+      "importLine": "import { Light } from '@codexo/exojs-lighting'",
       "sourceLink": null
     },
     {
@@ -31,7 +34,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: PointLightOptions): PointLight",
+          "signature": "new(options: LightOptions): Light",
           "signatureTokens": [
             {
               "text": "new",
@@ -50,7 +53,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointLightOptions",
+              "text": "LightOptions",
               "kind": "type"
             },
             {
@@ -62,18 +65,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointLight",
+              "text": "Light",
               "kind": "type"
             }
           ],
           "params": [
             {
               "name": "options",
-              "type": "PointLightOptions",
+              "type": "LightOptions",
               "optional": false
             }
           ],
-          "returnType": "PointLight",
+          "returnType": "Light",
           "description": ""
         }
       ],
@@ -1891,27 +1894,6 @@
           "description": "When true, this node can receive keyboard focus - via focus, Tab traversal, or app.interaction.focus(node) - and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do). A Widget additionally has to be enabled: disabling one takes it out of the Tab order and rejects programmatic focus, without touching this flag."
         },
         {
-          "name": "height",
-          "signature": "height: number",
-          "signatureTokens": [
-            {
-              "text": "height",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Height above the sprite plane, in pixels."
-        },
-        {
           "name": "hitArea",
           "signature": "hitArea: HitArea",
           "signatureTokens": [
@@ -1981,27 +1963,6 @@
           "params": [],
           "returnType": null,
           "description": "Optional human-readable identity for this node. Defaults to null. Purely a label the engine never interprets: useful for debugging, find-by-name lookups, prefab references, and as a stable key when merging serialized state back onto an existing tree. Not required to be unique."
-        },
-        {
-          "name": "radius",
-          "signature": "radius: number",
-          "signatureTokens": [
-            {
-              "text": "radius",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Distance in pixels at which the light contributes nothing."
         },
         {
           "name": "tabIndex",
@@ -3146,11 +3107,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/lights/PointLight.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/PointLight.ts"
+        "label": "packages/exojs-lighting/src/lights/Light.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/Light.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/lights/PointLight.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/PointLight.ts"
+  "sourcePath": "packages/exojs-lighting/src/lights/Light.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/Light.ts"
 }

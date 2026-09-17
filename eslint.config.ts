@@ -796,17 +796,6 @@ export default defineConfig([
     },
   },
 
-  // The light packer walks the registered lights by computed index inside a
-  // loop bounded by the count it just derived from their length, so `arr[i]!`
-  // says what the reader already knows and a per-frame `for...of` iterator is
-  // exactly the allocation this path exists to avoid.
-  {
-    files: ['packages/exojs-lighting/src/LightingSystem.ts'],
-    rules: {
-      '@typescript-eslint/no-non-null-assertion': 'off',
-    },
-  },
-
   // The pathfinding search reads its own typed-array state by an index it just
   // derived - a heap slot, a node id, a cell offset it bounds-checked one line
   // earlier. `noUncheckedIndexedAccess` widens every one of those reads to
@@ -839,7 +828,7 @@ export default defineConfig([
   // declare in snake_case with the engine's `u_` prefix. The object literal has
   // to spell them exactly as the shader does.
   {
-    files: ['packages/exojs-lighting/src/LitSpriteMaterial.ts'],
+    files: ['packages/exojs-lighting/src/LitMaterial.ts'],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },

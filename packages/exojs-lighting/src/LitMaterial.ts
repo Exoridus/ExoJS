@@ -1,0 +1,86 @@
+import { type BlendModes, type SamplerOptions, Shader, SpriteMaterial, type Texture } from '@codexo/exojs';
+
+import type { ForwardBackend } from './backends/ForwardBackend';
+import type { Lighting } from './Lighting';
+import { flatNormals, type NormalSource } from './normals/Normals';
+import glslFragment from './shaders/lit-sprite.frag';
+import wgslSource from './shaders/lit-sprite.wgsl';
+
+/**
+ * The one shader pair behind every {@link LitMaterial}. Renderers key their
+ * per-material GPU state on the shader instance, so sharing it keeps two
+ * materials over the same textures in one pipeline.
+ */
+const litSpriteShader = new Shader({ glsl: { fragment: glslFragment }, wgsl: wgslSource });
+
+/** Construction options for {@link LitMaterial}. */
+export interface LitMaterialOptions {
+  /** The system whose lights this material shades against. */
+  readonly lighting: Lighting;
+  /**
+   * Where the surface normals come from. Omitted, the surface is flat and lit
+   * as a plane - which is the point: a scene with no authored normal maps is
+   * lit rather than black, and normals are an upgrade instead of an entry fee.
+   */
+  readonly normals?: NormalSource;
+  /** Blend mode for sprites drawn with this material. */
+  readonly blendMode?: BlendModes;
+  /** Sampler for the base texture. */
+  readonly sampler?: SamplerOptions | null;
+}
+
+/**
+ * Makes a sprite respond to the lights of a {@link Lighting} system.
+ *
+ * ```ts
+ * crate.material = new LitMaterial({ lighting });
+ * hero.material = new LitMaterial({ lighting, normals: Normals.map(heroNormalMap) });
+ * ```
+ *
+ * The shaded result is `albedo * (ambient + sum over lights)`, each light
+ * falling off quadratically to nothing at its radius and, for a cone light,
+ * fading across its edge.
+ *
+ * # One normal source per material
+ *
+ * Normals are a material binding, not a per-sprite one, so every sprite drawn
+ * with a given material shares them - in practice one material per atlas.
+ * Sprites from a second atlas need a second material, which breaks the batch at
+ * the material boundary. Both shade against the same system.
+ *
+ * # Ownership
+ *
+ * The material owns neither the lighting system nor the textures. `destroy()`
+ * releases only the GPU resources cached against this material.
+ */
+export class LitMaterial extends SpriteMaterial {
+  /** The system this material shades against. */
+  public readonly lighting: Lighting;
+
+  public constructor(options: LitMaterialOptions) {
+    const backend = options.lighting.backend as ForwardBackend;
+
+    super({
+      shader: litSpriteShader,
+      // Declaration order is the group(2) binding order on WebGPU: normal map at
+      // bindings 1/2, light texture at 3/4, matching `lit-sprite.wgsl`.
+      textures: {
+        u_normalMap: options.normals?.texture ?? flatNormals(),
+        u_lights: backend.lightTexture,
+      },
+      ...(options.blendMode !== undefined ? { blendMode: options.blendMode } : {}),
+      ...(options.sampler !== undefined ? { sampler: options.sampler } : {}),
+    });
+
+    this.lighting = options.lighting;
+  }
+
+  /** The bound normal map. Assigning a replacement takes effect on the next draw. */
+  public get normalMap(): Texture {
+    return this.textures.u_normalMap as Texture;
+  }
+
+  public set normalMap(texture: Texture) {
+    this.setTexture('u_normalMap', texture);
+  }
+}

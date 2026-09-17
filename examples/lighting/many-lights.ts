@@ -10,13 +10,13 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { LightingSystem, LitSpriteMaterial, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, Normals, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // The light list is a data texture, not a uniform array, so the light count is
 // a shader loop bound rather than a compiled-in constant: the slider below
 // walks from 1 to 48 lights without recompiling anything and without adding a
-// draw call. The floor is one batch of sprites sharing one LitSpriteMaterial.
+// draw call. The floor is one batch of sprites sharing one LitMaterial.
 
 const MAX_LIGHTS = 48;
 const TILE_SIZE = 128;
@@ -91,7 +91,7 @@ interface Orbit {
 class ManyLightsScene extends Scene {
   private floor!: Container;
   private markerLayer!: Container;
-  private lighting!: LightingSystem;
+  private lighting!: Lighting;
   private orbits!: Orbit[];
   private visibleLights = 24;
   private elapsed = 0;
@@ -102,10 +102,10 @@ class ManyLightsScene extends Scene {
 
     this.floor = new Container();
     this.markerLayer = new Container();
-    this.lighting = new LightingSystem({ maxLights: MAX_LIGHTS, ambient: new Color(16, 16, 24) });
+    this.lighting = new Lighting({ maxLights: MAX_LIGHTS, ambient: new Color(16, 16, 24) });
     this.systems.add(this.lighting);
 
-    const material = new LitSpriteMaterial({ lighting: this.lighting, normalMap: normalTexture });
+    const material = new LitMaterial({ lighting: this.lighting, normals: Normals.map(normalTexture) });
 
     for (let y = 0; y < Math.ceil(height / TILE_SIZE); y++) {
       for (let x = 0; x < Math.ceil(width / TILE_SIZE); x++) {
