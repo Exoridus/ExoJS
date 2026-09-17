@@ -2,6 +2,7 @@ import { type Application, Color, Container, RenderPipeline, RenderTexture, Sign
 import { describe, expect, test } from 'vitest';
 
 import type { ForwardBackend } from '../src/backends/ForwardBackend';
+import type { LightmapBackend } from '../src/backends/LightmapBackend';
 import { Lighting } from '../src/Lighting';
 import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
@@ -17,11 +18,12 @@ const textureOf = (lighting: Lighting): (typeof ForwardBackend.prototype)['light
  * wants an application for its frame; nothing here draws, so a frame slot and
  * a surface size are the whole of what it touches.
  */
-const lightmapLighting = (): Lighting => {
+const lightmapLighting = (floatTargets = true): Lighting => {
   const app = {
     framePasses: new RenderPipeline(),
     frameTexture: new RenderTexture(64, 64),
     onResize: new Signal(),
+    rendering: { supportsColorFormat: (format: TextureFormat): boolean => format === TextureFormat.Rgba8 || floatTargets },
     width: 64,
     height: 64,
   } as unknown as Application;
@@ -251,6 +253,24 @@ describe('Lighting', () => {
 
     expect(lighting.occluders).toHaveLength(0);
   });
+  test('light accumulates in half float where one can be rendered into', () => {
+    const lighting = lightmapLighting();
+
+    expect(lighting.hdr).toBe(true);
+    expect((lighting.backend as LightmapBackend).lightTexture.format).toBe(TextureFormat.Rgba16F);
+  });
+
+  test('a context without renderable floats falls back to rgba8 and reports it', () => {
+    const lighting = lightmapLighting(false);
+
+    expect(lighting.hdr).toBe(false);
+    expect((lighting.backend as LightmapBackend).lightTexture.format).toBe(TextureFormat.Rgba8);
+  });
+
+  test('the forward renderer shades into the frame, so it never has headroom', () => {
+    expect(new Lighting({ maxLights: 4 }).hdr).toBe(false);
+  });
+
   test('a lit material refuses a renderer whose light texture it cannot read', () => {
     const lighting = lightmapLighting();
 

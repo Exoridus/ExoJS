@@ -32,6 +32,12 @@ export interface LightingBackend {
   readonly castsShadows: boolean;
 
   /**
+   * Whether light accumulates with headroom above `1.0`. See
+   * {@link Lighting.hdr}.
+   */
+  readonly hdr: boolean;
+
+  /**
    * Show an intermediate instead of the shaded frame, or `null` to shade
    * normally. A renderer that has no such intermediate ignores it.
    */

@@ -70,6 +70,8 @@ const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20,
 
 `lighting.debug = 'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's colours in the way; `lighting.debug = 'occluders'` draws the silhouettes the sources collected, over the shaded scene.
 
+The `lightmap` light target is `rgba16f`, so two lights overlapping add up past `1.0` instead of saturating to white, and a filter over the composite has something above the clipping point to work with. A WebGL2 context without `EXT_color_buffer_float` cannot render into one; there the target is `rgba8` and `lighting.hdr` reports `false`. The picture is still correct - it clips earlier, and a bloom keyed on a threshold near `1.0` finds little to bloom.
+
 ## Shadows you do not model
 
 The work in 2D shadows is data entry, not rendering. Engines that ask for a silhouette per object mostly ship without shadows, because the bookkeeping is not worth it - and a project with physics colliders or a tile layer has described its walls once already.
@@ -149,20 +151,21 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 
 ## Capabilities
 
-| Capability                                  | Status                                                    |
-| ------------------------------------------- | --------------------------------------------------------- |
-| Point and cone lights on sprites            | yes, WebGL2 and WebGPU                                    |
-| Lights as scene nodes (parenting, tweens)   | yes                                                       |
-| Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped |
-| Ambient term                                | yes, carried in the light texture                         |
-| Normal maps                                 | optional, one per material (= per atlas)                  |
-| Rotation / flip aware normals               | yes, via the instance's local-to-world basis              |
-| Extra render passes or draw calls           | `forward`: none; `lightmap`: two passes                   |
-| Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                        |
-| Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                    |
-| Light cookies, line and sun lights          | no                                                        |
-| Deferred (G-buffer) path                    | no                                                        |
-| Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                     |
+| Capability                                  | Status                                                         |
+| ------------------------------------------- | -------------------------------------------------------------- |
+| Point and cone lights on sprites            | yes, WebGL2 and WebGPU                                         |
+| Lights as scene nodes (parenting, tweens)   | yes                                                            |
+| Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped      |
+| Ambient term                                | yes, carried in the light texture                              |
+| Normal maps                                 | optional, one per material (= per atlas)                       |
+| Rotation / flip aware normals               | yes, via the instance's local-to-world basis                   |
+| Extra render passes or draw calls           | `forward`: none; `lightmap`: two passes                        |
+| Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                             |
+| Overbright light accumulation               | `lightmap`: `rgba16f`, `rgba8` where floats are not renderable |
+| Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                         |
+| Light cookies, line and sun lights          | no                                                             |
+| Deferred (G-buffer) path                    | no                                                             |
+| Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                          |
 
 ## Cost
 

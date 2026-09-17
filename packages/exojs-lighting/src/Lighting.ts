@@ -168,6 +168,20 @@ export class Lighting {
     return this._backend.quality;
   }
 
+  /**
+   * Whether light accumulates with headroom above `1.0`, so that overlapping
+   * lights add up instead of saturating to white and a filter in
+   * {@link post} has something above the clipping point to work with.
+   *
+   * `false` under `forward`, which shades straight into the frame, and under
+   * `lightmap` on a WebGL2 context without `EXT_color_buffer_float`. The
+   * picture is still correct there - it clips earlier, and a bloom keyed on a
+   * threshold near `1.0` finds little to bloom.
+   */
+  public get hdr(): boolean {
+    return this._backend.hdr;
+  }
+
   /** Registered lights, in registration order. */
   public get lights(): readonly Light[] {
     return this._lights;

@@ -12,6 +12,7 @@ import {
   type PassContext,
   RenderBatch,
   RenderTexture,
+  ScaleModes,
   Shader,
   Texture,
   TextureFormat,
@@ -105,6 +106,14 @@ export interface LightmapBackendOptions {
  * shadow map and its softness. The quad is the light's bounding square, so a
  * light costs the fill of its own radius rather than of the screen.
  *
+ * # Accumulation
+ *
+ * The light target is `rgba16f` wherever one can be rendered into, so two
+ * lights overlapping reach past `1.0` instead of saturating to white, and a
+ * filter over the composite has something above the clipping point to read.
+ * Where the format is unavailable - WebGL2 without `EXT_color_buffer_float` -
+ * it falls back to `rgba8` and says so through {@link hdr}.
+ *
  * # Shadows
  *
  * Each light gets one row of a shadow map: the distance to the nearest
@@ -118,6 +127,7 @@ export interface LightmapBackendOptions {
 export class LightmapBackend implements LightingBackend {
   public readonly quality: LightingQuality = 'lightmap';
   public readonly castsShadows = true;
+  public readonly hdr: boolean;
 
   private readonly _app: Application;
   private readonly _resolution: number;
@@ -146,7 +156,15 @@ export class LightmapBackend implements LightingBackend {
     this._app = options.app;
     this._resolution = options.resolution;
     this._shadowResolution = options.shadowResolution;
-    this._target = new RenderTexture(1, 1);
+    this.hdr = options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F);
+    // Half-float is filterable and blendable in WebGL2 and WebGPU alike, so the
+    // only thing the format changes is the ceiling. It is not the default for a
+    // render target, though, and a float target would otherwise point-sample -
+    // which on a half-resolution light field is visible as blocky falloff.
+    this._target = new RenderTexture(1, 1, {
+      format: this.hdr ? TextureFormat.Rgba16F : TextureFormat.Rgba8,
+      scaleMode: ScaleModes.Linear,
+    });
     this._shadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.R32F });
 
     this._lightMaterial = new MeshMaterial({
