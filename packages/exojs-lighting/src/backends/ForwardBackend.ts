@@ -1,6 +1,6 @@
 import { type Color, DataTexture, TextureFormat } from '@codexo/exojs';
 
-import type { LightingQuality } from '../Lighting';
+import type { LightingDebugView, LightingQuality } from '../Lighting';
 import { type Light } from '../lights/Light';
 import { PointLight } from '../lights/PointLight';
 import { SpotLight } from '../lights/SpotLight';
@@ -46,6 +46,9 @@ export interface ForwardBackendOptions {
  */
 export class ForwardBackend implements LightingBackend {
   public readonly quality: LightingQuality = 'forward';
+
+  /** Ignored: this renderer shades inside the sprite shader and has no intermediate to show. */
+  public debug: LightingDebugView = null;
 
   /** Lights the texture is sized for. */
   public readonly maxLights: number;

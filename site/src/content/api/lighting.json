@@ -302,27 +302,6 @@
           "description": "Baseline colour applied to every lit fragment. Mutable; re-read every frame."
         },
         {
-          "name": "debug",
-          "signature": "debug: LightingDebugView",
-          "signatureTokens": [
-            {
-              "text": "debug",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LightingDebugView",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Intermediate to show instead of the shaded frame. 'occluders' is the one that explains the feature: it draws the silhouettes the shadow pass reads, which is how you see that they came from colliders rather than from hand work."
-        },
-        {
           "name": "post",
           "signature": "post: readonly Filter[]",
           "signatureTokens": [
@@ -377,6 +356,27 @@
           "description": "Lights the last frame actually shaded with. Lower than lights when some are disabled, have no intensity, or fall beyond what the renderer in use can carry."
         },
         {
+          "name": "debug",
+          "signature": "debug: LightingDebugView",
+          "signatureTokens": [
+            {
+              "text": "debug",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingDebugView",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Intermediate to show instead of the shaded frame. See LightingDebugView."
+        },
+        {
           "name": "lights",
           "signature": "lights: readonly Light[]",
           "signatureTokens": [
@@ -411,7 +411,7 @@
         },
         {
           "name": "quality",
-          "signature": "quality: \"forward\"",
+          "signature": "quality: LightingQuality",
           "signatureTokens": [
             {
               "text": "quality",
@@ -422,8 +422,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"forward\"",
-              "kind": "keyword"
+              "text": "LightingQuality",
+              "kind": "type"
             }
           ],
           "params": [],

@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -52,6 +52,68 @@
           "params": [],
           "returnType": null,
           "description": "Baseline colour every lit fragment receives regardless of any light, as a multiplier on the albedo - 255 per channel means \"unlit areas keep their full albedo\". Stored by reference and re-read every frame."
+        },
+        {
+          "name": "app",
+          "signature": "app?: Application<object>",
+          "signatureTokens": [
+            {
+              "text": "app",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The application whose frame is lit. Required by 'lightmap', unused by 'forward'. Passing it installs two passes in app.framePasses and takes them out again on Lighting.destroy."
+        },
+        {
+          "name": "lightResolution",
+          "signature": "lightResolution?: number",
+          "signatureTokens": [
+            {
+              "text": "lightResolution",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Texels per logical unit of the lightmap renderer's light target. Light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill. Defaults to 0.5."
         },
         {
           "name": "maxLights",
@@ -114,6 +176,31 @@
           "params": [],
           "returnType": null,
           "description": "Filters applied to the shaded frame, in order. A bloom belongs here rather than on a node: it reads the light the system produced, including the parts no single node drew."
+        },
+        {
+          "name": "quality",
+          "signature": "quality?: LightingQuality",
+          "signatureTokens": [
+            {
+              "text": "quality",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingQuality",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Renderer to shade with. Defaults to 'forward', which needs nothing else; 'lightmap' needs LightingOptions.app, because it works on the frame the application drew."
         }
       ],
       "paragraphs": [],

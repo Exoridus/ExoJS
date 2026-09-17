@@ -839,7 +839,7 @@ export default defineConfig([
   // declare in snake_case with the engine's `u_` prefix. The object literal has
   // to spell them exactly as the shader does.
   {
-    files: ['packages/exojs-lighting/src/LitMaterial.ts'],
+    files: ['packages/exojs-lighting/src/LitMaterial.ts', 'packages/exojs-lighting/src/backends/LightmapBackend.ts'],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },

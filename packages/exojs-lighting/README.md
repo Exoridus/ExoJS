@@ -13,7 +13,7 @@ npm install @codexo/exojs @codexo/exojs-lighting
 ## What this package provides
 
 - `PointLight`, `SpotLight` - scene nodes that emit rather than draw. Position comes from the node's transform, a spot's cone points along its rotation, and every field is an ordinary property, so the engine's tweens animate a light with no lighting-specific animation concept.
-- `Lighting` - the system: collects the registered lights, packs them into one `rgba32f` data texture per frame, and carries the ambient term with them. Registers on a `SystemRegistry` like any other system.
+- `Lighting` - the system: collects the registered lights, hands them to a renderer, and carries the ambient term. Registers on a `SystemRegistry` like any other system.
 - `LitMaterial` - a `SpriteMaterial` (GLSL + WGSL) that shades a sprite against those lights. Normals are optional: without them the surface is lit as a plane rather than left black.
 - `Normals` - where a material's surface normals come from. `Normals.map(texture)` binds an authored tangent-space map, `Normals.fromAlpha(texture)` derives one from the texture's own silhouette; the interface is open, so a source of your own is a valid argument without this package knowing about it.
 
@@ -47,9 +47,29 @@ class LitScene extends Scene {
 }
 ```
 
+## Two renderers, one vocabulary
+
+The scene describes what emits; `quality` decides how that becomes pixels. Nothing else changes between them - the same lights, the same materials.
+
+|                         | `forward` (default)                | `lightmap`                                        |
+| ----------------------- | ---------------------------------- | ------------------------------------------------- |
+| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame |
+| Normal mapping          | yes                                | no - the frame it multiplies is already flat      |
+| Light count             | capped by `maxLights` (default 64) | uncapped                                          |
+| Extra passes            | none                               | two (accumulate, composite)                       |
+| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                        |
+
+```ts
+const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20, 20, 30) });
+```
+
+`lightmap` needs the application, because it works on the frame the application drew: it installs two passes in `app.framePasses` and removes them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
+
+`lighting.debug = 'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's colours in the way.
+
 ## How the lights reach the shader
 
-`Lighting` owns a single `rgba32f` `DataTexture`, `maxLights + 1` texels wide and three rows tall. The light count and the ambient term travel in the texture's header column, so a lit material has no per-frame uniform to write and any number of materials can share one system.
+The `forward` renderer owns a single `rgba32f` `DataTexture`, `maxLights + 1` texels wide and three rows tall. The light count and the ambient term travel in the texture's header column, so a lit material has no per-frame uniform to write and any number of materials can share one system.
 
 | column  | row 0                         | row 1                               | row 2                              |
 | ------- | ----------------------------- | ----------------------------------- | ---------------------------------- |
@@ -70,18 +90,18 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 
 ## Capabilities
 
-| Capability                                  | Status                                       |
-| ------------------------------------------- | -------------------------------------------- |
-| Point and cone lights on sprites            | yes, WebGL2 and WebGPU                       |
-| Lights as scene nodes (parenting, tweens)   | yes                                          |
-| Lights per material                         | `maxLights` (default 64), one shader loop    |
-| Ambient term                                | yes, carried in the light texture            |
-| Normal maps                                 | optional, one per material (= per atlas)     |
-| Rotation / flip aware normals               | yes, via the instance's local-to-world basis |
-| Extra render passes or draw calls           | none                                         |
-| Shadows, occlusion, light volumes           | no                                           |
-| Deferred (G-buffer) path                    | no                                           |
-| Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites        |
+| Capability                                  | Status                                                    |
+| ------------------------------------------- | --------------------------------------------------------- |
+| Point and cone lights on sprites            | yes, WebGL2 and WebGPU                                    |
+| Lights as scene nodes (parenting, tweens)   | yes                                                       |
+| Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped |
+| Ambient term                                | yes, carried in the light texture                         |
+| Normal maps                                 | optional, one per material (= per atlas)                  |
+| Rotation / flip aware normals               | yes, via the instance's local-to-world basis              |
+| Extra render passes or draw calls           | `forward`: none; `lightmap`: two passes                   |
+| Shadows, occlusion, light volumes           | no                                                        |
+| Deferred (G-buffer) path                    | no                                                        |
+| Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                     |
 
 ## Cost
 

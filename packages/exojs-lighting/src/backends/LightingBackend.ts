@@ -1,6 +1,6 @@
 import type { Color } from '@codexo/exojs';
 
-import type { LightingQuality } from '../Lighting';
+import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { Light } from '../lights/Light';
 
 /**
@@ -22,6 +22,12 @@ export interface LightingBackend {
 
   /** Lights the last {@link publish} actually wrote. */
   readonly activeLightCount: number;
+
+  /**
+   * Show an intermediate instead of the shaded frame, or `null` to shade
+   * normally. A renderer that has no such intermediate ignores it.
+   */
+  debug: LightingDebugView;
 
   /**
    * Take this frame's lights and ambient term. Called once per frame from the

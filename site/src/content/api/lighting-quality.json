@@ -1,6 +1,6 @@
 {
   "title": "LightingQuality",
-  "description": "Which renderer shades the scene. The scene never names one: it describes what emits and what blocks, and the system reports which renderer turned that into pixels. `forward` shades inside the sprite shader against a capacity-bounded light texture: one draw, no extra targets, no shadows. It is the floor, and for now the only one.",
+  "description": "Which renderer shades the scene. The scene never names one: it describes what emits and what blocks, and the system reports which renderer turned that into pixels. - `forward` shades inside the sprite shader against a capacity-bounded light texture. One draw, no extra targets, and the only renderer that does normal mapping - but every lit fragment walks every light, so the count is capped. - `lightmap` accumulates the lights into a target of their own and multiplies the frame by it. No light cap, and the accumulated field is what a shadow pass writes into; it gives up normal mapping in exchange, because the frame it multiplies is already flat.",
   "symbol": "LightingQuality",
   "kind": "type",
   "subsystem": "lighting",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Which renderer shades the scene. The scene never names one: it describes what emits and what blocks, and the system reports which renderer turned that into pixels.",
-        "`forward` shades inside the sprite shader against a capacity-bounded light texture: one draw, no extra targets, no shadows. It is the floor, and for now the only one."
+        "- `forward` shades inside the sprite shader against a capacity-bounded light texture. One draw, no extra targets, and the only renderer that does normal mapping - but every lit fragment walks every light, so the count is capped. - `lightmap` accumulates the lights into a target of their own and multiplies the frame by it. No light cap, and the accumulated field is what a shadow pass writes into; it gives up normal mapping in exchange, because the frame it multiplies is already flat."
       ],
       "importLine": "import { LightingQuality } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -31,10 +31,18 @@
       "members": [
         {
           "name": "LightingQuality",
-          "signature": "\"forward\"",
+          "signature": "\"forward\" | \"lightmap\"",
           "signatureTokens": [
             {
               "text": "\"forward\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"lightmap\"",
               "kind": "keyword"
             }
           ],

@@ -1,6 +1,6 @@
 {
   "title": "LightingDebugView",
-  "description": "Intermediate the debug view draws instead of the shaded frame. `null` shades normally.",
+  "description": "Intermediate to draw instead of the shaded frame. `null` shades normally. `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. A renderer with no such intermediate - `forward` shades inside the sprite shader - ignores it.",
   "symbol": "LightingDebugView",
   "kind": "type",
   "subsystem": "lighting",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Intermediate the debug view draws instead of the shaded frame. `null` shades normally."
+        "Intermediate to draw instead of the shaded frame. `null` shades normally.",
+        "`'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. A renderer with no such intermediate - `forward` shades inside the sprite shader - ignores it."
       ],
       "importLine": "import { LightingDebugView } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -30,42 +31,10 @@
       "members": [
         {
           "name": "LightingDebugView",
-          "signature": "\"albedo\" | \"cascades\" | \"light\" | \"normals\" | \"occluders\" | null",
+          "signature": "\"light\" | null",
           "signatureTokens": [
             {
-              "text": "\"albedo\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"cascades\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
               "text": "\"light\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"normals\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"occluders\"",
               "kind": "keyword"
             },
             {
