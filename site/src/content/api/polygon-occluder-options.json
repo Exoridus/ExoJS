@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Node whose world transform places the outline, making the points local to it. Without one the points are world space."
+          "description": "Node whose world transform places the outline, making the points local to it. Without one the points are world space. Local means the node's OWN space, scale included. A drawable sized through width / height carries that size as a scale, so its local space is its texture's pixels and not the size it appears at - points written in the size you see are then multiplied by it a second time, and the outline comes out many times too large. Where the shape you want IS the drawable's, Occluders.fromAlpha(drawable) takes it from the drawable itself and this cannot happen."
         }
       ],
       "paragraphs": [],
