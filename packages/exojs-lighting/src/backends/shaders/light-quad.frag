@@ -34,6 +34,15 @@ const float MAX_PENUMBRA = 0.03;
 const float SHADOW_BIAS = 0.004;
 
 /**
+ * Tap weights across the kernel. They sum to one, and they are UNEQUAL on
+ * purpose: five equally weighted taps can only ever add up to six distinct
+ * values, so a soft edge comes out as six bands that read as several shadows
+ * lying on top of each other. Weighting them spreads those sums over the whole
+ * range at no extra cost - same five fetches, a gradient instead of a staircase.
+ */
+const float SHADOW_WEIGHTS[5] = float[5](0.07, 0.24, 0.38, 0.24, 0.07);
+
+/**
  * The stored distance at a fractional bin, blended between the two bins it
  * falls between.
  *
@@ -73,10 +82,10 @@ float shadowTerm(float distance) {
     for (int tap = 0; tap < SHADOW_TAPS; tap++) {
         float offset = (float(tap) / float(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
 
-        lit += step(distance, distanceAt(center + offset, row, bins) + SHADOW_BIAS);
+        lit += SHADOW_WEIGHTS[tap] * step(distance, distanceAt(center + offset, row, bins) + SHADOW_BIAS);
     }
 
-    return lit / float(SHADOW_TAPS);
+    return lit;
 }
 
 /**

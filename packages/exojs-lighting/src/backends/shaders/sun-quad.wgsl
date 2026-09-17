@@ -38,6 +38,18 @@ const MAX_PENUMBRA: f32 = 0.03;
 const SHADOW_BIAS: f32 = 0.004;
 
 /**
+ * Tap weights across the kernel. They sum to one, and they are UNEQUAL on
+ * purpose: five equally weighted taps can only ever add up to six distinct
+ * values, so a soft edge comes out as six bands that read as several shadows
+ * lying on top of each other.
+ */
+fn shadowWeight(tap: i32) -> f32 {
+    var weights = array<f32, 5>(0.07, 0.24, 0.38, 0.24, 0.07);
+
+    return weights[tap];
+}
+
+/**
  * The stored depth at a fractional strip, blended between the two strips it
  * falls between.
  *
@@ -73,10 +85,10 @@ fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32) -> f32 {
     for (var tap: i32 = 0; tap < SHADOW_TAPS; tap = tap + 1) {
         let offset = (f32(tap) / f32(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
 
-        lit = lit + step(sun.y, depthAt(center + offset, row, bins) + SHADOW_BIAS);
+        lit = lit + shadowWeight(tap) * step(sun.y, depthAt(center + offset, row, bins) + SHADOW_BIAS);
     }
 
-    return lit / f32(SHADOW_TAPS);
+    return lit;
 }
 
 /** See the same term in `light-quad.wgsl`: `1` wherever nothing described a surface. */
