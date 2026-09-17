@@ -43,11 +43,13 @@ import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { OffscreenPlatform } from '#platform/OffscreenPlatform';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
+import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { type CaptureOptions, RenderingContext } from '#rendering/RenderingContext';
 import { type RenderNode } from '#rendering/RenderNode';
-import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { RenderPipeline } from '#rendering/RenderPipeline';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 
 import { Capabilities } from './Capabilities';
@@ -334,6 +336,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _documentVisible = true;
   /** Resolved {@link ApplicationOptions.autoClear} - read once per frame. */
   private _autoClear = true;
+  /**
+   * The frame pass pipeline and the target the frame is drawn into while it
+   * holds passes. Both are built on first access rather than in the
+   * constructor: an application that never post-processes its frame must not
+   * carry a screen-sized render texture for the possibility.
+   */
+  private _framePasses: RenderPipeline | null = null;
+  private _frameTexture: RenderTexture | null = null;
+  private _frameRedirect: BackendTargetPass | null = null;
   private _cursor = 'default';
   private readonly _errors: ApplicationErrorReporter;
   /** Whether {@link onAppInitialized} has already announced this application. */
@@ -680,6 +691,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     attempt(() => this.systems.destroy());
 
+    attempt(() => this._releaseFramePasses());
+
     attempt(() => this.animations.destroy());
     attempt(() => this.tweens.destroy());
     attempt(() => this.coroutines.destroy());
@@ -789,6 +802,54 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public get rendering(): RenderingContext {
     return this._rendering;
+  }
+
+  /**
+   * Passes that run after the frame has been drawn, with the frame itself as
+   * their input - the seam for a screen-wide effect (bloom over everything, a
+   * deferred lighting composite, a CRT filter) that a per-node filter cannot
+   * express.
+   *
+   * While this pipeline holds at least one pass, the scene, the systems' draw
+   * hooks and any scene transition render into {@link Application.frameTexture}
+   * instead of the canvas, and the pipeline is played afterwards; the last pass
+   * to write the active target produces the picture. An empty pipeline is the
+   * frame as it is drawn without this feature, at no cost.
+   *
+   * ```ts
+   * app.framePasses.addPass(new FilterPass(app.frameTexture, [new BloomFilter()]));
+   * ```
+   *
+   * Owned by the application: its passes are destroyed with it. Remove a pass
+   * before destroying an extension that owns it, the same contract every
+   * {@link RenderPipeline} has.
+   * @advanced
+   */
+  public get framePasses(): RenderPipeline {
+    return (this._framePasses ??= new RenderPipeline({ label: 'framePasses' }));
+  }
+
+  /**
+   * The off-screen target the frame is drawn into while {@link framePasses}
+   * holds passes - the source a frame pass reads.
+   *
+   * Sized to the logical surface times {@link pixelRatio} in texels, with a view
+   * in logical units, so the frame is rasterized at the density the canvas is
+   * and a pass sees the coordinates the scene was drawn in. It follows every
+   * resize, so a pass built once against it stays valid for the application's
+   * life.
+   *
+   * Reading this allocates it. An application that never adds a frame pass
+   * never pays for it.
+   * @advanced
+   */
+  public get frameTexture(): RenderTexture {
+    if (this._frameTexture === null) {
+      this._frameTexture = new RenderTexture(1, 1);
+      this._resizeFrameTexture();
+    }
+
+    return this._frameTexture;
   }
 
   /**
@@ -1202,22 +1263,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.scenes.update(frameDelta);
         this.scenes._updateTransition(frameDelta);
 
-        // The frame starts from `clearColor`, so a scene's `draw()` never has to
-        // open with a clear of its own. Opt out with `autoClear: false` when the
-        // pipeline wants the previous frame preserved or clears it itself.
-        if (this._autoClear) {
-          this._rendering.clear(this.clearColor);
-        }
-
-        if (this.scenes._transitionPlacement() === 'scene') {
-          this.scenes.draw(this._rendering);
-          this.scenes._renderTransition(this._rendering);
-          this.systems._draw(this._rendering);
-        } else {
-          this.scenes.draw(this._rendering);
-          this.systems._draw(this._rendering);
-          this.scenes._renderTransition(this._rendering);
-        }
+        this._drawFrame();
 
         this.onFrame.dispatch(frameDelta);
         this.backend.flush();
@@ -1366,6 +1412,90 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
+   * Draw the frame: the scene, the systems' draw hooks and any transition, into
+   * the canvas - or, while {@link framePasses} holds passes, into
+   * {@link frameTexture}, with the pipeline played against the frame afterwards.
+   *
+   * The redirect wraps the whole block rather than the scene alone so a pass
+   * sees the finished frame. A system that draws a debug overlay and a scene
+   * transition are both part of the picture an effect is applied to; a caller
+   * who wants an overlay left unfiltered adds it as a frame pass instead, after
+   * the effect.
+   */
+  private _drawFrame(): void {
+    const passes = this._framePasses;
+
+    if (passes === null || passes.size === 0) {
+      // The frame starts from `clearColor`, so a scene's `draw()` never has to
+      // open with a clear of its own. Opt out with `autoClear: false` when the
+      // pipeline wants the previous frame preserved or clears it itself.
+      if (this._autoClear) {
+        this._rendering.clear(this.clearColor);
+      }
+
+      this._drawSceneAndSystems();
+
+      return;
+    }
+
+    const texture = this.frameTexture;
+
+    this._frameRedirect ??= new BackendTargetPass(() => this._drawSceneAndSystems());
+    this._backend.execute(this._frameRedirect.retarget(texture, texture.view, this._autoClear ? this.clearColor : null));
+
+    passes.execute(this._rendering);
+  }
+
+  /** The frame's own drawing, in the order the transition placement asks for. */
+  private _drawSceneAndSystems(): void {
+    if (this.scenes._transitionPlacement() === 'scene') {
+      this.scenes.draw(this._rendering);
+      this.scenes._renderTransition(this._rendering);
+      this.systems._draw(this._rendering);
+
+      return;
+    }
+
+    this.scenes.draw(this._rendering);
+    this.systems._draw(this._rendering);
+    this.scenes._renderTransition(this._rendering);
+  }
+
+  /**
+   * Drop the frame slot while the backend is still alive: the pipeline's passes
+   * release GPU state of their own, and the frame target is an attachment a
+   * live backend has to see destroyed.
+   */
+  private _releaseFramePasses(): void {
+    this._framePasses?.destroy();
+    this._framePasses = null;
+    this._frameRedirect = null;
+    this._frameTexture?.destroy();
+    this._frameTexture = null;
+  }
+
+  /**
+   * Bring the frame target onto the current geometry. Texels follow the backing
+   * store so the frame is rasterized at the canvas's density; the view stays in
+   * logical units so a pass reads the coordinates the scene was drawn in.
+   */
+  private _resizeFrameTexture(): void {
+    const texture = this._frameTexture;
+
+    if (texture === null) {
+      return;
+    }
+
+    const logicalWidth = Math.max(1, this._geometry.width);
+    const logicalHeight = Math.max(1, this._geometry.height);
+    const ratio = this._geometry.pixelRatio;
+
+    texture.setSize(Math.max(1, Math.round(logicalWidth * ratio)), Math.max(1, Math.round(logicalHeight * ratio)));
+    texture.view.resize(logicalWidth, logicalHeight);
+    texture.view.setCenter(logicalWidth / 2, logicalHeight / 2);
+  }
+
+  /**
    * Bring the render target and this application's own listeners onto a
    * geometry the sizing unit has committed.
    *
@@ -1379,6 +1509,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._backend.resize(logicalWidth, logicalHeight);
     this._rendering.resize(logicalWidth, logicalHeight);
+    this._resizeFrameTexture();
+    this._framePasses?.resize(logicalWidth, logicalHeight);
     this.onResize.dispatch(logicalWidth, logicalHeight, this);
   }
 
@@ -1578,6 +1710,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this.systems.destroy();
 
+    this._releaseFramePasses();
     this._rendering.destroy();
     this.animations.destroy();
     this.tweens.destroy();
