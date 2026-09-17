@@ -263,6 +263,9 @@ describe('Application', () => {
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = Time.seconds(0);
     rawApp['_dirtyIndex'] = new NodeDirtyIndex();
+    // Same reason: the frame's draw path reads the frame-pass pipeline, and an
+    // uninitialised field is not the `null` an application without one holds.
+    rawApp['_framePasses'] = null;
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
