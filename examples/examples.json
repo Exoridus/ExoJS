@@ -759,6 +759,30 @@
       "tags": ["lighting", "shadows", "shader"],
       "capabilities": [],
       "level": "advanced"
+    },
+    {
+      "slug": "light-cookies",
+      "path": "lighting/light-cookies.js",
+      "language": "typescript",
+      "title": "Light Cookies",
+      "description": "Four light shapes and two textures doing the work of geometry: window bars and leaf shade are cookies on the lights themselves, a neon tube pools in a capsule rather than a disc, and a sun with no position throws parallel shadows across the whole view.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "shader", "texture"],
+      "capabilities": [],
+      "level": "intermediate"
+    },
+    {
+      "slug": "lightmap-normals",
+      "path": "lighting/lightmap-normals.js",
+      "language": "typescript",
+      "title": "Normals under the Lightmap Renderer",
+      "description": "Forty-five cobbles that nobody authored a normal map for: each one hands the lighting system its own silhouette, a prepass draws the derived normals where the stone sits, and the light field shades against them. Switching the normals off leaves the light exactly as bright.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "material", "shader"],
+      "capabilities": [],
+      "level": "advanced"
     }
   ],
   "particles": [

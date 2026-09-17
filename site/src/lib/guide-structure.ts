@@ -465,6 +465,19 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: [],
       },
       {
+        slug: 'lighting',
+        level: 'intermediate',
+        learningGoals: [
+          'light a scene with lights that are scene nodes',
+          'get normals out of art nobody authored a normal map for',
+          'read shadows out of colliders, tile layers and silhouettes',
+          'choose between the two renderers by the property you need',
+        ],
+        prerequisites: ['rendering/sprites'],
+        examples: ['lighting/shadow-casters', 'lighting/light-cookies', 'lighting/lightmap-normals', 'lighting/normal-mapped-sprites', 'lighting/many-lights'],
+        apiLinks: ['lighting', 'point-light', 'spot-light', 'line-light', 'sun-light', 'lit-material'],
+      },
+      {
         slug: 'post-processing',
         level: 'advanced',
         prerequisites: ['rendering/render-targets'],
