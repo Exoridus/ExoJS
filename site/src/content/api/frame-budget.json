@@ -1,0 +1,82 @@
+{
+  "title": "FrameBudget",
+  "description": "How much of the running frame is still unspent, handed to the SystemMethods.postFrame phase. Modelled on the platform's `IdleDeadline`, so the canonical loop is the one the browser already teaches: ```ts while (budget.timeRemaining() > 0 && queue.length > 0) { doWork(); } ``` The figure is advisory. JavaScript is run-to-completion, so nothing can interrupt a unit of work that overruns - the budget tells work that polls it when to stop, and work that ignores it is unaffected.",
+  "symbol": "FrameBudget",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How much of the running frame is still unspent, handed to the SystemMethods.postFrame phase.",
+        "Modelled on the platform's `IdleDeadline`, so the canonical loop is the one the browser already teaches:",
+        "```ts while (budget.timeRemaining() > 0 && queue.length > 0) { doWork(); } ```",
+        "The figure is advisory. JavaScript is run-to-completion, so nothing can interrupt a unit of work that overruns - the budget tells work that polls it when to stop, and work that ignores it is unaffected."
+      ],
+      "importLine": "import { FrameBudget } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "timeRemaining",
+          "signature": "timeRemaining(): Seconds",
+          "signatureTokens": [
+            {
+              "text": "timeRemaining",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Seconds",
+          "description": "Time left before the current frame reaches its target duration, clamped at zero. A live view of the running frame, updated in place - holding it across a yield and reading it again in a later frame is the intended pattern, not a mistake. Outside a frame it reports zero."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/FrameBudget.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/FrameBudget.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/FrameBudget.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/FrameBudget.ts"
+}

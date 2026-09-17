@@ -12,6 +12,13 @@ export const defaultFixedStepMs = 1000 / 60;
  */
 export const maxDeltaMs = 100;
 
+/** Number of recent frames the display-cadence estimate takes its minimum over. */
+const displayFrameWindow = 60;
+/** Estimate seeded and clamped to this range, in seconds: 240 Hz down to 30 Hz. */
+const minDisplayFrameSeconds = 1 / 240;
+const maxDisplayFrameSeconds = 1 / 30;
+const defaultDisplayFrameSeconds = 1 / 60;
+
 /** What one frame is given to work with, derived once at the top of the frame. */
 export interface FrameTiming {
   /** Unclamped host time since the previous frame began. */
@@ -55,12 +62,28 @@ export class FrameLoop {
    * delta.
    */
   private _lastFrameTimestamp = 0;
+  /**
+   * Ring of the last {@link displayFrameWindow} raw frame deltas, in
+   * milliseconds, whose minimum is the display-cadence estimate.
+   */
+  private readonly _rawDeltaWindow = new Float64Array(displayFrameWindow);
+  private _rawDeltaCursor = 0;
+  private _rawDeltaFilled = 0;
+  private _displayFrameSeconds: Seconds = seconds(defaultDisplayFrameSeconds);
+  private readonly _displayFrameOverride: Seconds | null;
 
   public constructor(
     private readonly _platform: PlatformAdapter,
     tick: (timestamp: number) => void,
     fixedStepMs: number,
+    displayFrameSeconds?: Seconds,
   ) {
+    this._displayFrameOverride = displayFrameSeconds ?? null;
+
+    if (displayFrameSeconds !== undefined) {
+      this._displayFrameSeconds = displayFrameSeconds;
+    }
+
     this._startupClock = new Clock(false, _platform);
     this._activeClock = new Clock(false, _platform);
     this._frameClock = new Clock(false, _platform);
@@ -100,6 +123,25 @@ export class FrameLoop {
   /** Fixed-step size as handed to every fixed-update recipient. */
   public get stepSeconds(): Seconds {
     return this._fixedSeconds;
+  }
+
+  /**
+   * Estimated duration of one display frame, and therefore the target a frame
+   * has to stay inside to hold cadence.
+   *
+   * There is no platform API for the refresh rate, but `requestAnimationFrame`
+   * is vsync-locked, so raw frame deltas are multiples of the refresh interval
+   * and the minimum over a rolling window is the interval itself. A minimum
+   * rather than a median because vsync cannot be undercut: an overshooting
+   * frame lengthens the deltas and would drag a median up with it, feeding
+   * back on itself.
+   *
+   * Seeded at 1/60 s until the window has filled and clamped to
+   * `[1/240, 1/30]` s. An explicit application setting replaces the estimate
+   * outright.
+   */
+  public get displayFrameSeconds(): Seconds {
+    return this._displayFrameSeconds;
   }
 
   public get startupSeconds(): Seconds {
@@ -170,6 +212,8 @@ export class FrameLoop {
     // than how long the previous one took.
     this._frameClock.restart();
 
+    this._recordRawDelta(rawDeltaMs);
+
     const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
 
     return {
@@ -208,6 +252,44 @@ export class FrameLoop {
   /** Close out a frame. Counted only while the loop is live, so a manual tick does not inflate the count. */
   public endFrame(): void {
     if (this._active) this._frameCount++;
+  }
+
+  /**
+   * Fold one raw delta into the cadence window and republish the estimate.
+   *
+   * A zero delta is dropped rather than recorded: two frames sharing a
+   * timestamp - a manual `update()` next to a live loop, or a platform whose
+   * clock has not moved - would otherwise pin the minimum at zero for the rest
+   * of the window and force every later reading up to the clamp floor.
+   */
+  private _recordRawDelta(rawDeltaMs: number): void {
+    if (this._displayFrameOverride !== null || rawDeltaMs <= 0) {
+      return;
+    }
+
+    this._rawDeltaWindow[this._rawDeltaCursor] = rawDeltaMs;
+    this._rawDeltaCursor = (this._rawDeltaCursor + 1) % displayFrameWindow;
+
+    if (this._rawDeltaFilled < displayFrameWindow) {
+      this._rawDeltaFilled++;
+
+      // Until the window has filled, the seed stands: a minimum over two or
+      // three frames is not yet a cadence, and a single early short frame
+      // would otherwise set the target for the next second.
+      if (this._rawDeltaFilled < displayFrameWindow) {
+        return;
+      }
+    }
+
+    let minimum = this._rawDeltaWindow[0]!;
+
+    for (let i = 1; i < displayFrameWindow; i++) {
+      const candidate = this._rawDeltaWindow[i]!;
+
+      if (candidate < minimum) minimum = candidate;
+    }
+
+    this._displayFrameSeconds = seconds(Math.min(Math.max(minimum / 1000, minDisplayFrameSeconds), maxDisplayFrameSeconds));
   }
 
   public destroy(): void {

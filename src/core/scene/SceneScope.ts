@@ -1,4 +1,5 @@
 import type { Application } from '#core/Application';
+import type { FrameBudget } from '#core/FrameBudget';
 import { logger } from '#core/Logger';
 import { Perf } from '#core/Perf';
 import { hookOwnerName, requireSynchronousHook } from '#core/syncHooks';
@@ -281,21 +282,16 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Forward one fixed step to the scene and its systems, gated to `Active`
-   * and unpaused (`fixedUpdate` never runs while paused,
-   * unlike {@link SceneScope.draw}). Throws in every build if
-   * `Scene.fixedUpdate` returns a thenable - the hook must be synchronous.
+   * Forward the frame-opening phase to this scope's systems, gated to
+   * `Active` and unpaused. `Scene` has no hook of its own here - frame-edge
+   * work belongs to systems.
    */
-  public preUpdate(delta: Seconds): void {
+  public preFrame(delta: Seconds): void {
     if (this._state !== SceneState.Active || this._paused) {
       return;
     }
 
-    const preResult = this.scene.preUpdate(delta) as unknown;
-
-    if (preResult !== undefined) this._requireSynchronousFrameHook(preResult, 'preUpdate');
-
-    this.systems._preUpdate(delta);
+    this.systems._preFrame(delta);
   }
 
   public fixedUpdate(step: Seconds): void {
@@ -365,6 +361,19 @@ export class SceneScope<Data = unknown> {
       Perf.clearMarks(drawStartMark);
       Perf.clearMeasures(drawMeasure);
     }
+  }
+
+  /**
+   * Forward the frame-closing phase to this scope's systems, gated to
+   * `Active` and unpaused, after the backend flush. `Scene` has no hook of
+   * its own here, for the same reason {@link SceneScope.preFrame} has none.
+   */
+  public postFrame(delta: Seconds, budget: FrameBudget): void {
+    if (this._state !== SceneState.Active || this._paused) {
+      return;
+    }
+
+    this.systems._postFrame(delta, budget);
   }
 
   /** @internal Forwards to {@link SystemRegistry._beginFrame}. */

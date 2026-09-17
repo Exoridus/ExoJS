@@ -48,13 +48,13 @@ export class TweenSystem {
   private _destroyed = false;
 
   /**
-   * Reused iteration buffers for {@link preUpdate}. A tween callback may add or
+   * Reused iteration buffers for {@link preFrame}. A tween callback may add or
    * remove entries while the frame is walking the list, so the walk has to read
    * a snapshot - but taking that snapshot with a fresh array would allocate two
    * arrays on every frame of every application that animates anything. These
    * are refilled in place instead, and their capacity survives across frames.
    *
-   * Safe to hold as state because `preUpdate` is never re-entrant: it is driven
+   * Safe to hold as state because `preFrame` is never re-entrant: it is driven
    * by one system phase, and a callback that reached it again would already be
    * corrupting the tween list it is iterating.
    */
@@ -202,11 +202,11 @@ export class TweenSystem {
 
   /**
    * Advance all active tweens by the frame `delta` (read as seconds), then
-   * advance all registered tickers. The {@link SystemMethods.preUpdate} phase,
+   * advance all registered tickers. The {@link SystemMethods.preFrame} phase,
    * at {@link SystemOrder.CoreTweens}. Uses snapshots so callbacks that add or
    * remove tweens/tickers do not corrupt mid-iteration.
    */
-  public preUpdate(delta: Seconds): void {
+  public preFrame(delta: Seconds): void {
     if (this._destroyed) return;
 
     const deltaSeconds = delta;

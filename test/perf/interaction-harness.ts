@@ -276,8 +276,8 @@ export const createInteractionHarness = (options: InteractionHarnessOptions = {}
       platform.dispatchSurfaceEvent(type, buildPointerEvent(init));
     },
     flush() {
-      input.preUpdate(0 as never);
-      interaction.preUpdate(0 as never);
+      input.preFrame(0 as never);
+      interaction.preFrame(0 as never);
     },
     pushScope(root) {
       return interaction.pushScope(root);

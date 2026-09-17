@@ -174,7 +174,7 @@ describe('Pointer relative movement', () => {
     fire(canvas, 'pointermove', { clientX: 110, clientY: 100, movementX: 10, movementY: 0 });
     fire(canvas, 'pointermove', { clientX: 110, clientY: 96, movementX: 0, movementY: -4 });
 
-    im.preUpdate(0 as never);
+    im.preFrame(0 as never);
 
     const pointer = getPointer();
 
@@ -183,7 +183,7 @@ describe('Pointer relative movement', () => {
     expect(pointer.movement.x).toBeCloseTo(10);
     expect(pointer.movement.y).toBeCloseTo(-4);
 
-    im.preUpdate(0 as never);
+    im.preFrame(0 as never);
 
     expect(pointer.movement.x).toBe(0);
     expect(pointer.movement.y).toBe(0);
@@ -191,14 +191,14 @@ describe('Pointer relative movement', () => {
 
   test('keeps reporting motion for a locked pointer whose position stands still', () => {
     fire(canvas, 'pointerover', { clientX: 400, clientY: 300 });
-    im.preUpdate(0 as never);
+    im.preFrame(0 as never);
 
     setLockElement(canvas);
 
     // A locked pointer has no position on screen, so the host repeats the last
     // one and puts the whole gesture in the movement fields.
     fire(canvas, 'pointermove', { clientX: 400, clientY: 300, movementX: 25, movementY: -12 });
-    im.preUpdate(0 as never);
+    im.preFrame(0 as never);
 
     const pointer = getPointer();
 
@@ -226,7 +226,7 @@ describe('Pointer relative movement', () => {
     fire(canvas, 'pointerover', { clientX: 100, clientY: 100 });
     fire(canvas, 'pointermove', { clientX: 120, clientY: 100, movementX: 20, movementY: 0 });
 
-    im.preUpdate(0 as never);
+    im.preFrame(0 as never);
 
     expect(getPointer().movement.x).toBeCloseTo(40);
   });

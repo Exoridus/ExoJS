@@ -20,7 +20,7 @@ import type { Identifier, Node, VariableDeclarator } from 'estree';
 const DEFAULT_PATTERN = 'System$';
 const DEFAULT_REGISTRY = 'systems';
 const DEFAULT_REGISTER_METHOD = 'add';
-const DEFAULT_LIFECYCLE_METHODS = ['preUpdate', 'fixedUpdate', 'update', 'draw'];
+const DEFAULT_LIFECYCLE_METHODS = ['preFrame', 'fixedUpdate', 'update', 'draw', 'postFrame'];
 
 /** Options for {@link noUnregisteredSystem}. */
 export interface NoUnregisteredSystemOptions {

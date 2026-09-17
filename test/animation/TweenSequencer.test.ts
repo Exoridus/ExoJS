@@ -477,12 +477,12 @@ describe('TweenSequencer', () => {
       const seq = system.createSequencer().then(t1).then(t2).start();
 
       // Frame 1: system ticks tweens first (t1 advances), then ticks sequencer.
-      system.preUpdate(sec(1.0)); // t1 completes; sequencer sees it and starts t2
+      system.preFrame(sec(1.0)); // t1 completes; sequencer sees it and starts t2
       expect(t1.state).toBe(TweenState.Complete);
       expect(a.x).toBe(100);
 
       // Frame 2: t2 advances and completes.
-      system.preUpdate(sec(1.0));
+      system.preFrame(sec(1.0));
       expect(t2.state).toBe(TweenState.Complete);
       expect(b.x).toBe(100);
       expect(seq.state).toBe(TweenSequencerState.Complete);
@@ -493,11 +493,11 @@ describe('TweenSequencer', () => {
       const { tween } = makeTween(1.0);
       const seq = system.createSequencer().then(tween).start();
 
-      system.preUpdate(sec(1.0)); // completes
+      system.preFrame(sec(1.0)); // completes
       expect(seq.state).toBe(TweenSequencerState.Complete);
 
       // Subsequent system updates must not error (ticker already removed).
-      expect(() => system.preUpdate(sec(1.0))).not.toThrow();
+      expect(() => system.preFrame(sec(1.0))).not.toThrow();
     });
 
     test('sequencer is removed from system on stop()', () => {
@@ -505,11 +505,11 @@ describe('TweenSequencer', () => {
       const { tween } = makeTween(1.0);
       const seq = system.createSequencer().then(tween).start();
 
-      system.preUpdate(sec(0.3));
+      system.preFrame(sec(0.3));
       seq.stop();
 
       // No crash and no further advancement.
-      expect(() => system.preUpdate(sec(1.0))).not.toThrow();
+      expect(() => system.preFrame(sec(1.0))).not.toThrow();
     });
 
     test('system.clear() also removes tickers', () => {
@@ -519,7 +519,7 @@ describe('TweenSequencer', () => {
 
       system.createSequencer().then(tween).onComplete(onComplete).start();
       system.clear();
-      system.preUpdate(sec(2.0));
+      system.preFrame(sec(2.0));
 
       expect(onComplete).not.toHaveBeenCalled();
     });
@@ -532,7 +532,7 @@ describe('TweenSequencer', () => {
       // Simulate accidentally calling start() again (which calls addTicker again).
       // The sequencer resets, but the ticker must not be in the list twice.
       seq.start();
-      system.preUpdate(sec(0.5));
+      system.preFrame(sec(0.5));
       expect(target.x).toBeCloseTo(50, 5); // exactly one advancement
     });
   });

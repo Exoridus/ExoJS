@@ -17,7 +17,7 @@ ruleTester.run('no-async-update', noAsyncUpdate, {
     'class MyScene extends Scene { fixedUpdate(step) {} }',
     'class MyScene extends Scene { draw(context) {} }',
     'class MySession { render(context, frame) {} }',
-    'class MySystem { preUpdate(delta) {} }',
+    'class MySystem { preFrame(delta) {} }',
     'const sys = { update(delta) { return; } };',
     'const sys = { update: (delta) => {} };',
     'class MyScene extends Scene { update = (delta) => {}; }',
@@ -52,8 +52,8 @@ ruleTester.run('no-async-update', noAsyncUpdate, {
       errors: [{ messageId: 'asyncHook', data: { name: 'render' } }],
     },
     {
-      code: 'class MySystem { async preUpdate(delta) {} }',
-      errors: [{ messageId: 'asyncHook', data: { name: 'preUpdate' } }],
+      code: 'class MySystem { async preFrame(delta) {} }',
+      errors: [{ messageId: 'asyncHook', data: { name: 'preFrame' } }],
     },
     {
       code: 'const sys = { async update(delta) {} };',

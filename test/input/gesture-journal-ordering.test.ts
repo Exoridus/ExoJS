@@ -15,7 +15,7 @@
  * pointer-move phase that produced it), and only on the next `update()`.
  *
  * The long-press hold is measured in engine time, so it is driven here by
- * feeding frame deltas to `preUpdate()` - never by a fake wall clock. That is
+ * feeding frame deltas to `preFrame()` - never by a fake wall clock. That is
  * also what makes it stop with `app.scenes.pause()`, which the mock app below
  * models with a writable `paused` flag.
  */
@@ -81,7 +81,7 @@ const createInputSystem = (canvas?: HTMLCanvasElement): { im: InputSystem; canva
 
 /** One frame boundary with no engine time elapsed - drains the journal without advancing any hold. */
 const drainFrame = (im: InputSystem): void => {
-  im.preUpdate(Time.seconds(0));
+  im.preFrame(Time.seconds(0));
 };
 
 /**
@@ -95,7 +95,7 @@ const advanceFrames = (im: InputSystem, milliseconds: number): void => {
   while (remaining > 0) {
     const stepMs = Math.min(16, remaining);
 
-    im.preUpdate(Time.toSeconds(Time.milliseconds(stepMs)));
+    im.preFrame(Time.toSeconds(Time.milliseconds(stepMs)));
     remaining -= stepMs;
   }
 };

@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 14,
+  "memberCount": 15,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 14,
+    "properties": 15,
     "events": 0
   },
   "sections": [
@@ -150,6 +150,31 @@
           "params": [],
           "returnType": null,
           "description": "Whether the application may reach the network, and what the host reports about it. Defaults to one built over ApplicationOptions.platform. Pass your own when something outside the application needs the same instance - a ConnectivityPolicyResolver is configured on an AssetCache the caller builds, which happens before an Application exists to own one. An injected Connectivity is *not* destroyed by Application.destroy - it stays yours to dispose."
+        },
+        {
+          "name": "displayFrameTime",
+          "signature": "displayFrameTime?: number",
+          "signatureTokens": [
+            {
+              "text": "displayFrameTime",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Duration of one display frame in **seconds**, the target a frame has to stay inside for FrameBudget.timeRemaining to report time left. Omit it and the engine estimates the display's cadence as the minimum frame delta over a rolling window, requestAnimationFrame being vsync-locked. Pass it to pin the target instead: a deterministic figure for a test, or an application that deliberately aims at a rate other than the display's."
         },
         {
           "name": "extensions",

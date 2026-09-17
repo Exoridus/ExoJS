@@ -13,7 +13,7 @@ interface FocusVisibilityHarness {
   readonly ApplicationState: typeof import('#core/Application').ApplicationState;
   readonly inputSystemMock: {
     update: MockInstance;
-    preUpdate: MockInstance;
+    preFrame: MockInstance;
     _finishInteractionFrame: MockInstance;
     destroy: MockInstance;
     canvasFocused: boolean;
@@ -33,7 +33,7 @@ interface FocusVisibilityHarness {
   };
   readonly interactionMock: {
     update: MockInstance;
-    preUpdate: MockInstance;
+    preFrame: MockInstance;
     destroy: MockInstance;
   };
 }
@@ -43,7 +43,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
 
   const inputSystemMock = {
     update: vi.fn(),
-    preUpdate: vi.fn(),
+    preFrame: vi.fn(),
     _finishInteractionFrame: vi.fn(),
     destroy: vi.fn(),
     canvasFocused: false,
@@ -53,7 +53,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
   const sceneDirectorMock = {
     _beginFrame: vi.fn(),
     _endFrame: vi.fn(),
-    preUpdate: vi.fn(),
+    preFrame: vi.fn(),
     fixedUpdate: vi.fn(),
     update: vi.fn(),
     draw: vi.fn(),
@@ -66,7 +66,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
 
   const interactionMock = {
     update: vi.fn(),
-    preUpdate: vi.fn(),
+    preFrame: vi.fn(),
     destroy: vi.fn(),
   };
 
@@ -316,8 +316,8 @@ describe('Application focus / visibility', () => {
       stats: { frameTimeMs: 0 },
       destroy: vi.fn(),
     };
-    rawApp['interaction'] = { update: vi.fn(), preUpdate: vi.fn(), destroy: vi.fn() };
-    rawApp['tweens'] = { update: vi.fn(), preUpdate: vi.fn(), destroy: vi.fn() };
+    rawApp['interaction'] = { update: vi.fn(), preFrame: vi.fn(), destroy: vi.fn() };
+    rawApp['tweens'] = { update: vi.fn(), preFrame: vi.fn(), destroy: vi.fn() };
 
     // pauseOnHidden defaults to false
     expect(app.pauseOnHidden).toBe(false);
@@ -326,7 +326,7 @@ describe('Application focus / visibility', () => {
 
     app.update();
 
-    expect(inputSystemMock.preUpdate).toHaveBeenCalledTimes(1);
+    expect(inputSystemMock.preFrame).toHaveBeenCalledTimes(1);
     expect(sceneDirectorMock.update).toHaveBeenCalledTimes(1);
 
     // Restore

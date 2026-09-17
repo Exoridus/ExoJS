@@ -190,7 +190,7 @@ describe('playback while the AudioContext is locked', () => {
 
     // Unlocked: the frame tick re-arms the one-shot.
     setContextState('running');
-    system.preUpdate(Time.seconds(0.016));
+    system.preFrame(Time.seconds(0.016));
 
     // ...and suspended again (an iOS audio-session interruption, a bfcache restore).
     setContextState('suspended');

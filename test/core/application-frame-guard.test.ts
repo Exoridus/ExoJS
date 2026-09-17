@@ -133,8 +133,8 @@ describe('Application frame guard', () => {
     forceRunning(app);
     mockFrameElapsed(app, 16);
 
-    vi.spyOn(app.input, 'preUpdate').mockImplementation(() => undefined);
-    vi.spyOn(app.interaction, 'preUpdate').mockImplementation(() => undefined);
+    vi.spyOn(app.input, 'preFrame').mockImplementation(() => undefined);
+    vi.spyOn(app.interaction, 'preFrame').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

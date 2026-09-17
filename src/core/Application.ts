@@ -55,6 +55,7 @@ import { Color } from './Color';
 import { Connectivity } from './Connectivity';
 import { DestroyScope } from './DestroyScope';
 import { assert, invariant } from './dev';
+import type { FrameBudget } from './FrameBudget';
 import { hello, logger } from './Logger';
 import { detachedNodeDirtyIndex, NodeDirtyIndex } from './nodeDirtyIndex';
 import { Perf } from './Perf';
@@ -62,7 +63,7 @@ import { Signal } from './Signal';
 import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
-import type { Seconds } from './units';
+import { type Seconds, seconds } from './units';
 import { canvasSourceToDataUrl } from './utils';
 
 /**
@@ -269,7 +270,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public pauseOnHidden = false;
 
   /**
-   * The engine's own `preUpdate` systems, owned here rather than by the
+   * The engine's own `preFrame` systems, owned here rather than by the
    * registry. Reassigned when the backend fallback rebuilds one of them, so
    * that teardown unregisters the instances that are actually registered.
    * Starts empty rather than unassigned so that a constructor rollback, which
@@ -287,6 +288,29 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _extensionDisposers: ExtensionDisposer[] = [];
 
   private readonly _scheduler: FrameLoop;
+
+  /**
+   * Host timestamp the running frame body started at, and whether one is
+   * running at all. Both back {@link Application._frameBudget}, which reports
+   * zero outside a frame rather than a figure derived from a stale start.
+   */
+  private _frameStart = 0;
+  private _inFrame = false;
+
+  /**
+   * The single {@link FrameBudget} handed to every `postFrame` system, updated
+   * in place rather than rebuilt - a system may hold it across frames, and the
+   * frame path allocates nothing.
+   */
+  private readonly _frameBudget: FrameBudget = {
+    timeRemaining: (): Seconds => {
+      if (!this._inFrame) {
+        return seconds(0);
+      }
+
+      return seconds(Math.max(0, this._scheduler.displayFrameSeconds * 1000 - (this.platform.now() - this._frameStart)) / 1000);
+    },
+  };
 
   private _state: ApplicationState = ApplicationState.Stopped;
   /**
@@ -427,6 +451,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           this.update(timestamp);
         },
         appSettings.fixedTimeStep !== undefined ? appSettings.fixedTimeStep * 1000 : defaultFixedStepMs,
+        appSettings.displayFrameTime !== undefined ? seconds(appSettings.displayFrameTime) : undefined,
       );
 
       // Only an adapter created here is ours to release - an injected one stays
@@ -472,6 +497,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         platform: this.platform,
         ...(appSettings.seed !== undefined && { seed: appSettings.seed }),
         ...(appSettings.fixedTimeStep !== undefined && { fixedTimeStep: appSettings.fixedTimeStep }),
+        ...(appSettings.displayFrameTime !== undefined && { displayFrameTime: appSettings.displayFrameTime }),
       };
 
       this._autoClear = this.options.autoClear ?? true;
@@ -519,7 +545,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       });
 
       // The engine's own per-frame work, registered as ordinary systems in the
-      // `preUpdate` phase rather than as a separate hard-coded stage. They occupy
+      // `preFrame` phase rather than as a separate hard-coded stage. They occupy
       // the negative `order` range, so an application system added without an
       // `order` runs after all of them - and `before`/`after` can name them.
       this.systems._addCoreSystem(this.input, { order: SystemOrder.CoreInput });
@@ -1078,13 +1104,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * Each normal frame runs, in order:
    *
-   * 1. **Pre-update** - `app.systems` pre-update phase, then the scene's
-   *    `preUpdate()` hook and its own systems' pre-update phase. The engine's
-   *    input, interaction, audio, tween, animation and rendering systems are
-   *    ordinary systems in this phase, pinned to the head of it by their
-   *    {@link SystemOrder} `Core*` values, so this frame's input snapshot is
-   *    current before anything simulates. An application system registered
-   *    without an explicit `order` runs after all of them.
+   * 1. **Pre-frame** - `app.systems` pre-frame phase, then the active scene's
+   *    own systems' pre-frame phase. The engine's input, interaction, audio,
+   *    tween, animation and rendering systems are ordinary systems in this
+   *    phase, pinned to the head of it by their {@link SystemOrder} `Core*`
+   *    values, so this frame's input snapshot is current before anything
+   *    simulates. An application system registered without an explicit
+   *    `order` runs after all of them.
    * 2. **Fixed steps** (zero or more) - `app.systems` fixed-update phase,
    *    `scenes.fixedUpdate()` + the scene's systems fixed-update phase,
    *    {@link Application.onFixedFrame}.
@@ -1098,6 +1124,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *    matching the pre-transition-runtime default).
    * 5. **Frame dispatch / flush** - {@link Application.onFrame}, backend GPU
    *    flush, frame-time stat write.
+   * 6. **Post-frame** - `app.systems` post-frame phase, then the active
+   *    scene's own systems' post-frame phase, both handed the frame's
+   *    remaining time ({@link FrameBudget}). Work placed here overlaps the GPU
+   *    drawing the frame just submitted.
    *
    * Running one frame is all this does: scheduling belongs to the loop, so a
    * manual call runs an extra frame alongside a live loop rather than forking
@@ -1128,6 +1158,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         const { rawDeltaMs, frameDelta, fixedSteps } = this._scheduler.beginFrame(timestamp);
         const frameStart = this.platform.now();
 
+        this._frameStart = frameStart;
+        this._inFrame = true;
+
         if (__DEV__) Perf.mark(frameStartMark);
 
         // The index counts in frames, and this is where one begins. Advancing it
@@ -1143,8 +1176,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         // own input, interaction, audio, tween, animation and rendering systems
         // sit at the head of this phase (negative `order`), application systems
         // follow.
-        this.systems._preUpdate(frameDelta);
-        this.scenes.preUpdate(frameDelta);
+        this.systems._preFrame(frameDelta);
+        this.scenes.preFrame(frameDelta);
 
         // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
         // so they see this frame's input and before the variable update/draw.
@@ -1184,6 +1217,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.backend.flush();
         this.backend.stats.frameTimeMs = this.platform.now() - frameStart;
 
+        // After the flush, so this work overlaps the GPU drawing the frame
+        // instead of delaying it, and so the budget it is handed is what the
+        // frame has actually left rather than a guess made up front.
+        this.systems._postFrame(frameDelta, this._frameBudget);
+        this.scenes.postFrame(frameDelta, this._frameBudget);
+
         if (__DEV__) {
           Perf.measure(frameMeasure, frameStartMark);
           Perf.clearMarks(frameStartMark);
@@ -1196,6 +1235,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       } catch (error) {
         this._handleFrameError(error);
       } finally {
+        this._inFrame = false;
+
         this.scenes._endFrame();
         this.systems._endFrame();
 

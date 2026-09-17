@@ -1,5 +1,6 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
+import type { FrameBudget } from './FrameBudget';
 import { logger } from './Logger';
 import { Signal } from './Signal';
 import { hookOwnerName, requireSynchronousHook } from './syncHooks';
@@ -33,7 +34,7 @@ export interface SystemRegistrationOptions {
 }
 
 /** The scheduler phases a {@link System} can be registered for, in dispatch order. */
-export type SystemPhase = 'preUpdate' | 'fixedUpdate' | 'update' | 'draw';
+export type SystemPhase = 'preFrame' | 'fixedUpdate' | 'update' | 'draw' | 'postFrame';
 
 interface SystemRegistration {
   readonly system: System;
@@ -175,7 +176,7 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
  * Phase-dispatching registry of {@link System}s, shared by `Scene` (as
  * `scene.systems`) and `Application` (as `app.systems`). Each system
  * participates only in the scheduler phases it implements
- * (`preUpdate`/`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending
+ * (`preFrame`/`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending
  * `order` (ties keep registration order) and are destroyed in reverse
  * registration order when the registry is destroyed.
  *
@@ -204,19 +205,21 @@ export class SystemRegistry implements Destroyable {
   /** Systems the owning Application registered as its own; removing one stops part of the engine. */
   private readonly _coreSystems = new Set<System>();
 
-  private readonly _preUpdateList: SystemRegistration[] = [];
+  private readonly _preFrameList: SystemRegistration[] = [];
   private readonly _fixedList: SystemRegistration[] = [];
   private readonly _updateList: SystemRegistration[] = [];
   private readonly _drawList: SystemRegistration[] = [];
+  private readonly _postFrameList: SystemRegistration[] = [];
   private readonly _pendingAdds = new Set<System>();
   private readonly _pending: PendingMutation[] = [];
   private _sequence = 0;
   private _activeCount = 0;
   private _frameActive = false;
-  private _preUpdateDirty = false;
+  private _preFrameDirty = false;
   private _fixedDirty = false;
   private _updateDirty = false;
   private _drawDirty = false;
+  private _postFrameDirty = false;
 
   /** Dispatched when a system structurally enters the registry (immediately, or at the frame boundary for a buffered add). */
   public readonly onAdd = new Signal<[system: System]>();
@@ -374,26 +377,26 @@ export class SystemRegistry implements Destroyable {
   }
 
   /** @internal Dispatched once per frame, ahead of every fixed step. */
-  public _preUpdate(delta: Seconds): void {
-    if (this._preUpdateList.length === 0) {
+  public _preFrame(delta: Seconds): void {
+    if (this._preFrameList.length === 0) {
       return;
     }
 
-    if (this._preUpdateDirty) {
-      sortRegistrations(this._preUpdateList, this._registrations);
-      this._preUpdateDirty = false;
+    if (this._preFrameDirty) {
+      sortRegistrations(this._preFrameList, this._registrations);
+      this._preFrameDirty = false;
     }
 
-    for (const registration of this._preUpdateList) {
+    for (const registration of this._preFrameList) {
       if (registration.active) {
-        const result = registration.system.preUpdate!(delta) as unknown;
+        const result = registration.system.preFrame!(delta) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'preUpdate');
+        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'preFrame');
       }
     }
   }
 
-  /** @internal Dispatched once per fixed-timestep step, after {@link SystemRegistry._preUpdate} and ahead of {@link SystemRegistry._update}. */
+  /** @internal Dispatched once per fixed-timestep step, after {@link SystemRegistry._preFrame} and ahead of {@link SystemRegistry._update}. */
   public _fixedUpdate(step: Seconds): void {
     if (this._fixedList.length === 0) {
       return;
@@ -453,6 +456,26 @@ export class SystemRegistry implements Destroyable {
     }
   }
 
+  /** @internal Dispatched once per frame, after the backend flush that ends {@link SystemRegistry._draw}'s frame. */
+  public _postFrame(delta: Seconds, budget: FrameBudget): void {
+    if (this._postFrameList.length === 0) {
+      return;
+    }
+
+    if (this._postFrameDirty) {
+      sortRegistrations(this._postFrameList, this._registrations);
+      this._postFrameDirty = false;
+    }
+
+    for (const registration of this._postFrameList) {
+      if (registration.active) {
+        const result = registration.system.postFrame!(delta, budget) as unknown;
+
+        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'postFrame');
+      }
+    }
+  }
+
   /**
    * Destroy every remaining registered system exactly once, in reverse
    * registration order, then clear the registry. A system already removed
@@ -485,10 +508,11 @@ export class SystemRegistry implements Destroyable {
     }
 
     this._registrations.clear();
-    this._preUpdateList.length = 0;
+    this._preFrameList.length = 0;
     this._fixedList.length = 0;
     this._updateList.length = 0;
     this._drawList.length = 0;
+    this._postFrameList.length = 0;
     this._pendingAdds.clear();
     this._pending.length = 0;
     this._activeCount = 0;
@@ -515,9 +539,9 @@ export class SystemRegistry implements Destroyable {
 
     const wants = (phase: SystemPhase): boolean => options?.phases === undefined || options.phases.includes(phase);
 
-    if (system.preUpdate !== undefined && wants('preUpdate')) {
-      this._preUpdateList.push(registration);
-      this._preUpdateDirty = true;
+    if (system.preFrame !== undefined && wants('preFrame')) {
+      this._preFrameList.push(registration);
+      this._preFrameDirty = true;
     }
 
     if (system.fixedUpdate !== undefined && wants('fixedUpdate')) {
@@ -535,6 +559,11 @@ export class SystemRegistry implements Destroyable {
       this._drawDirty = true;
     }
 
+    if (system.postFrame !== undefined && wants('postFrame')) {
+      this._postFrameList.push(registration);
+      this._postFrameDirty = true;
+    }
+
     this.onAdd.dispatch(system);
   }
 
@@ -549,10 +578,11 @@ export class SystemRegistry implements Destroyable {
 
   private _finalizeRemoval(registration: SystemRegistration): void {
     this._registrations.delete(registration.system);
-    removeRegistration(this._preUpdateList, registration);
+    removeRegistration(this._preFrameList, registration);
     removeRegistration(this._fixedList, registration);
     removeRegistration(this._updateList, registration);
     removeRegistration(this._drawList, registration);
+    removeRegistration(this._postFrameList, registration);
     this.onRemove.dispatch(registration.system);
   }
 }

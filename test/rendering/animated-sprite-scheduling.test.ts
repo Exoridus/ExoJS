@@ -1,7 +1,7 @@
 /**
  * AnimatedSprite frame playback is scheduled by the engine, not by hand:
  * a playing sprite attached to an Application's scene tree registers with
- * `app.animations` and is advanced once per frame from the core preUpdate
+ * `app.animations` and is advanced once per frame from the core preFrame
  * phase - and deregisters again on stop, detach, completion and destroy.
  */
 import { Application, ApplicationState } from '#core/Application';
@@ -104,8 +104,8 @@ describe('AnimatedSprite scheduling', () => {
     forceRunning(app);
 
     // The input subsystem is not under test and jsdom has no gamepad API.
-    vi.spyOn(app.input, 'preUpdate').mockImplementation(() => undefined);
-    vi.spyOn(app.interaction, 'preUpdate').mockImplementation(() => undefined);
+    vi.spyOn(app.input, 'preFrame').mockImplementation(() => undefined);
+    vi.spyOn(app.interaction, 'preFrame').mockImplementation(() => undefined);
 
     // A stage-attached root, the way a scene's structural root is bound.
     root = new Container();

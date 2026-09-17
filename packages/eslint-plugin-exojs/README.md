@@ -64,11 +64,11 @@ const deprecatedApi = collectDeprecatedExports(globSync('**/*.d.ts', { cwd: engi
 
 ### `exojs/no-async-update`
 
-Flags `async preUpdate` / `fixedUpdate` / `update` / `draw` / `render` on a class, a class field or an object literal.
+Flags `async preFrame` / `fixedUpdate` / `update` / `draw` / `postFrame` / `render` on a class, a class field or an object literal.
 
 The frame loop calls these synchronously and drops the promise: the work lands a frame or more later, out of order, and a rejection surfaces as an unhandled rejection instead of through the application's error pipeline. Start the asynchronous work in the hook and await it elsewhere.
 
-Matched by name alone, with no check that the object really is a system or a scene - these five names are distinctive enough that an unrelated `async fixedUpdate()` does not occur in practice. `load()`, `unload()` and `destroy()` are genuinely asynchronous or genuinely teardown, and are not in the set. A computed key (`async ['update']()`) is not checked.
+Matched by name alone, with no check that the object really is a system or a scene - these six names are distinctive enough that an unrelated `async fixedUpdate()` does not occur in practice. `load()`, `unload()` and `destroy()` are genuinely asynchronous or genuinely teardown, and are not in the set. A computed key (`async ['update']()`) is not checked.
 
 ### `exojs/no-async-render-hook`
 

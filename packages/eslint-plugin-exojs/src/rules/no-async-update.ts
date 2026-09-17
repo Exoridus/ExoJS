@@ -37,10 +37,11 @@ import { staticKeyName } from '../ast.js';
 
 const SYNCHRONOUS_HOOK_NAMES = new Set([
   // System phases (`SystemMethods`) and the identical Scene frame hooks.
-  'preUpdate',
+  'preFrame',
   'fixedUpdate',
   'update',
   'draw',
+  'postFrame',
   // `SceneTransitionSession.render` - the transition hook the frame loop
   // calls alongside its `update`, with no runtime guard at all (unlike the
   // System/Scene phases above, which at least throw instead of silently

@@ -261,7 +261,7 @@ const createHarness = (options: SceneTransitionConformanceOptions): ConformanceH
       const delta = options.frameDelta ?? Time.seconds(1 / 60);
 
       director._beginFrame();
-      director.preUpdate(delta);
+      director.preFrame(delta);
       director.update(delta);
       director._updateTransition(delta);
 

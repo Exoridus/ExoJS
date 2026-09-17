@@ -18,8 +18,8 @@
  *      write.
  *
  * Each scenario times a block of synthetic pointer events fed through
- * `platform.onSurfaceEvent(...)` and flushed via `input.preUpdate()` +
- * `interaction.preUpdate()` - the exact per-frame call `Application` makes -
+ * `platform.onSurfaceEvent(...)` and flushed via `input.preFrame()` +
+ * `interaction.preFrame()` - the exact per-frame call `Application` makes -
  * so the measured cost is the real dispatch + hit-test path, never a private
  * method called directly.
  *

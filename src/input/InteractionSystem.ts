@@ -642,7 +642,7 @@ export class InteractionSystem {
   }
 
   /**
-   * {@link SystemMethods.preUpdate} phase: dispatch this frame's node-level
+   * {@link SystemMethods.preFrame} phase: dispatch this frame's node-level
    * pointer events, then retire the pointers {@link InputSystem} flagged
    * terminal. Registered on `app.systems` by the {@link Application} at
    * {@link SystemOrder.CoreInteraction}, directly after {@link InputSystem}.
@@ -654,7 +654,7 @@ export class InteractionSystem {
    * pair be a single system: `order` alone could not express "B runs after A
    * even when A throws".
    */
-  public preUpdate(_delta: Seconds): void {
+  public preFrame(_delta: Seconds): void {
     try {
       this._dispatchFrame();
     } finally {

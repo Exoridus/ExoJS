@@ -63,8 +63,8 @@ describe('Application.start() with a real FadeSceneTransition', () => {
     // frames, so without this stub every frame throws, and 3 consecutive
     // frame errors abort the in-flight transition instead of letting it
     // complete (masking the thing this test actually verifies).
-    vi.spyOn(app.input, 'preUpdate').mockImplementation(() => undefined);
-    vi.spyOn(app.interaction, 'preUpdate').mockImplementation(() => undefined);
+    vi.spyOn(app.input, 'preFrame').mockImplementation(() => undefined);
+    vi.spyOn(app.interaction, 'preFrame').mockImplementation(() => undefined);
 
     const rafCallbacks: FrameRequestCallback[] = [];
     const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(cb => {

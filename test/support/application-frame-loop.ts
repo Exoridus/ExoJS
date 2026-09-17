@@ -57,6 +57,7 @@ export interface FrameLoopDouble {
   frameCount: number;
   stepSeconds: Seconds;
   stepMs: number;
+  displayFrameSeconds: Seconds;
   beginFrame: (timestamp: number) => FrameTiming;
   captureAlpha: () => void;
   skipFrame: (timestamp: number) => void;
@@ -81,6 +82,7 @@ export const createFrameLoopDouble = (overrides: Partial<FrameLoopDouble> = {}):
   frameCount: 0,
   stepSeconds: seconds(1 / 60),
   stepMs: 1000 / 60,
+  displayFrameSeconds: seconds(1 / 60),
   beginFrame: vi.fn((): FrameTiming => ({ rawDeltaMs: 16, clampedDeltaMs: 16, frameDelta: seconds(0.016), fixedSteps: 0 })),
   captureAlpha: vi.fn(),
   skipFrame: vi.fn(),

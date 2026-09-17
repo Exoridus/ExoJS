@@ -10,6 +10,7 @@ export { Color } from './Color';
 export type { ConnectivityState, NetworkMode } from './Connectivity';
 export { Connectivity } from './Connectivity';
 export { DestroyScope } from './DestroyScope';
+export type { FrameBudget } from './FrameBudget';
 export { InlineWorker, type InlineWorkerOptions } from './InlineWorker';
 export type { JobOptions, JobSchedulerOptions, JobStatus, JobWork } from './JobScheduler';
 export { Job, JobScheduler } from './JobScheduler';
