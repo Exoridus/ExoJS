@@ -783,6 +783,18 @@
       "tags": ["lighting", "material", "shader"],
       "capabilities": [],
       "level": "advanced"
+    },
+    {
+      "slug": "normal-mapped-blocks",
+      "path": "lighting/normal-mapped-blocks.js",
+      "language": "typescript",
+      "title": "Normal-Mapped Blocks",
+      "description": "The scene deferred 2D lighting plugins are demonstrated with, in ExoJS vocabulary: authored normal maps on a stone floor and three blocks, a directional light, and a point light on the pointer. Each drawable is drawn once and says where its normals come from - there is no second sprite in a normal layer.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "material", "shader", "input"],
+      "capabilities": [],
+      "level": "intermediate"
     }
   ],
   "particles": [

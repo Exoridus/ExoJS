@@ -65,6 +65,20 @@ Source: https://www.adventurekid.se/akrt/free-reverb-impulse-responses/
 Only `AK-SROOMS__018.wav` was renamed (to `AK-SROOMS_018.wav`) so the file names
 form one consistent series; the audio is unmodified.
 
+## Normal-Mapping Demo Textures — LICENSE UNCONFIRMED
+
+`demo/textures/lit-stone-diffuse.jpg`, `lit-stone-normal.jpg`,
+`lit-block-diffuse.png` and `lit-block-normal.png` are the four textures the
+`pixi-lights` demo ships with, copied here so the `lighting/normal-mapped-blocks`
+example poses the same scene.
+
+**Their license has not been established.** The `pixi-lights` repository is MIT,
+but these images carry no separate notice there and their original source is not
+stated. Confirm the license before this package is published, or replace them:
+the example needs a diffuse texture and a matching tangent-space normal map and
+nothing else, so generated textures would serve it the way they serve the other
+lighting examples.
+
 ## All Other Assets
 
 All other assets in this package are original works created for the ExoJS
