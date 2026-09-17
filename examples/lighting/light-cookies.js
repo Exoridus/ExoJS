@@ -97,27 +97,26 @@ class LightCookiesScene extends Scene {
     }
     // Directional: no position, no falloff, parallel shadows. It travels along
     // the node's rotation, so the time of day below is one number.
-    this.sun = this.lighting.add(new SunLight({ intensity: 0.55, softness: 0.15, color: new Color(255, 236, 205) }));
+    this.sun = this.lighting.add(new SunLight({ intensity: 0.55, softness: 0.05, color: new Color(255, 236, 205) }));
     this.sun.rotation = 20;
     // A point light wearing a window. The bars are the cookie, not geometry -
     // nothing in the scene knows they exist.
     //
-    // It does not move, and that is the point of the vocabulary rather than a
-    // detail of the scene: a cookie is a mask the LIGHT carries, so it turns,
-    // scales and travels with the light. A window is fixed to a wall, so a
-    // light wearing one has to be fixed too - dragging it would slide the bars
-    // across the floor, which is what a torch with a cut-out does and not what
-    // a window does.
-    this.window = this.lighting.add(new PointLight({ radius: 300, intensity: 2.4, color: new Color(255, 214, 160), cookie: windowCookie }));
+    // A cookie is a mask the LIGHT carries, so it turns, scales and travels
+    // with the light. This one drifts, which is what shows that: the bars move
+    // with the lamp rather than staying on the floor the way a real window's
+    // would. A pattern anchored to the world is a projection, and that is a
+    // different feature.
+    this.window = this.lighting.add(new PointLight({ radius: 300, intensity: 2.4, softness: 0.05, color: new Color(255, 214, 160), cookie: windowCookie }));
     this.window.setPosition(880, 240);
     // The same slot on a cone: the pattern turns with the light.
     this.canopy = this.lighting.add(
-      new SpotLight({ radius: 420, angle: 34, coneSoftness: 0.4, intensity: 2.2, color: new Color(186, 255, 198), cookie: canopyCookie }),
+      new SpotLight({ radius: 420, angle: 34, coneSoftness: 0.4, intensity: 2.2, softness: 0.05, color: new Color(186, 255, 198), cookie: canopyCookie }),
     );
     this.canopy.setPosition(960, 620);
     // No cookie, a different shape: falloff is measured from the segment, so
     // the pool is a capsule - which is what a tube of neon actually looks like.
-    this.tube = this.lighting.add(new LineLight({ length: 260, radius: 110, intensity: 1.9, color: new Color(120, 190, 255) }));
+    this.tube = this.lighting.add(new LineLight({ length: 260, radius: 64, intensity: 2.6, softness: 0.05, color: new Color(120, 190, 255) }));
     this.tube.setPosition(300, 640);
     this.hud = mountControls({
       title: 'Light Cookies',
@@ -157,10 +156,12 @@ class LightCookiesScene extends Scene {
   update(delta) {
     this.elapsed += delta;
     // Aiming a cone is rotating it, and the cookie turns with it.
-    this.canopy.rotation = -90 + Math.sin(this.elapsed * 0.35) * 20;
+    // Counter-clockwise from +x, so up the screen is +90 and not -90: the
+    // world's y grows downward while an angle still turns the way an angle
+    // turns.
+    this.canopy.rotation = 90 + Math.sin(this.elapsed * 0.35) * 20;
     this.tube.rotation = Math.sin(this.elapsed * 0.25) * 12;
-    // The daylight behind the window breathes; the window itself does not move.
-    this.window.intensity = 2.4 + Math.sin(this.elapsed * 0.6) * 0.35;
+    this.window.setPosition(880, 240 + Math.sin(this.elapsed * 0.6) * 40);
   }
   draw(context) {
     context.render(this.world);

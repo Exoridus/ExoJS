@@ -116,7 +116,9 @@ class ShadowCastersScene extends Scene {
     this.elapsed += delta;
     this.torch.setPosition(640 + Math.cos(this.elapsed * 0.55) * 250, 360 + Math.sin(this.elapsed * 0.83) * 150);
     // Aiming a spot is rotating it, so the beam sweeps by turning its node.
-    this.beam.rotation = -55 + Math.sin(this.elapsed * 0.4) * 35;
+    // Counter-clockwise from +x: up the screen is a POSITIVE angle, however
+    // far down the screen the world's y grows.
+    this.beam.rotation = 55 - Math.sin(this.elapsed * 0.4) * 35;
     // A moving occluder needs no bookkeeping: the outline is local to the node.
     this.turntable.rotation = this.elapsed * 22;
   }
