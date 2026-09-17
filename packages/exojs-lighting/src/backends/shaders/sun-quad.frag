@@ -22,6 +22,26 @@ const float MAX_PENUMBRA = 0.03;
 /** Tolerance, in the row's own units, that keeps an occluder out of its own shadow. */
 const float SHADOW_BIAS = 0.004;
 
+/**
+ * The stored depth at a fractional strip, blended between the two strips it
+ * falls between.
+ *
+ * Reading the nearest strip alone is what makes a shadow edge a staircase: the
+ * row is a few hundred strips across the whole view, so a silhouette moves in
+ * whole strips and shows every one of them. Blending costs one more fetch per
+ * tap and turns the step into the ramp a filtered shadow map has.
+ */
+float depthAt(float strip, int row, float bins) {
+    float lower = floor(strip);
+    float weight = strip - lower;
+    // Clamped rather than wrapped: strips are a line, and the far side of the
+    // range is not the near side of it.
+    int first = int(clamp(lower, 0.0, bins - 1.0));
+    int second = int(clamp(lower + 1.0, 0.0, bins - 1.0));
+
+    return mix(texelFetch(u_shadow, ivec2(first, row), 0).r, texelFetch(u_shadow, ivec2(second, row), 0).r, weight);
+}
+
 float shadowTerm() {
     if (v_shadowRow < 0.0) {
         return 1.0;
@@ -37,11 +57,8 @@ float shadowTerm() {
 
     for (int tap = 0; tap < SHADOW_TAPS; tap++) {
         float offset = (float(tap) / float(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
-        // Clamped rather than wrapped: strips are a line, and the far side of
-        // the range is not the near side of it.
-        int bin = int(clamp(floor(center + offset + 0.5), 0.0, bins - 1.0));
 
-        lit += step(v_sun.y, texelFetch(u_shadow, ivec2(bin, row), 0).r + SHADOW_BIAS);
+        lit += step(v_sun.y, depthAt(center + offset, row, bins) + SHADOW_BIAS);
     }
 
     return lit / float(SHADOW_TAPS);

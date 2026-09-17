@@ -49,6 +49,23 @@ const MAX_PENUMBRA: f32 = 0.03;
 const SHADOW_BIAS: f32 = 0.004;
 
 /**
+ * The stored distance at a fractional bin, blended between the two bins it
+ * falls between.
+ *
+ * Reading the nearest bin alone is what makes a shadow edge a staircase: a row
+ * is a few hundred bins around the whole circle, so at a large radius one bin
+ * is many pixels wide and every one of them shows.
+ */
+fn distanceAt(position: f32, row: i32, bins: f32) -> f32 {
+    let lower = floor(position);
+    let weight = position - lower;
+    let first = i32(fract(lower / bins) * bins);
+    let second = i32(fract((lower + 1.0) / bins) * bins);
+
+    return mix(textureLoad(u_shadow, vec2<i32>(first, row), 0).r, textureLoad(u_shadow, vec2<i32>(second, row), 0).r, weight);
+}
+
+/**
  * `distance` is the RADIAL distance from the light's own position, as a
  * fraction of the light's whole reach - the frame the polar rows were built in.
  * The falloff term measures to the segment instead, which is a different
@@ -70,10 +87,8 @@ fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) ->
 
     for (var tap: i32 = 0; tap < SHADOW_TAPS; tap = tap + 1) {
         let offset = (f32(tap) / f32(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
-        let bin = i32(fract(floor(center + offset + 0.5) / bins) * bins);
-        let occluder = textureLoad(u_shadow, vec2<i32>(bin, row), 0).r;
 
-        lit = lit + step(distance, occluder + SHADOW_BIAS);
+        lit = lit + step(distance, distanceAt(center + offset, row, bins) + SHADOW_BIAS);
     }
 
     return lit / f32(SHADOW_TAPS);

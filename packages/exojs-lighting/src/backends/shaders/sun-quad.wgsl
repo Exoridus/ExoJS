@@ -37,6 +37,25 @@ const MAX_PENUMBRA: f32 = 0.03;
 /** Tolerance, in the row's own units, that keeps an occluder out of its own shadow. */
 const SHADOW_BIAS: f32 = 0.004;
 
+/**
+ * The stored depth at a fractional strip, blended between the two strips it
+ * falls between.
+ *
+ * Reading the nearest strip alone is what makes a shadow edge a staircase: the
+ * row is a few hundred strips across the whole view, so a silhouette moves in
+ * whole strips and shows every one of them.
+ */
+fn depthAt(strip: f32, row: i32, bins: f32) -> f32 {
+    let lower = floor(strip);
+    let weight = strip - lower;
+    // Clamped rather than wrapped: strips are a line, and the far side of the
+    // range is not the near side of it.
+    let first = i32(clamp(lower, 0.0, bins - 1.0));
+    let second = i32(clamp(lower + 1.0, 0.0, bins - 1.0));
+
+    return mix(textureLoad(u_shadow, vec2<i32>(first, row), 0).r, textureLoad(u_shadow, vec2<i32>(second, row), 0).r, weight);
+}
+
 fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32) -> f32 {
     if (shadowRow < 0.0) {
         return 1.0;
@@ -53,12 +72,8 @@ fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32) -> f32 {
 
     for (var tap: i32 = 0; tap < SHADOW_TAPS; tap = tap + 1) {
         let offset = (f32(tap) / f32(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
-        // Clamped rather than wrapped: strips are a line, and the far side of
-        // the range is not the near side of it.
-        let bin = i32(clamp(floor(center + offset + 0.5), 0.0, bins - 1.0));
-        let occluder = textureLoad(u_shadow, vec2<i32>(bin, row), 0).r;
 
-        lit = lit + step(sun.y, occluder + SHADOW_BIAS);
+        lit = lit + step(sun.y, depthAt(center + offset, row, bins) + SHADOW_BIAS);
     }
 
     return lit / f32(SHADOW_TAPS);

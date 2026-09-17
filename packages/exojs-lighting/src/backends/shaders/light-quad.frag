@@ -34,6 +34,24 @@ const float MAX_PENUMBRA = 0.03;
 const float SHADOW_BIAS = 0.004;
 
 /**
+ * The stored distance at a fractional bin, blended between the two bins it
+ * falls between.
+ *
+ * Reading the nearest bin alone is what makes a shadow edge a staircase: a row
+ * is a few hundred bins around the whole circle, so at a large radius one bin
+ * is many pixels wide and every one of them shows. Blending costs one more
+ * fetch per tap and turns the step into the ramp a filtered shadow map has.
+ */
+float distanceAt(float position, int row, float bins) {
+    float lower = floor(position);
+    float weight = position - lower;
+    int first = int(mod(lower, bins));
+    int second = int(mod(lower + 1.0, bins));
+
+    return mix(texelFetch(u_shadow, ivec2(first, row), 0).r, texelFetch(u_shadow, ivec2(second, row), 0).r, weight);
+}
+
+/**
  * `distance` is the RADIAL distance from the light's own position, as a
  * fraction of the light's whole reach - the frame the polar rows were built in.
  * The falloff term measures to the segment instead, which is a different
@@ -54,9 +72,8 @@ float shadowTerm(float distance) {
 
     for (int tap = 0; tap < SHADOW_TAPS; tap++) {
         float offset = (float(tap) / float(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
-        int bin = int(mod(floor(center + offset + 0.5), bins));
 
-        lit += step(distance, texelFetch(u_shadow, ivec2(bin, row), 0).r + SHADOW_BIAS);
+        lit += step(distance, distanceAt(center + offset, row, bins) + SHADOW_BIAS);
     }
 
     return lit / float(SHADOW_TAPS);
