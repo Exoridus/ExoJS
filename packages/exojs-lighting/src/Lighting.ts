@@ -439,6 +439,11 @@ export class Lighting {
    * filters the result against its own circle when it builds its shadow map.
    */
   private _collect(): void {
+    // Asked before the sources are walked, not after: whether a source may
+    // hand a drawable over instead of tracing it is the renderer's answer, and
+    // a renderer can be switched between frames.
+    this._field.rasterisesDrawables = this._backend.rasterisesOccluders;
+
     if (this._occluders.length === 0 || !this._backend.castsShadows) {
       this._field.clear();
 

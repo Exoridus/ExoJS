@@ -9,6 +9,7 @@ import {
   RenderPipeline,
   RenderTexture,
   Signal,
+  Sprite,
   Texture,
   TextureFormat,
 } from '@codexo/exojs';
@@ -37,7 +38,11 @@ const fakeApp = (floatTargets = true): Application =>
     framePasses: new RenderPipeline(),
     frameTexture: new RenderTexture(64, 64),
     onResize: new Signal(),
-    rendering: { supportsColorFormat: (format: TextureFormat): boolean => format === TextureFormat.Rgba8 || floatTargets },
+    rendering: {
+      supportsColorFormat: (format: TextureFormat): boolean => format === TextureFormat.Rgba8 || floatTargets,
+      // The world view the light field and the occluder mask are drawn through.
+      view: { getBounds: (): Rectangle => new Rectangle(0, 0, 64, 64) },
+    },
     width: 64,
     height: 64,
   }) as unknown as Application;
@@ -337,6 +342,34 @@ describe('Lighting', () => {
 
     expect(forwardApp.framePasses.size).toBe(0);
     expect(lightmapApp.framePasses.size).toBe(0);
+  });
+
+  test('a source may hand a drawable over only while the renderer rasterises occluders', () => {
+    const lighting = lightmapLighting();
+    const backend = lighting.backend as LightmapBackend;
+    const sprite = new Sprite(new Texture(null));
+
+    let taken: boolean | null = null;
+
+    lighting.add(new PointLight({ radius: 50 })).setPosition(32, 32);
+    lighting.occludeFrom({
+      collect(_bounds, out) {
+        taken = out.addDrawable(sprite);
+      },
+    });
+
+    lighting.update();
+
+    // The segment walk is the shipped filler and has nothing to do with a
+    // drawable, so the offer is refused and the source keeps its geometry path.
+    expect(taken).toBe(false);
+
+    backend.shadowFiller = 'gpu';
+    lighting.update();
+
+    expect(taken).toBe(true);
+
+    lighting.destroy();
   });
 
   test('the shadow march is installed only where its float atlas can be rendered into', () => {

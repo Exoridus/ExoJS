@@ -1,8 +1,8 @@
-import { logger, type ReadonlyRectangle, Texture } from '@codexo/exojs';
+import { logger, type ReadonlyRectangle, RenderNode, Texture } from '@codexo/exojs';
 
 import { type AlphaOccluderDrawable, type AlphaOccluderOptions, traceAlphaFrame } from './alphaTrace';
 import type { OccluderPlacement } from './OccluderPlacement';
-import type { OccluderSink, OccluderSource } from './OccluderSource';
+import type { OccluderDrawable, OccluderSink, OccluderSource } from './OccluderSource';
 import { PolylineOccluder } from './PolylineOccluder';
 
 /** No outline, shared so a frame that traces to nothing costs no array. */
@@ -29,6 +29,13 @@ export class AlphaOccluder implements OccluderSource {
   private readonly _options: AlphaOccluderOptions;
   private readonly _polyline: PolylineOccluder;
   private readonly _cache = new Map<string, readonly Float32Array[]>();
+  /**
+   * The drawable as a scene node, when it is one and when it also carries its
+   * own placement. A `node` option pointing somewhere else means "this
+   * texture, placed there", which a rasteriser cannot express: it draws the
+   * node where the node is.
+   */
+  private readonly _node: OccluderDrawable | null;
   private _tracedTexture: Texture | null = null;
   private _tracedKey = '';
   private _warned = false;
@@ -37,10 +44,19 @@ export class AlphaOccluder implements OccluderSource {
     this._drawable = drawable;
     this._options = options;
     this._polyline = new PolylineOccluder(empty, true, placement);
+    this._node = drawable instanceof RenderNode && placement === drawable ? drawable : null;
     this._sync();
   }
 
   public collect(bounds: ReadonlyRectangle, out: OccluderSink): void {
+    // Offered before anything is traced: where the field rasterises, the
+    // silhouette is the drawable's own alpha every frame, which is correct for
+    // a video and a render target as well - the two cases the trace has to
+    // refuse or freeze.
+    if (this._node !== null && out.addDrawable(this._node)) {
+      return;
+    }
+
     this._sync();
     this._polyline.collect(bounds, out);
   }

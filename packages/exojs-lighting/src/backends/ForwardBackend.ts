@@ -65,6 +65,7 @@ export class ForwardBackend implements LightingBackend {
 
   /** Shading happens inside the sprite fragment stage, which has no light field to fold a shadow term into. */
   public readonly castsShadows = false;
+  public readonly rasterisesOccluders = false;
 
   /** Shading lands straight in the frame, so a lit fragment clamps where every fragment does. */
   public readonly hdr = false;

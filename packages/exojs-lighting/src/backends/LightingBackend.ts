@@ -42,6 +42,13 @@ export interface LightingBackend {
   readonly readsSurfaces: boolean;
 
   /**
+   * Whether this renderer rasterises occluders rather than turning them into
+   * geometry, which is what decides whether a source may hand a drawable over
+   * whole. See `OccluderSink.addDrawable`.
+   */
+  readonly rasterisesOccluders: boolean;
+
+  /**
    * Whether light accumulates with headroom above `1.0`. See
    * {@link Lighting.hdr}.
    */

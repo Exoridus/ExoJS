@@ -1,4 +1,4 @@
-import { type AabbLike, Container, logger, Matrix, Rectangle, RenderTexture, Texture } from '@codexo/exojs';
+import { type AabbLike, Container, logger, Matrix, Rectangle, RenderTexture, Sprite, Texture } from '@codexo/exojs';
 import { describe, expect, test, vi } from 'vitest';
 
 import { type OccluderCollider, type OccluderPhysicsWorld } from '../src/occluders/fromPhysics';
@@ -482,5 +482,70 @@ describe('Occluders.fromAlpha', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe('the drawable channel', () => {
+  test('a field that does not rasterise refuses a drawable, so the source falls back to geometry', () => {
+    const field = new OccluderField();
+
+    expect(field.addDrawable(new Container())).toBe(false);
+    expect(field.drawableCount).toBe(0);
+  });
+
+  test('a rasterising field takes drawables and forgets them with the rest of the frame', () => {
+    const field = new OccluderField();
+    const sprite = new Sprite(new Texture(null));
+
+    field.rasterisesDrawables = true;
+
+    expect(field.addDrawable(sprite)).toBe(true);
+    expect(field.drawableCount).toBe(1);
+    expect(field.drawables[0]).toBe(sprite);
+
+    field.collect([], everywhere);
+
+    expect(field.drawableCount).toBe(0);
+    // Dropped rather than merely uncounted: a field outliving the frame must
+    // not keep a node the scene has removed.
+    expect(field.drawables[0]).toBeUndefined();
+
+    // Switching the channel off is the other way a frame's drawables end.
+    field.addDrawable(sprite);
+    field.rasterisesDrawables = false;
+
+    expect(field.drawableCount).toBe(0);
+  });
+
+  test('an alpha occluder offers its drawable before it traces, and traces when the offer is refused', () => {
+    const sprite = new Sprite(new Texture(null));
+    const source = Occluders.fromAlpha(sprite);
+    const field = new OccluderField();
+
+    field.rasterisesDrawables = true;
+    field.collect([source], everywhere);
+
+    expect(field.drawableCount).toBe(1);
+    expect(field.drawables[0]).toBe(sprite);
+    // The offer was taken, so nothing was traced into segments for it.
+    expect(field.count).toBe(0);
+
+    field.rasterisesDrawables = false;
+    field.collect([source], everywhere);
+
+    expect(field.drawableCount).toBe(0);
+  });
+
+  test('a placement pointing away from the drawable keeps it on the tracing path', () => {
+    const sprite = new Sprite(new Texture(null));
+    // "This texture, placed over there" is a shape a rasteriser cannot express:
+    // it can only draw the node where the node is.
+    const source = Occluders.fromAlpha(sprite, { node: new Container().setPosition(50, 60) });
+    const field = new OccluderField();
+
+    field.rasterisesDrawables = true;
+    field.collect([source], everywhere);
+
+    expect(field.drawableCount).toBe(0);
   });
 });

@@ -34,4 +34,4 @@ export type { OccluderTileCell, OccluderTileLayer, TilemapOccluderOptions } from
 export { fromTilemap as tilemapOccluder } from './occluders/fromTilemap';
 export type { OccluderPlacement } from './occluders/OccluderPlacement';
 export { Occluders } from './occluders/Occluders';
-export type { OccluderSink, OccluderSource } from './occluders/OccluderSource';
+export type { OccluderDrawable, OccluderSink, OccluderSource } from './occluders/OccluderSource';

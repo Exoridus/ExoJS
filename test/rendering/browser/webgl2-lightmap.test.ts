@@ -773,4 +773,55 @@ describe('WebGL2 lightmap renderer', () => {
       host.destroy();
     }
   });
+  test('a render target handed over whole casts the shadow the tracer cannot read', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const backend = lighting.backend as LightmapBackend;
+    // A render target has no pixels on this side of the GPU, so its outline
+    // cannot be traced at all - which is what makes it the decisive case for
+    // the drawable channel: any shadow here came from rasterising it.
+    const live = new RenderTexture(8, 8);
+    const fill = new Sprite(Texture.fromColor(Color.white, 1));
+
+    fill.width = 8;
+    fill.height = 8;
+    host.context.renderTo(fill, { target: live, clear: Color.transparentBlack });
+
+    const wall = new Sprite(live);
+
+    wall.width = 4;
+    wall.height = 44;
+    wall.setPosition(40, 10);
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1, softness: 0 })).setPosition(32, 32);
+    lighting.occludeFrom(Occluders.fromAlpha(wall));
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // The segment walk got nothing out of it, so the light passes straight
+      // through where the wall stands - at the falloff twenty units out, which
+      // is the value the shadowed case has to fall below.
+      expect(readPixel(host.backend, 52, 32)[0]).toBeGreaterThan(40);
+
+      backend.shadowFiller = 'gpu';
+
+      if (backend.shadowFiller !== 'gpu') {
+        return;
+      }
+
+      runFrame(host, lighting);
+
+      expect(readPixel(host.backend, 52, 32)[0]).toBeLessThan(20);
+      // The side the wall does not stand on is lit either way.
+      expect(readPixel(host.backend, 20, 32)[0]).toBeGreaterThan(80);
+    } finally {
+      wall.destroy();
+      fill.destroy();
+      live.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
 });

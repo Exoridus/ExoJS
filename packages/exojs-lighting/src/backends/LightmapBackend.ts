@@ -27,6 +27,7 @@ import { SpotLight } from '../lights/SpotLight';
 import { SunLight } from '../lights/SunLight';
 import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
+import type { OccluderDrawable } from '../occluders/OccluderSource';
 import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
 import type { LightingBackend } from './LightingBackend';
 import lightCompositeFragment from './shaders/light-composite.frag';
@@ -204,6 +205,12 @@ export class LightmapBackend implements LightingBackend {
   private readonly _maskTarget: RenderTexture;
   private readonly _maskBatch: RenderBatch;
   private readonly _maskPass: CallbackRenderPass;
+  /**
+   * The drawables this frame's sources handed over, held from `publish` until
+   * the mask pass draws them. Copied out of the field rather than read through
+   * it, because the field is the system's and is refilled without asking.
+   */
+  private readonly _maskDrawables: OccluderDrawable[] = [];
   private readonly _normalTarget: RenderTexture;
   /** One batch per albedo/normal-map pair: a batch binds two textures and draws every surface sharing them. */
   private readonly _normalBatches = new Map<Texture | RenderTexture, Map<Texture, RenderBatch>>();
@@ -432,6 +439,14 @@ ${sunQuadWgsl}`,
     }
   }
 
+  /**
+   * Only the march reads the occluder mask, so only the march can take a
+   * drawable instead of its outline.
+   */
+  public get rasterisesOccluders(): boolean {
+    return this.shadowFiller === 'gpu';
+  }
+
   public publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void {
     this._writeSurfaces(surfaces);
     this._resize();
@@ -442,14 +457,14 @@ ${sunQuadWgsl}`,
       batch.clear();
     }
 
-    const bins = this._shadowResolution;
-    const casting = occluders.count > 0;
-    const marching = casting && this.shadowFiller === 'gpu';
-    const shadows = casting ? this._shadowMap.buffer : null;
+    const marching = this.shadowFiller === 'gpu';
+    // A field of nothing but drawables still casts, but only for the filler
+    // that can rasterise one: the segment walk has nothing to walk there.
+    const casting = occluders.count > 0 || (marching && occluders.drawableCount > 0);
     const segments = occluders.segments;
     const segmentCount = occluders.count;
 
-    if (marching) {
+    if (casting && marching) {
       this._filler!.begin(lights.length);
     }
 
@@ -480,21 +495,7 @@ ${sunQuadWgsl}`,
       } else {
         scratchInstance.a_shadow[0] = written;
 
-        if (marching) {
-          this._filler!.write(written, scratchPosition.x, scratchPosition.y, radius, scratchDirection.x, scratchDirection.y);
-        } else {
-          buildShadowRow(
-            segments,
-            segmentCount,
-            scratchPosition.x,
-            scratchPosition.y,
-            scratchDirection.x,
-            scratchDirection.y,
-            radius,
-            shadows!.subarray(written * bins, (written + 1) * bins),
-            bins,
-          );
-        }
+        this._writeShadowRow(written, radius, segments, segmentCount, marching);
       }
 
       scratchInstance.a_shadow[1] = light.softness;
@@ -538,9 +539,36 @@ ${sunQuadWgsl}`,
     this._writeMask(occluders);
     this._writeOccluderDebug(occluders);
 
-    if (marching) {
+    if (casting && marching) {
       this._filler!.end(this._app.rendering.view.getBounds(), this._maskTexel());
     }
+  }
+
+  /**
+   * Give one light the polar row the shader will sample, from whichever filler
+   * is active. The light's position and axis are the ones the caller has just
+   * read into the shared scratch.
+   */
+  private _writeShadowRow(row: number, radius: number, segments: Float32Array, segmentCount: number, marching: boolean): void {
+    const bins = this._shadowResolution;
+
+    if (marching) {
+      this._filler!.write(row, scratchPosition.x, scratchPosition.y, radius, scratchDirection.x, scratchDirection.y);
+
+      return;
+    }
+
+    buildShadowRow(
+      segments,
+      segmentCount,
+      scratchPosition.x,
+      scratchPosition.y,
+      scratchDirection.x,
+      scratchDirection.y,
+      radius,
+      this._shadowMap.buffer.subarray(row * bins, (row + 1) * bins),
+      bins,
+    );
   }
 
   /**
@@ -681,6 +709,7 @@ ${sunQuadWgsl}`,
       batch.destroy();
     }
 
+    this._maskDrawables.length = 0;
     this._lightBatches.clear();
     this._sunBatch.destroy();
     this._sunMaterial.destroy();
@@ -949,8 +978,17 @@ ${normalPrepassWgsl}`,
 
   /** Rasterise this frame's blocking edges, through the frame's own view. */
   private _drawMask(pass: PassContext): void {
+    const view = this._app.rendering.view;
+
     if (this._maskBatch.count > 0) {
-      pass.drawBatch(this._maskBatch, { view: this._app.rendering.view });
+      pass.drawBatch(this._maskBatch, { view });
+    }
+
+    // A drawable blocks light where it is opaque, so what the mask needs from
+    // it is the alpha it draws with - which is what drawing it here produces,
+    // at its own place, for whatever it happens to be showing this frame.
+    for (const drawable of this._maskDrawables) {
+      pass.render(drawable, { view });
     }
   }
 
@@ -966,9 +1004,14 @@ ${normalPrepassWgsl}`,
    */
   private _writeMask(occluders: OccluderField): void {
     this._maskBatch.clear();
+    this._maskDrawables.length = 0;
 
     if (!this._maskPass.enabled) {
       return;
+    }
+
+    for (let index = 0; index < occluders.drawableCount; index++) {
+      this._maskDrawables.push(occluders.drawables[index]!);
     }
 
     const texel = this._maskTexel();
