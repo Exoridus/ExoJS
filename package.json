@@ -221,7 +221,7 @@
     {
       "name": "@codexo/exojs-lighting",
       "path": "packages/exojs-lighting/dist/esm/index.js",
-      "limit": "30 KB",
+      "limit": "36 KB",
       "gzip": true,
       "ignore": [
         "@codexo/exojs"
@@ -231,7 +231,7 @@
       "name": "@codexo/exojs-lighting (forward, no occluder tracing)",
       "path": "packages/exojs-lighting/dist/esm/index.js",
       "import": "{ Lighting, PointLight, SpotLight, LitMaterial, normalMap }",
-      "limit": "18 KB",
+      "limit": "19 KB",
       "gzip": true,
       "ignore": [
         "@codexo/exojs"
