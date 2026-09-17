@@ -1089,4 +1089,73 @@ describe('WebGL2 lightmap renderer', () => {
       host.destroy();
     }
   });
+
+  test('a source is seen as its own size from every direction, not as a count of rays', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 0.4, softness: 0.35 })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // A ring at one distance, where the rays of the level that sees the
+      // source are a few texels apart: a source found by a whole number of
+      // them is brighter in the directions that catch one more, and the ring
+      // breaks into lobes. Weighted by the share of each ray's own width the
+      // source takes, the ring is a ring.
+      const samples: number[] = [];
+
+      for (let index = 0; index < 16; index++) {
+        const angle = (index / 16) * Math.PI * 2;
+
+        samples.push(readPixel(host.backend, Math.round(32 + Math.cos(angle) * 20), Math.round(32 + Math.sin(angle) * 20))[0]!);
+      }
+
+      const brightest = Math.max(...samples);
+      const darkest = Math.min(...samples);
+
+      expect(darkest).toBeGreaterThan(15);
+      expect(brightest / darkest).toBeLessThan(1.3);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a source moving by a fraction of a texel leaves the field where it was', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lamp = lighting.add(new PointLight({ radius: 40, intensity: 0.4, softness: 0.35 }));
+
+    drawWhiteFrame(host);
+
+    try {
+      // Sub-texel steps, so the mask the source is rasterised into changes by
+      // at most one texel at its rim: what arrives at a point a probe spacing
+      // or more away has to follow the source, not the texel grid.
+      const readings: number[] = [];
+
+      for (let step = 0; step < 6; step++) {
+        const x = 20 + step * 0.3;
+        const y = 30 + step * 0.2;
+
+        lamp.setPosition(x, y);
+        runFrame(host, lighting);
+        // Scaled by the distance, since what arrives legitimately grows as
+        // one over it while the source closes in.
+        readings.push(readPixel(host.backend, 44, 32)[0]! * Math.hypot(44 - x, 32 - y));
+      }
+
+      const brightest = Math.max(...readings);
+      const darkest = Math.min(...readings);
+
+      expect(darkest).toBeGreaterThan(15 * 22);
+      expect(brightest / darkest, `readings ${readings.map(reading => reading.toFixed(0)).join(' ')}`).toBeLessThan(1.08);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
 });

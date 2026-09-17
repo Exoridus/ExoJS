@@ -26,9 +26,10 @@ import type { OccluderSource } from './occluders/OccluderSource';
  *   than from a material.
  * - `radiance` fills the same light field from a chain of radiance cascades
  *   instead: light propagates from the emitters rather than falling off around
- *   each light, so a lit surface lights what is beside it. It is opt-in, needs
- *   a renderable float target, and does NOT make a scene look the way the other
- *   two renderers make it look.
+ *   each light, so a lamp fills the room it stands in, thins with distance
+ *   instead of ending at a radius, and casts penumbrae that widen the way a
+ *   source with a size does. It is opt-in, needs a renderable float target,
+ *   and does NOT make a scene look the way the other two renderers make it look.
  */
 export type LightingQuality = 'forward' | 'lightmap' | 'radiance';
 
@@ -60,9 +61,9 @@ export type LightingQualityOption = 'auto' | 'forward' | 'lightmap' | LightingRe
  *   is thick enough to be seen at that resolution.
  * - `'distance'` shows the distance field built from that mask: how far the
  *   nearest occluder is, as a ramp from black at a wall to white at the far end
- *   of what the camera can see. It is what a ray steps along instead of
- *   marching a texel at a time, and the view that says whether the field found
- *   the walls at all.
+ *   of what the camera can see, and inside an occluder how deep, in green. It
+ *   is what a ray steps along instead of marching a texel at a time, and the
+ *   view that says whether the field found the walls at all.
  * - `'normals'` shows the normal prepass: the world-space normals the
  *   registered surfaces described this frame, encoded the way a normal map is.
  *   Black is where nothing described a surface, and light lands there with no

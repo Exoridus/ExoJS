@@ -9,14 +9,15 @@ import sdfStepWgsl from './shaders/sdf-step.wgsl';
 
 /**
  * Turns the occluder mask into a field of seeds: every blocking texel names
- * itself, everything else names nothing.
+ * itself as the nearest blocking one, every other texel names itself as the
+ * nearest open one.
  * @internal
  */
 export const sdfSeedShader = createFilterShader({ glsl: { fragment: sdfSeedFragment }, wgsl: sdfSeedWgsl });
 
 /**
- * One jump-flood round: every texel takes the nearest seed any of its nine taps
- * knows about, at the round's own stride.
+ * One jump-flood round: every texel takes the nearest seed of each class that
+ * any of its nine taps knows about, at the round's own stride.
  * @internal
  */
 export const sdfStepShader = createFilterShader({
@@ -26,8 +27,9 @@ export const sdfStepShader = createFilterShader({
 });
 
 /**
- * Turns the finished seed field into distance, as a fraction of the reach the
- * field was built for.
+ * Turns the finished seed field into distance out of the nearest surface and
+ * depth into one, each as a fraction of the reach the field was built for and
+ * each measured to the surface's edge rather than to a texel centre.
  * @internal
  */
 export const sdfResolveShader = createFilterShader({
@@ -42,9 +44,13 @@ export const sdfResolveShader = createFilterShader({
  *
  * A jump flood is `log2(size)` rounds of nine taps each, which is what makes a
  * whole-screen field affordable at all: the alternative is a search per texel.
- * What comes out is UNSIGNED distance - a mask of thin walls has no inside for
- * a sign to distinguish - and it is what lets a ray step by the distance it is
- * guaranteed not to hit anything in, rather than by one texel at a time.
+ * What comes out is two distances: out of the nearest surface, which is what
+ * lets a ray step by the distance it is guaranteed not to hit anything in
+ * rather than by one texel at a time, and into the surface a texel is part
+ * of, which is what tells a ray that has entered a source how much of its own
+ * width the source takes. Both are measured to the surface's edge, from the
+ * coverage the mask holds, so a ray narrower than a texel still reads an
+ * outline rather than a staircase.
  *
  * Both backends run the same fragment rounds. A WebGPU compute path would
  * dispatch the same `log2(size)` rounds and is an optimisation with a
@@ -77,11 +83,14 @@ export class DistanceField {
     this._distance = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Linear });
     this._seedFilter = ShaderFilter.from(sdfSeedShader);
     this._stepFilter = ShaderFilter.from(sdfStepShader);
-    this._resolveFilter = ShaderFilter.from(sdfResolveShader);
+    // Bound once and read live: the mask is the caller's target and never
+    // changes identity, which is what lets it ride on the filter's fixed
+    // texture bindings.
+    this._resolveFilter = ShaderFilter.from(sdfResolveShader, { textures: { uMask: mask } });
     this.pass = new CallbackRenderPass((pass: PassContext) => this._build(pass), { label: 'lighting:distance-field', enabled: false });
   }
 
-  /** The finished field: distance to the nearest occluder as a fraction of {@link far}, in every channel. */
+  /** The finished field: distance out of the nearest occluder in `r`, and that plus the depth into one in `g`, each as a fraction of {@link far}. */
   public get texture(): RenderTexture {
     return this._distance;
   }

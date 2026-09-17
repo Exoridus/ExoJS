@@ -5,9 +5,11 @@ precision highp int;
 // The cascade above this one, already merged. A 1x1 placeholder stands in for
 // the top of the chain, where `uMerge` is zero and nothing reads it.
 uniform sampler2D uTexture;
-// The distance to the nearest thing a ray can hit, as a fraction of `uFar`.
+// Distance out of the nearest surface in `r`, and that plus the depth into
+// one in `g`, both as a fraction of `uFar`.
 uniform sampler2D uDistance;
-// What emits, at the same place in the world as the distance field.
+// What emits, at the same place in the world as the distance field. Alpha is
+// the emitter's shape; a surface with none is a wall.
 uniform sampler2D uEmission;
 
 out vec4 fragColor;
@@ -15,6 +17,15 @@ out vec4 fragColor;
 const float TAU = 6.28318530718;
 /** Hard ceiling on a ray's walk. Sphere tracing converges in far fewer. */
 const int MAX_STEPS = 64;
+/**
+ * Distance, in texels, at or below which a sample is on a surface: what a
+ * walk lands within when it steps by the field's own value.
+ */
+const float HIT = 0.25;
+/** Emission coverage below which a surface is a wall rather than a source. */
+const float WALL = 0.05;
+/** Depth that says "no encounter pending". */
+const float NOTHING = -1e8;
 
 /**
  * World position to a lookup in the screen-sized fields.
@@ -29,29 +40,99 @@ vec2 fieldUv(vec2 world) {
 }
 
 /**
- * Walk one ray over this cascade's own interval.
- *
- * Returns the radiance it found in `rgb` and, in `a`, how much of the ray got
- * through - which is what the cascade above is then scaled by.
+ * The share of a cone of half-width `width` that a surface takes when the
+ * cone's axis reaches `depth` into it - negative when the axis misses it by
+ * that much. A box cone: what is inside is what is covered, so the shares of
+ * neighbouring rays add up to one wherever a surface's edge falls.
+ */
+float share(float depth, float width) {
+    return clamp(0.5 + depth / (2.0 * max(width, 0.0001)), 0.0, 1.0);
+}
+
+/**
+ * What a walk amounts to with its open encounter settled: the radiance found
+ * in `rgb`, what got through in `a`.
+ */
+vec4 settle(vec3 found, float through, float depth, float width, vec2 at) {
+    if (depth == NOTHING) {
+        return vec4(found, through);
+    }
+
+    float taken = share(depth, width);
+
+    return vec4(found + through * taken * texture(uEmission, fieldUv(at)).rgb, through * (1.0 - taken));
+}
+
+/**
+ * Walk one ray, and report what it amounts to at each of four travel
+ * distances - one per probe of the cascade above that this ray will be merged
+ * with, at the distance where that probe's own ray in this direction begins.
  *
  * A ray is a CONE, not a line: it owns one angular sector of its probe, so at
- * distance `t` it covers `t * tan(pi / directions)` across. Weighting a hit by
- * how much of that footprint the surface fills is what makes the result
- * continuous in the scene's geometry. With a binary hit, a source a few texels
- * across is found by a whole number of rays, that number changes as the source
- * moves, and the field flickers - measured at 15 to 25 percent for a quarter of
- * a probe spacing.
+ * distance `t` it is `t * tan(pi / directions)` wide to either side, and the
+ * rays of one probe tile the circle. What a source takes of a ray is the share
+ * of that width its own edge cuts off, measured from how deep the ray's axis
+ * reaches into it or how narrowly the axis misses it. Weighted that way the
+ * rays of a probe see a source as exactly its angular size, wherever it sits
+ * between their directions; with a binary hit, or a hit weighted by whatever
+ * the walk happened to read at its last step, a source a few texels across is
+ * found by a whole number of rays, that number changes as the source moves,
+ * and the field breaks into blotches that flicker.
+ *
+ * A source is walked THROUGH to find how deep the axis went, and the cone's
+ * remainder carries on past it. A wall is not: it takes the whole cone, since
+ * the part of the cone that missed the wall's edge here would hit its face a
+ * step further on.
  */
-vec4 trace(vec2 origin, vec2 direction) {
+void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
     float minStep = max(uniforms.uTexel, 0.0001);
+    float end = max(max(ends.x, ends.y), max(ends.z, ends.w));
     float travelled = uniforms.uRange.x;
+    float through = 1.0;
+    vec3 found = vec3(0.0);
+    // The encounter still open: how deep the axis has reached into (or how
+    // close it came to) the surface at hand, where, at what travel, and how
+    // wide the cone was there.
+    float depth = NOTHING;
+    vec2 at = vec2(0.0);
+    float atTravel = 0.0;
+    float width = minStep;
+    bool inside = false;
+    // A source the walk BEGINS inside of belongs to the level below, whose
+    // interval it straddles: the ray that merges this one has walked it, and
+    // scaling that ray's remainder by a second reading of the same source is
+    // what put a bright ring at every interval boundary. The finest level has
+    // no level below it, and keeps what it starts in.
+    bool skipping = false;
+    // Just out of a source: the field still reads that source, and a near
+    // miss of it would count it twice.
+    bool leaving = false;
+    float previous = 1e8;
+    float stepped = 0.0;
+    float entered = 0.0;
+    bvec4 reported = bvec4(false);
 
     for (int taken = 0; taken < MAX_STEPS; taken++) {
-        if (travelled >= uniforms.uRange.y) {
+        // Each end is reported by the first sample at or past it: what the ray
+        // amounts to there is what it had settled by then, plus a near miss
+        // whose closest point lies before it - one further on is the coarser
+        // ray's to find. An end reached inside a source waits for the exit:
+        // the coarser ray starts inside that source and leaves it alone, so
+        // this ray has to carry the whole of it, and how much that is cannot
+        // be known before the far side.
+        for (int index = 0; index < 4; index++) {
+            if (!reported[index] && !inside && travelled >= ends[index]) {
+                results[index] = settle(found, through, atTravel <= ends[index] ? depth : NOTHING, width, at);
+                reported[index] = true;
+            }
+        }
+
+        if (travelled >= end) {
             break;
         }
 
-        vec2 uv = fieldUv(origin + direction * travelled);
+        vec2 here = origin + direction * travelled;
+        vec2 uv = fieldUv(here);
 
         // Outside the camera there is no field, and a ray that leaves it cannot
         // be told apart from one that found nothing - so it carries on as
@@ -60,71 +141,135 @@ vec4 trace(vec2 origin, vec2 direction) {
             break;
         }
 
-        float distance = texture(uDistance, uv).r * uniforms.uFar;
-        // The ray's own width here, never below a texel: the field cannot
-        // resolve anything finer, and a zero-width cone is the binary hit again.
-        float footprint = max(minStep, travelled * uniforms.uCone);
+        vec2 field = texture(uDistance, uv).rg * uniforms.uFar;
 
+        field.g -= field.r;
+        // The ray's own half-width here. NOT floored at a texel: the widths of a
+        // probe's rays have to tile the circle for their shares to add up to
+        // one, and near the start of an interval a ray is narrower than a texel.
+        float cone = travelled * uniforms.uCone;
+
+        if (field.r <= HIT * minStep) {
+            if (!inside) {
+                // A pending near miss of the surface being entered is this
+                // same surface, approached; one left further back is not.
+                if (depth != NOTHING && travelled - atTravel > 2.0 * max(width, minStep)) {
+                    vec4 settled = settle(found, through, depth, width, at);
+
+                    found = settled.rgb;
+                    through = settled.a;
+                }
+
+                if (texture(uEmission, fieldUv(here + direction * minStep)).a < WALL) {
+                    through = 0.0;
+                    depth = NOTHING;
+
+                    break;
+                }
+
+                inside = true;
+                skipping = taken == 0 && uniforms.uRange.x > 0.0;
+                depth = NOTHING;
+                entered = travelled;
+            }
+
+            float reached = field.g;
+
+            if (!skipping && reached > depth) {
+                depth = reached;
+                at = here;
+                atTravel = travelled;
+                width = cone;
+            }
+
+            previous = 1e8;
+            travelled += max(field.g, minStep);
+
+            continue;
+        }
+
+        if (inside) {
+            // The deepest point of a chord is its middle, and the samples along
+            // it were a texel apart: read the depth there once, exactly, rather
+            // than settle for the nearest sample to it.
+            if (!skipping) {
+                vec2 middle = origin + direction * (0.5 * (entered + travelled));
+                vec2 there = texture(uDistance, fieldUv(middle)).rg * uniforms.uFar;
+
+                if (there.g - there.r > depth) {
+                    depth = there.g - there.r;
+                    at = middle;
+                    atTravel = 0.5 * (entered + travelled);
+                    width = 0.5 * (entered + travelled) * uniforms.uCone;
+                }
+            }
+
+            vec4 settled = settle(found, through, depth, width, at);
+
+            found = settled.rgb;
+            through = settled.a;
+            inside = false;
+            skipping = false;
+            leaving = true;
+            depth = NOTHING;
+        }
+
+        if (leaving) {
+            leaving = field.r <= max(cone, minStep);
+        } else if (previous < 1e7) {
+            // The closest the segment from the previous sample to this one
+            // came to the surface, from the two distances at its ends and the
+            // segment's own length - the nearest point is between the samples,
+            // not at either of them. A first sample has no segment: the surface
+            // it reads may be beside the ray, or behind where it began, and
+            // only the second sample can tell.
+            float along = clamp((stepped * stepped + field.r * field.r - previous * previous) / (2.0 * stepped), 0.0, stepped);
+            float nearest = sqrt(max(field.r * field.r - along * along, 0.0));
+
+            if (-nearest > depth) {
+                vec2 foot = here - direction * along;
+
+                // The estimate assumes a flat surface; the field read at the
+                // foot of it is the truth for a curved one, and never further.
+                depth = -min(nearest, texture(uDistance, fieldUv(foot)).r * uniforms.uFar);
+                at = foot;
+                atTravel = travelled - along;
+                width = max(travelled - along, 0.0) * uniforms.uCone;
+            }
+        }
+
+        previous = field.r;
         // Sphere tracing: a step of the distance to the nearest surface cannot
         // pass through one, which is what makes a whole cascade affordable
         // where marching a texel at a time is not.
-        if (distance <= footprint) {
-            // Sampled past the surface rather than at the point the walk
-            // stopped at: the stop is short of what it hit, and an emitter's
-            // radiance is inside it, not in the gap.
-            vec3 emission = texture(uEmission, fieldUv(origin + direction * (travelled + distance + minStep))).rgb;
-            float coverage = clamp(1.0 - distance / footprint, 0.0, 1.0);
-
-            return vec4(emission * coverage, 1.0 - coverage);
-        }
-
-        travelled += max(distance, minStep);
+        stepped = max(field.r, minStep);
+        travelled += stepped;
     }
 
-    return vec4(0.0, 0.0, 0.0, 1.0);
-}
+    vec4 settled = settle(found, through, depth, width, at);
 
-/** One direction of one probe in the cascade above, as a texel of it. */
-vec3 coarseRay(ivec2 probe, int direction, int tile) {
-    ivec2 within = ivec2(direction % tile, direction / tile);
-
-    return texelFetch(uTexture, probe * tile + within, 0).rgb;
+    for (int index = 0; index < 4; index++) {
+        if (!reported[index]) {
+            results[index] = settled;
+        }
+    }
 }
 
 /**
- * What the cascade above carries for this ray: its four finer-grained
- * directions, averaged, bilinearly interpolated between the four probes of its
- * own coarser grid.
- *
- * Both halves matter. Taking one direction would lose three quarters of the
- * angular detail the level above paid for, and taking the nearest probe would
- * put the probe grid itself into the picture as blocky steps.
+ * The cascade above, for one of its probes: the average of the four
+ * directions there that subdivide this ray's own. Taking one would lose three
+ * quarters of the angular detail the level above paid for.
  */
-vec3 merged(ivec2 probe, int direction, int tile) {
-    int coarseTile = tile * 2;
-    ivec2 coarseProbes = ivec2((int(uniforms.uProbes.x) + 1) / 2, (int(uniforms.uProbes.y) + 1) / 2);
-    // This probe's place in the coarser grid: the coarser probes sit at twice
-    // the spacing, so a probe here lands halfway between two of them.
-    vec2 place = (vec2(probe) + 0.5) * 0.5 - 0.5;
-    vec2 weight = fract(place);
-    ivec2 base = ivec2(floor(place));
-    vec3 total = vec3(0.0);
+vec3 coarseRays(ivec2 probe, int direction, int coarseTile) {
+    vec3 sum = vec3(0.0);
 
-    for (int y = 0; y <= 1; y++) {
-        for (int x = 0; x <= 1; x++) {
-            ivec2 at = clamp(base + ivec2(x, y), ivec2(0), coarseProbes - 1);
-            float share = (x == 0 ? 1.0 - weight.x : weight.x) * (y == 0 ? 1.0 - weight.y : weight.y);
-            vec3 sum = vec3(0.0);
+    for (int sub = 0; sub < 4; sub++) {
+        int coarse = direction * 4 + sub;
 
-            for (int sub = 0; sub < 4; sub++) {
-                sum += coarseRay(at, direction * 4 + sub, coarseTile);
-            }
-
-            total += sum * (0.25 * share);
-        }
+        sum += texelFetch(uTexture, probe * coarseTile + ivec2(coarse % coarseTile, coarse / coarseTile), 0).rgb;
     }
 
-    return total;
+    return sum * 0.25;
 }
 
 void main() {
@@ -144,15 +289,61 @@ void main() {
     ivec2 within = texel - probe * tile;
     int direction = within.y * tile + within.x;
     float angle = (float(direction) + 0.5) / float(tile * tile) * TAU;
+    vec2 heading = vec2(cos(angle), sin(angle));
     vec2 origin = uniforms.uOrigin + (vec2(probe) + 0.5) * uniforms.uSpacing;
-    vec4 walked = trace(origin, vec2(cos(angle), sin(angle)));
+    vec4 results[4];
 
-    // Scaled by what got through: a ray that ended on a surface is already
-    // carrying that surface's radiance, and one that grazed it carries part of
-    // both.
-    if (uniforms.uMerge > 0.5 && walked.a > 0.0) {
-        walked.rgb += walked.a * merged(probe, direction, tile);
+    if (uniforms.uMerge < 0.5) {
+        trace(origin, heading, vec4(uniforms.uRange.y), results);
+        fragColor = vec4(results[0].rgb, 1.0);
+
+        return;
     }
 
-    fragColor = vec4(walked.rgb, 1.0);
+    // The four probes of the coarser grid around this one, bilinearly weighted:
+    // the coarser probes sit at twice the spacing, so a probe here lands
+    // halfway between two of them. Taking the nearest one would put the probe
+    // grid itself into the picture as blocky steps.
+    int coarseTile = tile * 2;
+    float coarseSpacing = uniforms.uSpacing * 2.0;
+    ivec2 coarseProbes = ivec2((int(uniforms.uProbes.x) + 1) / 2, (int(uniforms.uProbes.y) + 1) / 2);
+    vec2 place = (vec2(probe) + 0.5) * 0.5 - 0.5;
+    vec2 weight = fract(place);
+    ivec2 base = ivec2(floor(place));
+    ivec2 corners[4];
+    vec4 ends;
+
+    // Each coarser probe's ray in this direction begins a fixed distance from
+    // THAT probe, which along this ray is short of or past where this level's
+    // interval ends by the probe's own offset. Ending the walk there, per
+    // probe, is what makes the two intervals meet: one end for all four would
+    // leave a gap towards the probes ahead and count the band twice towards
+    // the ones behind, and either shows as a ring of blotches at the boundary.
+    for (int index = 0; index < 4; index++) {
+        ivec2 corner = clamp(base + ivec2(index % 2, index / 2), ivec2(0), coarseProbes - 1);
+        vec2 coarseOrigin = uniforms.uOrigin + (vec2(corner) + 0.5) * coarseSpacing;
+
+        corners[index] = corner;
+        ends[index] = uniforms.uRange.y + dot(coarseOrigin - origin, heading);
+    }
+
+    trace(origin, heading, ends, results);
+
+    vec3 total = vec3(0.0);
+
+    for (int index = 0; index < 4; index++) {
+        float along = (index % 2 == 0 ? 1.0 - weight.x : weight.x) * (index / 2 == 0 ? 1.0 - weight.y : weight.y);
+        vec4 walked = results[index];
+
+        // Scaled by what got through: a ray that ended on a surface is already
+        // carrying that surface's radiance, and one that grazed it carries
+        // part of both.
+        if (walked.a > 0.0) {
+            walked.rgb += walked.a * coarseRays(corners[index], direction, coarseTile);
+        }
+
+        total += walked.rgb * along;
+    }
+
+    fragColor = vec4(total, 1.0);
 }

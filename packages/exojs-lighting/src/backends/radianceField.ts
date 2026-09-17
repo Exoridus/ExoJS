@@ -75,13 +75,16 @@ const unitQuad = (): Geometry =>
 /** Levels the chain is allowed to grow to. Each one quadruples the reach, so six cover any surface. */
 const MAX_CASCADES = 6;
 /**
- * Fraction of an emitter's radius that fades out, so a source has no hard rim.
+ * How far past its shape an emitter's radiance extends, as a multiple of the
+ * finest cascade interval.
  *
- * Small rather than soft on purpose: a ray stops a step SHORT of what it hit
- * and reads the radiance a little inside it, so a wide fade would take that
- * reading off the bright part of a source only a few texels across.
+ * A ray reads radiance from where it STOPPED, and it stops short of the shape
+ * by up to its own width - or passes beside it by that much and still counts
+ * the source in part. The widest a ray gets over any level is about the finest
+ * interval, so a halo of that size is what makes every such read land on the
+ * source's colour rather than on the black beside it.
  */
-const EMITTER_FADE = 0.15;
+const EMITTER_HALO = 1.25;
 
 /**
  * An emitter's size as a fraction of its reach, per unit of `softness`.
@@ -111,7 +114,7 @@ const EMITTER_GAIN = Math.PI / 8;
 
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
-const scratchEmitter = { a_emit: [1, EMITTER_FADE, 0, 0] };
+const scratchEmitter = { a_emit: [1, 0, 0, 0] };
 
 /** Tuning for the radiance field. Every entry has a default derived from the surface. */
 export interface RadianceFieldOptions {
@@ -133,11 +136,12 @@ export interface RadianceFieldOptions {
  * whole thing affordable: detail near a surface comes from the dense level, and
  * detail far away is angular, where the sparse level has it.
  *
- * What this buys over the light quads is bounce: a ray that ends on a lit
- * surface carries that surface's radiance, so a red sign tints the wall beside
- * it with no light placed there. What it costs is that a light no longer falls
- * off as `(1 - d/r)^2` - it propagates - so the same scene does not look
- * identical under the two renderers.
+ * What this buys over the light quads is transport: a source with a size
+ * casts a penumbra that widens with distance, a lamp fills the room it stands
+ * in and thins as one over the distance rather than ending at a radius, and
+ * the cost is per probe rather than per light. What it costs is that the same
+ * scene does not look identical under the two renderers, and that a lit
+ * surface is not yet a source of its own - a ray carries what EMITS.
  * @internal
  */
 export class RadianceField {
@@ -228,7 +232,7 @@ export class RadianceField {
   /**
    * Turn this frame's lights into emitters.
    *
-   * A light's SIZE is its `softness` across its own reach, floored at two
+   * A light's SIZE is its `softness` across its own reach, floored at three
    * texels: that property is the only one in the vocabulary that says a light
    * is not a point, and a source with no size at all would cast shadows with no
    * penumbra at any distance - which is the thing this renderer is for.
@@ -257,18 +261,23 @@ export class RadianceField {
       const falloff = lightFalloff(light);
       const radius = Math.max(3 * texel, falloff * light.softness * EMITTER_SIZE);
       const half = lightHalfLength(light) / radius;
+      const halo = (EMITTER_HALO * this._intervalFor(texel)) / radius;
+      const extent = 1 + halo;
 
       light.getWorldPosition(scratchPosition);
       light.getWorldDirection(scratchDirection);
       scratchEmitter.a_emit[0] = light.intensity * EMITTER_GAIN * (falloff / radius);
-      scratchEmitter.a_emit[1] = EMITTER_FADE;
+      scratchEmitter.a_emit[1] = halo;
       scratchEmitter.a_emit[2] = half;
+      scratchEmitter.a_emit[3] = (0.5 * texel) / radius;
+      // The quad covers the halo as well as the shape, so the fragment stage
+      // can fade the radiance out where nothing reads it any more.
       this._transform.set(
-        radius * (half + 1) * scratchDirection.x,
-        -radius * scratchDirection.y,
+        radius * (half + extent) * scratchDirection.x,
+        -radius * extent * scratchDirection.y,
         scratchPosition.x,
-        radius * (half + 1) * scratchDirection.y,
-        radius * scratchDirection.x,
+        radius * (half + extent) * scratchDirection.y,
+        radius * extent * scratchDirection.x,
         scratchPosition.y,
       );
       this._batch.add(this._transform, light.color, scratchEmitter);
@@ -303,7 +312,7 @@ export class RadianceField {
     const spacing = Math.max(1, this._options.probeSpacing) * texel;
 
     this._view = view;
-    this._interval = spacing * Math.max(0.25, this._options.interval);
+    this._interval = this._intervalFor(texel);
     this._levels = this._levelsFor(Math.hypot(bounds.width, bounds.height));
 
     // Rounded up to a multiple of what the coarsest level halves by, so every
@@ -344,6 +353,11 @@ export class RadianceField {
     this._above.destroy();
     this._emission.destroy();
     this._emitterCount = 0;
+  }
+
+  /** The finest cascade's ray length in world units, for a light-field texel of `texel` world units. */
+  private _intervalFor(texel: number): number {
+    return Math.max(1, this._options.probeSpacing) * texel * Math.max(0.25, this._options.interval);
   }
 
   /** Levels enough for the coarsest one's interval to reach across `span`, or the count the caller fixed. */
