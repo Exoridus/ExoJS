@@ -61,6 +61,10 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
 
 class CountingPass extends RenderPass {
   public executions = 0;
+  public constructor() {
+    super();
+  }
+
   public resizes: Array<[number, number]> = [];
   public destroyed = 0;
 

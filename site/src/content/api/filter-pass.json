@@ -1,0 +1,404 @@
+{
+  "title": "FilterPass",
+  "description": "Runs a Filter or a chain of them from a source texture into a destination, as one pass inside a RenderPipeline. ```ts pipeline .addPass(new RenderNodePass(world, { target: sceneRt, clear: Color.black })) .addPass(new FilterPass(sceneRt, [bloom, grade])); ``` Intermediates between chain stages are borrowed from the backend's render-texture pool for the length of one execute and returned on every path, including when a filter throws. They are sized to the DESTINATION, so a chain neither grows nor shrinks the image: an effect that reaches outside its input (a blur, a glow) is clipped at the destination's edge, which is what a full-frame post-process wants and the one thing a filter at a node does differently - there the capture domain grows to the effect's declared reach, because a node has room around it and a frame does not. An empty chain is a blit, which is the useful degenerate case: it is how a pipeline shows an off-screen target on the canvas. The filters are caller-owned - a filter may be shared with a node or another pass - so destroy releases only what this pass allocated.",
+  "symbol": "FilterPass",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Runs a Filter or a chain of them from a source texture into a destination, as one pass inside a RenderPipeline.",
+        "```ts pipeline .addPass(new RenderNodePass(world, { target: sceneRt, clear: Color.black })) .addPass(new FilterPass(sceneRt, [bloom, grade])); ```",
+        "Intermediates between chain stages are borrowed from the backend's render-texture pool for the length of one execute and returned on every path, including when a filter throws. They are sized to the DESTINATION, so a chain neither grows nor shrinks the image: an effect that reaches outside its input (a blur, a glow) is clipped at the destination's edge, which is what a full-frame post-process wants and the one thing a filter at a node does differently - there the capture domain grows to the effect's declared reach, because a node has room around it and a frame does not.",
+        "An empty chain is a blit, which is the useful degenerate case: it is how a pipeline shows an off-screen target on the canvas.",
+        "The filters are caller-owned - a filter may be shared with a node or another pass - so destroy releases only what this pass allocated."
+      ],
+      "importLine": "import { FilterPass } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(source: RenderTexture, filters: Filter | readonly Filter[], options?: FilterPassOptions): FilterPass",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "filters",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Filter",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Filter",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FilterPassOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FilterPass",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "filters",
+              "type": "Filter | readonly Filter[]",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "FilterPassOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "FilterPass",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release resources this pass allocated internally. No-op by default; idempotent. Never frees injected scene nodes or caller-provided RenderTextures - those are owned by the caller / scene."
+        },
+        {
+          "name": "execute",
+          "signature": "execute(context: RenderingContext): void",
+          "signatureTokens": [
+            {
+              "text": "execute",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderingContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "RenderingContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Run this pass against context. The active render target is the canvas unless a parent redirected it. Called directly, this runs **regardless of enabled** - enabled is evaluated by the containing RenderPipeline, not self-checked here. Subclasses must not begin execute with if (!this.enabled)."
+        },
+        {
+          "name": "resize",
+          "signature": "resize(_width: number, _height: number): void",
+          "signatureTokens": [
+            {
+              "text": "resize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "_height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "React to a surface / target size change. No-op by default; size-dependent passes (effects with scratch targets) override. Called by RenderPipeline.resize, which the caller wires to app.onResize."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When false, the containing RenderPipeline skips this pass during execute. Default true. Evaluated by the parent - a direct execute call runs the pass regardless."
+        },
+        {
+          "name": "label",
+          "signature": "label: string",
+          "signatureTokens": [
+            {
+              "text": "label",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Debug label (inspector / logging). Defaults to the constructor name. Display only - not an identity."
+        },
+        {
+          "name": "filters",
+          "signature": "filters: readonly Filter[]",
+          "signatureTokens": [
+            {
+              "text": "filters",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Filter",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The chain this pass runs, in order."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/FilterPass.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/FilterPass.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/FilterPass.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/FilterPass.ts"
+}
