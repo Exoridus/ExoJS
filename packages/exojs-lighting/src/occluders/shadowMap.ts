@@ -145,3 +145,79 @@ const wrapSigned = (angle: number): number => {
 
   return wrapped;
 };
+
+/**
+ * Fill one directional light's 1D shadow map: for every strip across the
+ * light's direction, how far along that direction the nearest occluder sits, as
+ * a fraction of the strip range's own span.
+ *
+ * A sun has no centre to measure angles from, so the row is linear where a
+ * point light's is polar. Bin `i` covers the strip
+ * `[spanMin + i * span / bins, ...)` of the coordinate across the light, and
+ * the value stored is the smallest `depth` any occluder reaches in it - `1`
+ * where nothing blocks, so a fragment shallower than the stored depth is lit.
+ *
+ * `depthMin` and `depthSpan` put the depth into `0..1` over the same region the
+ * strips cover, which is what lets one `R32F` atlas hold polar and linear rows
+ * side by side.
+ *
+ * Both axes are given as unit vectors: `(alongX, alongY)` is the direction the
+ * light travels, `(acrossX, acrossY)` is perpendicular to it.
+ * @internal
+ */
+export const buildSunShadowRow = (
+  segments: Float32Array,
+  segmentCount: number,
+  alongX: number,
+  alongY: number,
+  acrossX: number,
+  acrossY: number,
+  spanMin: number,
+  spanSize: number,
+  depthMin: number,
+  depthSpan: number,
+  row: Float32Array,
+  bins: number,
+): void => {
+  row.fill(unoccluded, 0, bins);
+
+  if (bins <= 0 || spanSize <= 0 || depthSpan <= 0) {
+    return;
+  }
+
+  const binsPerUnit = bins / spanSize;
+
+  for (let index = 0; index < segmentCount; index++) {
+    const offset = index * 4;
+    const x1 = segments[offset]!;
+    const y1 = segments[offset + 1]!;
+    const x2 = segments[offset + 2]!;
+    const y2 = segments[offset + 3]!;
+    const across1 = acrossX * x1 + acrossY * y1;
+    const across2 = acrossX * x2 + acrossY * y2;
+    const depth1 = (alongX * x1 + alongY * y1 - depthMin) / depthSpan;
+    const depth2 = (alongX * x2 + alongY * y2 - depthMin) / depthSpan;
+    const firstBin = Math.floor((Math.min(across1, across2) - spanMin) * binsPerUnit);
+    const lastBin = Math.ceil((Math.max(across1, across2) - spanMin) * binsPerUnit);
+    const width = across2 - across1;
+
+    for (let bin = Math.max(0, firstBin); bin <= Math.min(bins - 1, lastBin); bin++) {
+      // Sampled at the strip's centre, the way the polar row samples at a bin's
+      // centre, so a silhouette edge is accurate to half a strip.
+      const across = spanMin + (bin + 0.5) / binsPerUnit;
+      // A segment lying exactly along the light contributes its nearer end to
+      // the one strip it occupies rather than nothing at all.
+      const t = width === 0 ? 0 : (across - across1) / width;
+
+      if (t < 0 || t > 1) {
+        continue;
+      }
+
+      const depth = depth1 + (depth2 - depth1) * t;
+
+      if (depth > 0 && depth < row[bin]!) {
+        row[bin] = depth;
+      }
+    }
+  }
+};

@@ -8,7 +8,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -410,6 +410,50 @@ describe('WebGL2 lightmap renderer', () => {
       // reach would not do on the other axis.
       expect(readPixel(host.backend, 32, 14)[0]).toBeLessThan(10);
       expect(readPixel(host.backend, 60, 32)[0]).toBeGreaterThan(30);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a sun lights the whole view evenly and casts a parallel shadow', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // Unrotated, so the light travels along world +x and shadows fall to the
+    // right of whatever blocks it.
+    lighting.add(new SunLight({ intensity: 1, softness: 0 }));
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // No falloff anywhere: the far corner is as lit as the centre.
+      const centre = readPixel(host.backend, 32, 32)[0];
+
+      expect(centre).toBeGreaterThan(200);
+      expect(Math.abs(readPixel(host.backend, 4, 4)[0] - centre)).toBeLessThan(10);
+      expect(Math.abs(readPixel(host.backend, 60, 60)[0] - centre)).toBeLessThan(10);
+
+      // A short wall: its shadow is a band of the wall's own width, not a
+      // widening wedge, and it reaches the edge of the view.
+      lighting.occludeFrom(
+        Occluders.fromPolygon(
+          [
+            { x: 20, y: 24 },
+            { x: 20, y: 40 },
+          ],
+          { closed: false },
+        ),
+      );
+      runFrame(host, lighting);
+
+      expect(readPixel(host.backend, 32, 32)[0]).toBeLessThan(20);
+      expect(readPixel(host.backend, 60, 32)[0]).toBeLessThan(20);
+      // Beside the wall, and in front of it, the sun still lands.
+      expect(readPixel(host.backend, 32, 8)[0]).toBeGreaterThan(200);
+      expect(readPixel(host.backend, 32, 56)[0]).toBeGreaterThan(200);
+      expect(readPixel(host.backend, 8, 32)[0]).toBeGreaterThan(200);
     } finally {
       lighting.destroy();
       host.destroy();

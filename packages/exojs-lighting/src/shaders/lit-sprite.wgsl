@@ -45,5 +45,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         lit = lit + tint.rgb * (max(dot(normal, direction), 0.0) * falloff * falloff * light.w * coneTerm);
     }
 
-    return vec4<f32>(base.rgb * lit, base.a) * input.color;
+    // Emission is added to the light rather than to the colour, so it scales
+    // the albedo the same way a light does and a transparent pixel stays
+    // transparent instead of glowing through its own alpha.
+    return vec4<f32>(base.rgb * (lit + uniforms.emissive), base.a) * input.color;
 }

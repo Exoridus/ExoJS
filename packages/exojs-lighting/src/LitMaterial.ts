@@ -1,4 +1,4 @@
-import { type BlendModes, type SamplerOptions, Shader, SpriteMaterial, type Texture } from '@codexo/exojs';
+import { type BlendModes, type SamplerOptions, Shader, SpriteMaterial, type Texture, UniformType } from '@codexo/exojs';
 
 import type { ForwardBackend } from './backends/ForwardBackend';
 import type { Lighting } from './Lighting';
@@ -11,7 +11,11 @@ import wgslSource from './shaders/lit-sprite.wgsl';
  * per-material GPU state on the shader instance, so sharing it keeps two
  * materials over the same textures in one pipeline.
  */
-const litSpriteShader = new Shader({ glsl: { fragment: glslFragment }, wgsl: wgslSource });
+const litUniforms = { emissive: UniformType.Float } as const;
+
+type LitUniforms = typeof litUniforms;
+
+const litSpriteShader = new Shader({ uniforms: litUniforms, glsl: { fragment: glslFragment }, wgsl: wgslSource });
 
 /** Construction options for {@link LitMaterial}. */
 export interface LitMaterialOptions {
@@ -23,6 +27,17 @@ export interface LitMaterialOptions {
    * lit rather than black, and normals are an upgrade instead of an entry fee.
    */
   readonly normals?: NormalSource;
+  /**
+   * How much light the surface emits of its own, as a multiplier on its albedo.
+   * `0` emits nothing, `1` makes the surface as bright as full white light
+   * would, above `1` pushes it past what a light could - which is what a filter
+   * in `post` keyed on a threshold is there to catch.
+   *
+   * It is added to the light term rather than to the colour, so a transparent
+   * pixel stays transparent and emission scales the albedo the way a light
+   * does: a black pixel emits nothing however high this is. Defaults to `0`.
+   */
+  readonly emissive?: number;
   /** Blend mode for sprites drawn with this material. */
   readonly blendMode?: BlendModes;
   /** Sampler for the base texture. */
@@ -53,7 +68,7 @@ export interface LitMaterialOptions {
  * The material owns neither the lighting system nor the textures. `destroy()`
  * releases only the GPU resources cached against this material.
  */
-export class LitMaterial extends SpriteMaterial {
+export class LitMaterial extends SpriteMaterial<LitUniforms> {
   /** The system this material shades against. */
   public readonly lighting: Lighting;
 
@@ -86,6 +101,16 @@ export class LitMaterial extends SpriteMaterial {
     });
 
     this.lighting = options.lighting;
+    this.emissive = options.emissive ?? 0;
+  }
+
+  /** How much light the surface emits of its own. See {@link LitMaterialOptions.emissive}. */
+  public get emissive(): number {
+    return this.uniforms.emissive.value;
+  }
+
+  public set emissive(emissive: number) {
+    this.uniforms.emissive.set(emissive);
   }
 
   /** The bound normal map. Assigning a replacement takes effect on the next draw. */

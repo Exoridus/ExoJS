@@ -24,9 +24,10 @@ import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { Light } from '../lights/Light';
 import { lightFalloff, lightHalfLength, lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
+import { SunLight } from '../lights/SunLight';
 import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
-import { buildShadowRow } from '../occluders/shadowMap';
+import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
 import type { LightingBackend } from './LightingBackend';
 import lightCompositeFragment from './shaders/light-composite.frag';
 import lightCompositeVertex from './shaders/light-composite.vert';
@@ -40,6 +41,9 @@ import normalPrepassWgsl from './shaders/normal-prepass.wgsl';
 import occluderDebugFragment from './shaders/occluder-debug.frag';
 import occluderDebugVertex from './shaders/occluder-debug.vert';
 import occluderDebugWgsl from './shaders/occluder-debug.wgsl';
+import sunQuadFragment from './shaders/sun-quad.frag';
+import sunQuadVertex from './shaders/sun-quad.vert';
+import sunQuadWgsl from './shaders/sun-quad.wgsl';
 
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 const noCone = -1;
@@ -52,6 +56,7 @@ const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
 const scratchInstance = { a_light: [noCone, noCone, 1, 0], a_shadow: [noShadow, 0], a_surface: [1, 0, 1, 0] };
 const scratchSurface = { a_frame: [0, 0, 1, 1], a_basis: [1, 0, 0, 1] };
+const scratchSun = { a_box: [0, 0, 1, 1], a_sun: [1, 0, 1, noShadow], a_range: [0, 1, 0, 1], a_beam: [1, 0] };
 
 /** Unit quad in `-1..1`, which is the light's own space: distance from its centre in radii. */
 const unitQuad = (): Geometry =>
@@ -167,6 +172,14 @@ export class LightmapBackend implements LightingBackend {
    * however many of them there are.
    */
   private readonly _lightBatches = new Map<Texture, RenderBatch>();
+  /**
+   * The directional lights, in a batch of their own. A sun has no radius to
+   * normalize by and no falloff to apply, so it shares neither the light quad's
+   * geometry nor its shader - but it shares the target, and additive blending
+   * does not care which draw arrived first.
+   */
+  private readonly _sunBatch: RenderBatch;
+  private readonly _sunMaterial: MeshMaterial;
   private readonly _compositeMaterial: MeshMaterial;
   private readonly _debugMaterial: MeshMaterial;
   private readonly _compositeBatch: RenderBatch;
@@ -205,6 +218,24 @@ export class LightmapBackend implements LightingBackend {
     });
     this._shadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.R32F });
 
+    this._sunMaterial = new MeshMaterial({
+      shader: new Shader({
+        glsl: {
+          vertex: `#version 300 es
+${INSTANCE_TRANSFORM_GLSL}
+${sunQuadVertex}`,
+          fragment: sunQuadFragment,
+        },
+        wgsl: `${INSTANCE_TRANSFORM_WGSL}
+${sunQuadWgsl}`,
+      }),
+      // Declaration order is the group(2) binding order on WebGPU: the shadow
+      // rows at bindings 1/2 and the normal prepass at 3/4, matching
+      // `sun-quad.wgsl`.
+      textures: { u_shadow: this._shadowMap, u_normal: transparentTexture() },
+      blendMode: BlendModes.Additive,
+    });
+
     this._compositeMaterial = new MeshMaterial({
       shader: new Shader({
         glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightCompositeVertex}`, fragment: lightCompositeFragment },
@@ -222,6 +253,14 @@ export class LightmapBackend implements LightingBackend {
       blendMode: BlendModes.Normal,
     });
 
+    this._sunBatch = new RenderBatch(this._lightGeometry, this._sunMaterial, {
+      instanceAttributes: [
+        { name: 'a_box', format: 'float32x4' },
+        { name: 'a_sun', format: 'float32x4' },
+        { name: 'a_range', format: 'float32x4' },
+        { name: 'a_beam', format: 'float32x2' },
+      ],
+    });
     this._compositeBatch = new RenderBatch(this._compositeGeometry, this._compositeMaterial);
     this._debugBatch = new RenderBatch(this._debugGeometry, this._debugMaterial);
 
@@ -382,12 +421,102 @@ export class LightmapBackend implements LightingBackend {
       written++;
     }
 
+    written = this._writeSuns(lights, shadows, segments, segmentCount, written);
+
     if (shadows !== null && written > 0) {
       this._shadowMap.commit();
     }
 
     this._activeCount = written;
     this._writeOccluderDebug(occluders);
+  }
+
+  /**
+   * Write the directional lights, continuing the shadow-row numbering the point
+   * lights left off at.
+   *
+   * A sun's quad is the camera's own world box and its shadow row is a line of
+   * strips across the light rather than a circle of rays around it, because
+   * there is no centre to measure angles from. The strips span the same box, so
+   * the region the occluder sources were collected for has to cover it - which
+   * is what the system arranges by folding the view into that region whenever a
+   * sun is registered.
+   */
+  private _writeSuns(lights: readonly Light[], shadows: Float32Array | null, segments: Float32Array, segmentCount: number, rows: number): number {
+    this._sunBatch.clear();
+
+    let written = rows;
+
+    for (const light of lights) {
+      if (!(light instanceof SunLight) || !light.enabled || light.intensity <= 0) {
+        continue;
+      }
+
+      const view = this._app.rendering.view.getBounds();
+      const halfWidth = Math.max(1, view.width) / 2;
+      const halfHeight = Math.max(1, view.height) / 2;
+      const centerX = view.left + halfWidth;
+      const centerY = view.top + halfHeight;
+
+      light.getWorldDirection(scratchDirection);
+
+      const alongX = scratchDirection.x;
+      const alongY = scratchDirection.y;
+      const acrossX = -alongY;
+      const acrossY = alongX;
+      // The box is axis-aligned in world space, so its extent along an
+      // arbitrary axis is the sum of each side's projection onto it - no need
+      // to walk the corners.
+      const acrossReach = Math.abs(acrossX) * halfWidth + Math.abs(acrossY) * halfHeight;
+      const alongReach = Math.abs(alongX) * halfWidth + Math.abs(alongY) * halfHeight;
+      const acrossCenter = acrossX * centerX + acrossY * centerY;
+      const alongCenter = alongX * centerX + alongY * centerY;
+      const spanMin = acrossCenter - acrossReach;
+      const spanSize = 2 * acrossReach;
+      const depthMin = alongCenter - alongReach;
+      const depthSpan = 2 * alongReach;
+
+      if (shadows === null) {
+        scratchSun.a_sun[3] = noShadow;
+      } else {
+        scratchSun.a_sun[3] = written;
+        buildSunShadowRow(
+          segments,
+          segmentCount,
+          alongX,
+          alongY,
+          acrossX,
+          acrossY,
+          spanMin,
+          spanSize,
+          depthMin,
+          depthSpan,
+          shadows.subarray(written * this._shadowResolution, (written + 1) * this._shadowResolution),
+          this._shadowResolution,
+        );
+      }
+
+      scratchSun.a_box[0] = centerX;
+      scratchSun.a_box[1] = centerY;
+      scratchSun.a_box[2] = halfWidth;
+      scratchSun.a_box[3] = halfHeight;
+      scratchSun.a_sun[0] = alongX;
+      scratchSun.a_sun[1] = alongY;
+      scratchSun.a_sun[2] = light.height;
+      scratchSun.a_range[0] = spanMin;
+      scratchSun.a_range[1] = spanSize;
+      scratchSun.a_range[2] = depthMin;
+      scratchSun.a_range[3] = depthSpan;
+      scratchSun.a_beam[0] = light.intensity;
+      scratchSun.a_beam[1] = light.softness;
+
+      this._transform.set(halfWidth, 0, centerX, 0, halfHeight, centerY);
+      this._tint.set(light.color.r, light.color.g, light.color.b, 255);
+      this._sunBatch.add(this._transform, this._tint, scratchSun);
+      written++;
+    }
+
+    return written;
   }
 
   /** Surfaces the last publish actually wrote - hidden and untextured ones are skipped. */
@@ -433,6 +562,8 @@ export class LightmapBackend implements LightingBackend {
     }
 
     this._lightBatches.clear();
+    this._sunBatch.destroy();
+    this._sunMaterial.destroy();
 
     for (const byNormal of this._normalBatches.values()) {
       for (const batch of byNormal.values()) {
@@ -461,6 +592,10 @@ export class LightmapBackend implements LightingBackend {
       if (batch.count > 0) {
         pass.drawBatch(batch, { view: this._app.rendering.view });
       }
+    }
+
+    if (this._sunBatch.count > 0) {
+      pass.drawBatch(this._sunBatch, { view: this._app.rendering.view });
     }
   }
 
@@ -565,6 +700,8 @@ export class LightmapBackend implements LightingBackend {
       for (const batch of this._lightBatches.values()) {
         batch.material?.setTexture('u_normal', this._boundNormals());
       }
+
+      this._sunMaterial.setTexture('u_normal', this._boundNormals());
     }
 
     this._surfaceCount = written;
@@ -717,6 +854,8 @@ ${normalPrepassWgsl}`,
     for (const batch of this._lightBatches.values()) {
       batch.material?.setTexture('u_shadow', this._shadowMap);
     }
+
+    this._sunMaterial.setTexture('u_shadow', this._shadowMap);
   }
 
   private readonly _onResize = (): void => {

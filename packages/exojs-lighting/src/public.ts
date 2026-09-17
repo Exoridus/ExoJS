@@ -12,6 +12,8 @@ export type { PointLightOptions } from './lights/PointLight';
 export { PointLight } from './lights/PointLight';
 export type { SpotLightOptions } from './lights/SpotLight';
 export { SpotLight } from './lights/SpotLight';
+export type { SunLightOptions } from './lights/SunLight';
+export { SunLight } from './lights/SunLight';
 export type { LitMaterialOptions } from './LitMaterial';
 export { LitMaterial } from './LitMaterial';
 export type { DeriveNormalsOptions } from './normals/deriveNormals';

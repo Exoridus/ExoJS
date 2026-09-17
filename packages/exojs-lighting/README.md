@@ -148,7 +148,15 @@ sign.addChild(new LineLight({ length: 120, radius: 160, color: Color.cyan }));
 
 A line light's `radius` is the distance from the SEGMENT, so it reaches `length / 2 + radius` along its own axis and `radius` across it. Its shadow map is polar around the segment's centre, the same as a point light's: exact for a fragment the segment subtends little of, approximate near a long tube's end, where a real emitter would light an occluder from many points at once. `softness` is the knob that stands in for that.
 
-`forward` has no capsule in its shader, so it draws a line light as a point light at the segment's centre with the whole reach as its radius.
+`SunLight` has a direction and no position: a sun, a moon, a distant floodlight. It reaches everything the camera can see, falls off nowhere, and its shadows are parallel.
+
+```ts
+scene.addChild(lighting.add(new SunLight({ intensity: 0.8 }))).setRotation(-35);
+```
+
+Its shadow map is a line rather than a circle - there is no centre to measure angles from, so instead of an angular bin per direction it has one bin per strip across the light, holding how far along the light the nearest occluder in that strip sits. The strips span the visible world, which is why registering a sun widens the region the occluder sources are asked for to the camera's own bounds. `height` is a slope rather than a length, because a source at no particular distance has no other meaning for it.
+
+`forward` has no capsule and no directional term in its shader, so it draws a line light as a point light at the segment's centre with the whole reach as its radius, and skips a sun entirely.
 
 Shapes are deliberately not extensible: a shape is instance data a light-pass shader evaluates, and opening it up means either exposing that shader's structure or accepting a draw per shape. Cookies plus parameters cover what people build, and additive extension stays possible later.
 
@@ -222,7 +230,7 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 | Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                              |
 | Light cookies                               | `lightmap`, one draw per distinct cookie                         |
 | Line lights (capsule falloff)               | yes; `forward` approximates one as a point light                 |
-| Sun lights                                  | no                                                               |
+| Sun lights (parallel shadows)               | `lightmap` only                                                  |
 | Deferred (G-buffer) path                    | no                                                               |
 | Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                            |
 

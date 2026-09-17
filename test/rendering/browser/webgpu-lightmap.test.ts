@@ -6,7 +6,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -353,6 +353,49 @@ describe('lightmap renderer WebGPU browser', () => {
       expect(rotated(32, 32)).toBeLessThan(146);
     } finally {
       crate.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a sun lights the whole view evenly and casts a parallel shadow', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // Unrotated, so the light travels along world +x and shadows fall to the
+    // right of whatever blocks it.
+    lighting.add(new SunLight({ intensity: 1, softness: 0 }));
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 20, y: 24 },
+          { x: 20, y: 40 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      // The shadow is a band of the wall's own width that reaches the edge of
+      // the view, not a widening wedge.
+      expect(at(32, 32)).toBeLessThan(20);
+      expect(at(60, 32)).toBeLessThan(20);
+      // Beside the wall, in front of it, and in the far corner: no falloff.
+      expect(at(32, 8)).toBeGreaterThan(200);
+      expect(at(32, 56)).toBeGreaterThan(200);
+      expect(at(8, 32)).toBeGreaterThan(200);
+      expect(at(60, 60)).toBeGreaterThan(200);
+    } finally {
       lighting.destroy();
       host.destroy();
     }

@@ -5,6 +5,7 @@ import type { LightingBackend } from './backends/LightingBackend';
 import { LightmapBackend } from './backends/LightmapBackend';
 import type { Light } from './lights/Light';
 import { lightRadius } from './lights/reach';
+import { SunLight } from './lights/SunLight';
 import type { NormalSource } from './normals/Normals';
 import type { NormalSurface, NormalSurfaceDrawable } from './normals/NormalSurface';
 import { OccluderField } from './occluders/OccluderField';
@@ -192,6 +193,7 @@ export class Lighting {
     this._backend.debug = view;
   }
 
+  private readonly _app: Application | null;
   private readonly _post: readonly Filter[];
   private readonly _lights: Light[] = [];
   private readonly _occluders: OccluderSource[] = [];
@@ -202,6 +204,7 @@ export class Lighting {
 
   public constructor(options: LightingOptions = {}) {
     this.ambient = options.ambient ?? new Color(28, 28, 38);
+    this._app = options.app ?? null;
     this._post = options.post ?? [];
     this._backend = createBackend(options, this._post);
     // Publish once up front: a renderer that has never been told the ambient
@@ -441,6 +444,19 @@ export class Lighting {
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
+
+    // A directional light has no reach to bound, so what bounds it is what can
+    // be seen: its shadows are parallel and every visible occluder casts one.
+    // The renderer reads the same view when it builds the strips, so the two
+    // agree without the region having to travel between them.
+    if (this._app !== null && this._lights.some(light => light instanceof SunLight && light.enabled && light.intensity > 0)) {
+      const view = this._app.rendering.view.getBounds();
+
+      minX = view.left;
+      minY = view.top;
+      maxX = view.right;
+      maxY = view.bottom;
+    }
 
     for (const light of this._lights) {
       if (!light.enabled || light.intensity <= 0) {
