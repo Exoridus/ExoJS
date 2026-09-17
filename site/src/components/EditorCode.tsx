@@ -4,7 +4,7 @@ import MonacoReactEditor, { loader, type OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-import { type ChangeEvent, type Ref, type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { type ChangeEvent, type ReactNode, type Ref, type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsPromise } from '../lib/footgun-diagnostics';
 import { buildPublicUrl } from '../lib/url-builder';
@@ -49,6 +49,8 @@ export interface EditorCodeProps {
   canReset: boolean;
   exampleTitle: string;
   language: 'javascript' | 'typescript';
+  /** Controls shown before the toolbar's title. */
+  leading?: ReactNode;
   readOnly?: boolean;
   ref?: Ref<EditorCodeHandle>;
   selectedVersionId: string;
@@ -118,6 +120,7 @@ export const EditorCode = ({
   canReset,
   exampleTitle,
   language,
+  leading,
   onCursorChange,
   onDiagnostic,
   onDirty,
@@ -363,7 +366,7 @@ export const EditorCode = ({
 
   return (
     <section className={css(styles, 'root')} data-editor-root aria-label={`Code editor for ${exampleTitle}`}>
-      <Toolbar title="Code">
+      <Toolbar title="Code" leading={leading}>
         <div className={css(styles, 'menu-anchor')} data-editor-menu-anchor>
           <button
             className={cx(css(styles, 'auto-button'), autoRefresh && css(styles, 'auto-button--active'))}

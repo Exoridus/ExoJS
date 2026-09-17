@@ -160,13 +160,21 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
+      'preview editor'
+      'diag editor'
+      'errors editor'
+      '. editor';
+    grid-template-rows: auto auto auto 1fr;
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .root[data-layout='split'][data-order='editor-first'] {
+    grid-template-areas:
       'editor preview'
       'editor diag'
       'editor errors'
       'editor .';
-    grid-template-rows: auto auto auto 1fr;
-    gap: 0.75rem;
-    align-items: start;
   }
 
   .root[data-layout='split'] .editor-frame {
