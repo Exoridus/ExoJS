@@ -5,7 +5,7 @@
 struct VertexInput {
     @location(0) position: vec2<f32>,
     @location(6) nodeIndex: u32,
-    @location(7) light: vec3<f32>,
+    @location(7) light: vec4<f32>,
     @location(8) shadow: vec2<f32>,
     @location(9) surface: vec4<f32>,
 };
@@ -22,6 +22,9 @@ struct VertexOutput {
     // vector: what it takes to turn a fragment's light-space offset back into
     // the world-space direction a surface normal can be measured against.
     @location(6) @interpolate(flat) surface: vec4<f32>,
+    // Half the emitting segment, in falloff radii. Zero for every shape that
+    // emits from a point.
+    @location(7) @interpolate(flat) half: f32,
 };
 
 // One row per shadowed light: the distance to the nearest occluder along each
@@ -33,6 +36,10 @@ struct VertexOutput {
 // coverage: zero means nothing described a surface there.
 @group(2) @binding(3) var u_normal: texture_2d<f32>;
 @group(2) @binding(4) var u_normalSampler: sampler;
+// The pattern this batch's lights are shone through, across the light's own
+// bounding square. Opaque white for a batch whose lights carry none.
+@group(2) @binding(5) var u_cookie: texture_2d<f32>;
+@group(2) @binding(6) var u_cookieSampler: sampler;
 
 const PI: f32 = 3.14159265359;
 const SHADOW_TAPS: i32 = 5;
@@ -41,6 +48,12 @@ const MAX_PENUMBRA: f32 = 0.03;
 /** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
 const SHADOW_BIAS: f32 = 0.004;
 
+/**
+ * `distance` is the RADIAL distance from the light's own position, as a
+ * fraction of the light's whole reach - the frame the polar rows were built in.
+ * The falloff term measures to the segment instead, which is a different
+ * quantity for a line light and the same one for every other shape.
+ */
 fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) -> f32 {
     if (shadowRow < 0.0) {
         return 1.0;
@@ -97,7 +110,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
     output.position = vec4<f32>(exoInstanceClipPosition(input.position, input.nodeIndex), 0.0, 1.0);
-    output.local = input.position;
+    // The quad is stretched along the light's axis by the same amount, so the
+    // fragment stage still measures in radii.
+    output.half = input.light.w;
+    output.local = vec2<f32>(input.position.x * (input.light.w + 1.0), input.position.y);
     output.tint = exoInstanceTint(input.nodeIndex);
     output.cone = vec2<f32>(input.light.x, input.light.y);
     output.intensity = input.light.z;
@@ -110,7 +126,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    let distance = length(input.local);
+    // Distance to the segment, not to the centre: folding `x` onto the segment
+    // first is what turns the disc into a capsule, and a zero half-length
+    // leaves the disc exactly as it was.
+    let toSegment = vec2<f32>(max(abs(input.local.x) - input.half, 0.0), input.local.y);
+    let distance = length(toSegment);
     let falloff = clamp(1.0 - distance, 0.0, 1.0);
 
     // A point light writes both cone cosines as -1, which no direction can
@@ -118,7 +138,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     var direction = vec2<f32>(1.0, 0.0);
 
     if (distance > 0.0) {
-        direction = input.local / distance;
+        direction = toSegment / distance;
     }
 
     let alignment = direction.x;
@@ -128,8 +148,12 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         coneTerm = step(input.cone.x, alignment);
     }
 
-    let shadow = shadowTerm(input.local, distance, input.shadowRow, input.softness);
+    let shadow = shadowTerm(input.local, length(input.local) / (input.half + 1.0), input.shadowRow, input.softness);
     let surface = surfaceTerm(input.position.xy, input.local, input.surface);
+    // The quad spans -1..1 in the light's own frame, which is the cookie's 0..1
+    // exactly - so the pattern turns and scales with the light for free, and a
+    // premultiplied texel that is transparent contributes nothing.
+    let cookie = textureSample(u_cookie, u_cookieSampler, input.local * 0.5 + vec2<f32>(0.5)).rgb;
 
-    return vec4<f32>(input.tint.rgb * (falloff * falloff * coneTerm * input.intensity * shadow * surface), 1.0);
+    return vec4<f32>(input.tint.rgb * cookie * (falloff * falloff * coneTerm * input.intensity * shadow * surface), 1.0);
 }

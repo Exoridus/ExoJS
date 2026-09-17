@@ -6,6 +6,8 @@ export type { LightingDebugView, LightingOptions, LightingQuality, LightingQuali
 export { Lighting } from './Lighting';
 export type { LightOptions } from './lights/Light';
 export { Light } from './lights/Light';
+export type { LineLightOptions } from './lights/LineLight';
+export { LineLight } from './lights/LineLight';
 export type { PointLightOptions } from './lights/PointLight';
 export { PointLight } from './lights/PointLight';
 export type { SpotLightOptions } from './lights/SpotLight';

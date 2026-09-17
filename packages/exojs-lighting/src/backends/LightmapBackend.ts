@@ -159,10 +159,16 @@ export class LightmapBackend implements LightingBackend {
   private readonly _normalGeometry: Geometry = boxQuad();
   private readonly _compositeGeometry: Geometry = screenQuad();
   private readonly _debugGeometry: Geometry = segmentQuad();
-  private readonly _lightMaterial: MeshMaterial;
+  /**
+   * One batch per cookie texture, with the shared opaque white standing in for
+   * "no cookie". A cookie is a texture and a texture is a material binding, so
+   * lights shining through different patterns cannot share a draw - but lights
+   * sharing one still do, and the uncookied majority stays in a single batch
+   * however many of them there are.
+   */
+  private readonly _lightBatches = new Map<Texture, RenderBatch>();
   private readonly _compositeMaterial: MeshMaterial;
   private readonly _debugMaterial: MeshMaterial;
-  private readonly _batch: RenderBatch;
   private readonly _compositeBatch: RenderBatch;
   private readonly _debugBatch: RenderBatch;
   private readonly _normalTarget: RenderTexture;
@@ -199,18 +205,6 @@ export class LightmapBackend implements LightingBackend {
     });
     this._shadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.R32F });
 
-    this._lightMaterial = new MeshMaterial({
-      shader: new Shader({
-        glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightQuadVertex}`, fragment: lightQuadFragment },
-        wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightQuadWgsl}`,
-      }),
-      // Declaration order is the group(2) binding order on WebGPU: the shadow
-      // rows at bindings 1/2, the normal prepass at 3/4, matching
-      // `light-quad.wgsl`.
-      textures: { u_shadow: this._shadowMap, u_normal: transparentTexture() },
-      blendMode: BlendModes.Additive,
-    });
-
     this._compositeMaterial = new MeshMaterial({
       shader: new Shader({
         glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightCompositeVertex}`, fragment: lightCompositeFragment },
@@ -228,13 +222,6 @@ export class LightmapBackend implements LightingBackend {
       blendMode: BlendModes.Normal,
     });
 
-    this._batch = new RenderBatch(this._lightGeometry, this._lightMaterial, {
-      instanceAttributes: [
-        { name: 'a_light', format: 'float32x3' },
-        { name: 'a_shadow', format: 'float32x2' },
-        { name: 'a_surface', format: 'float32x4' },
-      ],
-    });
     this._compositeBatch = new RenderBatch(this._compositeGeometry, this._compositeMaterial);
     this._debugBatch = new RenderBatch(this._debugGeometry, this._debugMaterial);
 
@@ -318,8 +305,11 @@ export class LightmapBackend implements LightingBackend {
     this._writeSurfaces(surfaces);
     this._resize();
     this._ambient.copy(ambient);
-    this._batch.clear();
     this._growShadowMap(lights.length);
+
+    for (const batch of this._lightBatches.values()) {
+      batch.clear();
+    }
 
     const bins = this._shadowResolution;
     const shadows = occluders.count > 0 ? this._shadowMap.buffer : null;
@@ -383,7 +373,7 @@ export class LightmapBackend implements LightingBackend {
         scratchPosition.y,
       );
       this._tint.set(light.color.r, light.color.g, light.color.b, 255);
-      this._batch.add(this._transform, this._tint, scratchInstance);
+      this._lightBatch(light.cookie ?? whiteTexture()).add(this._transform, this._tint, scratchInstance);
       written++;
     }
 
@@ -423,16 +413,21 @@ export class LightmapBackend implements LightingBackend {
     }
 
     this._shaded?.destroy();
-    this._batch.destroy();
     this._compositeBatch.destroy();
     this._debugBatch.destroy();
-    this._lightMaterial.destroy();
     this._compositeMaterial.destroy();
     this._debugMaterial.destroy();
     this._lightGeometry.destroy();
     this._normalGeometry.destroy();
     this._compositeGeometry.destroy();
     this._debugGeometry.destroy();
+
+    for (const batch of this._lightBatches.values()) {
+      batch.material?.destroy();
+      batch.destroy();
+    }
+
+    this._lightBatches.clear();
 
     for (const byNormal of this._normalBatches.values()) {
       for (const batch of byNormal.values()) {
@@ -457,7 +452,11 @@ export class LightmapBackend implements LightingBackend {
    * moved.
    */
   private _drawLights(pass: PassContext): void {
-    pass.drawBatch(this._batch, { view: this._app.rendering.view });
+    for (const batch of this._lightBatches.values()) {
+      if (batch.count > 0) {
+        pass.drawBatch(batch, { view: this._app.rendering.view });
+      }
+    }
   }
 
   /**
@@ -553,14 +552,59 @@ export class LightmapBackend implements LightingBackend {
 
     if (describes !== this._normalPass.enabled) {
       this._normalPass.enabled = describes;
+
       // An untouched render target holds whatever the driver left there, so the
       // light shader must never read the one-texel placeholder the prepass is
       // parked at. A texture that is zero everywhere reads as "nothing
       // described a surface", which is the term that changes nothing.
-      this._lightMaterial.setTexture('u_normal', describes ? this._normalTarget : transparentTexture());
+      for (const batch of this._lightBatches.values()) {
+        batch.material?.setTexture('u_normal', this._boundNormals());
+      }
     }
 
     this._surfaceCount = written;
+  }
+
+  /**
+   * The light batch for one cookie, built on first use and kept for the
+   * backend's life. A scene that switches a lamp's cookie back and forth keeps
+   * both batches rather than rebuilding a material per frame; an unused one
+   * holds a material and an empty instance buffer.
+   */
+  private _lightBatch(cookie: Texture): RenderBatch {
+    const existing = this._lightBatches.get(cookie);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const material = new MeshMaterial({
+      shader: new Shader({
+        glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightQuadVertex}`, fragment: lightQuadFragment },
+        wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightQuadWgsl}`,
+      }),
+      // Declaration order is the group(2) binding order on WebGPU: the shadow
+      // rows at bindings 1/2, the normal prepass at 3/4, the cookie at 5/6,
+      // matching `light-quad.wgsl`.
+      textures: { u_shadow: this._shadowMap, u_normal: this._boundNormals(), u_cookie: cookie },
+      blendMode: BlendModes.Additive,
+    });
+    const batch = new RenderBatch(this._lightGeometry, material, {
+      instanceAttributes: [
+        { name: 'a_light', format: 'float32x3' },
+        { name: 'a_shadow', format: 'float32x2' },
+        { name: 'a_surface', format: 'float32x4' },
+      ],
+    });
+
+    this._lightBatches.set(cookie, batch);
+
+    return batch;
+  }
+
+  /** The normal field the light shader should read: the prepass, or nothing at all. */
+  private _boundNormals(): Texture | RenderTexture {
+    return this._normalPass.enabled ? this._normalTarget : transparentTexture();
   }
 
   /**
@@ -664,7 +708,10 @@ ${normalPrepassWgsl}`,
 
     this._shadowMap.destroy();
     this._shadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
-    this._lightMaterial.setTexture('u_shadow', this._shadowMap);
+
+    for (const batch of this._lightBatches.values()) {
+      batch.material?.setTexture('u_shadow', this._shadowMap);
+    }
   }
 
   private readonly _onResize = (): void => {

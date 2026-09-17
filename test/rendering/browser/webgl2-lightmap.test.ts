@@ -17,8 +17,10 @@ import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -340,6 +342,46 @@ describe('WebGL2 lightmap renderer', () => {
       expect(flatRight).toBeGreaterThan(right + 20);
     } finally {
       ground.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a cookie patterns the light across its own bounding square, in both axes', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Four different quadrants, so a flipped axis cannot pass: white where the
+    // pattern starts, grey along one axis, black along the other.
+    const cookie = new DataTexture({
+      width: 2,
+      height: 2,
+      format: TextureFormat.Rgba8,
+      // prettier-ignore
+      data: new Uint8Array([
+        255, 255, 255, 255,  128, 128, 128, 255,
+        0, 0, 0, 255,        128, 128, 128, 255,
+      ]),
+    });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1, cookie })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // All four probes sit the same distance from the light, so falloff is
+      // identical and only the cookie can tell them apart.
+      const upperLeft = readPixel(host.backend, 20, 20)[0];
+      const upperRight = readPixel(host.backend, 44, 20)[0];
+      const lowerLeft = readPixel(host.backend, 20, 44)[0];
+      const lowerRight = readPixel(host.backend, 44, 44)[0];
+
+      expect(upperLeft).toBeGreaterThan(upperRight + 20);
+      expect(upperRight).toBeGreaterThan(lowerLeft + 20);
+      expect(Math.abs(upperRight - lowerRight)).toBeLessThan(10);
+      expect(lowerLeft).toBeLessThan(10);
+    } finally {
+      cookie.destroy();
       lighting.destroy();
       host.destroy();
     }

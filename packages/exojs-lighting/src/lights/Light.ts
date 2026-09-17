@@ -1,4 +1,4 @@
-import { Color, RenderNode } from '@codexo/exojs';
+import { Color, RenderNode, type Texture } from '@codexo/exojs';
 
 import type { Lighting } from '../Lighting';
 
@@ -17,6 +17,25 @@ export interface LightOptions {
    * is free of extra draws and can differ per light.
    */
   readonly softness?: number;
+  /**
+   * Texture the light is shone through, sampled across its own bounding square
+   * - a window cross, leaf shade, a stained-glass pattern. Multiplied into the
+   * light, so a transparent part of the cookie casts nothing and an opaque
+   * white one changes nothing.
+   *
+   * The square maps onto the texture's full `0..1`, turns with the light and
+   * scales with its radius, so the pattern stays fixed to the lamp rather than
+   * to the world. Wrapping is the texture's own business; a cookie meant to end
+   * at its edge wants `ClampToEdge`.
+   *
+   * Read by the `lightmap` renderer. `forward` shades inside the sprite stage,
+   * where a texture per light cannot be reached in one draw, and ignores it.
+   *
+   * Lights sharing a cookie share a draw, so a scene with three distinct
+   * cookies costs three draws rather than one - still one draw per texture,
+   * never one per light.
+   */
+  readonly cookie?: Texture;
   /** Whether the light contributes at all. Defaults to `true`. */
   readonly enabled?: boolean;
 }
@@ -50,6 +69,8 @@ export abstract class Light extends RenderNode {
   public intensity: number;
   /** Penumbra width of this light's shadows, in `0..1`. See {@link LightOptions.softness}. */
   public softness: number;
+  /** Texture the light is shone through, or `null`. See {@link LightOptions.cookie}. */
+  public cookie: Texture | null;
   /** When `false`, the light is skipped entirely rather than published as black. */
   public enabled: boolean;
 
@@ -62,6 +83,7 @@ export abstract class Light extends RenderNode {
     this.color = options.color ?? Color.white.clone();
     this.intensity = options.intensity ?? 1;
     this.softness = options.softness ?? 0.25;
+    this.cookie = options.cookie ?? null;
     this.enabled = options.enabled ?? true;
   }
 
@@ -76,6 +98,33 @@ export abstract class Light extends RenderNode {
 
     out.x = transform.x;
     out.y = transform.y;
+  }
+
+  /**
+   * The light's own axis in world space, as a unit vector written into `out` -
+   * the node's world rotation.
+   *
+   * It is what a cone points along and what a segment runs along, so aiming a
+   * light is the same act as rotating whatever carries it. A shape with no
+   * direction of its own still has one, and uses it to orient its cookie.
+   */
+  public getWorldDirection(out: { x: number; y: number }): void {
+    // The forward map is `world = [[a, b], [c, d]] * local + (x, y)`, so the
+    // local +x axis lands on (a, c) - the axis, before normalisation.
+    const transform = this.getWorldTransform();
+    const x = transform.a;
+    const y = transform.c;
+    const length = Math.hypot(x, y);
+
+    if (length === 0) {
+      out.x = 1;
+      out.y = 0;
+
+      return;
+    }
+
+    out.x = x / length;
+    out.y = y / length;
   }
 
   public override destroy(): void {

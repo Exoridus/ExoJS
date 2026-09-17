@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 8,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -102,6 +102,31 @@
           "params": [],
           "returnType": null,
           "description": "How far the cone fades at its edge, as a fraction of angle. 0 is a hard edge, 1 fades from the axis outwards. Defaults to 0.25. This is the shape of the cone. LightOptions.softness is the separate question of how soft the shadows the light casts are."
+        },
+        {
+          "name": "cookie",
+          "signature": "cookie?: Texture",
+          "signatureTokens": [
+            {
+              "text": "cookie",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Texture the light is shone through, sampled across its own bounding square - a window cross, leaf shade, a stained-glass pattern. Multiplied into the light, so a transparent part of the cookie casts nothing and an opaque white one changes nothing. The square maps onto the texture's full 0..1, turns with the light and scales with its radius, so the pattern stays fixed to the lamp rather than to the world. Wrapping is the texture's own business; a cookie meant to end at its edge wants ClampToEdge. Read by the lightmap renderer. forward shades inside the sprite stage, where a texture per light cannot be reached in one draw, and ignores it. Lights sharing a cookie share a draw, so a scene with three distinct cookies costs three draws rather than one - still one draw per texture, never one per light."
         },
         {
           "name": "enabled",

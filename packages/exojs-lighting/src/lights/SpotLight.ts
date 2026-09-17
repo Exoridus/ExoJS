@@ -45,28 +45,4 @@ export class SpotLight extends Light {
     this.coneSoftness = options.coneSoftness ?? 0.25;
     this.height = options.height ?? 64;
   }
-
-  /**
-   * Cone axis in world space, as a unit vector written into `out` - the node's
-   * world rotation, which is what makes aiming a spot the same act as rotating
-   * whatever carries it.
-   */
-  public getWorldDirection(out: { x: number; y: number }): void {
-    // The forward map is `world = [[a, b], [c, d]] * local + (x, y)`, so the
-    // local +x axis lands on (a, c) - the cone axis, before normalisation.
-    const transform = this.getWorldTransform();
-    const x = transform.a;
-    const y = transform.c;
-    const length = Math.hypot(x, y);
-
-    if (length === 0) {
-      out.x = 1;
-      out.y = 0;
-
-      return;
-    }
-
-    out.x = x / length;
-    out.y = y / length;
-  }
 }

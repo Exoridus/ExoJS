@@ -15,8 +15,10 @@ import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -351,6 +353,48 @@ describe('lightmap renderer WebGPU browser', () => {
       expect(rotated(32, 32)).toBeLessThan(146);
     } finally {
       crate.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a cookie patterns the light across its own bounding square, in both axes', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Four different quadrants, so a flipped axis cannot pass - and the same
+    // four the WebGL2 lane checks, which is what makes the two comparable.
+    const cookie = new DataTexture({
+      width: 2,
+      height: 2,
+      format: TextureFormat.Rgba8,
+      // prettier-ignore
+      data: new Uint8Array([
+        255, 255, 255, 255,  128, 128, 128, 255,
+        0, 0, 0, 255,        128, 128, 128, 255,
+      ]),
+    });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1, cookie })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      // All four probes sit the same distance from the light, so falloff is
+      // identical and only the cookie can tell them apart.
+      expect(at(20, 20)).toBeGreaterThan(at(44, 20) + 20);
+      expect(at(44, 20)).toBeGreaterThan(at(20, 44) + 20);
+      expect(Math.abs(at(44, 20) - at(44, 44))).toBeLessThan(10);
+      expect(at(20, 44)).toBeLessThan(10);
+    } finally {
+      cookie.destroy();
       lighting.destroy();
       host.destroy();
     }

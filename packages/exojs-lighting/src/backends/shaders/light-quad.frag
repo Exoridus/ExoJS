@@ -11,6 +11,7 @@ flat in float v_softness;
 // vector: what it takes to turn a fragment's light-space offset back into the
 // world-space direction a surface normal can be measured against.
 flat in vec4 v_surface;
+flat in float v_half;
 
 // One row per shadowed light: the distance to the nearest occluder along each
 // angular bin, as a fraction of the light's radius. A row index below zero
@@ -19,6 +20,9 @@ uniform sampler2D u_shadow;
 // The normal prepass, in screen space at this target's own size. Alpha is
 // coverage: zero means nothing described a surface there.
 uniform sampler2D u_normal;
+// The pattern this batch's lights are shone through, across the light's own
+// bounding square. Opaque white for a batch whose lights carry none.
+uniform sampler2D u_cookie;
 
 out vec4 fragColor;
 
@@ -29,6 +33,12 @@ const float MAX_PENUMBRA = 0.03;
 /** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
 const float SHADOW_BIAS = 0.004;
 
+/**
+ * `distance` is the RADIAL distance from the light's own position, as a
+ * fraction of the light's whole reach - the frame the polar rows were built in.
+ * The falloff term measures to the segment instead, which is a different
+ * quantity for a line light and the same one for every other shape.
+ */
 float shadowTerm(float distance) {
     if (v_shadowRow < 0.0) {
         return 1.0;
@@ -79,16 +89,23 @@ float surfaceTerm() {
 }
 
 void main() {
-    // The quad is the light's bounding square in radius-normalized space, so
-    // distance is `length(v_local)` and everything past 1 is outside the light.
-    float distance = length(v_local);
+    // Distance to the segment, not to the centre: folding `x` onto the segment
+    // first is what turns the disc into a capsule, and `v_half == 0` leaves the
+    // disc exactly as it was.
+    vec2 toSegment = vec2(max(abs(v_local.x) - v_half, 0.0), v_local.y);
+    float distance = length(toSegment);
     float falloff = clamp(1.0 - distance, 0.0, 1.0);
 
     // A point light writes both cone cosines as -1, which no direction can
     // fail, so one expression serves both shapes without a branch.
-    vec2 direction = distance > 0.0 ? v_local / distance : vec2(1.0, 0.0);
+    vec2 direction = distance > 0.0 ? toSegment / distance : vec2(1.0, 0.0);
     float alignment = direction.x;
     float coneTerm = v_cone.x == v_cone.y ? step(v_cone.x, alignment) : smoothstep(v_cone.x, v_cone.y, alignment);
 
-    fragColor = vec4(v_tint.rgb * (falloff * falloff * coneTerm * v_intensity * shadowTerm(distance) * surfaceTerm()), 1.0);
+    // The quad spans -1..1 in the light's own frame, which is the cookie's 0..1
+    // exactly - so the pattern turns and scales with the light for free, and a
+    // premultiplied texel that is transparent contributes nothing.
+    vec3 cookie = texture(u_cookie, v_local * 0.5 + 0.5).rgb;
+
+    fragColor = vec4(v_tint.rgb * cookie * (falloff * falloff * coneTerm * v_intensity * shadowTerm(length(v_local) / (v_half + 1.0)) * surfaceTerm()), 1.0);
 }

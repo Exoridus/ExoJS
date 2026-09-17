@@ -138,6 +138,18 @@ They do the same thing. The difference is that reaching one property of a namesp
 
 The renderers do not split this way. `quality` is a string read at runtime, so a `forward` project carries the lightmap renderer whether or not it runs it; the package as a whole is 12.9 KB gzip, of which a `forward` project uses 8.2 KB. Both figures are budgeted in CI.
 
+### Cookies
+
+Every light takes an optional `cookie` texture, which is the cheapest large visual win here: a window cross, leaf shade, a stained-glass pattern, a projector gobo.
+
+```ts
+lighting.add(new PointLight({ radius: 320, cookie: windowCross }));
+```
+
+The texture's full `0..1` maps onto the light's own bounding square, so the pattern turns with a cone light and scales with the radius - it is fixed to the lamp, not to the world. It is multiplied into the light, so a transparent part of the cookie casts nothing and an opaque white one changes nothing. Wrapping is the texture's own business; a cookie meant to end at its edge wants `ClampToEdge`.
+
+Lights sharing a cookie share a draw. A scene with three distinct cookies costs three draws rather than one - still one draw per texture, never one per light. `forward` ignores cookies: it shades inside the sprite stage, where a texture per light cannot be reached in one draw.
+
 ### Softness
 
 `softness` is a property of the light, in `0..1`. `0` is a point source with a hard edge; higher values widen the penumbra the way a larger lamp would. It widens the shadow sample kernel rather than adding a pass, so it costs nothing per light and can differ between them.
@@ -194,7 +206,8 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 | Overbright light accumulation               | `lightmap`: `rgba16f`, `rgba8` where floats are not renderable   |
 | Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                           |
 | Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                              |
-| Light cookies, line and sun lights          | no                                                               |
+| Light cookies                               | `lightmap`, one draw per distinct cookie                         |
+| Line and sun lights                         | no                                                               |
 | Deferred (G-buffer) path                    | no                                                               |
 | Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                            |
 

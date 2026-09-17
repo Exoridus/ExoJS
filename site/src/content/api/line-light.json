@@ -1,16 +1,16 @@
 {
-  "title": "SpotLight",
-  "description": "A cone of light. The cone points along the node's own rotation, so aiming a spot is rotating it - a headlight parented to a car needs no direction of its own. ```ts lamp.addChild(new SpotLight({ radius: 400, angle: 35, coneSoftness: 0.3 })); ```",
-  "symbol": "SpotLight",
+  "title": "LineLight",
+  "description": "A segment that emits: a neon tube, a light strip, a laser. Falloff is measured from the nearest point on the segment, so the pool of light is a capsule rather than a disc. ```ts sign.addChild(new LineLight({ length: 120, color: Color.cyan })); ``` The segment runs along the node's own rotation and is centred on it, so aiming a tube is rotating it and moving one is moving the node. # Shadows The shadow map is polar around the segment's CENTRE, the same as for a point light. That is exact for a fragment the segment subtends little of, and approximate near a long tube's ends, where a physically lit occluder would be lit from many points along the segment at once. LightOptions.softness is the knob that stands in for it.",
+  "symbol": "LineLight",
   "kind": "class",
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 90,
+  "memberCount": 89,
   "counts": {
     "constructors": 1,
     "methods": 35,
-    "properties": 40,
+    "properties": 39,
     "events": 14
   },
   "sections": [
@@ -19,10 +19,13 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A cone of light. The cone points along the node's own rotation, so aiming a spot is rotating it - a headlight parented to a car needs no direction of its own.",
-        "```ts lamp.addChild(new SpotLight({ radius: 400, angle: 35, coneSoftness: 0.3 })); ```"
+        "A segment that emits: a neon tube, a light strip, a laser. Falloff is measured from the nearest point on the segment, so the pool of light is a capsule rather than a disc.",
+        "```ts sign.addChild(new LineLight({ length: 120, color: Color.cyan })); ```",
+        "The segment runs along the node's own rotation and is centred on it, so aiming a tube is rotating it and moving one is moving the node.",
+        "# Shadows",
+        "The shadow map is polar around the segment's CENTRE, the same as for a point light. That is exact for a fragment the segment subtends little of, and approximate near a long tube's ends, where a physically lit occluder would be lit from many points along the segment at once. LightOptions.softness is the knob that stands in for it."
       ],
-      "importLine": "import { SpotLight } from '@codexo/exojs-lighting'",
+      "importLine": "import { LineLight } from '@codexo/exojs-lighting'",
       "sourceLink": null
     },
     {
@@ -31,7 +34,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: SpotLightOptions): SpotLight",
+          "signature": "new(options: LineLightOptions): LineLight",
           "signatureTokens": [
             {
               "text": "new",
@@ -50,7 +53,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SpotLightOptions",
+              "text": "LineLightOptions",
               "kind": "type"
             },
             {
@@ -62,18 +65,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "SpotLight",
+              "text": "LineLight",
               "kind": "type"
             }
           ],
           "params": [
             {
               "name": "options",
-              "type": "SpotLightOptions",
+              "type": "LineLightOptions",
               "optional": false
             }
           ],
-          "returnType": "SpotLight",
+          "returnType": "LineLight",
           "description": ""
         }
       ],
@@ -1803,27 +1806,6 @@
       "title": "Properties",
       "members": [
         {
-          "name": "angle",
-          "signature": "angle: number",
-          "signatureTokens": [
-            {
-              "text": "angle",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Half-angle of the cone in degrees."
-        },
-        {
           "name": "collisionType",
           "signature": "collisionType: CollisionType",
           "signatureTokens": [
@@ -1864,27 +1846,6 @@
           "params": [],
           "returnType": null,
           "description": "Light colour. Mutated in place or replaced; read once per frame."
-        },
-        {
-          "name": "coneSoftness",
-          "signature": "coneSoftness: number",
-          "signatureTokens": [
-            {
-              "text": "coneSoftness",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Edge fade as a fraction of angle. See SpotLightOptions.coneSoftness."
         },
         {
           "name": "cookie",
@@ -2104,6 +2065,27 @@
           "description": "Linear brightness multiplier."
         },
         {
+          "name": "length",
+          "signature": "length: number",
+          "signatureTokens": [
+            {
+              "text": "length",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Length of the emitting segment in pixels."
+        },
+        {
           "name": "name",
           "signature": "name: null | string",
           "signatureTokens": [
@@ -2151,7 +2133,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Distance in pixels at which the light contributes nothing."
+          "description": "Distance from the segment at which the light contributes nothing."
         },
         {
           "name": "softness",
@@ -3317,11 +3299,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/lights/SpotLight.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/SpotLight.ts"
+        "label": "packages/exojs-lighting/src/lights/LineLight.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/LineLight.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/lights/SpotLight.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/SpotLight.ts"
+  "sourcePath": "packages/exojs-lighting/src/lights/LineLight.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/LineLight.ts"
 }
