@@ -58,7 +58,20 @@ export class LitMaterial extends SpriteMaterial {
   public readonly lighting: Lighting;
 
   public constructor(options: LitMaterialOptions) {
-    const backend = options.lighting.backend as ForwardBackend;
+    const backend = options.lighting.backend;
+
+    // Both renderers expose a `lightTexture`, and they are nothing alike: this
+    // shader reads the forward renderer's packed rgba32f light data, while the
+    // lightmap renderer's is an accumulated light field. Binding one for the
+    // other compiles and shades garbage, so the mismatch is refused here - the
+    // same call that would otherwise have to be debugged from a picture.
+    if (backend.quality !== 'forward') {
+      throw new Error(
+        `LitMaterial shades inside the sprite fragment stage, against the 'forward' renderer's light texture, but this Lighting uses '${backend.quality}'. ` +
+          "The 'lightmap' renderer multiplies the finished frame by a light field and has no surface normals to shade against: use quality: 'forward' for " +
+          'normal-mapped sprites, or drop the material and let the renderer light the frame.',
+      );
+    }
 
     super({
       shader: litSpriteShader,
@@ -66,7 +79,7 @@ export class LitMaterial extends SpriteMaterial {
       // bindings 1/2, light texture at 3/4, matching `lit-sprite.wgsl`.
       textures: {
         u_normalMap: options.normals?.texture ?? flatNormals(),
-        u_lights: backend.lightTexture,
+        u_lights: (backend as ForwardBackend).lightTexture,
       },
       ...(options.blendMode !== undefined ? { blendMode: options.blendMode } : {}),
       ...(options.sampler !== undefined ? { sampler: options.sampler } : {}),

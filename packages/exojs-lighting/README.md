@@ -52,14 +52,15 @@ class LitScene extends Scene {
 
 The scene describes what emits; `quality` decides how that becomes pixels. Nothing else changes between them - the same lights, the same materials.
 
-|                         | `forward` (default)                | `lightmap`                                        |
-| ----------------------- | ---------------------------------- | ------------------------------------------------- |
-| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame |
-| Normal mapping          | yes                                | no - the frame it multiplies is already flat      |
-| Shadows                 | no                                 | yes, soft, from registered occluder sources       |
-| Light count             | capped by `maxLights` (default 64) | uncapped                                          |
-| Extra passes            | none                               | two, and a third only while debugging             |
-| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                        |
+|                         | `forward` (default)                | `lightmap`                                         |
+| ----------------------- | ---------------------------------- | -------------------------------------------------- |
+| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame  |
+| Normal mapping          | yes                                | no - the frame it multiplies is already flat       |
+| Lit material            | `LitMaterial`                      | none - the renderer lights the frame, not a sprite |
+| Shadows                 | no                                 | yes, soft, from registered occluder sources        |
+| Light count             | capped by `maxLights` (default 64) | uncapped                                           |
+| Extra passes            | none                               | two, and a third only while debugging              |
+| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                         |
 
 ```ts
 const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20, 20, 30) });

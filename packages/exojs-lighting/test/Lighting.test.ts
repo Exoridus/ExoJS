@@ -5,6 +5,7 @@ import type { ForwardBackend } from '../src/backends/ForwardBackend';
 import { Lighting } from '../src/Lighting';
 import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
+import { LitMaterial } from '../src/LitMaterial';
 
 const channels = 4;
 
@@ -249,5 +250,12 @@ describe('Lighting', () => {
     lighting.destroy();
 
     expect(lighting.occluders).toHaveLength(0);
+  });
+  test('a lit material refuses a renderer whose light texture it cannot read', () => {
+    const lighting = lightmapLighting();
+
+    // Both renderers expose a `lightTexture` and they hold different things:
+    // binding the wrong one shades garbage instead of failing.
+    expect(() => new LitMaterial({ lighting })).toThrow(/lightmap/);
   });
 });
