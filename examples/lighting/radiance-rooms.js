@@ -133,7 +133,6 @@ class RadianceRoomsScene extends Scene {
       quality: this.quality,
       app: this.app,
       ambient: new Color(10, 11, 16),
-      lightResolution: 0.5,
     });
     this.systems.add(this.lighting);
     this.lighting.add(new PointLight({ radius: 600, intensity: this.intensity, softness: this.softness, color: new Color(255, 226, 180) }));

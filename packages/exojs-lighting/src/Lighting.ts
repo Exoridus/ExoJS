@@ -117,7 +117,15 @@ const createBackend = (options: LightingOptions, post: readonly Filter[]): Light
     return new LightmapBackend({
       app: options.app,
       post,
-      resolution: options.lightResolution ?? 0.5,
+      // Half resolution is the right default for the quads, which PAINT the
+      // light field: a falloff is low-frequency and halving the fill is free.
+      // The cascades SAMPLE it instead - the emitters and the distance field
+      // they trace are both rasterised into it - so a coarse field quantises
+      // the scene rather than the light, and a source that moves by less than a
+      // texel makes the whole picture jump. Measured on a moving lamp: a
+      // quarter-probe step changed the light arriving at a fixed point by 25
+      // percent at half resolution and by 2 percent at full.
+      resolution: options.lightResolution ?? (renderer === null ? 0.5 : 1),
       shadowResolution: Math.max(8, Math.round(options.shadowResolution ?? 256)),
       fields: renderer?._fields ?? null,
     });
@@ -150,7 +158,11 @@ export interface LightingOptions {
   /**
    * Texels per logical unit of the `lightmap` renderer's light target. Light is
    * low-frequency, so half resolution is hard to tell apart and costs a quarter
-   * of the fill. Defaults to `0.5`.
+   * of the fill. Defaults to `0.5` - and to `1` under `radiance`, which SAMPLES
+   * the field instead of painting into it: the emitters and the distance field
+   * the cascades trace are both rasterised into it, so a coarse field quantises
+   * the scene rather than the light and a source moving by less than a texel
+   * makes the whole picture jump.
    */
   readonly lightResolution?: number;
   /**

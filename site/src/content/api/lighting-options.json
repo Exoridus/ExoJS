@@ -113,7 +113,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Texels per logical unit of the lightmap renderer's light target. Light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill. Defaults to 0.5."
+          "description": "Texels per logical unit of the lightmap renderer's light target. Light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill. Defaults to 0.5 - and to 1 under radiance, which SAMPLES the field instead of painting into it: the emitters and the distance field the cascades trace are both rasterised into it, so a coarse field quantises the scene rather than the light and a source moving by less than a texel makes the whole picture jump."
         },
         {
           "name": "maxLights",
