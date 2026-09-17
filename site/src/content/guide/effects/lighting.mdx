@@ -303,6 +303,11 @@ Window bars and leaf shade as cookies on the lights themselves, a neon tube pool
 
 Cobbles that nobody authored a normal map for: each hands the system its own silhouette, and a prepass draws the derived normals where the stone sits.
 
+<a id="normal-mapped-blocks"></a>
+<ExamplePreview chapter="lighting" slug="normal-mapped-blocks" />
+
+The scene deferred 2D lighting plugins are demonstrated with, posed here instead: authored normal maps on a floor and three blocks, a directional light, and a point light on the pointer. Each drawable is drawn once and says where its normals come from, so there is no second sprite in a normal layer and no parent group to assign.
+
 ## Where to go next
 
 [Post-processing](/ExoJS/en/guide/effects/post-processing/) covers the frame slot the lightmap renderer installs into, which is also how you would write a lighting system of your own — `app.framePasses.addPass(myPass)` hands a pass the finished frame and lets it write the canvas, with no agreement with this package at all.

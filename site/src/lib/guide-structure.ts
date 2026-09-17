@@ -474,7 +474,14 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'choose between the two renderers by the property you need',
         ],
         prerequisites: ['rendering/sprites'],
-        examples: ['lighting/shadow-casters', 'lighting/light-cookies', 'lighting/lightmap-normals', 'lighting/normal-mapped-sprites', 'lighting/many-lights'],
+        examples: [
+          'lighting/shadow-casters',
+          'lighting/light-cookies',
+          'lighting/lightmap-normals',
+          'lighting/normal-mapped-blocks',
+          'lighting/normal-mapped-sprites',
+          'lighting/many-lights',
+        ],
         apiLinks: ['lighting', 'point-light', 'spot-light', 'line-light', 'sun-light', 'lit-material'],
       },
       {
