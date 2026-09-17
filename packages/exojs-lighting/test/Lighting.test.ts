@@ -1,4 +1,4 @@
-import { type Application, Color, Container, RenderPipeline, RenderTexture, Signal, TextureFormat } from '@codexo/exojs';
+import { type Application, Color, ColorMatrixFilter, Container, type Filter, RenderPipeline, RenderTexture, Signal, TextureFormat } from '@codexo/exojs';
 import { describe, expect, test } from 'vitest';
 
 import type { ForwardBackend } from '../src/backends/ForwardBackend';
@@ -14,22 +14,21 @@ const channels = 4;
 const textureOf = (lighting: Lighting): (typeof ForwardBackend.prototype)['lightTexture'] => (lighting.backend as ForwardBackend).lightTexture;
 
 /**
- * A `Lighting` on the renderer that reads occluders. The lightmap renderer
- * wants an application for its frame; nothing here draws, so a frame slot and
- * a surface size are the whole of what it touches.
+ * Enough of an application for a renderer that never draws here: a frame slot,
+ * a frame to multiply, a surface size, and an answer about float targets.
  */
-const lightmapLighting = (floatTargets = true): Lighting => {
-  const app = {
+const fakeApp = (floatTargets = true): Application =>
+  ({
     framePasses: new RenderPipeline(),
     frameTexture: new RenderTexture(64, 64),
     onResize: new Signal(),
     rendering: { supportsColorFormat: (format: TextureFormat): boolean => format === TextureFormat.Rgba8 || floatTargets },
     width: 64,
     height: 64,
-  } as unknown as Application;
+  }) as unknown as Application;
 
-  return new Lighting({ quality: 'lightmap', app, ambient: Color.black });
-};
+/** A `Lighting` on the renderer that reads occluders. */
+const lightmapLighting = (floatTargets = true): Lighting => new Lighting({ quality: 'lightmap', app: fakeApp(floatTargets), ambient: Color.black });
 
 /** Byte offset of light `index`'s slot in row `row`. */
 const slot = (lighting: Lighting, row: number, index: number): number => (textureOf(lighting).width * row + index + 1) * channels;
@@ -269,6 +268,41 @@ describe('Lighting', () => {
 
   test('the forward renderer shades into the frame, so it never has headroom', () => {
     expect(new Lighting({ maxLights: 4 }).hdr).toBe(false);
+  });
+
+  test('a filter chain with no application to run in is refused rather than ignored', () => {
+    const post: readonly Filter[] = [new ColorMatrixFilter()];
+
+    expect(() => new Lighting({ post })).toThrow(/post/);
+    expect(() => new Lighting({ quality: 'lightmap', post })).toThrow();
+  });
+
+  test('a filter chain installs one pass, in either renderer, and takes it out again', () => {
+    const forwardApp = fakeApp();
+    const lightmapApp = fakeApp();
+    const grade = new ColorMatrixFilter();
+
+    const forward = new Lighting({ app: forwardApp, post: [grade] });
+    const lightmap = new Lighting({ quality: 'lightmap', app: lightmapApp, post: [grade] });
+
+    expect(forwardApp.framePasses.size).toBe(1);
+    expect(lightmap.post).toEqual([grade]);
+    // The lightmap renderer's own three, plus the chain.
+    expect(lightmapApp.framePasses.size).toBe(4);
+
+    forward.destroy();
+    lightmap.destroy();
+
+    expect(forwardApp.framePasses.size).toBe(0);
+    expect(lightmapApp.framePasses.size).toBe(0);
+  });
+
+  test('no filters means no pass at all, which is what keeps forward free of them', () => {
+    const app = fakeApp();
+
+    new Lighting({ app });
+
+    expect(app.framePasses.size).toBe(0);
   });
 
   test('a lit material refuses a renderer whose light texture it cannot read', () => {

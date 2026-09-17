@@ -1,4 +1,4 @@
-import { type Color, DataTexture, TextureFormat } from '@codexo/exojs';
+import { type Application, type Color, DataTexture, type Filter, FilterPass, TextureFormat } from '@codexo/exojs';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import { type Light } from '../lights/Light';
@@ -20,6 +20,14 @@ const scratchDirection = { x: 0, y: 0 };
 export interface ForwardBackendOptions {
   /** Lights the texture is sized for. Lights beyond it are skipped. */
   readonly maxLights: number;
+  /**
+   * Filters over the finished frame, in order. Empty installs no pass at all,
+   * which is what keeps this renderer's "no extra pass" claim true for every
+   * scene that does not ask for one.
+   */
+  readonly post: readonly Filter[];
+  /** The application whose frame the filters run on. Only read when `post` has filters. */
+  readonly app: Application | null;
 }
 
 /**
@@ -42,6 +50,11 @@ export interface ForwardBackendOptions {
  * The cap is the price of shading in one draw: every lit fragment walks every
  * light. It is the floor renderer, for hosts where a G-buffer is not worth its
  * bandwidth.
+ *
+ * A `post` chain is the one thing that puts a pass in the frame slot here, and
+ * it reads the shaded frame rather than a light field of its own: there is no
+ * intermediate to read, because the light was folded into the albedo inside the
+ * sprite stage.
  * @internal
  */
 export class ForwardBackend implements LightingBackend {
@@ -60,6 +73,8 @@ export class ForwardBackend implements LightingBackend {
   public readonly maxLights: number;
 
   private readonly _texture: DataTexture<TextureFormat.Rgba32F>;
+  private readonly _app: Application | null = null;
+  private readonly _postPass: FilterPass | null = null;
   private _activeCount = 0;
 
   public constructor(options: ForwardBackendOptions) {
@@ -69,6 +84,16 @@ export class ForwardBackend implements LightingBackend {
       height: rows,
       format: TextureFormat.Rgba32F,
     });
+
+    // Shading happens inside the sprite stage here, so there is no composite to
+    // filter: the chain reads the finished frame, exactly as a caller writing
+    // the pass by hand would. The frame slot redirects the frame into a texture
+    // on its own as soon as it holds a pass.
+    if (options.post.length > 0 && options.app !== null) {
+      this._app = options.app;
+      this._postPass = new FilterPass(options.app.frameTexture, options.post, { label: 'lighting:post' });
+      options.app.framePasses.addPass(this._postPass);
+    }
   }
 
   /** The packed light texture, bound as a material texture. Stable for this backend's lifetime. */
@@ -131,6 +156,12 @@ export class ForwardBackend implements LightingBackend {
   public destroy(): void {
     this._activeCount = 0;
     this._texture.destroy();
+
+    if (this._postPass !== null) {
+      this._app?.framePasses.removePass(this._postPass);
+      // The filters are the caller's; the pass only releases what it allocated.
+      this._postPass.destroy();
+    }
   }
 }
 

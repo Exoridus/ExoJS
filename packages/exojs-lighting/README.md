@@ -159,10 +159,11 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 | Ambient term                                | yes, carried in the light texture                              |
 | Normal maps                                 | optional, one per material (= per atlas)                       |
 | Rotation / flip aware normals               | yes, via the instance's local-to-world basis                   |
-| Extra render passes or draw calls           | `forward`: none; `lightmap`: two passes                        |
+| Extra render passes or draw calls           | `forward`: none; `lightmap`: two; a `post` chain adds one      |
 | Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                             |
 | Overbright light accumulation               | `lightmap`: `rgba16f`, `rgba8` where floats are not renderable |
 | Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                         |
+| Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                            |
 | Light cookies, line and sun lights          | no                                                             |
 | Deferred (G-buffer) path                    | no                                                             |
 | Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                          |

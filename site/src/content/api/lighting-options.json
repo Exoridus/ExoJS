@@ -88,7 +88,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The application whose frame is lit. Required by 'lightmap', unused by 'forward'. Passing it installs the renderer's passes in app.framePasses and takes them out again on Lighting.destroy."
+          "description": "The application whose frame is lit. Required by 'lightmap' and by a non-empty LightingOptions.post; a 'forward' system without filters needs nothing else. Passing it installs the renderer's passes in app.framePasses and takes them out again on Lighting.destroy."
         },
         {
           "name": "lightResolution",
@@ -175,7 +175,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Filters applied to the shaded frame, in order. A bloom belongs here rather than on a node: it reads the light the system produced, including the parts no single node drew."
+          "description": "Filters applied to the shaded frame, in order. A bloom belongs here rather than on a node: it reads the light the system produced, including the parts no single node drew. They run as one pass in app.framePasses, so LightingOptions.app is required whenever the chain is non-empty, in either renderer. Under lightmap the chain reads the composite, which is where the light the system accumulated is still above 1.0 (see Lighting.hdr); under forward it reads the frame the sprite shader shaded. Caller-owned, and fixed for the system's lifetime - the filters' own parameters stay live, which is what an animated effect actually needs."
         },
         {
           "name": "quality",

@@ -42,10 +42,19 @@ const scratchPosition = { x: 0, y: 0 };
 /**
  * Build the renderer the options ask for. `'lightmap'` without an application
  * is a contradiction rather than a degraded mode - it has no frame to multiply -
- * so it is refused at construction rather than silently shading differently.
+ * so it is refused at construction rather than silently shading differently,
+ * and so is a filter chain with nowhere to run.
  */
-const createBackend = (options: LightingOptions): LightingBackend => {
+const createBackend = (options: LightingOptions, post: readonly Filter[]): LightingBackend => {
   const quality = options.quality ?? 'forward';
+
+  // A filter chain is a frame pass whichever renderer is in use, and a frame
+  // pass needs the frame slot to install itself in. Refusing it is the only
+  // answer that is the same in both modes; degrading to "the option was
+  // ignored" is what this option did for its first release.
+  if (post.length > 0 && options.app === undefined) {
+    throw new Error('Lighting({ post }) needs the application whose frame the filters run on: pass `app`.');
+  }
 
   if (quality === 'lightmap') {
     if (options.app === undefined) {
@@ -54,12 +63,13 @@ const createBackend = (options: LightingOptions): LightingBackend => {
 
     return new LightmapBackend({
       app: options.app,
+      post,
       resolution: options.lightResolution ?? 0.5,
       shadowResolution: Math.max(8, Math.round(options.shadowResolution ?? 256)),
     });
   }
 
-  return new ForwardBackend({ maxLights: options.maxLights ?? 64 });
+  return new ForwardBackend({ maxLights: options.maxLights ?? 64, post, app: options.app ?? null });
 };
 
 /** Construction options for {@link Lighting}. */
@@ -71,8 +81,9 @@ export interface LightingOptions {
    */
   readonly quality?: LightingQuality;
   /**
-   * The application whose frame is lit. Required by `'lightmap'`, unused by
-   * `'forward'`. Passing it installs the renderer's passes in
+   * The application whose frame is lit. Required by `'lightmap'` and by a
+   * non-empty {@link LightingOptions.post}; a `'forward'` system without
+   * filters needs nothing else. Passing it installs the renderer's passes in
    * `app.framePasses` and takes them out again on {@link Lighting.destroy}.
    */
   readonly app?: Application;
@@ -92,6 +103,15 @@ export interface LightingOptions {
    * Filters applied to the shaded frame, in order. A bloom belongs here rather
    * than on a node: it reads the light the system produced, including the parts
    * no single node drew.
+   *
+   * They run as one pass in `app.framePasses`, so {@link LightingOptions.app}
+   * is required whenever the chain is non-empty, in either renderer. Under
+   * `lightmap` the chain reads the composite, which is where the light the
+   * system accumulated is still above `1.0` (see {@link Lighting.hdr}); under
+   * `forward` it reads the frame the sprite shader shaded.
+   *
+   * Caller-owned, and fixed for the system's lifetime - the filters' own
+   * parameters stay live, which is what an animated effect actually needs.
    */
   readonly post?: readonly Filter[];
   /**
@@ -136,8 +156,6 @@ export interface LightingOptions {
 export class Lighting {
   /** Baseline colour applied to every lit fragment. Mutable; re-read every frame. */
   public ambient: Color;
-  /** Filters applied to the shaded frame, in order. Caller-owned. */
-  public post: readonly Filter[];
   /** Intermediate to show instead of the shaded frame. See {@link LightingDebugView}. */
   public get debug(): LightingDebugView {
     return this._backend.debug;
@@ -147,6 +165,7 @@ export class Lighting {
     this._backend.debug = view;
   }
 
+  private readonly _post: readonly Filter[];
   private readonly _lights: Light[] = [];
   private readonly _occluders: OccluderSource[] = [];
   private readonly _field = new OccluderField();
@@ -155,12 +174,17 @@ export class Lighting {
 
   public constructor(options: LightingOptions = {}) {
     this.ambient = options.ambient ?? new Color(28, 28, 38);
-    this.post = options.post ?? [];
-    this._backend = createBackend(options);
+    this._post = options.post ?? [];
+    this._backend = createBackend(options, this._post);
     // Publish once up front: a renderer that has never been told the ambient
     // term shades an untouched scene black, and "black until the first tick"
     // is not a state the vocabulary admits.
     this._backend.publish(this._lights, this.ambient, this._field);
+  }
+
+  /** Filters over the shaded frame, in order. See {@link LightingOptions.post}. */
+  public get post(): readonly Filter[] {
+    return this._post;
   }
 
   /** The renderer in use. */

@@ -425,39 +425,6 @@
           "description": "Baseline colour applied to every lit fragment. Mutable; re-read every frame."
         },
         {
-          "name": "post",
-          "signature": "post: readonly Filter[]",
-          "signatureTokens": [
-            {
-              "text": "post",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "readonly",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Filter",
-              "kind": "type"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Filters applied to the shaded frame, in order. Caller-owned."
-        },
-        {
           "name": "activeLightCount",
           "signature": "activeLightCount: number",
           "signatureTokens": [
@@ -585,6 +552,39 @@
           "params": [],
           "returnType": null,
           "description": "Registered occluder sources, in registration order."
+        },
+        {
+          "name": "post",
+          "signature": "post: readonly Filter[]",
+          "signatureTokens": [
+            {
+              "text": "post",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Filter",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Filters over the shaded frame, in order. See LightingOptions.post."
         },
         {
           "name": "quality",

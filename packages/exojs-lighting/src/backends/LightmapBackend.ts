@@ -4,6 +4,8 @@ import {
   CallbackRenderPass,
   Color,
   DataTexture,
+  type Filter,
+  FilterPass,
   Geometry,
   INSTANCE_TRANSFORM_GLSL,
   INSTANCE_TRANSFORM_WGSL,
@@ -87,6 +89,12 @@ export interface LightmapBackendOptions {
   readonly resolution: number;
   /** Angular bins in each light's shadow map. */
   readonly shadowResolution: number;
+  /**
+   * Filters over the composited frame, in order. Empty installs no pass and
+   * allocates no intermediate; a non-empty chain makes the composite write an
+   * off-screen target the filters read.
+   */
+  readonly post: readonly Filter[];
 }
 
 /**
@@ -147,6 +155,9 @@ export class LightmapBackend implements LightingBackend {
   private readonly _transform = new Matrix();
   private readonly _tint = Color.white.clone();
   private readonly _target: RenderTexture;
+  /** The composite's destination while `post` has filters, and `null` otherwise. */
+  private readonly _shaded: RenderTexture | null;
+  private readonly _postPass: FilterPass | null;
   private readonly _ambient: Color = Color.black.clone();
   private _shadowMap: DataTexture<TextureFormat.R32F>;
   private _activeCount = 0;
@@ -202,9 +213,9 @@ export class LightmapBackend implements LightingBackend {
     this._compositeBatch = new RenderBatch(this._compositeGeometry, this._compositeMaterial);
     this._debugBatch = new RenderBatch(this._debugGeometry, this._debugMaterial);
 
-    // Three stock passes rather than passes of our own: the light field is a
-    // draw into a target the engine redirects for us, and the composite and
-    // the debug overlay are draws into whatever the frame slot has active.
+    // Stock passes rather than passes of our own: the light field is a draw
+    // into a target the engine redirects for us, and the composite and the
+    // debug overlay are draws into whatever the frame slot has active.
     // The ambient clear belongs to the pass rather than to a `pass.clear()`
     // inside it: a clear issued from within an open pass is a draw on WebGL2
     // and nothing at all on WebGPU, where a load operation is fixed when the
@@ -215,11 +226,29 @@ export class LightmapBackend implements LightingBackend {
       clear: this._ambient,
       label: 'lighting:accumulate',
     });
-    this._compositePass = new CallbackRenderPass(pass => this._drawComposite(pass), { label: 'lighting:composite' });
+    // A filter reads a texture, so a chain needs the shaded frame to land in
+    // one. It carries the light target's format rather than the frame's: the
+    // whole reason to filter here instead of on a node is to see the light the
+    // system produced, and an `rgba8` intermediate would clip it away again
+    // between the composite and the first filter.
+    this._shaded = options.post.length === 0 ? null : new RenderTexture(1, 1, { format: this._target.format, scaleMode: ScaleModes.Linear });
+    this._compositePass = new CallbackRenderPass(pass => this._drawComposite(pass), {
+      label: 'lighting:composite',
+      ...(this._shaded !== null && { target: this._shaded, clear: Color.transparentBlack }),
+    });
+    this._postPass = this._shaded === null ? null : new FilterPass(this._shaded, options.post, { label: 'lighting:post' });
     this._debugPass = new CallbackRenderPass(pass => this._drawOccluders(pass), { label: 'lighting:occluder-debug' });
 
     this._resize();
-    this._app.framePasses.addPass(this._lightPass).addPass(this._compositePass).addPass(this._debugPass);
+    this._app.framePasses.addPass(this._lightPass).addPass(this._compositePass);
+
+    if (this._postPass !== null) {
+      this._app.framePasses.addPass(this._postPass);
+    }
+
+    // Last, so the silhouettes stay legible over whatever the chain did to the
+    // frame: a debug overlay a bloom has smeared explains nothing.
+    this._app.framePasses.addPass(this._debugPass);
     this._app.onResize.add(this._onResize);
   }
 
@@ -331,6 +360,14 @@ export class LightmapBackend implements LightingBackend {
     this._lightPass.destroy();
     this._compositePass.destroy();
     this._debugPass.destroy();
+
+    if (this._postPass !== null) {
+      this._app.framePasses.removePass(this._postPass);
+      // The filters are the caller's; the pass only releases what it allocated.
+      this._postPass.destroy();
+    }
+
+    this._shaded?.destroy();
     this._batch.destroy();
     this._compositeBatch.destroy();
     this._debugBatch.destroy();
@@ -438,6 +475,11 @@ export class LightmapBackend implements LightingBackend {
     const logicalHeight = Math.max(1, this._app.height);
     const width = Math.max(1, Math.round(logicalWidth * this._resolution));
     const height = Math.max(1, Math.round(logicalHeight * this._resolution));
+
+    // Ahead of the guard below, and off the frame rather than off the logical
+    // size: what a filter reads has to match the frame texel for texel, and the
+    // density it is rasterized at is the application's to decide.
+    this._shaded?.setSize(this._app.frameTexture.width, this._app.frameTexture.height);
 
     if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0) {
       return;

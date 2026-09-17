@@ -13,6 +13,7 @@ import { Lighting, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighti
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -214,6 +215,38 @@ describe('WebGL2 lightmap renderer', () => {
       expectPixelNear(readPixel(host.backend, 2, 2), [0, 0, 0, 255]);
     } finally {
       lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a filter over the composite reads the light above 1.0 rather than a clipped frame', async () => {
+    const host = await createHost();
+    // Quarter brightness, so what reaches the canvas says what the filter was
+    // handed: a quarter of 2.0 is half, a quarter of a field clipped at 1.0 is
+    // a quarter.
+    const grade = new ColorMatrixFilter().brightness(0.25);
+    const lighting = new Lighting({
+      quality: 'lightmap',
+      app: host.app,
+      ambient: Color.black,
+      lightResolution: 1,
+      post: [grade],
+    });
+
+    lighting.add(new PointLight({ radius: 24, intensity: 2 })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      expect(lighting.hdr).toBe(true);
+      runFrame(host, lighting);
+
+      const centre = readPixel(host.backend, 32, 32)[0];
+
+      expect(centre).toBeGreaterThan(100);
+      expect(centre).toBeLessThan(150);
+    } finally {
+      lighting.destroy();
+      grade.destroy();
       host.destroy();
     }
   });

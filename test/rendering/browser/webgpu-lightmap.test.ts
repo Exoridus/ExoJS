@@ -11,6 +11,7 @@ import { Lighting, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighti
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -300,6 +301,44 @@ describe('lightmap renderer WebGPU browser', () => {
       host.destroy();
     }
   });
+  test('a filter over the composite reads the light above 1.0 rather than a clipped frame', async ctx => {
+    const host = await createHost();
+    // Quarter brightness, so what reaches the canvas says what the filter was
+    // handed: a quarter of 2.0 is half, a quarter of a field clipped at 1.0 is
+    // a quarter.
+    const grade = new ColorMatrixFilter().brightness(0.25);
+    const lighting = new Lighting({
+      quality: 'lightmap',
+      app: host.app,
+      ambient: Color.black,
+      lightResolution: 1,
+      post: [grade],
+    });
+
+    lighting.add(new PointLight({ radius: 24, intensity: 2 })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      expect(lighting.hdr).toBe(true);
+
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      expect(at(32, 32)).toBeGreaterThan(100);
+      expect(at(32, 32)).toBeLessThan(150);
+    } finally {
+      lighting.destroy();
+      grade.destroy();
+      host.destroy();
+    }
+  });
+
   test('ambient lights the frame where no light reaches, and with no light at all', async ctx => {
     const host = await createHost();
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: new Color(128, 128, 128), lightResolution: 1 });
