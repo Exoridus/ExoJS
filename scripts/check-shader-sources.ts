@@ -188,8 +188,14 @@ const checkLanguage = (file: string, text: string): Problem[] => {
 
   // A GLSL fragment meant for composition (an include body) legitimately has no
   // version line; only a file the backend compiles on its own needs one, and
-  // those are exactly the ones declaring an entry point.
-  if (/\bvoid\s+main\s*\(/.test(text) && firstLine.trim() !== GLSL_VERSION_DIRECTIVE) {
+  // those are exactly the ones declaring an entry point - except for the
+  // instanced-batch contract, whose constant is documented as going BETWEEN the
+  // version directive and the body, so a vertex stage using it must not carry
+  // one of its own. Calling `exoInstanceClipPosition` is that contract's own
+  // marker, which keeps this a property of the file rather than a path list.
+  const composedWithInstanceContract = text.includes('exoInstanceClipPosition(');
+
+  if (/\bvoid\s+main\s*\(/.test(text) && !composedWithInstanceContract && firstLine.trim() !== GLSL_VERSION_DIRECTIVE) {
     problems.push({ file, line: 1, message: `declares main() but line 1 is not '${GLSL_VERSION_DIRECTIVE}'` });
   }
 

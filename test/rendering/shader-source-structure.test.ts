@@ -24,10 +24,23 @@ const shaderModules = import.meta.glob(['/src/rendering/webgl2/shaders/*.{vert,f
 interface ShaderEntry {
   readonly name: string;
   readonly source: string;
+  /**
+   * Whether the backend compiles this file on its own. A vertex stage built on
+   * the instanced-batch contract does not: `INSTANCE_TRANSFORM_GLSL` is
+   * documented as going BETWEEN the version directive and the body, so such a
+   * file must carry no directive of its own. Calling `exoInstanceClipPosition`
+   * is that contract's own marker, which keeps this a property of the file
+   * rather than a list of paths that would fall behind.
+   */
+  readonly standalone: boolean;
 }
 
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
-  .map(([path, source]) => ({ name: path.slice(path.lastIndexOf('/') + 1), source }))
+  .map(([path, source]) => ({
+    name: path.slice(path.lastIndexOf('/') + 1),
+    source,
+    standalone: !source.includes('exoInstanceClipPosition('),
+  }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
 /** Strips GLSL line/block comments so bracket counting ignores commented-out code. */
@@ -69,9 +82,14 @@ describe('WebGL2 GLSL shader sources — structural integrity (jsdom, no GPU)', 
     expect(shaders.length).toBeGreaterThanOrEqual(8);
   });
 
-  test.each(shaders)('$name is non-empty, versioned GLSL ES 3.00 with a main entry point', ({ name, source }) => {
+  test.each(shaders)('$name is non-empty GLSL ES 3.00 with a main entry point', ({ name, source, standalone }) => {
     expect(source.length, `${name} is empty — a shader stub leaked into this check`).toBeGreaterThan(0);
-    expect(source.startsWith('#version 300 es'), `${name} is missing its #version 300 es directive`).toBe(true);
+    if (standalone) {
+      expect(source.startsWith('#version 300 es'), `${name} is missing its #version 300 es directive`).toBe(true);
+    } else {
+      expect(source.startsWith('#version 300 es'), `${name} composes the instanced-batch contract and must carry no directive`).toBe(false);
+    }
+
     expect(/\bvoid\s+main\s*\(/.test(source), `${name} has no 'void main(' entry point`).toBe(true);
   });
 

@@ -20,6 +20,7 @@ import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
+import { INSTANCE_TRANSFORM_GLSL } from '#rendering/shader/instanceContract';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSources';
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
@@ -88,8 +89,15 @@ const composeRuntimeSource = (name: string, source: string): string => {
   // A sprite-material fragment is authored without the base-texture slot table
   // and `sampleBase()`: the renderer splices those in. `lit-sprite.frag` ships
   // from the lighting package and only compiles in that spliced form.
-  const composed =
-    name.startsWith('text-') && name.endsWith('.frag')
+  // A vertex stage built on the instanced-batch contract carries no version
+  // directive of its own: `INSTANCE_TRANSFORM_GLSL` is documented as going
+  // between the directive and the body, and every material that uses it
+  // assembles the source that way.
+  const composed = filled.includes('exoInstanceClipPosition(')
+    ? `#version 300 es
+${INSTANCE_TRANSFORM_GLSL}
+${filled}`
+    : name.startsWith('text-') && name.endsWith('.frag')
       ? composeTextAtlasFragmentGlsl(filled)
       : name === 'lit-sprite.frag'
         ? composeSpriteMaterialFragmentGlsl(filled)
@@ -154,6 +162,11 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   // The custom sprite-material path: the engine owns the vertex stage, and the
   // lighting package's lit fragment is the in-repo counterpart it links with.
   ['sprite-material.vert', 'lit-sprite.frag'],
+  // The lighting package's own instanced-batch programs: the light quads, the
+  // composite that multiplies the frame by them, and the occluder debug view.
+  ['light-quad.vert', 'light-quad.frag'],
+  ['light-composite.vert', 'light-composite.frag'],
+  ['occluder-debug.vert', 'occluder-debug.frag'],
 ];
 
 const referencedShaderFiles = new Set(programPairs.flat());
@@ -209,9 +222,11 @@ describe('WebGL2 GLSL shader sources', () => {
     // here as empty strings rather than as a driver error further down.
     expect(shaders.length).toBeGreaterThanOrEqual(8);
 
-    for (const { name, source } of shaders) {
+    for (const { name, source, runtimeSource } of shaders) {
       expect(source.length, `${name} is empty — the shader text did not reach the test`).toBeGreaterThan(0);
-      expect(source.startsWith('#version 300 es'), `${name} is missing its #version directive`).toBe(true);
+      // The runtime form, not the authored one: a source composed with a
+      // prologue gets its directive from the composition.
+      expect(runtimeSource.startsWith('#version 300 es'), `${name} is missing its #version directive`).toBe(true);
     }
   });
 
