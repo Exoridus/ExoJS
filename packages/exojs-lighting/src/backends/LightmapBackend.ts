@@ -160,9 +160,9 @@ export class LightmapBackend implements LightingBackend {
   private readonly _app: Application;
   private readonly _resolution: number;
   private readonly _shadowResolution: number;
+  private readonly _compositeGeometry: Geometry = screenQuad();
   private readonly _lightGeometry: Geometry = unitQuad();
   private readonly _normalGeometry: Geometry = boxQuad();
-  private readonly _compositeGeometry: Geometry = screenQuad();
   private readonly _debugGeometry: Geometry = segmentQuad();
   /**
    * One batch per cookie texture, with the shared opaque white standing in for
@@ -184,6 +184,18 @@ export class LightmapBackend implements LightingBackend {
   private readonly _debugMaterial: MeshMaterial;
   private readonly _compositeBatch: RenderBatch;
   private readonly _debugBatch: RenderBatch;
+  /**
+   * The occluder mask: this frame's blocking edges rasterised at the light
+   * field's own resolution and size, so a fragment's position in one is its
+   * position in the other.
+   *
+   * Parked at one texel and switched off unless something reads it. Nothing
+   * marches it yet - the `mask` debug view is its only consumer - and a pass
+   * that runs for nobody is the defect `post` shipped with once already.
+   */
+  private readonly _maskTarget: RenderTexture;
+  private readonly _maskBatch: RenderBatch;
+  private readonly _maskPass: CallbackRenderPass;
   private readonly _normalTarget: RenderTexture;
   /** One batch per albedo/normal-map pair: a batch binds two textures and draws every surface sharing them. */
   private readonly _normalBatches = new Map<Texture | RenderTexture, Map<Texture, RenderBatch>>();
@@ -263,6 +275,11 @@ ${sunQuadWgsl}`,
     });
     this._compositeBatch = new RenderBatch(this._compositeGeometry, this._compositeMaterial);
     this._debugBatch = new RenderBatch(this._debugGeometry, this._debugMaterial);
+    // The same geometry and the same material as the debug overlay: rasterising
+    // an edge into a target and drawing it over the frame are one draw pointed
+    // at two places. What differs is the width, which is a property of the
+    // target rather than of the edge.
+    this._maskBatch = new RenderBatch(this._debugGeometry, this._debugMaterial);
 
     // Stock passes rather than passes of our own: the light field is a draw
     // into a target the engine redirects for us, and the composite and the
@@ -276,6 +293,13 @@ ${sunQuadWgsl}`,
     // a lightmap scene that registers none never pays for the attachment. The
     // clear is transparent black because alpha is coverage here - zero means
     // "nothing described a surface", and the rgb under it is never read.
+    this._maskTarget = new RenderTexture(1, 1);
+    this._maskPass = new CallbackRenderPass(pass => this._drawMask(pass), {
+      target: this._maskTarget,
+      clear: Color.transparentBlack,
+      label: 'lighting:occluder-mask',
+      enabled: false,
+    });
     this._normalTarget = new RenderTexture(1, 1);
     this._normalPass = new CallbackRenderPass(pass => this._drawNormals(pass), {
       target: this._normalTarget,
@@ -302,7 +326,7 @@ ${sunQuadWgsl}`,
     this._debugPass = new CallbackRenderPass(pass => this._drawOccluders(pass), { label: 'lighting:occluder-debug' });
 
     this._resize();
-    this._app.framePasses.addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
+    this._app.framePasses.addPass(this._maskPass).addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
 
     if (this._postPass !== null) {
       this._app.framePasses.addPass(this._postPass);
@@ -331,8 +355,20 @@ ${sunQuadWgsl}`,
     // Showing an intermediate is multiplying a white frame by it, so the debug
     // views swap the composite's two inputs rather than carrying a second
     // shader that would have to be kept in step with the first.
-    this._compositeMaterial.setTexture('u_frame', view === 'light' || view === 'normals' ? whiteTexture() : this._app.frameTexture);
-    this._compositeMaterial.setTexture('u_light', view === 'normals' ? this._normalTarget : this._target);
+    const intermediate = view === 'light' || view === 'normals' || view === 'mask';
+
+    this._maskPass.enabled = view === 'mask';
+    this._compositeMaterial.setTexture('u_frame', intermediate ? whiteTexture() : this._app.frameTexture);
+    this._compositeMaterial.setTexture('u_light', this._debugTexture(view));
+  }
+
+  /** The intermediate a debug view multiplies the white frame by. */
+  private _debugTexture(view: LightingDebugView): RenderTexture {
+    if (view === 'normals') {
+      return this._normalTarget;
+    }
+
+    return view === 'mask' ? this._maskTarget : this._target;
   }
 
   /** The accumulated light, for a debug view that wants to show it. @internal */
@@ -428,6 +464,7 @@ ${sunQuadWgsl}`,
     }
 
     this._activeCount = written;
+    this._writeMask(occluders);
     this._writeOccluderDebug(occluders);
   }
 
@@ -531,10 +568,12 @@ ${sunQuadWgsl}`,
 
   public destroy(): void {
     this._app.onResize.remove(this._onResize);
+    this._app.framePasses.removePass(this._maskPass);
     this._app.framePasses.removePass(this._normalPass);
     this._app.framePasses.removePass(this._lightPass);
     this._app.framePasses.removePass(this._compositePass);
     this._app.framePasses.removePass(this._debugPass);
+    this._maskPass.destroy();
     this._normalPass.destroy();
     this._lightPass.destroy();
     this._compositePass.destroy();
@@ -549,6 +588,7 @@ ${sunQuadWgsl}`,
     this._shaded?.destroy();
     this._compositeBatch.destroy();
     this._debugBatch.destroy();
+    this._maskBatch.destroy();
     this._compositeMaterial.destroy();
     this._debugMaterial.destroy();
     this._lightGeometry.destroy();
@@ -574,6 +614,7 @@ ${sunQuadWgsl}`,
 
     this._normalBatches.clear();
     this._shadowMap.destroy();
+    this._maskTarget.destroy();
     this._normalTarget.destroy();
     this._target.destroy();
     this._activeCount = 0;
@@ -797,6 +838,57 @@ ${normalPrepassWgsl}`,
     return batch;
   }
 
+  /** Rasterise this frame's blocking edges, through the frame's own view. */
+  private _drawMask(pass: PassContext): void {
+    if (this._maskBatch.count > 0) {
+      pass.drawBatch(this._maskBatch, { view: this._app.rendering.view });
+    }
+  }
+
+  /**
+   * One instance per collected segment, widened so no edge can fall between two
+   * texels of the mask.
+   *
+   * The width is a floor rather than a knob. An edge thinner than a texel is an
+   * edge a marcher can step over, and a tilemap wall one tile thick is exactly
+   * the case that produces: the leak would look like a tuning problem and be a
+   * sampling one. Widening here costs a fraction of a texel of shadow and
+   * removes the artefact class rather than trading it against a parameter.
+   */
+  private _writeMask(occluders: OccluderField): void {
+    this._maskBatch.clear();
+
+    if (!this._maskPass.enabled) {
+      return;
+    }
+
+    const view = this._app.rendering.view.getBounds();
+    // One mask texel in world units, along whichever axis resolves it worse.
+    const texel = Math.max(view.width / Math.max(1, this._maskTarget.width), view.height / Math.max(1, this._maskTarget.height));
+    const segments = occluders.segments;
+
+    for (let index = 0; index < occluders.count; index++) {
+      const offset = index * 4;
+      const x1 = segments[offset]!;
+      const y1 = segments[offset + 1]!;
+      const edgeX = segments[offset + 2]! - x1;
+      const edgeY = segments[offset + 3]! - y1;
+      const length = Math.hypot(edgeX, edgeY);
+
+      if (length === 0) {
+        continue;
+      }
+
+      const dirX = edgeX / length;
+      const dirY = edgeY / length;
+
+      // Lengthened by a texel at each end as well: two edges meeting at a corner
+      // would otherwise leave a hole exactly one texel wide at the join.
+      this._transform.set(dirX * (length + texel * 2), -dirY * texel, x1 - dirX * texel, dirY * (length + texel * 2), dirX * texel, y1 - dirY * texel);
+      this._maskBatch.add(this._transform, Color.white);
+    }
+  }
+
   private _drawOccluders(pass: PassContext): void {
     if (this._debug !== 'occluders' || this._debugBatch.count === 0) {
       return;
@@ -885,6 +977,9 @@ ${normalPrepassWgsl}`,
     // describes a surface, which is what keeps the attachment free for a scene
     // that registers none.
     this._normalTarget.setSize(this._surfaceCount > 0 ? width : 1, this._surfaceCount > 0 ? height : 1);
+    // On the light field's own grid, so a fragment's place in one is its place
+    // in the other - which is what a marcher reading both needs.
+    this._maskTarget.setSize(this._maskPass.enabled ? width : 1, this._maskPass.enabled ? height : 1);
 
     if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0) {
       return;

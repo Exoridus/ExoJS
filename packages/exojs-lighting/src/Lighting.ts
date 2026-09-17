@@ -41,6 +41,11 @@ export type LightingQualityOption = LightingQuality | 'auto';
  *
  * - `'light'` shows the accumulated light field on its own, which is how you
  *   see where a light reaches without the scene's own colours in the way.
+ * - `'mask'` shows the occluder mask: the same edges the `occluders` view draws,
+ *   rasterised into a target of their own at the light field's resolution and
+ *   widened so none of them can fall between two texels. It is the input a
+ *   GPU-resident occluder field marches, and the view that says whether a wall
+ *   is thick enough to be seen at that resolution.
  * - `'normals'` shows the normal prepass: the world-space normals the
  *   registered surfaces described this frame, encoded the way a normal map is.
  *   Black is where nothing described a surface, and light lands there with no
@@ -52,7 +57,7 @@ export type LightingQualityOption = LightingQuality | 'auto';
  * A renderer with no such intermediate - `forward` shades inside the sprite
  * shader and casts no shadows - ignores it.
  */
-export type LightingDebugView = 'light' | 'normals' | 'occluders' | null;
+export type LightingDebugView = 'light' | 'mask' | 'normals' | 'occluders' | null;
 
 const scratchPosition = { x: 0, y: 0 };
 

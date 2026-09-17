@@ -329,8 +329,8 @@ describe('Lighting', () => {
 
     expect(forwardApp.framePasses.size).toBe(1);
     expect(lightmap.post).toEqual([grade]);
-    // The lightmap renderer's own four, plus the chain.
-    expect(lightmapApp.framePasses.size).toBe(5);
+    // The lightmap renderer's own five, plus the chain.
+    expect(lightmapApp.framePasses.size).toBe(6);
 
     forward.destroy();
     lightmap.destroy();

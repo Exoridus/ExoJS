@@ -70,7 +70,7 @@ const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20,
 
 `lightmap` needs the application, because it works on the frame the application drew: it installs its passes in `app.framePasses` and removes them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
 
-`lighting.debug = 'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's colours in the way; `lighting.debug = 'occluders'` draws the silhouettes the sources collected, over the shaded scene.
+`lighting.debug = 'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's colours in the way; `lighting.debug = 'normals'` shows the prepass normals; `lighting.debug = 'occluders'` draws the silhouettes the sources collected, over the shaded scene; and `lighting.debug = 'mask'` shows those same edges rasterised into a target of their own at the light field's resolution, widened so none can fall between two texels. The mask costs nothing unless you ask for it - it is the input a GPU-resident occluder field would march, and today the debug view is its only reader.
 
 The `lightmap` light target is `rgba16f`, so two lights overlapping add up past `1.0` instead of saturating to white, and a filter over the composite has something above the clipping point to work with. A WebGL2 context without `EXT_color_buffer_float` cannot render into one; there the target is `rgba8` and `lighting.hdr` reports `false`. The picture is still correct - it clips earlier, and a bloom keyed on a threshold near `1.0` finds little to bloom.
 

@@ -460,6 +460,81 @@ describe('WebGL2 lightmap renderer', () => {
     }
   });
 
+  test('two cookies in one frame both reach the light field', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // A cookie is a material binding, so these three lights are three batches:
+    // one per texture, plus the shared white one for the light carrying none.
+    // Sharing one geometry between them would leave all but the last drawing
+    // nothing - draw calls issued, pixels black.
+    const dim = new DataTexture({ width: 1, height: 1, format: TextureFormat.Rgba8, data: new Uint8Array([90, 90, 90, 255]) });
+    const bright = new DataTexture({ width: 1, height: 1, format: TextureFormat.Rgba8, data: new Uint8Array([255, 255, 255, 255]) });
+
+    lighting.add(new PointLight({ radius: 18, intensity: 1, cookie: dim })).setPosition(14, 18);
+    lighting.add(new PointLight({ radius: 18, intensity: 1, cookie: bright })).setPosition(48, 22);
+    lighting.add(new PointLight({ radius: 18, intensity: 1 })).setPosition(30, 50);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      expect(lighting.activeLightCount).toBe(3);
+      // Every one of the three landed, and the dim cookie is dimmer than the
+      // bright one at the same distance from its own light.
+      const dimmed = readPixel(host.backend, 14, 18)[0];
+      const full = readPixel(host.backend, 48, 22)[0];
+      const uncookied = readPixel(host.backend, 30, 50)[0];
+
+      expect(dimmed).toBeGreaterThan(40);
+      expect(full).toBeGreaterThan(200);
+      expect(uncookied).toBeGreaterThan(200);
+      expect(full - dimmed).toBeGreaterThan(40);
+    } finally {
+      dim.destroy();
+      bright.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('the mask rasterises every blocking edge at least one texel wide', async () => {
+    const host = await createHost();
+    // Half resolution, so a mask texel is two canvas pixels - the case a hair-
+    // thin wall would fall through if the width were not a floor.
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 0.5 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(20, 24);
+    // A wall with no thickness at all: two points, one segment.
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 44, y: 12 },
+          { x: 44, y: 52 },
+        ],
+        { closed: false },
+      ),
+    );
+    lighting.debug = 'mask';
+
+    try {
+      runFrame(host, lighting);
+
+      // A wall with no thickness at all still registers: the width is a floor,
+      // and the composite reads it back through a half-resolution upsample.
+      expect(readPixel(host.backend, 44, 32)[0]).toBeGreaterThan(30);
+      // Off the wall, nothing blocks - and the probes are asymmetric in both
+      // axes, so a mask drawn in the wrong space cannot pass by accident.
+      expectPixelNear(readPixel(host.backend, 20, 12), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(host.backend, 58, 50), [0, 0, 0, 255]);
+      // Past the segment's own ends, by the texel the edge is lengthened by, so
+      // two edges meeting at a corner leave no hole.
+      expect(readPixel(host.backend, 44, 11)[0]).toBeGreaterThan(30);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
   test('a light beyond every cap still contributes - the lightmap has none', async () => {
     const host = await createHost();
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });

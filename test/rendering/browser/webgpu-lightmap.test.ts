@@ -358,6 +358,47 @@ describe('lightmap renderer WebGPU browser', () => {
     }
   });
 
+  test('the mask rasterises every blocking edge at least one texel wide', async ctx => {
+    const host = await createHost();
+    // Half resolution, so a mask texel is two canvas pixels - the case a hair-
+    // thin wall would fall through if the width were not a floor.
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 0.5 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(20, 24);
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 44, y: 12 },
+          { x: 44, y: 52 },
+        ],
+        { closed: false },
+      ),
+    );
+    lighting.debug = 'mask';
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      // A wall with no thickness at all still registers, and the probes are
+      // asymmetric in both axes so a mask drawn in the wrong space cannot pass.
+      expect(at(44, 32)).toBeGreaterThan(30);
+      expect(at(20, 12)).toBeLessThan(10);
+      expect(at(58, 50)).toBeLessThan(10);
+      // Past the segment's own ends, by the texel the edge is lengthened by.
+      expect(at(44, 11)).toBeGreaterThan(30);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
   test('a sun lights the whole view evenly and casts a parallel shadow', async ctx => {
     const host = await createHost();
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });

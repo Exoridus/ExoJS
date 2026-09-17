@@ -1,6 +1,6 @@
 {
   "title": "LightingDebugView",
-  "description": "Intermediate to draw instead of the shaded frame. `null` shades normally. - `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. - `'normals'` shows the normal prepass: the world-space normals the registered surfaces described this frame, encoded the way a normal map is. Black is where nothing described a surface, and light lands there with no `N dot L` term at all. - `'occluders'` draws the silhouettes the registered sources collected this frame over the shaded scene, which is how you see what the shadows are actually being cast from. A renderer with no such intermediate - `forward` shades inside the sprite shader and casts no shadows - ignores it.",
+  "description": "Intermediate to draw instead of the shaded frame. `null` shades normally. - `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. - `'mask'` shows the occluder mask: the same edges the `occluders` view draws, rasterised into a target of their own at the light field's resolution and widened so none of them can fall between two texels. It is the input a GPU-resident occluder field marches, and the view that says whether a wall is thick enough to be seen at that resolution. - `'normals'` shows the normal prepass: the world-space normals the registered surfaces described this frame, encoded the way a normal map is. Black is where nothing described a surface, and light lands there with no `N dot L` term at all. - `'occluders'` draws the silhouettes the registered sources collected this frame over the shaded scene, which is how you see what the shadows are actually being cast from. A renderer with no such intermediate - `forward` shades inside the sprite shader and casts no shadows - ignores it.",
   "symbol": "LightingDebugView",
   "kind": "type",
   "subsystem": "lighting",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Intermediate to draw instead of the shaded frame. `null` shades normally.",
-        "- `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. - `'normals'` shows the normal prepass: the world-space normals the registered surfaces described this frame, encoded the way a normal map is. Black is where nothing described a surface, and light lands there with no `N dot L` term at all. - `'occluders'` draws the silhouettes the registered sources collected this frame over the shaded scene, which is how you see what the shadows are actually being cast from.",
+        "- `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. - `'mask'` shows the occluder mask: the same edges the `occluders` view draws, rasterised into a target of their own at the light field's resolution and widened so none of them can fall between two texels. It is the input a GPU-resident occluder field marches, and the view that says whether a wall is thick enough to be seen at that resolution. - `'normals'` shows the normal prepass: the world-space normals the registered surfaces described this frame, encoded the way a normal map is. Black is where nothing described a surface, and light lands there with no `N dot L` term at all. - `'occluders'` draws the silhouettes the registered sources collected this frame over the shaded scene, which is how you see what the shadows are actually being cast from.",
         "A renderer with no such intermediate - `forward` shades inside the sprite shader and casts no shadows - ignores it."
       ],
       "importLine": "import { LightingDebugView } from '@codexo/exojs-lighting'",
@@ -32,10 +32,18 @@
       "members": [
         {
           "name": "LightingDebugView",
-          "signature": "\"light\" | \"normals\" | \"occluders\" | null",
+          "signature": "\"light\" | \"mask\" | \"normals\" | \"occluders\" | null",
           "signatureTokens": [
             {
               "text": "\"light\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"mask\"",
               "kind": "keyword"
             },
             {
