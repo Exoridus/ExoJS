@@ -29,6 +29,7 @@ export const RENDER_FEATURES: readonly RenderFeature[] = [
   { name: 'Graphics', summary: 'Filled and stroked vector primitives.' },
   { name: 'Tilemap', summary: 'Chunked tile layers from the tilemap package.' },
   { name: 'Particles', summary: 'CPU and GPU particle systems.' },
+  { name: 'Lighting', summary: 'Lights, lit materials and normal mapping from the lighting package.' },
   { name: 'RenderTexture', summary: 'Rendering into a texture and sampling it back.' },
   { name: 'Mask', summary: 'Stencil and alpha clipping.' },
   { name: 'Filter', summary: 'Post-processing passes over a rendered region.' },

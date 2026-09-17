@@ -18,6 +18,7 @@ import { colourScenes } from './scenes/colour';
 import { computedColourScenes } from './scenes/computedColour';
 import { filterScenes } from './scenes/filters';
 import { graphicsScenes } from './scenes/graphics';
+import { lightingScenes } from './scenes/lighting';
 import { meshScenes } from './scenes/mesh';
 import { nineSliceScenes } from './scenes/nineSlice';
 import { particleScenes } from './scenes/particles';
@@ -46,6 +47,7 @@ const scenes: readonly Scene[] = [
   ...textScenes,
   ...tilemapScenes,
   ...particleScenes,
+  ...lightingScenes,
 ];
 
 const properties: readonly Property[] = [crossBackendParity, determinism, rendersSomething, oracleAgreement];

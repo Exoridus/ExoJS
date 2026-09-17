@@ -1,8 +1,8 @@
 {
   "stamps": {
     "chromium": {
-      "measuredAt": "2026-09-06",
-      "commit": "d7afc0361",
+      "measuredAt": "2026-09-17",
+      "commit": "edae5d72a",
       "platform": "win32"
     },
     "firefox": {
@@ -138,6 +138,48 @@
       "scene": "blend/alpha-over-solid",
       "property": "repeat-render-determinism",
       "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "cross-backend-parity",
+      "feature": "Filter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "oracle-agreement",
+      "feature": "Filter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "renders-something",
+      "feature": "Filter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "1316/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "repeat-render-determinism",
+      "feature": "Filter",
       "browser": "chromium",
       "backend": "webgl2",
       "support": "supported",
@@ -390,6 +432,48 @@
       "scene": "graphics/solid-rectangle",
       "property": "repeat-render-determinism",
       "feature": "Graphics",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "cross-backend-parity",
+      "feature": "Lighting",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "oracle-agreement",
+      "feature": "Lighting",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "renders-something",
+      "feature": "Lighting",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2175/4096 pixels drawn"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "repeat-render-determinism",
+      "feature": "Lighting",
       "browser": "chromium",
       "backend": "webgl2",
       "support": "supported",
@@ -1321,6 +1405,48 @@
       "delta": 0
     },
     {
+      "scene": "filter/bloom-halo",
+      "property": "cross-backend-parity",
+      "feature": "Filter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "oracle-agreement",
+      "feature": "Filter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "renders-something",
+      "feature": "Filter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "1316/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "repeat-render-determinism",
+      "feature": "Filter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "filter/color-matrix-bias",
       "property": "cross-backend-parity",
       "feature": "ColorMatrixFilter",
@@ -1566,6 +1692,48 @@
       "scene": "graphics/solid-rectangle",
       "property": "repeat-render-determinism",
       "feature": "Graphics",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "cross-backend-parity",
+      "feature": "Lighting",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "oracle-agreement",
+      "feature": "Lighting",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "renders-something",
+      "feature": "Lighting",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2175/4096 pixels drawn"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "repeat-render-determinism",
+      "feature": "Lighting",
       "browser": "chromium",
       "backend": "webgpu",
       "support": "supported",

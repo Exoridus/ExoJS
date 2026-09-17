@@ -1,4 +1,5 @@
 import type { ArchetypeSpec } from './EngineAdapter';
+import { isLit } from './lighting';
 import { isTilemap } from './tilemap';
 import { usesRenderTargets } from './traits';
 import { isUiLayoutScene } from './uiLayout';
@@ -21,6 +22,11 @@ import { isScrolling } from './world';
  * when it has no public path that answers the archetype's question. Approximating
  * one would mean writing the arm's missing feature and then publishing the
  * harness's implementation under the library's name.
+ *
+ * The lighting archetypes are out for every arm on exactly that rule. Pixi could
+ * be given `@pixi/lights` plus `@pixi/layers`, which is a real deferred
+ * renderer and a fair opponent - but it is a dependency decision rather than an
+ * adapter one, and until it is taken the row measures ExoJS against itself.
  */
 
 /**
@@ -35,7 +41,7 @@ import { isScrolling } from './world';
  *   objects once on a fixed raster and `GameObjects.Grid` draws one; neither
  *   re-solves a box when a child resizes.
  */
-export const phaserCovers = (spec: ArchetypeSpec): boolean => !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec);
+export const phaserCovers = (spec: ArchetypeSpec): boolean => !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec) && !isLit(spec);
 
 /**
  * Excalibur 0.32.
@@ -56,6 +62,7 @@ export const excaliburCovers = (spec: ArchetypeSpec): boolean =>
   !usesRenderTargets(spec) &&
   !isTilemap(spec) &&
   !isUiLayoutScene(spec) &&
+  !isLit(spec) &&
   spec.particles === undefined &&
   (spec.pointerQueriesPerFrame ?? 0) === 0;
 
@@ -70,4 +77,4 @@ export const excaliburCovers = (spec: ArchetypeSpec): boolean =>
  * visibility itself and `Culler.shared.cull` acts on `.cullable` scene nodes it
  * never sees, so the variant would measure the stock arm a second time.
  */
-export const pixiCulledCovers = (spec: ArchetypeSpec): boolean => spec.cullingEnabled && !isTilemap(spec);
+export const pixiCulledCovers = (spec: ArchetypeSpec): boolean => spec.cullingEnabled && !isTilemap(spec) && !isLit(spec);

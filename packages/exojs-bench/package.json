@@ -21,6 +21,7 @@
   "devDependencies": {
     "@codexo/exojs": "workspace:*",
     "@codexo/exojs-config": "workspace:*",
+    "@codexo/exojs-lighting": "workspace:*",
     "@codexo/exojs-particles": "workspace:*",
     "@codexo/exojs-physics": "workspace:*",
     "@codexo/exojs-tilemap": "workspace:*",
