@@ -48,6 +48,22 @@
     display: none;
   }
 
+  // A column of its own, the height of the viewport under the header: the
+  // navigation inside it sizes to `100%` and scrolls its list against that, so
+  // without a definite height here the list is clipped instead of scrollable.
+  .side-content {
+    position: sticky;
+    top: 64px;
+    height: calc(100vh - 64px);
+    align-self: start;
+  }
+
+  // The track goes with the column. `display: none` removes the item, not the
+  // track, so the preview would otherwise be laid out in the navigation's width.
+  .root[data-sidebar='closed'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .backdrop {
     display: none;
   }
