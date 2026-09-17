@@ -20,6 +20,14 @@ import type { OccluderSource } from './OccluderSource';
  * Each of these is an ordinary implementation of {@link OccluderSource} with
  * no privilege over one you write. A source is registered with
  * {@link Lighting.occludeFrom} and contributes until it is removed.
+ *
+ * Every entry is also exported under its own name - `physicsOccluder`,
+ * `tilemapOccluder`, `alphaOccluder`, `meshOccluder`, `polygonOccluder`. The
+ * two spellings do the same thing, and only the named one lets a bundler drop
+ * what you did not use: reaching one property of this object keeps the whole
+ * object, and with it the marching-squares tracer and the tile boundary walker
+ * a physics-only project never runs. Reach for the named form when the bundle
+ * matters, and for this one when discoverability does.
  */
 export const Occluders = {
   /**

@@ -1,6 +1,6 @@
 {
   "title": "Normals",
-  "description": "Where a material takes its surface normals from.",
+  "description": "Where a material takes its surface normals from. Every entry is also exported under its own name - normalMap, normalsFromAlpha. The two spellings do the same thing, and only the named one lets a bundler drop what you did not use: reaching one property of this object keeps the whole object, and with it the Sobel derivation and the canvas readback behind `fromAlpha`. Reach for the named form when the bundle matters, and for this one when discoverability does.",
   "symbol": "Normals",
   "kind": "namespace",
   "subsystem": "lighting",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Where a material takes its surface normals from."
+        "Where a material takes its surface normals from.",
+        "Every entry is also exported under its own name - normalMap, normalsFromAlpha. The two spellings do the same thing, and only the named one lets a bundler drop what you did not use: reaching one property of this object keeps the whole object, and with it the Sobel derivation and the canvas readback behind `fromAlpha`. Reach for the named form when the bundle matters, and for this one when discoverability does."
       ],
       "importLine": "import { Normals } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -87,7 +88,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Normals derived from a texture's own alpha channel, computed once. The silhouette read as a height field, which gives edges that turn away from the light without anyone authoring a map. It knows nothing about the interior of a shape, so it is a floor rather than a replacement - but it is the difference between art that reacts to light and art that does not. The source must be drawable when this is called: a texture that is still loading yields a flat map rather than waiting."
+          "description": ""
         },
         {
           "name": "map",
@@ -128,7 +129,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "An authored tangent-space normal map."
+          "description": ""
         }
       ],
       "paragraphs": [],

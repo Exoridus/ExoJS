@@ -1,0 +1,156 @@
+{
+  "title": "Lighting Functions",
+  "description": "Free functions and constants exported from @codexo/exojs-lighting.",
+  "symbol": "Lighting Functions",
+  "kind": "namespace",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "members": [],
+      "paragraphs": [
+        "Free functions and constants exported from @codexo/exojs-lighting. Import any of them directly, for example `import { normalMap } from '@codexo/exojs-lighting'`."
+      ],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "functions",
+      "title": "Functions",
+      "members": [
+        {
+          "name": "normalMap",
+          "signature": "normalMap(texture: Texture): NormalSource",
+          "signatureTokens": [
+            {
+              "text": "normalMap",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalSource",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "texture",
+              "type": "Texture",
+              "optional": false
+            }
+          ],
+          "returnType": "NormalSource",
+          "description": "An authored tangent-space normal map."
+        },
+        {
+          "name": "normalsFromAlpha",
+          "signature": "normalsFromAlpha(texture: Texture, options?: DeriveNormalsOptions): NormalSource",
+          "signatureTokens": [
+            {
+              "text": "normalsFromAlpha",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DeriveNormalsOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalSource",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "texture",
+              "type": "Texture",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "DeriveNormalsOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "NormalSource",
+          "description": "Normals derived from a texture's own alpha channel, computed once. The silhouette read as a height field, which gives edges that turn away from the light without anyone authoring a map. It knows nothing about the interior of a shape, so it is a floor rather than a replacement - but it is the difference between art that reacts to light and art that does not. The source must be drawable when this is called: a texture that is still loading yields a flat map rather than waiting."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    }
+  ]
+}

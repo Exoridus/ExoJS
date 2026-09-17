@@ -15,8 +15,8 @@ npm install @codexo/exojs @codexo/exojs-lighting
 - `PointLight`, `SpotLight` - scene nodes that emit rather than draw. Position comes from the node's transform, a spot's cone points along its rotation, and every field is an ordinary property, so the engine's tweens animate a light with no lighting-specific animation concept.
 - `Lighting` - the system: collects the registered lights, hands them to a renderer, and carries the ambient term. Registers on a `SystemRegistry` like any other system.
 - `LitMaterial` - a `SpriteMaterial` (GLSL + WGSL) that shades a sprite against those lights. Normals are optional: without them the surface is lit as a plane rather than left black.
-- `Normals` - where a material's surface normals come from. `Normals.map(texture)` binds an authored tangent-space map, `Normals.fromAlpha(texture)` derives one from the texture's own silhouette; the interface is open, so a source of your own is a valid argument without this package knowing about it.
-- `Occluders` - what blocks light, read out of the description of the world a project already has: physics colliders, tile layers, a sprite's own silhouette, or an outline you author. Occluders are registered sources rather than a flag on a drawable, and `OccluderSource` is an interface you can implement.
+- `Normals` - where a material's surface normals come from. `Normals.map(texture)` binds an authored tangent-space map, `Normals.fromAlpha(texture)` derives one from the texture's own silhouette; the interface is open, so a source of your own is a valid argument without this package knowing about it. Both are also exported as `normalMap` and `normalsFromAlpha`, which is the spelling a bundler can drop what you did not use from.
+- `Occluders` - what blocks light, read out of the description of the world a project already has: physics colliders, tile layers, a sprite's own silhouette, or an outline you author. Occluders are registered sources rather than a flag on a drawable, and `OccluderSource` is an interface you can implement. Each factory is also exported by name - `physicsOccluder`, `tilemapOccluder`, `alphaOccluder`, `meshOccluder`, `polygonOccluder`.
 
 ## Usage
 
@@ -107,6 +107,19 @@ Two sources give no outline, by construction rather than by omission. A **render
 There is no `castsShadow` flag, in this package or in the core. A flag on a drawable would put lighting vocabulary on a class with no lighting concern, and it would tie the shadow silhouette to the sprite's shape - which is wrong often enough that a tree casts the shadow of its trunk, not of its canopy. Sources keep the two apart while letting the common case stay one line.
 
 `Occluders.fromPhysics` and `Occluders.fromTilemap` take structurally typed arguments, so this package depends on neither `@codexo/exojs-physics` nor `@codexo/exojs-tilemap`: a project without them pulls in nothing, and a project with a collision layer of its own can feed shadows from that instead.
+
+### Two spellings, and which one your bundler can act on
+
+Every occluder source and every normal source is exported twice: as a property of `Occluders` / `Normals`, and under its own name.
+
+```ts
+import { Occluders, Normals } from '@codexo/exojs-lighting'; // discoverable
+import { physicsOccluder, normalMap } from '@codexo/exojs-lighting'; // tree-shakeable
+```
+
+They do the same thing. The difference is that reaching one property of a namespace object keeps the whole object, so `Occluders.fromPhysics` also carries the marching-squares tracer, the alpha readback and the tile boundary walker that a physics-only project never runs - measured at 34.0 KB against 25.1 KB minified for the named form. Use the namespace while you are finding your way around, and the named form when the bundle matters.
+
+The renderers do not split this way. `quality` is a string read at runtime, so a `forward` project carries the lightmap renderer whether or not it runs it; the package as a whole is 12.9 KB gzip, of which a `forward` project uses 8.2 KB. Both figures are budgeted in CI.
 
 ### Softness
 
