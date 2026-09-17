@@ -22,7 +22,7 @@ import {
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { Light } from '../lights/Light';
-import { lightHeight, lightRadius } from '../lights/reach';
+import { lightFalloff, lightHalfLength, lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
@@ -50,7 +50,7 @@ const debugLineWidth = 2;
 
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
-const scratchInstance = { a_light: [noCone, noCone, 1], a_shadow: [noShadow, 0], a_surface: [1, 0, 1, 0] };
+const scratchInstance = { a_light: [noCone, noCone, 1, 0], a_shadow: [noShadow, 0], a_surface: [1, 0, 1, 0] };
 const scratchSurface = { a_frame: [0, 0, 1, 1], a_basis: [1, 0, 0, 1] };
 
 /** Unit quad in `-1..1`, which is the light's own space: distance from its centre in radii. */
@@ -329,10 +329,14 @@ export class LightmapBackend implements LightingBackend {
         continue;
       }
 
+      const falloff = lightFalloff(light);
+      const half = lightHalfLength(light);
+
       light.getWorldPosition(scratchPosition);
-      writeAxis(scratchDirection, light);
+      light.getWorldDirection(scratchDirection);
       writeCone(scratchInstance.a_light, light);
       scratchInstance.a_light[2] = light.intensity;
+      scratchInstance.a_light[3] = half / falloff;
 
       if (shadows === null) {
         scratchInstance.a_shadow[0] = noShadow;
@@ -355,21 +359,22 @@ export class LightmapBackend implements LightingBackend {
       // What the `N dot L` term needs and the instance transform has already
       // folded away: the radius it normalized the quad by, the height the light
       // sits at, and the axis it rotated the quad onto.
-      scratchInstance.a_surface[0] = radius;
+      scratchInstance.a_surface[0] = falloff;
       scratchInstance.a_surface[1] = lightHeight(light);
       scratchInstance.a_surface[2] = scratchDirection.x;
       scratchInstance.a_surface[3] = scratchDirection.y;
 
-      // Position, radius and cone rotation travel as the instance transform: a
-      // unit quad scaled by the radius IS the light's bounding square, and the
-      // fragment stage then measures distance in radii along the light's own
-      // axis, without knowing where it is in the world.
+      // Position, reach and rotation travel as the instance transform: a unit
+      // quad scaled by the falloff radius across the light's axis and by the
+      // whole reach along it IS the shape's bounding box, and the fragment
+      // stage then measures in radii along that axis without knowing where it
+      // is in the world.
       this._transform.set(
         radius * scratchDirection.x,
-        -radius * scratchDirection.y,
+        -falloff * scratchDirection.y,
         scratchPosition.x,
         radius * scratchDirection.y,
-        radius * scratchDirection.x,
+        falloff * scratchDirection.x,
         scratchPosition.y,
       );
       this._tint.set(light.color.r, light.color.g, light.color.b, 255);
@@ -591,7 +596,7 @@ export class LightmapBackend implements LightingBackend {
     });
     const batch = new RenderBatch(this._lightGeometry, material, {
       instanceAttributes: [
-        { name: 'a_light', format: 'float32x3' },
+        { name: 'a_light', format: 'float32x4' },
         { name: 'a_shadow', format: 'float32x2' },
         { name: 'a_surface', format: 'float32x4' },
       ],
@@ -754,22 +759,6 @@ ${normalPrepassWgsl}`,
 
 /** Colour the `occluders` debug view draws collected silhouettes in. */
 const debugColor = new Color(255, 96, 160);
-
-/**
- * The light's own axis as a unit vector. A cone points along the node's
- * rotation; everything else is axis-aligned, and its quad carries no rotation
- * at all.
- */
-const writeAxis = (out: { x: number; y: number }, light: Light): void => {
-  if (light instanceof SpotLight) {
-    light.getWorldDirection(out);
-
-    return;
-  }
-
-  out.x = 1;
-  out.y = 0;
-};
 
 const writeCone = (target: number[], light: Light): void => {
   if (!(light instanceof SpotLight)) {

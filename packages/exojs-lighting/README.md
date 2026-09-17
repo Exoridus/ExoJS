@@ -138,6 +138,20 @@ They do the same thing. The difference is that reaching one property of a namesp
 
 The renderers do not split this way. `quality` is a string read at runtime, so a `forward` project carries the lightmap renderer whether or not it runs it; the package as a whole is 12.9 KB gzip, of which a `forward` project uses 8.2 KB. Both figures are budgeted in CI.
 
+### Light shapes
+
+`PointLight` is equal in every direction. `SpotLight` is a cone along the node's own rotation. `LineLight` is a segment: falloff is measured from the nearest point on it, so the pool of light is a capsule rather than a disc - a neon tube, a light strip, a laser.
+
+```ts
+sign.addChild(new LineLight({ length: 120, radius: 160, color: Color.cyan }));
+```
+
+A line light's `radius` is the distance from the SEGMENT, so it reaches `length / 2 + radius` along its own axis and `radius` across it. Its shadow map is polar around the segment's centre, the same as a point light's: exact for a fragment the segment subtends little of, approximate near a long tube's end, where a real emitter would light an occluder from many points at once. `softness` is the knob that stands in for that.
+
+`forward` has no capsule in its shader, so it draws a line light as a point light at the segment's centre with the whole reach as its radius.
+
+Shapes are deliberately not extensible: a shape is instance data a light-pass shader evaluates, and opening it up means either exposing that shader's structure or accepting a draw per shape. Cookies plus parameters cover what people build, and additive extension stays possible later.
+
 ### Cookies
 
 Every light takes an optional `cookie` texture, which is the cheapest large visual win here: a window cross, leaf shade, a stained-glass pattern, a projector gobo.
@@ -207,7 +221,8 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 | Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                           |
 | Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                              |
 | Light cookies                               | `lightmap`, one draw per distinct cookie                         |
-| Line and sun lights                         | no                                                               |
+| Line lights (capsule falloff)               | yes; `forward` approximates one as a point light                 |
+| Sun lights                                  | no                                                               |
 | Deferred (G-buffer) path                    | no                                                               |
 | Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                            |
 

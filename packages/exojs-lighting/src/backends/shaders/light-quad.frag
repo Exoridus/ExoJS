@@ -92,7 +92,10 @@ void main() {
     // Distance to the segment, not to the centre: folding `x` onto the segment
     // first is what turns the disc into a capsule, and `v_half == 0` leaves the
     // disc exactly as it was.
-    vec2 toSegment = vec2(max(abs(v_local.x) - v_half, 0.0), v_local.y);
+    // Clamped onto the segment rather than folded by `abs`: the offset has to
+    // keep its sign, or a cone light stops being able to tell ahead from
+    // behind.
+    vec2 toSegment = vec2(v_local.x - clamp(v_local.x, -v_half, v_half), v_local.y);
     float distance = length(toSegment);
     float falloff = clamp(1.0 - distance, 0.0, 1.0);
 

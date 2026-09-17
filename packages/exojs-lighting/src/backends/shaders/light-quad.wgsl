@@ -129,7 +129,10 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     // Distance to the segment, not to the centre: folding `x` onto the segment
     // first is what turns the disc into a capsule, and a zero half-length
     // leaves the disc exactly as it was.
-    let toSegment = vec2<f32>(max(abs(input.local.x) - input.half, 0.0), input.local.y);
+    // Clamped onto the segment rather than folded by `abs`: the offset has to
+    // keep its sign, or a cone light stops being able to tell ahead from
+    // behind.
+    let toSegment = vec2<f32>(input.local.x - clamp(input.local.x, -input.half, input.half), input.local.y);
     let distance = length(toSegment);
     let falloff = clamp(1.0 - distance, 0.0, 1.0);
 

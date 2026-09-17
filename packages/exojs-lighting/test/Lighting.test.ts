@@ -17,6 +17,7 @@ import { describe, expect, test } from 'vitest';
 import type { ForwardBackend } from '../src/backends/ForwardBackend';
 import type { LightmapBackend } from '../src/backends/LightmapBackend';
 import { Lighting } from '../src/Lighting';
+import { LineLight } from '../src/lights/LineLight';
 import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
 import { LitMaterial } from '../src/LitMaterial';
@@ -233,6 +234,23 @@ describe('Lighting', () => {
     lighting.update();
 
     expect(regions).toEqual(['-100,-100,350,100']);
+  });
+
+  test('a line light reaches its falloff past both ends of its own segment', () => {
+    const lighting = lightmapLighting();
+    const regions: string[] = [];
+
+    lighting.occludeFrom({
+      collect: (bounds): void => {
+        regions.push(`${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}`);
+      },
+    });
+    // 32 long and 20 of falloff: 16 + 20 from the centre, in every direction,
+    // because the region is a box around the reach rather than the capsule.
+    lighting.add(new LineLight({ length: 32, radius: 20 })).setPosition(0, 0);
+    lighting.update();
+
+    expect(regions).toEqual(['-36,-36,36,36']);
   });
 
   test('no light means no region, so a source is never walked for nothing', () => {

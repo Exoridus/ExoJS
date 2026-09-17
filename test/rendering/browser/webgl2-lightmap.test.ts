@@ -8,7 +8,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import { Lighting, normalMap, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -382,6 +382,35 @@ describe('WebGL2 lightmap renderer', () => {
       expect(lowerLeft).toBeLessThan(10);
     } finally {
       cookie.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a line light pools in a capsule, not a disc', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // A tube along the node's +x, so the light reaches 16 + 20 along x and only
+    // 20 across it.
+    lighting.add(new LineLight({ length: 32, radius: 20, intensity: 1 })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // Both probes sit 16 from the centre. Along the tube that is ON the
+      // emitter and fully lit; across it that is most of the way to nothing.
+      const alongAxis = readPixel(host.backend, 48, 32)[0];
+      const acrossAxis = readPixel(host.backend, 32, 48)[0];
+
+      expect(alongAxis).toBeGreaterThan(200);
+      expect(acrossAxis).toBeLessThan(80);
+      // And past the end of the capsule it stops, which a disc of the same
+      // reach would not do on the other axis.
+      expect(readPixel(host.backend, 32, 14)[0]).toBeLessThan(10);
+      expect(readPixel(host.backend, 60, 32)[0]).toBeGreaterThan(30);
+    } finally {
       lighting.destroy();
       host.destroy();
     }

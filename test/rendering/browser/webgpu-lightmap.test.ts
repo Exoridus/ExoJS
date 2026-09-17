@@ -6,7 +6,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { Lighting, normalMap, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -353,6 +353,37 @@ describe('lightmap renderer WebGPU browser', () => {
       expect(rotated(32, 32)).toBeLessThan(146);
     } finally {
       crate.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a line light pools in a capsule, not a disc', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // A tube along the node's +x, so the light reaches 16 + 20 along x and only
+    // 20 across it.
+    lighting.add(new LineLight({ length: 32, radius: 20, intensity: 1 })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      // Both probes sit 16 from the centre. Along the tube that is ON the
+      // emitter and fully lit; across it that is most of the way to nothing.
+      expect(at(48, 32)).toBeGreaterThan(200);
+      expect(at(32, 48)).toBeLessThan(80);
+      expect(at(32, 14)).toBeLessThan(10);
+      expect(at(60, 32)).toBeGreaterThan(30);
+    } finally {
       lighting.destroy();
       host.destroy();
     }
