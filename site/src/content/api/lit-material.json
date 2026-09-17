@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 19,
   "counts": {
     "constructors": 1,
     "methods": 6,
-    "properties": 11,
+    "properties": 12,
     "events": 0
   },
   "sections": [
@@ -252,7 +252,7 @@
         },
         {
           "name": "setUniform",
-          "signature": "setUniform(name: string, value: UniformValue): this",
+          "signature": "setUniform(name: never, value: UniformValue): this",
           "signatureTokens": [
             {
               "text": "setUniform",
@@ -271,7 +271,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "never",
               "kind": "keyword"
             },
             {
@@ -306,7 +306,7 @@
           "params": [
             {
               "name": "name",
-              "type": "string",
+              "type": "never",
               "optional": false
             },
             {
@@ -753,7 +753,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: Shader<undefined, undefined>",
+          "signature": "shader: Shader<{ emissive: Float }, undefined>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -772,8 +772,24 @@
               "kind": "punctuation"
             },
             {
-              "text": "undefined",
-              "kind": "keyword"
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "emissive",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -833,6 +849,27 @@
           "params": [],
           "returnType": null,
           "description": "Stable bind key: identical ⇒ same bindings (textures unchanged). Derived from this material's identity, base-texture sampler override, and the identities of its bound textures. Changes when a texture is swapped or sampler state changes; drives bind-group/slot reuse."
+        },
+        {
+          "name": "emissive",
+          "signature": "emissive: number",
+          "signatureTokens": [
+            {
+              "text": "emissive",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How much light the surface emits of its own. See LitMaterialOptions.emissive."
         },
         {
           "name": "normalMap",

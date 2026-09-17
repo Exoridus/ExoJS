@@ -213,6 +213,18 @@ A normal map is a **material** binding, not a per-sprite one: every sprite drawn
 
 Sprites from a second atlas need a second `LitMaterial`, which breaks the batch at the material boundary. Both materials can shade against the same `Lighting` system.
 
+## Emission
+
+A `LitMaterial` takes an `emissive` multiplier: how much light the surface emits of its own, as a multiple of its albedo.
+
+```ts
+lava.material = new LitMaterial({ lighting, emissive: 2.4 });
+```
+
+It is added to the light term rather than to the colour, so emission scales the albedo the way a light does - a black pixel emits nothing however high it is set, and a transparent one stays transparent instead of glowing through its own alpha. Values above `1` push the surface past what a light could produce, which is what a `post` filter keyed on a threshold is there to catch.
+
+It is a live property (`material.emissive = 0.5`), so a pulsing forge is a tween like any other.
+
 ## Capabilities
 
 | Capability                                  | Status                                                           |
@@ -221,6 +233,7 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 | Lights as scene nodes (parenting, tweens)   | yes                                                              |
 | Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped        |
 | Ambient term                                | yes, carried in the light texture                                |
+| Emissive surfaces                           | `forward`, on `LitMaterial`                                      |
 | Normal maps                                 | `forward`: one per material; `lightmap`: per registered drawable |
 | Rotation / flip aware normals               | yes, via the instance's local-to-world basis                     |
 | Extra render passes or draw calls           | `forward`: none; `lightmap`: two; a `post` chain adds one        |

@@ -14,6 +14,7 @@
 // fails right here, on either form, whether or not any spec renders it.
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
+import { litSpriteShader } from '@codexo/exojs-lighting';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
@@ -77,6 +78,7 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['blur.frag', generateGlslUniformDeclarations(blurShader.uniformSchema!)],
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
+  ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
 ]);
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
@@ -93,7 +95,7 @@ const composeRuntimeSource = (name: string, source: string): string => {
   // directive of its own: `INSTANCE_TRANSFORM_GLSL` is documented as going
   // between the directive and the body, and every material that uses it
   // assembles the source that way.
-  const composed = filled.includes('exoInstanceClipPosition(')
+  const spliced = filled.includes('exoInstanceClipPosition(')
     ? `#version 300 es
 ${INSTANCE_TRANSFORM_GLSL}
 ${filled}`
@@ -101,9 +103,11 @@ ${filled}`
       ? composeTextAtlasFragmentGlsl(filled)
       : name === 'lit-sprite.frag'
         ? composeSpriteMaterialFragmentGlsl(filled)
-        : declarations !== undefined
-          ? withGlslUniformDeclarations(filled, declarations)
-          : filled;
+        : filled;
+  // Layered on top rather than chosen instead: a source can both be spliced by
+  // its renderer and read a declared uniform block, and `lit-sprite.frag` does
+  // both.
+  const composed = declarations === undefined ? spliced : withGlslUniformDeclarations(spliced, declarations);
 
   return resolveTransformTextureGlsl(composed);
 };

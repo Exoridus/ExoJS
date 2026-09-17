@@ -15,7 +15,7 @@ export { SpotLight } from './lights/SpotLight';
 export type { SunLightOptions } from './lights/SunLight';
 export { SunLight } from './lights/SunLight';
 export type { LitMaterialOptions } from './LitMaterial';
-export { LitMaterial } from './LitMaterial';
+export { LitMaterial, litSpriteShader } from './LitMaterial';
 export type { DeriveNormalsOptions } from './normals/deriveNormals';
 export type { NormalSource } from './normals/Normals';
 export { normalMap, Normals, normalsFromAlpha } from './normals/Normals';

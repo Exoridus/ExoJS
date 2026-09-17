@@ -10,12 +10,18 @@ import wgslSource from './shaders/lit-sprite.wgsl';
  * The one shader pair behind every {@link LitMaterial}. Renderers key their
  * per-material GPU state on the shader instance, so sharing it keeps two
  * materials over the same textures in one pipeline.
+ *
+ * Exported so the repository's shader-compile gate can compose the uniform
+ * block the authored fragment text reads but does not declare. Nothing else
+ * should reach for it: a second material over this shader would share its
+ * pipeline and its uniform layout without sharing its meaning.
+ * @internal
  */
 const litUniforms = { emissive: UniformType.Float } as const;
 
 type LitUniforms = typeof litUniforms;
 
-const litSpriteShader = new Shader({ uniforms: litUniforms, glsl: { fragment: glslFragment }, wgsl: wgslSource });
+export const litSpriteShader = new Shader({ uniforms: litUniforms, glsl: { fragment: glslFragment }, wgsl: wgslSource });
 
 /** Construction options for {@link LitMaterial}. */
 export interface LitMaterialOptions {

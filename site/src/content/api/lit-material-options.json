@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -52,6 +52,31 @@
           "params": [],
           "returnType": null,
           "description": "Blend mode for sprites drawn with this material."
+        },
+        {
+          "name": "emissive",
+          "signature": "emissive?: number",
+          "signatureTokens": [
+            {
+              "text": "emissive",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How much light the surface emits of its own, as a multiplier on its albedo. 0 emits nothing, 1 makes the surface as bright as full white light would, above 1 pushes it past what a light could - which is what a filter in post keyed on a threshold is there to catch. It is added to the light term rather than to the colour, so a transparent pixel stays transparent and emission scales the albedo the way a light does: a black pixel emits nothing however high this is. Defaults to 0."
         },
         {
           "name": "lighting",

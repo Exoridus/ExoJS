@@ -1,0 +1,200 @@
+{
+  "title": "SunLightOptions",
+  "description": "Construction options for SunLight. Every field is also mutable afterwards.",
+  "symbol": "SunLightOptions",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for SunLight. Every field is also mutable afterwards."
+      ],
+      "importLine": "import { SunLightOptions } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "color",
+          "signature": "color?: Color",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Light colour. Alpha is ignored. Defaults to opaque white."
+        },
+        {
+          "name": "cookie",
+          "signature": "cookie?: Texture",
+          "signatureTokens": [
+            {
+              "text": "cookie",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Texture the light is shone through, sampled across its own bounding square - a window cross, leaf shade, a stained-glass pattern. Multiplied into the light, so a transparent part of the cookie casts nothing and an opaque white one changes nothing. The square maps onto the texture's full 0..1, turns with the light and scales with its radius, so the pattern stays fixed to the lamp rather than to the world. Wrapping is the texture's own business; a cookie meant to end at its edge wants ClampToEdge. Read by the lightmap renderer. forward shades inside the sprite stage, where a texture per light cannot be reached in one draw, and ignores it. Lights sharing a cookie share a draw, so a scene with three distinct cookies costs three draws rather than one - still one draw per texture, never one per light."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled?: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the light contributes at all. Defaults to true."
+        },
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height above the sprite plane, as a fraction of the distance light travels across it - so it is a slope rather than a length, which is the only thing a source at no particular distance can mean. 0 rakes along the plane and large values light it from straight above. Defaults to 1."
+        },
+        {
+          "name": "intensity",
+          "signature": "intensity?: number",
+          "signatureTokens": [
+            {
+              "text": "intensity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Linear brightness multiplier. Defaults to 1."
+        },
+        {
+          "name": "softness",
+          "signature": "softness?: number",
+          "signatureTokens": [
+            {
+              "text": "softness",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How soft the shadows this light casts are, in 0..1. 0 is a point source with a hard edge; higher values widen the penumbra, as a larger lamp would. Defaults to 0.25. Softness widens the shadow sample kernel rather than adding a pass, so it is free of extra draws and can differ per light."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/lights/SunLight.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/SunLight.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/lights/SunLight.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/SunLight.ts"
+}

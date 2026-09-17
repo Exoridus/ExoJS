@@ -133,6 +133,56 @@ describe('lighting WebGL2 browser', () => {
     }
   });
 
+  test('an emissive surface lights itself where no light reaches, and keeps its alpha', async () => {
+    const backend = await createBackend();
+    const albedo = createAlbedo();
+    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const dark = new LitMaterial({ lighting });
+    const lava = new LitMaterial({ lighting, emissive: 0.75 });
+    const plain = new Sprite(albedo);
+    const glowing = new Sprite(albedo);
+    const root = new Container();
+
+    // Two quads, no light at all: only emission can tell them apart.
+    plain.material = dark;
+    plain.setPosition(4, 20).setScale(24, 24);
+    glowing.material = lava;
+    glowing.setPosition(36, 20).setScale(24, 24);
+    root.addChild(plain, glowing);
+    lighting.update();
+
+    try {
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+
+      const unlit = readWebGl2Pixel(backend, 16, 32);
+      const emissive = readWebGl2Pixel(backend, 48, 32);
+
+      expect(unlit[0]).toBeLessThan(10);
+      expect(emissive[0]).toBeGreaterThan(170);
+      expect(emissive[0]).toBeLessThan(215);
+      // Emission scales the albedo rather than being added to it, so the
+      // surface is no more opaque for glowing.
+      expect(emissive[3]).toBe(255);
+
+      // And it is a live property, not a construction-time constant.
+      lava.emissive = 0;
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+
+      expect(readWebGl2Pixel(backend, 48, 32)[0]).toBeLessThan(10);
+    } finally {
+      root.destroy();
+      dark.destroy();
+      lava.destroy();
+      lighting.destroy();
+      albedo.destroy();
+      backend.destroy();
+    }
+  });
+
   test('an unlit scene falls back to the ambient term and a committed light lights it', async () => {
     const backend = await createBackend();
     const albedo = createAlbedo();
