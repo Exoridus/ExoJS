@@ -14,7 +14,7 @@
 // fails right here, on either form, whether or not any spec renders it.
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
-import { litSpriteShader, sdfResolveShader, sdfStepShader, shadowMarchShader } from '@codexo/exojs-lighting';
+import { cascadeGatherShader, cascadeShader, litSpriteShader, sdfResolveShader, sdfStepShader, shadowMarchShader } from '@codexo/exojs-lighting';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
@@ -79,6 +79,8 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
+  ['cascade.frag', generateGlslUniformDeclarations(cascadeShader.uniformSchema!)],
+  ['cascade-gather.frag', generateGlslUniformDeclarations(cascadeGatherShader.uniformSchema!)],
   ['sdf-resolve.frag', generateGlslUniformDeclarations(sdfResolveShader.uniformSchema!)],
   ['sdf-step.frag', generateGlslUniformDeclarations(sdfStepShader.uniformSchema!)],
   ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],
@@ -173,6 +175,9 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'sdf-seed.frag'],
   ['default-vertex.vert', 'sdf-step.frag'],
   ['default-vertex.vert', 'sdf-resolve.frag'],
+  // The radiance chain: one level of it, and the gather that reads the finest.
+  ['default-vertex.vert', 'cascade.frag'],
+  ['default-vertex.vert', 'cascade-gather.frag'],
   // The custom sprite-material path: the engine owns the vertex stage, and the
   // lighting package's lit fragment is the in-repo counterpart it links with.
   ['sprite-material.vert', 'lit-sprite.frag'],
@@ -183,6 +188,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['occluder-debug.vert', 'occluder-debug.frag'],
   ['normal-prepass.vert', 'normal-prepass.frag'],
   ['sun-quad.vert', 'sun-quad.frag'],
+  ['emitter-quad.vert', 'emitter-quad.frag'],
 ];
 
 const referencedShaderFiles = new Set(programPairs.flat());

@@ -1,4 +1,4 @@
-import { type Application, Color, type Filter, Rectangle } from '@codexo/exojs';
+import { type Application, Color, type Filter, Rectangle, TextureFormat } from '@codexo/exojs';
 
 import { ForwardBackend } from './backends/ForwardBackend';
 import type { LightingBackend } from './backends/LightingBackend';
@@ -23,8 +23,13 @@ import type { OccluderSource } from './occluders/OccluderSource';
  *   the frame by it. No light cap, shadows from the registered occluder
  *   sources, and normals from a prepass over the registered surfaces rather
  *   than from a material.
+ * - `radiance` fills the same light field from a chain of radiance cascades
+ *   instead: light propagates from the emitters rather than falling off around
+ *   each light, so a lit surface lights what is beside it. It is opt-in, needs
+ *   a renderable float target, and does NOT make a scene look the way the other
+ *   two renderers make it look.
  */
-export type LightingQuality = 'forward' | 'lightmap';
+export type LightingQuality = 'forward' | 'lightmap' | 'radiance';
 
 /**
  * What {@link LightingOptions.quality} accepts: a renderer by name, or
@@ -35,6 +40,13 @@ export type LightingQuality = 'forward' | 'lightmap';
  * and asking which one ran is still answerable.
  */
 export type LightingQualityOption = LightingQuality | 'auto';
+
+/**
+ * Whether the renderer fills the light field with quads or with cascades.
+ * `'auto'` never resolves to `radiance`: it is the one renderer with an
+ * unbounded tuning surface, so it is only ever had by asking for it.
+ */
+const fillsWithCascades = (quality: LightingQuality): boolean => quality === 'radiance';
 
 /**
  * Intermediate to draw instead of the shaded frame. `null` shades normally.
@@ -88,9 +100,16 @@ const createBackend = (options: LightingOptions, post: readonly Filter[]): Light
     throw new Error('Lighting({ post }) needs the application whose frame the filters run on: pass `app`.');
   }
 
-  if (quality === 'lightmap') {
+  if (quality === 'lightmap' || quality === 'radiance') {
     if (options.app === undefined) {
-      throw new Error("Lighting({ quality: 'lightmap' }) needs the application whose frame it lights: pass `app`.");
+      throw new Error(`Lighting({ quality: '${quality}' }) needs the application whose frame it lights: pass \`app\`.`);
+    }
+
+    // The cascades live in float targets from end to end - a field of radiance
+    // has no ceiling to clamp at - so a surface that cannot render one is
+    // refused rather than shaded differently under the same name.
+    if (quality === 'radiance' && !options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F)) {
+      throw new Error("Lighting({ quality: 'radiance' }) needs renderable float targets, which this device does not have. Use 'lightmap' or 'auto'.");
     }
 
     return new LightmapBackend({
@@ -98,6 +117,12 @@ const createBackend = (options: LightingOptions, post: readonly Filter[]): Light
       post,
       resolution: options.lightResolution ?? 0.5,
       shadowResolution: Math.max(8, Math.round(options.shadowResolution ?? 256)),
+      lightField: fillsWithCascades(quality) ? 'cascades' : 'quads',
+      radiance: {
+        probeSpacing: Math.max(1, Math.round(options.probeSpacing ?? 2)),
+        cascades: options.cascades ?? null,
+        interval: Math.max(0.25, options.interval ?? 1),
+      },
     });
   }
 
@@ -164,6 +189,27 @@ export interface LightingOptions {
    * skipped. Defaults to `64`.
    */
   readonly maxLights?: number;
+  /**
+   * Light-field texels between the finest cascade's probes, under `radiance`.
+   * Lower is sharper and costs a probe grid that is four times as large per
+   * halving. Defaults to `2`.
+   *
+   * This is tuning rather than scene description: it changes how finely the
+   * same scene is sampled, never what is in it.
+   */
+  readonly probeSpacing?: number;
+  /**
+   * Levels in the cascade chain, under `radiance`. Defaults to as many as the
+   * view's own diagonal needs, which is what keeps the far end of a scene from
+   * going dark on a large surface.
+   */
+  readonly cascades?: number;
+  /**
+   * The finest cascade's ray length, in probe spacings, under `radiance`. Each
+   * level covers four times what the level below it did, so this sets where the
+   * whole chain starts. Defaults to `1`.
+   */
+  readonly interval?: number;
 }
 
 /**

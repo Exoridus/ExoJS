@@ -862,4 +862,91 @@ describe('WebGL2 lightmap renderer', () => {
       host.destroy();
     }
   });
+  test('radiance carries an emitter across the scene and dims with distance', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'radiance', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Off-centre in both axes: a field laid out in the wrong space would still
+    // look plausible around a light in the middle.
+    const lamp = lighting.add(new PointLight({ radius: 40, intensity: 4, color: new Color(255, 0, 0) }));
+
+    lamp.setPosition(16, 32);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      const near = readPixel(host.backend, 28, 32);
+      const middle = readPixel(host.backend, 32, 32)[0]!;
+      const far = readPixel(host.backend, 40, 32)[0]!;
+
+      // Light propagates from the emitter rather than falling off inside a
+      // radius, so what the distance does is thin it out, not end it.
+      expect(near[0]).toBeGreaterThan(middle);
+      expect(middle).toBeGreaterThan(far);
+      expect(far).toBeGreaterThan(5);
+      // The emitter's own colour is what travels: a red lamp reddens what it
+      // reaches rather than brightening it.
+      expect(near[1]).toBeLessThan(10);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('an occluder still cuts the radiance behind it', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'radiance', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 4 })).setPosition(16, 32);
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 32, y: 4 },
+          { x: 32, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // In front of the wall and behind it: the cascades trace the same mask
+      // the shadow march does, so a wall is a wall in either renderer.
+      expect(readPixel(host.backend, 24, 32)[0]).toBeGreaterThan(60);
+      expect(readPixel(host.backend, 48, 32)[0]).toBeLessThan(5);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('doubling an emitter doubles what arrives', async () => {
+    const arriving = async (intensity: number): Promise<number> => {
+      const host = await createHost();
+      const lighting = new Lighting({ quality: 'radiance', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+      lighting.add(new PointLight({ radius: 40, intensity })).setPosition(16, 32);
+      drawWhiteFrame(host);
+
+      try {
+        runFrame(host, lighting);
+
+        return readPixel(host.backend, 32, 32)[0]!;
+      } finally {
+        lighting.destroy();
+        host.destroy();
+      }
+    };
+
+    const single = await arriving(2);
+    const double = await arriving(4);
+
+    // Transport is linear in what is emitted, which is the property that makes
+    // the field a radiance field rather than a look.
+    expect(single).toBeGreaterThan(20);
+    expect(double / single).toBeGreaterThan(1.7);
+    expect(double / single).toBeLessThan(2.3);
+  });
 });

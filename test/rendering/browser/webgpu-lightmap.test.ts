@@ -780,4 +780,43 @@ describe('lightmap renderer WebGPU browser', () => {
       host.destroy();
     }
   });
+  test('radiance carries an emitter across the scene, and an occluder still cuts it', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'radiance', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // Off-centre in both axes: a field laid out in the wrong space would still
+    // look plausible around a light in the middle.
+    lighting.add(new PointLight({ radius: 40, intensity: 4 })).setPosition(16, 32);
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 32, y: 4 },
+          { x: 32, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      // Light propagates from the emitter rather than falling off inside a
+      // radius, so what the distance does is thin it out, not end it - and the
+      // cascades trace the same mask the shadow march does.
+      expect(at(20, 32)).toBeGreaterThan(at(28, 32));
+      expect(at(28, 32)).toBeGreaterThan(5);
+      expect(at(48, 32)).toBeLessThan(5);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
 });

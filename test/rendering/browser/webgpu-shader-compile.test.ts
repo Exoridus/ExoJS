@@ -37,7 +37,7 @@
  */
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
-import { sdfResolveShader, sdfSeedShader, sdfStepShader, shadowMarchShader } from '@codexo/exojs-lighting';
+import { cascadeGatherShader, cascadeShader, sdfResolveShader, sdfSeedShader, sdfStepShader, shadowMarchShader } from '@codexo/exojs-lighting';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
@@ -95,6 +95,8 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'lighting distance field seed', source: sdfSeedShader._resolveWgsl(filterUniformGroup)! },
   { name: 'lighting distance field step (generated uniform block)', source: sdfStepShader._resolveWgsl(filterUniformGroup)! },
   { name: 'lighting distance field resolve (generated uniform block)', source: sdfResolveShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting radiance cascade (generated uniform block)', source: cascadeShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting radiance gather (generated uniform block)', source: cascadeGatherShader._resolveWgsl(filterUniformGroup)! },
 ];
 
 // On the software (swiftshader / lavapipe) adapter the WebGPU device can drop

@@ -31,6 +31,7 @@ import type { OccluderDrawable } from '../occluders/OccluderSource';
 import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
 import { DistanceField } from './distanceField';
 import type { LightingBackend } from './LightingBackend';
+import { RadianceField, type RadianceFieldOptions } from './radianceField';
 import lightCompositeFragment from './shaders/light-composite.frag';
 import lightCompositeVertex from './shaders/light-composite.vert';
 import lightCompositeWgsl from './shaders/light-composite.wgsl';
@@ -119,6 +120,14 @@ export interface LightmapBackendOptions {
   /** Angular bins in each light's shadow map. */
   readonly shadowResolution: number;
   /**
+   * How the light field is filled: one quad per light with a shadow row each,
+   * or a chain of radiance cascades over the occluder field. Cascades need a
+   * renderable float target and are refused without one.
+   */
+  readonly lightField: 'cascades' | 'quads';
+  /** Tuning for the cascades, read only when they fill the field. */
+  readonly radiance: RadianceFieldOptions;
+  /**
    * Filters over the composited frame, in order. Empty installs no pass and
    * allocates no intermediate; a non-empty chain makes the composite write an
    * off-screen target the filters read.
@@ -162,7 +171,7 @@ export interface LightmapBackendOptions {
  * @internal
  */
 export class LightmapBackend implements LightingBackend {
-  public readonly quality: LightingQuality = 'lightmap';
+  public readonly quality: LightingQuality;
   public readonly castsShadows = true;
   public readonly readsSurfaces = true;
   public readonly hdr: boolean;
@@ -238,6 +247,8 @@ export class LightmapBackend implements LightingBackend {
   private readonly _filler: ShadowMarchFiller | null;
   /** The distance field over the mask. Built on the same condition as the filler, and read by the `distance` view. */
   private readonly _distanceField: DistanceField | null;
+  /** The cascade chain, when it is what fills the light field rather than the quads. */
+  private readonly _radiance: RadianceField | null;
   private _fillerRequest: ShadowFillerOption = 'auto';
   private _activeCount = 0;
   private _surfaceCount = 0;
@@ -248,6 +259,7 @@ export class LightmapBackend implements LightingBackend {
     this._resolution = options.resolution;
     this._shadowResolution = options.shadowResolution;
     this.hdr = options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F);
+    this.quality = options.lightField === 'cascades' ? 'radiance' : 'lightmap';
     // Half-float is filterable and blendable in WebGL2 and WebGPU alike, so the
     // only thing the format changes is the ceiling. It is not the default for a
     // render target, though, and a float target would otherwise point-sample -
@@ -334,6 +346,8 @@ ${sunQuadWgsl}`,
     // switched on later would otherwise march after the light field read it.
     this._filler = this.hdr ? new ShadowMarchFiller(this._maskTarget, this._shadowResolution) : null;
     this._distanceField = this.hdr ? new DistanceField(this._maskTarget) : null;
+    this._radiance =
+      options.lightField === 'cascades' && this._distanceField !== null ? new RadianceField(this._distanceField.texture, this._target, options.radiance) : null;
     this._normalTarget = new RenderTexture(1, 1);
     this._normalPass = new CallbackRenderPass(pass => this._drawNormals(pass), {
       target: this._normalTarget,
@@ -359,7 +373,7 @@ ${sunQuadWgsl}`,
     this._postPass = this._shaded === null ? null : new FilterPass(this._shaded, options.post, { label: 'lighting:post' });
     this._debugPass = new CallbackRenderPass(pass => this._drawOccluders(pass), { label: 'lighting:occluder-debug' });
 
-    this._resize();
+    this._syncMask();
     this._app.framePasses.addPass(this._maskPass);
 
     if (this._filler !== null) {
@@ -368,6 +382,12 @@ ${sunQuadWgsl}`,
 
     if (this._distanceField !== null) {
       this._app.framePasses.addPass(this._distanceField.pass);
+    }
+
+    if (this._radiance !== null) {
+      // The emitters go into the mask, so their field is drawn after it and
+      // before the cascades that march what the mask seeded.
+      this._app.framePasses.addPass(this._radiance.emissionPass).addPass(this._radiance.cascadePass);
     }
 
     this._app.framePasses.addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
@@ -452,17 +472,35 @@ ${sunQuadWgsl}`,
   }
 
   /**
-   * Only the march reads the occluder mask, so only the march can take a
-   * drawable instead of its outline.
+   * Only what reads the occluder mask can take a drawable instead of its
+   * outline: the shadow march, and the cascades that trace the same field.
    */
   public get rasterisesOccluders(): boolean {
-    return this.shadowFiller === 'gpu';
+    return this._radiance !== null || this.shadowFiller === 'gpu';
   }
 
   public publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void {
     this._writeSurfaces(surfaces);
     this._resize();
     this._ambient.copy(ambient);
+
+    const marching = this._radiance === null ? this._writeLights(lights, occluders) : false;
+
+    if (this._radiance !== null) {
+      this._activeCount = this._radiance.writeEmitters(lights, this._maskTexel());
+    }
+
+    this._writeMask(occluders);
+    this._writeOccluderDebug(occluders);
+    this._updateFields(marching);
+  }
+
+  /**
+   * Lay out this frame's lights as quads and give each one its shadow row.
+   * Answers whether the rows were marched rather than walked, which is what
+   * the marcher's own uniforms then have to be pointed at.
+   */
+  private _writeLights(lights: readonly Light[], occluders: OccluderField): boolean {
     this._growShadowMap(lights.length);
 
     for (const batch of this._lightBatches.values()) {
@@ -548,10 +586,8 @@ ${sunQuadWgsl}`,
     }
 
     this._activeCount = written + suns;
-    this._writeMask(occluders);
-    this._writeOccluderDebug(occluders);
 
-    this._updateFields(casting && marching);
+    return casting && marching;
   }
 
   /**
@@ -567,9 +603,15 @@ ${sunQuadWgsl}`,
     }
 
     if (this._distanceField?.pass.enabled === true) {
-      const view = this._app.rendering.view.getBounds();
+      const bounds = this._app.rendering.view.getBounds();
 
-      this._distanceField.update(texel, Math.hypot(view.width, view.height));
+      this._distanceField.update(texel, Math.hypot(bounds.width, bounds.height));
+    }
+
+    // After the distance field, which is what tells the cascades the scale
+    // their sphere tracing steps in.
+    if (this._radiance !== null && this._distanceField !== null) {
+      this._radiance.update(this._app.rendering.view, this._app.rendering.view.getBounds(), texel, this._distanceField.far, this._ambient);
     }
   }
 
@@ -710,6 +752,12 @@ ${sunQuadWgsl}`,
     if (this._distanceField !== null) {
       this._app.framePasses.removePass(this._distanceField.pass);
       this._distanceField.destroy();
+    }
+
+    if (this._radiance !== null) {
+      this._app.framePasses.removePass(this._radiance.emissionPass);
+      this._app.framePasses.removePass(this._radiance.cascadePass);
+      this._radiance.destroy();
     }
     this._app.framePasses.removePass(this._normalPass);
     this._app.framePasses.removePass(this._lightPass);
@@ -940,9 +988,13 @@ ${sunQuadWgsl}`,
    */
   private _syncMask(): void {
     const marching = this.shadowFiller === 'gpu';
-    const distance = this._debug === 'distance' && this._distanceField !== null;
+    const cascades = this._radiance !== null;
+    const distance = cascades || (this._debug === 'distance' && this._distanceField !== null);
 
-    this._maskPass.enabled = this._debug === 'mask' || marching || distance;
+    this._maskPass.enabled = cascades || this._debug === 'mask' || marching || distance;
+    // The cascades fill the light target themselves, ambient included, so the
+    // quad accumulation has nothing left to do and its clear would undo them.
+    this._lightPass.enabled = !cascades;
 
     if (this._filler !== null) {
       this._filler.pass.enabled = marching;
@@ -950,6 +1002,10 @@ ${sunQuadWgsl}`,
 
     if (this._distanceField !== null) {
       this._distanceField.pass.enabled = distance;
+    }
+
+    if (this._radiance !== null) {
+      this._radiance.enabled = cascades;
     }
 
     this._resize();
@@ -1029,6 +1085,11 @@ ${normalPrepassWgsl}`,
     for (const drawable of this._maskDrawables) {
       pass.render(drawable, { view });
     }
+
+    // An emitter is something a ray ends on, so it belongs in the mask as much
+    // as a wall does - otherwise the cascades would trace straight through the
+    // lamp and find whatever is behind it.
+    this._radiance?.drawEmitters(pass, view);
   }
 
   /**
@@ -1179,6 +1240,8 @@ ${normalPrepassWgsl}`,
 
       this._distanceField.setSize(wanted ? width : 1, wanted ? height : 1);
     }
+
+    this._radiance?.setSize(width, height);
 
     if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0) {
       return;

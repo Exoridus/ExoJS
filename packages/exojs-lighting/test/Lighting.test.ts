@@ -372,6 +372,25 @@ describe('Lighting', () => {
     lighting.destroy();
   });
 
+  test('radiance is a renderer of its own, and only ever had by asking for it', () => {
+    const app = fakeApp();
+    const lighting = new Lighting({ quality: 'radiance', app });
+
+    expect(lighting.quality).toBe('radiance');
+    // The light quads' accumulation plus the emitters' field and the chain that
+    // reads it; the quad pass stays registered and switched off.
+    expect(app.framePasses.size).toBe(9);
+    // Auto never picks it: it is the renderer with an unbounded tuning surface.
+    expect(new Lighting({ app: fakeApp(), quality: 'auto' }).quality).toBe('lightmap');
+
+    lighting.destroy();
+  });
+
+  test('radiance is refused where its float targets cannot be rendered into', () => {
+    expect(() => new Lighting({ quality: 'radiance', app: fakeApp(false) })).toThrow(/float/);
+    expect(() => new Lighting({ quality: 'radiance' })).toThrow(/app/);
+  });
+
   test('the shadow march is installed only where its float atlas can be rendered into', () => {
     const app = fakeApp(false);
     const lighting = new Lighting({ quality: 'lightmap', app });

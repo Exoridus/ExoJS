@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -89,6 +89,56 @@
           "params": [],
           "returnType": null,
           "description": "The application whose frame is lit. Required by 'lightmap' and by a non-empty LightingOptions.post; a 'forward' system without filters needs nothing else. Passing it installs the renderer's passes in app.framePasses and takes them out again on Lighting.destroy."
+        },
+        {
+          "name": "cascades",
+          "signature": "cascades?: number",
+          "signatureTokens": [
+            {
+              "text": "cascades",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Levels in the cascade chain, under radiance. Defaults to as many as the view's own diagonal needs, which is what keeps the far end of a scene from going dark on a large surface."
+        },
+        {
+          "name": "interval",
+          "signature": "interval?: number",
+          "signatureTokens": [
+            {
+              "text": "interval",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The finest cascade's ray length, in probe spacings, under radiance. Each level covers four times what the level below it did, so this sets where the whole chain starts. Defaults to 1."
         },
         {
           "name": "lightResolution",
@@ -176,6 +226,31 @@
           "params": [],
           "returnType": null,
           "description": "Filters applied to the shaded frame, in order. A bloom belongs here rather than on a node: it reads the light the system produced, including the parts no single node drew. They run as one pass in app.framePasses, so LightingOptions.app is required whenever the chain is non-empty, in either renderer. Under lightmap the chain reads the composite, which is where the light the system accumulated is still above 1.0 (see Lighting.hdr); under forward it reads the frame the sprite shader shaded. Caller-owned, and fixed for the system's lifetime - the filters' own parameters stay live, which is what an animated effect actually needs."
+        },
+        {
+          "name": "probeSpacing",
+          "signature": "probeSpacing?: number",
+          "signatureTokens": [
+            {
+              "text": "probeSpacing",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Light-field texels between the finest cascade's probes, under radiance. Lower is sharper and costs a probe grid that is four times as large per halving. Defaults to 2. This is tuning rather than scene description: it changes how finely the same scene is sampled, never what is in it."
         },
         {
           "name": "quality",
