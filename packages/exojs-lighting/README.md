@@ -52,15 +52,15 @@ class LitScene extends Scene {
 
 The scene describes what emits; `quality` decides how that becomes pixels. Nothing else changes between them - the same lights, the same materials.
 
-|                         | `forward` (default)                | `lightmap`                                         |
-| ----------------------- | ---------------------------------- | -------------------------------------------------- |
-| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame  |
-| Normal mapping          | yes                                | no - the frame it multiplies is already flat       |
-| Lit material            | `LitMaterial`                      | none - the renderer lights the frame, not a sprite |
-| Shadows                 | no                                 | yes, soft, from registered occluder sources        |
-| Light count             | capped by `maxLights` (default 64) | uncapped                                           |
-| Extra passes            | none                               | two, and a third only while debugging              |
-| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                         |
+|                         | `forward` (default)                | `lightmap`                                          |
+| ----------------------- | ---------------------------------- | --------------------------------------------------- |
+| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame   |
+| Normal mapping          | per material, on `LitMaterial`     | per drawable, through a prepass                     |
+| Lit material            | `LitMaterial`                      | none - the renderer lights the frame, not a sprite  |
+| Shadows                 | no                                 | yes, soft, from registered occluder sources         |
+| Light count             | capped by `maxLights` (default 64) | uncapped                                            |
+| Extra passes            | none                               | two, a third with normals, a fourth while debugging |
+| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                          |
 
 ```ts
 const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20, 20, 30) });
@@ -71,6 +71,21 @@ const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20,
 `lighting.debug = 'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's colours in the way; `lighting.debug = 'occluders'` draws the silhouettes the sources collected, over the shaded scene.
 
 The `lightmap` light target is `rgba16f`, so two lights overlapping add up past `1.0` instead of saturating to white, and a filter over the composite has something above the clipping point to work with. A WebGL2 context without `EXT_color_buffer_float` cannot render into one; there the target is `rgba8` and `lighting.hdr` reports `false`. The picture is still correct - it clips earlier, and a bloom keyed on a threshold near `1.0` finds little to bloom.
+
+### Normals under `lightmap`
+
+`lightmap` multiplies a frame that was already drawn, so by the time the light field is composited there is no per-fragment surface normal anywhere. A **normal prepass** puts one back without asking anything of the scene: register a drawable and the renderer draws its normal map, at the drawable's own place and orientation, into one `rgba8` attachment that the light shader then reads at its own screen position.
+
+```ts
+lighting.normalsFrom(crate, normalMap(crateNormals));
+lighting.normalsFrom(hero, normalsFromAlpha(heroTexture));
+```
+
+Nothing is required of a drawable that is not registered. The attachment's alpha is coverage, and where it is zero the light lands with no `N dot L` term at all - which is exactly how the renderer behaved before the prepass existed, so switching it on cannot darken anything that did not ask for normals. The drawable's own texture supplies that coverage, so a silhouette claims a surface and the empty corners of its quad do not.
+
+What it costs: one pass over the registered drawables, one `rgba8` attachment at the light target's resolution, and one texture fetch in the light shader. A scene that registers nothing pays none of it - the attachment stays at one texel and the pass is switched off. What it inherits from every screen-space normal buffer: one normal per pixel, so overlapping surfaces resolve to the topmost, and within the prepass that order is registration order rather than scene order.
+
+`lighting.debug = 'normals'` shows the field the prepass wrote.
 
 ## Shadows you do not model
 
@@ -164,22 +179,22 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 
 ## Capabilities
 
-| Capability                                  | Status                                                         |
-| ------------------------------------------- | -------------------------------------------------------------- |
-| Point and cone lights on sprites            | yes, WebGL2 and WebGPU                                         |
-| Lights as scene nodes (parenting, tweens)   | yes                                                            |
-| Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped      |
-| Ambient term                                | yes, carried in the light texture                              |
-| Normal maps                                 | optional, one per material (= per atlas)                       |
-| Rotation / flip aware normals               | yes, via the instance's local-to-world basis                   |
-| Extra render passes or draw calls           | `forward`: none; `lightmap`: two; a `post` chain adds one      |
-| Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                             |
-| Overbright light accumulation               | `lightmap`: `rgba16f`, `rgba8` where floats are not renderable |
-| Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                         |
-| Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                            |
-| Light cookies, line and sun lights          | no                                                             |
-| Deferred (G-buffer) path                    | no                                                             |
-| Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                          |
+| Capability                                  | Status                                                           |
+| ------------------------------------------- | ---------------------------------------------------------------- |
+| Point and cone lights on sprites            | yes, WebGL2 and WebGPU                                           |
+| Lights as scene nodes (parenting, tweens)   | yes                                                              |
+| Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped        |
+| Ambient term                                | yes, carried in the light texture                                |
+| Normal maps                                 | `forward`: one per material; `lightmap`: per registered drawable |
+| Rotation / flip aware normals               | yes, via the instance's local-to-world basis                     |
+| Extra render passes or draw calls           | `forward`: none; `lightmap`: two; a `post` chain adds one        |
+| Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                               |
+| Overbright light accumulation               | `lightmap`: `rgba16f`, `rgba8` where floats are not renderable   |
+| Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                           |
+| Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                              |
+| Light cookies, line and sun lights          | no                                                               |
+| Deferred (G-buffer) path                    | no                                                               |
+| Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                            |
 
 ## Cost
 

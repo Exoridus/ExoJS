@@ -7,11 +7,18 @@ flat in vec2 v_cone;
 flat in float v_intensity;
 flat in float v_shadowRow;
 flat in float v_softness;
+// The light's radius and height in world units, and its own axis as a unit
+// vector: what it takes to turn a fragment's light-space offset back into the
+// world-space direction a surface normal can be measured against.
+flat in vec4 v_surface;
 
 // One row per shadowed light: the distance to the nearest occluder along each
 // angular bin, as a fraction of the light's radius. A row index below zero
 // means this light sees no occluder at all.
 uniform sampler2D u_shadow;
+// The normal prepass, in screen space at this target's own size. Alpha is
+// coverage: zero means nothing described a surface there.
+uniform sampler2D u_normal;
 
 out vec4 fragColor;
 
@@ -45,6 +52,32 @@ float shadowTerm(float distance) {
     return lit / float(SHADOW_TAPS);
 }
 
+/**
+ * How much of this light the surface under the fragment actually faces.
+ *
+ * `1` wherever nothing described a surface, which is what keeps an
+ * unregistered drawable lit exactly as it was before the prepass existed - the
+ * flat normal's own `N dot L` would darken it by the grazing factor instead.
+ */
+float surfaceTerm() {
+    vec2 uv = gl_FragCoord.xy / vec2(textureSize(u_normal, 0));
+    vec4 encoded = texture(u_normal, uv);
+
+    if (encoded.a <= 0.0) {
+        return 1.0;
+    }
+
+    // Stored premultiplied by coverage, so the encoding comes back by dividing
+    // it out again.
+    vec3 normal = normalize((encoded.rgb / encoded.a) * 2.0 - 1.0);
+    // `v_local` is in the light's own frame; the prepass wrote world-space
+    // normals, so the offset has to be turned back by the light's axis.
+    vec2 axis = v_surface.zw;
+    vec2 world = vec2(axis.x * v_local.x - axis.y * v_local.y, axis.y * v_local.x + axis.x * v_local.y);
+
+    return max(dot(normal, normalize(vec3(-world * v_surface.x, v_surface.y))), 0.0);
+}
+
 void main() {
     // The quad is the light's bounding square in radius-normalized space, so
     // distance is `length(v_local)` and everything past 1 is outside the light.
@@ -57,5 +90,5 @@ void main() {
     float alignment = direction.x;
     float coneTerm = v_cone.x == v_cone.y ? step(v_cone.x, alignment) : smoothstep(v_cone.x, v_cone.y, alignment);
 
-    fragColor = vec4(v_tint.rgb * (falloff * falloff * coneTerm * v_intensity * shadowTerm(distance)), 1.0);
+    fragColor = vec4(v_tint.rgb * (falloff * falloff * coneTerm * v_intensity * shadowTerm(distance) * surfaceTerm()), 1.0);
 }

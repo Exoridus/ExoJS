@@ -7,6 +7,7 @@ struct VertexInput {
     @location(6) nodeIndex: u32,
     @location(7) light: vec3<f32>,
     @location(8) shadow: vec2<f32>,
+    @location(9) surface: vec4<f32>,
 };
 
 struct VertexOutput {
@@ -17,6 +18,10 @@ struct VertexOutput {
     @location(3) @interpolate(flat) intensity: f32,
     @location(4) @interpolate(flat) shadowRow: f32,
     @location(5) @interpolate(flat) softness: f32,
+    // The light's radius and height in world units, and its own axis as a unit
+    // vector: what it takes to turn a fragment's light-space offset back into
+    // the world-space direction a surface normal can be measured against.
+    @location(6) @interpolate(flat) surface: vec4<f32>,
 };
 
 // One row per shadowed light: the distance to the nearest occluder along each
@@ -24,6 +29,10 @@ struct VertexOutput {
 // means this light sees no occluder at all.
 @group(2) @binding(1) var u_shadow: texture_2d<f32>;
 @group(2) @binding(2) var u_shadowSampler: sampler;
+// The normal prepass, in screen space at this target's own size. Alpha is
+// coverage: zero means nothing described a surface there.
+@group(2) @binding(3) var u_normal: texture_2d<f32>;
+@group(2) @binding(4) var u_normalSampler: sampler;
 
 const PI: f32 = 3.14159265359;
 const SHADOW_TAPS: i32 = 5;
@@ -57,6 +66,32 @@ fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) ->
     return lit / f32(SHADOW_TAPS);
 }
 
+/**
+ * How much of this light the surface under the fragment actually faces.
+ *
+ * `1` wherever nothing described a surface, which is what keeps an
+ * unregistered drawable lit exactly as it was before the prepass existed - the
+ * flat normal's own `N dot L` would darken it by the grazing factor instead.
+ */
+fn surfaceTerm(fragment: vec2<f32>, local: vec2<f32>, surface: vec4<f32>) -> f32 {
+    let uv = fragment / vec2<f32>(textureDimensions(u_normal, 0));
+    let encoded = textureSample(u_normal, u_normalSampler, uv);
+
+    if (encoded.a <= 0.0) {
+        return 1.0;
+    }
+
+    // Stored premultiplied by coverage, so the encoding comes back by dividing
+    // it out again.
+    let normal = normalize((encoded.rgb / encoded.a) * 2.0 - 1.0);
+    // `local` is in the light's own frame; the prepass wrote world-space
+    // normals, so the offset has to be turned back by the light's axis.
+    let axis = surface.zw;
+    let world = vec2<f32>(axis.x * local.x - axis.y * local.y, axis.y * local.x + axis.x * local.y);
+
+    return max(dot(normal, normalize(vec3<f32>(-world * surface.x, surface.y))), 0.0);
+}
+
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
@@ -68,6 +103,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.intensity = input.light.z;
     output.shadowRow = input.shadow.x;
     output.softness = input.shadow.y;
+    output.surface = input.surface;
 
     return output;
 }
@@ -93,6 +129,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     let shadow = shadowTerm(input.local, distance, input.shadowRow, input.softness);
+    let surface = surfaceTerm(input.position.xy, input.local, input.surface);
 
-    return vec4<f32>(input.tint.rgb * (falloff * falloff * coneTerm * input.intensity * shadow), 1.0);
+    return vec4<f32>(input.tint.rgb * (falloff * falloff * coneTerm * input.intensity * shadow * surface), 1.0);
 }

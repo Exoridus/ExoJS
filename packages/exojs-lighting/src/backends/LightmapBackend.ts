@@ -22,7 +22,7 @@ import {
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { Light } from '../lights/Light';
-import { lightRadius } from '../lights/reach';
+import { lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
@@ -50,7 +50,7 @@ const debugLineWidth = 2;
 
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
-const scratchInstance = { a_light: [noCone, noCone, 1], a_shadow: [noShadow, 0] };
+const scratchInstance = { a_light: [noCone, noCone, 1], a_shadow: [noShadow, 0], a_surface: [1, 0, 1, 0] };
 const scratchSurface = { a_frame: [0, 0, 1, 1], a_basis: [1, 0, 0, 1] };
 
 /** Unit quad in `-1..1`, which is the light's own space: distance from its centre in radii. */
@@ -204,7 +204,10 @@ export class LightmapBackend implements LightingBackend {
         glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightQuadVertex}`, fragment: lightQuadFragment },
         wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightQuadWgsl}`,
       }),
-      textures: { u_shadow: this._shadowMap },
+      // Declaration order is the group(2) binding order on WebGPU: the shadow
+      // rows at bindings 1/2, the normal prepass at 3/4, matching
+      // `light-quad.wgsl`.
+      textures: { u_shadow: this._shadowMap, u_normal: transparentTexture() },
       blendMode: BlendModes.Additive,
     });
 
@@ -229,6 +232,7 @@ export class LightmapBackend implements LightingBackend {
       instanceAttributes: [
         { name: 'a_light', format: 'float32x3' },
         { name: 'a_shadow', format: 'float32x2' },
+        { name: 'a_surface', format: 'float32x4' },
       ],
     });
     this._compositeBatch = new RenderBatch(this._compositeGeometry, this._compositeMaterial);
@@ -358,6 +362,13 @@ export class LightmapBackend implements LightingBackend {
       }
 
       scratchInstance.a_shadow[1] = light.softness;
+      // What the `N dot L` term needs and the instance transform has already
+      // folded away: the radius it normalized the quad by, the height the light
+      // sits at, and the axis it rotated the quad onto.
+      scratchInstance.a_surface[0] = radius;
+      scratchInstance.a_surface[1] = lightHeight(light);
+      scratchInstance.a_surface[2] = scratchDirection.x;
+      scratchInstance.a_surface[3] = scratchDirection.y;
 
       // Position, radius and cone rotation travel as the instance transform: a
       // unit quad scaled by the radius IS the light's bounding square, and the
@@ -538,8 +549,18 @@ export class LightmapBackend implements LightingBackend {
       written++;
     }
 
+    const describes = written > 0;
+
+    if (describes !== this._normalPass.enabled) {
+      this._normalPass.enabled = describes;
+      // An untouched render target holds whatever the driver left there, so the
+      // light shader must never read the one-texel placeholder the prepass is
+      // parked at. A texture that is zero everywhere reads as "nothing
+      // described a surface", which is the term that changes nothing.
+      this._lightMaterial.setTexture('u_normal', describes ? this._normalTarget : transparentTexture());
+    }
+
     this._surfaceCount = written;
-    this._normalPass.enabled = written > 0;
   }
 
   /**
@@ -730,3 +751,8 @@ const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 let white: Texture | null = null;
 
 const whiteTexture = (): Texture => (white ??= Texture.fromColor(Color.white, 1));
+
+/** The shared empty normal field, on the same terms: one texel, zero coverage. */
+let transparent: Texture | null = null;
+
+const transparentTexture = (): Texture => (transparent ??= Texture.fromColor(Color.transparentBlack, 1));

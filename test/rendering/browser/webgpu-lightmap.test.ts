@@ -356,6 +356,41 @@ describe('lightmap renderer WebGPU browser', () => {
     }
   });
 
+  test('a surface normal turns the light towards the side it faces', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Leaning along +x, so the ground faces the light more on the light's own
+    // left than on its right.
+    const normals = normalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const ground = new Sprite(Texture.fromColor(Color.white, 1));
+
+    ground.width = canvasSize;
+    ground.height = canvasSize;
+    lighting.add(new PointLight({ radius: 60, intensity: 1, height: 40 })).setPosition(32, 32);
+    lighting.normalsFrom(ground, normals);
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      expect(at(12, 32)).toBeGreaterThan(at(52, 32) + 20);
+      // The normal leans along one axis only, so the other stays even - which
+      // is what says the term is reading a direction rather than a distance.
+      expect(Math.abs(at(32, 12) - at(32, 52))).toBeLessThan(12);
+    } finally {
+      ground.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
   test('a filter over the composite reads the light above 1.0 rather than a clipped frame', async ctx => {
     const host = await createHost();
     // Quarter brightness, so what reaches the canvas says what the filter was

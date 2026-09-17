@@ -300,6 +300,51 @@ describe('WebGL2 lightmap renderer', () => {
     }
   });
 
+  test('a surface normal turns the light towards the side it faces, and away again when it is taken back', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Leaning along +x, so the ground faces the light more on the light's own
+    // left than on its right.
+    const normals = normalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const ground = new Sprite(Texture.fromColor(Color.white, 1));
+
+    ground.width = canvasSize;
+    ground.height = canvasSize;
+    lighting.add(new PointLight({ radius: 60, intensity: 1, height: 40 })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      lighting.normalsFrom(ground, normals);
+      runFrame(host, lighting);
+
+      const left = readPixel(host.backend, 12, 32)[0];
+      const right = readPixel(host.backend, 52, 32)[0];
+      const above = readPixel(host.backend, 32, 12)[0];
+      const below = readPixel(host.backend, 32, 52)[0];
+
+      expect(left).toBeGreaterThan(right + 20);
+      // The normal leans along one axis only, so the other stays even - which
+      // is what says the term is reading a direction rather than a distance.
+      expect(Math.abs(above - below)).toBeLessThan(12);
+
+      // Taken back, the same scene is lit as a plane again: the light lands
+      // evenly on both sides.
+      lighting.stopNormals(ground);
+      runFrame(host, lighting);
+
+      const flatLeft = readPixel(host.backend, 12, 32)[0];
+      const flatRight = readPixel(host.backend, 52, 32)[0];
+
+      expect(lighting.activeSurfaceCount).toBe(0);
+      expect(Math.abs(flatLeft - flatRight)).toBeLessThan(12);
+      expect(flatRight).toBeGreaterThan(right + 20);
+    } finally {
+      ground.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
   test('a light beyond every cap still contributes - the lightmap has none', async () => {
     const host = await createHost();
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });

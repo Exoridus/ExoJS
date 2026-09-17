@@ -4,6 +4,7 @@
 // space aligned with the light's own axis.
 in vec3 a_light;
 in vec2 a_shadow;
+in vec4 a_surface;
 
 out vec2 v_local;
 out vec4 v_tint;
@@ -11,6 +12,7 @@ flat out vec2 v_cone;
 flat out float v_intensity;
 flat out float v_shadowRow;
 flat out float v_softness;
+flat out vec4 v_surface;
 
 void main() {
     gl_Position = vec4(exoInstanceClipPosition(a_position, a_nodeIndex), 0.0, 1.0);
@@ -20,4 +22,5 @@ void main() {
     v_intensity = a_light.z;
     v_shadowRow = a_shadow.x;
     v_softness = a_shadow.y;
+    v_surface = a_surface;
 }
