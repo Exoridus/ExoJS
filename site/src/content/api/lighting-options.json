@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -89,6 +89,31 @@
           "params": [],
           "returnType": null,
           "description": "The application whose frame is lit. Required by 'lightmap' and by a non-empty LightingOptions.post; a 'forward' system without filters needs nothing else. Passing it installs the renderer's passes in app.framePasses and takes them out again on Lighting.destroy."
+        },
+        {
+          "name": "fieldMargin",
+          "signature": "fieldMargin?: number",
+          "signatureTokens": [
+            {
+              "text": "fieldMargin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How far beyond the camera's view the occluder mask and the emission field reach, as a fraction of the view's size on each side. Under radiance it is what lets a wall or a lamp just outside the picture still shadow or light what is in it, so neither pops in at the edge as the camera moves; the probes themselves still cover only the view. Defaults to 0.25, and costs that much more mask, distance field and emission fill."
         },
         {
           "name": "lightResolution",

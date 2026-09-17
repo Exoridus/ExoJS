@@ -89,11 +89,12 @@ Its tuning rides on the factory - `probeSpacing`, `cascades` and `interval`, all
 
 What a light means here is its SHAPE, not its falloff: `softness` sets the size of the source, and that is what sets how soft its shadows are. `radius` still bounds the region occluders are collected for, and `intensity` and `color` are what it emits - `intensity` scaled so that it means the same brightness it means under the light quads, measured at half the light's radius. Changing `softness` therefore changes how soft the shadows are and not how bright the room is.
 
-Three things it does not do, all of them deliberate for now:
+What else the transport carries:
 
-- **A surface does not re-emit.** Light is transported from the emitters and occluded by the same field the shadows use, but a lit wall is not itself a source yet - so there is no bounced colour.
-- **A `SunLight` is skipped.** It has nowhere to emit from. Use `ambient`.
-- **A `SpotLight` emits like a point.** A cone is a property of how a light shades, and this renderer transports from a shape instead.
+- **A lit surface re-emits.** A wall the field lit gives part of that light off again in its own colour, one frame later - `radiance({ bounce: 0.5 })` sets how much, and `0` switches it off. It is the previous frame's light field that says how lit a wall was, so the bounce trails a moving lamp by a frame.
+- **A `SunLight` is the sky.** A ray that reaches the top of the chain without hitting anything ends in it, so a directional light comes in wherever the sky is open and every wall blocks it. The first enabled one is taken; `softness` is its angular size.
+- **A `SpotLight` emits across its cone** and blocks all round, the way a lamp's body does.
+- **The fields reach past the picture.** The mask, the distance field and the emission field cover the view and a margin around it (`fieldMargin`, a quarter of the view per side by default), so a wall or a lamp just outside the picture still shadows or lights what is in it as the camera moves. The probes themselves cover only the view.
 
 `lightmap` needs the application, because it works on the frame the application drew: it installs its passes in `app.framePasses` and removes them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
 
@@ -262,7 +263,7 @@ It is a live property (`material.emissive = 0.5`), so a pulsing forge is a tween
 | Lights as scene nodes (parenting, tweens)   | yes                                                                                 |
 | Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped                           |
 | Ambient term                                | yes, carried in the light texture                                                   |
-| Emissive surfaces                           | `forward`, on `LitMaterial`                                                         |
+| Emissive surfaces                           | `forward`, on `LitMaterial`; `radiance` re-emits from lit occluders (`bounce`)      |
 | Normal maps                                 | `forward`: one per material; `lightmap`: per registered drawable                    |
 | Rotation / flip aware normals               | yes, via the instance's local-to-world basis                                        |
 | Extra render passes or draw calls           | `forward`: none; `lightmap`: two; `radiance`: four to nine; a `post` chain adds one |
@@ -272,9 +273,9 @@ It is a live property (`material.emissive = 0.5`), so a pulsing forge is a tween
 | Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                                                 |
 | Light cookies                               | `lightmap`, one draw per distinct cookie                                            |
 | Line lights (capsule falloff)               | yes; `forward` approximates one as a point light                                    |
-| Sun lights (parallel shadows)               | `lightmap` only                                                                     |
+| Sun lights (parallel shadows)               | `lightmap`; `radiance` as the sky every open ray ends in                            |
 | Radiance cascades (propagating light)       | `radiance`, WebGL2 and WebGPU, opt-in                                               |
-| Bounced light off lit surfaces              | no - `radiance` transports from emitters only                                       |
+| Bounced light off lit surfaces              | `radiance`, one frame late, from lit occluders                                      |
 | Deferred (G-buffer) path                    | no                                                                                  |
 | Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                                               |
 

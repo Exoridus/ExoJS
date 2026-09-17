@@ -9,14 +9,26 @@ uniform sampler2D uTexture;
 // one in `g`, both as a fraction of `uFar`.
 uniform sampler2D uDistance;
 // What emits, at the same place in the world as the distance field. Alpha is
-// the emitter's shape; a surface with none is a wall.
+// the emitter's shape; a surface with none is a wall, and its colour there is
+// what it bounces.
 uniform sampler2D uEmission;
+// Per probe of this level, how much of the way to each of the four coarser
+// probes around it is open: `x` to the one left and above, `y` right and
+// above, `z` left and below, `w` right and below.
+uniform sampler2D uVisibility;
+// Wherever a source's colour is, its cone: outer and inner cosines in `rg`,
+// the axis in `ba`. Zero where nothing described one.
+uniform sampler2D uEmitterCone;
 
 out vec4 fragColor;
 
 const float TAU = 6.28318530718;
-/** Hard ceiling on a ray's walk. Sphere tracing converges in far fewer. */
-const int MAX_STEPS = 64;
+/**
+ * Hard ceiling on a ray's walk. Sphere tracing converges in far fewer in the
+ * open; the ceiling is what a ray running along a wall spends, a texel or two
+ * at a time, before it gives up on the far end of a coarse interval.
+ */
+const int MAX_STEPS = 128;
 /**
  * Distance, in texels, at or below which a sample is on a surface: what a
  * walk lands within when it steps by the field's own value.
@@ -28,15 +40,16 @@ const float WALL = 0.05;
 const float NOTHING = -1e8;
 
 /**
- * World position to a lookup in the screen-sized fields.
+ * World position to a lookup in the fields, which cover the camera's view and
+ * a margin around it, turned and scaled as the camera is.
  *
- * Flipped on v because WebGL2 writes a render target bottom-up and both fields
- * are render targets. The WGSL half needs no flip.
+ * Flipped on v because WebGL2 writes a render target bottom-up and every field
+ * is a render target. The WGSL half flips the other way.
  */
 vec2 fieldUv(vec2 world) {
-    vec2 uv = (world - uniforms.uView.xy) / uniforms.uView.zw;
+    vec2 clip = vec2(dot(uniforms.uToField.xy, world), dot(uniforms.uToField.zw, world)) + uniforms.uFieldOffset;
 
-    return vec2(uv.x, 1.0 - uv.y);
+    return clip * 0.5 + 0.5;
 }
 
 /**
@@ -50,17 +63,55 @@ float share(float depth, float width) {
 }
 
 /**
+ * A source's colour where a ray reads it, through the source's cone: light
+ * leaves the source along the ray, against the direction the ray walked, and
+ * a cone light gives none of it outside its own opening. A point light wrote
+ * both cosines as -1, which no direction can fail; a wall wrote nothing.
+ */
+vec3 sourceColour(vec2 colourAt, vec2 direction) {
+    vec2 uv = fieldUv(colourAt);
+    vec3 colour = texture(uEmission, uv).rgb;
+    vec4 cone = texture(uEmitterCone, uv);
+
+    if (dot(cone.zw, cone.zw) < 0.5) {
+        return colour;
+    }
+
+    float alignment = dot(-direction, normalize(cone.zw));
+    float coneTerm = cone.x == cone.y ? step(cone.x, alignment) : smoothstep(cone.x, cone.y, alignment);
+
+    return colour * coneTerm;
+}
+
+/**
  * What a walk amounts to with its open encounter settled: the radiance found
  * in `rgb`, what got through in `a`.
  */
-vec4 settle(vec3 found, float through, float depth, float width, vec2 at) {
+vec4 settle(vec3 found, float through, float depth, float width, vec2 colourAt, vec2 direction) {
     if (depth == NOTHING) {
         return vec4(found, through);
     }
 
     float taken = share(depth, width);
 
-    return vec4(found + through * taken * texture(uEmission, fieldUv(at)).rgb, through * (1.0 - taken));
+    return vec4(found + through * taken * sourceColour(colourAt, direction), through * (1.0 - taken));
+}
+
+/**
+ * What a directional light puts into a ray that reached open sky: its whole
+ * radiance concentrated into the rays within its own angular size, shared
+ * between neighbouring rays by the same box cone as everything else, so the
+ * average over a probe's directions is the light's intensity.
+ */
+vec3 sky(vec2 direction, float sector) {
+    if (uniforms.uSun.w <= 0.0) {
+        return vec3(0.0);
+    }
+
+    // The rays that see the sun point AT it: against the direction it travels.
+    float away = acos(clamp(dot(direction, -uniforms.uSun.xy), -1.0, 1.0));
+
+    return uniforms.uSunColor * (uniforms.uSun.w * share(uniforms.uSun.z - away, sector));
 }
 
 /**
@@ -82,7 +133,8 @@ vec4 settle(vec3 found, float through, float depth, float width, vec2 at) {
  * A source is walked THROUGH to find how deep the axis went, and the cone's
  * remainder carries on past it. A wall is not: it takes the whole cone, since
  * the part of the cone that missed the wall's edge here would hit its face a
- * step further on.
+ * step further on - and what it puts into the ray is whatever the wall itself
+ * bounces.
  */
 void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
     float minStep = max(uniforms.uTexel, 0.0001);
@@ -91,10 +143,10 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
     float through = 1.0;
     vec3 found = vec3(0.0);
     // The encounter still open: how deep the axis has reached into (or how
-    // close it came to) the surface at hand, where, at what travel, and how
-    // wide the cone was there.
+    // close it came to) the surface at hand, where its colour is read, at what
+    // travel, and how wide the cone was there.
     float depth = NOTHING;
-    vec2 at = vec2(0.0);
+    vec2 colourAt = vec2(0.0);
     float atTravel = 0.0;
     float width = minStep;
     bool inside = false;
@@ -122,7 +174,7 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
         // be known before the far side.
         for (int index = 0; index < 4; index++) {
             if (!reported[index] && !inside && travelled >= ends[index]) {
-                results[index] = settle(found, through, atTravel <= ends[index] ? depth : NOTHING, width, at);
+                results[index] = settle(found, through, atTravel <= ends[index] ? depth : NOTHING, width, colourAt, direction);
                 reported[index] = true;
             }
         }
@@ -134,9 +186,9 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
         vec2 here = origin + direction * travelled;
         vec2 uv = fieldUv(here);
 
-        // Outside the camera there is no field, and a ray that leaves it cannot
-        // be told apart from one that found nothing - so it carries on as
-        // unoccluded rather than ending in shadow.
+        // Outside the fields there is nothing known, and a ray that leaves them
+        // cannot be told apart from one that found nothing - so it carries on
+        // as unoccluded rather than ending in shadow.
         if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
             break;
         }
@@ -144,6 +196,7 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
         vec2 field = texture(uDistance, uv).rg * uniforms.uFar;
 
         field.g -= field.r;
+
         // The ray's own half-width here. NOT floored at a texel: the widths of a
         // probe's rays have to tile the circle for their shares to add up to
         // one, and near the start of an interval a ray is narrower than a texel.
@@ -154,13 +207,19 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
                 // A pending near miss of the surface being entered is this
                 // same surface, approached; one left further back is not.
                 if (depth != NOTHING && travelled - atTravel > 2.0 * max(width, minStep)) {
-                    vec4 settled = settle(found, through, depth, width, at);
+                    vec4 settled = settle(found, through, depth, width, colourAt, direction);
 
                     found = settled.rgb;
                     through = settled.a;
                 }
 
-                if (texture(uEmission, fieldUv(here + direction * minStep)).a < WALL) {
+                // Read a step in, where a source's colour is and a wall's
+                // bounce sits, rather than on the edge the walk stopped at.
+                vec2 within = here + direction * minStep;
+                vec4 emission = texture(uEmission, fieldUv(within));
+
+                if (emission.a < WALL) {
+                    found += through * emission.rgb;
                     through = 0.0;
                     depth = NOTHING;
 
@@ -170,14 +229,12 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
                 inside = true;
                 skipping = taken == 0 && uniforms.uRange.x > 0.0;
                 depth = NOTHING;
+                colourAt = within;
                 entered = travelled;
             }
 
-            float reached = field.g;
-
-            if (!skipping && reached > depth) {
-                depth = reached;
-                at = here;
+            if (!skipping && field.g > depth) {
+                depth = field.g;
                 atTravel = travelled;
                 width = cone;
             }
@@ -193,18 +250,17 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
             // it were a texel apart: read the depth there once, exactly, rather
             // than settle for the nearest sample to it.
             if (!skipping) {
-                vec2 middle = origin + direction * (0.5 * (entered + travelled));
-                vec2 there = texture(uDistance, fieldUv(middle)).rg * uniforms.uFar;
+                float midway = 0.5 * (entered + travelled);
+                vec2 there = texture(uDistance, fieldUv(origin + direction * midway)).rg * uniforms.uFar;
 
                 if (there.g - there.r > depth) {
                     depth = there.g - there.r;
-                    at = middle;
-                    atTravel = 0.5 * (entered + travelled);
-                    width = 0.5 * (entered + travelled) * uniforms.uCone;
+                    atTravel = midway;
+                    width = midway * uniforms.uCone;
                 }
             }
 
-            vec4 settled = settle(found, through, depth, width, at);
+            vec4 settled = settle(found, through, depth, width, colourAt, direction);
 
             found = settled.rgb;
             through = settled.a;
@@ -232,7 +288,7 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
                 // The estimate assumes a flat surface; the field read at the
                 // foot of it is the truth for a curved one, and never further.
                 depth = -min(nearest, texture(uDistance, fieldUv(foot)).r * uniforms.uFar);
-                at = foot;
+                colourAt = foot;
                 atTravel = travelled - along;
                 width = max(travelled - along, 0.0) * uniforms.uCone;
             }
@@ -246,7 +302,7 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
         travelled += stepped;
     }
 
-    vec4 settled = settle(found, through, depth, width, at);
+    vec4 settled = settle(found, through, depth, width, colourAt, direction);
 
     for (int index = 0; index < 4; index++) {
         if (!reported[index]) {
@@ -272,6 +328,10 @@ vec3 coarseRays(ivec2 probe, int direction, int coarseTile) {
     return sum * 0.25;
 }
 
+float bilinear(vec2 weight, int index) {
+    return (index % 2 == 0 ? 1.0 - weight.x : weight.x) * (index / 2 == 0 ? 1.0 - weight.y : weight.y);
+}
+
 void main() {
     int tile = int(uniforms.uTile);
     ivec2 texel = ivec2(gl_FragCoord.xy);
@@ -288,14 +348,18 @@ void main() {
 
     ivec2 within = texel - probe * tile;
     int direction = within.y * tile + within.x;
-    float angle = (float(direction) + 0.5) / float(tile * tile) * TAU;
+    float sector = TAU / float(tile * tile);
+    float angle = (float(direction) + 0.5) * sector;
     vec2 heading = vec2(cos(angle), sin(angle));
     vec2 origin = uniforms.uOrigin + (vec2(probe) + 0.5) * uniforms.uSpacing;
     vec4 results[4];
 
     if (uniforms.uMerge < 0.5) {
         trace(origin, heading, vec4(uniforms.uRange.y), results);
-        fragColor = vec4(results[0].rgb, 1.0);
+
+        // The top of the chain: what got through here reached the sky, and a
+        // directional light is what the sky holds.
+        fragColor = vec4(results[0].rgb + results[0].a * sky(heading, 0.5 * sector), 1.0);
 
         return;
     }
@@ -310,8 +374,13 @@ void main() {
     vec2 place = (vec2(probe) + 0.5) * 0.5 - 0.5;
     vec2 weight = fract(place);
     ivec2 base = ivec2(floor(place));
+    // Weighted as well by how much of the way to each coarser probe is open: a
+    // probe beside a wall would otherwise take half its light from probes on
+    // the far side of it, and the wall's shadow would glow along its edge.
+    vec4 open = texelFetch(uVisibility, probe, 0);
     ivec2 corners[4];
     vec4 ends;
+    vec4 shares;
 
     // Each coarser probe's ray in this direction begins a fixed distance from
     // THAT probe, which along this ray is short of or past where this level's
@@ -325,6 +394,18 @@ void main() {
 
         corners[index] = corner;
         ends[index] = uniforms.uRange.y + dot(coarseOrigin - origin, heading);
+        shares[index] = bilinear(weight, index) * open[index];
+    }
+
+    float totalShare = shares.x + shares.y + shares.z + shares.w;
+
+    // Every way blocked: fall back to the plain weights rather than to darkness.
+    if (totalShare <= 0.0) {
+        for (int index = 0; index < 4; index++) {
+            shares[index] = bilinear(weight, index);
+        }
+
+        totalShare = 1.0;
     }
 
     trace(origin, heading, ends, results);
@@ -332,7 +413,6 @@ void main() {
     vec3 total = vec3(0.0);
 
     for (int index = 0; index < 4; index++) {
-        float along = (index % 2 == 0 ? 1.0 - weight.x : weight.x) * (index / 2 == 0 ? 1.0 - weight.y : weight.y);
         vec4 walked = results[index];
 
         // Scaled by what got through: a ray that ended on a surface is already
@@ -342,7 +422,7 @@ void main() {
             walked.rgb += walked.a * coarseRays(corners[index], direction, coarseTile);
         }
 
-        total += walked.rgb * along;
+        total += walked.rgb * (shares[index] / totalShare);
     }
 
     fragColor = vec4(total, 1.0);

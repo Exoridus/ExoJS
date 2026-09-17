@@ -7,13 +7,27 @@
 @group(1) @binding(1) var uDistance: texture_2d<f32>;
 @group(1) @binding(2) var uDistanceSampler: sampler;
 // What emits, at the same place in the world as the distance field. Alpha is
-// the emitter's shape; a surface with none is a wall.
+// the emitter's shape; a surface with none is a wall, and its colour there is
+// what it bounces.
 @group(1) @binding(3) var uEmission: texture_2d<f32>;
 @group(1) @binding(4) var uEmissionSampler: sampler;
+// Per probe of this level, how much of the way to each of the four coarser
+// probes around it is open: `x` to the one left and above, `y` right and
+// above, `z` left and below, `w` right and below.
+@group(1) @binding(5) var uVisibility: texture_2d<f32>;
+@group(1) @binding(6) var uVisibilitySampler: sampler;
+// Wherever a source's colour is, its cone: outer and inner cosines in `rg`,
+// the axis in `ba`. Zero where nothing described one.
+@group(1) @binding(7) var uEmitterCone: texture_2d<f32>;
+@group(1) @binding(8) var uEmitterConeSampler: sampler;
 
 const TAU: f32 = 6.28318530718;
-/** Hard ceiling on a ray's walk. Sphere tracing converges in far fewer. */
-const MAX_STEPS: i32 = 64;
+/**
+ * Hard ceiling on a ray's walk. Sphere tracing converges in far fewer in the
+ * open; the ceiling is what a ray running along a wall spends, a texel or two
+ * at a time, before it gives up on the far end of a coarse interval.
+ */
+const MAX_STEPS: i32 = 128;
 /**
  * Distance, in texels, at or below which a sample is on a surface: what a
  * walk lands within when it steps by the field's own value.
@@ -24,9 +38,15 @@ const WALL: f32 = 0.05;
 /** Depth that says "no encounter pending". */
 const NOTHING: f32 = -1e8;
 
-/** World position to a lookup in the screen-sized fields. */
+/**
+ * World position to a lookup in the fields, which cover the camera's view and
+ * a margin around it, turned and scaled as the camera is. WebGPU writes a
+ * render target top-down, so clip `+y` is the first row.
+ */
 fn fieldUv(world: vec2<f32>) -> vec2<f32> {
-    return (world - uniforms.uView.xy) / uniforms.uView.zw;
+    let clip = vec2<f32>(dot(uniforms.uToField.xy, world), dot(uniforms.uToField.zw, world)) + uniforms.uFieldOffset;
+
+    return vec2<f32>(clip.x, -clip.y) * 0.5 + 0.5;
 }
 
 /**
@@ -43,18 +63,67 @@ fn emissionAt(world: vec2<f32>) -> vec4<f32> {
     return textureSampleLevel(uEmission, uEmissionSampler, fieldUv(world), 0.0);
 }
 
+fn distanceAt(world: vec2<f32>) -> vec2<f32> {
+    let stored = textureSampleLevel(uDistance, uDistanceSampler, fieldUv(world), 0.0).rg * uniforms.uFar;
+
+    return vec2<f32>(stored.x, stored.y - stored.x);
+}
+
+/**
+ * A source's colour where a ray reads it, through the source's cone: light
+ * leaves the source along the ray, against the direction the ray walked, and
+ * a cone light gives none of it outside its own opening. A point light wrote
+ * both cosines as -1, which no direction can fail; a wall wrote nothing.
+ */
+fn sourceColour(colourAt: vec2<f32>, direction: vec2<f32>) -> vec3<f32> {
+    let uv = fieldUv(colourAt);
+    let colour = textureSampleLevel(uEmission, uEmissionSampler, uv, 0.0).rgb;
+    let cone = textureSampleLevel(uEmitterCone, uEmitterConeSampler, uv, 0.0);
+
+    if (dot(cone.zw, cone.zw) < 0.5) {
+        return colour;
+    }
+
+    let alignment = dot(-direction, normalize(cone.zw));
+
+    var coneTerm = smoothstep(cone.x, cone.y, alignment);
+
+    if (cone.x == cone.y) {
+        coneTerm = step(cone.x, alignment);
+    }
+
+    return colour * coneTerm;
+}
+
 /**
  * What a walk amounts to with its open encounter settled: the radiance found
  * in `rgb`, what got through in `a`.
  */
-fn settle(found: vec3<f32>, through: f32, depth: f32, width: f32, at: vec2<f32>) -> vec4<f32> {
+fn settle(found: vec3<f32>, through: f32, depth: f32, width: f32, colourAt: vec2<f32>, direction: vec2<f32>) -> vec4<f32> {
     if (depth == NOTHING) {
         return vec4<f32>(found, through);
     }
 
     let taken = share(depth, width);
 
-    return vec4<f32>(found + through * taken * emissionAt(at).rgb, through * (1.0 - taken));
+    return vec4<f32>(found + through * taken * sourceColour(colourAt, direction), through * (1.0 - taken));
+}
+
+/**
+ * What a directional light puts into a ray that reached open sky: its whole
+ * radiance concentrated into the rays within its own angular size, shared
+ * between neighbouring rays by the same box cone as everything else, so the
+ * average over a probe's directions is the light's intensity.
+ */
+fn sky(direction: vec2<f32>, sector: f32) -> vec3<f32> {
+    if (uniforms.uSun.w <= 0.0) {
+        return vec3<f32>(0.0);
+    }
+
+    // The rays that see the sun point AT it: against the direction it travels.
+    let away = acos(clamp(dot(direction, -uniforms.uSun.xy), -1.0, 1.0));
+
+    return uniforms.uSunColor * (uniforms.uSun.w * share(uniforms.uSun.z - away, sector));
 }
 
 /**
@@ -76,7 +145,8 @@ fn settle(found: vec3<f32>, through: f32, depth: f32, width: f32, at: vec2<f32>)
  * A source is walked THROUGH to find how deep the axis went, and the cone's
  * remainder carries on past it. A wall is not: it takes the whole cone, since
  * the part of the cone that missed the wall's edge here would hit its face a
- * step further on.
+ * step further on - and what it puts into the ray is whatever the wall itself
+ * bounces.
  */
 fn trace(origin: vec2<f32>, direction: vec2<f32>, ends: vec4<f32>) -> array<vec4<f32>, 4> {
     let minStep = max(uniforms.uTexel, 0.0001);
@@ -87,10 +157,10 @@ fn trace(origin: vec2<f32>, direction: vec2<f32>, ends: vec4<f32>) -> array<vec4
     var through = 1.0;
     var found = vec3<f32>(0.0);
     // The encounter still open: how deep the axis has reached into (or how
-    // close it came to) the surface at hand, where, at what travel, and how
-    // wide the cone was there.
+    // close it came to) the surface at hand, where its colour is read, at what
+    // travel, and how wide the cone was there.
     var depth = NOTHING;
-    var at = vec2<f32>(0.0);
+    var colourAt = vec2<f32>(0.0);
     var atTravel = 0.0;
     var width = minStep;
     var inside = false;
@@ -118,7 +188,7 @@ fn trace(origin: vec2<f32>, direction: vec2<f32>, ends: vec4<f32>) -> array<vec4
         // be known before the far side.
         for (var index: i32 = 0; index < 4; index = index + 1) {
             if (!reported[index] && !inside && travelled >= ends[index]) {
-                results[index] = settle(found, through, select(NOTHING, depth, atTravel <= ends[index]), width, at);
+                results[index] = settle(found, through, select(NOTHING, depth, atTravel <= ends[index]), width, colourAt, direction);
                 reported[index] = true;
             }
         }
@@ -130,32 +200,37 @@ fn trace(origin: vec2<f32>, direction: vec2<f32>, ends: vec4<f32>) -> array<vec4
         let here = origin + direction * travelled;
         let uv = fieldUv(here);
 
-        // Outside the camera there is no field, and a ray that leaves it cannot
-        // be told apart from one that found nothing - so it carries on as
-        // unoccluded rather than ending in shadow.
+        // Outside the fields there is nothing known, and a ray that leaves them
+        // cannot be told apart from one that found nothing - so it carries on
+        // as unoccluded rather than ending in shadow.
         if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
             break;
         }
 
-        let stored = textureSampleLevel(uDistance, uDistanceSampler, uv, 0.0).rg * uniforms.uFar;
-        let field = vec2<f32>(stored.x, stored.y - stored.x);
+        let field = distanceAt(here);
         // The ray's own half-width here. NOT floored at a texel: the widths of a
         // probe's rays have to tile the circle for their shares to add up to
         // one, and near the start of an interval a ray is narrower than a texel.
         let cone = travelled * uniforms.uCone;
 
-        if (field.r <= HIT * minStep) {
+        if (field.x <= HIT * minStep) {
             if (!inside) {
                 // A pending near miss of the surface being entered is this
                 // same surface, approached; one left further back is not.
                 if (depth != NOTHING && travelled - atTravel > 2.0 * max(width, minStep)) {
-                    let settled = settle(found, through, depth, width, at);
+                    let settled = settle(found, through, depth, width, colourAt, direction);
 
                     found = settled.rgb;
                     through = settled.a;
                 }
 
-                if (emissionAt(here + direction * minStep).a < WALL) {
+                // Read a step in, where a source's colour is and a wall's
+                // bounce sits, rather than on the edge the walk stopped at.
+                let within = here + direction * minStep;
+                let emission = emissionAt(within);
+
+                if (emission.a < WALL) {
+                    found = found + through * emission.rgb;
                     through = 0.0;
                     depth = NOTHING;
 
@@ -165,20 +240,18 @@ fn trace(origin: vec2<f32>, direction: vec2<f32>, ends: vec4<f32>) -> array<vec4
                 inside = true;
                 skipping = taken == 0 && uniforms.uRange.x > 0.0;
                 depth = NOTHING;
+                colourAt = within;
                 entered = travelled;
             }
 
-            let reached = field.g;
-
-            if (!skipping && reached > depth) {
-                depth = reached;
-                at = here;
+            if (!skipping && field.y > depth) {
+                depth = field.y;
                 atTravel = travelled;
                 width = cone;
             }
 
             previous = 1e8;
-            travelled = travelled + max(field.g, minStep);
+            travelled = travelled + max(field.y, minStep);
 
             continue;
         }
@@ -189,18 +262,16 @@ fn trace(origin: vec2<f32>, direction: vec2<f32>, ends: vec4<f32>) -> array<vec4
             // than settle for the nearest sample to it.
             if (!skipping) {
                 let midway = 0.5 * (entered + travelled);
-                let middle = origin + direction * midway;
-                let there = textureSampleLevel(uDistance, uDistanceSampler, fieldUv(middle), 0.0).rg * uniforms.uFar;
+                let there = distanceAt(origin + direction * midway);
 
-                if (there.y - there.x > depth) {
-                    depth = there.y - there.x;
-                    at = middle;
+                if (there.y > depth) {
+                    depth = there.y;
                     atTravel = midway;
                     width = midway * uniforms.uCone;
                 }
             }
 
-            let settled = settle(found, through, depth, width, at);
+            let settled = settle(found, through, depth, width, colourAt, direction);
 
             found = settled.rgb;
             through = settled.a;
@@ -211,7 +282,7 @@ fn trace(origin: vec2<f32>, direction: vec2<f32>, ends: vec4<f32>) -> array<vec4
         }
 
         if (leaving) {
-            leaving = field.r <= max(cone, minStep);
+            leaving = field.x <= max(cone, minStep);
         } else if (previous < 1e7) {
             // The closest the segment from the previous sample to this one
             // came to the surface, from the two distances at its ends and the
@@ -219,30 +290,30 @@ fn trace(origin: vec2<f32>, direction: vec2<f32>, ends: vec4<f32>) -> array<vec4
             // not at either of them. A first sample has no segment: the surface
             // it reads may be beside the ray, or behind where it began, and
             // only the second sample can tell.
-            let along = clamp((stepped * stepped + field.r * field.r - previous * previous) / (2.0 * stepped), 0.0, stepped);
-            let nearest = sqrt(max(field.r * field.r - along * along, 0.0));
+            let along = clamp((stepped * stepped + field.x * field.x - previous * previous) / (2.0 * stepped), 0.0, stepped);
+            let nearest = sqrt(max(field.x * field.x - along * along, 0.0));
 
             if (-nearest > depth) {
                 let foot = here - direction * along;
 
                 // The estimate assumes a flat surface; the field read at the
                 // foot of it is the truth for a curved one, and never further.
-                depth = -min(nearest, textureSampleLevel(uDistance, uDistanceSampler, fieldUv(foot), 0.0).r * uniforms.uFar);
-                at = foot;
+                depth = -min(nearest, distanceAt(foot).x);
+                colourAt = foot;
                 atTravel = travelled - along;
                 width = max(travelled - along, 0.0) * uniforms.uCone;
             }
         }
 
-        previous = field.r;
+        previous = field.x;
         // Sphere tracing: a step of the distance to the nearest surface cannot
         // pass through one, which is what makes a whole cascade affordable
         // where marching a texel at a time is not.
-        stepped = max(field.r, minStep);
+        stepped = max(field.x, minStep);
         travelled = travelled + stepped;
     }
 
-    let settled = settle(found, through, depth, width, at);
+    let settled = settle(found, through, depth, width, colourAt, direction);
 
     for (var index: i32 = 0; index < 4; index = index + 1) {
         if (!reported[index]) {
@@ -270,6 +341,13 @@ fn coarseRays(probe: vec2<i32>, direction: i32, coarseTile: i32) -> vec3<f32> {
     return sum * 0.25;
 }
 
+fn bilinear(weight: vec2<f32>, index: i32) -> f32 {
+    let alongX = select(weight.x, 1.0 - weight.x, index % 2 == 0);
+    let alongY = select(weight.y, 1.0 - weight.y, index / 2 == 0);
+
+    return alongX * alongY;
+}
+
 @fragment
 fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     let tile = i32(uniforms.uTile);
@@ -285,14 +363,17 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
 
     let within = texel - probe * tile;
     let direction = within.y * tile + within.x;
-    let angle = (f32(direction) + 0.5) / f32(tile * tile) * TAU;
+    let sector = TAU / f32(tile * tile);
+    let angle = (f32(direction) + 0.5) * sector;
     let heading = vec2<f32>(cos(angle), sin(angle));
     let origin = uniforms.uOrigin + (vec2<f32>(probe) + 0.5) * uniforms.uSpacing;
 
     if (uniforms.uMerge < 0.5) {
         let walked = trace(origin, heading, vec4<f32>(uniforms.uRange.y));
 
-        return vec4<f32>(walked[0].rgb, 1.0);
+        // The top of the chain: what got through here reached the sky, and a
+        // directional light is what the sky holds.
+        return vec4<f32>(walked[0].rgb + walked[0].a * sky(heading, 0.5 * sector), 1.0);
     }
 
     // The four probes of the coarser grid around this one, bilinearly weighted:
@@ -305,9 +386,14 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
     let place = (vec2<f32>(probe) + 0.5) * 0.5 - 0.5;
     let weight = fract(place);
     let base = vec2<i32>(floor(place));
+    // Weighted as well by how much of the way to each coarser probe is open: a
+    // probe beside a wall would otherwise take half its light from probes on
+    // the far side of it, and the wall's shadow would glow along its edge.
+    let open = textureLoad(uVisibility, probe, 0);
 
     var corners: array<vec2<i32>, 4>;
     var ends = vec4<f32>(0.0);
+    var shares = vec4<f32>(0.0);
 
     // Each coarser probe's ray in this direction begins a fixed distance from
     // THAT probe, which along this ray is short of or past where this level's
@@ -321,6 +407,18 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
 
         corners[index] = corner;
         ends[index] = uniforms.uRange.y + dot(coarseOrigin - origin, heading);
+        shares[index] = bilinear(weight, index) * open[index];
+    }
+
+    var totalShare = shares.x + shares.y + shares.z + shares.w;
+
+    // Every way blocked: fall back to the plain weights rather than to darkness.
+    if (totalShare <= 0.0) {
+        for (var index: i32 = 0; index < 4; index = index + 1) {
+            shares[index] = bilinear(weight, index);
+        }
+
+        totalShare = 1.0;
     }
 
     let results = trace(origin, heading, ends);
@@ -328,9 +426,6 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
     var total = vec3<f32>(0.0);
 
     for (var index: i32 = 0; index < 4; index = index + 1) {
-        let alongX = select(weight.x, 1.0 - weight.x, index % 2 == 0);
-        let alongY = select(weight.y, 1.0 - weight.y, index / 2 == 0);
-
         var walked = results[index];
 
         // Scaled by what got through: a ray that ended on a surface is already
@@ -340,7 +435,7 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
             walked = vec4<f32>(walked.rgb + walked.a * coarseRays(corners[index], direction, coarseTile), walked.a);
         }
 
-        total = total + walked.rgb * (alongX * alongY);
+        total = total + walked.rgb * (shares[index] / totalShare);
     }
 
     return vec4<f32>(total, 1.0);

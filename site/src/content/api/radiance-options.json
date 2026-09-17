@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "bounce",
+          "signature": "bounce?: number",
+          "signatureTokens": [
+            {
+              "text": "bounce",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How much of the light that lands on a surface it gives off again, in 0..1. A lit wall then tints what stands beside it with its own colour, one frame later - the light field of the previous frame is what says how lit it was. 0 switches the bounce off. Defaults to 0.5. Above one the feedback runs away; the value is clamped below it."
+        },
         {
           "name": "cascades",
           "signature": "cascades?: number",

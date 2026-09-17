@@ -14,7 +14,15 @@
 // fails right here, on either form, whether or not any spec renders it.
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
-import { cascadeGatherShader, cascadeShader, litSpriteShader, sdfResolveShader, sdfStepShader, shadowMarchShader } from '@codexo/exojs-lighting';
+import {
+  cascadeGatherShader,
+  cascadeShader,
+  litSpriteShader,
+  probeVisibilityShader,
+  sdfResolveShader,
+  sdfStepShader,
+  shadowMarchShader,
+} from '@codexo/exojs-lighting';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
@@ -81,6 +89,7 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
   ['cascade.frag', generateGlslUniformDeclarations(cascadeShader.uniformSchema!)],
   ['cascade-gather.frag', generateGlslUniformDeclarations(cascadeGatherShader.uniformSchema!)],
+  ['probe-visibility.frag', generateGlslUniformDeclarations(probeVisibilityShader.uniformSchema!)],
   ['sdf-resolve.frag', generateGlslUniformDeclarations(sdfResolveShader.uniformSchema!)],
   ['sdf-step.frag', generateGlslUniformDeclarations(sdfStepShader.uniformSchema!)],
   ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],
@@ -175,8 +184,10 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'sdf-seed.frag'],
   ['default-vertex.vert', 'sdf-step.frag'],
   ['default-vertex.vert', 'sdf-resolve.frag'],
-  // The radiance chain: one level of it, and the gather that reads the finest.
+  // The radiance chain: one level of it, the merge weights written before it,
+  // and the gather that reads the finest.
   ['default-vertex.vert', 'cascade.frag'],
+  ['default-vertex.vert', 'probe-visibility.frag'],
   ['default-vertex.vert', 'cascade-gather.frag'],
   // The custom sprite-material path: the engine owns the vertex stage, and the
   // lighting package's lit fragment is the in-repo counterpart it links with.
@@ -189,6 +200,9 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['normal-prepass.vert', 'normal-prepass.frag'],
   ['sun-quad.vert', 'sun-quad.frag'],
   ['emitter-quad.vert', 'emitter-quad.frag'],
+  ['emitter-cone.vert', 'emitter-cone.frag'],
+  ['occluder-mask.vert', 'occluder-mask.frag'],
+  ['bounce.vert', 'bounce.frag'],
 ];
 
 const referencedShaderFiles = new Set(programPairs.flat());

@@ -18,6 +18,7 @@ import {
   Shader,
   Texture,
   TextureFormat,
+  View,
 } from '@codexo/exojs';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
@@ -45,6 +46,9 @@ import normalPrepassWgsl from './shaders/normal-prepass.wgsl';
 import occluderDebugFragment from './shaders/occluder-debug.frag';
 import occluderDebugVertex from './shaders/occluder-debug.vert';
 import occluderDebugWgsl from './shaders/occluder-debug.wgsl';
+import occluderMaskFragment from './shaders/occluder-mask.frag';
+import occluderMaskVertex from './shaders/occluder-mask.vert';
+import occluderMaskWgsl from './shaders/occluder-mask.wgsl';
 import sunQuadFragment from './shaders/sun-quad.frag';
 import sunQuadVertex from './shaders/sun-quad.vert';
 import sunQuadWgsl from './shaders/sun-quad.wgsl';
@@ -120,6 +124,8 @@ export interface LightmapBackendOptions {
   readonly resolution: number;
   /** Angular bins in each light's shadow map. */
   readonly shadowResolution: number;
+  /** How far beyond the view the mask and the emission field reach, as a fraction of the view per side. */
+  readonly fieldMargin: number;
   /**
    * The value-selected renderer's own pieces, or `null` for the light quads.
    * Passing them is what makes this renderer fill the field with cascades, and
@@ -178,6 +184,15 @@ export class LightmapBackend implements LightingBackend {
   private readonly _app: Application;
   private readonly _resolution: number;
   private readonly _shadowResolution: number;
+  private readonly _fieldMargin: number;
+  /**
+   * The view the mask, the distance field and the emission field are drawn
+   * through: the camera's own, widened by the margin. What reads them maps a
+   * world position through this view's transform, so a turned camera turns
+   * them with it.
+   */
+  private readonly _fieldView = new View(0, 0, 1, 1);
+  private readonly _maskMaterial: MeshMaterial;
   private readonly _compositeGeometry: Geometry = screenQuad();
   private readonly _lightGeometry: Geometry = unitQuad();
   private readonly _normalGeometry: Geometry = boxQuad();
@@ -249,6 +264,7 @@ export class LightmapBackend implements LightingBackend {
   /** The cascade chain, when it is what fills the light field rather than the quads. */
   private readonly _radiance: RadianceField | null;
   private _fillerRequest: ShadowFillerOption = 'auto';
+  private _compositeScale = 0;
   private _activeCount = 0;
   private _surfaceCount = 0;
   private _debug: LightingDebugView = null;
@@ -257,6 +273,7 @@ export class LightmapBackend implements LightingBackend {
     this._app = options.app;
     this._resolution = options.resolution;
     this._shadowResolution = options.shadowResolution;
+    this._fieldMargin = options.fieldMargin;
     this.hdr = options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F);
     this.quality = options.fields === null ? 'lightmap' : 'radiance';
     // Half-float is filterable and blendable in WebGL2 and WebGPU alike, so the
@@ -305,6 +322,14 @@ ${sunQuadWgsl}`,
       blendMode: BlendModes.Normal,
     });
 
+    this._maskMaterial = new MeshMaterial({
+      shader: new Shader({
+        glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${occluderMaskVertex}`, fragment: occluderMaskFragment },
+        wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${occluderMaskWgsl}`,
+      }),
+      blendMode: BlendModes.Normal,
+    });
+
     this._sunBatch = new RenderBatch(this._lightGeometry, this._sunMaterial, {
       instanceAttributes: [
         { name: 'a_box', format: 'float32x4' },
@@ -315,11 +340,11 @@ ${sunQuadWgsl}`,
     });
     this._compositeBatch = new RenderBatch(this._compositeGeometry, this._compositeMaterial);
     this._debugBatch = new RenderBatch(this._debugGeometry, this._debugMaterial);
-    // The same geometry and the same material as the debug overlay: rasterising
-    // an edge into a target and drawing it over the frame are one draw pointed
-    // at two places. What differs is the width, which is a property of the
-    // target rather than of the edge.
-    this._maskBatch = new RenderBatch(this._debugGeometry, this._debugMaterial);
+    // The same geometry as the debug overlay, with a material of its own: an
+    // edge in the mask is two texels wide with its coverage fading across them,
+    // which is what the distance field reads back as the edge's place within a
+    // texel. The overlay draws the same edge as a solid line over the frame.
+    this._maskBatch = new RenderBatch(this._debugGeometry, this._maskMaterial);
 
     // Stock passes rather than passes of our own: the light field is a draw
     // into a target the engine redirects for us, and the composite and the
@@ -347,7 +372,10 @@ ${sunQuadWgsl}`,
     // Both come from the selected renderer rather than from an import here: a
     // project on the quads never links a cascade or a jump flood.
     this._distanceField = options.fields === null || !this.hdr ? null : options.fields.distance(this._maskTarget);
-    this._radiance = options.fields === null || this._distanceField === null ? null : options.fields.radiance(this._distanceField.texture, this._target);
+    this._radiance =
+      options.fields === null || this._distanceField === null
+        ? null
+        : options.fields.radiance(this._distanceField.texture, this._target, this._app.frameTexture);
     this._normalTarget = new RenderTexture(1, 1);
     this._normalPass = new CallbackRenderPass(pass => this._drawNormals(pass), {
       target: this._normalTarget,
@@ -387,7 +415,7 @@ ${sunQuadWgsl}`,
     if (this._radiance !== null) {
       // The emitters go into the mask, so their field is drawn after it and
       // before the cascades that march what the mask seeded.
-      this._app.framePasses.addPass(this._radiance.emissionPass).addPass(this._radiance.cascadePass);
+      this._app.framePasses.addPass(this._radiance.emissionPass).addPass(this._radiance.conePass).addPass(this._radiance.cascadePass);
     }
 
     this._app.framePasses.addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
@@ -482,6 +510,7 @@ ${sunQuadWgsl}`,
   public publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void {
     this._writeSurfaces(surfaces);
     this._resize();
+    this._followCamera();
     this._ambient.copy(ambient);
 
     const marching = this._radiance === null ? this._writeLights(lights, occluders) : false;
@@ -599,20 +628,32 @@ ${sunQuadWgsl}`,
     const texel = this._maskTexel();
 
     if (marching) {
-      this._filler!.end(this._app.rendering.view.getBounds(), texel);
+      this._filler!.end(this._fieldView, texel);
     }
 
     if (this._distanceField?.pass.enabled === true) {
-      const bounds = this._app.rendering.view.getBounds();
-
-      this._distanceField.update(texel, Math.hypot(bounds.width, bounds.height));
+      this._distanceField.update(texel, Math.hypot(this._fieldView.width, this._fieldView.height));
     }
 
     // After the distance field, which is what tells the cascades the scale
     // their sphere tracing steps in.
     if (this._radiance !== null && this._distanceField !== null) {
-      this._radiance.update(this._app.rendering.view, this._app.rendering.view.getBounds(), texel, this._distanceField.far, this._ambient);
+      this._radiance.update(this._app.rendering.view, this._fieldView, texel, this._distanceField.far, this._ambient);
     }
+  }
+
+  /**
+   * Put the field view where the camera is, this frame: same centre, same
+   * turn, the margin's worth wider on every side.
+   */
+  private _followCamera(): void {
+    const view = this._app.rendering.view;
+    const scale = 1 + 2 * this._fieldMargin;
+
+    this._fieldView.center.set(view.center.x, view.center.y);
+    this._fieldView.width = view.width * scale;
+    this._fieldView.height = view.height * scale;
+    this._fieldView.rotation = view.rotation;
   }
 
   /**
@@ -756,6 +797,7 @@ ${sunQuadWgsl}`,
 
     if (this._radiance !== null) {
       this._app.framePasses.removePass(this._radiance.emissionPass);
+      this._app.framePasses.removePass(this._radiance.conePass);
       this._app.framePasses.removePass(this._radiance.cascadePass);
       this._radiance.destroy();
     }
@@ -779,6 +821,7 @@ ${sunQuadWgsl}`,
     this._compositeBatch.destroy();
     this._debugBatch.destroy();
     this._maskBatch.destroy();
+    this._maskMaterial.destroy();
     this._compositeMaterial.destroy();
     this._debugMaterial.destroy();
     this._lightGeometry.destroy();
@@ -1013,9 +1056,7 @@ ${sunQuadWgsl}`,
 
   /** One mask texel in world units, along whichever axis resolves it worse. */
   private _maskTexel(): number {
-    const view = this._app.rendering.view.getBounds();
-
-    return Math.max(view.width / Math.max(1, this._maskTarget.width), view.height / Math.max(1, this._maskTarget.height));
+    return Math.max(this._fieldView.width / Math.max(1, this._maskTarget.width), this._fieldView.height / Math.max(1, this._maskTarget.height));
   }
 
   /** The normal field the light shader should read: the prepass, or nothing at all. */
@@ -1071,9 +1112,9 @@ ${normalPrepassWgsl}`,
     return batch;
   }
 
-  /** Rasterise this frame's blocking edges, through the frame's own view. */
+  /** Rasterise this frame's blocking edges, through the field's own view. */
   private _drawMask(pass: PassContext): void {
-    const view = this._app.rendering.view;
+    const view = this._fieldView;
 
     if (this._maskBatch.count > 0) {
       pass.drawBatch(this._maskBatch, { view });
@@ -1093,14 +1134,14 @@ ${normalPrepassWgsl}`,
   }
 
   /**
-   * One instance per collected segment, widened so no edge can fall between two
-   * texels of the mask.
+   * One instance per collected segment, a texel wide to either side so no edge
+   * can fall between two texels of the mask.
    *
    * The width is a floor rather than a knob. An edge thinner than a texel is an
    * edge a marcher can step over, and a tilemap wall one tile thick is exactly
    * the case that produces: the leak would look like a tuning problem and be a
-   * sampling one. Widening here costs a fraction of a texel of shadow and
-   * removes the artefact class rather than trading it against a parameter.
+   * sampling one. The mask material fades the coverage across that width, so
+   * the edge itself still sits where the segment is, to a fraction of a texel.
    */
   private _writeMask(occluders: OccluderField): void {
     this._maskBatch.clear();
@@ -1134,7 +1175,7 @@ ${normalPrepassWgsl}`,
 
       // Lengthened by a texel at each end as well: two edges meeting at a corner
       // would otherwise leave a hole exactly one texel wide at the join.
-      this._transform.set(dirX * (length + texel * 2), -dirY * texel, x1 - dirX * texel, dirY * (length + texel * 2), dirX * texel, y1 - dirY * texel);
+      this._transform.set(dirX * (length + texel * 2), -dirY * texel * 2, x1 - dirX * texel, dirY * (length + texel * 2), dirX * texel * 2, y1 - dirY * texel);
       this._maskBatch.add(this._transform, Color.white);
     }
   }
@@ -1229,27 +1270,40 @@ ${normalPrepassWgsl}`,
     // describes a surface, which is what keeps the attachment free for a scene
     // that registers none.
     this._normalTarget.setSize(this._surfaceCount > 0 ? width : 1, this._surfaceCount > 0 ? height : 1);
-    // On the light field's own grid, so a fragment's place in one is its place
-    // in the other - which is what a marcher reading both needs.
-    this._maskTarget.setSize(this._maskPass.enabled ? width : 1, this._maskPass.enabled ? height : 1);
+    // At the light field's density over the view and its margin, so a texel of
+    // the mask is a texel of the distance field and of the emission field.
+    const fieldWidth = Math.max(1, Math.round(width * (1 + 2 * this._fieldMargin)));
+    const fieldHeight = Math.max(1, Math.round(height * (1 + 2 * this._fieldMargin)));
+
+    this._maskTarget.setSize(this._maskPass.enabled ? fieldWidth : 1, this._maskPass.enabled ? fieldHeight : 1);
 
     if (this._distanceField !== null) {
       // On the mask's own grid, so a texel of one is a texel of the other, and
       // parked at one texel while nothing reads it.
       const wanted = this._distanceField.pass.enabled;
 
-      this._distanceField.setSize(wanted ? width : 1, wanted ? height : 1);
+      this._distanceField.setSize(wanted ? fieldWidth : 1, wanted ? fieldHeight : 1);
     }
 
-    this._radiance?.setSize(width, height);
+    this._radiance?.setSize(fieldWidth, fieldHeight);
 
-    if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0) {
+    // A debug view of a field-sized intermediate is drawn through a quad the
+    // margin's worth larger than the screen, so what shows is the view's own
+    // part of it, where the frame's pixels are, rather than the whole field
+    // shrunk to fit.
+    const scale = this._debug === 'mask' || this._debug === 'distance' ? 1 + 2 * this._fieldMargin : 1;
+
+    if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0 && this._compositeScale === scale) {
       return;
     }
 
     this._target.setSize(width, height);
+    this._compositeScale = scale;
     this._compositeBatch.clear();
-    this._compositeBatch.add(this._transform.set(logicalWidth, 0, 0, 0, logicalHeight, 0), Color.white);
+    this._compositeBatch.add(
+      this._transform.set(logicalWidth * scale, 0, (logicalWidth * (1 - scale)) / 2, 0, logicalHeight * scale, (logicalHeight * (1 - scale)) / 2),
+      Color.white,
+    );
   }
 }
 

@@ -9,7 +9,6 @@ import {
   Matrix,
   MeshMaterial,
   type PassContext,
-  type ReadonlyRectangle,
   RenderBatch,
   RenderTexture,
   ScaleModes,
@@ -22,20 +21,32 @@ import {
 
 import type { Light } from '../lights/Light';
 import { lightFalloff, lightHalfLength, lightRadius } from '../lights/reach';
+import { SpotLight } from '../lights/SpotLight';
 import { SunLight } from '../lights/SunLight';
+import bounceFragment from './shaders/bounce.frag';
+import bounceVertex from './shaders/bounce.vert';
+import bounceWgsl from './shaders/bounce.wgsl';
 import cascadeFragment from './shaders/cascade.frag';
 import cascadeWgsl from './shaders/cascade.wgsl';
 import cascadeGatherFragment from './shaders/cascade-gather.frag';
 import cascadeGatherWgsl from './shaders/cascade-gather.wgsl';
+import emitterConeFragment from './shaders/emitter-cone.frag';
+import emitterConeVertex from './shaders/emitter-cone.vert';
+import emitterConeWgsl from './shaders/emitter-cone.wgsl';
 import emitterQuadFragment from './shaders/emitter-quad.frag';
 import emitterQuadVertex from './shaders/emitter-quad.vert';
 import emitterQuadWgsl from './shaders/emitter-quad.wgsl';
+import probeVisibilityFragment from './shaders/probe-visibility.frag';
+import probeVisibilityWgsl from './shaders/probe-visibility.wgsl';
 
 const cascadeUniforms = {
-  uView: UniformType.Vec4,
+  uToField: UniformType.Vec4,
+  uFieldOffset: UniformType.Vec2,
   uOrigin: UniformType.Vec2,
   uProbes: UniformType.Vec2,
   uRange: UniformType.Vec2,
+  uSun: UniformType.Vec4,
+  uSunColor: UniformType.Vec3,
   uSpacing: UniformType.Float,
   uTile: UniformType.Float,
   uTexel: UniformType.Float,
@@ -51,8 +62,30 @@ const cascadeUniforms = {
  */
 export const cascadeShader = createFilterShader({ glsl: { fragment: cascadeFragment }, wgsl: cascadeWgsl, uniforms: cascadeUniforms });
 
+const visibilityUniforms = {
+  uToField: UniformType.Vec4,
+  uFieldOffset: UniformType.Vec2,
+  uOrigin: UniformType.Vec2,
+  uProbes: UniformType.Vec2,
+  uSpacing: UniformType.Float,
+  uTexel: UniformType.Float,
+  uFar: UniformType.Float,
+} as const;
+
+/**
+ * Per probe of one level, how open the way to each of the four coarser probes
+ * it merges from is.
+ * @internal
+ */
+export const probeVisibilityShader = createFilterShader({
+  glsl: { fragment: probeVisibilityFragment },
+  wgsl: probeVisibilityWgsl,
+  uniforms: visibilityUniforms,
+});
+
 const gatherUniforms = {
-  uView: UniformType.Vec4,
+  uToWorld: UniformType.Vec4,
+  uWorldOffset: UniformType.Vec2,
   uOrigin: UniformType.Vec2,
   uProbes: UniformType.Vec2,
   uAmbient: UniformType.Vec3,
@@ -69,6 +102,18 @@ const unitQuad = (): Geometry =>
     attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
     stride: 8,
     vertexData: new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]),
+    indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
+  });
+
+/** Unit quad in `0..1` carrying its own corners as texture coordinates, for the bounce. */
+const frameQuad = (): Geometry =>
+  new Geometry({
+    attributes: [
+      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+      { name: 'a_texcoord', size: 2, type: 'f32', normalized: false, offset: 8 },
+    ],
+    stride: 16,
+    vertexData: new Float32Array([0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1]),
     indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
   });
 
@@ -99,6 +144,13 @@ const EMITTER_HALO = 1.25;
 const EMITTER_SIZE = 0.05;
 
 /**
+ * A directional light's angular radius per unit of `softness`, in radians: the
+ * emitter size read as an angle, so the same `softness` softens a shadow by
+ * about as much whichever shape casts it.
+ */
+const SUN_SIZE = EMITTER_SIZE * Math.PI;
+
+/**
  * What one unit of `intensity` emits, per unit of reach over emitter size.
  *
  * A source delivers its own angular size: `2R / (2 pi d)` of what it emits, at
@@ -112,9 +164,12 @@ const EMITTER_SIZE = 0.05;
  */
 const EMITTER_GAIN = Math.PI / 8;
 
+/** Cone cosine that no direction can fail, which is how a point light says "no cone". */
+const noCone = -1;
+
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
-const scratchEmitter = { a_emit: [1, 0, 0, 0] };
+const scratchEmitter = { a_emit: [1, 0, 0, 0], a_cone: [noCone, noCone, 1, 0] };
 
 /** Tuning for the radiance field. Every entry has a default derived from the surface. */
 export interface RadianceFieldOptions {
@@ -124,6 +179,8 @@ export interface RadianceFieldOptions {
   readonly cascades: number | null;
   /** The finest cascade's ray length, in probe spacings. */
   readonly interval: number;
+  /** How much of the light landing on a surface it gives off again, in `0..1`. */
+  readonly bounce: number;
 }
 
 /**
@@ -138,15 +195,17 @@ export interface RadianceFieldOptions {
  *
  * What this buys over the light quads is transport: a source with a size
  * casts a penumbra that widens with distance, a lamp fills the room it stands
- * in and thins as one over the distance rather than ending at a radius, and
- * the cost is per probe rather than per light. What it costs is that the same
- * scene does not look identical under the two renderers, and that a lit
- * surface is not yet a source of its own - a ray carries what EMITS.
+ * in and thins as one over the distance rather than ending at a radius, a lit
+ * wall gives part of that light off again in its own colour, and the cost is
+ * per probe rather than per light. What it costs is that the same scene does
+ * not look identical under the two renderers.
  * @internal
  */
 export class RadianceField {
-  /** Draws the emitters into a field of their own. */
+  /** Draws the emitters and the bounce into a field of their own. */
   public readonly emissionPass: CallbackRenderPass;
+  /** Draws each emitter's cone over the same capsule, into a field beside the colour. */
+  public readonly conePass: CallbackRenderPass;
   /** Builds the chain from the coarsest level down and gathers it into the light target. */
   public readonly cascadePass: CallbackRenderPass;
 
@@ -157,22 +216,33 @@ export class RadianceField {
   private readonly _geometry: Geometry = unitQuad();
   private readonly _material: MeshMaterial;
   private readonly _batch: RenderBatch;
+  private readonly _cone: RenderTexture;
+  private readonly _coneMaterial: MeshMaterial;
+  private readonly _coneBatch: RenderBatch;
+  private readonly _bounceGeometry: Geometry = frameQuad();
+  private readonly _bounceMaterial: MeshMaterial;
+  private readonly _bounceBatch: RenderBatch;
+  private readonly _bounceTint: Color;
   /** Ping-pong pair: a level reads the one above it whole, so it cannot write into it. */
   private readonly _chain: readonly [RenderTexture, RenderTexture];
   /** Stands in for the level above the coarsest, which nothing reads. */
   private readonly _above: RenderTexture;
+  /** One level's merge weights, rewritten before each level reads them. */
+  private readonly _visibility: RenderTexture;
   private readonly _cascadeFilter: ShaderFilter<typeof cascadeUniforms>;
+  private readonly _visibilityFilter: ShaderFilter<typeof visibilityUniforms>;
   private readonly _gatherFilter: ShaderFilter<typeof gatherUniforms>;
   private readonly _transform = new Matrix();
-  private _view: View | null = null;
+  private _field: View | null = null;
   private _levels = 1;
   private _probesX = 1;
   private _probesY = 1;
   private _spacing = 1;
   private _interval = 1;
   private _emitterCount = 0;
+  private _sun: SunLight | null = null;
 
-  public constructor(distance: RenderTexture, target: RenderTexture, options: RadianceFieldOptions) {
+  public constructor(distance: RenderTexture, target: RenderTexture, frame: RenderTexture, options: RadianceFieldOptions) {
     this._distance = distance;
     this._target = target;
     this._options = options;
@@ -182,6 +252,8 @@ export class RadianceField {
       new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest }),
     ];
     this._above = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
+    this._visibility = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
+    this._cone = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
     this._material = new MeshMaterial({
       shader: new Shader({
         glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${emitterQuadVertex}`, fragment: emitterQuadFragment },
@@ -190,15 +262,49 @@ export class RadianceField {
       blendMode: BlendModes.Additive,
     });
     this._batch = new RenderBatch(this._geometry, this._material, { instanceAttributes: [{ name: 'a_emit', format: 'float32x4' }] });
-    // Bound once and read live: both fields are this object's own targets and
-    // never change identity, which is what lets them ride on the filter's fixed
-    // texture bindings while the cascade being read changes per level.
-    this._cascadeFilter = ShaderFilter.from(cascadeShader, { textures: { uDistance: this._distance, uEmission: this._emission } });
+    this._coneMaterial = new MeshMaterial({
+      shader: new Shader({
+        glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${emitterConeVertex}`, fragment: emitterConeFragment },
+        wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${emitterConeWgsl}`,
+      }),
+      blendMode: BlendModes.Normal,
+    });
+    this._coneBatch = new RenderBatch(this._geometry, this._coneMaterial, {
+      instanceAttributes: [
+        { name: 'a_emit', format: 'float32x4' },
+        { name: 'a_cone', format: 'float32x4' },
+      ],
+    });
+    this._bounceMaterial = new MeshMaterial({
+      shader: new Shader({
+        glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${bounceVertex}`, fragment: bounceFragment },
+        wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${bounceWgsl}`,
+      }),
+      // Declaration order is the group(2) binding order on WebGPU: the frame
+      // at bindings 1/2 and last frame's light at 3/4, matching `bounce.wgsl`.
+      textures: { u_frame: frame, u_light: target },
+      blendMode: BlendModes.Additive,
+    });
+    this._bounceBatch = new RenderBatch(this._bounceGeometry, this._bounceMaterial);
+    this._bounceTint = new Color(255 * options.bounce, 255 * options.bounce, 255 * options.bounce, 255);
+    // Bound once and read live: every field is this object's own target and
+    // never changes identity, which is what lets them ride on the filter's
+    // fixed texture bindings while the cascade being read changes per level.
+    this._cascadeFilter = ShaderFilter.from(cascadeShader, {
+      textures: { uDistance: this._distance, uEmission: this._emission, uVisibility: this._visibility, uEmitterCone: this._cone },
+    });
+    this._visibilityFilter = ShaderFilter.from(probeVisibilityShader);
     this._gatherFilter = ShaderFilter.from(cascadeGatherShader);
-    this.emissionPass = new CallbackRenderPass((pass: PassContext) => this._drawEmitters(pass), {
+    this.emissionPass = new CallbackRenderPass((pass: PassContext) => this._drawEmission(pass), {
       target: this._emission,
       clear: Color.transparentBlack,
       label: 'lighting:emission',
+      enabled: false,
+    });
+    this.conePass = new CallbackRenderPass((pass: PassContext) => this._drawCones(pass), {
+      target: this._cone,
+      clear: Color.transparentBlack,
+      label: 'lighting:emitter-cones',
       enabled: false,
     });
     this.cascadePass = new CallbackRenderPass((pass: PassContext) => this._build(pass), { label: 'lighting:cascades', enabled: false });
@@ -209,7 +315,7 @@ export class RadianceField {
     return this._emission;
   }
 
-  /** Emitters the last {@link writeEmitters} actually wrote. */
+  /** Emitters the last {@link writeEmitters} actually wrote, the sky's directional light included. */
   public get emitterCount(): number {
     return this._emitterCount;
   }
@@ -221,12 +327,14 @@ export class RadianceField {
 
   public set enabled(enabled: boolean) {
     this.emissionPass.enabled = enabled;
+    this.conePass.enabled = enabled;
     this.cascadePass.enabled = enabled;
   }
 
-  /** Match the light field's grid: the probes are laid out in its texels. */
+  /** Match the mask's grid: the emission field is read at the same places. */
   public setSize(width: number, height: number): void {
     this._emission.setSize(width, height);
+    this._cone.setSize(width, height);
   }
 
   /**
@@ -237,15 +345,28 @@ export class RadianceField {
    * is not a point, and a source with no size at all would cast shadows with no
    * penumbra at any distance - which is the thing this renderer is for.
    *
-   * A directional light has no place to emit from and is skipped.
+   * A directional light has no place to emit from: the first enabled one
+   * becomes the sky, which every ray that reaches the top of the chain
+   * unblocked ends in.
    */
   public writeEmitters(lights: readonly Light[], texel: number): number {
     this._batch.clear();
+    this._coneBatch.clear();
+    this._sun = null;
 
     let written = 0;
 
     for (const light of lights) {
-      if (!light.enabled || light.intensity <= 0 || light instanceof SunLight) {
+      if (!light.enabled || light.intensity <= 0) {
+        continue;
+      }
+
+      if (light instanceof SunLight) {
+        if (this._sun === null) {
+          this._sun = light;
+          written++;
+        }
+
         continue;
       }
 
@@ -266,6 +387,9 @@ export class RadianceField {
 
       light.getWorldPosition(scratchPosition);
       light.getWorldDirection(scratchDirection);
+      writeCone(scratchEmitter.a_cone, light);
+      scratchEmitter.a_cone[2] = scratchDirection.x;
+      scratchEmitter.a_cone[3] = scratchDirection.y;
       scratchEmitter.a_emit[0] = light.intensity * EMITTER_GAIN * (falloff / radius);
       scratchEmitter.a_emit[1] = halo;
       scratchEmitter.a_emit[2] = half;
@@ -281,6 +405,7 @@ export class RadianceField {
         scratchPosition.y,
       );
       this._batch.add(this._transform, light.color, scratchEmitter);
+      this._coneBatch.add(this._transform, Color.white, scratchEmitter);
       written++;
     }
 
@@ -304,14 +429,20 @@ export class RadianceField {
    * Lay out the chain for this frame's camera and hand it the terms it shades
    * with.
    *
-   * `texel` is one light-field texel in world units and `far` what the distance
-   * field's `1.0` stands for. The number of levels follows the view's own
-   * diagonal, because each level quadruples the reach of the one below.
+   * `view` is the camera, whose axis-aligned bounds the probes cover and whose
+   * target the gather writes; `field` is the wider view the mask, the distance
+   * field and the emission field were drawn through. `texel` is one field
+   * texel in world units and `far` what the distance field's `1.0` stands
+   * for. The number of levels follows the view's own diagonal, because each
+   * level quadruples the reach of the one below.
    */
-  public update(view: View, bounds: ReadonlyRectangle, texel: number, far: number, ambient: Color): void {
+  public update(view: View, field: View, texel: number, far: number, ambient: Color): void {
+    const bounds = view.getBounds();
     const spacing = Math.max(1, this._options.probeSpacing) * texel;
+    const toField = field.getTransform();
+    const toWorld = view.getInverseTransform();
 
-    this._view = view;
+    this._field = field;
     this._interval = this._intervalFor(texel);
     this._levels = this._levelsFor(Math.hypot(bounds.width, bounds.height));
 
@@ -328,31 +459,59 @@ export class RadianceField {
     // axis and doubling the directions per axis leaves the product alone.
     this._chain[0].setSize(this._probesX * 2, this._probesY * 2);
     this._chain[1].setSize(this._probesX * 2, this._probesY * 2);
-    this._cascadeFilter.uniforms.uView.set(bounds.left, bounds.top, Math.max(1, bounds.width), Math.max(1, bounds.height));
-    this._cascadeFilter.uniforms.uOrigin.set(bounds.left, bounds.top);
-    this._cascadeFilter.uniforms.uTexel.set(texel);
-    this._cascadeFilter.uniforms.uFar.set(far);
-    this._gatherFilter.uniforms.uView.set(bounds.left, bounds.top, Math.max(1, bounds.width), Math.max(1, bounds.height));
+    this._visibility.setSize(this._probesX, this._probesY);
+
+    for (const filter of [this._cascadeFilter, this._visibilityFilter]) {
+      filter.uniforms.uToField.set(toField.a, toField.b, toField.c, toField.d);
+      filter.uniforms.uFieldOffset.set(toField.x, toField.y);
+      filter.uniforms.uOrigin.set(bounds.left, bounds.top);
+      filter.uniforms.uTexel.set(texel);
+      filter.uniforms.uFar.set(far);
+    }
+
+    this._writeSun();
+    this._gatherFilter.uniforms.uToWorld.set(toWorld.a, toWorld.b, toWorld.c, toWorld.d);
+    this._gatherFilter.uniforms.uWorldOffset.set(toWorld.x, toWorld.y);
     this._gatherFilter.uniforms.uOrigin.set(bounds.left, bounds.top);
     this._gatherFilter.uniforms.uProbes.set(this._probesX, this._probesY);
     this._gatherFilter.uniforms.uSpacing.set(spacing);
     this._gatherFilter.uniforms.uTile.set(2);
     this._gatherFilter.uniforms.uAmbient.set(ambient.r / 255, ambient.g / 255, ambient.b / 255);
+
+    // The bounce quad is the camera's own view rectangle, in the world: the
+    // unit quad's corners are clip -1 and +1 through the camera's inverse, so
+    // each fragment of it lands on the frame's own pixel.
+    this._bounceBatch.clear();
+
+    if (this._options.bounce > 0) {
+      this._transform.set(2 * toWorld.a, 2 * toWorld.b, toWorld.x - toWorld.a - toWorld.b, 2 * toWorld.c, 2 * toWorld.d, toWorld.y - toWorld.c - toWorld.d);
+      this._bounceBatch.add(this._transform, this._bounceTint);
+    }
   }
 
   public destroy(): void {
     this.emissionPass.destroy();
+    this.conePass.destroy();
     this.cascadePass.destroy();
     this._cascadeFilter.destroy();
+    this._visibilityFilter.destroy();
     this._gatherFilter.destroy();
     this._batch.destroy();
     this._material.destroy();
+    this._coneBatch.destroy();
+    this._coneMaterial.destroy();
+    this._cone.destroy();
     this._geometry.destroy();
+    this._bounceBatch.destroy();
+    this._bounceMaterial.destroy();
+    this._bounceGeometry.destroy();
     this._chain[0].destroy();
     this._chain[1].destroy();
     this._above.destroy();
+    this._visibility.destroy();
     this._emission.destroy();
     this._emitterCount = 0;
+    this._sun = null;
   }
 
   /** The finest cascade's ray length in world units, for a light-field texel of `texel` world units. */
@@ -379,9 +538,50 @@ export class RadianceField {
     return levels;
   }
 
-  private _drawEmitters(pass: PassContext): void {
-    if (this._view !== null) {
-      this.drawEmitters(pass, this._view);
+  /**
+   * Hand the chain its sky: the sun's direction of travel, its angular
+   * radius, and what one ray pointing straight at it carries.
+   *
+   * A ray carries `intensity * pi / radius`, so that a probe's average over
+   * all of its directions - the fraction `radius / pi` of them see the sun -
+   * comes to `intensity`, which is what the sun quad puts everywhere unshadowed.
+   */
+  private _writeSun(): void {
+    const sun = this._sun;
+
+    if (sun === null) {
+      this._cascadeFilter.uniforms.uSun.set(0, 0, 0, 0);
+      this._cascadeFilter.uniforms.uSunColor.set(0, 0, 0);
+
+      return;
+    }
+
+    const radius = Math.max(0.001, sun.softness * SUN_SIZE);
+
+    sun.getWorldDirection(scratchDirection);
+    this._cascadeFilter.uniforms.uSun.set(scratchDirection.x, scratchDirection.y, radius, (sun.intensity * Math.PI) / radius);
+    this._cascadeFilter.uniforms.uSunColor.set(sun.color.r / 255, sun.color.g / 255, sun.color.b / 255);
+  }
+
+  /**
+   * The emitters, then the bounce over them: what a surface re-emits is added
+   * to what emits outright, and where a lamp stands the frame shows the lamp.
+   */
+  private _drawEmission(pass: PassContext): void {
+    if (this._field === null) {
+      return;
+    }
+
+    this.drawEmitters(pass, this._field);
+
+    if (this._bounceBatch.count > 0) {
+      pass.drawBatch(this._bounceBatch, { view: this._field });
+    }
+  }
+
+  private _drawCones(pass: PassContext): void {
+    if (this._field !== null && this._coneBatch.count > 0) {
+      pass.drawBatch(this._coneBatch, { view: this._field });
     }
   }
 
@@ -391,7 +591,8 @@ export class RadianceField {
    *
    * Coarse to fine is the whole order of the technique: a level can only add
    * what the level above it already knows, so the merge has to happen on the
-   * way down and each level is read exactly once.
+   * way down and each level is read exactly once. Before each level but the
+   * top, its merge weights are written for it.
    */
   private _build(pass: PassContext): void {
     const { backend } = pass;
@@ -403,13 +604,21 @@ export class RadianceField {
     for (let level = this._levels - 1; level >= 0; level--) {
       const tile = 2 ** (level + 1);
       const start = (this._interval * (4 ** level - 1)) / 3;
+      const spacing = this._spacing * 2 ** level;
       const destination = flipped ? second : first;
+      const top = level === this._levels - 1;
+
+      if (!top) {
+        this._visibilityFilter.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
+        this._visibilityFilter.uniforms.uSpacing.set(spacing);
+        this._visibilityFilter.apply(backend, this._distance, this._visibility);
+      }
 
       this._cascadeFilter.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
-      this._cascadeFilter.uniforms.uSpacing.set(this._spacing * 2 ** level);
+      this._cascadeFilter.uniforms.uSpacing.set(spacing);
       this._cascadeFilter.uniforms.uTile.set(tile);
       this._cascadeFilter.uniforms.uRange.set(start, (this._interval * (4 ** (level + 1) - 1)) / 3);
-      this._cascadeFilter.uniforms.uMerge.set(level === this._levels - 1 ? 0 : 1);
+      this._cascadeFilter.uniforms.uMerge.set(top ? 0 : 1);
       // Half the angular sector one ray owns, as a slope: the coarser the
       // level, the more directions it has and the narrower each one is.
       this._cascadeFilter.uniforms.uCone.set(Math.tan(Math.PI / (tile * tile)));
@@ -422,3 +631,20 @@ export class RadianceField {
     this._gatherFilter.apply(backend, source, this._target);
   }
 }
+
+const writeCone = (target: number[], light: Light): void => {
+  if (!(light instanceof SpotLight)) {
+    target[0] = noCone;
+    target[1] = noCone;
+
+    return;
+  }
+
+  const outer = Math.cos((Math.max(0, Math.min(90, light.angle)) * Math.PI) / 180);
+  // The inner edge sits where the fade begins, so a cone softness of 0 collapses
+  // the two and the shader's smoothstep degenerates to a hard edge on its own.
+  const inner = Math.cos((Math.max(0, Math.min(90, light.angle * (1 - Math.min(1, Math.max(0, light.coneSoftness))))) * Math.PI) / 180);
+
+  target[0] = outer;
+  target[1] = inner;
+};

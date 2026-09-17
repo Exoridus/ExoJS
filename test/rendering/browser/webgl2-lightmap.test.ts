@@ -1092,7 +1092,8 @@ describe('WebGL2 lightmap renderer', () => {
 
   test('a source is seen as its own size from every direction, not as a count of rays', async () => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Nothing but the source: a bounce off the lamp's own body is a second, weaker source.
+    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
 
     lighting.add(new PointLight({ radius: 40, intensity: 0.4, softness: 0.35 })).setPosition(32, 32);
     drawWhiteFrame(host);
@@ -1126,7 +1127,8 @@ describe('WebGL2 lightmap renderer', () => {
 
   test('a source moving by a fraction of a texel leaves the field where it was', async () => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Nothing but the source: a bounce off the lamp's own body is a second, weaker source.
+    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
     const lamp = lighting.add(new PointLight({ radius: 40, intensity: 0.4, softness: 0.35 }));
 
     drawWhiteFrame(host);
@@ -1154,6 +1156,162 @@ describe('WebGL2 lightmap renderer', () => {
       expect(darkest).toBeGreaterThan(15 * 22);
       expect(brightest / darkest, `readings ${readings.map(reading => reading.toFixed(0)).join(' ')}`).toBeLessThan(1.08);
     } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a directional light is the sky under radiance, and a wall keeps it out', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // Travelling along +x, so the side of the wall the sun comes from is lit
+    // and the side behind it is in its shadow.
+    lighting.add(new SunLight({ intensity: 1 }));
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 32, y: -20 },
+          { x: 32, y: 84 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      expect(readPixel(host.backend, 16, 32)[0]!).toBeGreaterThan(120);
+      expect(readPixel(host.backend, 48, 32)[0]!).toBeLessThan(25);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a cone light emits across its cone under radiance and not behind itself', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // Pointing along +x from the middle: ahead of it is lit, behind it is not.
+    lighting.add(new SpotLight({ radius: 40, intensity: 0.6, angle: 30, coneSoftness: 0 })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      const ahead = readPixel(host.backend, 50, 32)[0]!;
+      const behind = readPixel(host.backend, 14, 32)[0]!;
+
+      expect(ahead).toBeGreaterThan(30);
+      expect(behind).toBeLessThan(ahead / 4);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a lit wall gives its colour off again, one frame later', async () => {
+    const arriving = async (bounce: number): Promise<RgbaTuple> => {
+      const host = await createHost();
+      const lighting = new Lighting({ quality: radiance({ bounce }), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+      lighting.add(new PointLight({ radius: 40, intensity: 2 })).setPosition(20, 32);
+      lighting.occludeFrom(
+        Occluders.fromPolygon(
+          [
+            { x: 42, y: 4 },
+            { x: 42, y: 60 },
+          ],
+          { closed: false },
+        ),
+      );
+
+      // A white floor with a red wall standing where the occluder is: the
+      // bounce reads the wall's colour from the frame.
+      const floor = new Sprite(Texture.fromColor(Color.white, 1));
+      const wall = new Sprite(Texture.fromColor(new Color(255, 0, 0), 1));
+
+      floor.width = canvasSize;
+      floor.height = canvasSize;
+      wall.width = 4;
+      wall.height = canvasSize;
+      wall.setPosition(40, 0);
+      host.context.renderTo(floor, { target: host.frameTexture, clear: Color.black });
+      host.context.renderTo(wall, { target: host.frameTexture });
+
+      try {
+        // Two frames: the bounce reads the light field the frame before left.
+        runFrame(host, lighting);
+        runFrame(host, lighting);
+
+        return readPixel(host.backend, 34, 32);
+      } finally {
+        floor.destroy();
+        wall.destroy();
+        lighting.destroy();
+        host.destroy();
+      }
+    };
+
+    const without = await arriving(0);
+    const withBounce = await arriving(0.9);
+
+    // The floor in front of the wall is white, so what the lamp puts there is
+    // grey; what the red wall adds is red. The lamp's own body, white in the
+    // frame, adds a little of everything, which is why the red is measured
+    // against the green rather than on its own.
+    expect(withBounce[0]! - withBounce[1]!).toBeGreaterThan(without[0]! - without[1]! + 8);
+  });
+
+  test('a lamp just outside the picture still lights it, through the field margin', async () => {
+    const arriving = async (fieldMargin: number): Promise<number> => {
+      const host = await createHost();
+      const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1, fieldMargin });
+
+      // Eight units left of the view's edge: inside the default margin, outside
+      // a field with none.
+      lighting.add(new PointLight({ radius: 60, intensity: 1 })).setPosition(-8, 32);
+      drawWhiteFrame(host);
+
+      try {
+        runFrame(host, lighting);
+
+        return readPixel(host.backend, 6, 32)[0]!;
+      } finally {
+        lighting.destroy();
+        host.destroy();
+      }
+    };
+
+    expect(await arriving(0)).toBeLessThan(10);
+    expect(await arriving(0.25)).toBeGreaterThan(60);
+  });
+
+  test('a turned camera keeps the light where the lamp is', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lamp = lighting.add(new PointLight({ radius: 40, intensity: 0.6 }));
+
+    lamp.setPosition(16, 32);
+    host.context.view.rotation = 90;
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // Where the camera puts the lamp on screen is where the light has to
+      // be brightest; where the lamp would be with the camera upright is not.
+      const onScreen = host.context.view.worldToScreen(16, 32);
+      const atLamp = readPixel(host.backend, Math.round(onScreen.x), Math.round(onScreen.y))[0]!;
+      const upright = readPixel(host.backend, 16, 32)[0]!;
+
+      expect(Math.round(onScreen.x)).not.toBe(16);
+      expect(atLamp).toBeGreaterThan(150);
+      expect(upright).toBeLessThan(atLamp / 2);
+    } finally {
+      host.context.view.rotation = 0;
       lighting.destroy();
       host.destroy();
     }

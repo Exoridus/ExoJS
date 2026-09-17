@@ -29,6 +29,12 @@ export interface LineLightOptions extends LightOptions {
  * The segment runs along the node's own rotation and is centred on it, so
  * aiming a tube is rotating it and moving one is moving the node.
  *
+ * # Renderers
+ *
+ * `lightmap` and `radiance` light the capsule. `forward` shades inside the
+ * sprite stage, where a light is a position and a radius, and so lights a line
+ * light as a point at its centre whose radius is the whole reach.
+ *
  * # Shadows
  *
  * The shadow map is polar around the segment's CENTRE, the same as for a point

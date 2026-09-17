@@ -26,6 +26,15 @@ export interface RadianceOptions {
    * Defaults to `1`.
    */
   readonly interval?: number;
+  /**
+   * How much of the light that lands on a surface it gives off again, in
+   * `0..1`. A lit wall then tints what stands beside it with its own colour,
+   * one frame later - the light field of the previous frame is what says how
+   * lit it was. `0` switches the bounce off. Defaults to `0.5`.
+   *
+   * Above one the feedback runs away; the value is clamped below it.
+   */
+  readonly bounce?: number;
 }
 
 /**
@@ -35,7 +44,7 @@ export interface RadianceOptions {
  */
 export interface LightingFields {
   distance(mask: RenderTexture): DistanceField;
-  radiance(distance: RenderTexture, target: RenderTexture): RadianceField;
+  radiance(distance: RenderTexture, target: RenderTexture, frame: RenderTexture): RadianceField;
 }
 
 /**
@@ -69,9 +78,9 @@ export interface LightingRenderer {
  * Light propagates from what emits rather than falling off inside each light's
  * radius, so a lamp lights the room it stands in, a wall between two rooms
  * leaves the second one dark, and a source with a size casts a penumbra that
- * widens with distance. A `SunLight` has nowhere to emit from and is skipped, a
- * `SpotLight` emits like a point, and a surface this renderer lit does not
- * itself become a source - there is no bounced colour yet.
+ * widens with distance. A `SpotLight` emits across its cone, a `SunLight` is
+ * the sky every unblocked ray ends in, and a lit surface gives part of its
+ * light off again in its own colour (see {@link RadianceOptions.bounce}).
  *
  * Needs the application and a device that can render into float targets, and is
  * refused at construction without either.
@@ -81,13 +90,14 @@ export const radiance = (options: RadianceOptions = {}): LightingRenderer => {
     probeSpacing: Math.max(1, Math.round(options.probeSpacing ?? 2)),
     cascades: options.cascades ?? null,
     interval: Math.max(0.25, options.interval ?? 1),
+    bounce: Math.min(0.95, Math.max(0, options.bounce ?? 0.5)),
   };
 
   return {
     quality: 'radiance',
     _fields: {
       distance: (mask: RenderTexture): DistanceField => new DistanceField(mask),
-      radiance: (distance: RenderTexture, target: RenderTexture): RadianceField => new RadianceField(distance, target, tuning),
+      radiance: (distance: RenderTexture, target: RenderTexture, frame: RenderTexture): RadianceField => new RadianceField(distance, target, frame, tuning),
     },
   };
 };

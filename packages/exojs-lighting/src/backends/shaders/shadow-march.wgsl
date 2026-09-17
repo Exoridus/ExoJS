@@ -1,4 +1,4 @@
-// The occluder mask, covering the camera's view.
+// The occluder mask, covering the camera's view and a margin around it.
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
 // One column per light: row 0 is (x, y, reach, 0), row 1 is (axisX, axisY, 0, 0).
@@ -44,7 +44,12 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
             break;
         }
 
-        let uv = (light.xy + direction * distance - uniforms.uViewMin) / uniforms.uViewSize;
+        let world = light.xy + direction * distance;
+        // Through the mask's own projection, which turns and scales as the
+        // camera does; WebGPU writes a render target top-down, so clip +1 is
+        // the first row.
+        let clip = vec2<f32>(dot(uniforms.uToField.xy, world), dot(uniforms.uToField.zw, world)) + uniforms.uFieldOffset;
+        let uv = vec2<f32>(clip.x, -clip.y) * 0.5 + 0.5;
 
         // Outside the mask nothing is known to block, and the ray may well come
         // back in - so this skips the sample rather than ending the walk.

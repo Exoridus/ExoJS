@@ -22,10 +22,13 @@ vec3 probeRadiance(ivec2 probe, int tile) {
 }
 
 void main() {
-    // Flipped on v because WebGL2 writes this target bottom-up: the destination
-    // texel at `vUv.y == 0` is the world's BOTTOM edge there and its top here.
-    vec2 uv = vec2(vUv.x, 1.0 - vUv.y);
-    vec2 world = uniforms.uView.xy + uv * uniforms.uView.zw;
+    // The destination is the camera's own target, so its texture coordinate is
+    // clip space folded into `0..1` - and WebGL2 writes it bottom-up, so
+    // `vUv.y == 0` is clip `-1`, the bottom of what the camera sees. Back
+    // through the camera's inverse, which is what puts a turned camera's
+    // probes where its pixels are.
+    vec2 clip = vUv * 2.0 - 1.0;
+    vec2 world = vec2(dot(uniforms.uToWorld.xy, clip), dot(uniforms.uToWorld.zw, clip)) + uniforms.uWorldOffset;
     // Where this fragment sits in the probe grid, in probe units and measured
     // from probe centres, which is what makes the interpolation below linear in
     // world space.

@@ -2,7 +2,7 @@ import { type Application, Color, type Filter, Rectangle, TextureFormat } from '
 
 import { ForwardBackend } from './backends/ForwardBackend';
 import type { LightingBackend } from './backends/LightingBackend';
-import { LightmapBackend } from './backends/LightmapBackend';
+import { LightmapBackend, type LightmapBackendOptions } from './backends/LightmapBackend';
 import type { LightingRenderer } from './backends/radiance';
 import type { Light } from './lights/Light';
 import { lightRadius } from './lights/reach';
@@ -56,9 +56,10 @@ export type LightingQualityOption = 'auto' | 'forward' | 'lightmap' | LightingRe
  *   see where a light reaches without the scene's own colours in the way.
  * - `'mask'` shows the occluder mask: the same edges the `occluders` view draws,
  *   rasterised into a target of their own at the light field's resolution and
- *   widened so none of them can fall between two texels. It is the input a
- *   GPU-resident occluder field marches, and the view that says whether a wall
- *   is thick enough to be seen at that resolution.
+ *   widened so none of them can fall between two texels. It reaches past the
+ *   view by {@link LightingOptions.fieldMargin}; the view shows its own part.
+ *   It is the input a GPU-resident occluder field marches, and the view that
+ *   says whether a wall is thick enough to be seen at that resolution.
  * - `'distance'` shows the distance field built from that mask: how far the
  *   nearest occluder is, as a ramp from black at a wall to white at the far end
  *   of what the camera can see, and inside an occluder how deep, in green. It
@@ -115,25 +116,28 @@ const createBackend = (options: LightingOptions, post: readonly Filter[]): Light
       throw new Error(`Lighting({ quality: ${quality}() }) needs renderable float targets, which this device does not have. Use 'lightmap' or 'auto'.`);
     }
 
-    return new LightmapBackend({
-      app: options.app,
-      post,
-      // Half resolution is the right default for the quads, which PAINT the
-      // light field: a falloff is low-frequency and halving the fill is free.
-      // The cascades SAMPLE it instead - the emitters and the distance field
-      // they trace are both rasterised into it - so a coarse field quantises
-      // the scene rather than the light, and a source that moves by less than a
-      // texel makes the whole picture jump. Measured on a moving lamp: a
-      // quarter-probe step changed the light arriving at a fixed point by 25
-      // percent at half resolution and by 2 percent at full.
-      resolution: options.lightResolution ?? (renderer === null ? 0.5 : 1),
-      shadowResolution: Math.max(8, Math.round(options.shadowResolution ?? 256)),
-      fields: renderer?._fields ?? null,
-    });
+    return new LightmapBackend(lightmapOptions(options, options.app, post, renderer));
   }
 
   return new ForwardBackend({ maxLights: options.maxLights ?? 64, post, app: options.app ?? null });
 };
+
+const lightmapOptions = (options: LightingOptions, app: Application, post: readonly Filter[], renderer: LightingRenderer | null): LightmapBackendOptions => ({
+  app,
+  post,
+  // Half resolution is the right default for the quads, which PAINT the
+  // light field: a falloff is low-frequency and halving the fill is free.
+  // The cascades SAMPLE it instead - the emitters and the distance field
+  // they trace are both rasterised into it - so a coarse field quantises
+  // the scene rather than the light, and a source that moves by less than a
+  // texel makes the whole picture jump. Measured on a moving lamp: a
+  // quarter-probe step changed the light arriving at a fixed point by 25
+  // percent at half resolution and by 2 percent at full.
+  resolution: options.lightResolution ?? (renderer === null ? 0.5 : 1),
+  shadowResolution: Math.max(8, Math.round(options.shadowResolution ?? 256)),
+  fieldMargin: Math.min(1, Math.max(0, options.fieldMargin ?? 0.25)),
+  fields: renderer?._fields ?? null,
+});
 
 /** Construction options for {@link Lighting}. */
 export interface LightingOptions {
@@ -187,6 +191,15 @@ export interface LightingOptions {
    * parameters stay live, which is what an animated effect actually needs.
    */
   readonly post?: readonly Filter[];
+  /**
+   * How far beyond the camera's view the occluder mask and the emission field
+   * reach, as a fraction of the view's size on each side. Under `radiance` it
+   * is what lets a wall or a lamp just outside the picture still shadow or
+   * light what is in it, so neither pops in at the edge as the camera moves;
+   * the probes themselves still cover only the view. Defaults to `0.25`, and
+   * costs that much more mask, distance field and emission fill.
+   */
+  readonly fieldMargin?: number;
   /**
    * Angular bins in each light's shadow map. A bin is the finest shadow edge
    * the renderer can resolve, so a large light on a high-resolution canvas

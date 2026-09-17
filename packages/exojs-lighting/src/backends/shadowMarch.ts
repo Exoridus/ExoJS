@@ -3,12 +3,12 @@ import {
   createFilterShader,
   DataTexture,
   type PassContext,
-  type ReadonlyRectangle,
   RenderTexture,
   ScaleModes,
   ShaderFilter,
   TextureFormat,
   UniformType,
+  type View,
 } from '@codexo/exojs';
 
 import glslFragment from './shaders/shadow-march.frag';
@@ -18,8 +18,8 @@ const shadowMarchUniforms = {
   uBins: UniformType.Float,
   uRows: UniformType.Float,
   uStep: UniformType.Float,
-  uViewMin: UniformType.Vec2,
-  uViewSize: UniformType.Vec2,
+  uToField: UniformType.Vec4,
+  uFieldOffset: UniformType.Vec2,
 } as const;
 
 /**
@@ -47,8 +47,9 @@ const createFilter = (lights: DataTexture<TextureFormat.Rgba32F>): ShaderFilter<
  * The atlas it writes is the same `bins x lights` field the light shader reads
  * either way, so the two fillers are interchangeable behind one texture
  * binding. What differs is where an occluder comes from: the mask holds what
- * was rasterised for the camera's view, so a caster outside the view casts no
- * shadow here where the segment walk would still find it.
+ * was rasterised for the camera's view and the margin around it, so a caster
+ * further out than that casts no shadow here where the segment walk would
+ * still find it.
  *
  * The atlas is a float render target, which WebGL2 only has with
  * `EXT_color_buffer_float` - {@link isSupported} is the question to ask before
@@ -122,18 +123,21 @@ export class ShadowMarchFiller {
   }
 
   /**
-   * Close the frame's lights and point the march at the region the mask covers.
+   * Close the frame's lights and point the march at the view the mask was
+   * rasterised through.
    *
    * `texel` is one mask texel in world units and is the march's step, so the
    * walk cannot step over an edge the mask widened to exactly that.
    */
-  public end(view: ReadonlyRectangle, texel: number): void {
+  public end(field: View, texel: number): void {
+    const transform = field.getTransform();
+
     this._lights.commit();
     this._filter.uniforms.uBins.set(this._bins);
     this._filter.uniforms.uRows.set(this._atlas.height);
     this._filter.uniforms.uStep.set(texel);
-    this._filter.uniforms.uViewMin.set(view.left, view.top);
-    this._filter.uniforms.uViewSize.set(Math.max(1, view.width), Math.max(1, view.height));
+    this._filter.uniforms.uToField.set(transform.a, transform.b, transform.c, transform.d);
+    this._filter.uniforms.uFieldOffset.set(transform.x, transform.y);
   }
 
   public destroy(): void {

@@ -5,7 +5,7 @@
 precision highp float;
 precision highp int;
 
-// The occluder mask, covering the camera's view.
+// The occluder mask, covering the camera's view and a margin around it.
 uniform sampler2D uTexture;
 // One column per light: row 0 is (x, y, reach, 0), row 1 is (axisX, axisY, 0, 0).
 uniform highp sampler2D uLights;
@@ -51,16 +51,18 @@ void main() {
             break;
         }
 
-        vec2 uv = (light.xy + direction * distance - uniforms.uViewMin) / uniforms.uViewSize;
+        vec2 world = light.xy + direction * distance;
+        // Through the mask's own projection, which turns and scales as the
+        // camera does; WebGL2 writes a render target bottom-up, so clip -1 is
+        // the first row. The WGSL half flips the other way.
+        vec2 uv = (vec2(dot(uniforms.uToField.xy, world), dot(uniforms.uToField.zw, world)) + uniforms.uFieldOffset) * 0.5 + 0.5;
 
         // Outside the mask nothing is known to block, and the ray may well come
         // back in - so this skips the sample rather than ending the walk.
         // Clamping to the edge instead would smear whatever sits on the border
         // across everything beyond it.
         if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
-            // Flipped on v because WebGL2 writes a render target bottom-up and
-            // the mask is one. The WGSL half needs no flip.
-            if (texture(uTexture, vec2(uv.x, 1.0 - uv.y)).a > 0.5) {
+            if (texture(uTexture, uv).a > 0.5) {
                 walked = distance;
 
                 break;

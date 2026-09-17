@@ -17,7 +17,13 @@ fn probeRadiance(probe: vec2<i32>, tile: i32) -> vec3<f32> {
 
 @fragment
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
-    let world = uniforms.uView.xy + vUv * uniforms.uView.zw;
+    // The destination is the camera's own target, so its texture coordinate is
+    // clip space folded into `0..1` - and WebGPU writes it top-down, so
+    // `vUv.y == 0` is clip `+1`, the top of what the camera sees. Back through
+    // the camera's inverse, which is what puts a turned camera's probes where
+    // its pixels are.
+    let clip = vec2<f32>(vUv.x * 2.0 - 1.0, 1.0 - vUv.y * 2.0);
+    let world = vec2<f32>(dot(uniforms.uToWorld.xy, clip), dot(uniforms.uToWorld.zw, clip)) + uniforms.uWorldOffset;
     // Where this fragment sits in the probe grid, in probe units and measured
     // from probe centres, which is what makes the interpolation below linear in
     // world space.

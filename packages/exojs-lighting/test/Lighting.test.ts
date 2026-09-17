@@ -42,7 +42,14 @@ const fakeApp = (floatTargets = true): Application =>
     rendering: {
       supportsColorFormat: (format: TextureFormat): boolean => format === TextureFormat.Rgba8 || floatTargets,
       // The world view the light field and the occluder mask are drawn through.
-      view: { getBounds: (): Rectangle => new Rectangle(0, 0, 64, 64) },
+      view: {
+        center: { x: 32, y: 32 },
+        width: 64,
+        height: 64,
+        rotation: 0,
+        getBounds: (): Rectangle => new Rectangle(0, 0, 64, 64),
+        getInverseTransform: (): Matrix => new Matrix(),
+      },
     },
     width: 64,
     height: 64,
@@ -382,7 +389,7 @@ describe('Lighting', () => {
     expect(lighting.quality).toBe('radiance');
     // The light quads' accumulation plus the emitters' field and the chain that
     // reads it; the quad pass stays registered and switched off.
-    expect(app.framePasses.size).toBe(9);
+    expect(app.framePasses.size).toBe(10);
     // Auto never picks it: it is the renderer with an unbounded tuning surface.
     expect(new Lighting({ app: fakeApp(), quality: 'auto' }).quality).toBe('lightmap');
 
