@@ -883,6 +883,17 @@
       "tags": ["performance", "webgpu", "rendering"],
       "capabilities": ["keyboard"],
       "level": "intermediate"
+    },
+    {
+      "slug": "coroutine-loading",
+      "path": "performance/coroutine-loading.js",
+      "language": "typescript",
+      "title": "Coroutine Loading",
+      "description": "Spread world building over frames with a coroutine: a progress-driven loading bar, a share-based frame budget, and cancellation.",
+      "backend": "core",
+      "tags": ["performance", "coroutines"],
+      "capabilities": ["keyboard"],
+      "level": "intermediate"
     }
   ],
   "physics": [

@@ -8,9 +8,9 @@
 export enum SystemOrder {
   /**
    * Input snapshot for this frame. First of the engine's own
-   * {@link SystemMethods.preFrame} systems, which occupy the negative range
-   * so that an application system added without an `order` runs after all of
-   * them. To sit between two of them, prefer `before`/`after` against the
+   * {@link SystemMethods.preFrame} systems. The engine's own systems occupy
+   * the negative range in every phase, so that an application system added
+   * without an `order` runs after all of them. To sit between two of them, prefer `before`/`after` against the
    * system instance (`before: [app.rendering]`) over picking a number.
    */
   CoreInput = -500,
@@ -18,8 +18,14 @@ export enum SystemOrder {
   CoreInteraction = -400,
   /** Voice and bus bookkeeping. */
   CoreAudio = -300,
-  /** Frame-budgeted job slices ({@link Application.jobs}), before tweens read their results. */
-  CoreJobs = -250,
+  /**
+   * Coroutine slices ({@link Application.coroutines}). The one core system in
+   * the {@link SystemMethods.postFrame} phase rather than `preFrame`, so the
+   * negative range it sits in puts it ahead of an application `postFrame`
+   * system: a profiler registered at {@link SystemOrder.Default} therefore
+   * measures a frame with the coroutine spend already in it.
+   */
+  CoreCoroutines = -250,
   /** Tween and sequencer advance. */
   CoreTweens = -200,
   /**

@@ -1,0 +1,148 @@
+{
+  "title": "CoroutineOptions",
+  "description": "",
+  "symbol": "CoroutineOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { CoroutineOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "name",
+          "signature": "name?: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Label for diagnostics: it appears in the development warning about a step that overruns its slice, and makes CoroutineSystem's read surface legible to a debug overlay. Not a lookup key - the system exposes no retrieval by name, and Coroutine remains the handle."
+        },
+        {
+          "name": "priority",
+          "signature": "priority?: number",
+          "signatureTokens": [
+            {
+              "text": "priority",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First claim on the frame's slice; higher runs earlier. Once everything at the highest priority present has been stepped, whatever is left of the slice goes to the next priority down - priority decides order, not exclusive access. Coroutines of equal priority take turns across frames. Default 0, writable afterwards through Coroutine.priority."
+        },
+        {
+          "name": "scope",
+          "signature": "scope?: DestroyScope",
+          "signatureTokens": [
+            {
+              "text": "scope",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DestroyScope",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scope that owns the coroutine for as long as it runs: the system tracks it there on CoroutineSystem.queue and untracks it again on settlement, so a scene or screen destroyed mid-run cancels it without collecting every coroutine it ever started."
+        },
+        {
+          "name": "signal",
+          "signature": "signal?: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cancels the coroutine when it aborts, exactly as Coroutine.cancel does. For reaching an existing signal in - the one that also aborts a fetch, or the one a controller uses to tear several things down at once."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/CoroutineSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/CoroutineSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+}

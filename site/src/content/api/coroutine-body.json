@@ -1,0 +1,118 @@
+{
+  "title": "CoroutineBody",
+  "description": "Work a CoroutineSystem advances one step per frame: a generator function whose every `yield` hands control back to the frame. Its return value becomes the coroutine's result, and each yielded value its Coroutine.progress. The `budget` argument reports how much of the driver's slice is left, so a body that wants to fill the frame loops on it and one that only wants to sequence over frames ignores it: ```ts // Sequencing: one yield is one frame. function* blink(): Generator<void, void> { for (let i = 0; i < 3; i++) { toggle(); yield; } } // Time-slicing: as many units as fit, reporting progress. const buildWorld = (map: WorldMap) => function* (budget: FrameBudget): Generator<number, World> { let placed = 0; while (placed < map.chunks.length) { do { placeChunk(map.chunks[placed++]!); } while (placed < map.chunks.length && budget.timeRemaining() > 0); yield placed / map.chunks.length; } return map.build(); }; ``` A body that takes arguments is written curried, as `buildWorld` is above, so the call site stays free of wrapper lambdas.",
+  "symbol": "CoroutineBody",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Work a CoroutineSystem advances one step per frame: a generator function whose every `yield` hands control back to the frame. Its return value becomes the coroutine's result, and each yielded value its Coroutine.progress.",
+        "The `budget` argument reports how much of the driver's slice is left, so a body that wants to fill the frame loops on it and one that only wants to sequence over frames ignores it:",
+        "```ts // Sequencing: one yield is one frame. function* blink(): Generator<void, void> { for (let i = 0; i < 3; i++) { toggle(); yield; } }",
+        "// Time-slicing: as many units as fit, reporting progress. const buildWorld = (map: WorldMap) => function* (budget: FrameBudget): Generator<number, World> { let placed = 0;",
+        "while (placed < map.chunks.length) { do { placeChunk(map.chunks[placed++]!); } while (placed < map.chunks.length && budget.timeRemaining() > 0);",
+        "yield placed / map.chunks.length; }",
+        "return map.build(); }; ```",
+        "A body that takes arguments is written curried, as `buildWorld` is above, so the call site stays free of wrapper lambdas."
+      ],
+      "importLine": "import { CoroutineBody } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "CoroutineBody",
+          "signature": "(budget: FrameBudget) => Iterator<P, T, undefined>",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "budget",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FrameBudget",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Iterator",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "P",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/CoroutineSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/CoroutineSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+}

@@ -10,6 +10,7 @@ import type { RenderingContext } from '#rendering/RenderingContext';
 import type { Scene } from './Scene';
 import { SceneAnimations } from './SceneAnimations';
 import { SceneAudio } from './SceneAudio';
+import { SceneCoroutines } from './SceneCoroutines';
 import { SceneInputs } from './SceneInputs';
 import { SceneInteraction } from './SceneInteraction';
 import { SceneLoader } from './SceneLoader';
@@ -49,6 +50,7 @@ export class SceneScope<Data = unknown> {
   public readonly inputs: SceneInputs;
   public readonly interaction: SceneInteraction;
   public readonly tweens: SceneTweens;
+  public readonly coroutines: SceneCoroutines;
   public readonly audio: SceneAudio;
   public readonly animations: SceneAnimations;
 
@@ -77,6 +79,7 @@ export class SceneScope<Data = unknown> {
       () => this._paused,
     );
     this.tweens = new SceneTweens(app, () => this._state);
+    this.coroutines = new SceneCoroutines(app, () => this._state);
     this.audio = new SceneAudio(app, () => this._state);
     this.animations = new SceneAnimations();
 
@@ -141,6 +144,7 @@ export class SceneScope<Data = unknown> {
     });
     this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.tweens.activate());
+    this._guard(errors, () => this.coroutines.activate());
     this._guard(errors, () => this.audio._flushPending());
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
@@ -168,6 +172,7 @@ export class SceneScope<Data = unknown> {
     const errors: unknown[] = [];
 
     this._guard(errors, () => this.tweens.pause());
+    this._guard(errors, () => this.coroutines.pause());
     this._guard(errors, () => this.audio.pause());
     this._guard(errors, () => this.animations.pause());
     this._guard(errors, () => this.interaction.resume());
@@ -195,6 +200,7 @@ export class SceneScope<Data = unknown> {
     const errors: unknown[] = [];
 
     this._guard(errors, () => this.tweens.resume());
+    this._guard(errors, () => this.coroutines.resume());
     this._guard(errors, () => this.audio.resume());
     this._guard(errors, () => this.animations.resume());
     this._guard(errors, () => this.interaction.resume());
@@ -236,6 +242,7 @@ export class SceneScope<Data = unknown> {
       }
     });
     this._guard(errors, () => this.tweens.suspend());
+    this._guard(errors, () => this.coroutines.suspend());
     this._guard(errors, () => this.audio.suspend());
     this._guard(errors, () => this.animations.suspend());
     this._guard(errors, () => this.scene.onSuspend.dispatchIsolated(error => this._reportError(error)));
@@ -271,6 +278,7 @@ export class SceneScope<Data = unknown> {
       }
     });
     this._guard(errors, () => this.tweens.restore());
+    this._guard(errors, () => this.coroutines.restore());
     this._guard(errors, () => this.audio.restore());
     this._guard(errors, () => this.animations.restore());
     this._guard(errors, () => this.audio._flushPending());
@@ -411,6 +419,7 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.systems.destroy());
     this._guard(errors, () => this.tweens.destroy());
+    this._guard(errors, () => this.coroutines.destroy());
     this._guard(errors, () => this.audio.destroy());
     this._guard(errors, () => this.animations.destroy());
     this._guard(errors, () => this.inputs.destroy());
@@ -461,6 +470,7 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.systems.destroy());
     this._guard(errors, () => this.tweens.destroy());
+    this._guard(errors, () => this.coroutines.destroy());
     this._guard(errors, () => this.audio.destroy());
     this._guard(errors, () => this.animations.destroy());
     this._guard(errors, () => this.inputs.destroy());
