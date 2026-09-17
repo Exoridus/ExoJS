@@ -59,43 +59,6 @@
   color: var(--fg-faint);
 }
 
-.tag-row {
-  display: flex;
-  gap: 0.28rem;
-  margin-top: 0.58rem;
-}
-
-.tag-button {
-  appearance: none;
-  min-height: 22px;
-  padding: 0 0.48rem;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-pill);
-  background: var(--bg-canvas);
-  color: var(--fg-muted);
-  font-family: var(--f-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.02em;
-  text-transform: lowercase;
-  cursor: pointer;
-}
-
-.tag-button:hover {
-  color: var(--fg);
-}
-
-.tag-button:focus-visible {
-  outline: 2px solid var(--accent-line);
-  outline-offset: 2px;
-}
-
-.tag-button[data-active] {
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-color: var(--accent-line);
-}
-
-
 nav {
   flex: 1 1 auto;
   min-height: 0;
@@ -118,23 +81,6 @@ nav {
   margin: 0;
   padding: 1rem;
   color: oklch(76% 0.15 27);
-}
-
-.tag-button--featured {
-  border-color: var(--accent-line);
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.tag-button--featured:hover {
-  color: var(--accent);
-  background: color-mix(in oklab, var(--accent-soft), var(--accent) 8%);
-}
-
-.tag-button--featured[data-active] {
-  background: var(--accent);
-  color: var(--bg-canvas);
-  border-color: var(--accent);
 }
 
 .empty-state {

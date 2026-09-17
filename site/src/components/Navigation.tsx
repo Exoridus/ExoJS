@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { FEATURED_FILTER, filterExamples } from '../lib/example-search';
+import { filterExamples } from '../lib/example-search';
 import { buildPlaygroundNavModel, isExampleRouteActive, type PlaygroundNavCategory } from '../lib/playground-nav';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, ExamplesMap } from '../lib/types';
@@ -9,7 +9,7 @@ import type { VersionInfo } from '../lib/versions';
 import styles from './Navigation.module.scss';
 import { NavigationLink } from './NavigationLink';
 import { NavigationSection } from './NavigationSection';
-import { css, cx } from './react-utils';
+import { css } from './react-utils';
 
 export interface NavigationProps {
   activeExample: Example | null;
@@ -22,19 +22,10 @@ export interface NavigationProps {
 
 export const Navigation = ({ activeExample, examples, loaded, loadError, onSelectExample, selectedVersion }: NavigationProps): JSX.Element => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const [overriddenCategories, setOverriddenCategories] = useState<Map<string, boolean>>(() => new Map());
 
   const allExamples = useMemo(() => Array.from(examples.values()).flat(), [examples]);
-  const featured = activeTagFilter === FEATURED_FILTER;
-  const filteredExamples = useMemo(
-    () =>
-      filterExamples(allExamples, {
-        query: searchQuery,
-        activeFilter: activeTagFilter,
-      }),
-    [activeTagFilter, allExamples, searchQuery],
-  );
+  const filteredExamples = useMemo(() => filterExamples(allExamples, { query: searchQuery, activeFilter: null }), [allExamples, searchQuery]);
   const categories = useMemo(() => buildPlaygroundNavModel(filteredExamples), [filteredExamples]);
 
   const isCategoryExpanded = (category: PlaygroundNavCategory): boolean => {
@@ -68,21 +59,6 @@ export const Navigation = ({ activeExample, examples, loaded, loadError, onSelec
           />
           <kbd>Ctrl+K</kbd>
         </label>
-        {/* The curated entry point, and the only filter the list carries: the
-            tree below is already grouped by category, so a row of tag chips
-            repeated that grouping in chip form and took the height the list
-            needs. */}
-        <div className={css(styles, 'tag-row')}>
-          <button
-            className={cx(css(styles, 'tag-button'), css(styles, 'tag-button--featured'))}
-            type="button"
-            data-active={featured ? 'true' : undefined}
-            aria-pressed={featured}
-            onClick={() => setActiveTagFilter(featured ? null : FEATURED_FILTER)}
-          >
-            Start here
-          </button>
-        </div>
       </section>
       <nav>
         {loadError && <p className={css(styles, 'error')}>{loadError}</p>}
