@@ -63,7 +63,7 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 - `scene.ui` — screen-fixed widget layer with `Label`, `Panel`, `Button`, `ProgressBar`, `Stack`, `ScrollContainer`, `Tooltip`, and anchoring
 - Keyboard focus through `app.interaction` — `focus`, `blur`, `focusNext`/`focusPrevious` Tab traversal, and scoped focus traps for modals
 - Exact picking: rotated nodes hit-test as oriented boxes, or set a local `hitArea` (`Circle`, `Ellipse`, `Polygon`, `Rectangle`) for round buttons and irregular shapes
-- `app.jobs` — a frame-budgeted `JobScheduler` that runs generator jobs a slice per frame, so world generation or batch pathfinding never blocks a frame and never needs an `async` update
+- `scene.coroutines` — a `CoroutineSystem` that hands a generator whatever the frame has left after the flush, so world generation or batch pathfinding spreads over frames with progress and cancellation instead of blocking one or needing an `async` update
 - Write your own `SceneTransition` against the same conformance harness the built-in fade, slide and cross-fade use
 
 **Physics** (`@codexo/exojs-physics`)
@@ -187,7 +187,7 @@ Directional work toward the `1.0.0` API freeze. Priorities may shift — nothing
 - Typed shader uniform blocks shared between GLSL and WGSL
 - `@codexo/exojs-cli` — `exo serve`, `exo create`, `exo doctor`, asset packing
 - Rich text with style spans and inline icons
-- Worker-backed jobs on the same `Job` handle as `app.jobs`
+- Worker-backed work on the same `Coroutine` handle as `app.coroutines`
 - Post-processing passes (bloom, tone mapping, grading) on `RenderPipeline`
 - Platform adapters for Worker and headless runtimes
 - Final pre-1.0 API audit and stabilization pass
