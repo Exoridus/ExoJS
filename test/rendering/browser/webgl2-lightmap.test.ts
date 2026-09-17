@@ -952,4 +952,113 @@ describe('WebGL2 lightmap renderer', () => {
     expect(double / single).toBeGreaterThan(1.7);
     expect(double / single).toBeLessThan(2.3);
   });
+  test('a normal map that faces up is lit from above, the way every authoring tool writes one', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Green above the midpoint is "faces up" in the convention an authored map
+    // carries. Up on screen is world -y, so this is the axis a renderer gets
+    // wrong without anyone noticing: left and right stay right either way.
+    const normals = normalMap(Texture.fromColor(new Color(128, 218, 218), 1));
+    const ground = new Sprite(Texture.fromColor(Color.white, 1));
+
+    ground.width = canvasSize;
+    ground.height = canvasSize;
+    lighting.add(new PointLight({ radius: 60, intensity: 1, height: 40 })).setPosition(32, 32);
+    lighting.normalsFrom(ground, normals);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // A surface facing up catches a light standing above it, so the ground
+      // BELOW the light is the bright side.
+      expect(readPixel(host.backend, 32, 52)[0]!).toBeGreaterThan(readPixel(host.backend, 32, 12)[0]! + 20);
+    } finally {
+      ground.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+  describe('the surface term, against normals that point at exactly one axis', () => {
+    // A light at height zero puts its direction flat in the plane, so `N dot L`
+    // is exactly +1 on the side a normal faces and exactly -1 on the opposite
+    // one. That turns the whole term into a table with no tolerance in it: the
+    // side it faces is lit, the other side is black, and nothing in between
+    // needs interpreting.
+    //
+    // All four directions are here on purpose. A sign error on one axis is
+    // invisible in a test that only compares left against right, which is how
+    // an inverted green channel lights every bevel upside down while looking
+    // perfectly correct.
+    const probes = {
+      left: [12, 32],
+      right: [52, 32],
+      above: [32, 12],
+      below: [32, 52],
+    } as const;
+
+    const cases = [
+      { faces: 'right', encoded: new Color(255, 128, 128), lit: 'left', dark: 'right' },
+      { faces: 'left', encoded: new Color(0, 128, 128), lit: 'right', dark: 'left' },
+      { faces: 'up', encoded: new Color(128, 255, 128), lit: 'below', dark: 'above' },
+      { faces: 'down', encoded: new Color(128, 0, 128), lit: 'above', dark: 'below' },
+    ] as const;
+
+    test.each(cases)('a normal facing $faces is lit from $lit and black at $dark', async ({ encoded, lit, dark }) => {
+      const host = await createHost();
+      const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+      const normals = normalMap(Texture.fromColor(encoded, 1));
+      const ground = new Sprite(Texture.fromColor(Color.white, 1));
+
+      ground.width = canvasSize;
+      ground.height = canvasSize;
+      lighting.add(new PointLight({ radius: 60, intensity: 1, height: 0 })).setPosition(32, 32);
+      lighting.normalsFrom(ground, normals);
+      drawWhiteFrame(host);
+
+      try {
+        runFrame(host, lighting);
+
+        const [litX, litY] = probes[lit];
+        const [darkX, darkY] = probes[dark];
+
+        // Twenty units out of sixty: the falloff alone leaves four ninths of the
+        // light, and the surface term keeps all of it.
+        expect(readPixel(host.backend, litX, litY)[0]!).toBeGreaterThan(90);
+        // Facing away is not "dimmer", it is nothing at all.
+        expect(readPixel(host.backend, darkX, darkY)[0]!).toBeLessThan(3);
+      } finally {
+        ground.destroy();
+        lighting.destroy();
+        host.destroy();
+      }
+    });
+
+    test('a flat normal takes nothing from a light lying in its own plane', async () => {
+      const host = await createHost();
+      const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+      const ground = new Sprite(Texture.fromColor(Color.white, 1));
+
+      ground.width = canvasSize;
+      ground.height = canvasSize;
+      lighting.add(new PointLight({ radius: 60, intensity: 1, height: 0 })).setPosition(32, 32);
+      lighting.normalsFrom(ground, normalMap(Texture.fromColor(new Color(128, 128, 255), 1)));
+      drawWhiteFrame(host);
+
+      try {
+        runFrame(host, lighting);
+
+        // `N dot L` is zero everywhere: the surface points at the viewer and the
+        // light travels across it. `height` is what lifts a light off the plane
+        // and gives a flat surface something to catch.
+        for (const [x, y] of Object.values(probes)) {
+          expect(readPixel(host.backend, x, y)[0]!).toBeLessThan(3);
+        }
+      } finally {
+        ground.destroy();
+        lighting.destroy();
+        host.destroy();
+      }
+    });
+  });
 });

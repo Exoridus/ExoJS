@@ -19,6 +19,19 @@ const verticalEdge = (width: number, height: number, left: number, right: number
   return alpha;
 };
 
+/** An alpha field opaque inside a centred square - four edges, one per side. */
+const block = (size: number, inset: number): Float32Array => {
+  const alpha = new Float32Array(size * size);
+
+  for (let y = inset; y < size - inset; y++) {
+    for (let x = inset; x < size - inset; x++) {
+      alpha[y * size + x] = 1;
+    }
+  }
+
+  return alpha;
+};
+
 const channelAt = (buffer: Uint8Array, width: number, x: number, y: number, channel: number): number => buffer[(y * width + x) * 4 + channel]!;
 
 describe('normalsFromAlphaField', () => {
@@ -94,5 +107,48 @@ describe('deriveNormalsFromAlpha', () => {
     expect(normals.width).toBe(1);
     expect(normals.buffer[0]).toBe(flatByte);
     expect(normals.buffer[2]).toBe(255);
+  });
+});
+
+describe('the derived map points out of the silhouette on every side', () => {
+  // One square, four edges, and the four answers stated as directions rather
+  // than as numbers: red above the midpoint is "faces right", green above it is
+  // "faces up". A sign that is wrong on one axis only is invisible in a test
+  // that checks the other one, which is exactly how an inverted green channel
+  // survives - it lights left and right correctly and every bevel upside down.
+  const size = 16;
+  const inset = 4;
+  const normals = normalsFromAlphaField(block(size, inset), size, size);
+  const at = (x: number, y: number, channel: number): number => channelAt(normals.buffer, size, x, y, channel);
+
+  test('the top edge faces up and the bottom edge faces down', () => {
+    expect(at(8, inset, 1)).toBeGreaterThan(flatByte);
+    expect(at(8, size - inset - 1, 1)).toBeLessThan(flatByte);
+    // Mirror images of each other, because the square is one - to within the
+    // one step the encoding's own rounding costs: `0.5` lands between two bytes.
+    expect(Math.abs(at(8, inset, 1) - flatByte - (flatByte - at(8, size - inset - 1, 1)))).toBeLessThanOrEqual(1);
+  });
+
+  test('the left edge faces left and the right edge faces right', () => {
+    expect(at(inset, 8, 0)).toBeLessThan(flatByte);
+    expect(at(size - inset - 1, 8, 0)).toBeGreaterThan(flatByte);
+    expect(Math.abs(flatByte - at(inset, 8, 0) - (at(size - inset - 1, 8, 0) - flatByte))).toBeLessThanOrEqual(1);
+  });
+
+  test('an edge tilts on its own axis only, and the interior stays flat', () => {
+    // The top edge says nothing about left and right, and vice versa.
+    expect(at(8, inset, 0)).toBe(flatByte);
+    expect(at(inset, 8, 1)).toBe(flatByte);
+    expect(at(8, 8, 0)).toBe(flatByte);
+    expect(at(8, 8, 1)).toBe(flatByte);
+    expect(at(8, 8, 2)).toBe(255);
+  });
+
+  test('a corner tilts on both axes, away from the two sides that meet there', () => {
+    // The top-left corner faces up AND left; the bottom-right the other way.
+    expect(at(inset, inset, 0)).toBeLessThan(flatByte);
+    expect(at(inset, inset, 1)).toBeGreaterThan(flatByte);
+    expect(at(size - inset - 1, size - inset - 1, 0)).toBeGreaterThan(flatByte);
+    expect(at(size - inset - 1, size - inset - 1, 1)).toBeLessThan(flatByte);
   });
 });
