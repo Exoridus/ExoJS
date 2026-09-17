@@ -94,6 +94,20 @@ const EMITTER_FADE = 0.15;
  */
 const EMITTER_SIZE = 0.05;
 
+/**
+ * What one unit of `intensity` emits, per unit of reach over emitter size.
+ *
+ * A source delivers its own angular size: `2R / (2 pi d)` of what it emits, at
+ * distance `d`. That is the physics, and it is also why a lamp the size of a
+ * lamp lights a room at a hundredth of what the light quads put there for the
+ * same `intensity` - the quads do not model a source at all, they paint a
+ * falloff. Scaling the emitted radiance by `reach / size` makes the two agree
+ * at HALF the light's radius, where the quads' own `(1 - d/r)^2` is a quarter,
+ * and it is what keeps `softness` a penumbra knob rather than an exposure one:
+ * a bigger source emits less per unit area for the same arriving light.
+ */
+const EMITTER_GAIN = Math.PI / 8;
+
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
 const scratchEmitter = { a_emit: [1, EMITTER_FADE, 0, 0] };
@@ -239,12 +253,13 @@ export class RadianceField {
       // Floored well above the tracer's own step: a source the size of one step
       // loses the grazing rays that stop on its rim, and loses more of them the
       // further away the probe is.
-      const radius = Math.max(3 * texel, lightFalloff(light) * light.softness * EMITTER_SIZE);
+      const falloff = lightFalloff(light);
+      const radius = Math.max(3 * texel, falloff * light.softness * EMITTER_SIZE);
       const half = lightHalfLength(light) / radius;
 
       light.getWorldPosition(scratchPosition);
       light.getWorldDirection(scratchDirection);
-      scratchEmitter.a_emit[0] = light.intensity;
+      scratchEmitter.a_emit[0] = light.intensity * EMITTER_GAIN * (falloff / radius);
       scratchEmitter.a_emit[1] = EMITTER_FADE;
       scratchEmitter.a_emit[2] = half;
       this._transform.set(

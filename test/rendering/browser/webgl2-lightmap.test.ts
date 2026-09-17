@@ -870,7 +870,7 @@ describe('WebGL2 lightmap renderer', () => {
     const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
     // Off-centre in both axes: a field laid out in the wrong space would still
     // look plausible around a light in the middle.
-    const lamp = lighting.add(new PointLight({ radius: 40, intensity: 4, color: new Color(255, 0, 0) }));
+    const lamp = lighting.add(new PointLight({ radius: 40, intensity: 0.6, color: new Color(255, 0, 0) }));
 
     lamp.setPosition(16, 32);
     drawWhiteFrame(host);
@@ -900,7 +900,7 @@ describe('WebGL2 lightmap renderer', () => {
     const host = await createHost();
     const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
 
-    lighting.add(new PointLight({ radius: 40, intensity: 4 })).setPosition(16, 32);
+    lighting.add(new PointLight({ radius: 40, intensity: 0.6 })).setPosition(16, 32);
     lighting.occludeFrom(
       Occluders.fromPolygon(
         [
@@ -943,8 +943,10 @@ describe('WebGL2 lightmap renderer', () => {
       }
     };
 
-    const single = await arriving(2);
-    const double = await arriving(4);
+    // Well below the ceiling at both ends: a ratio read off two saturated
+    // probes would say 1.0 whatever the transport did.
+    const single = await arriving(0.5);
+    const double = await arriving(1);
 
     // Transport is linear in what is emitted, which is the property that makes
     // the field a radiance field rather than a look.

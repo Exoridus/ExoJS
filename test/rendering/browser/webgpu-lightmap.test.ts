@@ -789,7 +789,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
     // Off-centre in both axes: a field laid out in the wrong space would still
     // look plausible around a light in the middle.
-    lighting.add(new PointLight({ radius: 40, intensity: 4 })).setPosition(16, 32);
+    lighting.add(new PointLight({ radius: 40, intensity: 0.6 })).setPosition(16, 32);
     lighting.occludeFrom(
       Occluders.fromPolygon(
         [
