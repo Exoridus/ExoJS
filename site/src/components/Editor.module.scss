@@ -152,6 +152,11 @@
 @media (min-width: 1120px) {
   .root[data-layout='split'] {
     width: 100%;
+    // The viewport under the header, less the column's own padding: the
+    // editor stretches to it, so the source is as tall as the screen instead
+    // of a fixed box with the rest of the column empty beneath it.
+    min-height: calc(100vh - 64px - 1.2rem);
+    padding: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
@@ -166,6 +171,25 @@
 
   .root[data-layout='split'] .editor-frame {
     grid-area: editor;
+    align-self: stretch;
+  }
+
+  // The code editor's host is a fixed, user-resizable height in the stacked
+  // flow. In the split it fills the column instead, so the three nested
+  // boxes between the frame and Monaco all have to pass the height down.
+  .root[data-layout='split'] [data-editor-root],
+  .root[data-layout='split'] [data-editor-shell] {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .root[data-layout='split'] [data-editor-host] {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 340px;
+    resize: none;
   }
 
   .root[data-layout='split'] .preview-frame {

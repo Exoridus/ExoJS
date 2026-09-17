@@ -68,8 +68,10 @@
     display: none;
   }
 
+  // Tight around the two frames: the split uses the whole column, and the
+  // gutter that framed a centred card is just space the editor could have.
   .main-content {
-    padding-top: 0.9rem;
+    padding: 0.6rem;
   }
 }
 

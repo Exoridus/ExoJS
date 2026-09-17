@@ -362,7 +362,7 @@ export const EditorCode = ({
   };
 
   return (
-    <section className={css(styles, 'root')} aria-label={`Code editor for ${exampleTitle}`}>
+    <section className={css(styles, 'root')} data-editor-root aria-label={`Code editor for ${exampleTitle}`}>
       <Toolbar title="Code">
         <div className={css(styles, 'menu-anchor')} data-editor-menu-anchor>
           <button
@@ -433,8 +433,8 @@ export const EditorCode = ({
         </div>
       </Toolbar>
       <input ref={fileInputRef} className={css(styles, 'file-input')} type="file" accept=".js,.ts" onChange={onFileImport} />
-      <div className={css(styles, 'editor-shell')}>
-        <div className={css(styles, 'editor-host')}>
+      <div className={css(styles, 'editor-shell')} data-editor-shell>
+        <div className={css(styles, 'editor-host')} data-editor-host>
           {/*
             Withheld until the selected example is known. Mounting earlier would
             create a throwaway model under a placeholder path in whatever
