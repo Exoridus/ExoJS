@@ -159,6 +159,10 @@ lighting.add(new PointLight({ radius: 320, cookie: windowCross }));
 
 The texture's full `0..1` maps onto the light's own bounding square, so the pattern turns with a cone light and scales with the radius — it is fixed to the lamp, not to the world. It is multiplied into the light, so a transparent part of the cookie casts nothing and an opaque white one changes nothing.
 
+<Callout type="note" title="It belongs to the lamp, not to the wall">
+  A cookie travels with its light. That is right for a torch with a cut-out over it and wrong for a window, whose bars belong to the wall: move a light wearing a window and the bars slide across the floor with it. Keep such a light still and animate its `intensity` instead. Anchoring a pattern to the world is a projection rather than a cookie, and is not built.
+</Callout>
+
 Lights sharing a cookie share a draw. A scene with three distinct cookies costs three draws rather than one — still one draw per texture, never one per light. `forward` ignores cookies: it shades inside the sprite stage, where a texture per light cannot be reached in one draw.
 
 ## Normals nobody has to author

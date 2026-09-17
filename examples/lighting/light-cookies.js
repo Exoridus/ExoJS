@@ -107,6 +107,13 @@ class LightCookiesScene extends Scene {
     this.sun.rotation = 20;
     // A point light wearing a window. The bars are the cookie, not geometry -
     // nothing in the scene knows they exist.
+    //
+    // It does not move, and that is the point of the vocabulary rather than a
+    // detail of the scene: a cookie is a mask the LIGHT carries, so it turns,
+    // scales and travels with the light. A window is fixed to a wall, so a
+    // light wearing one has to be fixed too - dragging it would slide the bars
+    // across the floor, which is what a torch with a cut-out does and not what
+    // a window does.
     this.window = this.lighting.add(new PointLight({ radius: 300, intensity: 2.4, color: new Color(255, 214, 160), cookie: windowCookie }));
     this.window.setPosition(880, 240);
     // The same slot on a cone: the pattern turns with the light.
@@ -120,7 +127,7 @@ class LightCookiesScene extends Scene {
     this.tube.setPosition(300, 640);
     this.hud = mountControls({
       title: 'Light Cookies',
-      hint: 'Every pattern here is one texture on one light. The window bars, the leaf shade and the parallel shadows are the light itself, not geometry and not a projector.',
+      hint: 'Every pattern here is one texture on ONE light, carried by that light - it turns and scales with the lamp rather than being projected onto the world. The window stands still because a window does; the canopy turns because leaves do.',
       status: '',
     });
     const panel = mountControlPanel({ title: 'Lights', corner: 'top-right' });
@@ -158,7 +165,8 @@ class LightCookiesScene extends Scene {
     // Aiming a cone is rotating it, and the cookie turns with it.
     this.canopy.rotation = -90 + Math.sin(this.elapsed * 0.35) * 20;
     this.tube.rotation = Math.sin(this.elapsed * 0.25) * 12;
-    this.window.setPosition(880, 240 + Math.sin(this.elapsed * 0.6) * 40);
+    // The daylight behind the window breathes; the window itself does not move.
+    this.window.intensity = 2.4 + Math.sin(this.elapsed * 0.6) * 0.35;
   }
   draw(context) {
     context.render(this.world);

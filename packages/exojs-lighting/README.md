@@ -197,6 +197,8 @@ lighting.add(new PointLight({ radius: 320, cookie: windowCross }));
 
 The texture's full `0..1` maps onto the light's own bounding square, so the pattern turns with a cone light and scales with the radius - it is fixed to the lamp, not to the world. It is multiplied into the light, so a transparent part of the cookie casts nothing and an opaque white one changes nothing. Wrapping is the texture's own business; a cookie meant to end at its edge wants `ClampToEdge`.
 
+A cookie is a mask the LIGHT carries, not a pattern projected onto the world: its full `0..1` lies on the light's own bounding square, so it turns with a cone and scales with a radius - and it travels with the light. That is what you want for a torch with a cut-out and what you do not want for a window, whose bars belong to the wall: keep a light wearing a window still, or the pattern slides across the floor with it. A world-anchored projection is a different feature and is not built.
+
 Lights sharing a cookie share a draw. A scene with three distinct cookies costs three draws rather than one - still one draw per texture, never one per light. `forward` ignores cookies: it shades inside the sprite stage, where a texture per light cannot be reached in one draw.
 
 ### Softness
