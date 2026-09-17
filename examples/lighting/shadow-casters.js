@@ -43,7 +43,7 @@ const wall = (x, y, width, height) => {
   sprite.height = height;
   sprite.setPosition(x, y);
   sprite.tint = new Color(150, 146, 138);
-  return { sprite, width, height };
+  return sprite;
 };
 class ShadowCastersScene extends Scene {
   world;
@@ -67,31 +67,21 @@ class ShadowCastersScene extends Scene {
     floor.width = width;
     floor.height = height;
     this.world.addChild(floor);
-    // Static level geometry: each wall hands over the rectangle it is drawn as,
-    // in its own local space, so the outline follows the sprite's transform.
+    // Level geometry. Every wall is an opaque sprite, so its silhouette is the
+    // rectangle it is drawn as - there is nothing to author, and the outline
+    // follows the sprite however it is sized, moved or turned.
     const walls = [wall(320, 200, 360, 28), wall(940, 250, 28, 320), wall(520, 560, 300, 28)];
     this.turntable = wall(880, 560, 220, 24);
     walls.push(this.turntable);
     for (const piece of walls) {
-      const half = { x: piece.width / 2, y: piece.height / 2 };
-      this.world.addChild(piece.sprite);
-      this.lighting.occludeFrom(
-        Occluders.fromPolygon(
-          [
-            { x: -half.x, y: -half.y },
-            { x: half.x, y: -half.y },
-            { x: half.x, y: half.y },
-            { x: -half.x, y: half.y },
-          ],
-          { node: piece.sprite },
-        ),
-      );
+      this.world.addChild(piece);
+      this.lighting.occludeFrom(Occluders.fromAlpha(piece));
     }
-    // The pillar describes nothing at all: its silhouette is traced out of the
-    // alpha channel once, here, and never again.
+    // The cross is the same one line, and the same nothing to author: what
+    // differs is that its silhouette is a cross rather than its bounding box.
     const pillar = new Sprite(pillarTexture).setAnchor(0.5).setPosition(640, 380);
     this.world.addChild(pillar);
-    this.lighting.occludeFrom(Occluders.fromAlpha(pillarTexture, { node: pillar, anchor: pillar.anchor, simplify: 2 }));
+    this.lighting.occludeFrom(Occluders.fromAlpha(pillar));
     this.torch = this.lighting.add(new PointLight({ radius: 520, intensity: 2.1, softness: 0.35, color: new Color(255, 196, 140) }));
     this.beam = this.lighting.add(
       new SpotLight({ radius: 760, angle: 28, coneSoftness: 0.35, intensity: 2.3, softness: 0.2, color: new Color(150, 210, 255) }),
@@ -99,7 +89,7 @@ class ShadowCastersScene extends Scene {
     this.beam.setPosition(120, 660);
     this.hud = mountControls({
       title: 'Shadow Casters',
-      hint: 'No object declares that it casts a shadow. The walls hand over the rectangle they are drawn as; the cross hands over the outline traced from its alpha channel.',
+      hint: 'No object declares that it casts a shadow, and nothing here authors an outline: every caster is one line handing the lighting system the sprite it already draws.',
       status: '',
     });
     const panel = mountControlPanel({ title: 'Shadows', corner: 'top-right' });
@@ -128,7 +118,7 @@ class ShadowCastersScene extends Scene {
     // Aiming a spot is rotating it, so the beam sweeps by turning its node.
     this.beam.rotation = -55 + Math.sin(this.elapsed * 0.4) * 35;
     // A moving occluder needs no bookkeeping: the outline is local to the node.
-    this.turntable.sprite.rotation = this.elapsed * 22;
+    this.turntable.rotation = this.elapsed * 22;
   }
   draw(context) {
     context.render(this.world);
