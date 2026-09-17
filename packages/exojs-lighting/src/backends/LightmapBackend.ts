@@ -24,6 +24,7 @@ import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { Light } from '../lights/Light';
 import { lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
+import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import { buildShadowRow } from '../occluders/shadowMap';
 import type { LightingBackend } from './LightingBackend';
@@ -33,6 +34,9 @@ import lightCompositeWgsl from './shaders/light-composite.wgsl';
 import lightQuadFragment from './shaders/light-quad.frag';
 import lightQuadVertex from './shaders/light-quad.vert';
 import lightQuadWgsl from './shaders/light-quad.wgsl';
+import normalPrepassFragment from './shaders/normal-prepass.frag';
+import normalPrepassVertex from './shaders/normal-prepass.vert';
+import normalPrepassWgsl from './shaders/normal-prepass.wgsl';
 import occluderDebugFragment from './shaders/occluder-debug.frag';
 import occluderDebugVertex from './shaders/occluder-debug.vert';
 import occluderDebugWgsl from './shaders/occluder-debug.wgsl';
@@ -47,6 +51,7 @@ const debugLineWidth = 2;
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
 const scratchInstance = { a_light: [noCone, noCone, 1], a_shadow: [noShadow, 0] };
+const scratchSurface = { a_frame: [0, 0, 1, 1], a_basis: [1, 0, 0, 1] };
 
 /** Unit quad in `-1..1`, which is the light's own space: distance from its centre in radii. */
 const unitQuad = (): Geometry =>
@@ -66,6 +71,15 @@ const screenQuad = (): Geometry =>
     ],
     stride: 16,
     vertexData: new Float32Array([0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1]),
+    indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
+  });
+
+/** Unit quad in `0..1`, which an instance transform maps onto a drawable's own box. */
+const boxQuad = (): Geometry =>
+  new Geometry({
+    attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
+    stride: 8,
+    vertexData: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
     indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
   });
 
@@ -135,12 +149,14 @@ export interface LightmapBackendOptions {
 export class LightmapBackend implements LightingBackend {
   public readonly quality: LightingQuality = 'lightmap';
   public readonly castsShadows = true;
+  public readonly readsSurfaces = true;
   public readonly hdr: boolean;
 
   private readonly _app: Application;
   private readonly _resolution: number;
   private readonly _shadowResolution: number;
   private readonly _lightGeometry: Geometry = unitQuad();
+  private readonly _normalGeometry: Geometry = boxQuad();
   private readonly _compositeGeometry: Geometry = screenQuad();
   private readonly _debugGeometry: Geometry = segmentQuad();
   private readonly _lightMaterial: MeshMaterial;
@@ -149,6 +165,10 @@ export class LightmapBackend implements LightingBackend {
   private readonly _batch: RenderBatch;
   private readonly _compositeBatch: RenderBatch;
   private readonly _debugBatch: RenderBatch;
+  private readonly _normalTarget: RenderTexture;
+  /** One batch per albedo/normal-map pair: a batch binds two textures and draws every surface sharing them. */
+  private readonly _normalBatches = new Map<Texture | RenderTexture, Map<Texture, RenderBatch>>();
+  private readonly _normalPass: CallbackRenderPass;
   private readonly _lightPass: CallbackRenderPass;
   private readonly _compositePass: CallbackRenderPass;
   private readonly _debugPass: CallbackRenderPass;
@@ -161,6 +181,7 @@ export class LightmapBackend implements LightingBackend {
   private readonly _ambient: Color = Color.black.clone();
   private _shadowMap: DataTexture<TextureFormat.R32F>;
   private _activeCount = 0;
+  private _surfaceCount = 0;
   private _debug: LightingDebugView = null;
 
   public constructor(options: LightmapBackendOptions) {
@@ -221,6 +242,17 @@ export class LightmapBackend implements LightingBackend {
     // and nothing at all on WebGPU, where a load operation is fixed when the
     // pass begins. The colour is read at execute time, so a scene that fades
     // from day to night just mutates it.
+    // Sized with the light target and only while something describes a surface:
+    // a lightmap scene that registers none never pays for the attachment. The
+    // clear is transparent black because alpha is coverage here - zero means
+    // "nothing described a surface", and the rgb under it is never read.
+    this._normalTarget = new RenderTexture(1, 1);
+    this._normalPass = new CallbackRenderPass(pass => this._drawNormals(pass), {
+      target: this._normalTarget,
+      clear: Color.transparentBlack,
+      label: 'lighting:normals',
+      enabled: false,
+    });
     this._lightPass = new CallbackRenderPass(pass => this._drawLights(pass), {
       target: this._target,
       clear: this._ambient,
@@ -240,7 +272,7 @@ export class LightmapBackend implements LightingBackend {
     this._debugPass = new CallbackRenderPass(pass => this._drawOccluders(pass), { label: 'lighting:occluder-debug' });
 
     this._resize();
-    this._app.framePasses.addPass(this._lightPass).addPass(this._compositePass);
+    this._app.framePasses.addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
 
     if (this._postPass !== null) {
       this._app.framePasses.addPass(this._postPass);
@@ -256,11 +288,6 @@ export class LightmapBackend implements LightingBackend {
     return this._activeCount;
   }
 
-  /**
-   * Showing the light field alone is multiplying a white frame by it, so the
-   * debug view swaps the composite's frame texture rather than carrying a
-   * second shader that would have to be kept in step with the first.
-   */
   public get debug(): LightingDebugView {
     return this._debug;
   }
@@ -271,7 +298,11 @@ export class LightmapBackend implements LightingBackend {
     }
 
     this._debug = view;
-    this._compositeMaterial.setTexture('u_frame', view === 'light' ? whiteTexture() : this._app.frameTexture);
+    // Showing an intermediate is multiplying a white frame by it, so the debug
+    // views swap the composite's two inputs rather than carrying a second
+    // shader that would have to be kept in step with the first.
+    this._compositeMaterial.setTexture('u_frame', view === 'light' || view === 'normals' ? whiteTexture() : this._app.frameTexture);
+    this._compositeMaterial.setTexture('u_light', view === 'normals' ? this._normalTarget : this._target);
   }
 
   /** The accumulated light, for a debug view that wants to show it. @internal */
@@ -279,7 +310,8 @@ export class LightmapBackend implements LightingBackend {
     return this._target;
   }
 
-  public publish(lights: readonly Light[], ambient: Color, occluders: OccluderField): void {
+  public publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void {
+    this._writeSurfaces(surfaces);
     this._resize();
     this._ambient.copy(ambient);
     this._batch.clear();
@@ -352,11 +384,23 @@ export class LightmapBackend implements LightingBackend {
     this._writeOccluderDebug(occluders);
   }
 
+  /** Surfaces the last publish actually wrote - hidden and untextured ones are skipped. */
+  public get activeSurfaceCount(): number {
+    return this._surfaceCount;
+  }
+
+  /** The prepass normals, for a debug view that wants to show them. @internal */
+  public get normalTexture(): RenderTexture {
+    return this._normalTarget;
+  }
+
   public destroy(): void {
     this._app.onResize.remove(this._onResize);
+    this._app.framePasses.removePass(this._normalPass);
     this._app.framePasses.removePass(this._lightPass);
     this._app.framePasses.removePass(this._compositePass);
     this._app.framePasses.removePass(this._debugPass);
+    this._normalPass.destroy();
     this._lightPass.destroy();
     this._compositePass.destroy();
     this._debugPass.destroy();
@@ -375,11 +419,23 @@ export class LightmapBackend implements LightingBackend {
     this._compositeMaterial.destroy();
     this._debugMaterial.destroy();
     this._lightGeometry.destroy();
+    this._normalGeometry.destroy();
     this._compositeGeometry.destroy();
     this._debugGeometry.destroy();
+
+    for (const byNormal of this._normalBatches.values()) {
+      for (const batch of byNormal.values()) {
+        batch.material?.destroy();
+        batch.destroy();
+      }
+    }
+
+    this._normalBatches.clear();
     this._shadowMap.destroy();
+    this._normalTarget.destroy();
     this._target.destroy();
     this._activeCount = 0;
+    this._surfaceCount = 0;
   }
 
   /**
@@ -400,6 +456,138 @@ export class LightmapBackend implements LightingBackend {
    */
   private _drawComposite(pass: PassContext): void {
     pass.drawBatch(this._compositeBatch, { view: this._app.rendering.screenView });
+  }
+
+  /**
+   * Lay every registered surface's normals over the flat field the pass cleared
+   * to.
+   *
+   * Through the frame's own view, like the lights, so the normals line up with
+   * the light field that will read them.
+   */
+  private _drawNormals(pass: PassContext): void {
+    for (const byNormal of this._normalBatches.values()) {
+      for (const batch of byNormal.values()) {
+        if (batch.count > 0) {
+          pass.drawBatch(batch, { view: this._app.rendering.view });
+        }
+      }
+    }
+  }
+
+  /**
+   * One instance per registered surface, mapping the unit quad onto the
+   * drawable's own box in world space.
+   *
+   * Surfaces sharing an albedo and a normal map share a batch, so a scene whose
+   * art comes from one atlas draws its whole normal field in one call. Within a
+   * batch the order is registration order rather than scene order - overlapping
+   * surfaces resolve topmost-wins against that, which is the one thing a
+   * screen-space normal buffer cannot take from the scene graph.
+   */
+  private _writeSurfaces(surfaces: readonly NormalSurface[]): void {
+    for (const byNormal of this._normalBatches.values()) {
+      for (const batch of byNormal.values()) {
+        batch.clear();
+      }
+    }
+
+    let written = 0;
+
+    for (const { drawable, normals } of surfaces) {
+      const albedo = drawable.texture;
+
+      if (albedo === null || !drawable.visible) {
+        continue;
+      }
+
+      const box = drawable.getLocalBounds();
+
+      if (box.width === 0 || box.height === 0) {
+        continue;
+      }
+
+      const world = drawable.getWorldTransform();
+      const frame = drawable.textureFrame;
+
+      // Local 0..1 onto the drawable's box, then the box onto the world: the
+      // fragment stage then works in the drawable's own space without knowing
+      // where it sits.
+      this._transform.set(
+        world.a * box.width,
+        world.b * box.height,
+        world.a * box.left + world.b * box.top + world.x,
+        world.c * box.width,
+        world.d * box.height,
+        world.c * box.left + world.d * box.top + world.y,
+      );
+
+      scratchSurface.a_frame[0] = frame.left / albedo.width;
+      scratchSurface.a_frame[1] = frame.top / albedo.height;
+      scratchSurface.a_frame[2] = frame.width / albedo.width;
+      scratchSurface.a_frame[3] = frame.height / albedo.height;
+      // The drawable's own basis, not the composed one: the box scale would
+      // survive the shader's normalize either way, but a mirrored box must flip
+      // the normal and only the drawable knows whether it is mirrored.
+      scratchSurface.a_basis[0] = world.a;
+      scratchSurface.a_basis[1] = world.b;
+      scratchSurface.a_basis[2] = world.c;
+      scratchSurface.a_basis[3] = world.d;
+
+      this._normalBatch(albedo, normals.texture).add(this._transform, Color.white, scratchSurface);
+      written++;
+    }
+
+    this._surfaceCount = written;
+    this._normalPass.enabled = written > 0;
+  }
+
+  /**
+   * The batch for one albedo/normal-map pair, built on first use. Batches are
+   * kept for the backend's life: an atlas pair that was drawn once is drawn
+   * again, and rebuilding a material per frame would recompile nothing but cost
+   * a pipeline lookup on every draw.
+   */
+  private _normalBatch(albedo: Texture | RenderTexture, normalMap: Texture): RenderBatch {
+    let byNormal = this._normalBatches.get(albedo);
+
+    if (byNormal === undefined) {
+      byNormal = new Map();
+      this._normalBatches.set(albedo, byNormal);
+    }
+
+    const existing = byNormal.get(normalMap);
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const material = new MeshMaterial({
+      shader: new Shader({
+        glsl: {
+          vertex: `#version 300 es
+${INSTANCE_TRANSFORM_GLSL}
+${normalPrepassVertex}`,
+          fragment: normalPrepassFragment,
+        },
+        wgsl: `${INSTANCE_TRANSFORM_WGSL}
+${normalPrepassWgsl}`,
+      }),
+      // Declaration order is the group(2) binding order on WebGPU: albedo at
+      // bindings 1/2, normal map at 3/4, matching `normal-prepass.wgsl`.
+      textures: { u_albedo: albedo, u_normalMap: normalMap },
+      blendMode: BlendModes.Normal,
+    });
+    const batch = new RenderBatch(this._normalGeometry, material, {
+      instanceAttributes: [
+        { name: 'a_frame', format: 'float32x4' },
+        { name: 'a_basis', format: 'float32x4' },
+      ],
+    });
+
+    byNormal.set(normalMap, batch);
+
+    return batch;
   }
 
   private _drawOccluders(pass: PassContext): void {
@@ -480,6 +668,11 @@ export class LightmapBackend implements LightingBackend {
     // size: what a filter reads has to match the frame texel for texel, and the
     // density it is rasterized at is the application's to decide.
     this._shaded?.setSize(this._app.frameTexture.width, this._app.frameTexture.height);
+    // The light shader reads the normals at its own fragment position, so the
+    // two targets must agree texel for texel. Held at one texel while nothing
+    // describes a surface, which is what keeps the attachment free for a scene
+    // that registers none.
+    this._normalTarget.setSize(this._surfaceCount > 0 ? width : 1, this._surfaceCount > 0 ? height : 1);
 
     if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0) {
       return;

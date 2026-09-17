@@ -5,6 +5,8 @@ import type { LightingBackend } from './backends/LightingBackend';
 import { LightmapBackend } from './backends/LightmapBackend';
 import type { Light } from './lights/Light';
 import { lightRadius } from './lights/reach';
+import type { NormalSource } from './normals/Normals';
+import type { NormalSurface, NormalSurfaceDrawable } from './normals/NormalSurface';
 import { OccluderField } from './occluders/OccluderField';
 import type { OccluderSource } from './occluders/OccluderSource';
 
@@ -28,6 +30,10 @@ export type LightingQuality = 'forward' | 'lightmap';
  *
  * - `'light'` shows the accumulated light field on its own, which is how you
  *   see where a light reaches without the scene's own colours in the way.
+ * - `'normals'` shows the normal prepass: the world-space normals the
+ *   registered surfaces described this frame, encoded the way a normal map is.
+ *   Black is where nothing described a surface, and light lands there with no
+ *   `N dot L` term at all.
  * - `'occluders'` draws the silhouettes the registered sources collected this
  *   frame over the shaded scene, which is how you see what the shadows are
  *   actually being cast from.
@@ -35,7 +41,7 @@ export type LightingQuality = 'forward' | 'lightmap';
  * A renderer with no such intermediate - `forward` shades inside the sprite
  * shader and casts no shadows - ignores it.
  */
-export type LightingDebugView = 'light' | 'occluders' | null;
+export type LightingDebugView = 'light' | 'normals' | 'occluders' | null;
 
 const scratchPosition = { x: 0, y: 0 };
 
@@ -168,6 +174,7 @@ export class Lighting {
   private readonly _post: readonly Filter[];
   private readonly _lights: Light[] = [];
   private readonly _occluders: OccluderSource[] = [];
+  private readonly _surfaces: NormalSurface[] = [];
   private readonly _field = new OccluderField();
   private readonly _region = new Rectangle();
   private readonly _backend: LightingBackend;
@@ -179,7 +186,7 @@ export class Lighting {
     // Publish once up front: a renderer that has never been told the ambient
     // term shades an untouched scene black, and "black until the first tick"
     // is not a state the vocabulary admits.
-    this._backend.publish(this._lights, this.ambient, this._field);
+    this._backend.publish(this._lights, this.ambient, this._field, this._surfaces);
   }
 
   /** Filters over the shaded frame, in order. See {@link LightingOptions.post}. */
@@ -218,6 +225,15 @@ export class Lighting {
    */
   public get activeLightCount(): number {
     return this._backend.activeLightCount;
+  }
+
+  /**
+   * Surfaces the last frame actually took normals from. Lower than
+   * {@link surfaces} when some are hidden or carry no texture, and zero under
+   * a renderer that takes its normals from a material.
+   */
+  public get activeSurfaceCount(): number {
+    return this._backend.activeSurfaceCount;
   }
 
   /** The renderer in use, for a material that has to bind its data. @internal */
@@ -316,16 +332,72 @@ export class Lighting {
     return this;
   }
 
-  /** `System` update phase: publish this frame's lights and occluders to the renderer. */
+  /** Registered normal surfaces, in registration order. */
+  public get surfaces(): readonly NormalSurface[] {
+    return this._surfaces;
+  }
+
+  /**
+   * Give a drawable surface normals, and return it so it can be created,
+   * parented and registered in one expression.
+   *
+   * ```ts
+   * lighting.normalsFrom(crate, normalMap(crateNormals));
+   * ```
+   *
+   * Only a renderer that shades a light field of its own reads these -
+   * `forward` shades inside the sprite stage and takes its normals from
+   * {@link LitMaterial} instead. Nothing is required of a drawable that is not
+   * registered: it is lit as a plane, which is what the renderer already
+   * assumed of everything.
+   *
+   * The drawable and the source are the caller's; the system only reads them.
+   * Registering the same drawable twice replaces its source rather than
+   * describing the surface twice.
+   */
+  public normalsFrom<T extends NormalSurfaceDrawable>(drawable: T, normals: NormalSource): T {
+    const index = this._surfaces.findIndex(surface => surface.drawable === drawable);
+
+    if (index === -1) {
+      this._surfaces.push({ drawable, normals });
+    } else {
+      this._surfaces[index] = { drawable, normals };
+    }
+
+    return drawable;
+  }
+
+  /** Take a drawable's normals away again. Returns `false` when it had none here. */
+  public stopNormals(drawable: NormalSurfaceDrawable): boolean {
+    const index = this._surfaces.findIndex(surface => surface.drawable === drawable);
+
+    if (index === -1) {
+      return false;
+    }
+
+    this._surfaces.splice(index, 1);
+
+    return true;
+  }
+
+  /** Unregister every normal surface. */
+  public clearSurfaces(): this {
+    this._surfaces.length = 0;
+
+    return this;
+  }
+
+  /** `System` update phase: publish this frame's lights, occluders and surfaces to the renderer. */
   public update(): void {
     this._collect();
-    this._backend.publish(this._lights, this.ambient, this._field);
+    this._backend.publish(this._lights, this.ambient, this._field, this._surfaces);
   }
 
   /** Release the renderer's resources. Registered lights and sources are unregistered, not destroyed. */
   public destroy(): void {
     this.clear();
     this.clearOccluders();
+    this.clearSurfaces();
     this._field.clear();
     this._backend.destroy();
   }

@@ -15,6 +15,7 @@ export { LitMaterial } from './LitMaterial';
 export type { DeriveNormalsOptions } from './normals/deriveNormals';
 export type { NormalSource } from './normals/Normals';
 export { normalMap, Normals, normalsFromAlpha } from './normals/Normals';
+export type { NormalSurface, NormalSurfaceDrawable } from './normals/NormalSurface';
 export type { AlphaOccluderDrawable, AlphaOccluderOptions } from './occluders/alphaTrace';
 export { fromAlpha as alphaOccluder } from './occluders/fromAlpha';
 export type { MeshOccluderOptions, OccluderMesh } from './occluders/fromMesh';

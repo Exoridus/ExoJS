@@ -2,6 +2,7 @@ import type { Color } from '@codexo/exojs';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { Light } from '../lights/Light';
+import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 
 /**
@@ -24,12 +25,21 @@ export interface LightingBackend {
   /** Lights the last {@link publish} actually wrote. */
   readonly activeLightCount: number;
 
+  /** Normal surfaces the last {@link publish} actually wrote. */
+  readonly activeSurfaceCount: number;
+
   /**
    * Whether this renderer turns the occluder field into shadows. A renderer
    * that does not lets the system skip collecting one at all, so registering
    * occluder sources costs nothing where they cannot be seen.
    */
   readonly castsShadows: boolean;
+
+  /**
+   * Whether this renderer reads registered normal surfaces. A renderer that
+   * takes its normals from a material instead ignores them.
+   */
+  readonly readsSurfaces: boolean;
 
   /**
    * Whether light accumulates with headroom above `1.0`. See
@@ -47,11 +57,12 @@ export interface LightingBackend {
    * Take this frame's lights, ambient term and occluder field. Called once per
    * frame from the system's update phase, before anything draws.
    *
-   * All three are read, never retained: they belong to the system and are
+   * All four are read, never retained: they belong to the system and are
    * rewritten between frames. A renderer that casts no shadows ignores the
-   * field.
+   * field, and one that takes its normals from a material ignores the
+   * surfaces.
    */
-  publish(lights: readonly Light[], ambient: Color, occluders: OccluderField): void;
+  publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void;
 
   /** Release GPU resources. The lights are not owned. */
   destroy(): void;

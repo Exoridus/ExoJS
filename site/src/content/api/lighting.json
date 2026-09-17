@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 17,
+  "memberCount": 22,
   "counts": {
     "constructors": 1,
-    "methods": 8,
-    "properties": 8,
+    "methods": 11,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -196,6 +196,35 @@
           "description": "Unregister every occluder source."
         },
         {
+          "name": "clearSurfaces",
+          "signature": "clearSurfaces(): this",
+          "signatureTokens": [
+            {
+              "text": "clearSurfaces",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Unregister every normal surface."
+        },
+        {
           "name": "destroy",
           "signature": "destroy(): void",
           "signatureTokens": [
@@ -223,6 +252,74 @@
           "params": [],
           "returnType": "void",
           "description": "Release the renderer's resources. Registered lights and sources are unregistered, not destroyed."
+        },
+        {
+          "name": "normalsFrom",
+          "signature": "normalsFrom(drawable: T, normals: NormalSource): T",
+          "signatureTokens": [
+            {
+              "text": "normalsFrom",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "drawable",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "normals",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalSource",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "drawable",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "normals",
+              "type": "NormalSource",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, normalMap(crateNormals));  Only a renderer that shades a light field of its own reads these - forward shades inside the sprite stage and takes its normals from LitMaterial instead. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
         },
         {
           "name": "occludeFrom",
@@ -319,6 +416,53 @@
           "description": "Unregister a light. Returns false when it was not registered here."
         },
         {
+          "name": "stopNormals",
+          "signature": "stopNormals(drawable: NormalSurfaceDrawable): boolean",
+          "signatureTokens": [
+            {
+              "text": "stopNormals",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "drawable",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalSurfaceDrawable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "drawable",
+              "type": "NormalSurfaceDrawable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Take a drawable's normals away again. Returns false when it had none here."
+        },
+        {
           "name": "stopOccluding",
           "signature": "stopOccluding(source: OccluderSource): boolean",
           "signatureTokens": [
@@ -392,7 +536,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "System update phase: publish this frame's lights and occluders to the renderer."
+          "description": "System update phase: publish this frame's lights, occluders and surfaces to the renderer."
         }
       ],
       "paragraphs": [],
@@ -444,6 +588,27 @@
           "params": [],
           "returnType": null,
           "description": "Lights the last frame actually shaded with. Lower than lights when some are disabled, have no intensity, or fall beyond what the renderer in use can carry."
+        },
+        {
+          "name": "activeSurfaceCount",
+          "signature": "activeSurfaceCount: number",
+          "signatureTokens": [
+            {
+              "text": "activeSurfaceCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Surfaces the last frame actually took normals from. Lower than surfaces when some are hidden or carry no texture, and zero under a renderer that takes its normals from a material."
         },
         {
           "name": "debug",
@@ -606,6 +771,39 @@
           "params": [],
           "returnType": null,
           "description": "The renderer in use."
+        },
+        {
+          "name": "surfaces",
+          "signature": "surfaces: readonly NormalSurface[]",
+          "signatureTokens": [
+            {
+              "text": "surfaces",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalSurface",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Registered normal surfaces, in registration order."
         }
       ],
       "paragraphs": [],

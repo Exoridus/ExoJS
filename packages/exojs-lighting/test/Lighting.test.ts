@@ -1,4 +1,17 @@
-import { type Application, Color, ColorMatrixFilter, Container, type Filter, RenderPipeline, RenderTexture, Signal, TextureFormat } from '@codexo/exojs';
+import {
+  type Application,
+  Color,
+  ColorMatrixFilter,
+  Container,
+  type Filter,
+  Matrix,
+  Rectangle,
+  RenderPipeline,
+  RenderTexture,
+  Signal,
+  Texture,
+  TextureFormat,
+} from '@codexo/exojs';
 import { describe, expect, test } from 'vitest';
 
 import type { ForwardBackend } from '../src/backends/ForwardBackend';
@@ -7,6 +20,7 @@ import { Lighting } from '../src/Lighting';
 import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
 import { LitMaterial } from '../src/LitMaterial';
+import { normalMap } from '../src/normals/Normals';
 
 const channels = 4;
 
@@ -287,8 +301,8 @@ describe('Lighting', () => {
 
     expect(forwardApp.framePasses.size).toBe(1);
     expect(lightmap.post).toEqual([grade]);
-    // The lightmap renderer's own three, plus the chain.
-    expect(lightmapApp.framePasses.size).toBe(4);
+    // The lightmap renderer's own four, plus the chain.
+    expect(lightmapApp.framePasses.size).toBe(5);
 
     forward.destroy();
     lightmap.destroy();
@@ -303,6 +317,43 @@ describe('Lighting', () => {
     new Lighting({ app });
 
     expect(app.framePasses.size).toBe(0);
+  });
+
+  test('a drawable registered twice replaces its normals instead of describing the surface twice', () => {
+    const lighting = lightmapLighting();
+    const drawable = {
+      texture: null,
+      textureFrame: new Rectangle(),
+      visible: true,
+      getLocalBounds: () => new Rectangle(),
+      getWorldTransform: () => new Matrix(),
+    };
+    const first = normalMap(Texture.fromColor(Color.white, 1));
+    const second = normalMap(Texture.fromColor(Color.black, 1));
+
+    expect(lighting.normalsFrom(drawable, first)).toBe(drawable);
+    lighting.normalsFrom(drawable, second);
+
+    expect(lighting.surfaces).toHaveLength(1);
+    expect(lighting.surfaces[0]?.normals).toBe(second);
+    expect(lighting.stopNormals(drawable)).toBe(true);
+    expect(lighting.stopNormals(drawable)).toBe(false);
+  });
+
+  test('destroying the system forgets its normal surfaces', () => {
+    const lighting = lightmapLighting();
+    const drawable = {
+      texture: null,
+      textureFrame: new Rectangle(),
+      visible: true,
+      getLocalBounds: () => new Rectangle(),
+      getWorldTransform: () => new Matrix(),
+    };
+
+    lighting.normalsFrom(drawable, normalMap(Texture.fromColor(Color.white, 1)));
+    lighting.destroy();
+
+    expect(lighting.surfaces).toHaveLength(0);
   });
 
   test('a lit material refuses a renderer whose light texture it cannot read', () => {

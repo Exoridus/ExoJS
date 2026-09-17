@@ -6,7 +6,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { Lighting, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { Lighting, normalMap, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -301,6 +301,61 @@ describe('lightmap renderer WebGPU browser', () => {
       host.destroy();
     }
   });
+  test('a registered surface writes its normals into the prepass, rotated with the drawable', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // A normal leaning along the drawable's own +x, which is the one encoding
+    // that says something different once the drawable turns.
+    const normals = normalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const crate = new Sprite(Texture.fromColor(Color.white, 1));
+
+    crate.width = 32;
+    crate.height = 32;
+    // Turned about its own centre, so the quarter turn below changes the
+    // normals under the probe instead of moving the drawable off it.
+    crate.setAnchor(0.5, 0.5);
+    crate.setPosition(32, 32);
+    lighting.normalsFrom(crate, normals);
+    lighting.debug = 'normals';
+
+    try {
+      const unrotated = await renderFrame(host, lighting);
+
+      if (unrotated === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      expect(lighting.activeSurfaceCount).toBe(1);
+      // Leaning along +x, so red is high where the drawable is and nothing
+      // described a surface outside it.
+      expect(unrotated(32, 32)).toBeGreaterThan(190);
+      expect(unrotated(2, 2)).toBeLessThan(10);
+
+      // A quarter turn lands the drawable's +x on the engine's -y, so the same
+      // map leans along green instead and red falls to the flat midpoint.
+      crate.setRotation(90);
+
+      const rotated = await renderFrame(host, lighting);
+
+      if (rotated === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      expect(rotated(32, 32)).toBeGreaterThan(110);
+      expect(rotated(32, 32)).toBeLessThan(146);
+    } finally {
+      crate.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
   test('a filter over the composite reads the light above 1.0 rather than a clipped frame', async ctx => {
     const host = await createHost();
     // Quarter brightness, so what reaches the canvas says what the filter was

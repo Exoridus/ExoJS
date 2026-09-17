@@ -69,6 +69,12 @@ export class ForwardBackend implements LightingBackend {
   /** Shading lands straight in the frame, so a lit fragment clamps where every fragment does. */
   public readonly hdr = false;
 
+  /** Normals arrive on the material here, not as a registered surface. */
+  public readonly readsSurfaces = false;
+
+  /** Always zero: a registered surface is never read, so none is ever written. */
+  public readonly activeSurfaceCount = 0;
+
   /** Lights the texture is sized for. */
   public readonly maxLights: number;
 

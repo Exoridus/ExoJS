@@ -8,7 +8,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import { Lighting, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { Lighting, normalMap, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -247,6 +247,55 @@ describe('WebGL2 lightmap renderer', () => {
     } finally {
       lighting.destroy();
       grade.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a registered surface writes its normals into the prepass, rotated with the drawable', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // A normal leaning along the drawable's own +x, which is the one encoding
+    // that says something different once the drawable turns.
+    const normals = normalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const crate = new Sprite(Texture.fromColor(Color.white, 1));
+
+    crate.width = 32;
+    crate.height = 32;
+    // Turned about its own centre, so the quarter turn below changes the
+    // normals under the probe instead of moving the drawable off it.
+    crate.setAnchor(0.5, 0.5);
+    crate.setPosition(32, 32);
+    lighting.normalsFrom(crate, normals);
+    lighting.debug = 'normals';
+
+    try {
+      runFrame(host, lighting);
+
+      const unrotated = readPixel(host.backend, 32, 32);
+
+      expect(lighting.activeSurfaceCount).toBe(1);
+      // Leaning along +x, so red is high and green sits at the flat midpoint.
+      expect(unrotated[0]).toBeGreaterThan(190);
+      expect(unrotated[1]).toBeGreaterThan(110);
+      expect(unrotated[1]).toBeLessThan(146);
+      // Nothing described a surface out here, and the clear says so. The
+      // composite carries the frame's alpha through, so only the colour speaks.
+      expectPixelNear(readPixel(host.backend, 2, 2), [0, 0, 0, 255]);
+
+      // A quarter turn lands the drawable's +x on the engine's -y, which is up
+      // the screen, so the same map now leans the other way along green and red
+      // falls back to the flat midpoint.
+      crate.setRotation(90);
+      runFrame(host, lighting);
+
+      const rotated = readPixel(host.backend, 32, 32);
+
+      expect(rotated[1]).toBeLessThan(60);
+      expect(rotated[0]).toBeGreaterThan(110);
+      expect(rotated[0]).toBeLessThan(146);
+    } finally {
+      crate.destroy();
+      lighting.destroy();
       host.destroy();
     }
   });

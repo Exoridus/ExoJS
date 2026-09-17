@@ -167,6 +167,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['light-quad.vert', 'light-quad.frag'],
   ['light-composite.vert', 'light-composite.frag'],
   ['occluder-debug.vert', 'occluder-debug.frag'],
+  ['normal-prepass.vert', 'normal-prepass.frag'],
 ];
 
 const referencedShaderFiles = new Set(programPairs.flat());
