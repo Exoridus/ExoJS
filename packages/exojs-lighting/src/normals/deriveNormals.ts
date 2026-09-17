@@ -1,5 +1,7 @@
 import { DataTexture, type Texture, TextureFormat } from '@codexo/exojs';
 
+import { readAlphaField } from '../readAlphaField';
+
 /** Tuning for {@link deriveNormalsFromAlpha}. */
 export interface DeriveNormalsOptions {
   /**
@@ -34,7 +36,7 @@ const flatByte = 128;
 export const deriveNormalsFromAlpha = (texture: Texture, options: DeriveNormalsOptions = {}): DataTexture<TextureFormat.Rgba8> => {
   const width = Math.max(1, texture.width);
   const height = Math.max(1, texture.height);
-  const alpha = readAlpha(texture, width, height);
+  const alpha = readAlphaField(texture, width, height);
 
   return normalsFromAlphaField(alpha, width, height, options);
 };
@@ -112,51 +114,6 @@ const fillFlat = (buffer: Uint8Array): void => {
     buffer[offset + 2] = 255;
     buffer[offset + 3] = 255;
   }
-};
-
-/** Alpha as `0..1` per pixel, or `null` when the source cannot be read. */
-const readAlpha = (texture: Texture, width: number, height: number): Float32Array | null => {
-  const source = texture.source;
-
-  if (source === null || typeof document === 'undefined') {
-    return null;
-  }
-
-  const canvas = document.createElement('canvas');
-
-  canvas.width = width;
-  canvas.height = height;
-
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-
-  if (context === null) {
-    return null;
-  }
-
-  try {
-    context.drawImage(source, 0, 0, width, height);
-  } catch {
-    // A cross-origin image taints the canvas, and a video frame may not be
-    // ready. Either way the silhouette is unknowable, and a flat map is the
-    // honest answer.
-    return null;
-  }
-
-  let pixels: Uint8ClampedArray;
-
-  try {
-    pixels = context.getImageData(0, 0, width, height).data;
-  } catch {
-    return null;
-  }
-
-  const alpha = new Float32Array(width * height);
-
-  for (let index = 0; index < alpha.length; index++) {
-    alpha[index] = pixels[index * 4 + 3]! / 255;
-  }
-
-  return alpha;
 };
 
 const sampleAlpha = (alpha: Float32Array, width: number, height: number, x: number, y: number): number => {

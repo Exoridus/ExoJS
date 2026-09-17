@@ -6,7 +6,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { Lighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { Lighting, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -58,7 +58,10 @@ const createHost = async (): Promise<Host> => {
 
   const context = new RenderingContext(backend);
 
+  // The world view the frame was drawn through: the lights are placed in world
+  // space and the composite in screen space, both read off `app.rendering`.
   context.view = new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
+  (app as unknown as { rendering: RenderingContext }).rendering = context;
 
   return {
     backend,
@@ -85,12 +88,47 @@ const drawWhiteFrame = (host: Host): void => {
   sprite.destroy();
 };
 
+/**
+ * Run the frame slot once under a validation scope, and hand back a pixel
+ * reader. `null` means the software adapter dropped the device and the caller
+ * should skip: one flush per scope, because a second flush inside the same
+ * scope reports errors the first one raised.
+ */
+const renderFrame = async (host: Host, lighting: Lighting): Promise<((x: number, y: number) => number) | null> => {
+  const device = getBackendDevice(host.backend);
+
+  device.pushErrorScope('validation');
+
+  let validationError: GPUError | null;
+
+  try {
+    lighting.update();
+    host.backend.clear(Color.black);
+    host.app.framePasses.execute(host.context);
+    host.backend.flush();
+    validationError = await device.popErrorScope();
+    await device.queue.onSubmittedWorkDone();
+  } catch (error) {
+    if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+      return null;
+    }
+
+    throw error;
+  }
+
+  expect(validationError).toBeNull();
+
+  const readPixel = readWebGpuPixels(host.backend, canvasSize);
+
+  return (x: number, y: number): number => readPixel(x, y)[0];
+};
+
 describe('lightmap renderer WebGPU browser', () => {
   test('lights the frame where a light reaches and leaves the rest at ambient', async ctx => {
     const host = await createHost();
     const device = getBackendDevice(host.backend);
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
-    const spot = lighting.add(new SpotLight({ radius: 40, angle: 30, softness: 0.2, intensity: 1 }));
+    const spot = lighting.add(new SpotLight({ radius: 40, angle: 30, coneSoftness: 0.2, intensity: 1 }));
 
     lighting.add(new PointLight({ radius: 24, intensity: 1 })).setPosition(16, 16);
     // Unrotated the cone points along +x, so its lit side is to the right.
@@ -142,6 +180,147 @@ describe('lightmap renderer WebGPU browser', () => {
       expect(at(60, 4)).toBeLessThan(20);
     } finally {
       cleanup();
+    }
+  });
+  test('an occluder leaves a dark region behind it, and softness widens its edge', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const light = lighting.add(new PointLight({ radius: 34, intensity: 1, softness: 0 }));
+
+    light.setPosition(32, 32);
+    // A wall running down from the light's own row, so its shadow edge lies
+    // along y = 32 and a pixel just above it is the penumbra's first victim.
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 38, y: 32 },
+          { x: 38, y: 62 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      const hard = await renderFrame(host, lighting);
+
+      if (hard === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      // Behind the wall: shadowed. Level with the light on the far side: lit.
+      const hardShadow = hard(50, 44);
+      const hardEdge = hard(50, 31);
+
+      expect(hardShadow).toBeLessThan(20);
+      expect(hard(20, 32)).toBeGreaterThan(80);
+      expect(hardEdge).toBeGreaterThan(40);
+
+      light.softness = 1;
+
+      const soft = await renderFrame(host, lighting);
+
+      if (soft === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      expect(soft(50, 44)).toBeLessThan(20);
+      expect(soft(50, 31)).toBeLessThan(hardEdge - 15);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('the occluders debug view draws the silhouettes that were collected', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(32, 32);
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 40, y: 4 },
+          { x: 40, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    lighting.debug = 'occluders';
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      expect(at(40, 32)).toBeGreaterThan(200);
+      expect(at(52, 32)).toBeLessThan(20);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('the composite keeps the frame the right way up', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: new Color(255, 255, 255), lightResolution: 1 });
+    const band = new Sprite(Texture.fromColor(Color.white, 1));
+
+    band.width = canvasSize;
+    band.height = canvasSize / 2;
+    host.context.renderTo(band, { target: host.frameTexture, clear: Color.black });
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      expect(at(32, 8)).toBeGreaterThan(200);
+      expect(at(32, 56)).toBeLessThan(20);
+    } finally {
+      band.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+  test('ambient lights the frame where no light reaches, and with no light at all', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: new Color(128, 128, 128), lightResolution: 1 });
+
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      expect(at(2, 2)).toBeGreaterThan(100);
+      expect(at(2, 2)).toBeLessThan(160);
+    } finally {
+      lighting.destroy();
+      host.destroy();
     }
   });
 });

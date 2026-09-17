@@ -2,7 +2,7 @@ import { type Color, DataTexture, TextureFormat } from '@codexo/exojs';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import { type Light } from '../lights/Light';
-import { PointLight } from '../lights/PointLight';
+import { lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 import type { LightingBackend } from './LightingBackend';
 
@@ -49,6 +49,9 @@ export class ForwardBackend implements LightingBackend {
 
   /** Ignored: this renderer shades inside the sprite shader and has no intermediate to show. */
   public debug: LightingDebugView = null;
+
+  /** Shading happens inside the sprite fragment stage, which has no light field to fold a shadow term into. */
+  public readonly castsShadows = false;
 
   /** Lights the texture is sized for. */
   public readonly maxLights: number;
@@ -105,13 +108,13 @@ export class ForwardBackend implements LightingBackend {
       light.getWorldPosition(scratchPosition);
       buffer[offset] = scratchPosition.x;
       buffer[offset + 1] = scratchPosition.y;
-      buffer[offset + 2] = radiusOf(light);
+      buffer[offset + 2] = lightRadius(light);
       buffer[offset + 3] = light.intensity;
 
       buffer[secondRow + offset] = light.color.r / 255;
       buffer[secondRow + offset + 1] = light.color.g / 255;
       buffer[secondRow + offset + 2] = light.color.b / 255;
-      buffer[secondRow + offset + 3] = heightOf(light);
+      buffer[secondRow + offset + 3] = lightHeight(light);
 
       writeCone(buffer, thirdRow + offset, light);
       written++;
@@ -128,23 +131,6 @@ export class ForwardBackend implements LightingBackend {
   }
 }
 
-/** A light shape this renderer cannot express contributes nothing rather than shading wrongly. */
-const radiusOf = (light: Light): number => {
-  if (light instanceof PointLight || light instanceof SpotLight) {
-    return light.radius;
-  }
-
-  return 0;
-};
-
-const heightOf = (light: Light): number => {
-  if (light instanceof PointLight || light instanceof SpotLight) {
-    return light.height;
-  }
-
-  return 0;
-};
-
 const writeCone = (buffer: Float32Array, offset: number, light: Light): void => {
   if (!(light instanceof SpotLight)) {
     buffer[offset] = 0;
@@ -158,9 +144,9 @@ const writeCone = (buffer: Float32Array, offset: number, light: Light): void => 
   light.getWorldDirection(scratchDirection);
 
   const outer = Math.cos((Math.max(0, Math.min(90, light.angle)) * Math.PI) / 180);
-  // The inner edge sits where the fade begins, so softness 0 collapses the two
+  // The inner edge sits where the fade begins, so a cone softness of 0 collapses the two
   // and the shader's smoothstep degenerates to a hard edge on its own.
-  const inner = Math.cos((Math.max(0, Math.min(90, light.angle * (1 - clamp01(light.softness)))) * Math.PI) / 180);
+  const inner = Math.cos((Math.max(0, Math.min(90, light.angle * (1 - clamp01(light.coneSoftness)))) * Math.PI) / 180);
 
   buffer[offset] = scratchDirection.x;
   buffer[offset + 1] = scratchDirection.y;

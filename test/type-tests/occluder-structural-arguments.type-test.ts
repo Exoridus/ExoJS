@@ -1,0 +1,30 @@
+// The occluder factories take structurally typed arguments so that
+// `@codexo/exojs-lighting` depends on neither `@codexo/exojs-physics` nor
+// `@codexo/exojs-tilemap`. That is a claim about two packages it cannot import,
+// so nothing inside it can check it: the assertion belongs here, where all
+// three surfaces are visible at once.
+//
+// A failure means a shape one of those packages exposes has moved and the
+// one-way dependency has quietly stopped being usable - a project would have to
+// adapt by hand, which is the thing the structural typing exists to avoid.
+
+import { type OccluderPhysicsWorld, Occluders, type OccluderTileLayer } from '@codexo/exojs-lighting';
+import type { PhysicsWorld } from '@codexo/exojs-physics';
+import type { ResolvedTile, TileLayer } from '@codexo/exojs-tilemap';
+
+declare const world: PhysicsWorld;
+declare const layer: TileLayer;
+
+const takesPhysicsWorld = (value: OccluderPhysicsWorld): OccluderPhysicsWorld => value;
+const takesTileLayer = (value: OccluderTileLayer<ResolvedTile>): OccluderTileLayer<ResolvedTile> => value;
+
+takesPhysicsWorld(world);
+takesTileLayer(layer);
+
+// The factories themselves, as a caller writes them.
+Occluders.fromPhysics(world, { staticOnly: true });
+Occluders.fromTilemap(layer);
+
+// `solid` infers the layer's own tile type, so a predicate can read a tile
+// definition without a cast.
+Occluders.fromTilemap(layer, { solid: tile => tile.tileset.getTileDefinition(tile.localTileId)?.collision !== undefined });

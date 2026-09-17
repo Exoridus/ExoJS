@@ -8,7 +8,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import { Lighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { Lighting, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -62,9 +62,10 @@ const createHost = async (): Promise<Host> => {
 
   const context = new RenderingContext(backend);
 
-  // The frame slot's view is the surface in logical units, which is what a
-  // frame pass reads and what the composite quad is sized against.
+  // The world view the frame was drawn through: the lights are placed in world
+  // space and the composite in screen space, both read off `app.rendering`.
   context.view = new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
+  (app as unknown as { rendering: RenderingContext }).rendering = context;
 
   return {
     backend,
@@ -176,7 +177,7 @@ describe('WebGL2 lightmap renderer', () => {
   test('a spot light lights along its own rotation and not behind it', async () => {
     const host = await createHost();
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
-    const spot = lighting.add(new SpotLight({ radius: 40, angle: 30, softness: 0.2, intensity: 1 }));
+    const spot = lighting.add(new SpotLight({ radius: 40, angle: 30, coneSoftness: 0.2, intensity: 1 }));
 
     // Unrotated the cone points along +x, so the lit side is to the right.
     spot.setPosition(32, 32);
@@ -234,6 +235,170 @@ describe('WebGL2 lightmap renderer', () => {
       expect(lighting.activeLightCount).toBe(100);
       expect(readPixel(host.backend, 32, 32)[0]).toBeGreaterThan(120);
     } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+  test('a rotated spot turns its cone with it', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const spot = lighting.add(new SpotLight({ radius: 40, angle: 30, coneSoftness: 0.2, intensity: 1 }));
+
+    // A quarter turn lands the axis on the engine's -y, which is up the screen.
+    spot.setPosition(32, 32);
+    spot.rotation = 90;
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      expect(readPixel(host.backend, 32, 16)[0]).toBeGreaterThan(80);
+      expect(readPixel(host.backend, 32, 48)[0]).toBeLessThan(20);
+      expect(readPixel(host.backend, 48, 32)[0]).toBeLessThan(20);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('the light field follows the camera rather than the surface', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // The camera looks at world (1032, 32), so a light there is on screen centre.
+    host.context.view.setCenter(1032, 32);
+    lighting.add(new PointLight({ radius: 24, intensity: 1 })).setPosition(1032, 32);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      expect(readPixel(host.backend, 32, 32)[0]).toBeGreaterThan(200);
+      expectPixelNear(readPixel(host.backend, 2, 2), [0, 0, 0, 255]);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('an occluder leaves a dark region behind it and lights the side facing the light', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1, softness: 0 })).setPosition(32, 32);
+    // A wall at x = 40, tall enough to cover the light's whole right side.
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 40, y: 4 },
+          { x: 40, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // Behind the wall: shadowed. In front of it and to the left: lit.
+      expect(readPixel(host.backend, 52, 32)[0]).toBeLessThan(20);
+      expect(readPixel(host.backend, 36, 32)[0]).toBeGreaterThan(80);
+      expect(readPixel(host.backend, 20, 32)[0]).toBeGreaterThan(80);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('softness widens the shadow edge instead of adding a pass', async () => {
+    const wall = (): ReturnType<typeof Occluders.fromPolygon> =>
+      Occluders.fromPolygon(
+        [
+          { x: 38, y: 32 },
+          { x: 38, y: 62 },
+        ],
+        { closed: false },
+      );
+
+    /** The pixel just outside the hard shadow edge, for one softness. */
+    const edgePixel = async (softness: number): Promise<number> => {
+      const host = await createHost();
+      const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+      lighting.add(new PointLight({ radius: 34, intensity: 1, softness })).setPosition(32, 32);
+      lighting.occludeFrom(wall());
+      drawWhiteFrame(host);
+
+      try {
+        runFrame(host, lighting);
+
+        return readPixel(host.backend, 50, 31)[0]!;
+      } finally {
+        lighting.destroy();
+        host.destroy();
+      }
+    };
+
+    const hard = await edgePixel(0);
+    const soft = await edgePixel(1);
+
+    // The wall starts level with the light, so the edge runs along y = 32. A
+    // point one pixel above it is fully lit with a point source and bleeding
+    // into the penumbra once the light is given a size.
+    expect(hard).toBeGreaterThan(40);
+    expect(soft).toBeLessThan(hard - 15);
+  });
+
+  test('the occluders debug view draws the silhouettes that were collected', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(32, 32);
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 40, y: 4 },
+          { x: 40, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    lighting.debug = 'occluders';
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      const onLine = readPixel(host.backend, 40, 32);
+
+      // The debug colour, over a region the shadow had left black.
+      expect(onLine[0]).toBeGreaterThan(200);
+      expect(onLine[1]).toBeLessThan(160);
+      expect(readPixel(host.backend, 52, 32)[0]).toBeLessThan(20);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+  test('the composite keeps the frame the right way up', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: new Color(255, 255, 255), lightResolution: 1 });
+    // A band across the top half of the world, with ambient at full strength:
+    // whatever the composite draws is the frame itself.
+    const band = new Sprite(Texture.fromColor(Color.white, 1));
+
+    band.width = canvasSize;
+    band.height = canvasSize / 2;
+    host.context.renderTo(band, { target: host.frameTexture, clear: Color.black });
+
+    try {
+      runFrame(host, lighting);
+
+      expect(readPixel(host.backend, 32, 8)[0]).toBeGreaterThan(200);
+      expect(readPixel(host.backend, 32, 56)[0]).toBeLessThan(20);
+    } finally {
+      band.destroy();
       lighting.destroy();
       host.destroy();
     }

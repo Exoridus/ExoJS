@@ -796,12 +796,19 @@ export default defineConfig([
     },
   },
 
-  // The normal derivation walks its own alpha field by an index it just built
-  // from the loop bounds, clamped to the field at the sampling site, so every
-  // read is in range by construction and `noUncheckedIndexedAccess` would only
-  // add a branch per texel to a load-time pass over every pixel of a texture.
+  // The lighting package's geometry paths walk their own typed arrays by an
+  // index they just built from the loop bounds - an alpha texel, a segment
+  // quadruple, a contour point, a shadow bin. Every read is in range by
+  // construction, and `noUncheckedIndexedAccess` would only add a branch per
+  // element to a load-time pass over a whole texture or to a per-frame pass
+  // over every occluding edge on screen.
   {
-    files: ['packages/exojs-lighting/src/normals/deriveNormals.ts'],
+    files: [
+      'packages/exojs-lighting/src/normals/deriveNormals.ts',
+      'packages/exojs-lighting/src/readAlphaField.ts',
+      'packages/exojs-lighting/src/occluders/*.ts',
+      'packages/exojs-lighting/src/backends/LightmapBackend.ts',
+    ],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
     },

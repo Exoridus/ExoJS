@@ -8,6 +8,15 @@ export interface LightOptions {
   readonly color?: Color;
   /** Linear brightness multiplier. Defaults to `1`. */
   readonly intensity?: number;
+  /**
+   * How soft the shadows this light casts are, in `0..1`. `0` is a point
+   * source with a hard edge; higher values widen the penumbra, as a larger
+   * lamp would. Defaults to `0.25`.
+   *
+   * Softness widens the shadow sample kernel rather than adding a pass, so it
+   * is free of extra draws and can differ per light.
+   */
+  readonly softness?: number;
   /** Whether the light contributes at all. Defaults to `true`. */
   readonly enabled?: boolean;
 }
@@ -39,6 +48,8 @@ export abstract class Light extends RenderNode {
   public color: Color;
   /** Linear brightness multiplier. */
   public intensity: number;
+  /** Penumbra width of this light's shadows, in `0..1`. See {@link LightOptions.softness}. */
+  public softness: number;
   /** When `false`, the light is skipped entirely rather than published as black. */
   public enabled: boolean;
 
@@ -50,6 +61,7 @@ export abstract class Light extends RenderNode {
 
     this.color = options.color ?? Color.white.clone();
     this.intensity = options.intensity ?? 1;
+    this.softness = options.softness ?? 0.25;
     this.enabled = options.enabled ?? true;
   }
 

@@ -1,6 +1,6 @@
 {
   "title": "LightingDebugView",
-  "description": "Intermediate to draw instead of the shaded frame. `null` shades normally. `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. A renderer with no such intermediate - `forward` shades inside the sprite shader - ignores it.",
+  "description": "Intermediate to draw instead of the shaded frame. `null` shades normally. - `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. - `'occluders'` draws the silhouettes the registered sources collected this frame over the shaded scene, which is how you see what the shadows are actually being cast from. A renderer with no such intermediate - `forward` shades inside the sprite shader and casts no shadows - ignores it.",
   "symbol": "LightingDebugView",
   "kind": "type",
   "subsystem": "lighting",
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "Intermediate to draw instead of the shaded frame. `null` shades normally.",
-        "`'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. A renderer with no such intermediate - `forward` shades inside the sprite shader - ignores it."
+        "- `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. - `'occluders'` draws the silhouettes the registered sources collected this frame over the shaded scene, which is how you see what the shadows are actually being cast from.",
+        "A renderer with no such intermediate - `forward` shades inside the sprite shader and casts no shadows - ignores it."
       ],
       "importLine": "import { LightingDebugView } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -31,10 +32,18 @@
       "members": [
         {
           "name": "LightingDebugView",
-          "signature": "\"light\" | null",
+          "signature": "\"light\" | \"occluders\" | null",
           "signatureTokens": [
             {
               "text": "\"light\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"occluders\"",
               "kind": "keyword"
             },
             {

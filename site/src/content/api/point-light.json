@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 85,
+  "memberCount": 86,
   "counts": {
     "constructors": 1,
     "methods": 34,
-    "properties": 36,
+    "properties": 37,
     "events": 14
   },
   "sections": [
@@ -2002,6 +2002,27 @@
           "params": [],
           "returnType": null,
           "description": "Distance in pixels at which the light contributes nothing."
+        },
+        {
+          "name": "softness",
+          "signature": "softness: number",
+          "signatureTokens": [
+            {
+              "text": "softness",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Penumbra width of this light's shadows, in 0..1. See LightOptions.softness."
         },
         {
           "name": "tabIndex",

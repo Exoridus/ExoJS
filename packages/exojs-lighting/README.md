@@ -16,6 +16,7 @@ npm install @codexo/exojs @codexo/exojs-lighting
 - `Lighting` - the system: collects the registered lights, hands them to a renderer, and carries the ambient term. Registers on a `SystemRegistry` like any other system.
 - `LitMaterial` - a `SpriteMaterial` (GLSL + WGSL) that shades a sprite against those lights. Normals are optional: without them the surface is lit as a plane rather than left black.
 - `Normals` - where a material's surface normals come from. `Normals.map(texture)` binds an authored tangent-space map, `Normals.fromAlpha(texture)` derives one from the texture's own silhouette; the interface is open, so a source of your own is a valid argument without this package knowing about it.
+- `Occluders` - what blocks light, read out of the description of the world a project already has: physics colliders, tile layers, a sprite's own silhouette, or an outline you author. Occluders are registered sources rather than a flag on a drawable, and `OccluderSource` is an interface you can implement.
 
 ## Usage
 
@@ -55,17 +56,62 @@ The scene describes what emits; `quality` decides how that becomes pixels. Nothi
 | ----------------------- | ---------------------------------- | ------------------------------------------------- |
 | Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame |
 | Normal mapping          | yes                                | no - the frame it multiplies is already flat      |
+| Shadows                 | no                                 | yes, soft, from registered occluder sources       |
 | Light count             | capped by `maxLights` (default 64) | uncapped                                          |
-| Extra passes            | none                               | two (accumulate, composite)                       |
+| Extra passes            | none                               | two, and a third only while debugging             |
 | Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                        |
 
 ```ts
 const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20, 20, 30) });
 ```
 
-`lightmap` needs the application, because it works on the frame the application drew: it installs two passes in `app.framePasses` and removes them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
+`lightmap` needs the application, because it works on the frame the application drew: it installs its passes in `app.framePasses` and removes them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
 
-`lighting.debug = 'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's colours in the way.
+`lighting.debug = 'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's colours in the way; `lighting.debug = 'occluders'` draws the silhouettes the sources collected, over the shaded scene.
+
+## Shadows you do not model
+
+The work in 2D shadows is data entry, not rendering. Engines that ask for a silhouette per object mostly ship without shadows, because the bookkeeping is not worth it - and a project with physics colliders or a tile layer has described its walls once already.
+
+```ts
+const lighting = new Lighting({ quality: 'lightmap', app });
+
+lighting.occludeFrom(Occluders.fromPhysics(world));
+lighting.occludeFrom(Occluders.fromTilemap(tilemap.layer('walls')));
+lighting.occludeFrom(Occluders.fromAlpha(tree.texture, { node: tree, anchor: tree.anchor }));
+lighting.occludeFrom(Occluders.fromPolygon(trunkOutline, { node: tree }));
+```
+
+| Factory                         | Reads                          | Notes                                                                          |
+| ------------------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
+| `Occluders.fromPhysics(world)`  | collider geometry              | static bodies only by default, never sensors; queried per frame by region      |
+| `Occluders.fromTilemap(layer)`  | occupied cells of a tile layer | boundary edges only, merged into runs; cached per block, keyed on the revision |
+| `Occluders.fromAlpha(texture)`  | a texture's own silhouette     | traced and simplified once, never per frame; placed by an optional node        |
+| `Occluders.fromPolygon(points)` | an outline you author          | the escape hatch, and the right answer when the shadow is not the drawing      |
+
+There is no `castsShadow` flag, in this package or in the core. A flag on a drawable would put lighting vocabulary on a class with no lighting concern, and it would tie the shadow silhouette to the sprite's shape - which is wrong often enough that a tree casts the shadow of its trunk, not of its canopy. Sources keep the two apart while letting the common case stay one line.
+
+`Occluders.fromPhysics` and `Occluders.fromTilemap` take structurally typed arguments, so this package depends on neither `@codexo/exojs-physics` nor `@codexo/exojs-tilemap`: a project without them pulls in nothing, and a project with a collision layer of its own can feed shadows from that instead.
+
+### Softness
+
+`softness` is a property of the light, in `0..1`. `0` is a point source with a hard edge; higher values widen the penumbra the way a larger lamp would. It widens the shadow sample kernel rather than adding a pass, so it costs nothing per light and can differ between them.
+
+```ts
+lighting.add(new PointLight({ radius: 320, softness: 0.6 }));
+```
+
+A spot light's `coneSoftness` is a separate thing: the fade across the edge of its cone, which is the shape of the light rather than the shape of its shadows.
+
+### How a shadow is computed
+
+Every light gets one row of a shadow map: for each of `shadowResolution` angular bins around the light, the distance to the nearest occluding edge as a fraction of the light's radius. The rows are built on the CPU from the segments the sources collected and uploaded as one texture; the light shader turns a fragment's own direction into a bin and compares.
+
+That shape is chosen so the lights stay in a single instanced draw. A shadow pass per light would break the batch the renderer exists for, and the batch is what makes an uncapped light count affordable.
+
+The cost is therefore the visible occluding edges times the lights that can see them, per frame, on top of the fill each light already pays. It is bounded by collecting only the region the visible lights jointly reach, by emitting only boundary edges - a hundred-tile corridor is four segments, not four hundred - and by caching whatever does not change: a traced silhouette is traced once, a tile block is rebuilt only when the layer's revision moves.
+
+`shadowResolution` (default `256`) is the finest shadow edge the renderer can resolve. A bin is accurate to half its own width, which the sample kernel smooths over; a very large light on a high-resolution canvas is the case that wants more bins.
 
 ## How the lights reach the shader
 
@@ -99,7 +145,9 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 | Normal maps                                 | optional, one per material (= per atlas)                  |
 | Rotation / flip aware normals               | yes, via the instance's local-to-world basis              |
 | Extra render passes or draw calls           | `forward`: none; `lightmap`: two passes                   |
-| Shadows, occlusion, light volumes           | no                                                        |
+| Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                        |
+| Shadows from physics, tilemaps or alpha     | yes, via `Occluders.*`                                    |
+| Light cookies, line and sun lights          | no                                                        |
 | Deferred (G-buffer) path                    | no                                                        |
 | Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                     |
 

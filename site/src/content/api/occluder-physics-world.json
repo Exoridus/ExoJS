@@ -1,0 +1,160 @@
+{
+  "title": "OccluderPhysicsWorld",
+  "description": "What Occluders.fromPhysics needs of a physics world: an AABB query over its live colliders. Structural on purpose. `@codexo/exojs-physics` satisfies it as it stands, and this package does not depend on it, so a project without physics pulls none of it in and a project with a collision layer of its own can still feed shadows from it.",
+  "symbol": "OccluderPhysicsWorld",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What Occluders.fromPhysics needs of a physics world: an AABB query over its live colliders.",
+        "Structural on purpose. `@codexo/exojs-physics` satisfies it as it stands, and this package does not depend on it, so a project without physics pulls none of it in and a project with a collision layer of its own can still feed shadows from it."
+      ],
+      "importLine": "import { OccluderPhysicsWorld } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "forEachAabbHit",
+          "signature": "forEachAabbHit(bounds: AabbLike, filter: undefined, callback: (collider: OccluderCollider) => void): void",
+          "signatureTokens": [
+            {
+              "text": "forEachAabbHit",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bounds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AabbLike",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "filter",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "collider",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderCollider",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "bounds",
+              "type": "AabbLike",
+              "optional": false
+            },
+            {
+              "name": "filter",
+              "type": "undefined",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "(collider: OccluderCollider) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+}

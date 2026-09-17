@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -77,6 +77,31 @@
           "params": [],
           "returnType": null,
           "description": "Light colour. Alpha is ignored. Defaults to opaque white."
+        },
+        {
+          "name": "coneSoftness",
+          "signature": "coneSoftness?: number",
+          "signatureTokens": [
+            {
+              "text": "coneSoftness",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How far the cone fades at its edge, as a fraction of angle. 0 is a hard edge, 1 fades from the axis outwards. Defaults to 0.25. This is the shape of the cone. LightOptions.softness is the separate question of how soft the shadows the light casts are."
         },
         {
           "name": "enabled",
@@ -201,7 +226,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How far the cone fades at its edge, as a fraction of angle. 0 is a hard edge, 1 fades from the axis outwards. Defaults to 0.25."
+          "description": "How soft the shadows this light casts are, in 0..1. 0 is a point source with a hard edge; higher values widen the penumbra, as a larger lamp would. Defaults to 0.25. Softness widens the shadow sample kernel rather than adding a pass, so it is free of extra draws and can differ per light."
         }
       ],
       "paragraphs": [],

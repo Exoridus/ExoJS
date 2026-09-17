@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -88,7 +88,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The application whose frame is lit. Required by 'lightmap', unused by 'forward'. Passing it installs two passes in app.framePasses and takes them out again on Lighting.destroy."
+          "description": "The application whose frame is lit. Required by 'lightmap', unused by 'forward'. Passing it installs the renderer's passes in app.framePasses and takes them out again on Lighting.destroy."
         },
         {
           "name": "lightResolution",
@@ -201,6 +201,31 @@
           "params": [],
           "returnType": null,
           "description": "Renderer to shade with. Defaults to 'forward', which needs nothing else; 'lightmap' needs LightingOptions.app, because it works on the frame the application drew."
+        },
+        {
+          "name": "shadowResolution",
+          "signature": "shadowResolution?: number",
+          "signatureTokens": [
+            {
+              "text": "shadowResolution",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Angular bins in each light's shadow map. A bin is the finest shadow edge the renderer can resolve, so a large light on a high-resolution canvas wants more of them; the cost is linear in the light count. Defaults to 256."
         }
       ],
       "paragraphs": [],

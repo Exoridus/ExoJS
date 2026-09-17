@@ -1,7 +1,7 @@
 {
-  "title": "LightOptions",
-  "description": "Options every light shares. Each field is also mutable afterwards.",
-  "symbol": "LightOptions",
+  "title": "AlphaOccluderOptions",
+  "description": "Tuning for Occluders.fromAlpha.",
+  "symbol": "AlphaOccluderOptions",
   "kind": "interface",
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options every light shares. Each field is also mutable afterwards."
+        "Tuning for Occluders.fromAlpha."
       ],
-      "importLine": "import { LightOptions } from '@codexo/exojs-lighting'",
+      "importLine": "import { AlphaOccluderOptions } from '@codexo/exojs-lighting'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "color",
-          "signature": "color?: Color",
+          "name": "anchor",
+          "signature": "anchor?: Readonly<PointLike>",
           "signatureTokens": [
             {
-              "text": "color",
+              "text": "anchor",
               "kind": "name"
             },
             {
@@ -45,45 +45,57 @@
               "kind": "punctuation"
             },
             {
-              "text": "Color",
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Where the node's origin sits in the texture, in 0..1 - the same anchor the drawable uses. Defaults to (0, 0), the top-left corner."
+        },
+        {
+          "name": "node",
+          "signature": "node?: OccluderPlacement",
+          "signatureTokens": [
+            {
+              "text": "node",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderPlacement",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Light colour. Alpha is ignored. Defaults to opaque white."
+          "description": "Node whose world transform places the outline. Without one the outline sits in world space with the texture's top-left pixel at the origin, which is only useful for a backdrop that never moves."
         },
         {
-          "name": "enabled",
-          "signature": "enabled?: boolean",
+          "name": "simplify",
+          "signature": "simplify?: number",
           "signatureTokens": [
             {
-              "text": "enabled",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Whether the light contributes at all. Defaults to true."
-        },
-        {
-          "name": "intensity",
-          "signature": "intensity?: number",
-          "signatureTokens": [
-            {
-              "text": "intensity",
+              "text": "simplify",
               "kind": "name"
             },
             {
@@ -101,14 +113,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Linear brightness multiplier. Defaults to 1."
+          "description": "How far, in texture pixels, the simplified outline may drift from the traced one. 0 keeps every step of the pixel staircase, which is rarely worth its segment count. Defaults to 2."
         },
         {
-          "name": "softness",
-          "signature": "softness?: number",
+          "name": "threshold",
+          "signature": "threshold?: number",
           "signatureTokens": [
             {
-              "text": "softness",
+              "text": "threshold",
               "kind": "name"
             },
             {
@@ -126,7 +138,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How soft the shadows this light casts are, in 0..1. 0 is a point source with a hard edge; higher values widen the penumbra, as a larger lamp would. Defaults to 0.25. Softness widens the shadow sample kernel rather than adding a pass, so it is free of extra draws and can differ per light."
+          "description": "Alpha at or above which a pixel blocks light, in 0..1. Defaults to 0.5."
         }
       ],
       "paragraphs": [],
@@ -140,11 +152,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/lights/Light.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/Light.ts"
+        "label": "packages/exojs-lighting/src/occluders/fromAlpha.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromAlpha.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/lights/Light.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/Light.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/fromAlpha.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromAlpha.ts"
 }

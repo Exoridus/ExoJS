@@ -9,8 +9,11 @@ export interface SpotLightOptions extends LightOptions {
   /**
    * How far the cone fades at its edge, as a fraction of {@link angle}. `0` is a
    * hard edge, `1` fades from the axis outwards. Defaults to `0.25`.
+   *
+   * This is the shape of the cone. {@link LightOptions.softness} is the
+   * separate question of how soft the shadows the light casts are.
    */
-  readonly softness?: number;
+  readonly coneSoftness?: number;
   /** Height above the sprite plane, in pixels. See {@link PointLight.height}. Defaults to `64`. */
   readonly height?: number;
 }
@@ -21,7 +24,7 @@ export interface SpotLightOptions extends LightOptions {
  * own.
  *
  * ```ts
- * lamp.addChild(new SpotLight({ radius: 400, angle: 35, softness: 0.3 }));
+ * lamp.addChild(new SpotLight({ radius: 400, angle: 35, coneSoftness: 0.3 }));
  * ```
  */
 export class SpotLight extends Light {
@@ -29,8 +32,8 @@ export class SpotLight extends Light {
   public radius: number;
   /** Half-angle of the cone in degrees. */
   public angle: number;
-  /** Edge fade as a fraction of {@link angle}. */
-  public softness: number;
+  /** Edge fade as a fraction of {@link angle}. See {@link SpotLightOptions.coneSoftness}. */
+  public coneSoftness: number;
   /** Height above the sprite plane, in pixels. */
   public height: number;
 
@@ -39,7 +42,7 @@ export class SpotLight extends Light {
 
     this.radius = options.radius ?? 320;
     this.angle = options.angle ?? 30;
-    this.softness = options.softness ?? 0.25;
+    this.coneSoftness = options.coneSoftness ?? 0.25;
     this.height = options.height ?? 64;
   }
 
