@@ -7,7 +7,7 @@
  */
 
 import type { LightmapBackend } from '@codexo/exojs-lighting';
-import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { Lighting, LineLight, normalMap, Occluders, PointLight, radiance, SpotLight, SunLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -741,7 +741,10 @@ describe('lightmap renderer WebGPU browser', () => {
   });
   test('the distance field grows away from the wall the mask drew', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Through the renderer that brings the field with it: a project on the
+    // light quads never links the jump flood, so there is nothing for the view
+    // to show there.
+    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
 
     // Asymmetric in both axes on purpose: a field built in the wrong space
     // would still look plausible on a wall through the middle.
@@ -782,7 +785,7 @@ describe('lightmap renderer WebGPU browser', () => {
   });
   test('radiance carries an emitter across the scene, and an occluder still cuts it', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'radiance', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
 
     // Off-centre in both axes: a field laid out in the wrong space would still
     // look plausible around a light in the middle.

@@ -29,9 +29,10 @@ import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
 import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
-import { DistanceField } from './distanceField';
+import type { DistanceField } from './distanceField';
 import type { LightingBackend } from './LightingBackend';
-import { RadianceField, type RadianceFieldOptions } from './radianceField';
+import type { LightingFields } from './radiance';
+import type { RadianceField } from './radianceField';
 import lightCompositeFragment from './shaders/light-composite.frag';
 import lightCompositeVertex from './shaders/light-composite.vert';
 import lightCompositeWgsl from './shaders/light-composite.wgsl';
@@ -120,13 +121,11 @@ export interface LightmapBackendOptions {
   /** Angular bins in each light's shadow map. */
   readonly shadowResolution: number;
   /**
-   * How the light field is filled: one quad per light with a shadow row each,
-   * or a chain of radiance cascades over the occluder field. Cascades need a
-   * renderable float target and are refused without one.
+   * The value-selected renderer's own pieces, or `null` for the light quads.
+   * Passing them is what makes this renderer fill the field with cascades, and
+   * it is the only way their code is linked at all.
    */
-  readonly lightField: 'cascades' | 'quads';
-  /** Tuning for the cascades, read only when they fill the field. */
-  readonly radiance: RadianceFieldOptions;
+  readonly fields: LightingFields | null;
   /**
    * Filters over the composited frame, in order. Empty installs no pass and
    * allocates no intermediate; a non-empty chain makes the composite write an
@@ -259,7 +258,7 @@ export class LightmapBackend implements LightingBackend {
     this._resolution = options.resolution;
     this._shadowResolution = options.shadowResolution;
     this.hdr = options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F);
-    this.quality = options.lightField === 'cascades' ? 'radiance' : 'lightmap';
+    this.quality = options.fields === null ? 'lightmap' : 'radiance';
     // Half-float is filterable and blendable in WebGL2 and WebGPU alike, so the
     // only thing the format changes is the ceiling. It is not the default for a
     // render target, though, and a float target would otherwise point-sample -
@@ -345,9 +344,10 @@ ${sunQuadWgsl}`,
     // the accumulation in the frame slot: the pipeline appends, and a filler
     // switched on later would otherwise march after the light field read it.
     this._filler = this.hdr ? new ShadowMarchFiller(this._maskTarget, this._shadowResolution) : null;
-    this._distanceField = this.hdr ? new DistanceField(this._maskTarget) : null;
-    this._radiance =
-      options.lightField === 'cascades' && this._distanceField !== null ? new RadianceField(this._distanceField.texture, this._target, options.radiance) : null;
+    // Both come from the selected renderer rather than from an import here: a
+    // project on the quads never links a cascade or a jump flood.
+    this._distanceField = options.fields === null || !this.hdr ? null : options.fields.distance(this._maskTarget);
+    this._radiance = options.fields === null || this._distanceField === null ? null : options.fields.radiance(this._distanceField.texture, this._target);
     this._normalTarget = new RenderTexture(1, 1);
     this._normalPass = new CallbackRenderPass(pass => this._drawNormals(pass), {
       target: this._normalTarget,

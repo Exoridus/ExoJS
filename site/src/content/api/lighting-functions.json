@@ -6,10 +6,10 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
-    "methods": 2,
+    "methods": 3,
     "properties": 1,
     "events": 0
   },
@@ -146,6 +146,53 @@
           ],
           "returnType": "NormalSource",
           "description": "Normals derived from a texture's own alpha channel, computed once. The silhouette read as a height field, which gives edges that turn away from the light without anyone authoring a map. It knows nothing about the interior of a shape, so it is a floor rather than a replacement - but it is the difference between art that reacts to light and art that does not. The source must be drawable when this is called: a texture that is still loading yields a flat map rather than waiting."
+        },
+        {
+          "name": "radiance",
+          "signature": "radiance(options: RadianceOptions): LightingRenderer",
+          "signatureTokens": [
+            {
+              "text": "radiance",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RadianceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingRenderer",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "RadianceOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "LightingRenderer",
+          "description": "Light that spreads: the light field filled by a chain of radiance cascades instead of by one quad per light. ts const lighting = new Lighting({ app, quality: radiance({ probeSpacing: 2 }) });  It is a VALUE rather than a name because everything it needs - the cascade chain and the distance field it traces - is linked only by projects that import it. Naming it as a string would put the whole of it into every bundle that reads quality from a config file. Light propagates from what emits rather than falling off inside each light's radius, so a lamp lights the room it stands in, a wall between two rooms leaves the second one dark, and a source with a size casts a penumbra that widens with distance. A SunLight has nowhere to emit from and is skipped, a SpotLight emits like a point, and a surface this renderer lit does not itself become a source - there is no bounced colour yet. Needs the application and a device that can render into float targets, and is refused at construction without either."
         }
       ],
       "paragraphs": [],

@@ -4,6 +4,8 @@
 
 export { sdfResolveShader, sdfSeedShader, sdfStepShader } from './backends/distanceField';
 export type { LightmapBackend, ShadowFillerOption } from './backends/LightmapBackend';
+export type { LightingRenderer, RadianceOptions } from './backends/radiance';
+export { radiance } from './backends/radiance';
 export { cascadeGatherShader, cascadeShader } from './backends/radianceField';
 export { shadowMarchShader } from './backends/shadowMarch';
 export type { LightingDebugView, LightingOptions, LightingQuality, LightingQualityOption } from './Lighting';

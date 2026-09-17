@@ -68,28 +68,32 @@ const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20,
 
 `quality` defaults to `'auto'`, which takes `lightmap` when you passed `app` and `forward` when you did not - so a scene that describes what it wants rather than how gets shadows wherever it can have them. It resolves once, at construction, and `lighting.quality` reports what it settled on. Name a renderer outright when you need a property only that one has: `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count.
 
-`'auto'` never picks `radiance`: it is the one renderer whose look differs from the other two, so it is only ever had by asking for it. It needs the application and a device that can render into float targets, and is refused at construction without either.
-
 ### `radiance`
 
 `radiance` fills the same light field from a chain of radiance cascades. Light PROPAGATES from what emits rather than falling off inside each light's radius, which is a different picture rather than a better one: a lamp lights the whole room it is in, a wall between two rooms leaves the second dark, and a source with a size casts a penumbra that widens with distance the way a real one does.
 
+It is the one renderer named by a VALUE rather than a string:
+
 ```ts
-const lighting = new Lighting({ quality: 'radiance', app, ambient: new Color(8, 8, 14) });
+import { Lighting, PointLight, radiance } from '@codexo/exojs-lighting';
+
+const lighting = new Lighting({ quality: radiance({ probeSpacing: 2 }), app, ambient: new Color(8, 8, 14) });
 
 lighting.add(new PointLight({ radius: 300, intensity: 3, softness: 0.4 }));
 lighting.occludeFrom(Occluders.fromTilemap(level.layer('walls')));
 ```
 
-What a light means here is its SHAPE, not its falloff: `softness` across its reach is the size of the source, and that is what sets how soft its shadows are. `radius` still bounds the region occluders are collected for, and `intensity` and `color` are what it emits.
+That is not decoration. The cascades and the distance field they trace are linked only by a project that imports `radiance`, so a project that does not never pays for them - `'radiance'` as a string would put the whole of it into every bundle that reads `quality` from a config file. `lighting.quality` still reports `'radiance'`, and `'auto'` still never picks it.
+
+Its tuning rides on the factory - `probeSpacing`, `cascades` and `interval`, all optional and all defaulting to something derived from the surface. They change how finely the same scene is sampled, never what is in it.
+
+What a light means here is its SHAPE, not its falloff: `softness` sets the size of the source, and that is what sets how soft its shadows are. `radius` still bounds the region occluders are collected for, and `intensity` and `color` are what it emits.
 
 Three things it does not do, all of them deliberate for now:
 
 - **A surface does not re-emit.** Light is transported from the emitters and occluded by the same field the shadows use, but a lit wall is not itself a source yet - so there is no bounced colour.
 - **A `SunLight` is skipped.** It has nowhere to emit from. Use `ambient`.
 - **A `SpotLight` emits like a point.** A cone is a property of how a light shades, and this renderer transports from a shape instead.
-
-`probeSpacing`, `cascades` and `interval` are exposed as tuning and all default to something derived from the surface. They change how finely the same scene is sampled, never what is in it.
 
 `lightmap` needs the application, because it works on the frame the application drew: it installs its passes in `app.framePasses` and removes them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
 
@@ -159,7 +163,7 @@ import { physicsOccluder, normalMap } from '@codexo/exojs-lighting'; // tree-sha
 
 They do the same thing. The difference is that reaching one property of a namespace object keeps the whole object, so `Occluders.fromPhysics` also carries the marching-squares tracer, the alpha readback and the tile boundary walker that a physics-only project never runs - measured at 34.0 KB against 25.1 KB minified for the named form. Use the namespace while you are finding your way around, and the named form when the bundle matters.
 
-The renderers do not split this way. `quality` is a string read at runtime, so a `forward` project carries the lightmap and radiance renderers whether or not it runs them; the package as a whole is 28.1 KB gzip, of which a `forward` project uses 23.2 KB. Both figures are budgeted in CI.
+The two built-in renderers do not split this way: `quality` is a string read at runtime, so a `forward` project carries the lightmap renderer whether or not it runs it. `radiance` does split, because it is imported rather than named - the package as a whole is 28.1 KB gzip and a `forward` project that never mentions `radiance` uses 17.0 KB. Both figures are budgeted in CI.
 
 ### Light shapes
 

@@ -59,27 +59,31 @@ declare const lighting: Lighting;
 lighting.quality; // 'forward' | 'lightmap' | 'radiance'
 ```
 
-Name a renderer outright when you need a property only that one has — `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count, `'radiance'` for light that spreads.
+Name a renderer outright when you need a property only that one has — `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count, `radiance()` for light that spreads.
 
 ### Light that spreads
 
 `radiance` fills the same light field from a chain of radiance cascades. Light propagates from what emits instead of falling off inside each light's radius, so a lamp lights the room it stands in, a wall between two rooms leaves the second one dark, and a source with a size casts a penumbra that widens with distance.
 
+It is the one renderer asked for by a value rather than a name:
+
 ```ts
 import { Color } from '@codexo/exojs';
-import { Lighting, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, PointLight, radiance } from '@codexo/exojs-lighting';
 import type { Application } from '@codexo/exojs';
 
 declare const app: Application;
 
-const lighting = new Lighting({ quality: 'radiance', app, ambient: new Color(8, 8, 14) });
+const lighting = new Lighting({ quality: radiance(), app, ambient: new Color(8, 8, 14) });
 
-// Under `radiance` a light's `softness` is the SIZE of the source, which is
+// Under `radiance` a light's `softness` sets the SIZE of the source, which is
 // what decides how soft the shadows it casts are.
 lighting.add(new PointLight({ radius: 300, intensity: 3, softness: 0.4 }));
 ```
 
-`'auto'` never picks it. It is the one renderer whose look differs from the other two, it needs a device that can render into float targets, and it is refused at construction where it cannot run — so you never get it by accident.
+The value is what keeps the cascades out of a bundle that never runs them: they are linked by the import, not by a string. Its tuning rides on the same call — `radiance({ probeSpacing: 2, cascades: 5, interval: 1 })`, all optional and all derived from the surface by default.
+
+`'auto'` never picks it. It needs a device that can render into float targets and is refused at construction where it cannot run — so you never get it by accident, and `lighting.quality` still reports `'radiance'` once it is running.
 
 <Callout type="note" title="A lit surface is not a source yet">
   Light is transported from the emitters and occluded by the same field the shadows use, but a wall this renderer lit does not itself emit. There is no bounced colour yet. A `SunLight` has nowhere to emit from and is skipped; a `SpotLight` emits like a point.

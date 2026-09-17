@@ -9,7 +9,7 @@
  */
 
 import type { LightmapBackend } from '@codexo/exojs-lighting';
-import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { Lighting, LineLight, normalMap, Occluders, PointLight, radiance, SpotLight, SunLight } from '@codexo/exojs-lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -826,7 +826,10 @@ describe('WebGL2 lightmap renderer', () => {
   });
   test('the distance field grows away from the wall the mask drew', async () => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    // Through the renderer that brings the field with it: a project on the
+    // light quads never links the jump flood, so there is nothing for the view
+    // to show there.
+    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
 
     // Asymmetric in both axes on purpose: a field built in the wrong space
     // would still look plausible on a wall through the middle.
@@ -845,7 +848,7 @@ describe('WebGL2 lightmap renderer', () => {
     try {
       runFrame(host, lighting);
 
-      const atWall = readPixel(host.backend, 44, 32)[0]!;
+      const atWall = readPixel(host.backend, 43, 32)[0]!;
       const near = readPixel(host.backend, 36, 32)[0]!;
       const far = readPixel(host.backend, 8, 32)[0]!;
 
@@ -856,7 +859,7 @@ describe('WebGL2 lightmap renderer', () => {
       expect(far).toBeGreaterThan(near);
       // Off the end of the wall the nearest blocking texel is its corner, not
       // the column it stands in, so the distance there is the diagonal one.
-      expect(readPixel(host.backend, 44, 1)[0]!).toBeGreaterThan(atWall);
+      expect(readPixel(host.backend, 43, 1)[0]!).toBeGreaterThan(atWall);
     } finally {
       lighting.destroy();
       host.destroy();
@@ -864,7 +867,7 @@ describe('WebGL2 lightmap renderer', () => {
   });
   test('radiance carries an emitter across the scene and dims with distance', async () => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'radiance', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
     // Off-centre in both axes: a field laid out in the wrong space would still
     // look plausible around a light in the middle.
     const lamp = lighting.add(new PointLight({ radius: 40, intensity: 4, color: new Color(255, 0, 0) }));
@@ -895,7 +898,7 @@ describe('WebGL2 lightmap renderer', () => {
 
   test('an occluder still cuts the radiance behind it', async () => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'radiance', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
 
     lighting.add(new PointLight({ radius: 40, intensity: 4 })).setPosition(16, 32);
     lighting.occludeFrom(
@@ -925,7 +928,7 @@ describe('WebGL2 lightmap renderer', () => {
   test('doubling an emitter doubles what arrives', async () => {
     const arriving = async (intensity: number): Promise<number> => {
       const host = await createHost();
-      const lighting = new Lighting({ quality: 'radiance', app: host.app, ambient: Color.black, lightResolution: 1 });
+      const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
 
       lighting.add(new PointLight({ radius: 40, intensity })).setPosition(16, 32);
       drawWhiteFrame(host);

@@ -82,6 +82,18 @@ const MAX_CASCADES = 6;
  */
 const EMITTER_FADE = 0.15;
 
+/**
+ * An emitter's size as a fraction of its reach, per unit of `softness`.
+ *
+ * It is the same scale the light quads read `softness` at - their penumbra
+ * spans at most three percent of a turn - so a light keeps the size it already
+ * had rather than becoming an area source the moment the renderer changes.
+ * Reading `softness` as the size directly made a default light a quarter of its
+ * own reach across, which fills the scene AND blocks it: an emitter goes into
+ * the occluder mask, so an oversized one is an oversized wall.
+ */
+const EMITTER_SIZE = 0.05;
+
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
 const scratchEmitter = { a_emit: [1, EMITTER_FADE, 0, 0] };
@@ -227,7 +239,7 @@ export class RadianceField {
       // Floored well above the tracer's own step: a source the size of one step
       // loses the grazing rays that stop on its rim, and loses more of them the
       // further away the probe is.
-      const radius = Math.max(3 * texel, lightFalloff(light) * light.softness);
+      const radius = Math.max(3 * texel, lightFalloff(light) * light.softness * EMITTER_SIZE);
       const half = lightHalfLength(light) / radius;
 
       light.getWorldPosition(scratchPosition);

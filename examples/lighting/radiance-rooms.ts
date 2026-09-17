@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { Lighting, type LightingQuality, PointLight, polygonOccluder } from '@codexo/exojs-lighting';
+import { Lighting, type LightingQualityOption, PointLight, polygonOccluder, radiance } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
@@ -22,8 +22,8 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // comes through the doorway is a wedge that widens - because nothing is being
 // drawn around the light at all. What the field holds is where light ARRIVES.
 //
-// The second thing to watch is the source size. `softness` under `radiance` is
-// how big the lamp is, so widening it softens every shadow in the scene at
+// The second thing to watch is the source size. `softness` under `radiance`
+// sets how big the lamp is, so widening it softens every shadow in the scene at
 // once, and the penumbra grows with distance from the wall the way a real one
 // does.
 
@@ -71,7 +71,7 @@ const walls: readonly Wall[] = [
 class RadianceRoomsScene extends Scene {
   private world!: Container;
   private lighting!: Lighting;
-  private quality: LightingQuality = 'radiance';
+  private quality: LightingQualityOption = radiance();
   private intensity = 3;
   private softness = 0.35;
   private elapsed = 0;
@@ -113,8 +113,10 @@ class RadianceRoomsScene extends Scene {
       onChange: value => {
         // `quality` resolves once, at construction, so switching renderers means
         // building a new system - which is all a system is here: it owns its
-        // passes and takes them out again on `destroy()`.
-        this.quality = value ? 'radiance' : 'lightmap';
+        // passes and takes them out again on `destroy()`. `radiance` is a value
+        // rather than a name because that is what lets a project that never
+        // uses it leave the cascades out of its bundle.
+        this.quality = value ? radiance() : 'lightmap';
         this.build();
       },
     });

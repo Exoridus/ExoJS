@@ -3,6 +3,7 @@ import { type Application, Color, type Filter, Rectangle, TextureFormat } from '
 import { ForwardBackend } from './backends/ForwardBackend';
 import type { LightingBackend } from './backends/LightingBackend';
 import { LightmapBackend } from './backends/LightmapBackend';
+import type { LightingRenderer } from './backends/radiance';
 import type { Light } from './lights/Light';
 import { lightRadius } from './lights/reach';
 import { SunLight } from './lights/SunLight';
@@ -32,21 +33,20 @@ import type { OccluderSource } from './occluders/OccluderSource';
 export type LightingQuality = 'forward' | 'lightmap' | 'radiance';
 
 /**
- * What {@link LightingOptions.quality} accepts: a renderer by name, or
- * `'auto'` to let the system pick one from what it has been given.
+ * What {@link LightingOptions.quality} accepts: one of the two built-in
+ * renderers by name, `'auto'` to let the system pick from what it has been
+ * given, or a renderer imported as a value.
  *
  * `'auto'` resolves once, at construction, and {@link Lighting.quality} then
  * reports what it settled on - so a scene still never has to name a renderer,
  * and asking which one ran is still answerable.
+ *
+ * `'radiance'` is deliberately NOT a name here. Its cascades and the distance
+ * field they trace are linked only by a project that imports `radiance()`, so
+ * naming it as a string would put the whole of it into every bundle that reads
+ * `quality` from a config file.
  */
-export type LightingQualityOption = LightingQuality | 'auto';
-
-/**
- * Whether the renderer fills the light field with quads or with cascades.
- * `'auto'` never resolves to `radiance`: it is the one renderer with an
- * unbounded tuning surface, so it is only ever had by asking for it.
- */
-const fillsWithCascades = (quality: LightingQuality): boolean => quality === 'radiance';
+export type LightingQualityOption = 'auto' | 'forward' | 'lightmap' | LightingRenderer;
 
 /**
  * Intermediate to draw instead of the shaded frame. `null` shades normally.
@@ -89,8 +89,10 @@ const createBackend = (options: LightingOptions, post: readonly Filter[]): Light
   // renderer works on the application's frame, so an application is the whole
   // of what it needs, and without one there is no frame to light.
   const requested = options.quality ?? 'auto';
+  const renderer = typeof requested === 'object' ? requested : null;
   const resolved: LightingQuality = options.app === undefined ? 'forward' : 'lightmap';
-  const quality = requested === 'auto' ? resolved : requested;
+  const named: LightingQuality = requested === 'auto' || typeof requested === 'object' ? resolved : requested;
+  const quality: LightingQuality = renderer === null ? named : renderer.quality;
 
   // A filter chain is a frame pass whichever renderer is in use, and a frame
   // pass needs the frame slot to install itself in. Refusing it is the only
@@ -100,7 +102,7 @@ const createBackend = (options: LightingOptions, post: readonly Filter[]): Light
     throw new Error('Lighting({ post }) needs the application whose frame the filters run on: pass `app`.');
   }
 
-  if (quality === 'lightmap' || quality === 'radiance') {
+  if (quality !== 'forward') {
     if (options.app === undefined) {
       throw new Error(`Lighting({ quality: '${quality}' }) needs the application whose frame it lights: pass \`app\`.`);
     }
@@ -108,8 +110,8 @@ const createBackend = (options: LightingOptions, post: readonly Filter[]): Light
     // The cascades live in float targets from end to end - a field of radiance
     // has no ceiling to clamp at - so a surface that cannot render one is
     // refused rather than shaded differently under the same name.
-    if (quality === 'radiance' && !options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F)) {
-      throw new Error("Lighting({ quality: 'radiance' }) needs renderable float targets, which this device does not have. Use 'lightmap' or 'auto'.");
+    if (renderer !== null && !options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F)) {
+      throw new Error(`Lighting({ quality: ${quality}() }) needs renderable float targets, which this device does not have. Use 'lightmap' or 'auto'.`);
     }
 
     return new LightmapBackend({
@@ -117,12 +119,7 @@ const createBackend = (options: LightingOptions, post: readonly Filter[]): Light
       post,
       resolution: options.lightResolution ?? 0.5,
       shadowResolution: Math.max(8, Math.round(options.shadowResolution ?? 256)),
-      lightField: fillsWithCascades(quality) ? 'cascades' : 'quads',
-      radiance: {
-        probeSpacing: Math.max(1, Math.round(options.probeSpacing ?? 2)),
-        cascades: options.cascades ?? null,
-        interval: Math.max(0.25, options.interval ?? 1),
-      },
+      fields: renderer?._fields ?? null,
     });
   }
 
@@ -189,27 +186,6 @@ export interface LightingOptions {
    * skipped. Defaults to `64`.
    */
   readonly maxLights?: number;
-  /**
-   * Light-field texels between the finest cascade's probes, under `radiance`.
-   * Lower is sharper and costs a probe grid that is four times as large per
-   * halving. Defaults to `2`.
-   *
-   * This is tuning rather than scene description: it changes how finely the
-   * same scene is sampled, never what is in it.
-   */
-  readonly probeSpacing?: number;
-  /**
-   * Levels in the cascade chain, under `radiance`. Defaults to as many as the
-   * view's own diagonal needs, which is what keeps the far end of a scene from
-   * going dark on a large surface.
-   */
-  readonly cascades?: number;
-  /**
-   * The finest cascade's ray length, in probe spacings, under `radiance`. Each
-   * level covers four times what the level below it did, so this sets where the
-   * whole chain starts. Defaults to `1`.
-   */
-  readonly interval?: number;
 }
 
 /**

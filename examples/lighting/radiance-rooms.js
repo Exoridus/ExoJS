@@ -1,6 +1,6 @@
 // Auto-generated from radiance-rooms.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { Lighting, PointLight, polygonOccluder } from '@codexo/exojs-lighting';
+import { Lighting, PointLight, polygonOccluder, radiance } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
 // draws a light and the one that transports it.
@@ -11,8 +11,8 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // comes through the doorway is a wedge that widens - because nothing is being
 // drawn around the light at all. What the field holds is where light ARRIVES.
 //
-// The second thing to watch is the source size. `softness` under `radiance` is
-// how big the lamp is, so widening it softens every shadow in the scene at
+// The second thing to watch is the source size. `softness` under `radiance`
+// sets how big the lamp is, so widening it softens every shadow in the scene at
 // once, and the penumbra grows with distance from the wall the way a real one
 // does.
 const canvasTexture = (size, paint) => {
@@ -48,7 +48,7 @@ const walls = [
 class RadianceRoomsScene extends Scene {
   world;
   lighting;
-  quality = 'radiance';
+  quality = radiance();
   intensity = 3;
   softness = 0.35;
   elapsed = 0;
@@ -80,8 +80,10 @@ class RadianceRoomsScene extends Scene {
       onChange: value => {
         // `quality` resolves once, at construction, so switching renderers means
         // building a new system - which is all a system is here: it owns its
-        // passes and takes them out again on `destroy()`.
-        this.quality = value ? 'radiance' : 'lightmap';
+        // passes and takes them out again on `destroy()`. `radiance` is a value
+        // rather than a name because that is what lets a project that never
+        // uses it leave the cascades out of its bundle.
+        this.quality = value ? radiance() : 'lightmap';
         this.build();
       },
     });

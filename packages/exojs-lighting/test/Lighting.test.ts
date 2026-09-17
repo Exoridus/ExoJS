@@ -17,6 +17,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { ForwardBackend } from '../src/backends/ForwardBackend';
 import type { LightmapBackend } from '../src/backends/LightmapBackend';
+import { radiance } from '../src/backends/radiance';
 import { Lighting } from '../src/Lighting';
 import { LineLight } from '../src/lights/LineLight';
 import { PointLight } from '../src/lights/PointLight';
@@ -334,8 +335,10 @@ describe('Lighting', () => {
 
     expect(forwardApp.framePasses.size).toBe(1);
     expect(lightmap.post).toEqual([grade]);
-    // The lightmap renderer's own seven, plus the chain.
-    expect(lightmapApp.framePasses.size).toBe(8);
+    // The lightmap renderer's own six, plus the chain. The distance field and
+    // the cascades are not among them: they arrive with the renderer that is
+    // imported rather than named.
+    expect(lightmapApp.framePasses.size).toBe(7);
 
     forward.destroy();
     lightmap.destroy();
@@ -374,7 +377,7 @@ describe('Lighting', () => {
 
   test('radiance is a renderer of its own, and only ever had by asking for it', () => {
     const app = fakeApp();
-    const lighting = new Lighting({ quality: 'radiance', app });
+    const lighting = new Lighting({ quality: radiance(), app });
 
     expect(lighting.quality).toBe('radiance');
     // The light quads' accumulation plus the emitters' field and the chain that
@@ -387,8 +390,8 @@ describe('Lighting', () => {
   });
 
   test('radiance is refused where its float targets cannot be rendered into', () => {
-    expect(() => new Lighting({ quality: 'radiance', app: fakeApp(false) })).toThrow(/float/);
-    expect(() => new Lighting({ quality: 'radiance' })).toThrow(/app/);
+    expect(() => new Lighting({ quality: radiance(), app: fakeApp(false) })).toThrow(/float/);
+    expect(() => new Lighting({ quality: radiance() })).toThrow(/app/);
   });
 
   test('the shadow march is installed only where its float atlas can be rendered into', () => {
@@ -396,9 +399,9 @@ describe('Lighting', () => {
     const lighting = new Lighting({ quality: 'lightmap', app });
     const backend = lighting.backend as LightmapBackend;
 
-    // Two passes fewer than the float-capable renderer - neither the march nor
-    // the distance field it shares the mask with - and the request for the
-    // marching filler resolves back to the segment walk rather than failing.
+    // One pass fewer than the float-capable renderer - no march - and the
+    // request for the marching filler resolves back to the segment walk rather
+    // than failing.
     expect(app.framePasses.size).toBe(5);
 
     backend.shadowFiller = 'gpu';
