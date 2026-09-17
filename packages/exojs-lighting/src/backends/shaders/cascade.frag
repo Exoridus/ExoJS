@@ -31,9 +31,16 @@ vec2 fieldUv(vec2 world) {
 /**
  * Walk one ray over this cascade's own interval.
  *
- * Returns the radiance it found in `rgb` and, in `a`, whether it reached the
- * end of the interval without hitting anything - which is what says the
- * cascade above has something to add.
+ * Returns the radiance it found in `rgb` and, in `a`, how much of the ray got
+ * through - which is what the cascade above is then scaled by.
+ *
+ * A ray is a CONE, not a line: it owns one angular sector of its probe, so at
+ * distance `t` it covers `t * tan(pi / directions)` across. Weighting a hit by
+ * how much of that footprint the surface fills is what makes the result
+ * continuous in the scene's geometry. With a binary hit, a source a few texels
+ * across is found by a whole number of rays, that number changes as the source
+ * moves, and the field flickers - measured at 15 to 25 percent for a quarter of
+ * a probe spacing.
  */
 vec4 trace(vec2 origin, vec2 direction) {
     float minStep = max(uniforms.uTexel, 0.0001);
@@ -54,15 +61,21 @@ vec4 trace(vec2 origin, vec2 direction) {
         }
 
         float distance = texture(uDistance, uv).r * uniforms.uFar;
+        // The ray's own width here, never below a texel: the field cannot
+        // resolve anything finer, and a zero-width cone is the binary hit again.
+        float footprint = max(minStep, travelled * uniforms.uCone);
 
         // Sphere tracing: a step of the distance to the nearest surface cannot
         // pass through one, which is what makes a whole cascade affordable
         // where marching a texel at a time is not.
-        if (distance <= minStep) {
+        if (distance <= footprint) {
             // Sampled past the surface rather than at the point the walk
-            // stopped at: the stop is a texel SHORT of what it hit, and an
-            // emitter's radiance is inside it, not in the gap.
-            return vec4(texture(uEmission, fieldUv(origin + direction * (travelled + distance + minStep))).rgb, 0.0);
+            // stopped at: the stop is short of what it hit, and an emitter's
+            // radiance is inside it, not in the gap.
+            vec3 emission = texture(uEmission, fieldUv(origin + direction * (travelled + distance + minStep))).rgb;
+            float coverage = clamp(1.0 - distance / footprint, 0.0, 1.0);
+
+            return vec4(emission * coverage, 1.0 - coverage);
         }
 
         travelled += max(distance, minStep);
@@ -134,10 +147,11 @@ void main() {
     vec2 origin = uniforms.uOrigin + (vec2(probe) + 0.5) * uniforms.uSpacing;
     vec4 walked = trace(origin, vec2(cos(angle), sin(angle)));
 
-    // Only a ray that got through has room for what the level above found: one
-    // that ended on a surface is already carrying that surface's radiance.
+    // Scaled by what got through: a ray that ended on a surface is already
+    // carrying that surface's radiance, and one that grazed it carries part of
+    // both.
     if (uniforms.uMerge > 0.5 && walked.a > 0.0) {
-        walked.rgb += merged(probe, direction, tile);
+        walked.rgb += walked.a * merged(probe, direction, tile);
     }
 
     fragColor = vec4(walked.rgb, 1.0);

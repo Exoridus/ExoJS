@@ -21,9 +21,14 @@ fn fieldUv(world: vec2<f32>) -> vec2<f32> {
 /**
  * Walk one ray over this cascade's own interval.
  *
- * Returns the radiance it found in `rgb` and, in `a`, whether it reached the
- * end of the interval without hitting anything - which is what says the
- * cascade above has something to add.
+ * Returns the radiance it found in `rgb` and, in `a`, how much of the ray got
+ * through - which is what the cascade above is then scaled by.
+ *
+ * A ray is a CONE, not a line: it owns one angular sector of its probe, so at
+ * distance `t` it covers `t * tan(pi / directions)` across. Weighting a hit by
+ * how much of that footprint the surface fills is what makes the result
+ * continuous in the scene's geometry, where a binary hit makes it flicker as a
+ * small source crosses from one ray into the next.
  */
 fn trace(origin: vec2<f32>, direction: vec2<f32>) -> vec4<f32> {
     let minStep = max(uniforms.uTexel, 0.0001);
@@ -45,17 +50,22 @@ fn trace(origin: vec2<f32>, direction: vec2<f32>) -> vec4<f32> {
         }
 
         let distance = textureSampleLevel(uDistance, uDistanceSampler, uv, 0.0).r * uniforms.uFar;
+        // The ray's own width here, never below a texel: the field cannot
+        // resolve anything finer, and a zero-width cone is the binary hit again.
+        let footprint = max(minStep, travelled * uniforms.uCone);
 
         // Sphere tracing: a step of the distance to the nearest surface cannot
         // pass through one, which is what makes a whole cascade affordable
         // where marching a texel at a time is not.
-        if (distance <= minStep) {
+        if (distance <= footprint) {
             // Sampled past the surface rather than at the point the walk
-            // stopped at: the stop is a texel SHORT of what it hit, and an
-            // emitter's radiance is inside it, not in the gap.
+            // stopped at: the stop is short of what it hit, and an emitter's
+            // radiance is inside it, not in the gap.
             let surface = fieldUv(origin + direction * (travelled + distance + minStep));
+            let emission = textureSampleLevel(uEmission, uEmissionSampler, surface, 0.0).rgb;
+            let coverage = clamp(1.0 - distance / footprint, 0.0, 1.0);
 
-            return vec4<f32>(textureSampleLevel(uEmission, uEmissionSampler, surface, 0.0).rgb, 0.0);
+            return vec4<f32>(emission * coverage, 1.0 - coverage);
         }
 
         travelled = travelled + max(distance, minStep);
@@ -130,10 +140,11 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
 
     var walked = trace(origin, vec2<f32>(cos(angle), sin(angle)));
 
-    // Only a ray that got through has room for what the level above found: one
-    // that ended on a surface is already carrying that surface's radiance.
+    // Scaled by what got through: a ray that ended on a surface is already
+    // carrying that surface's radiance, and one that grazed it carries part of
+    // both.
     if (uniforms.uMerge > 0.5 && walked.a > 0.0) {
-        walked = vec4<f32>(walked.rgb + merged(probe, direction, tile), walked.a);
+        walked = vec4<f32>(walked.rgb + walked.a * merged(probe, direction, tile), walked.a);
     }
 
     return vec4<f32>(walked.rgb, 1.0);

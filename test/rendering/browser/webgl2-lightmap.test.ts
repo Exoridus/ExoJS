@@ -1063,4 +1063,30 @@ describe('WebGL2 lightmap renderer', () => {
       }
     });
   });
+  test('a small source thins out as one over the distance, not faster', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    // A point source with no size of its own, floored at three tracer steps -
+    // the case a ray's own width decides, because the source is narrower than
+    // it. In two dimensions what arrives from a source is its angular size,
+    // which halves when the distance doubles; a ray that took a hit as all or
+    // nothing lost it faster than that, and by more the further away it was.
+    lighting.add(new PointLight({ radius: 40, intensity: 0.6, softness: 0 })).setPosition(16, 32);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      const near = readPixel(host.backend, 28, 32)[0]!;
+      const far = readPixel(host.backend, 40, 32)[0]!;
+
+      expect(near).toBeGreaterThan(20);
+      expect(near / far).toBeGreaterThan(1.7);
+      expect(near / far).toBeLessThan(2.4);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
 });

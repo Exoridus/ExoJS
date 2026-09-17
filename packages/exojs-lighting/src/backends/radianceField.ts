@@ -41,6 +41,7 @@ const cascadeUniforms = {
   uTexel: UniformType.Float,
   uFar: UniformType.Float,
   uMerge: UniformType.Float,
+  uCone: UniformType.Float,
 } as const;
 
 /**
@@ -395,6 +396,9 @@ export class RadianceField {
       this._cascadeFilter.uniforms.uTile.set(tile);
       this._cascadeFilter.uniforms.uRange.set(start, (this._interval * (4 ** (level + 1) - 1)) / 3);
       this._cascadeFilter.uniforms.uMerge.set(level === this._levels - 1 ? 0 : 1);
+      // Half the angular sector one ray owns, as a slope: the coarser the
+      // level, the more directions it has and the narrower each one is.
+      this._cascadeFilter.uniforms.uCone.set(Math.tan(Math.PI / (tile * tile)));
       this._cascadeFilter.apply(backend, source, destination);
 
       source = destination;
