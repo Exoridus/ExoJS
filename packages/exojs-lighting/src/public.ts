@@ -2,6 +2,8 @@
 // Importing this entry performs no registration: a Lighting system is
 // constructed directly and added to the system registry that should tick it.
 
+export type { LightmapBackend, ShadowFillerOption } from './backends/LightmapBackend';
+export { shadowMarchShader } from './backends/shadowMarch';
 export type { LightingDebugView, LightingOptions, LightingQuality, LightingQualityOption } from './Lighting';
 export { Lighting } from './Lighting';
 export type { LightOptions } from './lights/Light';

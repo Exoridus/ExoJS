@@ -14,7 +14,7 @@
 // fails right here, on either form, whether or not any spec renders it.
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
-import { litSpriteShader } from '@codexo/exojs-lighting';
+import { litSpriteShader, shadowMarchShader } from '@codexo/exojs-lighting';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
@@ -79,6 +79,7 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
+  ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],
 ]);
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
@@ -163,6 +164,9 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'drop-shadow.frag'],
   ['default-vertex.vert', 'lut-3d.frag'],
   ['default-vertex.vert', 'lut-rgb1d.frag'],
+  // The lighting package's shadow march runs on the same fullscreen quad: the
+  // occluder mask in, one shadow row per light out.
+  ['default-vertex.vert', 'shadow-march.frag'],
   // The custom sprite-material path: the engine owns the vertex stage, and the
   // lighting package's lit fragment is the in-repo counterpart it links with.
   ['sprite-material.vert', 'lit-sprite.frag'],

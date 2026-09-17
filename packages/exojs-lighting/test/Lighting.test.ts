@@ -329,14 +329,30 @@ describe('Lighting', () => {
 
     expect(forwardApp.framePasses.size).toBe(1);
     expect(lightmap.post).toEqual([grade]);
-    // The lightmap renderer's own five, plus the chain.
-    expect(lightmapApp.framePasses.size).toBe(6);
+    // The lightmap renderer's own six, plus the chain.
+    expect(lightmapApp.framePasses.size).toBe(7);
 
     forward.destroy();
     lightmap.destroy();
 
     expect(forwardApp.framePasses.size).toBe(0);
     expect(lightmapApp.framePasses.size).toBe(0);
+  });
+
+  test('the shadow march is installed only where its float atlas can be rendered into', () => {
+    const app = fakeApp(false);
+    const lighting = new Lighting({ quality: 'lightmap', app });
+    const backend = lighting.backend as LightmapBackend;
+
+    // One pass fewer than the float-capable renderer, and the request for the
+    // marching filler resolves back to the segment walk rather than failing.
+    expect(app.framePasses.size).toBe(5);
+
+    backend.shadowFiller = 'gpu';
+
+    expect(backend.shadowFiller).toBe('cpu');
+
+    lighting.destroy();
   });
 
   test('no filters means no pass at all, which is what keeps forward free of them', () => {

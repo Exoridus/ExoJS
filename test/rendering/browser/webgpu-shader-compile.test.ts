@@ -37,6 +37,7 @@
  */
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
+import { shadowMarchShader } from '@codexo/exojs-lighting';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
@@ -88,6 +89,9 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'BlurFilter (generated uniform block)', source: blurShader._resolveWgsl(filterUniformGroup)! },
   { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShader._resolveWgsl(filterUniformGroup)! },
   { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShader._resolveWgsl(filterUniformGroup)! },
+  // The lighting package's shadow march is a filter of the same shape, and the
+  // only WGSL in that package this suite can reach as a fixed string.
+  { name: 'lighting shadow march (generated uniform block)', source: shadowMarchShader._resolveWgsl(filterUniformGroup)! },
 ];
 
 // On the software (swiftshader / lavapipe) adapter the WebGPU device can drop

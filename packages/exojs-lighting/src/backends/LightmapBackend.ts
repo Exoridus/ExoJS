@@ -44,6 +44,7 @@ import occluderDebugWgsl from './shaders/occluder-debug.wgsl';
 import sunQuadFragment from './shaders/sun-quad.frag';
 import sunQuadVertex from './shaders/sun-quad.vert';
 import sunQuadWgsl from './shaders/sun-quad.wgsl';
+import { ShadowMarchFiller } from './shadowMarch';
 
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 const noCone = -1;
@@ -96,6 +97,13 @@ const segmentQuad = (): Geometry =>
     vertexData: new Float32Array([0, -0.5, 1, -0.5, 1, 0.5, 0, 0.5]),
     indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
   });
+
+/**
+ * Which filler writes the polar shadow rows: the CPU segment walk, the GPU
+ * march over the occluder mask, or the renderer's own choice.
+ * @internal
+ */
+export type ShadowFillerOption = 'auto' | 'cpu' | 'gpu';
 
 /** Construction options for {@link LightmapBackend}. */
 export interface LightmapBackendOptions {
@@ -211,6 +219,16 @@ export class LightmapBackend implements LightingBackend {
   private readonly _postPass: FilterPass | null;
   private readonly _ambient: Color = Color.black.clone();
   private _shadowMap: DataTexture<TextureFormat.R32F>;
+  /**
+   * The directional lights' rows, in a texture of their own. A sun's row is
+   * linear where a point light's is polar, so the two are numbered per texture
+   * rather than by one counter across both - which is also what lets the polar
+   * rows move to a render target without the suns having to follow.
+   */
+  private _sunShadowMap: DataTexture<TextureFormat.R32F>;
+  /** Built only where a float render target exists; `null` pins the renderer to the CPU filler. */
+  private readonly _filler: ShadowMarchFiller | null;
+  private _fillerRequest: ShadowFillerOption = 'auto';
   private _activeCount = 0;
   private _surfaceCount = 0;
   private _debug: LightingDebugView = null;
@@ -229,6 +247,7 @@ export class LightmapBackend implements LightingBackend {
       scaleMode: ScaleModes.Linear,
     });
     this._shadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.R32F });
+    this._sunShadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.R32F });
 
     this._sunMaterial = new MeshMaterial({
       shader: new Shader({
@@ -244,7 +263,7 @@ ${sunQuadWgsl}`,
       // Declaration order is the group(2) binding order on WebGPU: the shadow
       // rows at bindings 1/2 and the normal prepass at 3/4, matching
       // `sun-quad.wgsl`.
-      textures: { u_shadow: this._shadowMap, u_normal: transparentTexture() },
+      textures: { u_shadow: this._sunShadowMap, u_normal: transparentTexture() },
       blendMode: BlendModes.Additive,
     });
 
@@ -300,6 +319,10 @@ ${sunQuadWgsl}`,
       label: 'lighting:occluder-mask',
       enabled: false,
     });
+    // Built here rather than on demand so its pass can sit between the mask and
+    // the accumulation in the frame slot: the pipeline appends, and a filler
+    // switched on later would otherwise march after the light field read it.
+    this._filler = this.hdr ? new ShadowMarchFiller(this._maskTarget, this._shadowResolution) : null;
     this._normalTarget = new RenderTexture(1, 1);
     this._normalPass = new CallbackRenderPass(pass => this._drawNormals(pass), {
       target: this._normalTarget,
@@ -326,7 +349,13 @@ ${sunQuadWgsl}`,
     this._debugPass = new CallbackRenderPass(pass => this._drawOccluders(pass), { label: 'lighting:occluder-debug' });
 
     this._resize();
-    this._app.framePasses.addPass(this._maskPass).addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
+    this._app.framePasses.addPass(this._maskPass);
+
+    if (this._filler !== null) {
+      this._app.framePasses.addPass(this._filler.pass);
+    }
+
+    this._app.framePasses.addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
 
     if (this._postPass !== null) {
       this._app.framePasses.addPass(this._postPass);
@@ -357,7 +386,7 @@ ${sunQuadWgsl}`,
     // shader that would have to be kept in step with the first.
     const intermediate = view === 'light' || view === 'normals' || view === 'mask';
 
-    this._maskPass.enabled = view === 'mask';
+    this._syncMask();
     this._compositeMaterial.setTexture('u_frame', intermediate ? whiteTexture() : this._app.frameTexture);
     this._compositeMaterial.setTexture('u_light', this._debugTexture(view));
   }
@@ -376,6 +405,33 @@ ${sunQuadWgsl}`,
     return this._target;
   }
 
+  /**
+   * The filler actually writing the polar shadow rows, which is what a caller
+   * reads back after asking for one: `'gpu'` needs a float render target, and
+   * where there is none the request resolves to `'cpu'` rather than failing.
+   *
+   * `'auto'` is `'cpu'`. The march covers only what the occluder mask holds -
+   * the camera's view - so it stays opt-in until its picture is on the record
+   * against the segment walk's.
+   * @internal
+   */
+  public get shadowFiller(): 'cpu' | 'gpu' {
+    return this._fillerRequest === 'gpu' && this._filler !== null ? 'gpu' : 'cpu';
+  }
+
+  public set shadowFiller(filler: ShadowFillerOption) {
+    if (this._fillerRequest === filler) {
+      return;
+    }
+
+    this._fillerRequest = filler;
+    this._syncMask();
+
+    for (const batch of this._lightBatches.values()) {
+      batch.material?.setTexture('u_shadow', this._boundShadows());
+    }
+  }
+
   public publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void {
     this._writeSurfaces(surfaces);
     this._resize();
@@ -387,9 +443,15 @@ ${sunQuadWgsl}`,
     }
 
     const bins = this._shadowResolution;
-    const shadows = occluders.count > 0 ? this._shadowMap.buffer : null;
+    const casting = occluders.count > 0;
+    const marching = casting && this.shadowFiller === 'gpu';
+    const shadows = casting ? this._shadowMap.buffer : null;
     const segments = occluders.segments;
     const segmentCount = occluders.count;
+
+    if (marching) {
+      this._filler!.begin(lights.length);
+    }
 
     let written = 0;
 
@@ -413,21 +475,26 @@ ${sunQuadWgsl}`,
       scratchInstance.a_light[2] = light.intensity;
       scratchInstance.a_light[3] = half / falloff;
 
-      if (shadows === null) {
+      if (!casting) {
         scratchInstance.a_shadow[0] = noShadow;
       } else {
         scratchInstance.a_shadow[0] = written;
-        buildShadowRow(
-          segments,
-          segmentCount,
-          scratchPosition.x,
-          scratchPosition.y,
-          scratchDirection.x,
-          scratchDirection.y,
-          radius,
-          shadows.subarray(written * bins, (written + 1) * bins),
-          bins,
-        );
+
+        if (marching) {
+          this._filler!.write(written, scratchPosition.x, scratchPosition.y, radius, scratchDirection.x, scratchDirection.y);
+        } else {
+          buildShadowRow(
+            segments,
+            segmentCount,
+            scratchPosition.x,
+            scratchPosition.y,
+            scratchDirection.x,
+            scratchDirection.y,
+            radius,
+            shadows!.subarray(written * bins, (written + 1) * bins),
+            bins,
+          );
+        }
       }
 
       scratchInstance.a_shadow[1] = light.softness;
@@ -457,20 +524,28 @@ ${sunQuadWgsl}`,
       written++;
     }
 
-    written = this._writeSuns(lights, shadows, segments, segmentCount, written);
+    const suns = this._writeSuns(lights, casting, segments, segmentCount);
 
-    if (shadows !== null && written > 0) {
+    if (casting && written > 0 && !marching) {
       this._shadowMap.commit();
     }
 
-    this._activeCount = written;
+    if (casting && suns > 0) {
+      this._sunShadowMap.commit();
+    }
+
+    this._activeCount = written + suns;
     this._writeMask(occluders);
     this._writeOccluderDebug(occluders);
+
+    if (marching) {
+      this._filler!.end(this._app.rendering.view.getBounds(), this._maskTexel());
+    }
   }
 
   /**
-   * Write the directional lights, continuing the shadow-row numbering the point
-   * lights left off at.
+   * Write the directional lights, numbering their rows from zero in a shadow
+   * texture of their own.
    *
    * A sun's quad is the camera's own world box and its shadow row is a line of
    * strips across the light rather than a circle of rays around it, because
@@ -479,10 +554,10 @@ ${sunQuadWgsl}`,
    * is what the system arranges by folding the view into that region whenever a
    * sun is registered.
    */
-  private _writeSuns(lights: readonly Light[], shadows: Float32Array | null, segments: Float32Array, segmentCount: number, rows: number): number {
+  private _writeSuns(lights: readonly Light[], casting: boolean, segments: Float32Array, segmentCount: number): number {
     this._sunBatch.clear();
 
-    let written = rows;
+    let written = 0;
 
     for (const light of lights) {
       if (!(light instanceof SunLight) || !light.enabled || light.intensity <= 0) {
@@ -513,7 +588,7 @@ ${sunQuadWgsl}`,
       const depthMin = alongCenter - alongReach;
       const depthSpan = 2 * alongReach;
 
-      if (shadows === null) {
+      if (!casting) {
         scratchSun.a_sun[3] = noShadow;
       } else {
         scratchSun.a_sun[3] = written;
@@ -528,7 +603,7 @@ ${sunQuadWgsl}`,
           spanSize,
           depthMin,
           depthSpan,
-          shadows.subarray(written * this._shadowResolution, (written + 1) * this._shadowResolution),
+          this._sunShadowMap.buffer.subarray(written * this._shadowResolution, (written + 1) * this._shadowResolution),
           this._shadowResolution,
         );
       }
@@ -569,6 +644,11 @@ ${sunQuadWgsl}`,
   public destroy(): void {
     this._app.onResize.remove(this._onResize);
     this._app.framePasses.removePass(this._maskPass);
+
+    if (this._filler !== null) {
+      this._app.framePasses.removePass(this._filler.pass);
+      this._filler.destroy();
+    }
     this._app.framePasses.removePass(this._normalPass);
     this._app.framePasses.removePass(this._lightPass);
     this._app.framePasses.removePass(this._compositePass);
@@ -614,6 +694,7 @@ ${sunQuadWgsl}`,
 
     this._normalBatches.clear();
     this._shadowMap.destroy();
+    this._sunShadowMap.destroy();
     this._maskTarget.destroy();
     this._normalTarget.destroy();
     this._target.destroy();
@@ -769,7 +850,7 @@ ${sunQuadWgsl}`,
       // Declaration order is the group(2) binding order on WebGPU: the shadow
       // rows at bindings 1/2, the normal prepass at 3/4, the cookie at 5/6,
       // matching `light-quad.wgsl`.
-      textures: { u_shadow: this._shadowMap, u_normal: this._boundNormals(), u_cookie: cookie },
+      textures: { u_shadow: this._boundShadows(), u_normal: this._boundNormals(), u_cookie: cookie },
       blendMode: BlendModes.Additive,
     });
     const batch = new RenderBatch(this._lightGeometry, material, {
@@ -783,6 +864,34 @@ ${sunQuadWgsl}`,
     this._lightBatches.set(cookie, batch);
 
     return batch;
+  }
+
+  /** The polar rows the light shader should read: the marched atlas, or the walked ones. */
+  private _boundShadows(): DataTexture<TextureFormat.R32F> | RenderTexture {
+    return this.shadowFiller === 'gpu' ? this._filler!.texture : this._shadowMap;
+  }
+
+  /**
+   * Keep the mask pass on for whoever reads the mask - the debug view, or the
+   * march - and off for everyone else, and keep its target sized to match.
+   */
+  private _syncMask(): void {
+    const marching = this.shadowFiller === 'gpu';
+
+    this._maskPass.enabled = this._debug === 'mask' || marching;
+
+    if (this._filler !== null) {
+      this._filler.pass.enabled = marching;
+    }
+
+    this._resize();
+  }
+
+  /** One mask texel in world units, along whichever axis resolves it worse. */
+  private _maskTexel(): number {
+    const view = this._app.rendering.view.getBounds();
+
+    return Math.max(view.width / Math.max(1, this._maskTarget.width), view.height / Math.max(1, this._maskTarget.height));
   }
 
   /** The normal field the light shader should read: the prepass, or nothing at all. */
@@ -862,9 +971,7 @@ ${normalPrepassWgsl}`,
       return;
     }
 
-    const view = this._app.rendering.view.getBounds();
-    // One mask texel in world units, along whichever axis resolves it worse.
-    const texel = Math.max(view.width / Math.max(1, this._maskTarget.width), view.height / Math.max(1, this._maskTarget.height));
+    const texel = this._maskTexel();
     const segments = occluders.segments;
 
     for (let index = 0; index < occluders.count; index++) {
@@ -941,13 +1048,15 @@ ${normalPrepassWgsl}`,
     }
 
     this._shadowMap.destroy();
+    this._sunShadowMap.destroy();
     this._shadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
+    this._sunShadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
 
     for (const batch of this._lightBatches.values()) {
-      batch.material?.setTexture('u_shadow', this._shadowMap);
+      batch.material?.setTexture('u_shadow', this._boundShadows());
     }
 
-    this._sunMaterial.setTexture('u_shadow', this._shadowMap);
+    this._sunMaterial.setTexture('u_shadow', this._sunShadowMap);
   }
 
   private readonly _onResize = (): void => {

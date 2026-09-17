@@ -8,6 +8,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
+import type { LightmapBackend } from '@codexo/exojs-lighting';
 import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
 
 import { type Application } from '#core/Application';
@@ -716,6 +717,58 @@ describe('WebGL2 lightmap renderer', () => {
       expect(readPixel(host.backend, 32, 56)[0]).toBeLessThan(20);
     } finally {
       band.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+  test('the GPU filler paints the shadow the segment walk paints', async () => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const backend = lighting.backend as LightmapBackend;
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1, softness: 0 })).setPosition(32, 32);
+    // The same wall the segment walk's own case uses, so the two pictures are
+    // compared over a shape whose shadow is already on the record.
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 40, y: 4 },
+          { x: 40, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    /** Behind the wall, in front of it, and on the light's other side. */
+    const probes = (): readonly number[] => {
+      runFrame(host, lighting);
+
+      return [readPixel(host.backend, 52, 32)[0]!, readPixel(host.backend, 36, 32)[0]!, readPixel(host.backend, 20, 32)[0]!];
+    };
+
+    try {
+      const walked = probes();
+
+      backend.shadowFiller = 'gpu';
+
+      // A float render target is what the march writes into, and WebGL2 only
+      // has one with `EXT_color_buffer_float`. Without it the request resolves
+      // back to the segment walk and there is nothing to compare.
+      if (backend.shadowFiller !== 'gpu') {
+        return;
+      }
+
+      const marched = probes();
+
+      expect(marched[0]).toBeLessThan(20);
+      expect(marched[1]).toBeGreaterThan(80);
+      expect(marched[2]).toBeGreaterThan(80);
+
+      for (let probe = 0; probe < marched.length; probe++) {
+        expect(Math.abs(marched[probe]! - walked[probe]!)).toBeLessThan(12);
+      }
+    } finally {
       lighting.destroy();
       host.destroy();
     }

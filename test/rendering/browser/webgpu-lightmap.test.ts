@@ -6,6 +6,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
+import type { LightmapBackend } from '@codexo/exojs-lighting';
 import { Lighting, LineLight, normalMap, Occluders, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
@@ -606,6 +607,68 @@ describe('lightmap renderer WebGPU browser', () => {
 
       expect(at(2, 2)).toBeGreaterThan(100);
       expect(at(2, 2)).toBeLessThan(160);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+  test('the GPU filler paints the shadow the segment walk paints', async ctx => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const backend = lighting.backend as LightmapBackend;
+
+    lighting.add(new PointLight({ radius: 40, intensity: 1, softness: 0 })).setPosition(32, 32);
+    // The same wall the segment walk's own case uses, so the two pictures are
+    // compared over a shape whose shadow is already on the record.
+    lighting.occludeFrom(
+      Occluders.fromPolygon(
+        [
+          { x: 40, y: 4 },
+          { x: 40, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      const walk = await renderFrame(host, lighting);
+
+      if (walk === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      // Behind the wall, in front of it, and on the light's other side. Read
+      // before the second frame overwrites the surface they come from.
+      const walked = [walk(52, 32), walk(36, 32), walk(20, 32)];
+
+      backend.shadowFiller = 'gpu';
+
+      if (backend.shadowFiller !== 'gpu') {
+        return;
+      }
+
+      const march = await renderFrame(host, lighting);
+
+      if (march === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      const marched = [march(52, 32), march(36, 32), march(20, 32)];
+
+      expect(marched[0]).toBeLessThan(20);
+      expect(marched[1]).toBeGreaterThan(80);
+      expect(marched[2]).toBeGreaterThan(80);
+
+      for (let probe = 0; probe < marched.length; probe++) {
+        expect(Math.abs(marched[probe]! - walked[probe]!)).toBeLessThan(12);
+      }
     } finally {
       lighting.destroy();
       host.destroy();
