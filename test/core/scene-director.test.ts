@@ -5,6 +5,7 @@ import { TweenSystem } from '#animation/TweenSystem';
 import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import type { FrameBudget } from '#core/FrameBudget';
 import { logger } from '#core/Logger';
 import { PhasedSceneTransition } from '#core/scene/PhasedSceneTransition';
 import { Scene } from '#core/scene/Scene';
@@ -132,11 +133,12 @@ const createApplicationStub = (): ApplicationStub => {
 const tick = (manager: SceneDirector, app: ReturnType<typeof createApplicationStub>, milliseconds = 16): void => {
   const time = Time.toSeconds(Time.milliseconds(milliseconds));
 
-  manager.preUpdate(time);
+  manager.preFrame(time);
   manager.update(time);
   manager._updateTransition(time);
   manager.draw(app.rendering);
   manager._renderTransition(app.rendering);
+  manager.postFrame(time, { timeRemaining: () => Time.seconds(0.004) });
 };
 
 // `ThisType<Scene>` is what makes `this` inside a hook literal the scene the
@@ -527,6 +529,29 @@ describe('SceneDirector', () => {
     tick(manager, app);
 
     expect(drawArg).toBe(app.rendering);
+  });
+
+  test('postFrame dispatches the scene systems post-frame phase, gated by pause', async () => {
+    const postFrame = vi.fn();
+    const TestScene = makeSceneClass();
+    const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
+    const budget: FrameBudget = { timeRemaining: () => Time.seconds(0.004) };
+    const delta = Time.toSeconds(Time.milliseconds(16));
+
+    await manager.change(TestScene);
+    manager.currentScene?.systems.add({ postFrame });
+
+    manager.postFrame(delta, budget);
+    expect(postFrame).toHaveBeenCalledTimes(1);
+    expect(postFrame).toHaveBeenLastCalledWith(delta, budget);
+
+    manager.pause();
+    manager.postFrame(delta, budget);
+    expect(postFrame).toHaveBeenCalledTimes(1);
+
+    manager.resume();
+    manager.postFrame(delta, budget);
+    expect(postFrame).toHaveBeenCalledTimes(2);
   });
 
   test('fixedUpdate additionally dispatches the scene systems fixed-update phase', async () => {

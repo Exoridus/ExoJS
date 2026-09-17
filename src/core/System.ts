@@ -1,12 +1,14 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
+import type { FrameBudget } from './FrameBudget';
 import type { Destroyable, Synchronous } from './types';
 import type { Seconds } from './units';
 
 /**
- * The four scheduler phases a {@link System} may participate in, one per
+ * The five scheduler phases a {@link System} may participate in, one per
  * dispatch stage of the {@link Application} frame loop: pre-simulation sync,
- * fixed-timestep simulation, variable-rate update, and rendering.
+ * fixed-timestep simulation, variable-rate update, rendering, and post-flush
+ * work.
  *
  * Every phase must be synchronous. The registry dispatches them on the frame
  * path and never awaits a result, so an `async` phase is a compile error (see
@@ -26,13 +28,29 @@ export interface SystemMethods {
    * input in {@link SystemMethods.update} would see the previous frame's
    * snapshot, because `update` runs after the fixed steps.
    */
-  preUpdate?(delta: Seconds): Synchronous;
-  /** Advance by one fixed-timestep `step` ({@link Application.fixedTimeStep}). Called zero or more times per frame, after {@link SystemMethods.preUpdate} and before {@link SystemMethods.update}. */
+  preFrame?(delta: Seconds): Synchronous;
+  /** Advance by one fixed-timestep `step` ({@link Application.fixedTimeStep}). Called zero or more times per frame, after {@link SystemMethods.preFrame} and before {@link SystemMethods.update}. */
   fixedUpdate?(step: Seconds): Synchronous;
   /** Advance by the variable frame `delta`. Called once per frame, after fixed steps. */
   update?(delta: Seconds): Synchronous;
   /** Render into `context`. Called once per frame, after {@link SystemMethods.update}. */
   draw?(context: RenderingContext): Synchronous;
+  /**
+   * Act on a frame that is already out of the application's hands. Called once
+   * per frame, after the backend has flushed and the frame-time statistic has
+   * been written - a diagnostic overlay reporting true frame cost, a network
+   * system sending state once the frame is drawn, work that wants whatever
+   * time the frame has left.
+   *
+   * `budget` reports the time remaining before the frame reaches its target
+   * duration; see {@link FrameBudget}. It is the only phase handed one,
+   * because it is the only point in the frame at which the figure is
+   * meaningful.
+   *
+   * Scene-graph mutation is allowed here and is picked up by the next frame's
+   * consumers rather than this one's.
+   */
+  postFrame?(delta: Seconds, budget: FrameBudget): Synchronous;
 }
 
 /**

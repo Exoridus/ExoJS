@@ -339,12 +339,12 @@ describe('Real de-spatialization — AudioSystem tick-set membership', () => {
 
     // Sanity: still ticked while spatial.
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    system.preUpdate(frameDelta);
+    system.preFrame(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
     tickSpy.mockClear();
 
     voice.position = null; // de-spatializes: unregisters from the system's tick set
-    system.preUpdate(frameDelta);
+    system.preFrame(frameDelta);
     expect(tickSpy).not.toHaveBeenCalled();
 
     pannerSpy.restore();
@@ -369,7 +369,7 @@ describe('Real de-spatialization — AudioSystem tick-set membership', () => {
 
     // And it is ticked again.
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    system.preUpdate(frameDelta);
+    system.preFrame(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
 
     pannerSpy.restore();

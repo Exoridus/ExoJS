@@ -3,6 +3,7 @@
  * reads, without an Application around it.
  */
 import { FrameLoop } from '#core/application/FrameLoop';
+import { seconds } from '#core/units';
 import type { PlatformAdapter } from '#platform/PlatformAdapter';
 
 interface HostStub {
@@ -239,5 +240,115 @@ describe('FrameLoop', () => {
     expect(loop.activeSeconds).toBeCloseTo(0.25, 6);
 
     loop.destroy();
+  });
+
+  describe('displayFrameSeconds', () => {
+    /** Run `count` frames whose raw deltas are `deltasMs`, cycling through it. */
+    const runFrames = (loop: FrameLoop, host: HostStub, deltasMs: readonly number[], count: number): void => {
+      let timestamp = 0;
+
+      for (let i = 0; i < count; i++) {
+        timestamp += deltasMs[i % deltasMs.length]!;
+        host.setNow(timestamp);
+        loop.beginFrame(timestamp);
+      }
+    };
+
+    test('reports the 1/60 seed until the window has filled', () => {
+      const host = createHost();
+      const loop = new FrameLoop(host.platform, vi.fn(), stepMs);
+
+      loop.start();
+
+      expect(loop.displayFrameSeconds).toBeCloseTo(1 / 60, 6);
+
+      runFrames(loop, host, [1000 / 144], 59);
+
+      expect(loop.displayFrameSeconds).toBeCloseTo(1 / 60, 6);
+
+      loop.destroy();
+    });
+
+    test('tracks the cadence once 60 frames have been seen', () => {
+      const host = createHost();
+      const loop = new FrameLoop(host.platform, vi.fn(), stepMs);
+
+      loop.start();
+      runFrames(loop, host, [1000 / 144], 60);
+
+      expect(loop.displayFrameSeconds).toBeCloseTo(1 / 144, 5);
+
+      loop.destroy();
+    });
+
+    test('is unaffected by slow frames, because the minimum cannot be dragged up', () => {
+      const host = createHost();
+      const loop = new FrameLoop(host.platform, vi.fn(), stepMs);
+
+      loop.start();
+      runFrames(loop, host, [1000 / 60], 60);
+
+      expect(loop.displayFrameSeconds).toBeCloseTo(1 / 60, 5);
+
+      // Nine out of every ten frames now take four vsync intervals. The
+      // estimate has to stay at the interval the tenth still hits.
+      runFrames(loop, host, [4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 1000 / 60], 60);
+
+      expect(loop.displayFrameSeconds).toBeCloseTo(1 / 60, 5);
+
+      loop.destroy();
+    });
+
+    test('clamps a cadence faster than 240 Hz and slower than 30 Hz', () => {
+      const fast = createHost();
+      const fastLoop = new FrameLoop(fast.platform, vi.fn(), stepMs);
+
+      fastLoop.start();
+      runFrames(fastLoop, fast, [1], 60);
+
+      expect(fastLoop.displayFrameSeconds).toBeCloseTo(1 / 240, 6);
+
+      fastLoop.destroy();
+
+      const slow = createHost();
+      const slowLoop = new FrameLoop(slow.platform, vi.fn(), stepMs);
+
+      slowLoop.start();
+      runFrames(slowLoop, slow, [200], 60);
+
+      expect(slowLoop.displayFrameSeconds).toBeCloseTo(1 / 30, 6);
+
+      slowLoop.destroy();
+    });
+
+    test('holds an explicitly configured target against any cadence', () => {
+      const host = createHost();
+      const loop = new FrameLoop(host.platform, vi.fn(), stepMs, seconds(1 / 120));
+
+      expect(loop.displayFrameSeconds).toBeCloseTo(1 / 120, 6);
+
+      loop.start();
+      runFrames(loop, host, [1000 / 30], 120);
+
+      expect(loop.displayFrameSeconds).toBeCloseTo(1 / 120, 6);
+
+      loop.destroy();
+    });
+
+    test('ignores a zero delta rather than pinning the minimum at the clamp floor', () => {
+      const host = createHost();
+      const loop = new FrameLoop(host.platform, vi.fn(), stepMs);
+
+      loop.start();
+
+      // A manual tick alongside a live loop repeats the previous timestamp.
+      host.setNow(0);
+      loop.beginFrame(0);
+      runFrames(loop, host, [1000 / 60], 60);
+
+      expect(loop.displayFrameSeconds).toBeCloseTo(1 / 60, 5);
+
+      loop.destroy();
+    });
   });
 });

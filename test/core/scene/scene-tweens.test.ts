@@ -369,7 +369,7 @@ describe('SceneTweens — activation against a real TweenSystem', () => {
     const tween = tweens.create(target).to({ x: 100 }, 1).start();
 
     // Started while dormant - the app-wide system must not drive it yet.
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(target.x).toBe(0);
 
     state = SceneState.Active;
@@ -378,7 +378,7 @@ describe('SceneTweens — activation against a real TweenSystem', () => {
     // Activation must hand a live tween over completely, not merely bind it:
     // it never gets another `start()` call to enter it into the update list.
     expect(trackedCount(system)).toBe(1);
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(target.x).toBeCloseTo(50, 5);
     expect(tween.state).toBe(TweenState.Active);
   });
@@ -399,7 +399,7 @@ describe('SceneTweens — activation against a real TweenSystem', () => {
     // The binding survived, so a later start() still reaches the system.
     tween.start();
     expect(trackedCount(system)).toBe(1);
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(target.x).toBeCloseTo(50, 5);
   });
 
@@ -416,7 +416,7 @@ describe('SceneTweens — activation against a real TweenSystem', () => {
     tweens.restore();
 
     expect(trackedCount(system)).toBe(1);
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(target.x).toBeCloseTo(50, 5);
   });
 });

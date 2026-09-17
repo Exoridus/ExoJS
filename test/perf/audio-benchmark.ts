@@ -253,7 +253,7 @@ const results: BenchmarkResult[] = [];
   );
 }
 
-// --- Scenario 2: AudioSystem.preUpdate() - listener tick + 20 spatial voices ---
+// --- Scenario 2: AudioSystem.preFrame() - listener tick + 20 spatial voices ---
 {
   const FRAME_DELTA = seconds(1 / 60);
 
@@ -272,7 +272,7 @@ const results: BenchmarkResult[] = [];
         }
       },
       tick() {
-        system!.preUpdate(FRAME_DELTA);
+        system!.preFrame(FRAME_DELTA);
       },
       teardown() {
         for (const s of spatialSounds) {

@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "SystemPhase",
-          "signature": "\"draw\" | \"fixedUpdate\" | \"preUpdate\" | \"update\"",
+          "signature": "\"draw\" | \"fixedUpdate\" | \"postFrame\" | \"preFrame\" | \"update\"",
           "signatureTokens": [
             {
               "text": "\"draw\"",
@@ -49,7 +49,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"preUpdate\"",
+              "text": "\"postFrame\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"preFrame\"",
               "kind": "keyword"
             },
             {

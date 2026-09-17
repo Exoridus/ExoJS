@@ -95,7 +95,7 @@ export class GestureRecognizer {
    * hold advances only on frames the owning {@link InputSystem} actually
    * runs, so it freezes with a stopped application instead of maturing in the
    * background. The caller decides whether the current frame counts at all -
-   * {@link InputSystem.preUpdate} skips this call entirely while the active
+   * {@link InputSystem.preFrame} skips this call entirely while the active
    * scene is paused, so a finger left on the screen through a pause menu does
    * not complete a long-press behind it.
    *

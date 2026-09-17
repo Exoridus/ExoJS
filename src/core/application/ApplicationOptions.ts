@@ -211,6 +211,17 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    */
   fixedTimeStep?: number;
   /**
+   * Duration of one display frame in **seconds**, the target a frame has to
+   * stay inside for {@link FrameBudget.timeRemaining} to report time left.
+   *
+   * Omit it and the engine estimates the display's cadence as the minimum
+   * frame delta over a rolling window, `requestAnimationFrame` being
+   * vsync-locked. Pass it to pin the target instead: a deterministic figure
+   * for a test, or an application that deliberately aims at a rate other than
+   * the display's.
+   */
+  displayFrameTime?: number;
+  /**
    * Extension selection - the only way an Application is equipped.
    *
    * `undefined` or `[]` → Core only. `[a, b, ...]` → Core plus exactly these.

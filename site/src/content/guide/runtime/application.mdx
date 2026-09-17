@@ -200,40 +200,66 @@ Once an application exists, its subsystems are accessible as properties:
 - `app.audio` — the [`AudioSystem`](/ExoJS/en/api/audio-system/) for playback, busses, and the spatial listener.
 - `app.systems` — the [`SystemRegistry`](/ExoJS/en/api/system-registry/) for app-scoped `System` instances.
 - `app.tweens` — the global `TweenSystem`.
-- `app.jobs` — the [`JobScheduler`](/ExoJS/en/api/job-scheduler/) that spreads heavy work over frames.
+- `app.coroutines` — the [`CoroutineSystem`](/ExoJS/en/api/coroutine-system/) that spreads heavy work over frames.
 
 Most code reaches these through the active scene (`this.app.input`, `this.app.tweens`) rather than holding a top-level reference, but both work.
 
 ## Spreading work over frames
 
-`update` and `draw` are synchronous on purpose: a frame has a fixed budget, and an `async` update would resume in a later microtask, after the frame that started it. Work that does not fit into one frame (building a world, computing hundreds of paths, rebuilding a visibility index) goes through `app.jobs` instead. A job is a generator; every `yield` hands control back, and the scheduler resumes it on the next frame until its 2 ms budget is spent.
+`update` and `draw` are synchronous on purpose: a frame has a fixed budget, and an `async` update would resume in a later microtask, after the frame that started it. Work that does not fit into one frame (building a world, computing hundreds of paths, rebuilding a visibility index) goes through a **coroutine** instead: a generator whose every `yield` hands control back to the frame. `scene.coroutines` is the scene-bound view of the one driver the application owns as `app.coroutines`.
+
+The driver runs in the `postFrame` phase, after the backend has flushed, so its work overlaps the GPU drawing the frame just submitted — and, unlike a fixed budget guessed up front, it knows how much of the frame is actually left. Each coroutine is stepped at most once per frame, and the first step of a frame happens whatever the budget says, so a coroutine always makes progress.
+
+That one rule is what lets the same primitive serve two shapes of work. A body that never looks at the budget advances exactly one unit per frame, which is what sequencing means:
 
 ```ts
-import type { Application, Job } from '@codexo/exojs';
+declare function toggle(): void;
 
-declare const application: Application;
-declare const chunks: readonly { place(): void }[];
-
-function* buildWorld(): Generator<void, number> {
-    let placed = 0;
-    for (const chunk of chunks) {
-        chunk.place();
-        placed++;
+function* blinkThreeTimes(): Generator<void, void> {
+    for (let i = 0; i < 3; i++) {
+        toggle();
         yield;
     }
-    return placed;
 }
+```
 
-const job: Job<number> = application.jobs.run(buildWorld());
+A body that does look at it fills whatever the frame has left. It is written curried so the call site needs no wrapper lambda, and what it yields becomes `coroutine.progress` — a loading bar needs no side channel:
 
-job.done.then(placed => {
+```ts
+import type { FrameBudget, Scene } from '@codexo/exojs';
+
+declare const scene: Scene;
+declare const chunks: readonly { place(): void }[];
+
+const buildWorld = (parts: readonly { place(): void }[]) =>
+    function* (budget: FrameBudget): Generator<number, number> {
+        let placed = 0;
+
+        while (placed < parts.length) {
+            do {
+                parts[placed++]!.place();
+            } while (placed < parts.length && budget.timeRemaining() > 0);
+
+            yield placed / parts.length;
+        }
+
+        return placed;
+    };
+
+const build = scene.coroutines.queue(buildWorld(chunks), { name: 'world' });
+
+build.done.then(placed => {
     console.log(`placed ${placed} chunks`);
 });
 ```
 
-The handle works from both worlds. Frame code polls `job.status` and `job.result`; async code awaits `job.done`, which rejects when the job throws or is cancelled. Higher `priority` jobs run first, equal priorities take turns, and `cancel()` stops a generator at its current `yield` and runs its `finally` blocks. Pass `{ scope }` with a `DestroyScope` so a screen that closes mid-job cancels it, or give a scene its own `JobScheduler` via `scene.systems.add(new JobScheduler())` when the jobs should not outlive the scene.
+`queue()` also takes a ready-made iterator (`scene.coroutines.queue(blinkThreeTimes())`) for the sequencing case, which has no use for a budget.
 
-Yield often enough that a single step stays well inside the budget: the scheduler cannot interrupt a step, only decline to start the next one.
+The handle works from both worlds. Frame code polls `status`, `progress` and `result`; async code awaits `done`, which rejects when the body throws or the coroutine is cancelled. `cancel()` stops it at its current `yield` and runs its `finally` blocks, `priority` is writable so work the player is now waiting on can be promoted, and `{ signal }` reaches an existing `AbortSignal` in. A coroutine queued on `scene.coroutines` stops advancing while the scene is paused or suspended, resumes exactly where it left off, and is cancelled when the scene ends.
+
+The budget defaults to a quarter of what the frame has left, capped at 4 ms, so a frame that is already behind withdraws instead of being handed more work. Set `app.coroutines.budget` to an absolute `Seconds` value if you want a fixed figure instead.
+
+Yield often enough that a single step stays well inside the slice: the driver cannot interrupt a step, only decline to start the next one. A step that overruns by a wide margin is reported in development, naming the coroutine's `name`.
 
 ## Per-frame signals
 

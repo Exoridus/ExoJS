@@ -13,6 +13,7 @@ import { UIRoot } from '#ui/UIRoot';
 
 import type { SceneAnimations } from './SceneAnimations';
 import type { SceneAudio } from './SceneAudio';
+import type { SceneCoroutines } from './SceneCoroutines';
 import type { SceneInputs } from './SceneInputs';
 import type { SceneInteraction } from './SceneInteraction';
 import type { SceneLoader } from './SceneLoader';
@@ -56,6 +57,7 @@ import type { ApplicationLike, ApplicationOf } from './sceneTypes';
  *
  * Scene-bound facilities ({@link Scene.systems}, {@link Scene.loader},
  * {@link Scene.inputs}, {@link Scene.interaction}, {@link Scene.tweens},
+ * {@link Scene.coroutines},
  * {@link Scene.audio}, {@link Scene.animations}) are unavailable during
  * construction and class-field initialization - they become available once
  * the scene is attached and
@@ -236,6 +238,18 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    */
   public get tweens(): SceneTweens {
     return this._requireScope('tweens').tweens;
+  }
+
+  /**
+   * Scene-bound coroutine facade over `app.coroutines`. Work queued via
+   * `this.coroutines.queue(...)` stops advancing while the scene is paused or
+   * suspended, resumes exactly where it left off, and is cancelled when the
+   * scene ends permanently - no manual cleanup required.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get coroutines(): SceneCoroutines {
+    return this._requireScope('coroutines').coroutines;
   }
 
   /**
@@ -420,23 +434,6 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * so an `async` override would drop its timing and swallow its errors.
    */
   public update(_delta: Seconds): Synchronous {
-    // override in subclass
-  }
-
-  /**
-   * Pre-simulation hook, called once per frame before this frame's fixed
-   * steps - and therefore before {@link Scene.fixedUpdate} and
-   * {@link Scene.update}. Runs after the engine's own core systems, so this
-   * frame's input snapshot is already current here.
-   *
-   * Use it for state the simulation must see this frame rather than next:
-   * feeding networked or replayed input, resolving intents before physics
-   * consumes them. Ordinary gameplay belongs in {@link Scene.update}, which
-   * runs after the simulation. Default is a no-op. Override in subclass.
-   *
-   * Must be synchronous - see {@link Scene.update}.
-   */
-  public preUpdate(_delta: Seconds): Synchronous {
     // override in subclass
   }
 

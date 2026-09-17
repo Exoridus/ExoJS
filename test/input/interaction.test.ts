@@ -239,7 +239,7 @@ const createAppNoScene = (
  * node listeners.
  */
 const flushInteractions = (im: InteractionSystem): void => {
-  im.preUpdate(frameDelta);
+  im.preFrame(frameDelta);
 };
 
 // ---------------------------------------------------------------------------
@@ -1676,12 +1676,12 @@ describe('InteractionSystem — multi-Application isolation', () => {
     // singleton the node registered with whichever system was constructed
     // last, breaking exactly this case.
     dispatchPointer(b.signals.onPointerDown, { x: 25, y: 25 });
-    imB.preUpdate(frameDelta);
+    imB.preFrame(frameDelta);
     expect(down).not.toHaveBeenCalled();
 
     // Only app A's own pointer reaches it.
     dispatchPointer(a.signals.onPointerDown, { x: 25, y: 25 });
-    imA.preUpdate(frameDelta);
+    imA.preFrame(frameDelta);
     expect(down).toHaveBeenCalledTimes(1);
 
     imA.destroy();
@@ -2818,7 +2818,7 @@ describe('InteractionSystem — miscellaneous', () => {
 
     im.attachRoot(scene.root);
 
-    expect(() => im.preUpdate(frameDelta)).not.toThrow();
+    expect(() => im.preFrame(frameDelta)).not.toThrow();
 
     im.destroy();
   });
@@ -2874,7 +2874,7 @@ describe('InteractionSystem — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(onDown).not.toHaveBeenCalled();
 
@@ -2895,7 +2895,7 @@ describe('InteractionSystem — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(onDown).toHaveBeenCalledTimes(1);
 
@@ -2919,7 +2919,7 @@ describe('InteractionSystem — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(onDown).toHaveBeenCalledTimes(1);
 
@@ -2943,11 +2943,11 @@ describe('InteractionSystem — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(onDown).not.toHaveBeenCalled();
 
     appMutable.scenes._transitionGateOpen = false;
-    im.preUpdate(frameDelta); // the stale queued event must NOT replay once the gate reopens
+    im.preFrame(frameDelta); // the stale queued event must NOT replay once the gate reopens
 
     expect(onDown).not.toHaveBeenCalled();
 
@@ -2961,7 +2961,7 @@ describe('InteractionSystem — dispatch gating', () => {
 
     expect(() => {
       dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
-      im.preUpdate(frameDelta);
+      im.preFrame(frameDelta);
     }).not.toThrow();
 
     im.destroy();

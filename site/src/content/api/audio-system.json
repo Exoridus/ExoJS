@@ -382,11 +382,11 @@
           "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities). When source is a Sound, options widens to SoundPlayOptions and additionally accepts replace: true, which stops all currently-playing instances of that sound before the new one starts (singleton-replace mode)."
         },
         {
-          "name": "preUpdate",
-          "signature": "preUpdate(_delta: Seconds): void",
+          "name": "preFrame",
+          "signature": "preFrame(_delta: Seconds): void",
           "signatureTokens": [
             {
-              "text": "preUpdate",
+              "text": "preFrame",
               "kind": "name"
             },
             {
@@ -426,7 +426,7 @@
             }
           ],
           "returnType": "void",
-          "description": "SystemMethods.preUpdate phase, at SystemOrder.CoreAudio. The frame delta is unused here (hence _delta)."
+          "description": "SystemMethods.preFrame phase, at SystemOrder.CoreAudio. The frame delta is unused here (hence _delta)."
         },
         {
           "name": "registerBus",

@@ -132,7 +132,7 @@ describe('UI interaction routing', () => {
 
     button.onPointerDown.add(handler);
     dispatchPointer(signals.onPointerDown, 80, 80);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -148,7 +148,7 @@ describe('UI interaction routing', () => {
 
     // (150, 50) is outside the unscaled 100x50 panel...
     dispatchPointer(signals.onPointerDown, 150, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -156,7 +156,7 @@ describe('UI interaction routing', () => {
     // panel's own layout size changing.
     scene.ui.uiScale = 2;
     dispatchPointer(signals.onPointerDown, 150, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(panel.uiWidth).toBe(100);
@@ -179,7 +179,7 @@ describe('UI interaction routing', () => {
     button.onPointerDown.add(uiHandler);
     worldSprite.onPointerDown.add(worldHandler);
     dispatchPointer(signals.onPointerDown, 80, 80);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(uiHandler).toHaveBeenCalledTimes(1);
     expect(worldHandler).not.toHaveBeenCalled();
@@ -202,7 +202,7 @@ describe('UI interaction routing', () => {
     button.onPointerDown.add(uiHandler);
     worldSprite.onPointerDown.add(worldHandler);
     dispatchPointer(signals.onPointerDown, 400, 400);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(uiHandler).not.toHaveBeenCalled();
     expect(worldHandler).toHaveBeenCalledTimes(1);

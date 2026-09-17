@@ -206,7 +206,7 @@ describe('Pointer channel buffer — slot reuse', () => {
     // undispatched.
     pointerLeave(canvas, { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     expect(ch(im, Pointer.Slot0Active)).toBe(0);
-    im.preUpdate(0 as never);
+    im.preFrame(0 as never);
     im._finishInteractionFrame();
 
     // Pointer 2 should land in slot 0 again (front of free-list), now that
@@ -345,7 +345,7 @@ describe('Gesture — pinch', () => {
 
     expect(pinchSpy).not.toHaveBeenCalled();
 
-    im.preUpdate(0 as never);
+    im.preFrame(0 as never);
 
     expect(pinchSpy).toHaveBeenCalledTimes(1);
     const [scale] = pinchSpy.mock.calls[0] as [number, unknown];
@@ -389,7 +389,7 @@ describe('Gesture — long press', () => {
     while (remaining > 0) {
       const stepMs = Math.min(16, remaining);
 
-      im.preUpdate(Time.toSeconds(Time.milliseconds(stepMs)));
+      im.preFrame(Time.toSeconds(Time.milliseconds(stepMs)));
       remaining -= stepMs;
     }
   };
@@ -409,7 +409,7 @@ describe('Gesture — long press', () => {
 
     // Frames without a delta advance the hold by nothing at all - the hold is
     // measured in engine time, so a frame boundary on its own cannot mature it.
-    im.preUpdate(Time.seconds(0));
+    im.preFrame(Time.seconds(0));
 
     expect(longPressSpy).not.toHaveBeenCalled();
 

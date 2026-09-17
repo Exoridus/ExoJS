@@ -1,4 +1,5 @@
 import type { Application } from '#core/Application';
+import type { FrameBudget } from '#core/FrameBudget';
 import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
@@ -970,6 +971,29 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
+   * Frame-opening entry point called by {@link Application.update} ahead of
+   * every other phase: runs the active scene's systems' `preFrame` phase,
+   * gated by its `SceneScope` state.
+   */
+  public preFrame(delta: Seconds): this {
+    this._activeScope?.preFrame(delta);
+
+    return this;
+  }
+
+  /**
+   * Frame-closing entry point called by {@link Application.update} once the
+   * backend has flushed: runs the active scene's systems' `postFrame` phase,
+   * gated by its `SceneScope` state. `budget` reports the frame's remaining
+   * time - see {@link FrameBudget}.
+   */
+  public postFrame(delta: Seconds, budget: FrameBudget): this {
+    this._activeScope?.postFrame(delta, budget);
+
+    return this;
+  }
+
+  /**
    * Per-frame logic entry point called by {@link Application.update}, after
    * this frame's fixed steps: for the active scene, gated by its
    * `SceneScope` state, runs `update()` then its systems' update phase.
@@ -977,12 +1001,6 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * active, regardless of state. Drawing is a separate call - see
    * {@link SceneDirector.draw}.
    */
-  public preUpdate(delta: Seconds): this {
-    this._activeScope?.preUpdate(delta);
-
-    return this;
-  }
-
   public update(delta: Seconds): this {
     const scope = this._activeScope;
 

@@ -142,7 +142,7 @@ const createApp = (): {
 };
 
 const flushInteractions = (im: InteractionSystem): void => {
-  im.preUpdate(frameDelta);
+  im.preFrame(frameDelta);
 };
 
 // ---------------------------------------------------------------------------
@@ -535,7 +535,7 @@ describe('InteractionSystem — spatial index: addChild registers subtree', () =
     expect(im._getDebugQuadtree()).not.toBeNull();
 
     // Both children should be discoverable via hit test.
-    im.preUpdate(frameDelta); // flush stale entries
+    im.preFrame(frameDelta); // flush stale entries
 
     im.destroy();
     container.destroy();

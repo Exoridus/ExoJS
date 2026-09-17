@@ -6,6 +6,9 @@
  *   - internal MAX_DELTA_MS clamp applied to simulation delta
  */
 import { Application, ApplicationState } from '#core/Application';
+import type { FrameBudget } from '#core/FrameBudget';
+import { DirtyChannel } from '#core/nodeDirtyIndex';
+import type { SceneNode } from '#core/SceneNode';
 import { type Seconds, Time } from '#core/units';
 
 import { frameClockOf, lastFrameTimestampOf, setFrameLoopActive, setLastFrameTimestamp, tickFrame } from '../support/application-frame-loop';
@@ -143,8 +146,8 @@ describe('Application.update() — loop timing', () => {
 
     // Stub out input/interaction so jsdom's missing gamepad API doesn't error.
     // These tests exercise loop timing logic, not the input subsystem.
-    vi.spyOn(app.input, 'preUpdate').mockImplementation(() => undefined);
-    vi.spyOn(app.interaction, 'preUpdate').mockImplementation(() => undefined);
+    vi.spyOn(app.input, 'preFrame').mockImplementation(() => undefined);
+    vi.spyOn(app.interaction, 'preFrame').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -228,7 +231,7 @@ describe('Application.update() — loop timing', () => {
       (app as unknown as Record<string, unknown>)['_documentVisible'] = true;
 
       // On the visible frame, capture what delta tweens receive
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preFrame');
 
       // Control the clock to return a small post-resume delta
       mockFrameElapsed(app, 16);
@@ -249,7 +252,7 @@ describe('Application.update() — loop timing', () => {
     test('a very large raw delta is clamped before tweens.update receives it', () => {
       mockFrameElapsed(app, 30_000); // 30 seconds — simulates device sleep
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preFrame');
 
       app.update();
 
@@ -276,7 +279,7 @@ describe('Application.update() — loop timing', () => {
     test('a normal frame delta (16ms) passes through unchanged', () => {
       mockFrameElapsed(app, 16);
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preFrame');
 
       app.update();
 
@@ -289,7 +292,7 @@ describe('Application.update() — loop timing', () => {
     test('a delta exactly at the cap boundary (100ms) passes through unchanged', () => {
       mockFrameElapsed(app, 100);
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preFrame');
 
       app.update();
 
@@ -301,7 +304,7 @@ describe('Application.update() — loop timing', () => {
     test('a delta one millisecond above the cap is clamped to exactly the cap', () => {
       mockFrameElapsed(app, 101);
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preFrame');
 
       app.update();
 
@@ -322,7 +325,7 @@ describe('Application.update() — loop timing', () => {
     test('rawFrameDeltaMs equals the unclamped value even when clamped', () => {
       mockFrameElapsed(app, 200);
 
-      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preUpdate');
+      const tweensUpdateSpy = vi.spyOn(app.tweens, 'preFrame');
 
       app.update();
 
@@ -364,7 +367,7 @@ describe('Application.update() — loop timing', () => {
       const framePeriodMs = 16;
       const observedDeltas: number[] = [];
 
-      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Seconds) => {
+      vi.spyOn(app.tweens, 'preFrame').mockImplementation((delta: Seconds) => {
         observedDeltas.push(delta * 1000);
       });
 
@@ -390,7 +393,7 @@ describe('Application.update() — loop timing', () => {
     test('the frame delta is the distance between two frame timestamps', () => {
       const observedDeltas: number[] = [];
 
-      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Seconds) => {
+      vi.spyOn(app.tweens, 'preFrame').mockImplementation((delta: Seconds) => {
         observedDeltas.push(delta * 1000);
       });
 
@@ -407,7 +410,7 @@ describe('Application.update() — loop timing', () => {
       const globalNow = vi.spyOn(performance, 'now');
 
       vi.spyOn(app.platform, 'now').mockReturnValue(25);
-      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Seconds) => {
+      vi.spyOn(app.tweens, 'preFrame').mockImplementation((delta: Seconds) => {
         observedDeltas.push(delta * 1000);
       });
 
@@ -429,7 +432,7 @@ describe('Application.update() — loop timing', () => {
 
         return 1;
       });
-      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Seconds) => {
+      vi.spyOn(app.tweens, 'preFrame').mockImplementation((delta: Seconds) => {
         observedDeltas.push(delta * 1000);
       });
 
@@ -524,8 +527,8 @@ describe('Application.update() — loop timing', () => {
 
       try {
         forceRunning(uncleared);
-        vi.spyOn(uncleared.input, 'preUpdate').mockImplementation(() => undefined);
-        vi.spyOn(uncleared.interaction, 'preUpdate').mockImplementation(() => undefined);
+        vi.spyOn(uncleared.input, 'preFrame').mockImplementation(() => undefined);
+        vi.spyOn(uncleared.interaction, 'preFrame').mockImplementation(() => undefined);
         mockFrameElapsed(uncleared, 16);
 
         uncleared.update();
@@ -610,8 +613,8 @@ describe('Application.update() — loop timing', () => {
     test('derives the step cap from a small configured step, not a hard-coded count', () => {
       const smallStepApp = new Application({ backend: { type: 'webgl2' }, fixedTimeStep: 0.004 });
       forceRunning(smallStepApp);
-      vi.spyOn(smallStepApp.input, 'preUpdate').mockImplementation(() => undefined);
-      vi.spyOn(smallStepApp.interaction, 'preUpdate').mockImplementation(() => undefined);
+      vi.spyOn(smallStepApp.input, 'preFrame').mockImplementation(() => undefined);
+      vi.spyOn(smallStepApp.interaction, 'preFrame').mockImplementation(() => undefined);
       const fixedSpy = vi.spyOn(smallStepApp.scenes, 'fixedUpdate');
 
       // A 4 ms step clamped to a 100 ms frame wants 25 steps; the old hard-coded
@@ -654,6 +657,188 @@ describe('Application.update() — loop timing', () => {
       app.update();
 
       expect(receivedViaOnFixedFrame! * 1000).toBeCloseTo(STEP_MS, 4);
+    });
+  });
+
+  describe('postFrame phase', () => {
+    const FRAME_MS = 1000 / 60;
+
+    test('runs after the backend flush and after the frame-time stat is written', () => {
+      const callOrder: string[] = [];
+      let frameTimeAtDispatch = -1;
+
+      const flushSpy = vi.spyOn(app.backend, 'flush').mockImplementation(() => {
+        callOrder.push('flush');
+
+        return app.backend;
+      });
+
+      app.systems.add({
+        postFrame: () => {
+          callOrder.push('postFrame');
+          frameTimeAtDispatch = app.backend.stats.frameTimeMs;
+        },
+      });
+
+      // A system added outside a frame is eligible at once, but `update()`
+      // opens the buffering window before it dispatches anything, so the
+      // second frame is the first one that can show ordering.
+      mockFrameElapsed(app, FRAME_MS);
+      app.update();
+      mockFrameElapsed(app, FRAME_MS);
+      app.update();
+
+      expect(flushSpy).toHaveBeenCalled();
+      expect(callOrder).toEqual(['flush', 'postFrame', 'flush', 'postFrame']);
+      expect(frameTimeAtDispatch).toBeGreaterThanOrEqual(0);
+    });
+
+    test('hands the phase what the frame has left, and zero once the target is spent', () => {
+      const targetApp = new Application({ backend: { type: 'webgl2' }, displayFrameTime: 0.016 });
+
+      forceRunning(targetApp);
+      vi.spyOn(targetApp.input, 'preFrame').mockImplementation(() => undefined);
+      vi.spyOn(targetApp.interaction, 'preFrame').mockImplementation(() => undefined);
+
+      let nowMs = 0;
+      let spendMs = 0;
+      const remaining: number[] = [];
+
+      vi.spyOn(targetApp.platform, 'now').mockImplementation(() => nowMs);
+
+      targetApp.systems.add({
+        postFrame: (_delta, budget) => {
+          nowMs += spendMs;
+          remaining.push(budget.timeRemaining());
+        },
+      });
+
+      for (const spend of [0, 4, 40]) {
+        spendMs = spend;
+        nowMs += FRAME_MS;
+        targetApp.update();
+      }
+
+      expect(remaining).toHaveLength(3);
+      expect(remaining[0]).toBeCloseTo(0.016, 6);
+      expect(remaining[1]).toBeCloseTo(0.012, 6);
+      expect(remaining[2]).toBe(0);
+
+      (targetApp as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
+      void targetApp.destroy();
+    });
+
+    // B11's premise: work in `postFrame` may mutate the scene graph, because a
+    // mark made after the flush still lands in the generation this frame's
+    // `advance()` opened and is therefore readable by the next frame's
+    // consumers.
+    describe('scene-graph mutation after the flush', () => {
+      /**
+       * The index only ever touches a node's mark fields, so a spec about the
+       * index itself does not need a real node - and a bulk case needs
+       * thousands of them.
+       */
+      const markable = (): SceneNode =>
+        ({
+          _dirtyMarkGeneration: -1,
+          _dirtyMarkSlot: -1,
+          _transformMarkSequence: 0,
+          _contentMarkSequence: 0,
+          _tintMarkSequence: 0,
+          _structureMarkSequence: 0,
+          _effectMarkSequence: 0,
+        }) as unknown as SceneNode;
+
+      test('a node marked in postFrame is visible to a consumer in the following frame', () => {
+        const index = app._dirtyIndex;
+        const node = markable();
+        const seenPerFrame: boolean[] = [];
+        let cursor = index.sequence;
+
+        app.systems.add({
+          update: () => {
+            let found = false;
+
+            index.readSince(cursor, DirtyChannel.Transform, visited => {
+              found ||= visited === node;
+
+              return true;
+            });
+
+            seenPerFrame.push(found);
+            cursor = index.sequence;
+          },
+          postFrame: () => {
+            index.mark(node, DirtyChannel.Transform);
+          },
+        });
+
+        for (let frame = 0; frame < 3; frame++) {
+          mockFrameElapsed(app, FRAME_MS);
+          app.update();
+        }
+
+        expect(seenPerFrame).toEqual([false, true, true]);
+      });
+
+      test('a bulk postFrame mutation past the generation bound retires through covers rather than answering short', () => {
+        const index = app._dirtyIndex;
+        // One more than a generation holds, so `mark()` rotates mid-batch.
+        const nodes = Array.from({ length: 16_385 }, markable);
+        const staleCursor = index.sequence;
+        const perFrameCounts: number[] = [];
+        let cursor = index.sequence;
+
+        app.systems.add({
+          update: () => {
+            let count = 0;
+
+            const covered = index.readSince(cursor, DirtyChannel.Transform, () => {
+              count++;
+
+              return true;
+            });
+
+            if (covered) perFrameCounts.push(count);
+            cursor = index.sequence;
+          },
+          postFrame: () => {
+            for (const node of nodes) {
+              index.mark(node, DirtyChannel.Transform);
+            }
+          },
+        });
+
+        for (let frame = 0; frame < 10; frame++) {
+          mockFrameElapsed(app, FRAME_MS);
+          app.update();
+        }
+
+        // A consumer that keeps up is answered in full every frame, bulk or not.
+        expect(perFrameCounts).toHaveLength(10);
+        expect(perFrameCounts[0]).toBe(0);
+        expect(perFrameCounts.slice(1)).toEqual(Array.from({ length: 9 }, () => nodes.length));
+
+        // One that does not keep up is told to rebuild, not handed a partial answer.
+        expect(index.covers(staleCursor)).toBe(false);
+        expect(index.readSince(staleCursor, DirtyChannel.Transform, () => true)).toBe(false);
+      });
+    });
+
+    test('reports zero outside a frame', () => {
+      let captured: FrameBudget | undefined;
+
+      app.systems.add({
+        postFrame: (_delta, budget) => {
+          captured = budget;
+        },
+      });
+
+      mockFrameElapsed(app, FRAME_MS);
+      app.update();
+
+      expect(captured).toBeDefined();
+      expect(captured!.timeRemaining()).toBe(0);
     });
   });
 });

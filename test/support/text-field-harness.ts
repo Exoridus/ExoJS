@@ -137,7 +137,7 @@ export const makePointer = (x: number, y: number, id = 1): Pointer => ({ id, x, 
 
 export const press = (harness: Harness, x: number, y: number): void => {
   harness.signals.onPointerDown.dispatch(makePointer(x, y), x, y);
-  harness.im.preUpdate(frameDelta);
+  harness.im.preFrame(frameDelta);
 };
 
 /** Fire a synthetic `beforeinput` on the transport textarea the seam created. */

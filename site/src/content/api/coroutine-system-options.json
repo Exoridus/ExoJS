@@ -1,0 +1,163 @@
+{
+  "title": "CoroutineSystemOptions",
+  "description": "",
+  "symbol": "CoroutineSystemOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { CoroutineSystemOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "budget",
+          "signature": "budget?: Seconds | { max: Seconds; share: number }",
+          "signatureTokens": [
+            {
+              "text": "budget",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "max",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "share",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Time the system may spend advancing coroutines per frame, either an absolute figure or a share of what the frame has left. The share is taken once, at the start of the phase: min(frameRemaining * share, max). Default { share: 0.25, max: 0.004 } - a busy frame therefore withdraws instead of adding a fixed cost to a frame that has already missed its target, and an idle one lends more than a fixed figure would. max bounds input latency, not overshoot: it caps how long post-flush work can delay the next frame request however idle the application looks."
+        },
+        {
+          "name": "minSlice",
+          "signature": "minSlice?: Seconds",
+          "signatureTokens": [
+            {
+              "text": "minSlice",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Floor under the per-frame slice, granted even on a frame that has already missed its target, so the coroutine stepped first always sees a positive FrameBudget.timeRemaining. Default is a 64th of the display cadence - 0.26 ms at 60 Hz, 0.11 ms at 144 Hz. Set it to zero to decline the grant."
+        },
+        {
+          "name": "order",
+          "signature": "order?: number",
+          "signatureTokens": [
+            {
+              "text": "order",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Registry tick order. Default SystemOrder.CoreCoroutines's neighbourhood; 0 unless given."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/CoroutineSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/CoroutineSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+}

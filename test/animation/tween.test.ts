@@ -294,7 +294,7 @@ describe('Tween', () => {
       tween.stop();
       // After stop, updating system should not move sprite.
       const xAtStop = sprite.x;
-      system.preUpdate(sec(1.0));
+      system.preFrame(sec(1.0));
       expect(sprite.x).toBe(xAtStop);
     });
   });
@@ -318,11 +318,11 @@ describe('Tween', () => {
       const target = { ...makeSprite(), destroyed: false };
       system.create(target).to({ x: 100 }, 1.0).repeat(-1).start();
 
-      system.preUpdate(sec(1.0));
+      system.preFrame(sec(1.0));
       expect(system['_tweens']).toHaveLength(1);
 
       target.destroyed = true;
-      system.preUpdate(sec(1.0));
+      system.preFrame(sec(1.0));
 
       // Released, not pinned in the system forever.
       expect(system['_tweens']).toHaveLength(0);
@@ -502,14 +502,14 @@ describe('Tween', () => {
       const target = makeSprite();
       const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
-      system.preUpdate(sec(1.0)); // complete — tween removed from system
+      system.preFrame(sec(1.0)); // complete — tween removed from system
       expect(tween.state).toBe(TweenState.Complete);
 
       const secondComplete = vi.fn();
       tween.onComplete(secondComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 
-      system.preUpdate(sec(1.0)); // system must drive it — second completion fires
+      system.preFrame(sec(1.0)); // system must drive it — second completion fires
       expect(secondComplete).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Complete);
     });
@@ -519,7 +519,7 @@ describe('Tween', () => {
       const target = makeSprite();
       const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
-      system.preUpdate(sec(0.3));
+      system.preFrame(sec(0.3));
       tween.stop();
       expect(tween.state).toBe(TweenState.Stopped);
 
@@ -527,7 +527,7 @@ describe('Tween', () => {
       tween.onComplete(onComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 
-      system.preUpdate(sec(1.0)); // system drives the restarted tween
+      system.preFrame(sec(1.0)); // system drives the restarted tween
       expect(onComplete).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Complete);
     });
@@ -540,7 +540,7 @@ describe('Tween', () => {
       const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
       tween.start(); // re-call while active — resets elapsed, no double-registration
-      system.preUpdate(sec(0.5));
+      system.preFrame(sec(0.5));
       expect(target.x).toBeCloseTo(50, 5); // exactly one advancement
     });
 
@@ -570,7 +570,7 @@ describe('Tween', () => {
       forward.start();
 
       // 50 × 0.1s = 5 seconds; enough for ≥2 complete cycles of each tween
-      for (let i = 0; i < 50; i++) system.preUpdate(sec(0.1));
+      for (let i = 0; i < 50; i++) system.preFrame(sec(0.1));
 
       expect(forwardCompleteCount).toBeGreaterThanOrEqual(2);
       expect(backwardCompleteCount).toBeGreaterThanOrEqual(2);

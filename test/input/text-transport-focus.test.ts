@@ -88,7 +88,7 @@ describe('text transport focus and the keyboard gate', () => {
 
     input.onMouseWheel.add(onMouseWheel);
     canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, deltaMode: 0 }));
-    input.preUpdate(0 as never);
+    input.preFrame(0 as never);
 
     expect(onMouseWheel).toHaveBeenCalledExactlyOnceWith(0, expect.any(Number));
   });

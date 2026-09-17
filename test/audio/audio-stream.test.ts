@@ -140,7 +140,7 @@ describe('AudioStream', () => {
 
     voice.position = { x: 1, y: 2 };
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    system.preUpdate(frameDelta);
+    system.preFrame(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
 
     stream.destroy();

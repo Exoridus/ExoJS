@@ -1,16 +1,16 @@
 {
-  "title": "Job",
-  "description": "Handle for work handed to a JobScheduler. Poll Job.status and Job.result from frame code, or await Job.done from async code; both see the same settlement. Cancelling (or destroying, which is the same) stops the generator at its current `yield` and settles the job as `cancelled`.",
-  "symbol": "Job",
+  "title": "Coroutine",
+  "description": "Handle for work handed to a CoroutineSystem. Poll Coroutine.status, Coroutine.progress and Coroutine.result from frame code, or await Coroutine.done from async code; both see the same settlement. Cancelling (or destroying, which is the same) stops the body at its current `yield` and settles the coroutine as `cancelled`.",
+  "symbol": "Coroutine",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 2,
-    "properties": 5,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Handle for work handed to a JobScheduler. Poll Job.status and Job.result from frame code, or await Job.done from async code; both see the same settlement. Cancelling (or destroying, which is the same) stops the generator at its current `yield` and settles the job as `cancelled`."
+        "Handle for work handed to a CoroutineSystem. Poll Coroutine.status, Coroutine.progress and Coroutine.result from frame code, or await Coroutine.done from async code; both see the same settlement. Cancelling (or destroying, which is the same) stops the body at its current `yield` and settles the coroutine as `cancelled`."
       ],
-      "importLine": "import { Job } from '@codexo/exojs'",
+      "importLine": "import { Coroutine } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -55,7 +55,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Stop the job at its current yield. No-op once settled."
+          "description": "Stop the coroutine at its current yield. No-op once settled."
         },
         {
           "name": "destroy",
@@ -96,6 +96,35 @@
       "title": "Properties",
       "members": [
         {
+          "name": "name",
+          "signature": "name: string | undefined",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The label passed at CoroutineSystem.queue, if any."
+        },
+        {
           "name": "done",
           "signature": "done: Promise<T>",
           "signatureTokens": [
@@ -126,7 +155,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolves with the result when the job completes and rejects when it fails or is cancelled (cancellation rejects with an AbortError). Created on first access, so a job nobody awaits never raises an unhandled rejection. The continuation runs after the frame step that settled the job; read Job.result for same-frame access."
+          "description": "Resolves with the result when the coroutine completes and rejects when it fails or is cancelled (cancellation rejects with an AbortError). Created on first access, so a coroutine nobody awaits never raises an unhandled rejection. The continuation runs after the frame step that settled it; read Coroutine.result for same-frame access."
         },
         {
           "name": "error",
@@ -155,7 +184,57 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The error that failed or cancelled the job, otherwise undefined. A thrown non-Error value is wrapped, with the value as cause."
+          "description": "The error that failed or cancelled the coroutine, otherwise undefined. A thrown non-Error value is wrapped, with the value as cause."
+        },
+        {
+          "name": "priority",
+          "signature": "priority: number",
+          "signatureTokens": [
+            {
+              "text": "priority",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First claim on the frame's slice. Writable while the coroutine runs, so work the player is now waiting on can be promoted ahead of the rest; the system reorders before its next frame."
+        },
+        {
+          "name": "progress",
+          "signature": "progress: P | undefined",
+          "signatureTokens": [
+            {
+              "text": "progress",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "P",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The most recent value the body yielded, or undefined before the first step. A body that yields nothing types this as void."
         },
         {
           "name": "result",
@@ -184,7 +263,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The generator's return value once the job is done, otherwise undefined."
+          "description": "The body's return value once the coroutine is done, otherwise undefined."
         },
         {
           "name": "settled",
@@ -205,11 +284,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether the job has reached a terminal state."
+          "description": "Whether the coroutine has reached a terminal state."
         },
         {
           "name": "status",
-          "signature": "status: JobStatus",
+          "signature": "status: CoroutineStatus",
           "signatureTokens": [
             {
               "text": "status",
@@ -220,7 +299,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "JobStatus",
+              "text": "CoroutineStatus",
               "kind": "type"
             }
           ],
@@ -240,11 +319,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/JobScheduler.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/JobScheduler.ts"
+        "label": "src/core/CoroutineSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
       }
     }
   ],
-  "sourcePath": "src/core/JobScheduler.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/JobScheduler.ts"
+  "sourcePath": "src/core/CoroutineSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
 }

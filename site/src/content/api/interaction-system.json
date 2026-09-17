@@ -544,11 +544,11 @@
           "description": "Release the scope token identifies - a targeted removal wherever it sits in the stack, never a rebuild of the entries above or below it (see pushScope). Idempotent: releasing an already-released or unknown token is a no-op, so a caller never needs to track whether it already let go of a scope."
         },
         {
-          "name": "preUpdate",
-          "signature": "preUpdate(_delta: Seconds): void",
+          "name": "preFrame",
+          "signature": "preFrame(_delta: Seconds): void",
           "signatureTokens": [
             {
-              "text": "preUpdate",
+              "text": "preFrame",
               "kind": "name"
             },
             {
@@ -588,7 +588,7 @@
             }
           ],
           "returnType": "void",
-          "description": "SystemMethods.preUpdate phase: dispatch this frame's node-level pointer events, then retire the pointers InputSystem flagged terminal. Registered on app.systems by the Application at SystemOrder.CoreInteraction, directly after InputSystem. The retirement runs in a finally because node-level dispatch above may still reference pointers flagged terminal this flush; only once it has drained is destroying them safe - and it must still happen if a node handler threw. Keeping both halves inside this one phase is what lets the pair be a single system: order alone could not express \"B runs after A even when A throws\"."
+          "description": "SystemMethods.preFrame phase: dispatch this frame's node-level pointer events, then retire the pointers InputSystem flagged terminal. Registered on app.systems by the Application at SystemOrder.CoreInteraction, directly after InputSystem. The retirement runs in a finally because node-level dispatch above may still reference pointers flagged terminal this flush; only once it has drained is destroying them safe - and it must still happen if a node handler threw. Keeping both halves inside this one phase is what lets the pair be a single system: order alone could not express \"B runs after A even when A throws\"."
         },
         {
           "name": "pushScope",

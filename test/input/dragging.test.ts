@@ -130,7 +130,7 @@ describe('drag threshold', () => {
     sprite.onDragStart.add(started);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(started).not.toHaveBeenCalled();
     expect(im.getCapturedNodes()).toEqual([]);
@@ -149,10 +149,10 @@ describe('drag threshold', () => {
     sprite.onDrag.add(dragged);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     dispatchPointer(signals.onPointerMove, 54, 52, 5);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(started).not.toHaveBeenCalled();
     expect(dragged).not.toHaveBeenCalled();
@@ -170,10 +170,10 @@ describe('drag threshold', () => {
     sprite.onDragStart.add(started);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     dispatchPointer(signals.onPointerMove, 70, 50, 20);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(started).toHaveBeenCalledTimes(1);
     expect(im.getCapturedNodes()).toEqual([sprite]);
@@ -190,11 +190,11 @@ describe('drag threshold', () => {
     sprite.onDragStart.add(started);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     dispatchPointer(signals.onPointerMove, 70, 50, 20);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(started).toHaveBeenCalledTimes(1);
 
@@ -210,14 +210,14 @@ describe('drag threshold', () => {
     sprite.onDragStart.add(started);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     dispatchPointer(signals.onPointerMove, 70, 50, 20);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(started).not.toHaveBeenCalled();
 
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(started).toHaveBeenCalledTimes(1);
 
     im.destroy();
@@ -234,10 +234,10 @@ describe('tap after drag', () => {
     sprite.onPointerTap.add(tapped);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     dispatchPointer(signals.onPointerUp, 52, 50, 2);
     dispatchPointer(signals.onPointerTap, 52, 50, 2);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(tapped).toHaveBeenCalledTimes(1);
 
@@ -255,13 +255,13 @@ describe('tap after drag', () => {
     sprite.onDragEnd.add(ended);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     dispatchPointer(signals.onPointerUp, 90, 50, 40);
     dispatchPointer(signals.onPointerTap, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(ended).toHaveBeenCalledTimes(1);
     expect(tapped).not.toHaveBeenCalled();
@@ -283,10 +283,10 @@ describe('parent-local positioning', () => {
 
     // Grab at world (50, 50) - parent-local (-50, 10), so the offset is (50, -10).
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     dispatchPointer(signals.onPointerMove, 150, 90, 108);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     // World (150, 90) is parent-local (50, 50); plus the grab offset → (100, 40).
     expect(sprite.position.x).toBeCloseTo(100);
@@ -306,11 +306,11 @@ describe('parent-local positioning', () => {
     parent.getWorldTransform();
 
     dispatchPointer(signals.onPointerDown, 0, 0);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     // 40 world pixels are 20 parent-local pixels under a 2× parent.
     dispatchPointer(signals.onPointerMove, 40, 40, 56);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(sprite.position.x).toBeCloseTo(20);
     expect(sprite.position.y).toBeCloseTo(20);
@@ -332,11 +332,11 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onPointerDown.add(() => sprite.destroy());
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(() => {
       dispatchPointer(signals.onPointerMove, 90, 50, 40);
-      im.preUpdate(frameDelta);
+      im.preFrame(frameDelta);
     }).not.toThrow();
 
     expect(started).not.toHaveBeenCalled();
@@ -355,10 +355,10 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onPointerDown.add(() => scene.removeChild(sprite));
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(started).not.toHaveBeenCalled();
     expect(im.getCapturedNodes()).toEqual([]);
@@ -376,13 +376,13 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onDrag.add(dragged);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     // This move promotes the candidate, fires dragstart (which destroys the
     // node), and must not then reposition it or fire `drag`.
     expect(() => {
       dispatchPointer(signals.onPointerMove, 90, 50, 40);
-      im.preUpdate(frameDelta);
+      im.preFrame(frameDelta);
     }).not.toThrow();
 
     expect(dragged).not.toHaveBeenCalled();
@@ -391,7 +391,7 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     // A further move must not resurrect stale state or throw either.
     expect(() => {
       dispatchPointer(signals.onPointerMove, 120, 50, 40);
-      im.preUpdate(frameDelta);
+      im.preFrame(frameDelta);
     }).not.toThrow();
 
     im.destroy();
@@ -409,12 +409,12 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     });
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     // Promotes, fires dragstart, then the first `drag` tick - which destroys
     // the node from inside its own handler.
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(dragged).toHaveBeenCalledTimes(1);
     expect(im.getCapturedNodes()).toEqual([]);
@@ -422,7 +422,7 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     // A further move must find no captured node left to move or tick again.
     expect(() => {
       dispatchPointer(signals.onPointerMove, 120, 50, 40);
-      im.preUpdate(frameDelta);
+      im.preFrame(frameDelta);
     }).not.toThrow();
 
     expect(dragged).toHaveBeenCalledTimes(1);
@@ -440,13 +440,13 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onPointerUp.add(() => sprite.destroy());
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(() => {
       dispatchPointer(signals.onPointerUp, 90, 50, 40);
-      im.preUpdate(frameDelta);
+      im.preFrame(frameDelta);
     }).not.toThrow();
 
     // The node was already gone by the time dragend would have fired.
@@ -469,9 +469,9 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     sprite.onDragEnd.add(() => other.destroy());
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     // Release ends the drag (firing dragend, which destroys `other`), then a
     // tap-shaped release/tap pair over `other` shares the SAME flush.
@@ -479,7 +479,7 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
       dispatchPointer(signals.onPointerUp, 90, 50, 40);
       dispatchPointer(signals.onPointerDown, 250, 50);
       dispatchPointer(signals.onPointerTap, 250, 50);
-      im.preUpdate(frameDelta);
+      im.preFrame(frameDelta);
     }).not.toThrow();
 
     expect(otherTap).not.toHaveBeenCalled();
@@ -496,9 +496,9 @@ describe('gated frames', () => {
     scene.addChild(sprite);
 
     dispatchPointer(signals.onPointerDown, 50, 50);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(im.getCapturedNodes()).toEqual([sprite]);
 
@@ -509,7 +509,7 @@ describe('gated frames', () => {
     // The Up entry is queued, but this frame is gated - it must be discarded
     // WITHOUT leaving the drag/capture behind for the gate to lift onto.
     dispatchPointer(signals.onPointerUp, 90, 50, 40);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(im.getCapturedNodes()).toEqual([]);
 
@@ -521,7 +521,7 @@ describe('gated frames', () => {
     // reposition the node - a drag the gated frame failed to end would keep
     // following the pointer here.
     dispatchPointer(signals.onPointerMove, 300, 300, 300);
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(sprite.position.x).toBe(positionAfterGate.x);
     expect(sprite.position.y).toBe(positionAfterGate.y);

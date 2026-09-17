@@ -80,8 +80,8 @@ describe('per-Application virtual listener', () => {
     listener.positionX.setValueAtTime.mockClear();
 
     system.listener.target = { x: 500, y: 300 };
-    system.preUpdate(frame);
-    system.preUpdate(frame);
+    system.preFrame(frame);
+    system.preFrame(frame);
 
     expect(listener.positionX.setValueAtTime).not.toHaveBeenCalled();
     expect(listener.positionX.setTargetAtTime).not.toHaveBeenCalled();
@@ -109,8 +109,8 @@ describe('per-Application virtual listener', () => {
     expect(factory.panners[1].positionX.setValueAtTime).toHaveBeenCalledWith(1200, expect.any(Number));
 
     // A frame tick must not let one system's listener bleed into the other's pan.
-    first.preUpdate(frame);
-    second.preUpdate(frame);
+    first.preFrame(frame);
+    second.preFrame(frame);
 
     expect(factory.panners[0].positionX.setValueAtTime).not.toHaveBeenCalledWith(1200, expect.any(Number));
     expect(factory.panners[1].positionX.setValueAtTime).not.toHaveBeenCalledWith(-800, expect.any(Number));
@@ -137,7 +137,7 @@ describe('per-Application virtual listener', () => {
     // is panned by must follow, which is exactly what the old central listener
     // smoothing used to cover.
     system.listener.target = { x: 40, y: 0 };
-    system.preUpdate(frame);
+    system.preFrame(frame);
 
     expect(panner.positionX.setTargetAtTime).toHaveBeenCalledWith(60, expect.any(Number), expect.any(Number));
 
@@ -180,7 +180,7 @@ describe('per-Application virtual listener', () => {
     const voice = system.play(sound, { position: { x: 5100, y: 0 } });
     // Receding from the listener along +X at 500 u/s => ratio 1 - 0.5 = 0.5.
     voice.velocity = { x: 500, y: 0 };
-    system.preUpdate(frame);
+    system.preFrame(frame);
 
     const rate = (voice as unknown as { _source: { playbackRate: MockParam } })._source.playbackRate;
     expect(rate.setTargetAtTime).toHaveBeenCalledWith(0.5, expect.any(Number), expect.any(Number));

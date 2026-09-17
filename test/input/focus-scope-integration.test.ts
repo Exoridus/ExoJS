@@ -78,7 +78,7 @@ const createHarness = (): Harness => {
 /** Dispatch a real keydown, then flush it through InputSystem into FocusController. */
 const pressKey = (h: Harness, code: string): void => {
   window.dispatchEvent(new KeyboardEvent('keydown', { code }));
-  h.input.preUpdate(0 as never);
+  h.input.preFrame(0 as never);
 };
 
 const focusableNode = (): Container => {
@@ -541,7 +541,7 @@ describe('KeyEvent bubbling', () => {
 
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyA' }));
-    h.input.preUpdate(0 as never);
+    h.input.preFrame(0 as never);
 
     expect(parentHandler).toHaveBeenCalledTimes(1);
 

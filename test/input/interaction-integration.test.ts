@@ -64,8 +64,8 @@ interface Harness {
 /**
  * A full real InputSystem + InteractionSystem pair sharing one canvas -
  * dispatching a genuine platform PointerEvent and calling `flush()` runs the
- * exact pipeline a live Application does (input.preUpdate() then
- * interaction.preUpdate()).
+ * exact pipeline a live Application does (input.preFrame() then
+ * interaction.preFrame()).
  */
 const createHarness = (dragThreshold?: number): Harness => {
   const canvas = document.createElement('canvas');
@@ -126,8 +126,8 @@ const createHarness = (dragThreshold?: number): Harness => {
 };
 
 const flush = (h: Harness): void => {
-  h.input.preUpdate(0 as never);
-  h.im.preUpdate(frameDelta);
+  h.input.preFrame(0 as never);
+  h.im.preFrame(frameDelta);
 };
 
 beforeAll(() => {

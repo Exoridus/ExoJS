@@ -102,7 +102,7 @@ const pick = (im: InteractionSystem, signals: { onPointerDown: Signal<[Pointer]>
 
   // getHoveredNode reflects the resolved hit, which the queue flush computes.
   signals.onPointerDown.dispatch(makePointer(x, y));
-  im.preUpdate(frameDelta);
+  im.preFrame(frameDelta);
   probe();
   void scene;
 

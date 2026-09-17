@@ -53,7 +53,7 @@ describe('AudioSystem.onUnlock contract', () => {
     const system = new AudioSystem();
 
     setContextState('suspended');
-    system.preUpdate(frame);
+    system.preFrame(frame);
 
     const handler = vi.fn();
     system.onUnlock.add(handler);
@@ -62,7 +62,7 @@ describe('AudioSystem.onUnlock contract', () => {
     expect(handler).not.toHaveBeenCalled();
 
     setContextState('running');
-    system.preUpdate(frame);
+    system.preFrame(frame);
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -73,13 +73,13 @@ describe('AudioSystem.onUnlock contract', () => {
     const system = new AudioSystem();
 
     setContextState('suspended');
-    system.preUpdate(frame);
+    system.preFrame(frame);
 
     const registered = vi.fn();
     system.onUnlock.add(registered);
 
     setContextState('running');
-    system.preUpdate(frame);
+    system.preFrame(frame);
     expect(registered).toHaveBeenCalledTimes(1);
 
     // A replayed handler and a registered one must both stay at one call
@@ -92,9 +92,9 @@ describe('AudioSystem.onUnlock contract', () => {
 
     for (let i = 0; i < 3; i++) {
       setContextState('suspended');
-      system.preUpdate(frame);
+      system.preFrame(frame);
       setContextState('running');
-      system.preUpdate(frame);
+      system.preFrame(frame);
     }
 
     expect(registered).toHaveBeenCalledTimes(1);
@@ -119,21 +119,21 @@ describe('AudioSystem.onUnlock contract', () => {
     expect(handler).not.toHaveBeenCalled();
 
     setContextState('running');
-    system.preUpdate(frame);
+    system.preFrame(frame);
 
     expect(handler).toHaveBeenCalledTimes(1);
 
     system.destroy();
   });
 
-  test('the locked-playback warning re-arms across a lock cycle without preUpdate ordering luck', () => {
+  test('the locked-playback warning re-arms across a lock cycle without preFrame ordering luck', () => {
     const system = new AudioSystem();
 
     setContextState('suspended');
-    system.preUpdate(frame);
+    system.preFrame(frame);
     setContextState('running');
-    system.preUpdate(frame);
-    system.preUpdate(frame);
+    system.preFrame(frame);
+    system.preFrame(frame);
 
     expect(system.locked).toBe(false);
 
@@ -167,14 +167,14 @@ describe('AudioSystem.onUnlock contract', () => {
       const system = new AudioSystem();
 
       setContextState('suspended');
-      system.preUpdate(frame);
+      system.preFrame(frame);
 
       const handler = vi.fn();
       system.onUnlock.add(handler);
       system.onUnlock.remove(handler);
 
       setContextState('running');
-      system.preUpdate(frame);
+      system.preFrame(frame);
 
       expect(handler).not.toHaveBeenCalled();
 
@@ -214,7 +214,7 @@ describe('AudioSystem.onUnlock contract', () => {
       system.destroy();
 
       setContextState('running');
-      system.preUpdate(frame);
+      system.preFrame(frame);
 
       expect(handler).not.toHaveBeenCalled();
     });

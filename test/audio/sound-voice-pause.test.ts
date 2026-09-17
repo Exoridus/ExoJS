@@ -247,7 +247,7 @@ describe('SoundVoice — Pausable', () => {
     retired.playbackRate.setTargetAtTime.mockClear();
 
     setCurrentTime(0.1);
-    system.preUpdate(Time.seconds(0.1));
+    system.preFrame(Time.seconds(0.1));
 
     expect(retired.playbackRate.setTargetAtTime).not.toHaveBeenCalled();
     expect(factory.sources).toHaveLength(1);

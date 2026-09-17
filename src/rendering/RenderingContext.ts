@@ -153,10 +153,10 @@ export class RenderingContext implements DrawContext {
   /**
    * Advance follow, shake, and bounds-constraint animations on the active
    * {@link view}, every view rendered last frame (automatic), and any
-   * {@link trackView}-ed view. The {@link SystemMethods.preUpdate} phase, at
+   * {@link trackView}-ed view. The {@link SystemMethods.preFrame} phase, at
    * {@link SystemOrder.CoreRendering} - last of the engine's core systems.
    */
-  public preUpdate(delta: Seconds): void {
+  public preFrame(delta: Seconds): void {
     const ms = delta * 1000;
 
     this._view.update(ms);
