@@ -476,6 +476,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         prerequisites: ['rendering/sprites'],
         examples: [
           'lighting/shadow-casters',
+          'lighting/radiance-rooms',
           'lighting/light-cookies',
           'lighting/lightmap-normals',
           'lighting/normal-mapped-blocks',

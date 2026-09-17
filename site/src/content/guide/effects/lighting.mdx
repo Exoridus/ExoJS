@@ -36,18 +36,18 @@ class CaveScene extends Scene {
 
 Register the system with the registry that ticks **after** the code moving your lights. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want.
 
-## Two renderers, one vocabulary
+## Three renderers, one vocabulary
 
-The scene describes what emits and what blocks. `quality` decides how that becomes pixels, and nothing else changes between the two — the same lights, the same occluders.
+The scene describes what emits and what blocks. `quality` decides how that becomes pixels, and nothing else changes between them — the same lights, the same occluders.
 
-|                         | `forward`                          | `lightmap`                                          |
-| ----------------------- | ---------------------------------- | --------------------------------------------------- |
-| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame   |
-| Normal mapping          | per material, on `LitMaterial`     | per drawable, through a prepass                     |
-| Shadows                 | no                                 | yes, soft, from registered occluder sources         |
-| Light count             | capped by `maxLights` (default 64) | uncapped                                            |
-| Extra passes            | none                               | two, a third with normals                           |
-| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                          |
+|                         | `forward`                          | `lightmap`                                          | `radiance`                                          |
+| ----------------------- | ---------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
+| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame   | the same target, filled by transporting radiance    |
+| Normal mapping          | per material, on `LitMaterial`     | per drawable, through a prepass                     | no                                                   |
+| Shadows                 | no                                 | yes, soft, from registered occluder sources         | yes, with a penumbra that follows the source's size  |
+| Light count             | capped by `maxLights` (default 64) | uncapped                                            | uncapped, and free: the cost is per probe            |
+| Extra passes            | none                               | two, a third with normals                           | four to nine, depending on the view                  |
+| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                          | none — the field costs what the screen costs         |
 
 `quality` defaults to `'auto'`, which takes `lightmap` when you passed `app` and `forward` when you did not. It resolves once, at construction, and `lighting.quality` reports what it settled on:
 
@@ -56,10 +56,34 @@ import { Lighting } from '@codexo/exojs-lighting';
 
 declare const lighting: Lighting;
 
-lighting.quality; // 'forward' | 'lightmap'
+lighting.quality; // 'forward' | 'lightmap' | 'radiance'
 ```
 
-Name a renderer outright when you need a property only that one has — `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count.
+Name a renderer outright when you need a property only that one has — `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count, `'radiance'` for light that spreads.
+
+### Light that spreads
+
+`radiance` fills the same light field from a chain of radiance cascades. Light propagates from what emits instead of falling off inside each light's radius, so a lamp lights the room it stands in, a wall between two rooms leaves the second one dark, and a source with a size casts a penumbra that widens with distance.
+
+```ts
+import { Color } from '@codexo/exojs';
+import { Lighting, PointLight } from '@codexo/exojs-lighting';
+import type { Application } from '@codexo/exojs';
+
+declare const app: Application;
+
+const lighting = new Lighting({ quality: 'radiance', app, ambient: new Color(8, 8, 14) });
+
+// Under `radiance` a light's `softness` is the SIZE of the source, which is
+// what decides how soft the shadows it casts are.
+lighting.add(new PointLight({ radius: 300, intensity: 3, softness: 0.4 }));
+```
+
+`'auto'` never picks it. It is the one renderer whose look differs from the other two, it needs a device that can render into float targets, and it is refused at construction where it cannot run — so you never get it by accident.
+
+<Callout type="note" title="A lit surface is not a source yet">
+  Light is transported from the emitters and occluded by the same field the shadows use, but a wall this renderer lit does not itself emit. There is no bounced colour yet. A `SunLight` has nowhere to emit from and is skipped; a `SpotLight` emits like a point.
+</Callout>
 
 <Callout type="note" title="The axis is properties, not quality">
   `forward` is not the low setting and `lightmap` is not the high one. One shades inside the sprite stage and can therefore reach a per-material normal map; the other shades a field of its own and can therefore carry shadows and any number of lights. Neither is a downgrade of the other.
@@ -273,8 +297,12 @@ declare const lighting: Lighting;
 lighting.debug = 'light'; // the accumulated light field, without the scene's colours
 lighting.debug = 'normals'; // the prepass normals, encoded the way a normal map is
 lighting.debug = 'occluders'; // the silhouettes the sources collected, over the scene
+lighting.debug = 'mask'; // the same silhouettes rasterised at the light field's own resolution
+lighting.debug = 'distance'; // how far the nearest occluder is, as a ramp across the view
 lighting.debug = null;
 ```
+
+`mask` and `distance` are the two the GPU-resident paths read: the mask says whether a wall is thick enough to be seen at the light field's resolution, and the distance field is what a ray steps along instead of marching a texel at a time.
 
 The `occluders` view is the one that explains the feature: it draws what the shadows are actually being cast from, which is usually the fastest way to find out that a source is reading the wrong thing.
 
@@ -284,6 +312,8 @@ Forward lighting costs `fragments x active lights`. With everything on screen li
 
 The lightmap renderer costs the fill of each light's own radius, plus two full-screen passes and a third when normals are registered. `lightResolution` (default `0.5`) sets the light target's density: light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
 
+The radiance renderer costs neither of those: it costs the probe grid. Every level of the chain holds the same number of texels, and the number of levels follows the view's own diagonal, so the whole field is between four and nine full-screen-ish passes however many lights are in it. `probeSpacing` (default `2` light-field texels) is the knob that moves that cost, and halving it quadruples the grid.
+
 Shadows cost the visible occluding edges times the lights that can see them, per frame. That is bounded by collecting only the region the visible lights jointly reach, by emitting only boundary edges — a hundred-tile corridor is four segments, not four hundred — and by caching whatever does not change.
 
 ## Examples
@@ -292,6 +322,11 @@ Shadows cost the visible occluding edges times the lights that can see them, per
 <ExamplePreview chapter="lighting" slug="shadow-casters" />
 
 Walls that hand over the rectangle they are drawn as, a cross whose outline is traced from its alpha, and a softness slider — with nothing in the scene declaring that it casts a shadow.
+
+<a id="radiance-rooms"></a>
+<ExamplePreview chapter="lighting" slug="radiance-rooms" />
+
+One lamp, two rooms and a doorway, with a switch between `lightmap` and `radiance` on the same scene. Watch the far room: under the light quads it is whatever the lamp's radius reaches minus a shadow, and under the cascades it is dark except for the wedge coming through the opening. The source-size slider is `softness`, which is the lamp's own size under `radiance` — widen it and every penumbra in the scene widens with it.
 
 <a id="light-cookies"></a>
 <ExamplePreview chapter="lighting" slug="light-cookies" />

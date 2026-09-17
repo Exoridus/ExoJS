@@ -48,25 +48,48 @@ class LitScene extends Scene {
 }
 ```
 
-## Two renderers, one vocabulary
+## Three renderers, one vocabulary
 
 The scene describes what emits; `quality` decides how that becomes pixels. Nothing else changes between them - the same lights, the same materials.
 
-|                         | `forward`                          | `lightmap`                                          |
-| ----------------------- | ---------------------------------- | --------------------------------------------------- |
-| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame   |
-| Normal mapping          | per material, on `LitMaterial`     | per drawable, through a prepass                     |
-| Lit material            | `LitMaterial`                      | none - the renderer lights the frame, not a sprite  |
-| Shadows                 | no                                 | yes, soft, from registered occluder sources         |
-| Light count             | capped by `maxLights` (default 64) | uncapped                                            |
-| Extra passes            | none                               | two, a third with normals, a fourth while debugging |
-| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                          |
+|                         | `forward`                          | `lightmap`                                          | `radiance`                                          |
+| ----------------------- | ---------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
+| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame   | the same target, filled by transporting radiance    |
+| Normal mapping          | per material, on `LitMaterial`     | per drawable, through a prepass                     | no                                                  |
+| Lit material            | `LitMaterial`                      | none - the renderer lights the frame, not a sprite  | none                                                |
+| Shadows                 | no                                 | yes, soft, from registered occluder sources         | yes, with a penumbra that follows the source's size |
+| Light count             | capped by `maxLights` (default 64) | uncapped                                            | uncapped, and free: the cost is per probe           |
+| Extra passes            | none                               | two, a third with normals, a fourth while debugging | four to nine, depending on the view                 |
+| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                          | none - the field costs what the screen costs        |
 
 ```ts
 const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20, 20, 30) });
 ```
 
 `quality` defaults to `'auto'`, which takes `lightmap` when you passed `app` and `forward` when you did not - so a scene that describes what it wants rather than how gets shadows wherever it can have them. It resolves once, at construction, and `lighting.quality` reports what it settled on. Name a renderer outright when you need a property only that one has: `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count.
+
+`'auto'` never picks `radiance`: it is the one renderer whose look differs from the other two, so it is only ever had by asking for it. It needs the application and a device that can render into float targets, and is refused at construction without either.
+
+### `radiance`
+
+`radiance` fills the same light field from a chain of radiance cascades. Light PROPAGATES from what emits rather than falling off inside each light's radius, which is a different picture rather than a better one: a lamp lights the whole room it is in, a wall between two rooms leaves the second dark, and a source with a size casts a penumbra that widens with distance the way a real one does.
+
+```ts
+const lighting = new Lighting({ quality: 'radiance', app, ambient: new Color(8, 8, 14) });
+
+lighting.add(new PointLight({ radius: 300, intensity: 3, softness: 0.4 }));
+lighting.occludeFrom(Occluders.fromTilemap(level.layer('walls')));
+```
+
+What a light means here is its SHAPE, not its falloff: `softness` across its reach is the size of the source, and that is what sets how soft its shadows are. `radius` still bounds the region occluders are collected for, and `intensity` and `color` are what it emits.
+
+Three things it does not do, all of them deliberate for now:
+
+- **A surface does not re-emit.** Light is transported from the emitters and occluded by the same field the shadows use, but a lit wall is not itself a source yet - so there is no bounced colour.
+- **A `SunLight` is skipped.** It has nowhere to emit from. Use `ambient`.
+- **A `SpotLight` emits like a point.** A cone is a property of how a light shades, and this renderer transports from a shape instead.
+
+`probeSpacing`, `cascades` and `interval` are exposed as tuning and all default to something derived from the surface. They change how finely the same scene is sampled, never what is in it.
 
 `lightmap` needs the application, because it works on the frame the application drew: it installs its passes in `app.framePasses` and removes them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
 
@@ -136,7 +159,7 @@ import { physicsOccluder, normalMap } from '@codexo/exojs-lighting'; // tree-sha
 
 They do the same thing. The difference is that reaching one property of a namespace object keeps the whole object, so `Occluders.fromPhysics` also carries the marching-squares tracer, the alpha readback and the tile boundary walker that a physics-only project never runs - measured at 34.0 KB against 25.1 KB minified for the named form. Use the namespace while you are finding your way around, and the named form when the bundle matters.
 
-The renderers do not split this way. `quality` is a string read at runtime, so a `forward` project carries the lightmap renderer whether or not it runs it; the package as a whole is 12.9 KB gzip, of which a `forward` project uses 8.2 KB. Both figures are budgeted in CI.
+The renderers do not split this way. `quality` is a string read at runtime, so a `forward` project carries the lightmap and radiance renderers whether or not it runs them; the package as a whole is 28.1 KB gzip, of which a `forward` project uses 23.2 KB. Both figures are budgeted in CI.
 
 ### Light shapes
 
@@ -227,25 +250,27 @@ It is a live property (`material.emissive = 0.5`), so a pulsing forge is a tween
 
 ## Capabilities
 
-| Capability                                  | Status                                                           |
-| ------------------------------------------- | ---------------------------------------------------------------- |
-| Point and cone lights on sprites            | yes, WebGL2 and WebGPU                                           |
-| Lights as scene nodes (parenting, tweens)   | yes                                                              |
-| Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped        |
-| Ambient term                                | yes, carried in the light texture                                |
-| Emissive surfaces                           | `forward`, on `LitMaterial`                                      |
-| Normal maps                                 | `forward`: one per material; `lightmap`: per registered drawable |
-| Rotation / flip aware normals               | yes, via the instance's local-to-world basis                     |
-| Extra render passes or draw calls           | `forward`: none; `lightmap`: two; a `post` chain adds one        |
-| Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                               |
-| Overbright light accumulation               | `lightmap`: `rgba16f`, `rgba8` where floats are not renderable   |
-| Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                           |
-| Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                              |
-| Light cookies                               | `lightmap`, one draw per distinct cookie                         |
-| Line lights (capsule falloff)               | yes; `forward` approximates one as a point light                 |
-| Sun lights (parallel shadows)               | `lightmap` only                                                  |
-| Deferred (G-buffer) path                    | no                                                               |
-| Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                            |
+| Capability                                  | Status                                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Point and cone lights on sprites            | yes, WebGL2 and WebGPU                                                              |
+| Lights as scene nodes (parenting, tweens)   | yes                                                                                 |
+| Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped                           |
+| Ambient term                                | yes, carried in the light texture                                                   |
+| Emissive surfaces                           | `forward`, on `LitMaterial`                                                         |
+| Normal maps                                 | `forward`: one per material; `lightmap`: per registered drawable                    |
+| Rotation / flip aware normals               | yes, via the instance's local-to-world basis                                        |
+| Extra render passes or draw calls           | `forward`: none; `lightmap`: two; `radiance`: four to nine; a `post` chain adds one |
+| Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                                                  |
+| Overbright light accumulation               | `lightmap`: `rgba16f`, `rgba8` where floats are not renderable                      |
+| Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                                              |
+| Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                                                 |
+| Light cookies                               | `lightmap`, one draw per distinct cookie                                            |
+| Line lights (capsule falloff)               | yes; `forward` approximates one as a point light                                    |
+| Sun lights (parallel shadows)               | `lightmap` only                                                                     |
+| Radiance cascades (propagating light)       | `radiance`, WebGL2 and WebGPU, opt-in                                               |
+| Bounced light off lit surfaces              | no - `radiance` transports from emitters only                                       |
+| Deferred (G-buffer) path                    | no                                                                                  |
+| Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                                               |
 
 ## Cost
 

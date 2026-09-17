@@ -761,6 +761,18 @@
       "level": "advanced"
     },
     {
+      "slug": "radiance-rooms",
+      "path": "lighting/radiance-rooms.js",
+      "language": "typescript",
+      "title": "Radiance Rooms",
+      "description": "Radiance cascades against the light-quad renderer on one scene: a single lamp in one of two rooms, a doorway between them, and a switch that rebuilds the lighting system so the same lights can be seen drawn and transported.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "shadows", "shader"],
+      "capabilities": [],
+      "level": "advanced"
+    },
+    {
       "slug": "light-cookies",
       "path": "lighting/light-cookies.js",
       "language": "typescript",
