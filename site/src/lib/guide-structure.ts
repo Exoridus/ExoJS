@@ -479,7 +479,6 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'lighting/radiance-rooms',
           'lighting/light-cookies',
           'lighting/lightmap-normals',
-          'lighting/normal-mapped-blocks',
           'lighting/normal-mapped-sprites',
           'lighting/many-lights',
         ],

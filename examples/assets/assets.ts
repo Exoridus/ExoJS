@@ -25,10 +25,6 @@ export const assets = {
             prototypeDark01: 'demo/textures/prototype-dark-01.png',
             prototypeLight01: 'demo/textures/prototype-light-01.png',
             prototypeGrid: 'demo/textures/prototype-grid.png',
-            litStoneDiffuse: 'demo/textures/lit-stone-diffuse.jpg',
-            litStoneNormal: 'demo/textures/lit-stone-normal.jpg',
-            litBlockDiffuse: 'demo/textures/lit-block-diffuse.png',
-            litBlockNormal: 'demo/textures/lit-block-normal.png',
         },
         sprites: {
             buttons: {

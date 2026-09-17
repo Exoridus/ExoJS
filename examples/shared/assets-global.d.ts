@@ -33,10 +33,6 @@ interface ExampleAssetCatalog {
             readonly prototypeDark01: 'demo/textures/prototype-dark-01.png';
             readonly prototypeLight01: 'demo/textures/prototype-light-01.png';
             readonly prototypeGrid: 'demo/textures/prototype-grid.png';
-            readonly litStoneDiffuse: 'demo/textures/lit-stone-diffuse.jpg';
-            readonly litStoneNormal: 'demo/textures/lit-stone-normal.jpg';
-            readonly litBlockDiffuse: 'demo/textures/lit-block-diffuse.png';
-            readonly litBlockNormal: 'demo/textures/lit-block-normal.png';
         };
         readonly sprites: {
             readonly buttons: {
