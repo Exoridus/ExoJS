@@ -1,5 +1,5 @@
-import { type AabbLike, Container, Matrix, Rectangle } from '@codexo/exojs';
-import { describe, expect, test } from 'vitest';
+import { type AabbLike, Container, logger, Matrix, Rectangle, RenderTexture, Texture } from '@codexo/exojs';
+import { describe, expect, test, vi } from 'vitest';
 
 import { type OccluderCollider, type OccluderPhysicsWorld } from '../src/occluders/fromPhysics';
 import type { OccluderTileCell, OccluderTileLayer } from '../src/occluders/fromTilemap';
@@ -361,5 +361,126 @@ describe('OccluderPlacement', () => {
     );
 
     expect(collect(source)).toEqual(['7,9,9,9']);
+  });
+});
+
+describe('Occluders.fromMesh', () => {
+  /** Two triangles forming a 10x10 square, sharing the diagonal. */
+  const square = {
+    vertices: new Float32Array([0, 0, 10, 0, 10, 10, 0, 10]),
+    indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
+    getWorldTransform: () => new Matrix(),
+  };
+
+  test('the shared diagonal is interior, so only the outline is emitted', () => {
+    expect(collect(Occluders.fromMesh(square))).toEqual(['0,0,10,0', '10,0,10,10', '10,10,0,10', '0,10,0,0']);
+  });
+
+  test('a mesh without an index stream is welded by position rather than read as loose triangles', () => {
+    const loose = {
+      // The same square, but with the diagonal's corners repeated per triangle.
+      vertices: new Float32Array([0, 0, 10, 0, 10, 10, 0, 0, 10, 10, 0, 10]),
+      indices: null,
+      getWorldTransform: () => new Matrix(),
+    };
+
+    expect(collect(Occluders.fromMesh(loose))).toHaveLength(4);
+  });
+
+  test('a hole comes back as an outline of its own', () => {
+    // A square ring: four corners outside, four inside, eight triangles.
+    const outer = [0, 0, 30, 0, 30, 30, 0, 30];
+    const inner = [10, 10, 20, 10, 20, 20, 10, 20];
+    const indices: number[] = [];
+
+    for (let corner = 0; corner < 4; corner++) {
+      const next = (corner + 1) % 4;
+
+      indices.push(corner, next, 4 + next, corner, 4 + next, 4 + corner);
+    }
+
+    const ring = {
+      vertices: new Float32Array([...outer, ...inner]),
+      indices: new Uint16Array(indices),
+      getWorldTransform: () => new Matrix(),
+    };
+
+    expect(collect(Occluders.fromMesh(ring))).toHaveLength(8);
+  });
+
+  test('collinear points along a tessellated edge are dropped', () => {
+    // A 20x10 rectangle split into four triangles by a midpoint on each long
+    // edge: the midpoints lie on the outline but add nothing to its shape.
+    const strip = {
+      vertices: new Float32Array([0, 0, 10, 0, 20, 0, 0, 10, 10, 10, 20, 10]),
+      indices: new Uint16Array([0, 1, 4, 0, 4, 3, 1, 2, 5, 1, 5, 4]),
+      getWorldTransform: () => new Matrix(),
+    };
+
+    expect(collect(Occluders.fromMesh(strip))).toHaveLength(4);
+  });
+
+  test('the mesh places its own outline unless a node overrides it', () => {
+    const carrier = new Container().setPosition(100, 0);
+    const placed = { ...square, getWorldTransform: () => carrier.getWorldTransform() };
+
+    expect(collect(Occluders.fromMesh(placed))[0]).toBe('100,0,110,0');
+    expect(collect(Occluders.fromMesh(square, { node: carrier }))[0]).toBe('100,0,110,0');
+  });
+
+  test('a mesh with no triangles describes nothing', () => {
+    expect(collect(Occluders.fromMesh({ ...square, vertices: new Float32Array(), indices: null }))).toEqual([]);
+  });
+});
+
+describe('Occluders.fromAlpha', () => {
+  const drawableOver = (texture: Texture | null) => ({
+    texture,
+    textureFrame: new Rectangle(0, 0, 8, 8),
+    getLocalBounds: () => new Rectangle(0, 0, 8, 8),
+    getWorldTransform: () => new Matrix(),
+  });
+
+  // jsdom has no 2D canvas, so a trace yields nothing here: what these pin is
+  // which inputs are accepted and which are refused, not the silhouette.
+  test('a drawable supplies its own texture, frame and placement', () => {
+    expect(collect(Occluders.fromAlpha(drawableOver(new Texture(null))))).toEqual([]);
+  });
+
+  test('a drawable with no texture yields no outline', () => {
+    expect(collect(Occluders.fromAlpha(drawableOver(null)))).toEqual([]);
+  });
+
+  test('a bare texture is still accepted, placed by an optional node', () => {
+    const carrier = new Container().setPosition(50, 60);
+
+    expect(collect(Occluders.fromAlpha(new Texture(null), { node: carrier }))).toEqual([]);
+  });
+
+  test('a render target says so rather than silently casting nothing', () => {
+    const target = new RenderTexture(8, 8);
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+
+    try {
+      Occluders.fromAlpha({ ...drawableOver(null), texture: target });
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]?.[0]).toContain('RenderTexture');
+    } finally {
+      warn.mockRestore();
+      target.destroy();
+    }
+  });
+
+  test('a drawable with no texture says that instead', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+
+    try {
+      Occluders.fromAlpha(drawableOver(null));
+
+      expect(warn.mock.calls[0]?.[0]).toContain('no texture');
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

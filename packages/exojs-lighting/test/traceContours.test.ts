@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { outlinesFromAlphaField } from '../src/occluders/fromAlpha';
+import { outlinesFromAlphaField } from '../src/occluders/alphaTrace';
 import { simplifyLoop, traceContours } from '../src/occluders/traceContours';
 
 /** A field where `cells` lists the occupied `(x, y)` pairs. */
@@ -138,19 +138,21 @@ describe('outlinesFromAlphaField', () => {
   };
 
   test('an unreadable field yields no outline rather than a wrong one', () => {
-    expect(outlinesFromAlphaField(null, 4, 4, 0.5, 0, 0, 0)).toEqual([]);
+    expect(outlinesFromAlphaField(null, 4, 4, 0.5, 0)).toEqual([]);
   });
 
-  test('the silhouette comes back in texture pixels', () => {
-    const [loop] = outlinesFromAlphaField(square(), 4, 4, 0.5, 0, 0, 0);
+  test('the silhouette comes back in traced pixels when nothing places it', () => {
+    const [loop] = outlinesFromAlphaField(square(), 4, 4, 0.5, 0);
 
     expect(pointsOf([...loop!]).sort()).toEqual(['1,1', '1,3', '3,1', '3,3']);
   });
 
-  test('the anchor moves the outline, so a centred sprite outlines around its own origin', () => {
-    const [loop] = outlinesFromAlphaField(square(), 4, 4, 0.5, 0, 0.5, 0.5);
+  test("the placement maps a traced pixel onto the drawable's own box", () => {
+    // A 4x4 trace onto a box twice the size, offset the way a local box is:
+    // the outline scales and shifts with it rather than staying in pixels.
+    const [loop] = outlinesFromAlphaField(square(), 4, 4, 0.5, 0, { scaleX: 2, scaleY: 2, offsetX: -4, offsetY: -4 });
 
-    expect(pointsOf([...loop!]).sort()).toEqual(['-1,-1', '-1,1', '1,-1', '1,1']);
+    expect(pointsOf([...loop!]).sort()).toEqual(['-2,-2', '-2,2', '2,-2', '2,2']);
   });
 
   test('the threshold decides what counts as opaque', () => {
@@ -158,7 +160,7 @@ describe('outlinesFromAlphaField', () => {
 
     alpha[5] = 0.4;
 
-    expect(outlinesFromAlphaField(alpha, 4, 4, 0.5, 0, 0, 0)).toEqual([]);
-    expect(outlinesFromAlphaField(alpha, 4, 4, 0.3, 0, 0, 0)).toHaveLength(1);
+    expect(outlinesFromAlphaField(alpha, 4, 4, 0.5, 0)).toEqual([]);
+    expect(outlinesFromAlphaField(alpha, 4, 4, 0.3, 0)).toHaveLength(1);
   });
 });

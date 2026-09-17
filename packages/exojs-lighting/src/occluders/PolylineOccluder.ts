@@ -13,22 +13,38 @@ import type { OccluderSink, OccluderSource } from './OccluderSource';
  * @internal
  */
 export class PolylineOccluder implements OccluderSource {
-  private readonly _loops: readonly Float32Array[];
+  private _loops: readonly Float32Array[] = [];
   private readonly _closed: boolean;
   private readonly _node: OccluderPlacement | null;
-  private readonly _scratch: Float32Array;
+  private _scratch = new Float32Array(0);
   private readonly _placement = placementMap();
 
   public constructor(loops: readonly Float32Array[], closed: boolean, node: OccluderPlacement | null) {
-    this._loops = loops;
     this._closed = closed;
     this._node = node;
-    this._scratch = new Float32Array(loops.reduce((longest, loop) => Math.max(longest, loop.length), 0));
+    this.setLoops(loops);
   }
 
   /** The outlines in local space, as flat `[x0, y0, x1, y1, ...]` arrays. */
   public get loops(): readonly Float32Array[] {
     return this._loops;
+  }
+
+  /**
+   * Swap the outlines this places, for a source whose shape can change - an
+   * animation stepping to a frame with a different silhouette.
+   *
+   * The scratch buffer only ever grows, so switching back and forth between
+   * frames reallocates nothing after the largest has been seen once.
+   */
+  public setLoops(loops: readonly Float32Array[]): void {
+    this._loops = loops;
+
+    const longest = loops.reduce((most, loop) => Math.max(most, loop.length), 0);
+
+    if (this._scratch.length < longest) {
+      this._scratch = new Float32Array(longest);
+    }
   }
 
   public collect(bounds: ReadonlyRectangle, out: OccluderSink): void {

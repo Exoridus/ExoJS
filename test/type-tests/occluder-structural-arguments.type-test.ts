@@ -8,18 +8,32 @@
 // one-way dependency has quietly stopped being usable - a project would have to
 // adapt by hand, which is the thing the structural typing exists to avoid.
 
-import { type OccluderPhysicsWorld, Occluders, type OccluderTileLayer } from '@codexo/exojs-lighting';
+import type { Mesh, Sprite, Video } from '@codexo/exojs';
+import { type AlphaOccluderDrawable, type OccluderMesh, type OccluderPhysicsWorld, Occluders, type OccluderTileLayer } from '@codexo/exojs-lighting';
 import type { PhysicsWorld } from '@codexo/exojs-physics';
 import type { ResolvedTile, TileLayer } from '@codexo/exojs-tilemap';
 
 declare const world: PhysicsWorld;
 declare const layer: TileLayer;
+declare const sprite: Sprite;
+declare const mesh: Mesh;
+declare const video: Video;
 
 const takesPhysicsWorld = (value: OccluderPhysicsWorld): OccluderPhysicsWorld => value;
 const takesTileLayer = (value: OccluderTileLayer<ResolvedTile>): OccluderTileLayer<ResolvedTile> => value;
 
+const takesAlphaDrawable = (value: AlphaOccluderDrawable): AlphaOccluderDrawable => value;
+const takesMesh = (value: OccluderMesh): OccluderMesh => value;
+
 takesPhysicsWorld(world);
 takesTileLayer(layer);
+// Core's own drawables, which is what lets one argument stand in for a
+// texture, an anchor and a transform.
+takesAlphaDrawable(sprite);
+// A video is a sprite over a live texture, so it needs no separate path - it
+// traces whichever frame was decoded when the source was built.
+takesAlphaDrawable(video);
+takesMesh(mesh);
 
 // The factories themselves, as a caller writes them.
 Occluders.fromPhysics(world, { staticOnly: true });
@@ -28,3 +42,5 @@ Occluders.fromTilemap(layer);
 // `solid` infers the layer's own tile type, so a predicate can read a tile
 // definition without a cast.
 Occluders.fromTilemap(layer, { solid: tile => tile.tileset.getTileDefinition(tile.localTileId)?.collision !== undefined });
+Occluders.fromAlpha(sprite);
+Occluders.fromMesh(mesh);

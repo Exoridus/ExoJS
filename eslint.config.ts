@@ -574,15 +574,11 @@ export default defineConfig([
   },
 
   // Build-time constants intentionally follow ecosystem-style ALL_CAPS names.
+  // Matched by filename rather than listed per package: every package that
+  // declares them does it in the same file, and a list would fall behind the
+  // next one that does.
   {
-    files: [
-      'src/build-constants.d.ts',
-      'src/typings.d.ts',
-      'packages/exojs-particles/src/typings.d.ts',
-      'packages/exojs-tilemap/src/typings.d.ts',
-      'packages/exojs-tiled/src/typings.d.ts',
-      'packages/exojs-physics/src/typings.d.ts',
-    ],
+    files: ['src/build-constants.d.ts', 'src/typings.d.ts', 'packages/*/src/typings.d.ts'],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },

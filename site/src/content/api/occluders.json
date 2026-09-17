@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "fromAlpha",
-          "signature": "fromAlpha: (texture: Texture, options?: AlphaOccluderOptions) => OccluderSource",
+          "signature": "fromAlpha: (source: AlphaOccluderDrawable | Texture, options?: AlphaOccluderOptions) => OccluderSource",
           "signatureTokens": [
             {
               "text": "fromAlpha",
@@ -47,11 +47,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "texture",
+              "text": "source",
               "kind": "param"
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AlphaOccluderDrawable",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -89,7 +97,68 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shadows from a texture's own silhouette, traced once. ts lighting.occludeFrom(Occluders.fromAlpha(tree.texture, { node: tree, anchor: tree.anchor }));  The alpha channel is traced and simplified when this is called, never per frame; what runs per frame is the node transform, so a moving carrier is free. A texture that is still loading traces to nothing rather than waiting, so call it once the texture is ready. The outline follows the art, which is not always the shadow you want - a tree casts the shadow of its trunk, not of its canopy. Reach for Occluders.fromPolygon where they differ."
+          "description": "Shadows from a texture's own silhouette, traced once. ts lighting.occludeFrom(Occluders.fromAlpha(tree));  Pass the drawable and it supplies everything: its texture, the frame of it that it shows - so a sprite from an atlas outlines itself rather than the whole page - its own box, and its transform, which already carries the anchor. Pass a bare texture instead and the whole of it is traced, placed by node. The alpha channel is traced and simplified per distinct frame, on first sight and then never again, so an animation costs one trace per frame OF THE CLIP rather than one per rendered frame - and the outline follows the clip instead of freezing on whichever frame was showing at construction. What runs every rendered frame is a comparison and the transform. That leaves two cases with no outline rather than a wrong one, both reported on the Occluders log source in a development build. A render target has no pixels this side of the GPU and can never be traced. A texture that is not readable yet - still loading, or tainted by a cross-origin image - is retried on the next frame rather than cached. The outline follows the art, which is not always the shadow you want - a tree casts the shadow of its trunk, not of its canopy. Reach for Occluders.fromPolygon where they differ."
+        },
+        {
+          "name": "fromMesh",
+          "signature": "fromMesh: (mesh: OccluderMesh, options?: MeshOccluderOptions) => OccluderSource",
+          "signatureTokens": [
+            {
+              "text": "fromMesh",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mesh",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderMesh",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshOccluderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shadows from a triangle mesh's own silhouette. ts lighting.occludeFrom(Occluders.fromMesh(platform));  Only edges one triangle owns are kept: an edge two triangles share is interior and casts no shadow anybody can see, and a tessellated shape has far more of those than of the other kind. Holes come back as outlines of their own, so a ring shadows like a ring. The outline is extracted once. The mesh places it, so moving or rotating it moves its shadow; deforming its vertices afterwards does not, and wants a fresh source."
         },
         {
           "name": "fromPhysics",

@@ -78,7 +78,8 @@ const lighting = new Lighting({ quality: 'lightmap', app });
 
 lighting.occludeFrom(Occluders.fromPhysics(world));
 lighting.occludeFrom(Occluders.fromTilemap(tilemap.layer('walls')));
-lighting.occludeFrom(Occluders.fromAlpha(tree.texture, { node: tree, anchor: tree.anchor }));
+lighting.occludeFrom(Occluders.fromAlpha(tree));
+lighting.occludeFrom(Occluders.fromMesh(platform));
 lighting.occludeFrom(Occluders.fromPolygon(trunkOutline, { node: tree }));
 ```
 
@@ -86,8 +87,19 @@ lighting.occludeFrom(Occluders.fromPolygon(trunkOutline, { node: tree }));
 | ------------------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
 | `Occluders.fromPhysics(world)`  | collider geometry              | static bodies only by default, never sensors; queried per frame by region      |
 | `Occluders.fromTilemap(layer)`  | occupied cells of a tile layer | boundary edges only, merged into runs; cached per block, keyed on the revision |
-| `Occluders.fromAlpha(texture)`  | a texture's own silhouette     | traced and simplified once, never per frame; placed by an optional node        |
+| `Occluders.fromAlpha(sprite)`   | the drawable's own silhouette  | its atlas frame, traced and simplified once, never per frame                   |
+| `Occluders.fromMesh(mesh)`      | a triangle mesh's outline      | interior edges dropped, holes kept; extracted once                             |
 | `Occluders.fromPolygon(points)` | an outline you author          | the escape hatch, and the right answer when the shadow is not the drawing      |
+
+`fromAlpha` and `fromMesh` take the drawable itself, which then supplies both its geometry and its placement: `fromAlpha` the texture, the frame of it the drawable shows and the box that frame is drawn into, `fromMesh` the vertices and the index stream. The anchor needs no mention - a drawable's transform already carries it. Pass a bare `Texture` to `fromAlpha` instead and the whole of it is traced, placed by `node`; that form cannot know about an atlas frame or a resize, so prefer the drawable wherever there is one.
+
+`fromMesh` extracts once. `fromAlpha` extracts per distinct frame: an animation is a finite set of silhouettes, not a continuous one, so each region of the atlas is traced the first time the clip reaches it and looked up every time after. A rendered frame costs a comparison and the transform; the marching-squares pass happens once per frame of the clip, however long the clip runs. Moving, rotating or scaling either carrier is free.
+
+What neither follows is a change with nothing to key on: deforming a mesh's vertices, or a texture whose pixels move while its frame stays put. That second case is video and anything drawn into every frame - see below.
+
+Two sources give no outline, by construction rather than by omission. A **render target** has no pixels this side of the GPU: reading one back is asynchronous and backend-specific, and its content is dynamic anyway, so `fromAlpha` refuses it - draw into an `HTMLCanvasElement` or `OffscreenCanvas` and wrap that in a `Texture` if you need both a live surface and its outline. **Video** is the opposite case: an `HTMLVideoElement` is a perfectly readable texture source, so `Video` (which extends `Sprite`) traces the frame that was decoded at the time. It will not follow the playback, because a video's frame rectangle never changes while its pixels do, and the per-frame cache has nothing to distinguish one moment from the next. It hardly matters in practice: almost no video carries an alpha channel, so what you get is the frame rectangle, which `fromPolygon` describes with four points and no tracing pass at all.
+
+`Sprite.texture` accepts a `RenderTexture`, so "a sprite that cannot be traced" is a shape the types allow, and a shadow that silently never appears is a bad way to find out. A development build says which of the three it was - no texture, a render target, or a texture that could not be read yet - on the `Occluders` log source. A production build carries neither the check nor the message.
 
 There is no `castsShadow` flag, in this package or in the core. A flag on a drawable would put lighting vocabulary on a class with no lighting concern, and it would tie the shadow silhouette to the sprite's shape - which is wrong often enough that a tree casts the shadow of its trunk, not of its canopy. Sources keep the two apart while letting the common case stay one line.
 
@@ -146,7 +158,7 @@ Sprites from a second atlas need a second `LitMaterial`, which breaks the batch 
 | Rotation / flip aware normals               | yes, via the instance's local-to-world basis              |
 | Extra render passes or draw calls           | `forward`: none; `lightmap`: two passes                   |
 | Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                        |
-| Shadows from physics, tilemaps or alpha     | yes, via `Occluders.*`                                    |
+| Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                    |
 | Light cookies, line and sun lights          | no                                                        |
 | Deferred (G-buffer) path                    | no                                                        |
 | Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                     |
