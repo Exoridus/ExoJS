@@ -165,6 +165,8 @@ export {
 export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
 export { DataTexture } from '#rendering/texture/DataTexture';
 export { DepthTexture } from '#rendering/texture/DepthTexture';
+export type { PixelReaderOptions } from '#rendering/texture/PixelReader';
+export { PixelRead, PixelReader } from '#rendering/texture/PixelReader';
 export type { RenderTextureOptions } from '#rendering/texture/RenderTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';
 export type { RepeatFit, RepeatMode, RepeatPlan, RepeatSegment } from '#rendering/texture/repeat';

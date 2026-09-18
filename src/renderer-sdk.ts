@@ -18,6 +18,7 @@ export type { MaterialKey } from '#rendering/material/MaterialKey';
 export type { RenderPassCoordinator, RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordinator';
 export type { RenderPassDescriptor, RenderPassLoad } from '#rendering/pass/RenderPassDescriptor';
 export { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
+export type { PixelReadback } from '#rendering/PixelReadback';
 export { PixelSnapMode } from '#rendering/pixelSnap';
 export type { DrawCommand, SharedTransformRenderer } from '#rendering/plan/renderCommand';
 export type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';

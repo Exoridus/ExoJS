@@ -18,6 +18,7 @@ import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant }
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { assertBatchSingleAttachment, assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
+import type { PixelReadback } from '#rendering/PixelReadback';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
@@ -70,6 +71,7 @@ import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import type { WebGpuPersistentSlotCapableRenderer, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
+import { WebGpuPixelReadback, type WebGpuPixelReadbackHost } from './WebGpuPixelReadback';
 import { WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
 import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
@@ -329,6 +331,9 @@ export class WebGpuBackend implements RenderBackend {
    * them - their buffers belong to the device that just went away.
    */
   private readonly _persistentStores = new Set<WebGpuPersistentSlotStore>();
+  /** Live standing readbacks, drained at frame start and invalidated together on device loss. */
+  private readonly _pixelReadbacks = new Set<WebGpuPixelReadback>();
+  private _pixelReadbackHostInstance: WebGpuPixelReadbackHost | null = null;
   private readonly _rejectedRetainedSets = new WeakSet<RetainedInstructionSet>();
   // Reused across per-batch scans at record time to avoid an
   // allocation per flush; the renderer-agnostic counterpart of WebGL2's
@@ -605,6 +610,13 @@ export class WebGpuBackend implements RenderBackend {
     // previously reset per render() call in _beginDrawPlan).
     this._getTransformStorage().buffer.begin();
     this._gpuTimer?.beginFrame();
+
+    // Frame start rather than frame end: a map never settles in the task that
+    // requested it, so polling here is what lets a read requested in one
+    // frame's update be ready by the next one's.
+    for (const readback of this._pixelReadbacks) {
+      readback.poll();
+    }
 
     return this;
   }
@@ -1242,6 +1254,26 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
+  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback {
+    const readback = new WebGpuPixelReadback(this._pixelReadbackHost(), source, x, y, width, height, slots);
+
+    this._pixelReadbacks.add(readback);
+
+    return readback;
+  }
+
+  private _pixelReadbackHost(): WebGpuPixelReadbackHost {
+    return (this._pixelReadbackHostInstance ??= {
+      accountant: this._accountant,
+      liveDevice: () => (this._device !== null && !this._deviceLost ? this._device : null),
+      flushDraws: () => this._flushActiveRendererAndEndPass(),
+      textureOf: source => this._syncTexture(source).texture,
+      forgetPixelReadback: readback => {
+        this._pixelReadbacks.delete(readback);
+      },
+    });
+  }
+
   public acquireRenderTexture(width: number, height: number): RenderTexture {
     return this._renderTexturePool.acquire(width, height);
   }
@@ -1387,6 +1419,12 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     this._persistentStores.clear();
+
+    for (const readback of [...this._pixelReadbacks]) {
+      readback.destroy();
+    }
+
+    this._pixelReadbacks.clear();
     this._retainedCaptureFrames.length = 0;
     this._passCoordinatorInstance?.destroyStencil();
     this._drawPlanDepth = 0;
@@ -2620,6 +2658,12 @@ export class WebGpuBackend implements RenderBackend {
     // treat the next selection as all-entering.
     for (const store of this._persistentStores) {
       store.invalidateDeviceResources();
+    }
+
+    // Standing readbacks hold staging buffers of the dead device the same way;
+    // finished reads keep their bytes, pending ones fail.
+    for (const readback of this._pixelReadbacks) {
+      readback.invalidateDeviceState();
     }
 
     this._persistentStores.clear();

@@ -170,6 +170,8 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "PassContext",
   "Perf",
   "PhasedSceneTransition",
+  "PixelRead",
+  "PixelReader",
   "PixelSnapMode",
   "PlayStationGeneration",
   "Pointer",

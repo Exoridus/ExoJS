@@ -9,6 +9,8 @@ import { RenderTarget } from '#rendering/RenderTarget';
 import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
+import { createPixelReadbackDouble } from './pixel-readback-double';
+
 export interface RenderBackendDoubleOptions {
   /** Root target the double reports and hands out views from. Created at 800x600 when omitted. */
   readonly renderTarget?: RenderTarget;
@@ -110,6 +112,9 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     },
     readPixels(_source: RenderTexture, _x: number, _y: number, width: number, height: number) {
       return Promise.resolve(new Uint8ClampedArray(width * height * 4));
+    },
+    createPixelReadback(_source: RenderTexture, _x: number, _y: number, width: number, height: number, slots: number) {
+      return createPixelReadbackDouble(width, height, slots);
     },
     acquireRenderTexture(width: number, height: number) {
       return new RenderTexture(width, height);
