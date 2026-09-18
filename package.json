@@ -215,8 +215,27 @@
     },
     {
       "path": "dist/exo.full.iife.min.js",
-      "limit": "550 KB",
+      "limit": "600 KB",
       "gzip": true
+    },
+    {
+      "name": "@codexo/exojs-lighting",
+      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "limit": "28 KB",
+      "gzip": true,
+      "ignore": [
+        "@codexo/exojs"
+      ]
+    },
+    {
+      "name": "@codexo/exojs-lighting (forward, no occluder tracing)",
+      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "import": "{ Lighting, PointLight, SpotLight, LitMaterial, NormalMap }",
+      "limit": "15 KB",
+      "gzip": true,
+      "ignore": [
+        "@codexo/exojs"
+      ]
     },
     {
       "path": "dist/exo.debug.esm.js",

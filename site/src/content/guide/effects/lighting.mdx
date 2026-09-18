@@ -1,0 +1,351 @@
+---
+title: 'Lighting'
+description: 'Light a 2D scene with lights that are scene nodes, normals nobody authored, and shadows read out of the world you already described.'
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
+
+# Lighting
+
+Most 2D projects that could have shadows ship without them, and the reason is bookkeeping rather than technique: an engine that asks you to draw a silhouette per object is asking for work nobody budgeted. `@codexo/exojs-lighting` starts from the opposite end. A light is a scene node, so a torch parents to the player and follows it. A surface gets its normals from its own silhouette, so art that was never authored for lighting still reacts to it. And what blocks light is read out of a description you already have — physics colliders, a tile layer, a sprite's alpha.
+
+> **Note:** lighting ships as an official ExoJS extension package. Install it alongside the core:
+> ```sh
+> npm install @codexo/exojs @codexo/exojs-lighting
+> ```
+
+There is no extension to register. `Lighting` is an ordinary system you add to a scene.
+
+## Setup
+
+```ts
+import { Color, Scene } from '@codexo/exojs';
+import { Lighting } from '@codexo/exojs-lighting';
+
+class CaveScene extends Scene {
+    private lighting = new Lighting({ app: this.app, ambient: new Color(20, 22, 34) });
+
+    override init(): void {
+        this.systems.add(this.lighting);
+    }
+}
+```
+
+`ambient` is the baseline every lit fragment receives regardless of any light — `255` per channel means "unlit areas keep their full albedo", and a dark blue is the usual night. It is read every frame, so fading from day to night is one tween on a colour.
+
+Register the system with the registry that ticks **after** the code moving your lights. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want.
+
+## Three renderers, one vocabulary
+
+The scene describes what emits and what blocks. `quality` decides how that becomes pixels, and nothing else changes between them — the same lights, the same occluders.
+
+|                         | `forward`                          | `lightmap`                                          | `radiance`                                          |
+| ----------------------- | ---------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
+| Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame   | the same target, filled by transporting radiance    |
+| Normal mapping          | per material, on `LitMaterial`     | per drawable, through a prepass                     | no                                                   |
+| Shadows                 | no                                 | yes, soft, from registered occluder sources         | yes, with a penumbra that follows the source's size  |
+| Light count             | capped by `maxLights` (default 64) | uncapped                                            | uncapped, and free: the cost is per probe            |
+| Extra passes            | none                               | two, a third with normals                           | four to nine, depending on the view                  |
+| Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                          | none — the field costs what the screen costs         |
+
+`quality` defaults to `'auto'`, which takes `lightmap` when you passed `app` and `forward` when you did not. It resolves once, at construction, and `lighting.quality` reports what it settled on:
+
+```ts
+import { Lighting } from '@codexo/exojs-lighting';
+
+declare const lighting: Lighting;
+
+lighting.quality; // 'forward' | 'lightmap' | 'radiance'
+```
+
+Name a renderer outright when you need a property only that one has — `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count, `radiance()` for light that spreads.
+
+### Light that spreads
+
+`radiance` fills the same light field from a chain of radiance cascades. Light propagates from what emits instead of falling off inside each light's radius, so a lamp lights the room it stands in, a wall between two rooms leaves the second one dark, and a source with a size casts a penumbra that widens with distance.
+
+It is the one renderer asked for by a value rather than a name:
+
+```ts
+import { Color } from '@codexo/exojs';
+import { Lighting, PointLight, radiance } from '@codexo/exojs-lighting';
+import type { Application } from '@codexo/exojs';
+
+declare const app: Application;
+
+const lighting = new Lighting({ quality: radiance(), app, ambient: new Color(8, 8, 14) });
+
+// Under `radiance` a light's `softness` sets the SIZE of the source, which is
+// what decides how soft the shadows it casts are.
+lighting.add(new PointLight({ radius: 300, intensity: 3, softness: 0.4 }));
+```
+
+The value is what keeps the cascades out of a bundle that never runs them: they are linked by the import, not by a string. Its tuning rides on the same call — `radiance({ probeSpacing: 2, cascades: 5, interval: 1 })`, all optional and all derived from the surface by default.
+
+`'auto'` never picks it. It needs a device that can render into float targets and is refused at construction where it cannot run — so you never get it by accident, and `lighting.quality` still reports `'radiance'` once it is running.
+
+<Callout type="note" title="What the transport carries">
+  A wall the field lit gives part of that light off again in its own colour, one frame later - `radiance({ bounce: 0.5 })` sets how much, and `0` switches it off. A `SunLight` is the sky every unblocked ray ends in, a `SpotLight` emits across its cone, and the fields reach a margin past the picture (`fieldMargin`), so what stands just outside it still shadows and lights what is in it.
+</Callout>
+
+<Callout type="note" title="The axis is properties, not quality">
+  `forward` is not the low setting and `lightmap` is not the high one. One shades inside the sprite stage and can therefore reach a per-material normal map; the other shades a field of its own and can therefore carry shadows and any number of lights. Neither is a downgrade of the other.
+</Callout>
+
+## Lights are nodes
+
+A light is a `RenderNode` that emits rather than draws. It inherits the transform, parents to whatever carries it, and every field is an ordinary property — so the engine's tweens animate a light with no lighting-specific animation concept.
+
+```ts
+import { Color } from '@codexo/exojs';
+import { Lighting, PointLight } from '@codexo/exojs-lighting';
+import type { Application, Container } from '@codexo/exojs';
+
+declare const app: Application;
+declare const lighting: Lighting;
+declare const player: Container;
+
+const torch = lighting.add(new PointLight({ radius: 320, color: new Color(255, 180, 120), intensity: 1.4 }));
+
+player.addChild(torch);
+// A flicker is an ordinary tween on an ordinary property - there is no
+// lighting-specific animation concept to learn.
+app.tweens.create(torch).to({ intensity: 1.8 }, 0.4).start();
+```
+
+`add` returns the light, so creating, parenting and registering it is one expression. Registering the same light twice shades it once; destroying a registered light unregisters it.
+
+Four shapes:
+
+```ts
+import { Color } from '@codexo/exojs';
+import { Lighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
+
+declare const lighting: Lighting;
+
+// Equal in every direction, falling off to nothing at its radius.
+lighting.add(new PointLight({ radius: 260 }));
+
+// A cone along the node's own rotation - aiming a spot is rotating it.
+lighting.add(new SpotLight({ radius: 400, angle: 35, coneSoftness: 0.3 }));
+
+// A segment: falloff is measured from the nearest point on it, so the pool of
+// light is a capsule. Neon tubes, light strips, lasers.
+lighting.add(new LineLight({ length: 120, radius: 160, color: new Color(120, 200, 255) }));
+
+// A direction and no position. Reaches everything the camera can see, falls off
+// nowhere, and its shadows are parallel.
+lighting.add(new SunLight({ intensity: 0.8 })).setRotation(-35);
+```
+
+A line light's `radius` is the distance from the **segment**, so it reaches `length / 2 + radius` along its own axis and `radius` across it. A sun's `height` is a slope rather than a length, because a source at no particular distance has no other meaning for one.
+
+Shapes are deliberately not extensible. A shape is instance data a light-pass shader evaluates, and opening it up means either exposing that shader's structure or accepting a draw call per shape.
+
+### Cookies
+
+Every light takes an optional `cookie` texture — the cheapest large visual win here.
+
+```ts
+import type { Texture } from '@codexo/exojs';
+import { Lighting, PointLight } from '@codexo/exojs-lighting';
+
+declare const lighting: Lighting;
+declare const windowCross: Texture;
+
+lighting.add(new PointLight({ radius: 320, cookie: windowCross }));
+```
+
+The texture's full `0..1` maps onto the light's own bounding square, so the pattern turns with a cone light and scales with the radius — it is fixed to the lamp, not to the world. It is multiplied into the light, so a transparent part of the cookie casts nothing and an opaque white one changes nothing.
+
+<Callout type="note" title="It belongs to the lamp, not to the wall">
+  A cookie travels with its light. That is right for a torch with a cut-out over it and wrong for a window, whose bars belong to the wall: move a light wearing a window and the bars slide across the floor with it. Keep such a light still and animate its `intensity` instead. Anchoring a pattern to the world is a projection rather than a cookie, and is not built.
+</Callout>
+
+Lights sharing a cookie share a draw. A scene with three distinct cookies costs three draws rather than one — still one draw per texture, never one per light. `forward` ignores cookies: it shades inside the sprite stage, where a texture per light cannot be reached in one draw.
+
+## Normals nobody has to author
+
+Most 2D projects have no normal maps, and a lighting system that looks bad without them is a lighting system nobody switches on. So normals are an upgrade, never an entry fee: a surface without them is lit as a plane rather than left black.
+
+Where they come from depends on which renderer is shading.
+
+Under `forward`, they are a **material** binding:
+
+```ts
+import type { Sprite, Texture } from '@codexo/exojs';
+import { AlphaNormals, Lighting, LitMaterial, NormalMap } from '@codexo/exojs-lighting';
+
+declare const lighting: Lighting;
+declare const crate: Sprite;
+declare const hero: Sprite;
+declare const heroNormals: Texture;
+declare const crateTexture: Texture;
+
+// Lit as a plane - no map, and not black.
+crate.material = new LitMaterial({ lighting });
+
+// An authored tangent-space map.
+hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals) });
+
+// Derived from the texture's own alpha, once at load.
+crate.material = new LitMaterial({ lighting, normals: new AlphaNormals(crateTexture) });
+```
+
+Every sprite drawn with a given material shares its map — in practice one material per atlas — and the map must have the same layout as the albedo atlas, frame for frame. Rotation and mirroring are handled in the shader.
+
+Under `lightmap` there is no per-fragment surface to bind to: the renderer multiplies a frame that was already drawn. A **normal prepass** puts one back. Register a drawable and the renderer draws its normal map, at the drawable's own place and orientation, into one attachment the light shader then reads:
+
+```ts
+import type { Sprite, Texture } from '@codexo/exojs';
+import { Lighting, NormalMap } from '@codexo/exojs-lighting';
+
+declare const lighting: Lighting;
+declare const crate: Sprite;
+declare const crateNormals: Texture;
+
+lighting.normalsFrom(crate, new NormalMap(crateNormals));
+```
+
+<Callout type="note" title="Registering nothing costs nothing">
+  The attachment's alpha is coverage, and where it is zero the light lands with no `N dot L` term at all — which is exactly how the renderer behaved before the prepass existed. Switching normals on cannot darken anything that did not ask for them, and a scene that registers none pays for no attachment and no pass.
+</Callout>
+
+The drawable's own texture supplies that coverage, so a silhouette claims a surface and the empty corners of its quad do not. What it inherits from every screen-space normal buffer: one normal per pixel, so overlapping surfaces resolve to the topmost.
+
+## Shadows you do not model
+
+Nothing in this package has a `castsShadow` flag. A flag on a drawable would put lighting vocabulary on a class with no lighting concern, and it would tie the shadow silhouette to the sprite's shape — which is wrong often enough that a tree casts the shadow of its trunk, not of its canopy.
+
+Instead, what blocks light is a **source**, and the useful sources read descriptions you already have:
+
+```ts
+import type { Sprite } from '@codexo/exojs';
+import { AlphaOccluder, Lighting, PhysicsOccluder, PolygonOccluder, TilemapOccluder } from '@codexo/exojs-lighting';
+import type { OccluderPhysicsWorld, OccluderTileLayer } from '@codexo/exojs-lighting';
+
+declare const lighting: Lighting;
+declare const world: OccluderPhysicsWorld;
+declare const walls: OccluderTileLayer<unknown>;
+declare const tree: Sprite;
+
+// You already have colliders, so you already have shadows.
+lighting.occludeFrom(new PhysicsOccluder(world, { staticOnly: true }));
+
+// Follows the chunk streamer, so an infinite map streams its shadows.
+lighting.occludeFrom(new TilemapOccluder(walls));
+
+// A sprite's own silhouette, traced once at load.
+lighting.occludeFrom(new AlphaOccluder(tree));
+
+// The escape hatch, and the right answer whenever the shadow outline is not
+// the drawn one.
+lighting.occludeFrom(
+    new PolygonOccluder([
+        { x: 0, y: 0 },
+        { x: 64, y: 0 },
+        { x: 64, y: 96 },
+    ]),
+);
+```
+
+`PhysicsOccluder` and `TilemapOccluder` take structurally typed arguments, so this package depends on neither the physics nor the tilemap package: a project without them pulls in nothing, and a project with a collision layer of its own can feed shadows from that instead.
+
+`softness` is a property of the light, in `0..1`. `0` is a point source with a hard edge; higher values widen the penumbra the way a larger lamp would. It widens the shadow sample kernel rather than adding a pass, so it costs nothing per light and can differ between them.
+
+<Callout type="pitfall" title="A render target cannot be traced">
+  `AlphaOccluder` reads pixels, and a `RenderTexture` has none this side of the GPU. It returns an empty source rather than a wrong outline, and a development build says which of three cases it was. If you need both a live surface and its outline, draw into an `HTMLCanvasElement` and wrap that in a `Texture`.
+</Callout>
+
+### How a shadow is computed
+
+Every light gets one row of a shadow map. For a point, cone or line light that row is **polar**: for each of `shadowResolution` angular bins around the light, the distance to the nearest occluding edge. A sun has no centre to measure angles from, so its row is **linear**: one bin per strip across the light's direction, holding how far along the light the nearest occluder in that strip sits.
+
+The rows are built on the CPU from the segments the sources collected and uploaded as one texture; the light shader turns a fragment's own direction into a bin and compares. That shape is chosen so the lights stay in a single instanced draw — a shadow pass per light would break the batch the renderer exists for.
+
+## Emission
+
+A `LitMaterial` takes an `emissive` multiplier: how much light the surface emits of its own, as a multiple of its albedo.
+
+```ts
+import type { Sprite } from '@codexo/exojs';
+import { Lighting, LitMaterial } from '@codexo/exojs-lighting';
+
+declare const lighting: Lighting;
+declare const lava: Sprite;
+
+lava.material = new LitMaterial({ lighting, emissive: 2.4 });
+```
+
+It is added to the light term rather than to the colour, so emission scales the albedo the way a light does — a black pixel emits nothing however high it is set, and a transparent one stays transparent instead of glowing through its own alpha. Values above `1` push the surface past what a light could produce, which is what a `post` filter keyed on a threshold is there to catch.
+
+## Filters over the shaded frame
+
+`post` is a filter chain over what the system produced, run as one pass in `app.framePasses`. A bloom belongs here rather than on a node, because it reads the light the system accumulated — including the parts no single node drew.
+
+```ts
+import { BloomFilter, type Application } from '@codexo/exojs';
+import { Lighting } from '@codexo/exojs-lighting';
+
+declare const app: Application;
+
+const lighting = new Lighting({ app, post: [new BloomFilter({ threshold: 0.9 })] });
+```
+
+It needs `app` in either renderer, and a chain passed without one is refused at construction rather than quietly ignored. Under `lightmap` the composite writes an off-screen target in the light target's own format and the chain reads that, so a threshold above `1.0` still has something to find — the light target is `rgba16f` wherever one can be rendered into, and `lighting.hdr` reports whether it is.
+
+## Seeing what the renderer sees
+
+```ts
+import { Lighting } from '@codexo/exojs-lighting';
+
+declare const lighting: Lighting;
+
+lighting.debug = 'light'; // the accumulated light field, without the scene's colours
+lighting.debug = 'normals'; // the prepass normals, encoded the way a normal map is
+lighting.debug = 'occluders'; // the silhouettes the sources collected, over the scene
+lighting.debug = 'mask'; // the same silhouettes rasterised at the light field's own resolution
+lighting.debug = 'distance'; // how far the nearest occluder is, as a ramp across the view
+lighting.debug = null;
+```
+
+`mask` and `distance` are the two the GPU-resident paths read: the mask says whether a wall is thick enough to be seen at the light field's resolution, and the distance field is what a ray steps along instead of marching a texel at a time.
+
+The `occluders` view is the one that explains the feature: it draws what the shadows are actually being cast from, which is usually the fastest way to find out that a source is reading the wrong thing.
+
+## Cost
+
+Forward lighting costs `fragments x active lights`. With everything on screen lit and many overlapping lights, the fragment stage becomes the bottleneck well before the CPU does — measure before raising `maxLights` into the dozens on a full-screen scene.
+
+The lightmap renderer costs the fill of each light's own radius, plus two full-screen passes and a third when normals are registered. `lightResolution` (default `0.5`) sets the light target's density: light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
+
+The radiance renderer costs neither of those: it costs the probe grid. Every level of the chain holds the same number of texels, and the number of levels follows the view's own diagonal, so the whole field is between four and nine full-screen-ish passes however many lights are in it. `probeSpacing` (default `2` light-field texels) is the knob that moves that cost, and halving it quadruples the grid.
+
+Shadows cost the visible occluding edges times the lights that can see them, per frame. That is bounded by collecting only the region the visible lights jointly reach, by emitting only boundary edges — a hundred-tile corridor is four segments, not four hundred — and by caching whatever does not change.
+
+## Examples
+
+<a id="shadow-casters"></a>
+<ExamplePreview chapter="lighting" slug="shadow-casters" />
+
+Walls that hand over the rectangle they are drawn as, a cross whose outline is traced from its alpha, and a softness slider — with nothing in the scene declaring that it casts a shadow.
+
+<a id="radiance-rooms"></a>
+<ExamplePreview chapter="lighting" slug="radiance-rooms" />
+
+One lamp, two rooms and a doorway, with a switch between `lightmap` and `radiance` on the same scene. Watch the far room: under the light quads it is whatever the lamp's radius reaches minus a shadow, and under the cascades it is dark except for the wedge coming through the opening. The source-size slider is `softness`, which is the lamp's own size under `radiance` — widen it and every penumbra in the scene widens with it.
+
+<a id="light-cookies"></a>
+<ExamplePreview chapter="lighting" slug="light-cookies" />
+
+Window bars and leaf shade as cookies on the lights themselves, a neon tube pooling in a capsule, and a sun with no position throwing parallel shadows.
+
+<a id="lightmap-normals"></a>
+<ExamplePreview chapter="lighting" slug="lightmap-normals" />
+
+Cobbles that nobody authored a normal map for: each hands the system its own silhouette, and a prepass draws the derived normals where the stone sits.
+
+## Where to go next
+
+[Post-processing](/ExoJS/en/guide/effects/post-processing/) covers the frame slot the lightmap renderer installs into, which is also how you would write a lighting system of your own — `app.framePasses.addPass(myPass)` hands a pass the finished frame and lets it write the canvas, with no agreement with this package at all.

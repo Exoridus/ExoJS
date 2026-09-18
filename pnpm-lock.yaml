@@ -185,6 +185,9 @@ importers:
       '@codexo/exojs-config':
         specifier: workspace:*
         version: link:../exojs-config
+      '@codexo/exojs-lighting':
+        specifier: workspace:*
+        version: link:../exojs-lighting
       '@codexo/exojs-particles':
         specifier: workspace:*
         version: link:../exojs-particles

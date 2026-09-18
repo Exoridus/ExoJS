@@ -1,0 +1,175 @@
+{
+  "title": "AlphaOccluderDrawable",
+  "description": "A drawable whose own texture, frame and layout box describe where its silhouette belongs. Core's `Sprite` - and therefore `AnimatedSprite` and `Video`, which extend it - satisfies it as it stands, which is what lets one argument stand in for a texture, a region of it and a placement.",
+  "symbol": "AlphaOccluderDrawable",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A drawable whose own texture, frame and layout box describe where its silhouette belongs. Core's `Sprite` - and therefore `AnimatedSprite` and `Video`, which extend it - satisfies it as it stands, which is what lets one argument stand in for a texture, a region of it and a placement."
+      ],
+      "importLine": "import { AlphaOccluderDrawable } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "getLocalBounds",
+          "signature": "getLocalBounds(): ReadonlyRectangle",
+          "signatureTokens": [
+            {
+              "text": "getLocalBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "ReadonlyRectangle",
+          "description": "The drawable's own local box, which the traced frame is mapped onto."
+        },
+        {
+          "name": "getWorldTransform",
+          "signature": "getWorldTransform(): Matrix",
+          "signatureTokens": [
+            {
+              "text": "getWorldTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Matrix",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Matrix",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "texture",
+          "signature": "texture: RenderTexture | Texture | null",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "textureFrame",
+          "signature": "textureFrame: ReadonlyRectangle",
+          "signatureTokens": [
+            {
+              "text": "textureFrame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The region of the texture this drawable shows, which is what gets traced."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/alphaTrace.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/alphaTrace.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/alphaTrace.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/alphaTrace.ts"
+}

@@ -83,10 +83,6 @@ export const getExamplesList = (versionId: string): Array<Example> => {
   return Array.from(getNestedExamples(versionId).values()).flat();
 };
 
-export const getAvailableTags = (versionId: string): Array<string> => {
-  return Array.from(new Set(getExamplesList(versionId).flatMap(example => example.tags ?? []))).sort((a, b) => a.localeCompare(b));
-};
-
 export const getExampleByPath = (versionId: string, path: string): Example | null => {
   return getExamplesList(versionId).find(example => example.path === path) ?? null;
 };

@@ -1,6 +1,6 @@
 // Auto-generated from blendmodes.ts - edit the .ts source, not this file.
 import { Application, Asset, BlendModes, Color, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { mountControls } from '@examples/runtime';
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 // Every public blend mode, in enum order, paired with a display name.
 const BLEND_MODES = [
@@ -31,7 +31,6 @@ class BlendmodesScene extends Scene {
   index = 0;
   ticker = 0;
   hud;
-  cycle;
   // Note: passing `options` as a 3rd argument to `loader.get(...)` or
   // `loader.load(Asset.type('texture', ...))` alongside a non-Json type currently mis-resolves
   // the overload (falls through to the `Json` generic and types the result as
@@ -66,12 +65,6 @@ class BlendmodesScene extends Scene {
       title: 'Blend Modes',
       controls: [{ keys: 'Click', action: 'next blend mode' }],
     });
-    this.cycle = mountControlPanel({ title: 'Compositing' }).addCycle({
-      label: 'Blend mode',
-      options: BLEND_MODES.map(entry => entry.name),
-      index: 0,
-      onChange: index => this.setIndex(index),
-    });
     app.input.onPointerDown.add(() => this.setIndex((this.index + 1) % BLEND_MODES.length));
     // Apply the initial mode (Normal) without skipping it.
     this.applyBlendMode();
@@ -84,7 +77,6 @@ class BlendmodesScene extends Scene {
     const { mode, name } = BLEND_MODES[this.index];
     this.left.setBlendMode(mode);
     this.right.setBlendMode(mode);
-    this.cycle.set(this.index);
     this.hud.setStatus(`${name}  (${this.index + 1}/${BLEND_MODES.length})`);
   }
   update(delta) {

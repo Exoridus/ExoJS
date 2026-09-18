@@ -1,3 +1,4 @@
+import { Lighting, PointLight, PolygonOccluder } from '@codexo/exojs-lighting';
 import { AlphaFadeOverLifetime, Curve, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
 
@@ -36,6 +37,7 @@ import { Widget } from '#ui/Widget';
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import { BLUR_TAPS_PER_SIDE } from '../archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter, LayoutDigestReport } from '../EngineAdapter';
+import { isLit, LIT_LIGHT_RADIUS, LIT_OCCLUDER_BOXES, LIT_SPRITE_COUNT, LIT_SPRITE_SIZE, litLightAt, litOccluderBox, litSpriteAt } from '../lighting';
 import {
   isParticleLifecycle,
   isParticles,
@@ -722,6 +724,69 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     particleLifetime = null;
   };
 
+  /** The lighting system of the lit scenes, and the pass that draws the field it lights. */
+  let litLighting: Lighting | null = null;
+  let litScenePass: RenderNodePass | null = null;
+
+  /**
+   * Build the lit scene: a fixed sprite field, `nodeCount` lights over it, and -
+   * for the shadowed variant - a fixed set of occluding boxes.
+   *
+   * The field and the occluders are the same at every rung, so what the ladder
+   * sweeps is the light count alone.
+   *
+   * The scene draws through the application's own frame slot rather than through
+   * `rendering.render`, because that is where the renderer lives: it accumulates
+   * the lights into a target of their own and multiplies the drawn frame by
+   * them, which only means anything if the frame was drawn into a texture
+   * first. The pass that does that is inserted AHEAD of the renderer's own, the
+   * same order the application composes for a scene with frame passes.
+   */
+  const buildLitScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const field = new Container();
+    const texture = textures[0]!;
+
+    for (let index = 0; index < LIT_SPRITE_COUNT; index++) {
+      const placement = litSpriteAt(index, LIT_SPRITE_COUNT);
+      const sprite = new Sprite(texture);
+
+      sprite.width = LIT_SPRITE_SIZE;
+      sprite.height = LIT_SPRITE_SIZE;
+      sprite.setPosition(placement.x, placement.y);
+      field.addChild(sprite);
+    }
+
+    const lighting = new Lighting({ app: app!, ambient: new Color(18, 18, 26), lightResolution: 0.5 });
+
+    for (let index = 0; index < nodeCount; index++) {
+      const light = litLightAt(index);
+
+      lighting.add(new PointLight({ radius: LIT_LIGHT_RADIUS, intensity: light.intensity })).setPosition(light.x, light.y);
+    }
+
+    if (spec.lights === 'shadowed') {
+      for (let index = 0; index < LIT_OCCLUDER_BOXES; index++) {
+        lighting.occludeFrom(new PolygonOccluder(litOccluderBox(index)));
+      }
+    }
+
+    root = field;
+    litLighting = lighting;
+    litScenePass = new RenderNodePass(field, { target: app!.frameTexture, clear: Color.black, label: 'bench:lit-field' });
+    app!.framePasses.insertPass(litScenePass, 0);
+  };
+
+  const releaseLit = (): void => {
+    if (litScenePass !== null) {
+      app?.framePasses.removePass(litScenePass);
+      litScenePass.destroy();
+      litScenePass = null;
+    }
+
+    litLighting?.destroy();
+    litLighting = null;
+  };
+
   /** The blur scene's texture, kept so teardown releases it. */
   let blurTexture: Texture | null = null;
 
@@ -972,6 +1037,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseComposite();
       releaseTilemap();
       releaseParticles();
+      releaseLit();
       releaseBlur();
       releasePicking();
       releaseLayout();
@@ -990,6 +1056,15 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // in the system's own storage rather than in the scene graph.
       if (isParticles(spec)) {
         buildParticleScene(spec, nodeCount);
+
+        return;
+      }
+
+      // The lit scenes keep the sprite path but leave the render path: the
+      // renderer works on the frame the application drew, so the scene has to
+      // be drawn into one.
+      if (isLit(spec)) {
+        buildLitScene(spec, nodeCount);
 
         return;
       }
@@ -1471,6 +1546,17 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         throw new Error('renderFrame was called before buildScene.');
       }
 
+      // The lit scenes publish this frame's lights and then play the frame slot,
+      // which draws the field into the frame texture and lights it - the
+      // application's own order, assembled from the same passes.
+      if (litLighting !== null) {
+        litLighting.update();
+        app.framePasses.execute(app.rendering);
+        backend.flush();
+
+        return;
+      }
+
       // `composite`: the bloom stack renders the frame itself (capture, blur,
       // direct draw, additive overlay), so the ordinary single render below
       // would be a fifth, redundant scene walk.
@@ -1501,6 +1587,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseComposite();
       releaseTilemap();
       releaseParticles();
+      releaseLit();
       releaseLayout();
 
       if (root !== null) {

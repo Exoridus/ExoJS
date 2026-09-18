@@ -54,6 +54,10 @@ import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatch
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
+import { sdfResolveShader, sdfSeedShader, sdfStepShader } from '../../../packages/exojs-lighting/src/backends/distanceField';
+import { cascadeGatherShader, cascadeShader, probeVisibilityShader } from '../../../packages/exojs-lighting/src/backends/radianceField';
+import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
+
 interface ShaderEntry {
   readonly name: string;
   readonly source: string;
@@ -88,6 +92,15 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'BlurFilter (generated uniform block)', source: blurShader._resolveWgsl(filterUniformGroup)! },
   { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShader._resolveWgsl(filterUniformGroup)! },
   { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShader._resolveWgsl(filterUniformGroup)! },
+  // The lighting package's shadow march is a filter of the same shape, and the
+  // only WGSL in that package this suite can reach as a fixed string.
+  { name: 'lighting shadow march (generated uniform block)', source: shadowMarchShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting distance field seed', source: sdfSeedShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting distance field step (generated uniform block)', source: sdfStepShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting distance field resolve (generated uniform block)', source: sdfResolveShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting radiance cascade (generated uniform block)', source: cascadeShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting radiance gather (generated uniform block)', source: cascadeGatherShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting radiance merge weights (generated uniform block)', source: probeVisibilityShader._resolveWgsl(filterUniformGroup)! },
 ];
 
 // On the software (swiftshader / lavapipe) adapter the WebGPU device can drop

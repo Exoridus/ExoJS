@@ -844,11 +844,11 @@ describe('TileMapView image layer nodes', () => {
     const view = map.createView();
     const node = view.getImageLayerNodeById(10)!;
 
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
-
-    view.pixelSnapMode = PixelSnapMode.Geometry;
-
     expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
+
+    view.pixelSnapMode = PixelSnapMode.None;
+
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
   });
 
   it('band definitions accept image-layer ids and names as selectors', () => {

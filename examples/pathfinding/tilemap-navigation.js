@@ -15,12 +15,18 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //
 // Editing the map keeps the two in step through `setCost`, which bumps the
 // grid's revision so anything following an older path can notice.
-const TILE = 32;
-const COLUMNS = 40;
-const ROWS = 22;
-const FLOOR_TILE = 0;
-const WALL_TILE = 9;
-const ROUGH_TILE = 1;
+// The map-pack tilesheet is a 64px grid, and a tile is drawn at its own
+// source size - a smaller cell would overlap its neighbour rather than
+// scale the art down, so the arena is laid out in 64px cells.
+const TILE = 64;
+const COLUMNS = 20;
+const ROWS = 11;
+// Seamless terrain-centre tiles from mapPack_tilesheet.png (17 columns,
+// localTileId = row * 17 + column). The block corners and edges that sit
+// around them are meant for terrain borders, not for filling an area.
+const FLOOR_TILE = 23; // grass centre
+const WALL_TILE = 28; // stone centre
+const ROUGH_TILE = 91; // dirt centre
 const ROUGH_COST = 5;
 const AGENT_SPEED = 220;
 const PATH_COLOR = new Color(120, 240, 190);
@@ -30,7 +36,7 @@ const isBorder = (x, y) => x === 0 || y === 0 || x === COLUMNS - 1 || y === ROWS
 /** Deterministic layout: a walled arena with pillars and a band of rough ground. */
 const tileAt = (x, y) => {
   if (isBorder(x, y) || (x % 6 === 3 && y % 4 !== 2)) return WALL_TILE;
-  if (y >= 9 && y <= 11 && x > 1 && x < COLUMNS - 2) return ROUGH_TILE;
+  if (y >= 4 && y <= 5 && x > 1 && x < COLUMNS - 2) return ROUGH_TILE;
   return FLOOR_TILE;
 };
 /** The one place the two packages meet: a tile turns into a traversal cost. */

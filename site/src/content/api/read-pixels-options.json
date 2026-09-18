@@ -1,0 +1,75 @@
+{
+  "title": "ReadPixelsOptions",
+  "description": "Options for RenderingContext.readPixels.",
+  "symbol": "ReadPixelsOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for RenderingContext.readPixels."
+      ],
+      "importLine": "import { ReadPixelsOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "region",
+          "signature": "region?: ReadonlyRectangle",
+          "signatureTokens": [
+            {
+              "text": "region",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sub-rectangle to read, in pixels from the texture's top-left corner. Defaults to the whole texture."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/RenderingContext.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderingContext.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/RenderingContext.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderingContext.ts"
+}

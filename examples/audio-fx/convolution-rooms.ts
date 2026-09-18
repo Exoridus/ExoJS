@@ -1,15 +1,4 @@
-import {
-  Application,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  Keyboard,
-  type RenderingContext,
-  Scene,
-  type Seconds,
-  type Sound,
-  Text,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, type Sound, Text } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -60,53 +49,105 @@ function character(ms: number): string {
   return 'cavern';
 }
 
+// Four distinct impact materials laid out left to right, so a strike's
+// stereo position matches where it visually sits - the same left/right
+// spread the ear hears back through the room.
+const MATERIALS = [
+  { file: 'impactBell_heavy_000', label: 'Bell', color: new Color(210, 180, 100) },
+  { file: 'impactWood_heavy_000', label: 'Wood', color: new Color(160, 120, 80) },
+  { file: 'impactGlass_heavy_000', label: 'Glass', color: new Color(130, 210, 230) },
+  { file: 'impactMetal_heavy_000', label: 'Metal', color: new Color(160, 180, 200) },
+] as const;
+
+const REF_DISTANCE = 60;
+const MAX_DISTANCE = 700;
+
+interface Pad {
+  sound: Sound;
+  label: string;
+  color: Color;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  flash: number;
+}
+
 class ConvolutionRoomsScene extends Scene {
-  private impact!: Sound;
   private convolution!: ConvolutionEffect;
   private index = 0;
+  private pads: Pad[] = [];
+  private listener!: { x: number; y: number };
   private gfx!: Graphics;
   private label!: Text;
   private detail!: Text;
   private tapPrompt!: Text;
-  private flash = 0;
-  private pad = { x: 0, y: 0, w: 0, h: 0 };
   private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
     const { width, height } = this.app;
 
-    this.pad = { x: width / 2 - 240, y: height * 0.34, w: 480, h: 150 };
-    this.impact = this.loader.get('audio/impact-light.ogg');
+    this.listener = { x: width / 2, y: height / 2 };
+    this.app.audio.listener.target = this.listener;
 
     // No impulse yet - the effect passes audio through untouched until one
     // is set, so it is safe on the bus from the start.
     this.convolution = new ConvolutionEffect({ wet: 0.85 });
     this.app.audio.sound.addEffect(this.convolution);
 
+    const padW = 220;
+    const padH = 220;
+    const gap = 40;
+    const totalW = MATERIALS.length * padW + (MATERIALS.length - 1) * gap;
+    const startX = (width - totalW) / 2;
+    const padY = height / 2 - padH / 2 + 20;
+
+    this.pads = MATERIALS.map((material, i) => ({
+      sound: this.loader.get(`audio/${material.file}.ogg`),
+      label: material.label,
+      color: material.color,
+      x: startX + i * (padW + gap),
+      y: padY,
+      w: padW,
+      h: padH,
+      flash: 0,
+    }));
+
     this.gfx = new Graphics();
-    this.label = new Text('', { fillColor: Color.white, fontSize: 26 }).setAnchor(0.5, 0.5).setPosition(width / 2, this.pad.y + this.pad.h / 2 - 14);
-    this.detail = new Text('', { fillColor: new Color(178, 191, 217), fontSize: 18 })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, this.pad.y + this.pad.h / 2 + 22);
+    this.label = new Text('', { fillColor: Color.white, fontSize: 26 }).setAnchor(0.5, 0.5).setPosition(width / 2, padY - 44);
+    this.detail = new Text('', { fillColor: new Color(178, 191, 217), fontSize: 18 }).setAnchor(0.5, 0.5).setPosition(width / 2, padY - 14);
     this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22 })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 48);
 
+    const materialLabels = this.pads.map(pad =>
+      new Text(pad.label, { fillColor: Color.white, fontSize: 20 }).setAnchor(0.5, 0.5).setPosition(pad.x + pad.w / 2, pad.y + pad.h + 26),
+    );
+
+    this.root.addChild(this.gfx, this.label, this.detail, this.tapPrompt, ...materialLabels);
+
+    this.app.input.onPointerDown.add(pointer => {
+      if (!(pointer.buttons & 1)) return;
+
+      for (const pad of this.pads) {
+        if (pointer.x >= pad.x && pointer.x <= pad.x + pad.w && pointer.y >= pad.y && pointer.y <= pad.y + pad.h) {
+          this.strike(pad);
+          return;
+        }
+      }
+    });
+    this.app.input.onContextMenu.add(() => this.select(this.index + 1));
+
     this.hud = mountControls({
       title: 'Convolution rooms',
       controls: [
-        { keys: 'Click', action: 'fire the impact through the current room' },
-        { keys: '← / →', action: 'previous / next impulse response' },
+        { keys: 'Click', action: 'strike a pad, panned to its position' },
+        { keys: 'Right-click', action: 'next room' },
       ],
       status: 'Click or press any key to start…',
-      hint: 'Same dry impact every time — only the impulse response changes.',
+      hint: 'Same four materials every time — only the room around them changes.',
     });
 
-    this.inputs.onTrigger(Keyboard.Right, () => this.select(this.index + 1));
-    this.inputs.onTrigger(Keyboard.Left, () => this.select(this.index - 1));
-    this.app.input.onPointerTap.add(() => this.strike());
-
-    this.root.addChild(this.gfx, this.label, this.detail, this.tapPrompt);
     this.select(0);
   }
 
@@ -129,30 +170,41 @@ class ConvolutionRoomsScene extends Scene {
     });
   }
 
-  private strike(): void {
+  private strike(pad: Pad): void {
     if (this.app.audio.locked) {
       return;
     }
 
-    this.app.audio.play(this.impact);
-    this.flash = 1;
+    this.app.audio.play(pad.sound, {
+      position: { x: pad.x + pad.w / 2, y: pad.y + pad.h / 2 },
+      distanceModel: 'linear',
+      refDistance: REF_DISTANCE,
+      maxDistance: MAX_DISTANCE,
+      rolloffFactor: 1,
+    });
+    pad.flash = 1;
   }
 
   override update(time: Seconds): void {
-    this.flash = Math.max(0, this.flash - time * 3);
+    for (const pad of this.pads) {
+      pad.flash = Math.max(0, pad.flash - time * 3);
+    }
+
     this.tapPrompt.visible = this.app.audio.locked;
     this.hud.setStatus(this.app.audio.locked ? 'Click or press any key to start…' : `Room ${this.index + 1} of ${ROOMS.length}`);
-
-    const { x, y, w, h } = this.pad;
-
-    const lit = Math.floor(40 + this.flash * 150);
-
-    this.gfx.clear();
-    this.gfx.fillColor = new Color(lit, lit, Math.floor(70 + this.flash * 110));
-    this.gfx.drawRectangle(x, y, w, h);
   }
 
   override draw(context: RenderingContext): void {
+    this.gfx.clear();
+
+    for (const pad of this.pads) {
+      const { color, flash } = pad;
+      const lit = 0.4 + flash * 0.6;
+
+      this.gfx.fillColor = new Color(Math.floor(color.r * lit), Math.floor(color.g * lit), Math.floor(color.b * lit));
+      this.gfx.drawRoundedRectangle(pad.x, pad.y, pad.w, pad.h, 16);
+    }
+
     context.render(this.root);
   }
 }

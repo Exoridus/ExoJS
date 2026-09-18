@@ -1,6 +1,6 @@
 // Auto-generated from color-matrix-filter.ts - edit the .ts source, not this file.
 import { Application, Color, ColorMatrixFilter, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { mountControls } from '@examples/runtime';
 // A full-hue ramp shows every preset on every colour at once.
 const HUE_RAMP = assets.technical.color.hueRamp;
 // One filter class, one matrix - each preset is a different concatenation onto
@@ -19,7 +19,6 @@ class ColorMatrixFilterScene extends Scene {
   filter;
   index = 1; // start on Desaturate - the most visually obvious preset
   hud;
-  cycle;
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -32,23 +31,17 @@ class ColorMatrixFilterScene extends Scene {
     this.applyPreset();
     this.hud = mountControls({
       title: 'Color Matrix Filter',
-      controls: [{ keys: 'Preset', action: 'tint · desaturate · invert · brightness · contrast · sepia' }],
+      controls: [{ keys: 'Click', action: 'next preset: tint · desaturate · invert · brightness · contrast · sepia' }],
       status: this.statusText(),
       hint: 'Every preset is one affine colour matrix; switching rewrites the matrix in place.',
     });
-    this.cycle = mountControlPanel({ title: 'Colour Grade' }).addCycle({
-      label: 'Preset',
-      options: PRESETS.map(preset => preset.label),
-      index: this.index,
-      onChange: index => {
-        this.index = index;
-        this.applyPreset();
-      },
+    app.input.onPointerTap.add(() => {
+      this.index = (this.index + 1) % PRESETS.length;
+      this.applyPreset();
     });
   }
   applyPreset() {
     PRESETS[this.index].apply(this.filter.reset());
-    this.cycle?.set(this.index);
     this.hud?.setStatus(this.statusText());
   }
   statusText() {

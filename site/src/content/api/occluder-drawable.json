@@ -1,0 +1,63 @@
+{
+  "title": "OccluderDrawable",
+  "description": "A scene node offered whole, for a field that can rasterise a silhouette instead of tracing one. What blocks light is the node's own subtree as it draws, thresholded on alpha.",
+  "symbol": "OccluderDrawable",
+  "kind": "type",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A scene node offered whole, for a field that can rasterise a silhouette instead of tracing one. What blocks light is the node's own subtree as it draws, thresholded on alpha."
+      ],
+      "importLine": "import { OccluderDrawable } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "OccluderDrawable",
+          "signature": "RenderNode",
+          "signatureTokens": [
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/OccluderSource.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/OccluderSource.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/OccluderSource.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/OccluderSource.ts"
+}

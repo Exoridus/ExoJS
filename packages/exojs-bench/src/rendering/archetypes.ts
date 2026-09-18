@@ -60,6 +60,15 @@ const TILEMAP_EDIT_COUNTS = [10_000, 100_000] as const;
 const PARTICLE_DRAW_COUNTS = [1_000, 10_000, 100_000, 1_000_000] as const;
 
 /**
+ * Light counts for the lighting archetypes. The sprite field underneath is the
+ * same at every rung, so the ladder sweeps what a light costs rather than what a
+ * scene costs: 8 is a lamp-lit room, 64 the forward renderer's own default cap,
+ * and 512 well past what a hand-placed scene contains - which is where an
+ * accumulated light field either holds up or does not.
+ */
+const LIGHT_COUNTS = [8, 64, 512] as const;
+
+/**
  * Particle counts for the lifecycle scene. It stops below the million the
  * draw-only scene reaches: a million simulated particles measures each arm's
  * update loop rather than the effect, and no effect anything ships keeps that
@@ -705,6 +714,45 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0,
     cullingEnabled: false,
     particles: 'lifecycle',
+  },
+  // LIGHTS OVER A FIXED SPRITE FIELD. The node count is the LIGHT count and the
+  // field beneath it never changes, so the row states what one more light costs
+  // - which is the number the `lightmap` renderer exists to make affordable, and
+  // the one no correctness test can report.
+  //
+  // Two rows rather than one. Unshadowed is the accumulation alone: one
+  // instanced draw over every light, each paying the fill of its own radius.
+  // Shadowed adds a fixed set of occluding boxes, so the delta between the rows
+  // is what the shadow term costs per light - a CPU polar row per light plus one
+  // texture fetch per lit fragment. Averaging the two into one figure would hide
+  // whichever half is the problem, which is the same reason the particle scenes
+  // are two rows.
+  //
+  // EXOJS-ONLY, and the excluded list says so rather than the comparison table
+  // implying a win. No competitor arm ships 2D lighting this scene could be
+  // posed to unmodified; `@pixi/lights` plus `@pixi/layers` would be the fair
+  // opponent and is a dependency decision that has not been taken.
+  {
+    id: 'lights-unshadowed',
+    category: 'lighting',
+    crossArm: false,
+    nodeCounts: LIGHT_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    lights: 'unshadowed',
+  },
+  {
+    id: 'lights-shadowed',
+    category: 'lighting',
+    crossArm: false,
+    nodeCounts: LIGHT_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    lights: 'shadowed',
   },
   // A BLUR OVER A FIXED AREA - the one effect every 2D project reaches for, and
   // the only archetype whose load is an AREA rather than a node count. The scene

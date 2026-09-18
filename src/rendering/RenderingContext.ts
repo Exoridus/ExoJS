@@ -1,6 +1,7 @@
 import type { Color } from '#core/Color';
 import type { Seconds } from '#core/units';
 import type { Matrix } from '#math/Matrix';
+import type { ReadonlyRectangle } from '#math/Rectangle';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMeshMaterial } from '#rendering/material/MeshMaterial';
 import { ImmediateMesh } from '#rendering/mesh/ImmediateMesh';
@@ -8,7 +9,7 @@ import type { RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordi
 import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
-import type { ColorTextureFormat } from '#rendering/types';
+import { type ColorTextureFormat, TextureFormat } from '#rendering/types';
 
 import type { DrawContext, RenderToOptions } from './DrawContext';
 import { type RenderBackend } from './RenderBackend';
@@ -28,6 +29,20 @@ export interface CaptureOptions {
    * {@link RenderingContext.supportsColorFormat} first.
    */
   format?: ColorTextureFormat;
+}
+
+/** Options for {@link RenderingContext.readPixels}. */
+export interface ReadPixelsOptions {
+  /** Sub-rectangle to read, in pixels from the texture's top-left corner. Defaults to the whole texture. */
+  region?: ReadonlyRectangle;
+}
+
+/** The pixels {@link RenderingContext.readPixels} read, shaped for `ImageData`. */
+export interface PixelData {
+  readonly width: number;
+  readonly height: number;
+  /** RGBA bytes, four per pixel, row-major with the top row first. */
+  readonly data: Uint8ClampedArray;
 }
 
 export interface RenderOptions {
@@ -303,6 +318,60 @@ export class RenderingContext implements DrawContext {
     }
 
     return target;
+  }
+
+  /**
+   * Read a render texture's pixels back to the CPU.
+   *
+   * ```ts
+   * const frame = await app.rendering.readPixels(app.frameTexture);
+   * const image = new ImageData(frame.data, frame.width, frame.height);
+   * ```
+   *
+   * The payload is laid out exactly as `ImageData` wants it - RGBA bytes, four
+   * per pixel, top row first - so a screenshot, an export or a colour picked
+   * off the frame is the two lines above and nothing more. Both backends agree
+   * on that layout even though only one of them produces it natively.
+   *
+   * `region` reads part of the texture instead of all of it, in pixels from its
+   * top-left corner; a picker wants a 1x1 rectangle rather than a frame.
+   *
+   * Everything drawn into `source` before this call is included: pending work
+   * is submitted first. The result is the state at that moment and does not
+   * track the texture afterwards.
+   *
+   * # Cost
+   *
+   * A readback waits for the GPU to reach this point and hands the pixels back
+   * over the bus, which is why it is asynchronous and why it does not belong in
+   * a per-frame path - a full 1080p frame is ~8 MB per call. Await it in the
+   * `postFrame` phase, or from a coroutine, so the frame it reads is already
+   * finished. {@link RenderStats.downloadBytes} counts what this moved.
+   *
+   * # Formats
+   *
+   * `'rgba8'` only. A float target holds values a byte per channel cannot carry,
+   * and no lossless byte answer exists for one; reading those needs a typed
+   * payload this does not have.
+   */
+  public async readPixels(source: RenderTexture, options: ReadPixelsOptions = {}): Promise<PixelData> {
+    if (source.format !== TextureFormat.Rgba8) {
+      throw new Error(
+        `RenderingContext.readPixels reads 'rgba8' targets, and this one is '${source.format}'. A float target's values do not fit the byte payload this returns.`,
+      );
+    }
+
+    const region = options.region;
+    const x = region !== undefined ? Math.trunc(region.left) : 0;
+    const y = region !== undefined ? Math.trunc(region.top) : 0;
+    const width = region !== undefined ? Math.trunc(region.width) : source.width;
+    const height = region !== undefined ? Math.trunc(region.height) : source.height;
+
+    if (width <= 0 || height <= 0 || x < 0 || y < 0 || x + width > source.width || y + height > source.height) {
+      throw new Error(`RenderingContext.readPixels region ${width}x${height} at ${x},${y} does not lie inside the ${source.width}x${source.height} texture.`);
+    }
+
+    return { width, height, data: await this._backend.readPixels(source, x, y, width, height) };
   }
 
   /**

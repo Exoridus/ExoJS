@@ -16,6 +16,8 @@ export type ArchetypeId =
   | 'tilemap-edit'
   | 'particles-draw'
   | 'particles-lifecycle'
+  | 'lights-shadowed'
+  | 'lights-unshadowed'
   | 'fx-blur'
   | 'interaction-picking'
   | 'ui-layout-update'
@@ -55,6 +57,7 @@ export type ArchetypeCategory =
   | 'submission'
   | 'tilemaps'
   | 'particles'
+  | 'lighting'
   | 'interaction';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
@@ -298,6 +301,21 @@ export interface ArchetypeSpec {
    * they are separate archetypes. See `particles.ts` for the shared scene.
    */
   readonly particles?: 'draw' | 'lifecycle';
+  /**
+   * Lights a fixed sprite field instead of drawing it flat, and whether the
+   * lights also cast shadows.
+   *
+   * The node count is the LIGHT count, not a number of sprites: the field is
+   * the same at every rung, and what the ladder sweeps is what a light costs.
+   * `'unshadowed'` accumulates the lights alone; `'shadowed'` registers a fixed
+   * set of occluding boxes as well, so the delta between the two rows is what a
+   * shadow term costs per light. See `lighting.ts` for the shared scene.
+   *
+   * ExoJS-only. No competitor arm ships 2D lighting whose scene this could be
+   * posed to without writing the missing feature first, which is what
+   * `crossArm: false` and the coverage predicates say between them.
+   */
+  readonly lights?: 'shadowed' | 'unshadowed';
   /**
    * Gaussian standard deviation in logical pixels for the effect scene, or
    * `undefined` for every archetype that renders no blur.

@@ -33,6 +33,7 @@ const ENGINE_SRC = resolve(REPO_ROOT, 'src');
  * silently kept its default capacity instead of the one the cell asked for.
  */
 const SOURCE_PACKAGE_ALIASES: ReadonlyArray<{ find: string; replacement: string }> = [
+  { find: '@codexo/exojs-lighting', replacement: resolve(REPO_ROOT, 'packages/exojs-lighting/src/index.ts') },
   { find: '@codexo/exojs-particles', replacement: resolve(REPO_ROOT, 'packages/exojs-particles/src/index.ts') },
   { find: '@codexo/exojs-tilemap', replacement: resolve(REPO_ROOT, 'packages/exojs-tilemap/src/index.ts') },
   { find: '@codexo/exojs/renderer-sdk', replacement: resolve(ENGINE_SRC, 'renderer-sdk.ts') },

@@ -574,15 +574,11 @@ export default defineConfig([
   },
 
   // Build-time constants intentionally follow ecosystem-style ALL_CAPS names.
+  // Matched by filename rather than listed per package: every package that
+  // declares them does it in the same file, and a list would fall behind the
+  // next one that does.
   {
-    files: [
-      'src/build-constants.d.ts',
-      'src/typings.d.ts',
-      'packages/exojs-particles/src/typings.d.ts',
-      'packages/exojs-tilemap/src/typings.d.ts',
-      'packages/exojs-tiled/src/typings.d.ts',
-      'packages/exojs-physics/src/typings.d.ts',
-    ],
+    files: ['src/build-constants.d.ts', 'src/typings.d.ts', 'packages/*/src/typings.d.ts'],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },
@@ -796,12 +792,19 @@ export default defineConfig([
     },
   },
 
-  // The light packer walks the registered lights by computed index inside a
-  // loop bounded by the count it just derived from their length, so `arr[i]!`
-  // says what the reader already knows and a per-frame `for...of` iterator is
-  // exactly the allocation this path exists to avoid.
+  // The lighting package's geometry paths walk their own typed arrays by an
+  // index they just built from the loop bounds - an alpha texel, a segment
+  // quadruple, a contour point, a shadow bin. Every read is in range by
+  // construction, and `noUncheckedIndexedAccess` would only add a branch per
+  // element to a load-time pass over a whole texture or to a per-frame pass
+  // over every occluding edge on screen.
   {
-    files: ['packages/exojs-lighting/src/LightingSystem.ts'],
+    files: [
+      'packages/exojs-lighting/src/normals/deriveNormals.ts',
+      'packages/exojs-lighting/src/readAlphaField.ts',
+      'packages/exojs-lighting/src/occluders/*.ts',
+      'packages/exojs-lighting/src/backends/LightmapBackend.ts',
+    ],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
@@ -839,7 +842,11 @@ export default defineConfig([
   // declare in snake_case with the engine's `u_` prefix. The object literal has
   // to spell them exactly as the shader does.
   {
-    files: ['packages/exojs-lighting/src/LitSpriteMaterial.ts'],
+    files: [
+      'packages/exojs-lighting/src/LitMaterial.ts',
+      'packages/exojs-lighting/src/backends/LightmapBackend.ts',
+      'packages/exojs-lighting/src/backends/radianceField.ts',
+    ],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },

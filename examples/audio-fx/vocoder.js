@@ -1,7 +1,7 @@
 // Auto-generated from vocoder.ts - edit the .ts source, not this file.
-import { Application, Asset, AudioBus, AudioGenerator, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
-import { VocoderEffect } from '@codexo/exojs-audio-fx';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { Application, Asset, AudioBus, AudioGenerator, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { AudioAnalyser, VocoderEffect } from '@codexo/exojs-audio-fx';
+import { mountControls } from '@examples/runtime';
 // Spoken phrases (Kenney Voiceover Pack, CC0) - a voice modulator is what makes
 // a vocoder recognisable as the classic "robot voice" effect.
 const PHRASES = [
@@ -12,9 +12,13 @@ const PHRASES = [
 class VocoderScene extends Scene {
   modulatorBus;
   vocoder;
+  level;
   phrases = new Map();
   phraseIndex = 0;
+  pulse = 0;
+  gfx;
   phraseLabel;
+  hintLabel;
   tapPrompt;
   hud;
   init() {
@@ -32,7 +36,12 @@ class VocoderScene extends Scene {
     }
     this.vocoder = new VocoderEffect({ modulator: this.modulatorBus, numBands: 16, wet: 1 });
     app.audio.sound.addEffect(this.vocoder);
-    this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
+    // Measured downstream of the vocoder, so the pulse tracks the robot
+    // voice actually reaching the speakers, not the dry carrier.
+    this.level = new AudioAnalyser({ source: app.audio.sound, smoothingTimeConstant: 0.6 });
+    this.gfx = new Graphics();
+    this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, height / 2 - 130);
+    this.hintLabel = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 18 }).setAnchor(0.5, 0.5).setPosition(width / 2, height / 2 + 130);
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued carrier starts.
     this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
@@ -40,18 +49,15 @@ class VocoderScene extends Scene {
       .setPosition(width / 2, height - 48);
     this.hud = mountControls({
       title: 'Vocoder',
-      controls: [{ keys: 'Click', action: 'speak the phrase' }],
+      controls: [
+        { keys: 'Click', action: 'speak the phrase' },
+        { keys: 'Right-click', action: 'next phrase' },
+      ],
       hint: 'A spoken voice modulates a sustained saw carrier — the classic robot-voice effect.',
     });
-    const panel = mountControlPanel({ title: 'Vocoder' });
-    panel.addCycle({
-      label: 'Phrase',
-      options: PHRASES.map(phrase => phrase.label),
-      index: 0,
-      onChange: index => (this.phraseIndex = index),
-    });
-    panel.addButton({ label: 'Speak', onClick: () => this.speak() });
+    this.root.addChild(this.gfx, this.phraseLabel, this.hintLabel, this.tapPrompt);
     app.input.onPointerTap.add(() => this.speak());
+    app.input.onContextMenu.add(() => this.selectPhrase(this.phraseIndex + 1));
     // The carrier is a sustained saw tone shaped by the voice envelope.
     // An oscillator played while audio is still locked is a no-op - it is
     // ephemeral and cannot be deferred - so start it from the unlock
@@ -60,7 +66,12 @@ class VocoderScene extends Scene {
     app.audio.onUnlock.add(() => {
       app.audio.play(new AudioGenerator({ frequency: 110, type: 'sawtooth' }), { volume: 0.45 });
     });
-    this.hud.setStatus('Ready — pick a phrase and speak.');
+    this.hud.setStatus('Ready — click to speak, right-click to change phrase.');
+    this.selectPhrase(0);
+  }
+  selectPhrase(next) {
+    this.phraseIndex = (next + PHRASES.length) % PHRASES.length;
+    this.hintLabel.text = `${this.phraseIndex + 1} / ${PHRASES.length} — "${PHRASES[this.phraseIndex].label}"`;
   }
   speak() {
     const app = this.app;
@@ -77,7 +88,13 @@ class VocoderScene extends Scene {
   }
   draw(context) {
     const app = this.app;
-    context.render(this.phraseLabel);
+    const level = this.level.getRms();
+    this.pulse += (level * 4 - this.pulse) * 0.35;
+    const radius = 70 + Math.min(1, this.pulse) * 60;
+    this.gfx.clear();
+    this.gfx.fillColor = new Color(Math.floor(90 + this.pulse * 140), Math.floor(120 + this.pulse * 90), 255);
+    this.gfx.drawCircle(app.width / 2, app.height / 2, radius);
+    context.render(this.root);
     if (app.audio.locked) {
       context.render(this.tapPrompt);
     }

@@ -20,7 +20,7 @@ export type SuiteKind = 'reference' | 'full';
  * so every load carries the unit it is counted in and the published page quotes
  * it beside the figure.
  */
-export type LoadUnit = 'sprites' | 'nodes' | 'labels' | 'tiles' | 'layers' | 'particles' | 'widgets' | 'rects' | 'bodies' | 'viewport';
+export type LoadUnit = 'sprites' | 'nodes' | 'labels' | 'tiles' | 'layers' | 'particles' | 'lights' | 'widgets' | 'rects' | 'bodies' | 'viewport';
 
 /** One selectable load of one scenario. */
 export interface LoadSpec {
@@ -308,6 +308,24 @@ export const RENDERING_SCENARIOS: readonly ScenarioLoads[] = [
       [1_000, ''],
       [10_000, 'r*'],
       [100_000, ''],
+    ]),
+  },
+  {
+    scenarioId: 'lights-unshadowed',
+    unit: 'lights',
+    loads: loads([
+      [8, ''],
+      [64, 'r*'],
+      [512, ''],
+    ]),
+  },
+  {
+    scenarioId: 'lights-shadowed',
+    unit: 'lights',
+    loads: loads([
+      [8, ''],
+      [64, 'r*'],
+      [512, ''],
     ]),
   },
   {

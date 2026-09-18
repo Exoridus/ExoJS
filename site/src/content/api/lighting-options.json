@@ -1,0 +1,274 @@
+{
+  "title": "LightingOptions",
+  "description": "Construction options for Lighting.",
+  "symbol": "LightingOptions",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for Lighting."
+      ],
+      "importLine": "import { LightingOptions } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "ambient",
+          "signature": "ambient?: Color",
+          "signatureTokens": [
+            {
+              "text": "ambient",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Baseline colour every lit fragment receives regardless of any light, as a multiplier on the albedo - 255 per channel means \"unlit areas keep their full albedo\". Stored by reference and re-read every frame."
+        },
+        {
+          "name": "app",
+          "signature": "app?: Application<object>",
+          "signatureTokens": [
+            {
+              "text": "app",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The application whose frame is lit. Required by 'lightmap' and by a non-empty LightingOptions.post; a 'forward' system without filters needs nothing else. Passing it installs the renderer's passes in app.framePasses and takes them out again on Lighting.destroy."
+        },
+        {
+          "name": "fieldMargin",
+          "signature": "fieldMargin?: number",
+          "signatureTokens": [
+            {
+              "text": "fieldMargin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How far beyond the camera's view the occluder mask and the emission field reach, as a fraction of the view's size on each side. Under radiance it is what lets a wall or a lamp just outside the picture still shadow or light what is in it, so neither pops in at the edge as the camera moves; the probes themselves still cover only the view. Defaults to 0.25, and costs that much more mask, distance field and emission fill."
+        },
+        {
+          "name": "lightResolution",
+          "signature": "lightResolution?: number",
+          "signatureTokens": [
+            {
+              "text": "lightResolution",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Texels per logical unit of the lightmap renderer's light target. Light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill. Defaults to 0.5 - and to 1 under radiance, which SAMPLES the field instead of painting into it: the emitters and the distance field the cascades trace are both rasterised into it, so a coarse field quantises the scene rather than the light and a source moving by less than a texel makes the whole picture jump."
+        },
+        {
+          "name": "maxLights",
+          "signature": "maxLights?: number",
+          "signatureTokens": [
+            {
+              "text": "maxLights",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lights the forward renderer's texture is sized for; lights beyond it are skipped. Defaults to 64."
+        },
+        {
+          "name": "post",
+          "signature": "post?: readonly Filter[]",
+          "signatureTokens": [
+            {
+              "text": "post",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Filter",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Filters applied to the shaded frame, in order. A bloom belongs here rather than on a node: it reads the light the system produced, including the parts no single node drew. They run as one pass in app.framePasses, so LightingOptions.app is required whenever the chain is non-empty, in either renderer. Under lightmap the chain reads the composite, which is where the light the system accumulated is still above 1.0 (see Lighting.hdr); under forward it reads the frame the sprite shader shaded. Caller-owned, and fixed for the system's lifetime - the filters' own parameters stay live, which is what an animated effect actually needs."
+        },
+        {
+          "name": "quality",
+          "signature": "quality?: LightingQualityOption",
+          "signatureTokens": [
+            {
+              "text": "quality",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingQualityOption",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Renderer to shade with, or 'auto' to take the best one the other options allow. Defaults to 'auto', which means 'lightmap' when LightingOptions.app was passed and 'forward' when it was not. It resolves at construction and never changes afterwards; Lighting.quality reports what it resolved to. Naming a renderer outright is what a scene does when it needs a property only that one has - 'forward' for normal maps on a LitMaterial, 'lightmap' for shadows and an uncapped light count."
+        },
+        {
+          "name": "shadowResolution",
+          "signature": "shadowResolution?: number",
+          "signatureTokens": [
+            {
+              "text": "shadowResolution",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Angular bins in each light's shadow map. A bin is the finest shadow edge the renderer can resolve, so a large light on a high-resolution canvas wants more of them; the cost is linear in the light count. Defaults to 256."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/Lighting.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/Lighting.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
+}

@@ -1,4 +1,4 @@
-// Forward point lighting for one sprite fragment. The engine prepends its
+// Forward lighting for one sprite fragment: point and cone lights. The engine prepends its
 // sprite-material prologue, which declares `VertexOutput`, the group(0)
 // projection, the group(1) base-texture slot table and `sampleBase()`.
 //
@@ -16,7 +16,13 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
     // Rotate the tangent-space normal by the instance's local-to-world basis so
     // a spinning or mirrored sprite keeps its bumps facing the right way.
-    let tangentNormal = textureSample(u_normalMap, u_normalMapSampler, input.texcoord).xyz * 2.0 - 1.0;
+    // Green above the midpoint means "faces up" - the convention every
+    // authoring tool writes - and up on screen is world -y here, so the tangent
+    // normal's y is negated on the way in. Without it a normal map lights its
+    // bevels from the wrong side of the horizon, and only the vertical ones:
+    // left and right stay correct, which is what makes it hard to see.
+    let encodedNormal = textureSample(u_normalMap, u_normalMapSampler, input.texcoord).xyz * 2.0 - 1.0;
+    let tangentNormal = vec3<f32>(encodedNormal.x, -encodedNormal.y, encodedNormal.z);
     let axisX = normalize(vec2<f32>(input.basis.x, input.basis.z));
     let axisY = normalize(vec2<f32>(input.basis.y, input.basis.w));
     let normal = normalize(vec3<f32>(axisX * tangentNormal.x + axisY * tangentNormal.y, tangentNormal.z));
@@ -27,12 +33,26 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     for (var index = 0; index < count; index = index + 1) {
         let light = textureLoad(u_lights, vec2<i32>(index + 1, 0), 0);
         let tint = textureLoad(u_lights, vec2<i32>(index + 1, 1), 0);
+        let cone = textureLoad(u_lights, vec2<i32>(index + 1, 2), 0);
         let toLight = light.xy - input.worldPosition;
         let falloff = clamp(1.0 - length(toLight) / light.z, 0.0, 1.0);
         let direction = normalize(vec3<f32>(toLight, tint.w));
 
-        lit = lit + tint.rgb * (max(dot(normal, direction), 0.0) * falloff * falloff * light.w);
+        // A point light writes both cone cosines as -1, which no direction can
+        // fail, so the cone term is 1 for it and the loop never branches.
+        let fromLight = normalize(-toLight);
+        let alignment = dot(fromLight, cone.xy);
+        var coneTerm = smoothstep(cone.z, cone.w, alignment);
+
+        if (cone.z == cone.w) {
+            coneTerm = step(cone.z, alignment);
+        }
+
+        lit = lit + tint.rgb * (max(dot(normal, direction), 0.0) * falloff * falloff * light.w * coneTerm);
     }
 
-    return vec4<f32>(base.rgb * lit, base.a) * input.color;
+    // Emission is added to the light rather than to the colour, so it scales
+    // the albedo the same way a light does and a transparent pixel stays
+    // transparent instead of glowing through its own alpha.
+    return vec4<f32>(base.rgb * (lit + uniforms.emissive), base.a) * input.color;
 }

@@ -7,7 +7,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { LightingSystem, LitSpriteMaterial, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -73,8 +73,8 @@ describe('lighting WebGPU browser', () => {
     const device = getBackendDevice(backend);
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
-    const lighting = new LightingSystem({ maxLights: 4, ambient: Color.black });
-    const material = new LitSpriteMaterial({ lighting, normalMap });
+    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
     const root = new Container();
     const upright = new Sprite(albedo);
     const mirrored = new Sprite(albedo);
@@ -88,8 +88,8 @@ describe('lighting WebGPU browser', () => {
     root.addChild(upright);
     root.addChild(mirrored);
 
-    lighting.add(new PointLight({ x: 32, y: 32, radius: 64, intensity: 1, height: 20 }));
-    lighting.commit();
+    lighting.add(new PointLight({ radius: 64, intensity: 1, height: 20 })).setPosition(32, 32);
+    lighting.update();
 
     const cleanup = (): void => {
       root.destroy();
@@ -142,13 +142,80 @@ describe('lighting WebGPU browser', () => {
     }
   });
 
+  test('an emissive surface lights itself where no light reaches, and keeps its alpha', async ctx => {
+    const backend = await createBackend();
+    const device = getBackendDevice(backend);
+    const albedo = createAlbedo();
+    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const dark = new LitMaterial({ lighting });
+    const lava = new LitMaterial({ lighting, emissive: 0.75 });
+    const plain = new Sprite(albedo);
+    const glowing = new Sprite(albedo);
+    const root = new Container();
+
+    // Two quads, no light at all: only emission can tell them apart.
+    plain.material = dark;
+    plain.setPosition(4, 20).setScale(24, 24);
+    glowing.material = lava;
+    glowing.setPosition(36, 20).setScale(24, 24);
+    root.addChild(plain, glowing);
+    lighting.update();
+
+    const cleanup = (): void => {
+      root.destroy();
+      dark.destroy();
+      lava.destroy();
+      lighting.destroy();
+      albedo.destroy();
+      backend.destroy();
+    };
+
+    let validationError: GPUError | null;
+
+    device.pushErrorScope('validation');
+
+    try {
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+      validationError = await device.popErrorScope();
+      await device.queue.onSubmittedWorkDone();
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        cleanup();
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    }
+
+    try {
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+      const unlit = readPixel(16, 32);
+      const emissive = readPixel(48, 32);
+
+      expect(validationError).toBeNull();
+      expect(unlit[0]).toBeLessThan(10);
+      expect(emissive[0]).toBeGreaterThan(170);
+      expect(emissive[0]).toBeLessThan(215);
+      // Emission scales the albedo rather than being added to it, so the
+      // surface is no more opaque for glowing.
+      expect(emissive[3]).toBe(255);
+    } finally {
+      cleanup();
+    }
+  });
+
   test('an unlit scene falls back to the ambient term and a committed light lights it', async ctx => {
     const backend = await createBackend();
     const device = getBackendDevice(backend);
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
-    const lighting = new LightingSystem({ maxLights: 4, ambient: new Color(64, 64, 64) });
-    const material = new LitSpriteMaterial({ lighting, normalMap });
+    const lighting = new Lighting({ maxLights: 4, ambient: new Color(64, 64, 64) });
+    const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
     const root = new Container();
     const sprite = new Sprite(albedo);
 
@@ -181,8 +248,8 @@ describe('lighting WebGPU browser', () => {
       expect(ambientOnly[0]).toBeGreaterThan(50);
       expect(ambientOnly[0]).toBeLessThan(80);
 
-      lighting.add(new PointLight({ x: 32, y: 32, radius: 64, intensity: 1, height: 16 }));
-      lighting.commit();
+      lighting.add(new PointLight({ radius: 64, intensity: 1, height: 16 })).setPosition(32, 32);
+      lighting.update();
       await render();
 
       const lit = readWebGpuPixels(backend, canvasSize)(32, 32);

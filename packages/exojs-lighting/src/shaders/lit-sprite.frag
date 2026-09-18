@@ -2,7 +2,7 @@
 precision highp float;
 precision highp int;
 
-// Forward point lighting for one sprite fragment. The engine splices its
+// Forward lighting for one sprite fragment: point and cone lights. The engine splices its
 // base-texture slot table and `sampleBase()` in below the precision block.
 in vec2 v_texcoord;
 in vec4 v_color;
@@ -22,7 +22,13 @@ void main(void) {
 
     // Rotate the tangent-space normal by the instance's local-to-world basis so
     // a spinning or mirrored sprite keeps its bumps facing the right way.
+    // Green above the midpoint means "faces up" - the convention every
+    // authoring tool writes - and up on screen is world -y here, so the tangent
+    // normal's y is negated on the way in. Without it a normal map lights its
+    // bevels from the wrong side of the horizon, and only the vertical ones:
+    // left and right stay correct, which is what makes it hard to see.
     vec3 tangentNormal = texture(u_normalMap, v_texcoord).xyz * 2.0 - 1.0;
+    tangentNormal.y = -tangentNormal.y;
     vec2 axisX = normalize(vec2(v_basis.x, v_basis.z));
     vec2 axisY = normalize(vec2(v_basis.y, v_basis.w));
     vec3 normal = normalize(vec3(axisX * tangentNormal.x + axisY * tangentNormal.y, tangentNormal.z));
@@ -33,12 +39,22 @@ void main(void) {
     for (int index = 0; index < count; index++) {
         vec4 light = texelFetch(u_lights, ivec2(index + 1, 0), 0);
         vec4 tint = texelFetch(u_lights, ivec2(index + 1, 1), 0);
+        vec4 cone = texelFetch(u_lights, ivec2(index + 1, 2), 0);
         vec2 toLight = light.xy - v_worldPosition;
         float falloff = clamp(1.0 - length(toLight) / light.z, 0.0, 1.0);
         vec3 direction = normalize(vec3(toLight, tint.w));
 
-        lit += tint.rgb * (max(dot(normal, direction), 0.0) * falloff * falloff * light.w);
+        // A point light writes both cone cosines as -1, which no direction can
+        // fail, so the cone term is 1 for it and the loop never branches.
+        vec2 fromLight = normalize(-toLight);
+        float alignment = dot(fromLight, cone.xy);
+        float coneTerm = cone.z == cone.w ? step(cone.z, alignment) : smoothstep(cone.z, cone.w, alignment);
+
+        lit += tint.rgb * (max(dot(normal, direction), 0.0) * falloff * falloff * light.w * coneTerm);
     }
 
-    fragColor = vec4(base.rgb * lit, base.a) * v_color;
+    // Emission is added to the light rather than to the colour, so it scales
+    // the albedo the same way a light does and a transparent pixel stays
+    // transparent instead of glowing through its own alpha.
+    fragColor = vec4(base.rgb * (lit + uniforms.emissive), base.a) * v_color;
 }

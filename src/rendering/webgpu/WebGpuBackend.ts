@@ -1203,6 +1203,45 @@ export class WebGpuBackend implements RenderBackend {
     return true;
   }
 
+  public async readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray> {
+    this.flush();
+
+    const texture = this._syncTexture(source).texture;
+    // `copyTextureToBuffer` wants every row to start on a 256-byte boundary,
+    // unlike `writeTexture`, so the staging rows are padded and the payload is
+    // unpacked out of them below.
+    const bytesPerRow = Math.ceil((width * 4) / 256) * 256;
+    const staging = this.device.createBuffer({
+      label: 'backend:readPixels',
+      size: bytesPerRow * height,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+
+    try {
+      const encoder = this.device.createCommandEncoder({ label: 'backend:readPixels:encoder' });
+
+      encoder.copyTextureToBuffer({ texture, origin: { x, y } }, { buffer: staging, bytesPerRow, rowsPerImage: height }, { width, height });
+      this.device.queue.submit([encoder.finish()]);
+
+      await staging.mapAsync(GPUMapMode.READ);
+
+      const padded = new Uint8Array(staging.getMappedRange());
+      const stride = width * 4;
+      const pixels = new Uint8ClampedArray(stride * height);
+
+      for (let row = 0; row < height; row++) {
+        pixels.set(padded.subarray(row * bytesPerRow, row * bytesPerRow + stride), row * stride);
+      }
+
+      staging.unmap();
+      this._accountant.recordDownload(pixels.byteLength);
+
+      return pixels;
+    } finally {
+      staging.destroy();
+    }
+  }
+
   public acquireRenderTexture(width: number, height: number): RenderTexture {
     return this._renderTexturePool.acquire(width, height);
   }

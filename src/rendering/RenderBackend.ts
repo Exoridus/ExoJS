@@ -184,6 +184,21 @@ export interface RenderBackend {
   supportsColorFormat(format: ColorTextureFormat): boolean;
 
   /**
+   * Read back `width × height` RGBA bytes from `source`, starting at `x`, `y`
+   * measured from its top-left corner, with the top row first.
+   *
+   * Pending work is submitted first, so the pixels are those of everything
+   * drawn into `source` up to this call. Both backends resolve on the GPU's own
+   * schedule rather than blocking, which is why this is asynchronous even where
+   * the platform call is not.
+   *
+   * The caller is expected to have validated the format and the rectangle;
+   * {@link RenderingContext.readPixels} is the checked entry point.
+   * @advanced
+   */
+  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray>;
+
+  /**
    * Borrow a temporary {@link RenderTexture} of exactly `width × height` from
    * the backend's pool, allocating one if no pooled entry matches. Hand it back
    * with {@link releaseRenderTexture} - destroying a borrowed texture instead

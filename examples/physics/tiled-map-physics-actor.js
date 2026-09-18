@@ -54,7 +54,10 @@ class TiledMapPhysicsActorScene extends Scene {
       tileCount: 204,
       columns: 17,
     });
-    const groundTile = 0; // top-left grid tile — a solid block.
+    // Stone centre from mapPack_tilesheet.png (17 columns, localTileId =
+    // row * 17 + column). The block corners and edges around it are terrain
+    // borders with transparent margins - they do not read as solid ground.
+    const groundTile = 28;
     const layer = new TileLayer({ id: 1, name: 'ground', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset] });
     // Paint a floor row + two side walls + two floating platforms.
     for (let tx = 0; tx < COLUMNS; tx++) {

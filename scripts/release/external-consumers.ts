@@ -65,7 +65,7 @@ import { AudioAnalyser, BeatDetector, ReverbEffect } from '@codexo/exojs-audio-f
 import { AsepriteSheet, asepriteExtension } from '@codexo/exojs-aseprite';
 import { LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk';
 import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
-import { LightingSystem, LitSpriteMaterial, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, PointLight } from '@codexo/exojs-lighting';
 import { GridSpace, Pathfinder, WaypointGraph } from '@codexo/exojs-pathfinding';
 
 export class DemoScene extends Scene {}
@@ -101,8 +101,8 @@ export function bootstrap(): { app: Application; system: typeof ParticleSystem; 
     void LdtkMap;
     void ldtkExtension;
     void TileColliderStreamer;
-    void LightingSystem;
-    void LitSpriteMaterial;
+    void Lighting;
+    void LitMaterial;
     void PointLight;
     void GridSpace;
     void Pathfinder;
@@ -196,8 +196,8 @@ const checks = [
   ['facade ldtk TileMap identity (ldtk === tilemap)', ldtk.TileMap === tilemap.TileMap],
   ['@codexo/exojs-tilemap-physics TileColliderStreamer', typeof tilemapPhysics.TileColliderStreamer === 'function'],
   ['@codexo/exojs-tilemap-physics buildObjectLayerColliders', typeof tilemapPhysics.buildObjectLayerColliders === 'function'],
-  ['@codexo/exojs-lighting LightingSystem', typeof lighting.LightingSystem === 'function'],
-  ['@codexo/exojs-lighting LitSpriteMaterial', typeof lighting.LitSpriteMaterial === 'function'],
+  ['@codexo/exojs-lighting Lighting', typeof lighting.Lighting === 'function'],
+  ['@codexo/exojs-lighting LitMaterial', typeof lighting.LitMaterial === 'function'],
   ['@codexo/exojs-lighting PointLight', typeof lighting.PointLight === 'function'],
   ['@codexo/exojs-pathfinding Pathfinder', typeof pathfinding.Pathfinder === 'function'],
   ['@codexo/exojs-pathfinding GridSpace', typeof pathfinding.GridSpace === 'function'],

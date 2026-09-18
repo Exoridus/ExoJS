@@ -1,0 +1,827 @@
+{
+  "title": "Lighting",
+  "description": "The lighting system: lights, materials and occluders in, a shaded frame out. ```ts const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(11, 16, 32) }); scene.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); lighting.occludeFrom(new PhysicsOccluder(world)); ``` # What it owns The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Occluder sources and filters passed as `post` are the caller's too. # Ordering Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want.",
+  "symbol": "Lighting",
+  "kind": "class",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 22,
+  "counts": {
+    "constructors": 1,
+    "methods": 11,
+    "properties": 10,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The lighting system: lights, materials and occluders in, a shaded frame out.",
+        "```ts const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(11, 16, 32) });",
+        "scene.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); lighting.occludeFrom(new PhysicsOccluder(world)); ```",
+        "# What it owns",
+        "The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Occluder sources and filters passed as `post` are the caller's too.",
+        "# Ordering",
+        "Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want."
+      ],
+      "importLine": "import { Lighting } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: LightingOptions): Lighting",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Lighting",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "LightingOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Lighting",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "add",
+          "signature": "add(light: T): T",
+          "signatureTokens": [
+            {
+              "text": "add",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "light",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "light",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": "Register a light and return it, so it can be created, parented and registered in one expression. Registering the same light twice shades it twice; the second registration is ignored instead."
+        },
+        {
+          "name": "clear",
+          "signature": "clear(): this",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Unregister every light."
+        },
+        {
+          "name": "clearOccluders",
+          "signature": "clearOccluders(): this",
+          "signatureTokens": [
+            {
+              "text": "clearOccluders",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Unregister every occluder source."
+        },
+        {
+          "name": "clearSurfaces",
+          "signature": "clearSurfaces(): this",
+          "signatureTokens": [
+            {
+              "text": "clearSurfaces",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Unregister every normal surface."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release the renderer's resources. Registered lights and sources are unregistered, not destroyed."
+        },
+        {
+          "name": "normalsFrom",
+          "signature": "normalsFrom(drawable: T, normals: NormalSource): T",
+          "signatureTokens": [
+            {
+              "text": "normalsFrom",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "drawable",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "normals",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalSource",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "drawable",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "normals",
+              "type": "NormalSource",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, new NormalMap(crateNormals));  Only a renderer that shades a light field of its own reads these - forward shades inside the sprite stage and takes its normals from LitMaterial instead. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
+        },
+        {
+          "name": "occludeFrom",
+          "signature": "occludeFrom(source: T): T",
+          "signatureTokens": [
+            {
+              "text": "occludeFrom",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(new PhysicsOccluder(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice collects it twice, so the second registration is ignored instead."
+        },
+        {
+          "name": "remove",
+          "signature": "remove(light: Light): boolean",
+          "signatureTokens": [
+            {
+              "text": "remove",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "light",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Light",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "light",
+              "type": "Light",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Unregister a light. Returns false when it was not registered here."
+        },
+        {
+          "name": "stopNormals",
+          "signature": "stopNormals(drawable: NormalSurfaceDrawable): boolean",
+          "signatureTokens": [
+            {
+              "text": "stopNormals",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "drawable",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalSurfaceDrawable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "drawable",
+              "type": "NormalSurfaceDrawable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Take a drawable's normals away again. Returns false when it had none here."
+        },
+        {
+          "name": "stopOccluding",
+          "signature": "stopOccluding(source: OccluderSource): boolean",
+          "signatureTokens": [
+            {
+              "text": "stopOccluding",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderSource",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "OccluderSource",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Unregister an occluder source. Returns false when it was not registered here."
+        },
+        {
+          "name": "update",
+          "signature": "update(): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System update phase: publish this frame's lights, occluders and surfaces to the renderer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "ambient",
+          "signature": "ambient: Color",
+          "signatureTokens": [
+            {
+              "text": "ambient",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Baseline colour applied to every lit fragment. Mutable; re-read every frame."
+        },
+        {
+          "name": "activeLightCount",
+          "signature": "activeLightCount: number",
+          "signatureTokens": [
+            {
+              "text": "activeLightCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lights the last frame actually shaded with. Lower than lights when some are disabled, have no intensity, or fall beyond what the renderer in use can carry."
+        },
+        {
+          "name": "activeSurfaceCount",
+          "signature": "activeSurfaceCount: number",
+          "signatureTokens": [
+            {
+              "text": "activeSurfaceCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Surfaces the last frame actually took normals from. Lower than surfaces when some are hidden or carry no texture, and zero under a renderer that takes its normals from a material."
+        },
+        {
+          "name": "debug",
+          "signature": "debug: LightingDebugView",
+          "signatureTokens": [
+            {
+              "text": "debug",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingDebugView",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Intermediate to show instead of the shaded frame. See LightingDebugView."
+        },
+        {
+          "name": "hdr",
+          "signature": "hdr: boolean",
+          "signatureTokens": [
+            {
+              "text": "hdr",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether light accumulates with headroom above 1.0, so that overlapping lights add up instead of saturating to white and a filter in post has something above the clipping point to work with. false under forward, which shades straight into the frame, and under lightmap on a WebGL2 context without EXT_color_buffer_float. The picture is still correct there - it clips earlier, and a bloom keyed on a threshold near 1.0 finds little to bloom."
+        },
+        {
+          "name": "lights",
+          "signature": "lights: readonly Light[]",
+          "signatureTokens": [
+            {
+              "text": "lights",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Light",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Registered lights, in registration order."
+        },
+        {
+          "name": "occluders",
+          "signature": "occluders: readonly OccluderSource[]",
+          "signatureTokens": [
+            {
+              "text": "occluders",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderSource",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Registered occluder sources, in registration order."
+        },
+        {
+          "name": "post",
+          "signature": "post: readonly Filter[]",
+          "signatureTokens": [
+            {
+              "text": "post",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Filter",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Filters over the shaded frame, in order. See LightingOptions.post."
+        },
+        {
+          "name": "quality",
+          "signature": "quality: LightingQuality",
+          "signatureTokens": [
+            {
+              "text": "quality",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingQuality",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The renderer in use."
+        },
+        {
+          "name": "surfaces",
+          "signature": "surfaces: readonly NormalSurface[]",
+          "signatureTokens": [
+            {
+              "text": "surfaces",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalSurface",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Registered normal surfaces, in registration order."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/Lighting.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/Lighting.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
+}

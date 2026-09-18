@@ -1,5 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, Keyboard, LutFilter, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { mountControls } from '@examples/runtime';
 
 const LUT_SIZE = 17;
 
@@ -72,7 +72,6 @@ class ColorGradingScene extends Scene {
   private index = 0;
   private sprite!: Sprite;
   private hud!: ReturnType<typeof mountControls>;
-  private cycle!: { set(value: number): void };
 
   override init(): void {
     const app = this.app;
@@ -87,20 +86,11 @@ class ColorGradingScene extends Scene {
 
     this.hud = mountControls({
       title: 'Color Grading',
-      controls: [
-        { keys: 'SPACE', action: 'next look' },
-        { keys: 'Look', action: 'pick a grade' },
-      ],
+      controls: [{ keys: 'Click / Space', action: 'next look' }],
     });
 
-    this.cycle = mountControlPanel({ title: 'LUT' }).addCycle({
-      label: 'Look',
-      options: LOOKS.map(look => look.name),
-      index: 0,
-      onChange: index => this.setIndex(index),
-    });
-
-    this.inputs.onTrigger(Keyboard.Space, () => this.setIndex((this.index + 1) % LOOKS.length));
+    this.inputs.onTrigger(Keyboard.Space, () => this.setIndex(this.index + 1));
+    app.input.onPointerTap.add(() => this.setIndex(this.index + 1));
 
     // Apply the initial look so the HUD and sprite agree from frame one.
     this.applyLook();
@@ -113,7 +103,6 @@ class ColorGradingScene extends Scene {
 
   private applyLook(): void {
     this.filter.setLut(this.luts[this.index]);
-    this.cycle.set(this.index);
     this.hud.setStatus(`${LOOKS[this.index].name}  (${this.index + 1}/${LOOKS.length})`);
   }
 

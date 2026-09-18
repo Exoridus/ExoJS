@@ -1,10 +1,10 @@
 // Auto-generated from normal-mapped-sprites.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { LightingSystem, LitSpriteMaterial, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControls } from '@examples/runtime';
-// Forward normal mapping on plain sprites. A LitSpriteMaterial samples a
+// Forward normal mapping on plain sprites. A LitMaterial samples a
 // tangent-space normal map next to the base texture and shades each fragment
-// against the lights a LightingSystem publishes. Everything stays in one batch:
+// against the lights a Lighting system publishes. Everything stays in one batch:
 // the lights live in a data texture, not in extra draw calls.
 const LIGHT_COUNT = 4;
 const TILE_SIZE = 96;
@@ -74,8 +74,8 @@ class NormalMappedSpritesScene extends Scene {
   init() {
     const { width, height } = this.app;
     this.layer = new Container();
-    this.lighting = new LightingSystem({ maxLights: LIGHT_COUNT, ambient: new Color(30, 30, 40) });
-    this.material = new LitSpriteMaterial({ lighting: this.lighting, normalMap: normalTexture });
+    this.lighting = new Lighting({ maxLights: LIGHT_COUNT, ambient: new Color(30, 30, 40) });
+    this.material = new LitMaterial({ lighting: this.lighting, normals: new NormalMap(normalTexture) });
     // Scene systems tick after Scene.update(), so the packed light texture
     // always describes the frame that is about to be drawn.
     this.systems.add(this.lighting);

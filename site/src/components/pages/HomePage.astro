@@ -29,9 +29,9 @@ const heroExampleTitle = heroExample?.title ?? 'Many Lights';
 const heroExampleSource = getExampleExecutionSource('lighting', 'many-lights');
 
 const heroSnippet = `import { Application, Color, Scene, Sprite } from '@codexo/exojs';
-import { LightingSystem, LitSpriteMaterial, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, Normals, PointLight } from '@codexo/exojs-lighting';
 
-const lighting = new LightingSystem();
+const lighting = new Lighting();
 const lights = Array.from({ length: 24 }, (_, i) => {
   const color = Color.fromCss(\`hsl(\${i * 15} 80% 60%)\`);
   return new PointLight({ radius: 190, color });
@@ -41,7 +41,7 @@ class LitScene extends Scene {
   async load(loader) {
     const stone = await loader.load('stone.png');
     const normalMap = await loader.load('stone-normal.png');
-    const material = new LitSpriteMaterial({ lighting, normalMap });
+    const material = new LitMaterial({ lighting, normals: Normals.map(normalMap) });
 
     for (let i = 0; i < 112; i++) {
       const tile = new Sprite(stone);
@@ -60,8 +60,7 @@ class LitScene extends Scene {
     const t = this.app.activeSeconds;
     lights.forEach((light, i) => {
       const angle = t * (0.25 + i * 0.08) + i;
-      light.x = 640 + Math.cos(angle) * 420;
-      light.y = 360 + Math.sin(angle * 1.37) * 260;
+      light.setPosition(640 + Math.cos(angle) * 420, 360 + Math.sin(angle * 1.37) * 260);
     });
   }
 

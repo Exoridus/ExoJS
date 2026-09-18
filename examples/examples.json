@@ -48,7 +48,7 @@
       "path": "application-scenes/world-vs-screen-coords.js",
       "language": "typescript",
       "title": "World Vs Screen Coords",
-      "description": "Convert pointer positions between world space and screen space as the camera pans and zooms.",
+      "description": "Click anywhere to drop a marker and read the same point in both screen and world space, converted through a camera offset from the origin.",
       "backend": "core",
       "tags": ["camera", "scene", "pointer"],
       "capabilities": ["pointer"],
@@ -238,7 +238,7 @@
       "path": "audio-fx/vocoder.js",
       "language": "typescript",
       "title": "Vocoder",
-      "description": "Vocode a spoken voice phrase with a synth carrier to produce the classic robot-voice effect — pick a phrase and click to speak.",
+      "description": "Vocode a spoken voice phrase with a synth carrier to produce the classic robot-voice effect — click to speak, right-click to change phrase.",
       "backend": "core",
       "tags": ["audio", "fx", "vocoder"],
       "capabilities": ["pointer", "audio"],
@@ -249,10 +249,10 @@
       "path": "audio-fx/convolution-rooms.js",
       "language": "typescript",
       "title": "Convolution Rooms",
-      "description": "Fire the same dry impact through 30 recorded room impulse responses, from a few milliseconds of colouration to a half-second cavern.",
+      "description": "Strike one of four materials, panned to where it sits, and cycle through 30 recorded room impulse responses with a right-click, from a few milliseconds of colouration to a half-second cavern.",
       "backend": "core",
       "tags": ["audio", "fx", "convolution", "reverb", "impulse-response"],
-      "capabilities": ["pointer", "keyboard"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     },
     {
@@ -363,9 +363,10 @@
       "path": "debug-layer/signal-bus-inspector.js",
       "language": "typescript",
       "title": "Signal Bus Inspector",
-      "description": "List all active Signals on the SignalBus, inspect current values, and monitor subscriber counts in the debug layer.",
+      "description": "Click to dispatch three Signals at once and watch their listener counts light up; right-click toggles a second listener on one of them.",
       "backend": "core",
       "tags": ["debug"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -386,9 +387,10 @@
       "path": "filters/color-matrix-filter.js",
       "language": "typescript",
       "title": "Color Matrix Filter",
-      "description": "Tint, desaturate, invert, brighten, push contrast and sepia-tone a sprite — one colour matrix, cycled from the control panel.",
+      "description": "Tint, desaturate, invert, brighten, push contrast and sepia-tone a sprite — click to cycle through one colour matrix.",
       "backend": "core",
       "tags": ["fx", "color", "filter"],
+      "capabilities": ["pointer"],
       "level": "intro"
     },
     {
@@ -729,7 +731,7 @@
       "path": "lighting/normal-mapped-sprites.js",
       "language": "typescript",
       "title": "Normal-Mapped Sprites",
-      "description": "Forward normal mapping on plain sprites: a LitSpriteMaterial samples a tangent-space normal map and shades every sprite against four moving point lights in a single batch, with spinning and mirrored tiles proving the basis rotation.",
+      "description": "Forward normal mapping on plain sprites: a LitMaterial samples a tangent-space normal map and shades every sprite against four moving point lights in a single batch, with spinning and mirrored tiles proving the basis rotation.",
       "backend": "core",
       "featured": false,
       "tags": ["lighting", "material", "shader"],
@@ -745,6 +747,54 @@
       "backend": "core",
       "featured": false,
       "tags": ["lighting", "material", "shader", "performance"],
+      "capabilities": [],
+      "level": "advanced"
+    },
+    {
+      "slug": "shadow-casters",
+      "path": "lighting/shadow-casters.js",
+      "language": "typescript",
+      "title": "Shadow Casters",
+      "description": "Soft shadows nobody modelled: the walls hand over the rectangle they are drawn as, the cross hands over the outline traced from its alpha channel, and the lightmap renderer shadows every light against them in one draw. Toggle the occluder debug view to see exactly what was collected.",
+      "backend": "core",
+      "featured": true,
+      "tags": ["lighting", "shadows", "shader"],
+      "capabilities": [],
+      "level": "advanced"
+    },
+    {
+      "slug": "radiance-rooms",
+      "path": "lighting/radiance-rooms.js",
+      "language": "typescript",
+      "title": "Radiance Rooms",
+      "description": "Radiance cascades against the light-quad renderer on one scene: a single lamp in one of two rooms, a doorway between them, and a switch that rebuilds the lighting system so the same lights can be seen drawn and transported.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "shadows", "shader"],
+      "capabilities": [],
+      "level": "advanced"
+    },
+    {
+      "slug": "light-cookies",
+      "path": "lighting/light-cookies.js",
+      "language": "typescript",
+      "title": "Light Cookies",
+      "description": "Four light shapes and two textures doing the work of geometry: window bars and leaf shade are cookies on the lights themselves, a neon tube pools in a capsule rather than a disc, and a sun with no position throws parallel shadows across the whole view.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "shader", "texture"],
+      "capabilities": [],
+      "level": "intermediate"
+    },
+    {
+      "slug": "lightmap-normals",
+      "path": "lighting/lightmap-normals.js",
+      "language": "typescript",
+      "title": "Normals under the Lightmap Renderer",
+      "description": "Forty-five cobbles that nobody authored a normal map for: each one hands the lighting system its own silhouette, a prepass draws the derived normals where the stone sits, and the light field shades against them. Switching the normals off leaves the light exactly as bright.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "material", "shader"],
       "capabilities": [],
       "level": "advanced"
     }
@@ -1210,10 +1260,10 @@
       "path": "showcase/color-grading.js",
       "language": "typescript",
       "title": "Color Grading",
-      "description": "Switch between procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) plus an Identity bypass, on a single sprite.",
+      "description": "Click or press Space to cycle procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) plus an Identity bypass, on a single sprite.",
       "backend": "core",
       "tags": ["lut", "color", "grading"],
-      "capabilities": ["keyboard"],
+      "capabilities": ["pointer", "keyboard"],
       "level": "intermediate"
     },
     {

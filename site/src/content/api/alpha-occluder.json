@@ -1,0 +1,208 @@
+{
+  "title": "AlphaOccluder",
+  "description": "Shadows from a texture's own silhouette, traced once. ```ts lighting.occludeFrom(new AlphaOccluder(tree)); ``` Pass the drawable and it supplies everything: its texture, the frame of it that it shows - so a sprite from an atlas outlines itself rather than the whole page - its own box, and its transform, which already carries the anchor. Pass a bare texture instead and the whole of it is traced, placed by `node`. The alpha channel is traced and simplified per distinct frame, on first sight and then never again, so an animation costs one trace per frame OF THE CLIP rather than one per rendered frame - and the outline follows the clip instead of freezing on whichever frame was showing at construction. What runs every rendered frame is a comparison and the transform. That leaves two cases with no outline rather than a wrong one, both reported on the `AlphaOccluder` log source in a development build. A render target has no pixels this side of the GPU and can never be traced. A texture that is not readable yet - still loading, or tainted by a cross-origin image - is retried on the next frame rather than cached. The outline follows the art, which is not always the shadow you want - a tree casts the shadow of its trunk, not of its canopy. Reach for PolygonOccluder where they differ.",
+  "symbol": "AlphaOccluder",
+  "kind": "class",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Shadows from a texture's own silhouette, traced once.",
+        "```ts lighting.occludeFrom(new AlphaOccluder(tree)); ```",
+        "Pass the drawable and it supplies everything: its texture, the frame of it that it shows - so a sprite from an atlas outlines itself rather than the whole page - its own box, and its transform, which already carries the anchor. Pass a bare texture instead and the whole of it is traced, placed by `node`.",
+        "The alpha channel is traced and simplified per distinct frame, on first sight and then never again, so an animation costs one trace per frame OF THE CLIP rather than one per rendered frame - and the outline follows the clip instead of freezing on whichever frame was showing at construction. What runs every rendered frame is a comparison and the transform.",
+        "That leaves two cases with no outline rather than a wrong one, both reported on the `AlphaOccluder` log source in a development build. A render target has no pixels this side of the GPU and can never be traced. A texture that is not readable yet - still loading, or tainted by a cross-origin image - is retried on the next frame rather than cached.",
+        "The outline follows the art, which is not always the shadow you want - a tree casts the shadow of its trunk, not of its canopy. Reach for PolygonOccluder where they differ."
+      ],
+      "importLine": "import { AlphaOccluder } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(source: AlphaOccluderDrawable | Texture, options: AlphaOccluderOptions): AlphaOccluder",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AlphaOccluderDrawable",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AlphaOccluderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AlphaOccluder",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "AlphaOccluderDrawable | Texture",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "AlphaOccluderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "AlphaOccluder",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "collect",
+          "signature": "collect(bounds: ReadonlyRectangle, out: OccluderSink): void",
+          "signatureTokens": [
+            {
+              "text": "collect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bounds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderSink",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "bounds",
+              "type": "ReadonlyRectangle",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "OccluderSink",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Append the segments overlapping bounds to out. Called once per frame with the region the visible lights actually reach, so a source that can narrow its search by region should. Reporting more than bounds covers is allowed and only costs work; reporting less than it covers leaks light. bounds is valid for the duration of the call and is reused afterwards."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/AlphaOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/AlphaOccluder.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/AlphaOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/AlphaOccluder.ts"
+}
