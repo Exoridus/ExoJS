@@ -38,15 +38,15 @@ interface Host {
   destroy(): void;
 }
 
-const createHost = async (): Promise<Host> => {
+const createHost = async (size: number = canvasSize): Promise<Host> => {
   const canvas = document.createElement('canvas');
 
-  canvas.width = canvasSize;
-  canvas.height = canvasSize;
+  canvas.width = size;
+  canvas.height = size;
 
   const options = {
     clearColor: Color.black,
-    canvas: { width: canvasSize, height: canvasSize, pixelRatio: 1 },
+    canvas: { width: size, height: size, pixelRatio: 1 },
     rendering: {
       debug: false,
       webglAttributes: { antialias: false, preserveDrawingBuffer: true, stencil: false, depth: false },
@@ -54,10 +54,10 @@ const createHost = async (): Promise<Host> => {
     },
   };
 
-  const frameTexture = new RenderTexture(canvasSize, canvasSize);
+  const frameTexture = new RenderTexture(size, size);
   const onResize = new Signal<[number, number, Application]>();
   const framePasses = new RenderPipeline();
-  const app = { canvas, options, framePasses, frameTexture, onResize, width: canvasSize, height: canvasSize } as unknown as Application;
+  const app = { canvas, options, framePasses, frameTexture, onResize, width: size, height: size } as unknown as Application;
   const backend = new WebGl2Backend(app);
 
   await backend.initialize();
@@ -65,7 +65,7 @@ const createHost = async (): Promise<Host> => {
 
   const context = new RenderingContext(backend);
 
-  context.view = new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
+  context.view = new View(size / 2, size / 2, size, size);
   (app as unknown as { rendering: RenderingContext }).rendering = context;
 
   return {
@@ -84,11 +84,11 @@ const createHost = async (): Promise<Host> => {
 };
 
 /** Fill the frame the lighting multiplies with one opaque white quad, so a read is the light term alone. */
-const drawWhiteFrame = (host: Host): void => {
+const drawWhiteFrame = (host: Host, size: number = canvasSize): void => {
   const sprite = new Sprite(Texture.fromColor(Color.white, 1));
 
-  sprite.width = canvasSize;
-  sprite.height = canvasSize;
+  sprite.width = size;
+  sprite.height = size;
   host.context.renderTo(sprite, { target: host.frameTexture, clear: Color.black });
   sprite.destroy();
 };
@@ -320,12 +320,18 @@ describe('the cascade chain against an analytic reference', () => {
     try {
       runFrame(host, lighting);
 
-      const radial: number[] = [];
+      const radial: Array<{ radius: number; product: number }> = [];
       const angular: number[] = [];
 
-      // From well outside the emitter's own halo to the edge of the canvas.
-      for (let radius = 12; radius <= 56; radius += 2) {
-        radial.push(readRed(host.backend, 64 + radius, 64) * radius);
+      // From just outside the emitter's own halo to short of the frame's
+      // border, one texel at a time. The finest interval here is two world
+      // units and each level covers four times the last, so the level
+      // boundaries sit at 2, 10, 42 and 170: this sweep crosses 10 and 42,
+      // and 2 is inside the halo. A step at either is a cascade ring, and the
+      // sampling is dense enough to tell a step from the slow bow the
+      // approximation leaves.
+      for (let radius = 6; radius <= 52; radius += 1) {
+        radial.push({ radius, product: readRed(host.backend, 64 + radius, 64) * radius });
       }
 
       // One radius, all the way round: a ring shows up in the radial profile,
@@ -345,20 +351,36 @@ describe('the cascade chain against an analytic reference', () => {
 
   test('the arriving light falls as one over the distance, with no ring at a cascade boundary', async () => {
     const { radial, angular } = await profileOf();
-    const spread = Math.max(...radial) / Math.min(...radial);
+    const products = radial.map(sample => sample.product);
+    const spread = Math.max(...products) / Math.min(...products);
+    const mean = products.reduce((total, value) => total + value, 0) / products.length;
     const angularRange = Math.max(...angular) - Math.min(...angular);
+    const shown = products.map(value => value.toFixed(0)).join(' ');
 
     // Nothing saturated and nothing lost in the noise floor, so the numbers
     // below mean what they say.
-    expect(Math.min(...radial) / 12).toBeGreaterThan(8);
-    expect(Math.max(...radial) / 56).toBeLessThan(250);
+    expect(Math.min(...products) / 52).toBeGreaterThan(8);
+    expect(Math.max(...products) / 6).toBeLessThan(250);
 
     // The residual of the single-trace merge, quantified rather than asserted
-    // away: every level boundary of the chain falls inside this sweep, and
-    // what is left is a slow bow of about a tenth either side of the mean
-    // rather than a step at any one radius. A disagreement across a boundary
-    // would be a step, and a step is what a cascade ring is.
-    expect(spread, `r * L: ${radial.map(value => value.toFixed(0)).join(' ')}`).toBeLessThan(1.25);
+    // away. Two bounds, because a global ratio alone says nothing about where
+    // the error sits: the SPREAD is how far the product wanders over the
+    // whole sweep, and the per-sample bound is how much of that can happen
+    // between two neighbouring texels. A cascade ring is a step at one
+    // radius, and only the second bound can see one.
+    expect(spread, `r * L: ${shown}`).toBeLessThan(1.3);
+
+    for (let index = 1; index < radial.length; index++) {
+      const here = radial[index]!;
+      const previous = radial[index - 1]!;
+      // The floor is the quantisation, which this product AMPLIFIES: one
+      // 8-bit count at radius r is r of the product, so the outer end of the
+      // sweep is noisier than the inner end by construction. Anything a ring
+      // would produce is many times either term.
+      const tolerated = 1.5 * here.radius + 0.05 * mean;
+
+      expect(Math.abs(here.product - previous.product), `step at r=${here.radius} of ${tolerated.toFixed(0)} in: ${shown}`).toBeLessThan(tolerated);
+    }
 
     // Around one circle the tolerance is the quantisation, not a fraction:
     // the reading is ~32 of 255 here, one 8-bit step is 3 percent of it, and
@@ -502,5 +524,181 @@ describe('the tangent-space convention reaching the sprite shader', () => {
     // on.
     expect(Math.abs(above.top! - above.bottom!)).toBeLessThanOrEqual(2);
     expect(Math.abs(below.top! - below.bottom!)).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('the shadow filter as the fragment crosses a bin', () => {
+  /**
+   * The same isolated edge, on a canvas large enough that one angular bin is
+   * several pixels wide: at radius 200 with 256 bins a bin spans about five
+   * pixels, so a profile sampled per pixel resolves what happens WITHIN a bin
+   * as well as between two.
+   *
+   * That is what a staircase needs to be visible. Taps placed at fixed
+   * offsets from the fragment's own angle carry constant weights and all
+   * round to the next bin at the same moment, so the whole kernel shifts at
+   * once and the result jumps by the weight of one tap - up to a fifth of the
+   * range at the default softness. Taps placed ON the bins, weighted by their
+   * distance from the angle, cannot do that.
+   */
+  const denseProfile = async (softness: number): Promise<number[]> => {
+    const size = 512;
+    const host = await createHost(size);
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 460, intensity: 1, softness })).setPosition(256, 256);
+    lighting.occludeFrom(
+      new PolygonOccluder(
+        [
+          { x: 288, y: 256 },
+          { x: 288, y: 500 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host, size);
+
+    try {
+      runFrame(host, lighting);
+
+      // Just over four bins of arc, sampled about every fifth of a bin.
+      return arcProfile(host, 256, 256, 200, -0.05, 0.05, 101);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  };
+
+  test.each([{ softness: 0.35 }, { softness: 1 }])('the penumbra has no step at a bin boundary at softness $softness', async ({ softness }) => {
+    const profile = await denseProfile(softness);
+    const range = Math.max(...profile) - Math.min(...profile);
+
+    // There is an edge to measure at all.
+    expect(range).toBeGreaterThan(30);
+    // And it crosses several bins without a jump.
+    expect(largestStep(profile), `softness ${softness}: ${profile.join(' ')}`).toBeLessThan(0.1);
+  });
+});
+
+describe('two spots that overlap', () => {
+  /** The light arriving behind and ahead of a pair of lamps at (64, 64) that both point along +x. */
+  const around = async (build: (lighting: Lighting) => void): Promise<{ back: number; front: number }> => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    build(lighting);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      return { back: readRed(host.backend, 36, 64), front: readRed(host.backend, 92, 64) };
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  };
+
+  const spot = (intensity = 1, angle = 20): SpotLight => new SpotLight({ radius: 30, intensity, angle, coneSoftness: 0 });
+
+  test('one spot lights ahead of itself and not behind', async () => {
+    const one = await around(lighting => {
+      lighting.add(spot()).setPosition(64, 64);
+    });
+
+    expect(one.front).toBeGreaterThan(20);
+    expect(one.back).toBeLessThan(one.front / 4);
+  });
+
+  test('a second spot with the same opening does not light what neither of them faces', async () => {
+    const one = await around(lighting => {
+      lighting.add(spot()).setPosition(64, 64);
+    });
+    const two = await around(lighting => {
+      lighting.add(spot()).setPosition(64, 64);
+      lighting.add(spot()).setPosition(64, 64);
+    });
+
+    // Twice the emission ahead, and still nothing behind. A texel that read
+    // "more than one emitter, so no cone" would put their whole summed
+    // radiance back there instead.
+    expect(two.front).toBeGreaterThan(one.front);
+    expect(two.back, `one ${one.back}/${one.front}, two ${two.back}/${two.front}`).toBeLessThan(one.front / 4);
+  });
+
+  test('a faint second spot does not unlock the first one', async () => {
+    const strong = await around(lighting => {
+      lighting.add(spot()).setPosition(64, 64);
+    });
+    const withFaint = await around(lighting => {
+      lighting.add(spot()).setPosition(64, 64);
+      lighting.add(spot(0.02, 80)).setPosition(64, 64);
+    });
+
+    // The mean cone is weighted by what each spot actually emits, so a lamp
+    // at two percent of the other's intensity moves the opening by about two
+    // percent rather than switching the strong one off.
+    expect(withFaint.back, `strong ${strong.back}, with faint ${withFaint.back}`).toBeLessThan(strong.back + 6);
+  });
+});
+
+describe('the bounce history', () => {
+  /**
+   * A red wall beside a white floor, lit hard enough that the bounce is worth
+   * several counts, with the camera moved by updates that are never drawn.
+   *
+   * What is under test is which frame the light field being read belongs to.
+   * The field is gathered at the END of a frame, so a camera prepared by an
+   * `update()` that was never drawn describes no light field at all - and
+   * pairing the two reprojects last frame's light through a camera it was
+   * never rendered through.
+   */
+  const bounceAfter = async (skipped: number): Promise<number> => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance({ bounce: 0.9 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const floor = new Sprite(Texture.fromColor(Color.white, 1));
+    const wall = new Sprite(Texture.fromColor(new Color(255, 0, 0), 1));
+
+    floor.width = canvasSize;
+    floor.height = canvasSize;
+    wall.width = 8;
+    wall.height = canvasSize;
+    wall.setPosition(84, 0);
+    host.context.renderTo(floor, { target: host.frameTexture, clear: Color.black });
+    host.context.renderTo(wall, { target: host.frameTexture });
+    lighting.add(new PointLight({ radius: 80, intensity: 4 })).setPosition(40, 64);
+
+    try {
+      // One drawn frame, so there is a light field to bounce from.
+      runFrame(host, lighting);
+
+      // Then some updates the renderer never got to draw. Each prepares a
+      // camera; none of them gathers anything.
+      for (let index = 0; index < skipped; index++) {
+        host.context.view.center.set(64 + index + 1, 64);
+        lighting.update();
+      }
+
+      host.context.view.center.set(64, 64);
+      runFrame(host, lighting);
+
+      return readRed(host.backend, 70, 64);
+    } finally {
+      floor.destroy();
+      wall.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  };
+
+  test('an update the renderer never drew does not become the frame the bounce reads from', async () => {
+    const drawn = await bounceAfter(0);
+    const afterSkips = await bounceAfter(3);
+
+    expect(drawn).toBeGreaterThan(10);
+    // The camera ends where it started in both runs and the light field is
+    // the same one, so the bounce has to be too. Committing the camera during
+    // `update` instead leaves the last skipped one paired with it.
+    expect(Math.abs(afterSkips - drawn), `drawn ${drawn}, after skips ${afterSkips}`).toBeLessThanOrEqual(2);
   });
 });

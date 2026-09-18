@@ -16,13 +16,16 @@
 // above, `z` left and below, `w` right and below.
 @group(1) @binding(5) var uVisibility: texture_2d<f32>;
 @group(1) @binding(6) var uVisibilitySampler: sampler;
-// Wherever a source's colour is, its cone: outer and inner half-angles in
-// `rg`, the axis angle in `b`, and in `a` how many emitters wrote here.
+// Wherever a spot's colour is, its cone: outer and inner half-angles in `rg`
+// and the axis angle in `b`, each scaled by the luminance that spot emits
+// here, and that luminance itself in `a`. Zero where nothing described one.
 @group(1) @binding(7) var uEmitterCone: texture_2d<f32>;
 @group(1) @binding(8) var uEmitterConeSampler: sampler;
 
 const TAU: f32 = 6.28318530718;
 const PI: f32 = 3.14159265359;
+/** Rec. 709 luminance, the weighting the cone field's own weights were taken with. */
+const LUMA: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
 /**
  * Hard ceiling on a ray's walk. Sphere tracing converges in far fewer in the
  * open; the ceiling is what a ray running along a wall spends, a texel or two
@@ -71,38 +74,53 @@ fn distanceAt(world: vec2<f32>) -> vec2<f32> {
 }
 
 /**
- * A source's colour where a ray reads it, through the source's cone: light
- * leaves the source along the ray, against the direction the ray walked, and
- * a cone light gives none of it outside its own opening. A point light wrote
- * a half-angle of pi, which no direction can fail; a wall wrote nothing.
+ * A source's colour where a ray reads it, through whatever cone the sources
+ * there emit into: light leaves a source along the ray, against the direction
+ * the ray walked, and a cone light gives none of it outside its own opening.
  *
- * The cone field is a SUM, and its alpha counts what was summed. One emitter
- * is a cone; none is a wall; more than one is a texel no single cone
- * describes, and the conservative reading of that is no cone at all - the
- * union of the openings, which never takes light away that one of the sources
- * actually emits.
+ * The cone field holds, summed over the SPOTS covering the texel and weighted
+ * by the luminance each of them puts into the emission field there, their
+ * outer and inner half-angles and the angle of their axis - and in `a` that
+ * weight itself. Two things come out of it. Dividing the first three by `a`
+ * gives a luminance-weighted mean cone, which is EXACT for one spot and for
+ * any number of spots that share an opening. Dividing `a` by the luminance of
+ * the emission gives the share of what is emitted here that a cone applies to
+ * at all, so a point light standing inside a spot keeps its own light and the
+ * spot keeps its direction:
+ *
+ *     L = E * ((1 - f) + f * cone)
+ *
+ * What it approximates: several spots with DIFFERENT openings over one texel
+ * collapse into one mean lobe, and their colours are not separated, so a red
+ * spot and a blue one crossing share a single cone term. Their axes are
+ * averaged as angles, which folds for two spots pointing almost exactly away
+ * from each other. A wall wrote nothing and reads as no cone.
  */
 fn sourceColour(colourAt: vec2<f32>, direction: vec2<f32>) -> vec3<f32> {
     let uv = fieldUv(colourAt);
     let colour = textureSampleLevel(uEmission, uEmissionSampler, uv, 0.0).rgb;
     let cone = textureSampleLevel(uEmitterCone, uEmitterConeSampler, uv, 0.0);
+    let weight = cone.w;
 
-    if (cone.w < 0.5 || cone.w > 1.5) {
+    if (weight <= 0.0) {
         return colour;
     }
 
-    let axis = vec2<f32>(cos(cone.z - PI), sin(cone.z - PI));
+    let directional = clamp(weight / max(dot(colour, LUMA), 1e-5), 0.0, 1.0);
+    let outer = cone.x / weight;
+    let inner = cone.y / weight;
+    let axis = vec2<f32>(cos(cone.z / weight - PI), sin(cone.z / weight - PI));
     let away = acos(clamp(dot(-direction, axis), -1.0, 1.0));
     // Inner half-angle first: the term is one inside the opening and falls to
     // zero at the outer edge, and a cone softness of zero collapses the two
     // into the hard edge `step` gives.
-    var coneTerm = 1.0 - smoothstep(cone.y, cone.x, away);
+    var coneTerm = 1.0 - smoothstep(inner, outer, away);
 
-    if (cone.x == cone.y) {
-        coneTerm = step(away, cone.x);
+    if (outer == inner) {
+        coneTerm = step(away, outer);
     }
 
-    return colour * coneTerm;
+    return colour * ((1.0 - directional) + directional * coneTerm);
 }
 
 /**

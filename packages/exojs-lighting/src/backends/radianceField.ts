@@ -196,12 +196,9 @@ const SUN_SIZE = EMITTER_SIZE * Math.PI;
  */
 const EMITTER_GAIN = Math.PI / 8;
 
-/** Cone half-angle that no direction can fail, which is how a point light says "no cone". */
-const noCone = Math.PI;
-
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
-const scratchEmitter = { a_emit: [1, 0, 0, 0], a_cone: [noCone, noCone, Math.PI, 1] };
+const scratchEmitter = { a_emit: [1, 0, 0, 0], a_cone: [Math.PI, Math.PI, Math.PI, 0] };
 
 /** Tuning for the radiance field. Every entry has a default derived from the surface. */
 export interface RadianceFieldOptions {
@@ -255,8 +252,10 @@ export class RadianceField {
   private readonly _bounceMaterial: MeshMaterial<BounceUniforms>;
   private readonly _bounceBatch: RenderBatch;
   private readonly _bounceTint: Color;
-  /** World to clip as the previous frame's camera saw it, which is the frame the light field holds. */
-  private readonly _previousToClip = new Matrix();
+  /** World to clip as the camera saw it when the light field was last GATHERED. */
+  private readonly _gatheredToClip = new Matrix();
+  /** World to clip for the frame being prepared, promoted above once its gather has run. */
+  private readonly _pendingToClip = new Matrix();
   private readonly _reproject = new Matrix();
   private _history = false;
   /** Ping-pong pair: a level reads the one above it whole, so it cannot write into it. */
@@ -429,12 +428,6 @@ export class RadianceField {
 
       light.getWorldPosition(scratchPosition);
       light.getWorldDirection(scratchDirection);
-      writeCone(scratchEmitter.a_cone, light);
-      // The axis as its angle, offset into `0..2pi`, and a count of one. The
-      // field adds these up, so a texel two emitters cover reads a count of
-      // two and the tracer stops trying to describe it with a single cone.
-      scratchEmitter.a_cone[2] = Math.atan2(scratchDirection.y, scratchDirection.x) + Math.PI;
-      scratchEmitter.a_cone[3] = 1;
       scratchEmitter.a_emit[0] = light.intensity * EMITTER_GAIN * (falloff / radius);
       scratchEmitter.a_emit[1] = halo;
       scratchEmitter.a_emit[2] = half;
@@ -450,7 +443,18 @@ export class RadianceField {
         scratchPosition.y,
       );
       this._batch.add(this._transform, light.color, scratchEmitter);
-      this._coneBatch.add(this._transform, Color.white, scratchEmitter);
+
+      // Only a spot describes a cone. A point light writing an accept-all one
+      // would be averaged together with any spot over the same texel and drag
+      // that spot's opening wide; leaving it out is what lets the reader tell
+      // the two contributions apart by weight instead.
+      if (light instanceof SpotLight) {
+        writeCone(scratchEmitter.a_cone, light);
+        // The axis as its angle, offset into `0..2pi` so the field can sum it.
+        scratchEmitter.a_cone[2] = Math.atan2(scratchDirection.y, scratchDirection.x) + Math.PI;
+        this._coneBatch.add(this._transform, light.color, scratchEmitter);
+      }
+
       written++;
     }
 
@@ -547,22 +551,27 @@ export class RadianceField {
   }
 
   /**
-   * Point the bounce at where each of this frame's pixels sat in the previous
-   * frame's camera.
+   * Point the bounce at where each of this frame's pixels sat when the light
+   * field it reads was gathered.
    *
    * Without it a camera that moves by a pixel reads last frame's light one
    * pixel across, and a scene that pans smears its own bounce along the
    * direction of travel. The map is clip to clip - this frame's inverse into
-   * the last frame's transform - because that is what the quad's corners are
-   * expressed in.
+   * the gathered frame's transform - because that is what the quad's corners
+   * are expressed in.
+   *
+   * The camera it reprojects FROM is the one the last gather actually ran
+   * with, not the last one prepared. Promoting it here instead would pair the
+   * light field with a camera it was never rendered through: the system
+   * publishes once from its own constructor, and an application is free to
+   * update more often than it draws.
    */
   private _writeReprojection(view: View, toWorld: Matrix): void {
-    this._reproject.copy(toWorld).combine(this._previousToClip);
+    this._reproject.copy(toWorld).combine(this._gatheredToClip);
     this._bounceMaterial.uniforms.uReproject.set(this._reproject.a, this._reproject.b, this._reproject.c, this._reproject.d);
     this._bounceMaterial.uniforms.uReprojectOffset.set(this._reproject.x, this._reproject.y);
     this._bounceMaterial.uniforms.uHistory.set(this._history ? 1 : 0);
-    this._previousToClip.copy(view.getTransform());
-    this._history = true;
+    this._pendingToClip.copy(view.getTransform());
   }
 
   public destroy(): void {
@@ -705,26 +714,24 @@ export class RadianceField {
     }
 
     this._gatherFilter.apply(backend, source, this._target);
+
+    // The light field now holds this frame, so the camera it was gathered
+    // through becomes what the next bounce reprojects from - and only now is
+    // there anything for it to read at all.
+    this._gatheredToClip.copy(this._pendingToClip);
+    this._history = true;
   }
 }
 
 /**
- * A light's opening as two half-angles in radians rather than as their
- * cosines.
+ * A spot's opening as two half-angles in radians rather than as their cosines.
  *
- * The cone field sums its descriptions, so what it holds has to survive being
- * added up and divided by the count - and a cosine near `1`, which is where a
- * tight spot lives, loses two decimal places of angle to half-float there. An
- * angle is linear in the quantity the tracer compares.
+ * The cone field sums its descriptions and divides by the summed weight, so
+ * what it holds has to survive being added up - and a cosine near `1`, which
+ * is where a tight spot lives, loses two decimal places of angle to half-float
+ * there. An angle is linear in the quantity the tracer compares.
  */
-const writeCone = (target: number[], light: Light): void => {
-  if (!(light instanceof SpotLight)) {
-    target[0] = noCone;
-    target[1] = noCone;
-
-    return;
-  }
-
+const writeCone = (target: number[], light: SpotLight): void => {
   const outer = (Math.max(0, Math.min(90, light.angle)) * Math.PI) / 180;
 
   // The inner edge sits where the fade begins, so a cone softness of 0 collapses

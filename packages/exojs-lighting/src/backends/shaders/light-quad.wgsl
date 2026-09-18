@@ -43,12 +43,16 @@ struct VertexOutput {
 
 const PI: f32 = 3.14159265359;
 /**
- * Fetch budget for one fragment's penumbra. The taps sit at most one bin
- * apart, so this also sets how wide a kernel can be sampled without gaps: at
- * the default 256 bins it covers the whole softness range.
+ * Widest kernel, as a half-width in bins, and therefore also the fetch budget:
+ * one tap per bin, `2 * MAX_HALF + 1` of them.
+ *
+ * It bounds the penumbra in BINS, so a larger `shadowResolution` buys a
+ * sharper hard edge rather than a wider softest penumbra. Sampling every bin
+ * under the kernel is what keeps the filter continuous, and a budget that did
+ * not bound the width would have to skip bins to stay within itself.
  */
-const MAX_TAPS: i32 = 21;
-/** Fraction of a full turn the widest penumbra spans. */
+const MAX_HALF: i32 = 10;
+/** Fraction of a full turn the widest penumbra spans, before the bin bound above. */
 const MAX_PENUMBRA: f32 = 0.03;
 /** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
 const SHADOW_BIAS: f32 = 0.004;
@@ -81,9 +85,18 @@ fn visibleAt(bin: i32, bins: i32, row: i32, distance: f32) -> f32 {
  * The falloff term measures to the segment instead, which is a different
  * quantity for a line light and the same one for every other shape.
  *
- * The filter is a normalized tent over the bins the penumbra spans. It is an
- * ANGULAR filter, not an area source: it widens the edge a point source casts,
- * and it does not make the shadow behave like one cast by a disc of that size.
+ * The filter is a normalized tent over the bins the penumbra spans. Its taps
+ * sit on the BINS, not on the fragment's own angle, and each one is weighted
+ * by how far that bin is from the angle: the weights then slide continuously
+ * as the fragment moves, and the tap that enters or leaves the window as the
+ * angle crosses a bin carries no weight at the moment it does. Placing the
+ * taps at fixed offsets from the angle instead - and rounding each to a bin -
+ * makes every weight constant and moves the whole window at once, which puts
+ * a step the size of the centre tap back into the edge.
+ *
+ * It is an ANGULAR filter, not an area source: it widens the edge a point
+ * source casts, and it does not make the shadow behave like one cast by a
+ * disc of that size.
  */
 fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) -> f32 {
     if (shadowRow < 0.0) {
@@ -92,31 +105,27 @@ fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) ->
 
     let bins = i32(textureDimensions(u_shadow, 0).x);
     let row = i32(shadowRow);
-    let radius = MIN_RADIUS + max(0.0, softness) * f32(bins) * MAX_PENUMBRA;
+    let radius = min(MIN_RADIUS + max(0.0, softness) * f32(bins) * MAX_PENUMBRA, f32(MAX_HALF));
     let center = (atan2(local.y, local.x) + PI) / (2.0 * PI) * f32(bins) - 0.5;
-    // One tap per bin while that fits the budget, and evenly spread over the
-    // kernel when it does not: the sampling follows the filter's own width
-    // instead of leaving gaps across it.
-    let taps = min(2 * i32(ceil(radius)) + 1, MAX_TAPS);
-    let stride = 2.0 * radius / f32(taps - 1);
+    let base = i32(floor(center));
+    let reach = i32(ceil(radius));
 
     var lit = 0.0;
     var total = 0.0;
 
-    for (var tap: i32 = 0; tap < MAX_TAPS; tap = tap + 1) {
-        if (tap >= taps) {
-            break;
+    for (var offset: i32 = -MAX_HALF; offset <= MAX_HALF; offset = offset + 1) {
+        if (offset < -reach || offset > reach) {
+            continue;
         }
 
-        let at = center + (f32(tap) - 0.5 * f32(taps - 1)) * stride;
-        // Weighted by the tap's true distance from the centre rather than by
-        // the bin it rounds to, so the weights slide continuously as the
-        // fragment's angle moves - and the outermost tap, the one whose bin
-        // index jumps when the centre crosses a half-bin, carries no weight
-        // at the moment it does.
-        let weight = max(0.0, 1.0 - abs(at - center) / radius);
+        let bin = base + offset;
+        let weight = max(0.0, 1.0 - abs(f32(bin) - center) / radius);
 
-        lit = lit + weight * visibleAt(i32(floor(at + 0.5)), bins, row, distance);
+        if (weight <= 0.0) {
+            continue;
+        }
+
+        lit = lit + weight * visibleAt(bin, bins, row, distance);
         total = total + weight;
     }
 

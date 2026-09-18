@@ -32,7 +32,7 @@ import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
 import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
-import type { DistanceField } from './distanceField';
+import { type DistanceField, fieldGrid } from './distanceField';
 import type { LightingBackend } from './LightingBackend';
 import type { LightingFields } from './radiance';
 import type { RadianceField } from './radianceField';
@@ -1313,8 +1313,14 @@ ${normalPrepassWgsl}`,
     this._normalTarget.setSize(this._surfaceCount > 0 ? width : 1, this._surfaceCount > 0 ? height : 1);
     // At the light field's density over the view and its margin, so a texel of
     // the mask is a texel of the distance field and of the emission field.
-    const fieldWidth = Math.max(1, Math.round(width * (1 + 2 * this._fieldMargin)));
-    const fieldHeight = Math.max(1, Math.round(height * (1 + 2 * this._fieldMargin)));
+    //
+    // Bounded on both axes, at the same aspect: past that the distance field
+    // can no longer name its own texels exactly (see `MAX_FIELD_TEXELS`), and
+    // every field here shares the grid, so they are all clamped together or
+    // none of them are.
+    const field = fieldGrid(Math.round(width * (1 + 2 * this._fieldMargin)), Math.round(height * (1 + 2 * this._fieldMargin)));
+    const fieldWidth = field.width;
+    const fieldHeight = field.height;
 
     this._maskTarget.setSize(this._maskPass.enabled ? fieldWidth : 1, this._maskPass.enabled ? fieldHeight : 1);
 

@@ -31,8 +31,8 @@ struct VertexOutput {
 @group(2) @binding(3) var u_normal: texture_2d<f32>;
 @group(2) @binding(4) var u_normalSampler: sampler;
 
-/** Fetch budget for one fragment's penumbra. See the same constant in `light-quad.wgsl`. */
-const MAX_TAPS: i32 = 21;
+/** Widest kernel as a half-width in strips, and the fetch budget. See `light-quad.wgsl`. */
+const MAX_HALF: i32 = 10;
 /** Fraction of the strip range the widest penumbra spans. */
 const MAX_PENUMBRA: f32 = 0.03;
 /** Tolerance, in the row's own units, that keeps an occluder out of its own shadow. */
@@ -58,23 +58,30 @@ fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32) -> f32 {
 
     let bins = i32(textureDimensions(u_shadow, 0).x);
     let row = i32(shadowRow);
-    let radius = MIN_RADIUS + max(0.0, softness) * f32(bins) * MAX_PENUMBRA;
+    let radius = min(MIN_RADIUS + max(0.0, softness) * f32(bins) * MAX_PENUMBRA, f32(MAX_HALF));
     let center = sun.x * f32(bins) - 0.5;
-    let taps = min(2 * i32(ceil(radius)) + 1, MAX_TAPS);
-    let stride = 2.0 * radius / f32(taps - 1);
+    let base = i32(floor(center));
+    let reach = i32(ceil(radius));
 
     var lit = 0.0;
     var total = 0.0;
 
-    for (var tap: i32 = 0; tap < MAX_TAPS; tap = tap + 1) {
-        if (tap >= taps) {
-            break;
+    // Taps on the strips rather than at fixed offsets from the fragment. See
+    // the same filter in `light-quad.wgsl` for why that is what makes it
+    // continuous.
+    for (var offset: i32 = -MAX_HALF; offset <= MAX_HALF; offset = offset + 1) {
+        if (offset < -reach || offset > reach) {
+            continue;
         }
 
-        let at = center + (f32(tap) - 0.5 * f32(taps - 1)) * stride;
-        let weight = max(0.0, 1.0 - abs(at - center) / radius);
+        let strip = base + offset;
+        let weight = max(0.0, 1.0 - abs(f32(strip) - center) / radius);
 
-        lit = lit + weight * visibleAt(i32(floor(at + 0.5)), bins, row, sun.y);
+        if (weight <= 0.0) {
+            continue;
+        }
+
+        lit = lit + weight * visibleAt(strip, bins, row, sun.y);
         total = total + weight;
     }
 

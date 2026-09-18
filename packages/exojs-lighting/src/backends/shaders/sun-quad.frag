@@ -16,8 +16,8 @@ uniform sampler2D u_normal;
 
 out vec4 fragColor;
 
-/** Fetch budget for one fragment's penumbra. See the same constant in `light-quad.frag`. */
-const int MAX_TAPS = 21;
+/** Widest kernel as a half-width in strips, and the fetch budget. See `light-quad.frag`. */
+const int MAX_HALF = 10;
 /** Fraction of the strip range the widest penumbra spans. */
 const float MAX_PENUMBRA = 0.03;
 /** Tolerance, in the row's own units, that keeps an occluder out of its own shadow. */
@@ -43,22 +43,29 @@ float shadowTerm() {
 
     int bins = textureSize(u_shadow, 0).x;
     int row = int(v_shadowRow);
-    float radius = MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA;
+    float radius = min(MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA, float(MAX_HALF));
     float center = v_sun.x * float(bins) - 0.5;
-    int taps = min(2 * int(ceil(radius)) + 1, MAX_TAPS);
-    float stride = 2.0 * radius / float(taps - 1);
+    int base = int(floor(center));
+    int reach = int(ceil(radius));
     float lit = 0.0;
     float total = 0.0;
 
-    for (int tap = 0; tap < MAX_TAPS; tap++) {
-        if (tap >= taps) {
-            break;
+    // Taps on the strips rather than at fixed offsets from the fragment. See
+    // the same filter in `light-quad.frag` for why that is what makes it
+    // continuous.
+    for (int offset = -MAX_HALF; offset <= MAX_HALF; offset++) {
+        if (offset < -reach || offset > reach) {
+            continue;
         }
 
-        float at = center + (float(tap) - 0.5 * float(taps - 1)) * stride;
-        float weight = max(0.0, 1.0 - abs(at - center) / radius);
+        int strip = base + offset;
+        float weight = max(0.0, 1.0 - abs(float(strip) - center) / radius);
 
-        lit += weight * visibleAt(int(floor(at + 0.5)), bins, row, v_sun.y);
+        if (weight <= 0.0) {
+            continue;
+        }
+
+        lit += weight * visibleAt(strip, bins, row, v_sun.y);
         total += weight;
     }
 
