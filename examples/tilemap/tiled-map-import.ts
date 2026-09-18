@@ -1,7 +1,7 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { ObjectKind, type ObjectQuery, type TileMapObject } from '@codexo/exojs-tilemap';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { mountControls } from '@examples/runtime';
 
 // Loading a Tiled `.tmj` map through @codexo/exojs-tiled's *advanced*
 // parsed-source path, then querying its object layer.
@@ -64,20 +64,14 @@ class TiledMapImportScene extends Scene {
 
     this.hud = mountControls({
       title: 'Tiled Map Import & Object Query',
-      controls: [{ keys: 'panel', action: 'cycle the ObjectLayer.query() filter' }],
+      controls: [{ keys: 'Click', action: 'cycle the ObjectLayer.query() filter' }],
       status: `region: ${String(source.getProperty('region')?.value ?? '?')} — ${this.zoneObjects.length} objects in "Zones"`,
       hint: 'ObjectLayer.query() filters by type / kind / a property+value pair — matching zones are outlined in gold.',
     });
 
-    const panel = mountControlPanel({ title: 'Object query' });
-    panel.addCycle({
-      label: 'Filter',
-      options: FILTERS.map(entry => entry.label),
-      index: 0,
-      onChange: index => {
-        this.filterIndex = index;
-        this.redrawQuery(zones.query(FILTERS[index]!.query));
-      },
+    this.app.input.onPointerTap.add(() => {
+      this.filterIndex = (this.filterIndex + 1) % FILTERS.length;
+      this.redrawQuery(zones.query(FILTERS[this.filterIndex]!.query));
     });
 
     this.redrawQuery(zones.query(FILTERS[this.filterIndex]!.query));
