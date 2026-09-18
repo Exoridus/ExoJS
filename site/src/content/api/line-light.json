@@ -2156,7 +2156,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Penumbra width of this light's shadows, in 0..1. See LightOptions.softness."
+          "description": "How soft this light's shadows are, in 0..1. See LightOptions.softness."
         },
         {
           "name": "tabIndex",
