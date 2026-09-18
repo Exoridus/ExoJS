@@ -48,7 +48,7 @@
       "path": "application-scenes/world-vs-screen-coords.js",
       "language": "typescript",
       "title": "World Vs Screen Coords",
-      "description": "Convert pointer positions between world space and screen space as the camera pans and zooms.",
+      "description": "Click anywhere to drop a marker and read the same point in both screen and world space, converted through a camera offset from the origin.",
       "backend": "core",
       "tags": ["camera", "scene", "pointer"],
       "capabilities": ["pointer"],
@@ -238,7 +238,7 @@
       "path": "audio-fx/vocoder.js",
       "language": "typescript",
       "title": "Vocoder",
-      "description": "Vocode a spoken voice phrase with a synth carrier to produce the classic robot-voice effect — pick a phrase and click to speak.",
+      "description": "Vocode a spoken voice phrase with a synth carrier to produce the classic robot-voice effect — click to speak, right-click to change phrase.",
       "backend": "core",
       "tags": ["audio", "fx", "vocoder"],
       "capabilities": ["pointer", "audio"],
@@ -249,10 +249,10 @@
       "path": "audio-fx/convolution-rooms.js",
       "language": "typescript",
       "title": "Convolution Rooms",
-      "description": "Fire the same dry impact through 30 recorded room impulse responses, from a few milliseconds of colouration to a half-second cavern.",
+      "description": "Strike one of four materials, panned to where it sits, and cycle through 30 recorded room impulse responses with a right-click, from a few milliseconds of colouration to a half-second cavern.",
       "backend": "core",
       "tags": ["audio", "fx", "convolution", "reverb", "impulse-response"],
-      "capabilities": ["pointer", "keyboard"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     },
     {
@@ -386,9 +386,10 @@
       "path": "filters/color-matrix-filter.js",
       "language": "typescript",
       "title": "Color Matrix Filter",
-      "description": "Tint, desaturate, invert, brighten, push contrast and sepia-tone a sprite — one colour matrix, cycled from the control panel.",
+      "description": "Tint, desaturate, invert, brighten, push contrast and sepia-tone a sprite — click to cycle through one colour matrix.",
       "backend": "core",
       "tags": ["fx", "color", "filter"],
+      "capabilities": ["pointer"],
       "level": "intro"
     },
     {
@@ -1258,10 +1259,10 @@
       "path": "showcase/color-grading.js",
       "language": "typescript",
       "title": "Color Grading",
-      "description": "Switch between procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) plus an Identity bypass, on a single sprite.",
+      "description": "Click or press Space to cycle procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) plus an Identity bypass, on a single sprite.",
       "backend": "core",
       "tags": ["lut", "color", "grading"],
-      "capabilities": ["keyboard"],
+      "capabilities": ["pointer", "keyboard"],
       "level": "intermediate"
     },
     {
