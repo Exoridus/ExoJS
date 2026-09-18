@@ -26,6 +26,7 @@
  *   ... --browser firefox          # run under Firefox headed (cross-browser)
  *   ... --headed                   # force headed mode for any browser
  *   ... --color-scheme dark        # emulate dark-mode OS preference
+ *   ... --shots <dir>              # write one PNG per example, pass or fail
  *
  * Chromium (default): new headless, WebGPU via Dawn (SwiftShader backend).
  *   WebGPU adapter is available without --use-angle=swiftshader, which would
@@ -728,6 +729,7 @@ const runExample = async (
   graphics: Graphics,
   timeoutMs: number,
   attempt: 'first' | 'retry' = 'first',
+  shotDir: string | null = null,
 ): Promise<Result> => {
   const capabilities = entry.capabilities ?? [];
   const result: Result = {
@@ -882,6 +884,23 @@ const runExample = async (
         }
       }
     }
+
+    // A capture of every run, verdict aside: reviewing a change to a renderer
+    // means looking at what it drew, and the artifacts above only exist for
+    // the one failure mode that needs them to be believed.
+    if (shotDir !== null) {
+      const box = await page
+        .locator('iframe')
+        .first()
+        .boundingBox()
+        .catch(() => null);
+      const shot = box ? await page.screenshot({ clip: box }).catch(() => null) : null;
+
+      if (shot) {
+        await mkdir(shotDir, { recursive: true });
+        await writeFile(join(shotDir, `${entry.path.replaceAll('/', '__').replace(/\.js$/, '')}.png`), shot);
+      }
+    }
   } catch (error) {
     result.status = 'failed';
     result.note = oneLine(`harness error: ${error instanceof Error ? error.message : String(error)}`);
@@ -929,6 +948,7 @@ const main = async (): Promise<void> => {
       browser: { type: 'string' }, // 'chromium' (default) | 'firefox'
       headed: { type: 'boolean' }, // force headed (any browser)
       'color-scheme': { type: 'string' }, // 'light' (default) | 'dark'
+      shots: { type: 'string' }, // directory to write one capture per example into
     },
     allowPositionals: false,
   });
@@ -966,6 +986,7 @@ const main = async (): Promise<void> => {
   const defaultConcurrency = Math.min(4, Math.max(1, Math.floor(availableParallelism() / 2)));
   const concurrency = Math.max(1, Number.parseInt(values.concurrency ?? '', 10) || defaultConcurrency);
   const timeoutMs = Math.max(4000, Number.parseInt(values['timeout-ms'] ?? '15000', 10) || 15000);
+  const shotDir = values.shots === undefined ? null : resolve(repoRoot, values.shots);
 
   const { port, server } = await startServer(distDir);
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -1022,7 +1043,7 @@ const main = async (): Promise<void> => {
         if (index >= entries.length) return;
 
         const entry = entries[index];
-        const result = await runExample(pool, baseUrl, entry, index, graphics, timeoutMs);
+        const result = await runExample(pool, baseUrl, entry, index, graphics, timeoutMs, 'first', shotDir);
         results[index] = result;
 
         const tag = result.status.toUpperCase().padEnd(7);

@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { Lighting, type LightingQualityOption, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
+import { Lighting, type LightingDebugView, type LightingQualityOption, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
@@ -22,10 +22,22 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // comes through the doorway is a wedge that widens - because nothing is being
 // drawn around the light at all. What the field holds is where light ARRIVES.
 //
-// The second thing to watch is the source size. `softness` under `radiance`
-// sets how big the lamp is, so widening it softens every shadow in the scene at
-// once, and the penumbra grows with distance from the wall the way a real one
-// does.
+// The second thing to watch is what `softness` means, because it is not the
+// same quantity in the two renderers:
+//
+// - Under `radiance` it is the SOURCE SIZE. The lamp becomes an emitter with a
+//   width, so every shadow in the scene softens at once and each penumbra
+//   grows with the distance from the wall that casts it, the way a real one
+//   does.
+// - Under `lightmap` it is FILTER WIDTH. The lamp is still a point; the shadow
+//   term is blurred across a fixed fraction of a turn around it, so the
+//   penumbra widens with the distance from the LIGHT rather than from the
+//   wall, and no shadow ever behaves like one cast by an area source.
+//
+// The panel controls pause the motion, place the lamp at a reproducible point
+// on its own path, switch the bounce off, and show the intermediate fields, so
+// two renderers can be compared at the same instant instead of by eye while
+// everything moves.
 
 const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) => void): Texture => {
   const canvas = document.createElement('canvas');
@@ -68,14 +80,36 @@ const walls: readonly Wall[] = [
   { x: 300, y: 560, width: 150, height: 34 },
 ];
 
+/** Levels the debug cycle walks, in the order it walks them. */
+const debugViews: readonly LightingDebugView[] = [null, 'light', 'mask', 'distance', 'occluders'];
+
+/** Texels of light field per logical pixel. Stated here so the panel can show what was actually run at. */
+const lightResolution = 1;
+
+/**
+ * The lamp's own path, as a function of a phase in seconds. One expression, so
+ * the paused slider and the running clock place it identically.
+ */
+const lampAt = (phase: number): { x: number; y: number } => ({
+  x: 340 + Math.sin(phase * 0.3) * 120,
+  y: 360 + Math.cos(phase * 0.22) * 150,
+});
+
+/** Seconds for one full loop of both terms, so a phase slider covers the whole path. */
+const loopSeconds = (Math.PI * 2) / 0.06;
+
 class RadianceRoomsScene extends Scene {
   private world!: Container;
   private lighting!: Lighting;
   private quality: LightingQualityOption = radiance();
   private intensity = 3;
   private softness = 0.35;
+  private bounce = true;
+  private moving = true;
+  private debug: LightingDebugView = null;
   private elapsed = 0;
   private hud!: ReturnType<typeof mountControls>;
+  private phaseControl!: { set(value: number): void };
 
   override init(): void {
     const { width, height } = this.app;
@@ -101,7 +135,7 @@ class RadianceRoomsScene extends Scene {
 
     this.hud = mountControls({
       title: 'Radiance Rooms',
-      hint: 'One lamp, one doorway. Switch the renderer to see the difference between a light that is drawn and light that is transported.',
+      hint: 'One lamp, one doorway. Switch the renderer to see the difference between a light that is drawn and light that is transported - they are different transport models and will not agree pixel for pixel. Pause the motion and set a phase to compare the two at the same instant.',
       status: '',
     });
 
@@ -116,8 +150,56 @@ class RadianceRoomsScene extends Scene {
         // passes and takes them out again on `destroy()`. `radiance` is a value
         // rather than a name because that is what lets a project that never
         // uses it leave the cascades out of its bundle.
-        this.quality = value ? radiance() : 'lightmap';
+        this.quality = value ? radiance({ bounce: this.bounce ? 0.5 : 0 }) : 'lightmap';
         this.build();
+      },
+    });
+
+    panel.addToggle({
+      label: 'Bounce',
+      value: this.bounce,
+      onChange: value => {
+        this.bounce = value;
+
+        // Only the cascades bounce; under the quads the toggle has nothing to
+        // rebuild.
+        if (typeof this.quality === 'object') {
+          this.quality = radiance({ bounce: value ? 0.5 : 0 });
+          this.build();
+        }
+      },
+    });
+
+    panel.addToggle({
+      label: 'Motion',
+      value: this.moving,
+      onChange: value => {
+        this.moving = value;
+      },
+    });
+
+    this.phaseControl = panel.addSlider({
+      label: 'Phase',
+      min: 0,
+      max: 1,
+      step: 0.005,
+      value: 0,
+      onChange: value => {
+        // Placing the lamp by hand is what makes a comparison reproducible:
+        // the same phase is the same position in either renderer, however long
+        // either has been running.
+        this.elapsed = value * loopSeconds;
+        this.moveLamp();
+      },
+    });
+
+    panel.addCycle({
+      label: 'Field',
+      options: ['shaded', 'light', 'mask', 'distance', 'occluders'],
+      index: 0,
+      onChange: index => {
+        this.debug = debugViews[index] ?? null;
+        this.lighting.debug = this.debug;
       },
     });
 
@@ -134,7 +216,10 @@ class RadianceRoomsScene extends Scene {
     });
 
     panel.addSlider({
-      label: 'Source size',
+      // Source size under radiance, filter width under lightmap. See the note
+      // at the top of the file: the two are not the same quantity, and the
+      // slider is labelled for neither so that the difference stays visible.
+      label: 'Softness',
       min: 0,
       max: 1,
       step: 0.05,
@@ -147,15 +232,32 @@ class RadianceRoomsScene extends Scene {
   }
 
   override update(delta: Seconds): void {
+    if (!this.moving) {
+      return;
+    }
+
     this.elapsed += delta;
+    this.phaseControl.set((this.elapsed % loopSeconds) / loopSeconds);
     // Moving the lamp is the clearest way to see that nothing about the far
     // room is baked: the wedge through the doorway sweeps with it.
-    this.lamp.setPosition(340 + Math.sin(this.elapsed * 0.3) * 120, 360 + Math.cos(this.elapsed * 0.22) * 150);
+    this.moveLamp();
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.world);
-    this.hud.setStatus(`${this.lighting.quality} - draw calls ${context.stats.drawCalls}`);
+
+    const { x, y } = lampAt(this.elapsed);
+    const bounce = typeof this.quality === 'object' && this.bounce ? 'bounce' : 'no bounce';
+
+    this.hud.setStatus(
+      `${this.lighting.quality} - ${bounce} - ${this.app.width}x${this.app.height} at ${lightResolution}x - lamp ${x.toFixed(1)}, ${y.toFixed(1)} - draw calls ${context.stats.drawCalls}`,
+    );
+  }
+
+  private moveLamp(): void {
+    const { x, y } = lampAt(this.elapsed);
+
+    this.lamp.setPosition(x, y);
   }
 
   private get lamp(): PointLight {
@@ -173,7 +275,9 @@ class RadianceRoomsScene extends Scene {
       quality: this.quality,
       app: this.app,
       ambient: new Color(10, 11, 16),
+      lightResolution,
     });
+    this.lighting.debug = this.debug;
     this.systems.add(this.lighting);
     this.lighting.add(new PointLight({ radius: 600, intensity: this.intensity, softness: this.softness, color: new Color(255, 226, 180) }));
 

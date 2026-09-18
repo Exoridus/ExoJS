@@ -753,7 +753,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: Shader<Readonly<{ emissive: Float }>, undefined>",
+          "signature": "shader: Shader<Readonly<{ emissive: Float; normalY: Float }>, undefined>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -785,6 +785,22 @@
             },
             {
               "text": "emissive",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "normalY",
               "kind": "name"
             },
             {
@@ -884,11 +900,11 @@
           "description": "How much light the surface emits of its own. See LitMaterialOptions.emissive."
         },
         {
-          "name": "normalMap",
-          "signature": "normalMap: Texture",
+          "name": "normals",
+          "signature": "normals: NormalSource",
           "signatureTokens": [
             {
-              "text": "normalMap",
+              "text": "normals",
               "kind": "name"
             },
             {
@@ -896,13 +912,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "NormalSource",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The bound normal map. Assigning a replacement takes effect on the next draw."
+          "description": "The bound normal source. Assigning a replacement takes effect on the next draw and carries its own channel convention with it."
         },
         {
           "name": "pipelineKey",

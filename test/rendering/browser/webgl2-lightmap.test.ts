@@ -954,12 +954,13 @@ describe('WebGL2 lightmap renderer', () => {
     expect(double / single).toBeGreaterThan(1.7);
     expect(double / single).toBeLessThan(2.3);
   });
-  test('a normal map that faces up is lit from above, the way every authoring tool writes one', async () => {
+  test('a normal map leaning towards the top of its image is lit from above', async () => {
     const host = await createHost();
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
-    // Green above the midpoint is "faces up" in the convention an authored map
-    // carries. Up on screen is world -y, so this is the axis a renderer gets
-    // wrong without anyone noticing: left and right stay right either way.
+    // Green above the midpoint leans towards the top of the image in the
+    // canonical OpenGL convention, and the top of a drawable is local -y, so
+    // this is the axis a renderer gets wrong without anyone noticing: left and
+    // right stay right either way.
     const normals = new NormalMap(Texture.fromColor(new Color(128, 218, 218), 1));
     const ground = new Sprite(Texture.fromColor(Color.white, 1));
 

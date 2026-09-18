@@ -15,14 +15,14 @@ npm install @codexo/exojs @codexo/exojs-lighting
 - `PointLight`, `SpotLight` - scene nodes that emit rather than draw. Position comes from the node's transform, a spot's cone points along its rotation, and every field is an ordinary property, so the engine's tweens animate a light with no lighting-specific animation concept.
 - `Lighting` - the system: collects the registered lights, hands them to a renderer, and carries the ambient term. Registers on a `SystemRegistry` like any other system.
 - `LitMaterial` - a `SpriteMaterial` (GLSL + WGSL) that shades a sprite against those lights. Normals are optional: without them the surface is lit as a plane rather than left black.
-- `Normals` - where a material's surface normals come from. `Normals.map(texture)` binds an authored tangent-space map, `Normals.fromAlpha(texture)` derives one from the texture's own silhouette; the interface is open, so a source of your own is a valid argument without this package knowing about it. Both are also exported as `normalMap` and `normalsFromAlpha`, which is the spelling a bundler can drop what you did not use from.
+- `NormalMap`, `AlphaNormals` - where a material's surface normals come from. `new NormalMap(texture)` binds an authored tangent-space map, `new AlphaNormals(texture)` derives one from the texture's own silhouette; `NormalSource` is an interface, so a source of your own is a valid argument without this package knowing about it.
 - `Occluders` - what blocks light, read out of the description of the world a project already has: physics colliders, tile layers, a sprite's own silhouette, or an outline you author. Occluders are registered sources rather than a flag on a drawable, and `OccluderSource` is an interface you can implement. Each factory is also exported by name - `physicsOccluder`, `tilemapOccluder`, `alphaOccluder`, `meshOccluder`, `polygonOccluder`.
 
 ## Usage
 
 ```ts
 import { Color, Scene, type Seconds, Sprite } from '@codexo/exojs';
-import { Lighting, LitMaterial, Normals, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 
 class LitScene extends Scene {
   private lighting = new Lighting({ ambient: new Color(30, 30, 45) });
@@ -38,7 +38,7 @@ class LitScene extends Scene {
 
     const ground = new Sprite(albedoTexture);
 
-    ground.material = new LitMaterial({ lighting: this.lighting, normals: Normals.map(normalTexture) });
+    ground.material = new LitMaterial({ lighting: this.lighting, normals: new NormalMap(normalTexture) });
     this.root.addChild(ground, this.player);
   }
 
@@ -107,8 +107,8 @@ The `lightmap` light target is `rgba16f`, so two lights overlapping add up past 
 `lightmap` multiplies a frame that was already drawn, so by the time the light field is composited there is no per-fragment surface normal anywhere. A **normal prepass** puts one back without asking anything of the scene: register a drawable and the renderer draws its normal map, at the drawable's own place and orientation, into one `rgba8` attachment that the light shader then reads at its own screen position.
 
 ```ts
-lighting.normalsFrom(crate, normalMap(crateNormals));
-lighting.normalsFrom(hero, normalsFromAlpha(heroTexture));
+lighting.normalsFrom(crate, new NormalMap(crateNormals));
+lighting.normalsFrom(hero, new AlphaNormals(heroTexture));
 ```
 
 Nothing is required of a drawable that is not registered. The attachment's alpha is coverage, and where it is zero the light lands with no `N dot L` term at all - which is exactly how the renderer behaved before the prepass existed, so switching it on cannot darken anything that did not ask for normals. The drawable's own texture supplies that coverage, so a silhouette claims a surface and the empty corners of its quad do not.
@@ -204,7 +204,9 @@ Lights sharing a cookie share a draw. A scene with three distinct cookies costs 
 
 ### Softness
 
-`softness` is a property of the light, in `0..1`. `0` is a point source with a hard edge; higher values widen the penumbra the way a larger lamp would. It widens the shadow sample kernel rather than adding a pass, so it costs nothing per light and can differ between them.
+`softness` is a property of the light, in `0..1`, and it means a different quantity in each renderer. Under `lightmap` it is FILTER WIDTH: the light stays a point, and the shadow term is averaged over a band of the angular shadow row up to three percent of a full turn wide. A wider band widens the edge, but the edge widens with distance from the LIGHT rather than from the wall, and it is not a model of an area source. Under `radiance` it is SOURCE SIZE: the emitter is given a width, and the penumbra follows from the geometry - it grows with the distance between the wall and the surface the shadow falls on, the way a real one does.
+
+Neither adds a pass. Under `lightmap` the filter costs between 5 and 21 texture fetches per shadowed fragment, scaling with the width asked for, and can differ between lights.
 
 ```ts
 lighting.add(new PointLight({ radius: 320, softness: 0.6 }));
@@ -237,9 +239,23 @@ The shaded result is `albedo * (ambient + sum over lights)`. Each light falls of
 
 ## Normal maps
 
-Normals are optional, in three steps. A `LitMaterial` without them binds a shared flat normal and the surface is lit as a plane - a project with no authored maps is lit rather than black. `Normals.fromAlpha(texture)` reads the alpha channel as a height field and derives a map once at load: the silhouette gains edges that turn away from the light, which knows nothing about the interior of a shape but is the difference between art that reacts to light and art that does not. `Normals.map(texture)` binds an authored map, which is what a project with real art direction ships. It is read in the OpenGL convention - green above the midpoint means "faces up" - which is what Blender, Substance, Krita and the sprite-lighting tools write. A map authored the other way up lights its vertical detail from the wrong side and its horizontal detail correctly, which is the shape that symptom always has; invert the green channel of the texture to fix it.
+Normals are optional, in three steps. A `LitMaterial` without them binds a shared flat normal and the surface is lit as a plane - a project with no authored maps is lit rather than black. `new AlphaNormals(texture)` reads the alpha channel as a height field and derives a map once at load: the silhouette gains edges that turn away from the light, which knows nothing about the interior of a shape but is the difference between art that reacts to light and art that does not. `new NormalMap(texture)` binds an authored map, which is what a project with real art direction ships.
 
-A normal map is a **material** binding, not a per-sprite one: every sprite drawn with a given `LitMaterial` shares it, so in practice there is one material per atlas. The map must have the same layout as the albedo atlas, frame for frame, and encodes tangent-space normals as `rgb = n * 0.5 + 0.5` with `+x` right and `+y` down the texture. Rotation and mirroring are handled in the shader: the normal is rotated by the sprite's local-to-world basis, so a spinning or negatively-scaled sprite keeps its bumps facing the right way.
+### Which way up the green channel is
+
+The canonical input convention is **OpenGL**: green above the midpoint means the normal leans towards the TOP of the image, blue points out of the sprite plane, and a flat texel is `(128, 128, 255)`. That is what Blender, Substance, Krita, Godot and Unity's default sprite import write. A map authored the other way up - the DirectX convention - lights its vertical detail from the wrong side while its horizontal detail stays correct, which is the shape that symptom always has.
+
+Declare the other convention rather than editing the texture:
+
+```ts
+new NormalMap(fromMax, { convention: 'directx' });
+```
+
+It is per source, it is carried through both the `forward` shader and the `lightmap` prepass, and it costs no texture copy and no readback. There is no auto-detection and no backend-dependent default: the same asset means the same thing on WebGL2 and WebGPU.
+
+Three things stay separate and are easy to confuse. The CHANNEL convention is which way up green is. The TEXTURE orientation is which way up the image is. And this engine's own coordinates are y-down, which is why a map leaning towards the top of its image leans towards local `-y`. Inverting a green channel is not the same as flipping an image vertically.
+
+A normal map is a **material** binding, not a per-sprite one: every sprite drawn with a given `LitMaterial` shares it, so in practice there is one material per atlas. The map must have the same layout as the albedo atlas, frame for frame, and encodes tangent-space normals as `rgb = n * 0.5 + 0.5` with `+x` towards the right of the image and `+y` towards its top. Rotation and mirroring are handled in the shader: the normal is rotated by the sprite's local-to-world basis, so a spinning or negatively-scaled sprite keeps its bumps facing the right way.
 
 Sprites from a second atlas need a second `LitMaterial`, which breaks the batch at the material boundary. Both materials can shade against the same `Lighting` system.
 

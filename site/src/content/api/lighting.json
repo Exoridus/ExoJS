@@ -319,7 +319,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, new NormalMap(crateNormals));  Only a renderer that shades a light field of its own reads these - forward shades inside the sprite stage and takes its normals from LitMaterial instead. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
+          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, new NormalMap(crateNormals));  Only lightmap reads these. forward shades inside the sprite stage and takes its normals from LitMaterial instead, and radiance gathers each probe's rays into one arriving colour, which leaves no incident direction at a fragment for a normal to be measured against - under both, registering a surface is recorded and ignored, and activeSurfaceCount stays at zero. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
         },
         {
           "name": "occludeFrom",
@@ -608,7 +608,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Surfaces the last frame actually took normals from. Lower than surfaces when some are hidden or carry no texture, and zero under a renderer that takes its normals from a material."
+          "description": "Surfaces the last frame actually took normals from. Lower than surfaces when some are hidden or carry no texture, and zero under every renderer but lightmap. See normalsFrom."
         },
         {
           "name": "debug",

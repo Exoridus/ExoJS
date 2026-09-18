@@ -10,8 +10,10 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //
 // Nothing is required of a drawable that is not registered - the attachment's
 // alpha is coverage, and where it is zero the light lands with no `N dot L`
-// term at all. That is what the "Normals" toggle below shows: switching them
-// off cannot darken anything, it only flattens what asked for them.
+// term at all. That is what the "Normals" toggle below shows: without them
+// every fragment takes the light head-on, so the relief flattens and the
+// stones read slightly BRIGHTER rather than darker. Normals redistribute
+// light across a surface; they never add any.
 //
 // Nobody authored a normal map here either. `AlphaNormals` reads the
 // silhouette as a height field, once at load.
@@ -86,7 +88,7 @@ class LightmapNormalsScene extends Scene {
     this.lantern = this.lighting.add(new PointLight({ radius: 360, intensity: 1.8, height: 90, color: new Color(150, 200, 255) }));
     this.hud = mountControls({
       title: 'Normals under the lightmap renderer',
-      hint: 'Nobody authored a normal map: the cobbles are round because their own alpha says so. Switch the normals off and the light stays exactly as bright - it just stops finding a surface to land on.',
+      hint: 'Nobody authored a normal map: the cobbles are round because their own alpha says so. Switch the normals off and every fragment takes the light head-on - the relief flattens and the stones read a little brighter, because a surface normal moves light around rather than adding any.',
       status: '',
     });
     const panel = mountControlPanel({ title: 'Surfaces', corner: 'top-right' });

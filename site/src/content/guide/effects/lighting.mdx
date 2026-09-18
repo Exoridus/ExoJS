@@ -195,6 +195,23 @@ crate.material = new LitMaterial({ lighting, normals: new AlphaNormals(crateText
 
 Every sprite drawn with a given material shares its map — in practice one material per atlas — and the map must have the same layout as the albedo atlas, frame for frame. Rotation and mirroring are handled in the shader.
 
+The canonical input convention is **OpenGL**: green above the midpoint means the normal leans towards the top of the image, blue points out of the sprite plane, and a flat texel is `(128, 128, 255)`. Blender, Substance, Krita, Godot and Unity's default sprite import all write that. A map authored the other way up is declared rather than edited:
+
+```ts
+import type { Texture } from '@codexo/exojs';
+import { NormalMap } from '@codexo/exojs-lighting';
+
+declare const fromMax: Texture;
+
+const normals = new NormalMap(fromMax, { convention: 'directx' });
+```
+
+The setting travels with the source into both the `forward` shader and the `lightmap` prepass, and costs no texture copy and no per-frame readback. There is no auto-detection and no backend-dependent default.
+
+<Callout type="pitfall" title="A green flip is not a vertical flip">
+  Three things are easy to run together: the channel convention (which way up green is), the texture's own orientation (which way up the image is), and this engine's y-down coordinates (which is why a normal leaning towards the top of its image leans towards local `-y`). Flipping the image does not fix a DirectX map, and declaring the convention does not flip the image.
+</Callout>
+
 Under `lightmap` there is no per-fragment surface to bind to: the renderer multiplies a frame that was already drawn. A **normal prepass** puts one back. Register a drawable and the renderer draws its normal map, at the drawable's own place and orientation, into one attachment the light shader then reads:
 
 ```ts
@@ -252,7 +269,9 @@ lighting.occludeFrom(
 
 `PhysicsOccluder` and `TilemapOccluder` take structurally typed arguments, so this package depends on neither the physics nor the tilemap package: a project without them pulls in nothing, and a project with a collision layer of its own can feed shadows from that instead.
 
-`softness` is a property of the light, in `0..1`. `0` is a point source with a hard edge; higher values widen the penumbra the way a larger lamp would. It widens the shadow sample kernel rather than adding a pass, so it costs nothing per light and can differ between them.
+`softness` is a property of the light, in `0..1`, and the two renderers mean different things by it. Under `lightmap` it is **filter width**: the light stays a point and the shadow term is averaged over a band of its angular shadow row, up to three percent of a full turn. The edge widens, but it widens with distance from the *light* rather than from the wall, and it does not behave like a shadow cast by a source of that size. Under `radiance` it is **source size**: the emitter is given a width, and the penumbra follows from the geometry — it grows with the distance between the wall and what the shadow falls on.
+
+Neither adds a pass. Under `lightmap` the filter costs between 5 and 21 texture fetches per shadowed fragment, in step with the width asked for, and can differ between lights.
 
 <Callout type="pitfall" title="A render target cannot be traced">
   `AlphaOccluder` reads pixels, and a `RenderTexture` has none this side of the GPU. It returns an empty source rather than a wrong outline, and a development build says which of three cases it was. If you need both a live surface and its outline, draw into an `HTMLCanvasElement` and wrap that in a `Texture`.
@@ -334,7 +353,7 @@ Walls that hand over the rectangle they are drawn as, a cross whose outline is t
 <a id="radiance-rooms"></a>
 <ExamplePreview chapter="lighting" slug="radiance-rooms" />
 
-One lamp, two rooms and a doorway, with a switch between `lightmap` and `radiance` on the same scene. Watch the far room: under the light quads it is whatever the lamp's radius reaches minus a shadow, and under the cascades it is dark except for the wedge coming through the opening. The source-size slider is `softness`, which is the lamp's own size under `radiance` — widen it and every penumbra in the scene widens with it.
+One lamp, two rooms and a doorway, with a switch between `lightmap` and `radiance` on the same scene. Watch the far room: under the light quads it is whatever the lamp's radius reaches minus a shadow, and under the cascades it is dark except for the wedge coming through the opening. The softness slider is the lamp's own size under `radiance` — widen it and every penumbra in the scene widens with it — and the width of an angular filter under `lightmap`, which is not the same quantity. Pause the motion and set a phase to compare the two renderers at the same instant; they are different transport models and will not agree pixel for pixel.
 
 <a id="light-cookies"></a>
 <ExamplePreview chapter="lighting" slug="light-cookies" />

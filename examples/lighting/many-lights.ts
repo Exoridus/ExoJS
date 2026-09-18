@@ -13,10 +13,16 @@ import {
 import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-// The light list is a data texture, not a uniform array, so the light count is
-// a shader loop bound rather than a compiled-in constant: the slider below
-// walks from 1 to 48 lights without recompiling anything and without adding a
-// draw call. The floor is one batch of sprites sharing one LitMaterial.
+// The FORWARD renderer under load: the light list is a data texture, not a
+// uniform array, so the light count is a shader loop bound rather than a
+// compiled-in constant, and the slider below walks from 1 to 48 lights without
+// recompiling anything and without adding a draw call. The floor is one batch
+// of sprites sharing one LitMaterial.
+//
+// It is a demo of that one property and not a benchmark of the package. Every
+// lit fragment walks every light here, there are no occluders and no shadows,
+// and the other two renderers reach the same scene by entirely different work -
+// numbers taken here say nothing about either of them.
 
 const MAX_LIGHTS = 48;
 const TILE_SIZE = 128;
@@ -139,8 +145,8 @@ class ManyLightsScene extends Scene {
     this.setVisibleLights(this.visibleLights);
 
     this.hud = mountControls({
-      title: 'Many Lights',
-      hint: `Up to ${MAX_LIGHTS} point lights over ${this.floor.children.length} tiles. The light list is a data texture, so the count is a loop bound - not a recompile.`,
+      title: 'Many Lights (forward renderer)',
+      hint: `Up to ${MAX_LIGHTS} point lights over ${this.floor.children.length} tiles, all in one batch. The light list is a data texture, so the count is a loop bound - not a recompile. No shadows and no transport here: this shows what the forward renderer costs, not what the package can do.`,
       status: '',
     });
 

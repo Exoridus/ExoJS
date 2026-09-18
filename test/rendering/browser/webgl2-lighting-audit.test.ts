@@ -10,16 +10,19 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import { Lighting, PointLight, PolygonOccluder, radiance, SpotLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, type NormalConvention, NormalMap, PointLight, PolygonOccluder, radiance, SpotLight } from '@codexo/exojs-lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
+import { Container } from '#rendering/Container';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -290,5 +293,142 @@ describe('emitters that overlap', () => {
     // descriptions with ordinary source-over, where alpha is a signed axis
     // component - gates the point light's own light on the spot's opening.
     expect(shared, `alone ${alone}, shared ${shared}`).toBeGreaterThanOrEqual(alone - 2);
+  });
+});
+
+describe('the tangent-space convention reaching the sprite shader', () => {
+  const tile = 32;
+
+  /**
+   * A hemisphere bulging out of the plane, encoded in the canonical OpenGL
+   * convention: green above the midpoint means the normal leans towards the
+   * TOP of the image, so the image-space gradient is negated on the way into
+   * the channel.
+   *
+   * `flip` writes the same surface the other way up, which is exactly what a
+   * DirectX map is - and declaring it as such has to bring the shading back.
+   */
+  const hemisphere = (flip: boolean): Texture => {
+    const map = new DataTexture({ width: tile, height: tile, format: TextureFormat.Rgba8 });
+    const half = tile / 2;
+
+    for (let y = 0; y < tile; y++) {
+      for (let x = 0; x < tile; x++) {
+        const dx = (x + 0.5 - half) / half;
+        const dy = (y + 0.5 - half) / half;
+        const inside = dx * dx + dy * dy;
+        const nx = inside < 1 ? dx : 0;
+        const ny = inside < 1 ? -dy : 0;
+        const nz = inside < 1 ? Math.sqrt(1 - inside) : 1;
+        const offset = (y * tile + x) * 4;
+
+        map.buffer[offset] = Math.round((nx * 0.5 + 0.5) * 255);
+        map.buffer[offset + 1] = Math.round(((flip ? -ny : ny) * 0.5 + 0.5) * 255);
+        map.buffer[offset + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+        map.buffer[offset + 3] = 255;
+      }
+    }
+
+    map.commit();
+
+    return map;
+  };
+
+  /** The flat map every material without a source binds. */
+  const flat = (): Texture => {
+    const map = new DataTexture({ width: 1, height: 1, format: TextureFormat.Rgba8 });
+
+    map.buffer.set([128, 128, 255, 255]);
+    map.commit();
+
+    return map;
+  };
+
+  /**
+   * The lit sprite, read at the four points of its own rim, with one light
+   * placed at `(lightX, lightY)`. The albedo is white, so a read is the light
+   * term alone.
+   */
+  const rim = async (normals: Texture, convention: NormalConvention, lightX: number, lightY: number): Promise<Record<string, number>> => {
+    const host = await createHost();
+    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const material = new LitMaterial({ lighting, normals: new NormalMap(normals, { convention }) });
+    const albedo = Texture.fromColor(Color.white, 1);
+    const root = new Container();
+    const sprite = new Sprite(albedo);
+
+    // The sprite covers the middle 64x64 of the canvas, unrotated and
+    // unmirrored, so image space and world space differ only in scale.
+    sprite.material = material;
+    sprite.setPosition(32, 32).setScale(64, 64);
+    root.addChild(sprite);
+
+    // Height 0: the light lies in the sprite's own plane, so what decides a
+    // fragment is purely which way its normal leans.
+    lighting.add(new PointLight({ radius: 400, intensity: 1, height: 0 })).setPosition(lightX, lightY);
+    lighting.update();
+
+    try {
+      host.backend.clear(Color.black);
+      root.render(host.backend);
+      host.backend.flush();
+
+      return {
+        top: readRed(host.backend, 64, 40),
+        bottom: readRed(host.backend, 64, 88),
+        left: readRed(host.backend, 40, 64),
+        right: readRed(host.backend, 88, 64),
+      };
+    } finally {
+      root.destroy();
+      material.destroy();
+      lighting.destroy();
+      albedo.destroy();
+      normals.destroy();
+      host.destroy();
+    }
+  };
+
+  test.each([
+    { name: 'a light above the sprite lights its upper rim', x: 64, y: -60, bright: 'top' as const, dark: 'bottom' as const },
+    { name: 'a light below it lights its lower rim', x: 64, y: 188, bright: 'bottom' as const, dark: 'top' as const },
+    { name: 'a light to its left lights its left rim', x: -60, y: 64, bright: 'left' as const, dark: 'right' as const },
+    { name: 'a light to its right lights its right rim', x: 188, y: 64, bright: 'right' as const, dark: 'left' as const },
+  ])('$name', async ({ x, y, bright, dark }) => {
+    const reading = await rim(hemisphere(false), 'opengl', x, y);
+
+    expect(reading[bright]!).toBeGreaterThan(reading[dark]! + 30);
+  });
+
+  test('a DirectX map declared as one shades exactly like the OpenGL original', async () => {
+    const canonical = await rim(hemisphere(false), 'opengl', 64, -60);
+    const mirrored = await rim(hemisphere(true), 'directx', 64, -60);
+
+    for (const key of ['top', 'bottom', 'left', 'right']) {
+      expect(Math.abs(mirrored[key]! - canonical[key]!), `${key}: ${canonical[key]!} vs ${mirrored[key]!}`).toBeLessThanOrEqual(2);
+    }
+  });
+
+  test('the same map left undeclared lights the wrong half', async () => {
+    const canonical = await rim(hemisphere(false), 'opengl', 64, -60);
+    const undeclared = await rim(hemisphere(true), 'opengl', 64, -60);
+
+    // The failure a green channel the wrong way up produces, stated so it
+    // cannot be mistaken for noise: the vertical rims swap and the horizontal
+    // ones do not move.
+    expect(undeclared.top!).toBeLessThan(canonical.top!);
+    expect(undeclared.bottom!).toBeGreaterThan(canonical.bottom!);
+    expect(Math.abs(undeclared.left! - canonical.left!)).toBeLessThanOrEqual(2);
+  });
+
+  test('a flat map is lit the same from every side', async () => {
+    const above = await rim(flat(), 'opengl', 64, -60);
+    const below = await rim(flat(), 'opengl', 64, 188);
+
+    // (0, 0, 1) faces the viewer, and every light here lies in the plane, so
+    // the whole sprite takes the same grazing term whichever side the light is
+    // on.
+    expect(Math.abs(above.top! - above.bottom!)).toBeLessThanOrEqual(2);
+    expect(Math.abs(below.top! - below.bottom!)).toBeLessThanOrEqual(2);
   });
 });

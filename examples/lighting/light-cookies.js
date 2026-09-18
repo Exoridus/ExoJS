@@ -8,7 +8,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // A cookie is one texture slot on the light: its full 0..1 lies on the light's
 // own bounding square, so the pattern turns with a cone and scales with a
 // radius. Nothing is projected, nothing is authored per wall - the window bars
-// below are a 128x128 canvas the sun is shone through.
+// below are a 128x128 canvas carried by the lamp that casts them.
 //
 // The sun is the one shape that is not a pool of light: it has a direction and
 // no position, so its shadows are parallel and it reaches whatever the camera
@@ -120,7 +120,7 @@ class LightCookiesScene extends Scene {
     this.tube.setPosition(300, 640);
     this.hud = mountControls({
       title: 'Light Cookies',
-      hint: 'Every pattern here is one texture on ONE light, carried by that light - it turns and scales with the lamp rather than being projected onto the world. The window stands still because a window does; the canopy turns because leaves do.',
+      hint: 'Every pattern here is one texture on ONE light, carried by that light - it turns and scales with the lamp rather than being projected onto the world. Watch the window drift: its bars travel with the lamp instead of staying put on the floor, which is exactly the difference between a cookie and a world projection.',
       status: '',
     });
     const panel = mountControlPanel({ title: 'Lights', corner: 'top-right' });
