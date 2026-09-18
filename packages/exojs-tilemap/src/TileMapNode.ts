@@ -47,7 +47,7 @@ export class TileMapNode extends Container {
   private readonly _map: TileMap;
   private readonly _cullChunks: boolean;
   private readonly _layerNodes: Array<TileLayerNode | ImageLayerNode> = [];
-  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
+  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.Geometry;
 
   public constructor(map: TileMap, options?: TileMapNodeOptions) {
     super();
@@ -76,7 +76,12 @@ export class TileMapNode extends Container {
    * unchanged. Setting the current value is a no-op; an invalid value throws and
    * leaves the prior mode unchanged.
    *
-   * @default PixelSnapMode.None
+   * Defaults to `Geometry` because a tile grid is made of quads that share
+   * their edges: left unsnapped, a boundary landing between two device pixels
+   * is sampled across both, so the seams blur and shimmer as the view moves.
+   * Set `None` to opt out.
+   *
+   * @default PixelSnapMode.Geometry
    * @stable
    */
   public get pixelSnapMode(): PixelSnapMode {
@@ -169,9 +174,9 @@ export class TileMapNode extends Container {
     for (const layer of this._map.renderableLayers) {
       const node = layer instanceof ImageLayer ? new ImageLayerNode(layer) : new TileLayerNode(layer, { cullable: this._cullChunks });
 
-      if (this._pixelSnapMode !== PixelSnapMode.None) {
-        node.pixelSnapMode = this._pixelSnapMode;
-      }
+      // Unconditional: a node built after the map was set to `None` has to
+      // inherit that too, not just a non-default mode.
+      node.pixelSnapMode = this._pixelSnapMode;
 
       this._layerNodes.push(node);
       this.addChild(node);

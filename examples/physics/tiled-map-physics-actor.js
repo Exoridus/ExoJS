@@ -1,5 +1,5 @@
 // Auto-generated from tiled-map-physics-actor.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, PixelSnapMode, Scene, Spritesheet, SystemOrder, TextureRegion, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Spritesheet, SystemOrder, TextureRegion, Vector } from '@codexo/exojs';
 import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { ObjectKind, ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
@@ -99,9 +99,6 @@ class TiledMapPhysicsActorScene extends Scene {
       ],
     });
     this.mapNode = new TileMapNode(map);
-    // Without snapping, a tile boundary that lands between two device pixels
-    // samples across both and the seams shimmer whenever the view moves.
-    this.mapNode.pixelSnapMode = PixelSnapMode.Geometry;
     // ── The bridge: ObjectLayer → static physics colliders ────────────
     const collision = map.getObjectLayer('collision');
     if (collision) {

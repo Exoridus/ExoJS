@@ -5,7 +5,6 @@ import {
   Container,
   FixedResolutionCanvasSizing,
   Keyboard,
-  PixelSnapMode,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -124,9 +123,6 @@ class InfiniteTerrainScene extends Scene {
     this.terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
     const map = new TileMap({ name: 'infinite-world', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.terrain] });
     this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
-    // The camera flies to fractional positions; without snapping every tile
-    // boundary samples between two device pixels and the seams shimmer.
-    this.mapView.pixelSnapMode = PixelSnapMode.Geometry;
 
     const characters = new Spritesheet(
       await this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)),

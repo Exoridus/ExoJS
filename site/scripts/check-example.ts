@@ -16,7 +16,7 @@
  *   click:<fx>,<fy>    left-click at a fraction of the canvas box (0..1)
  *   rclick:<fx>,<fy>   right-click at a fraction of the canvas box
  *   key:<key>          press a keyboard key (Playwright key name)
- *   shot:<name>        screenshot to .workspace/tmp/check-example/<name>.png
+ *   shot:<name>        screenshot named <name>; the run prints where it landed
  *
  * Example:
  *   pnpm check-example audio-fx/convolution-rooms \

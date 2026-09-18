@@ -110,9 +110,6 @@ class TileChunksAndBandsScene extends Scene {
     });
     // ── TileMapView: group layers into bands, place actors between ────
     this.mapView = map.createView({ bands: { ground: ['ground'], canopy: ['canopy'] } });
-    // The cycle below starts on the same mode; a view left unsnapped samples
-    // every tile boundary between two device pixels once the camera moves.
-    this.mapView.pixelSnapMode = PixelSnapMode.Geometry;
     const characters = new Spritesheet(
       this.loader.get(assets.demo.spritesheets.platformerCharacters.image),
       await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data)),
@@ -174,9 +171,9 @@ class TileChunksAndBandsScene extends Scene {
         this.mapView.band('canopy').visible = visible;
       },
     });
-    // Starts on `geometry` - the mode a tile grid wants. Cycling down to
-    // `none` shows what it buys: every boundary then samples between two
-    // device pixels and the seams shimmer as the camera moves.
+    // Starts on the view's default, `geometry`. Cycling down to `none` shows
+    // what it buys: every boundary then samples between two device pixels and
+    // the seams shimmer as the camera moves.
     panel.addCycle({
       label: 'Pixel snap',
       options: ['geometry', 'position', 'none'],

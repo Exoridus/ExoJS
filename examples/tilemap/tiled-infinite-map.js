@@ -1,5 +1,5 @@
 // Auto-generated from tiled-infinite-map.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, PixelSnapMode, Scene, View } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, View } from '@codexo/exojs';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { ChunkStreamer, TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
@@ -32,9 +32,6 @@ class TiledInfiniteMapScene extends Scene {
     const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/drift-fields.tmj'));
     const runtimeMap = source.toTileMap();
     this.mapNode = new TileMapNode(runtimeMap);
-    // Without snapping, a camera at a fractional position samples every tile
-    // boundary between two texels and the seams shimmer as it moves.
-    this.mapNode.pixelSnapMode = PixelSnapMode.Geometry;
     const ground = runtimeMap.getTileLayer('Ground');
     const props = runtimeMap.getTileLayer('Props');
     if (!ground || !props) {

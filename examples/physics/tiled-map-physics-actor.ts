@@ -3,7 +3,6 @@ import {
   Asset,
   Color,
   FixedResolutionCanvasSizing,
-  PixelSnapMode,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -134,9 +133,6 @@ class TiledMapPhysicsActorScene extends Scene {
     });
 
     this.mapNode = new TileMapNode(map);
-    // Without snapping, a tile boundary that lands between two device pixels
-    // samples across both and the seams shimmer whenever the view moves.
-    this.mapNode.pixelSnapMode = PixelSnapMode.Geometry;
 
     // ── The bridge: ObjectLayer → static physics colliders ────────────
     const collision = map.getObjectLayer('collision');

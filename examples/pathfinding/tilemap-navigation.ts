@@ -5,7 +5,6 @@ import {
   Container,
   FixedResolutionCanvasSizing,
   Graphics,
-  PixelSnapMode,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -100,9 +99,6 @@ class TilemapNavigationScene extends Scene {
     const map = new TileMap({ name: 'arena', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset], layers: [this.layer] });
 
     this.mapView = map.createView({ bands: { ground: ['ground'] } });
-    // Without snapping, a tile boundary that lands between two device pixels
-    // samples across both and the seams shimmer whenever the view moves.
-    this.mapView.pixelSnapMode = PixelSnapMode.Geometry;
     this.worldRoot = new Container();
     this.worldRoot.addChild(this.mapView.band('ground'));
 

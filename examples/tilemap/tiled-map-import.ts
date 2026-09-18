@@ -1,4 +1,4 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, PixelSnapMode, type RenderingContext, Scene } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { ObjectKind, type ObjectQuery, type TileMapObject } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
@@ -50,9 +50,6 @@ class TiledMapImportScene extends Scene {
     const runtimeMap = source.toTileMap();
 
     this.mapNode = new TileMapNode(runtimeMap);
-    // Without snapping, a tile boundary that lands between two device pixels
-    // samples across both and the seams shimmer whenever the view moves.
-    this.mapNode.pixelSnapMode = PixelSnapMode.Geometry;
 
     const zones = runtimeMap.getObjectLayer('Zones');
 

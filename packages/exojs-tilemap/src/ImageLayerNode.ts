@@ -50,7 +50,7 @@ export class ImageLayerNode extends Container {
   private readonly _baseOffsetY: number;
   private readonly _imageWidth: number;
   private readonly _imageHeight: number;
-  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
+  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.Geometry;
 
   // Repeat-coverage cache: the view span and patched origin that last drove a
   // resize. A static camera pays one comparison per frame and skips the rebuild.
@@ -102,6 +102,9 @@ export class ImageLayerNode extends Container {
     sprite.tint.set(r, g, b, layer.opacity);
 
     this._sprite = sprite;
+    // The sprite's own default is `None`; without this it would render
+    // unsnapped while this node reports the mode it was constructed with.
+    sprite.pixelSnapMode = this._pixelSnapMode;
     this.addChild(sprite);
 
     if (layer.repeatX || layer.repeatY || layer.parallaxX !== 1 || layer.parallaxY !== 1 || layer.parallaxScale !== 1) {
@@ -125,7 +128,11 @@ export class ImageLayerNode extends Container {
    * is simply stored. Setting the current value is a no-op; an invalid value
    * throws and leaves the prior mode unchanged.
    *
-   * @default PixelSnapMode.None
+   * Defaults to `Geometry`, matching the tile layers it is composed with, so a
+   * repeated backdrop does not sample between two device pixels and shimmer as
+   * the view moves. Set `None` to opt out.
+   *
+   * @default PixelSnapMode.Geometry
    * @stable
    */
   public get pixelSnapMode(): PixelSnapMode {

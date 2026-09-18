@@ -111,35 +111,35 @@ const chunkModes = (node: TileLayerNode): PixelSnapMode[] => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('pixelSnapMode defaults', () => {
-  it('defaults to none on a fresh TileLayerNode and its chunk drawables', () => {
+  it('defaults to geometry on a fresh TileLayerNode and its chunk drawables', () => {
     const node = new TileLayerNode(makeBoundaryLayer(makeTileset()));
 
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     expect(node.chunkNodes).toHaveLength(2); // sanity: spans a chunk boundary
-    expect(chunkModes(node)).toEqual([PixelSnapMode.None, PixelSnapMode.None]);
+    expect(chunkModes(node)).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
   });
 
-  it('defaults to none on a fresh TileMapNode and all descendants', () => {
+  it('defaults to geometry on a fresh TileMapNode and all descendants', () => {
     const { map } = makeBoundaryMap();
     const node = new TileMapNode(map);
 
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     expect(node.layerNodes).toHaveLength(2);
     for (const layerNode of node.layerNodes) {
-      expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.None);
-      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.None, PixelSnapMode.None]);
+      expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
+      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
     }
   });
 
-  it('defaults to none on a fresh TileMapView and all descendants', () => {
+  it('defaults to geometry on a fresh TileMapView and all descendants', () => {
     const { map } = makeBoundaryMap();
     const view = map.createView();
 
-    expect(view.pixelSnapMode).toBe(PixelSnapMode.None);
+    expect(view.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     expect(view.layers).toHaveLength(2);
     for (const layerNode of view.layers) {
-      expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.None);
-      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.None, PixelSnapMode.None]);
+      expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
+      expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
     }
   });
 });
@@ -168,42 +168,40 @@ describe('TileLayerNode.pixelSnapMode', () => {
     expect(() => {
       node.pixelSnapMode = 99 as PixelSnapMode;
     }).toThrow(/pixelSnapMode/);
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
-    expect(chunkModes(node)).toEqual([PixelSnapMode.None, PixelSnapMode.None]);
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
+    expect(chunkModes(node)).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
 
-    node.pixelSnapMode = PixelSnapMode.Geometry;
+    node.pixelSnapMode = PixelSnapMode.None;
 
     expect(() => {
       node.pixelSnapMode = 99 as PixelSnapMode;
     }).toThrow(/pixelSnapMode/);
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
-    expect(chunkModes(node)).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
+    expect(chunkModes(node)).toEqual([PixelSnapMode.None, PixelSnapMode.None]);
   });
 
   it('validates even for an empty layer with no chunk drawables to delegate to', () => {
     const node = new TileLayerNode(makeEmptyLayer(makeTileset()));
 
     expect(node.chunkNodes).toHaveLength(0);
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
 
     expect(() => {
       node.pixelSnapMode = 99 as PixelSnapMode;
     }).toThrow(/pixelSnapMode/);
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
-
-    node.pixelSnapMode = PixelSnapMode.Geometry;
     expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
+
+    node.pixelSnapMode = PixelSnapMode.None;
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
   });
 
   it('setting the same value twice is a no-op (no throw, no re-propagation)', () => {
     const node = new TileLayerNode(makeBoundaryLayer(makeTileset()));
 
     expect(() => {
-      node.pixelSnapMode = PixelSnapMode.None; // same as the default
+      node.pixelSnapMode = PixelSnapMode.Geometry; // same as the default
     }).not.toThrow();
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
-
-    node.pixelSnapMode = PixelSnapMode.Geometry;
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
 
     // Diverge one chunk on purpose, then re-set the same node value: the
     // no-op must not touch the chunk drawables again.
@@ -285,10 +283,10 @@ describe('TileMapNode.pixelSnapMode', () => {
     expect(() => {
       node.pixelSnapMode = 99 as PixelSnapMode;
     }).toThrow(/pixelSnapMode/);
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
-
-    node.pixelSnapMode = PixelSnapMode.Geometry;
     expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
+
+    node.pixelSnapMode = PixelSnapMode.None;
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
   });
 
   it('setting the same value twice is a no-op', () => {
@@ -370,7 +368,7 @@ describe('TileMapView.pixelSnapMode', () => {
     expect(() => {
       view.pixelSnapMode = 99 as PixelSnapMode;
     }).toThrow(/pixelSnapMode/);
-    expect(view.pixelSnapMode).toBe(PixelSnapMode.None);
+    expect(view.pixelSnapMode).toBe(PixelSnapMode.Geometry);
 
     view.pixelSnapMode = PixelSnapMode.Position;
     expect(view.pixelSnapMode).toBe(PixelSnapMode.Position);

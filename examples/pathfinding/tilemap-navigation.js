@@ -1,5 +1,5 @@
 // Auto-generated from tilemap-navigation.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, PixelSnapMode, Scene, TextureRegion } from '@codexo/exojs';
+import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene, TextureRegion } from '@codexo/exojs';
 import { GridSpace, Pathfinder } from '@codexo/exojs-pathfinding';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -75,9 +75,6 @@ class TilemapNavigationScene extends Scene {
     }
     const map = new TileMap({ name: 'arena', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset], layers: [this.layer] });
     this.mapView = map.createView({ bands: { ground: ['ground'] } });
-    // Without snapping, a tile boundary that lands between two device pixels
-    // samples across both and the seams shimmer whenever the view moves.
-    this.mapView.pixelSnapMode = PixelSnapMode.Geometry;
     this.worldRoot = new Container();
     this.worldRoot.addChild(this.mapView.band('ground'));
     this.buildGrid();
