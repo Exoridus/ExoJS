@@ -363,9 +363,10 @@
       "path": "debug-layer/signal-bus-inspector.js",
       "language": "typescript",
       "title": "Signal Bus Inspector",
-      "description": "List all active Signals on the SignalBus, inspect current values, and monitor subscriber counts in the debug layer.",
+      "description": "Click to dispatch three Signals at once and watch their listener counts light up; right-click toggles a second listener on one of them.",
       "backend": "core",
       "tags": ["debug"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
