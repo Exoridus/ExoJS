@@ -1129,7 +1129,12 @@ describe('WebGL2 lightmap renderer', () => {
     const host = await createHost();
     // Nothing but the source: a bounce off the lamp's own body is a second, weaker source.
     const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
-    const lamp = lighting.add(new PointLight({ radius: 40, intensity: 0.4, softness: 0.35 }));
+    // Bright enough that the probe lands around 120/255 rather than 22/255:
+    // the field is stored with 8 bits, so at the dimmer setting a single
+    // quantisation step was ~4.5% of the reading - half the tolerance below,
+    // and enough for one rasteriser rounding a step differently than another
+    // to decide the result.
+    const lamp = lighting.add(new PointLight({ radius: 90, intensity: 1, softness: 0.35 }));
 
     drawWhiteFrame(host);
 
@@ -1153,7 +1158,7 @@ describe('WebGL2 lightmap renderer', () => {
       const brightest = Math.max(...readings);
       const darkest = Math.min(...readings);
 
-      expect(darkest).toBeGreaterThan(15 * 22);
+      expect(darkest).toBeGreaterThan(100 * 22);
       expect(brightest / darkest, `readings ${readings.map(reading => reading.toFixed(0)).join(' ')}`).toBeLessThan(1.08);
     } finally {
       lighting.destroy();
