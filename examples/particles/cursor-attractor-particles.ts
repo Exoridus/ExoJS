@@ -9,7 +9,7 @@ import {
   RateSpawn,
   RepelFromPoint,
 } from '@codexo/exojs-particles';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { mountControls } from '@examples/runtime';
 
 // Acceleration magnitude shared by both force modules (units / s²). Only the
 // active mode's module carries this strength; the inactive one is held at 0.
@@ -71,19 +71,8 @@ class CursorAttractorParticlesScene extends Scene {
       hint: 'Move the cursor over the canvas to drag the particle field around.',
     });
 
-    const toggle = mountControlPanel({ title: 'Force Field' }).addToggle({
-      label: 'Repel (off = attract)',
-      value: false,
-      onChange: repel => this.setMode(repel ? 'repel' : 'attract'),
-    });
-
-    // A pointer button also flips the mode, so the demo is usable without
-    // the slider panel; keep the toggle UI in sync when that happens.
     app.input.onPointerDown.add(() => {
-      const next = this.mode === 'attract' ? 'repel' : 'attract';
-
-      this.setMode(next);
-      toggle.set(next === 'repel');
+      this.setMode(this.mode === 'attract' ? 'repel' : 'attract');
     });
 
     this.setMode('attract');

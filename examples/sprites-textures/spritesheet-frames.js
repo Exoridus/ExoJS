@@ -25,21 +25,18 @@ class SpritesheetFramesScene extends Scene {
     }
     this.hud = mountControls({
       title: 'Spritesheet Frames',
+      controls: [{ keys: 'Right-click', action: 'next character' }],
       hint: 'A two-frame walk cycle stepped on a timer from named spritesheet frames.',
     });
     const panel = mountControlPanel({ title: 'Animation' });
     panel.addSlider({ label: 'Speed (fps)', min: 1, max: 16, step: 1, value: this.fps, onChange: value => (this.fps = value) });
-    panel.addCycle({
-      label: 'Character',
-      options: CHARACTERS,
-      index: 0,
-      onChange: (_, name) => {
-        this.character = name;
-        this.frameIndex = 0;
-        this.updateHud();
-      },
-    });
     panel.addToggle({ label: 'Playing', value: true, onChange: on => (this.playing = on) });
+    app.input.onContextMenu.add(() => {
+      const index = (CHARACTERS.indexOf(this.character) + 1) % CHARACTERS.length;
+      this.character = CHARACTERS[index];
+      this.frameIndex = 0;
+      this.updateHud();
+    });
     this.updateHud();
   }
   walkFrames() {
