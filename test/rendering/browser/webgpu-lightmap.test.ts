@@ -822,4 +822,45 @@ describe('lightmap renderer WebGPU browser', () => {
       host.destroy();
     }
   });
+  test('a spot standing inside a point light never darkens it', async ctx => {
+    /** The light arriving behind a lamp at (32, 32), where a spot pointing along +x emits nothing. */
+    const behind = async (withSpot: boolean): Promise<number | null> => {
+      const host = await createHost();
+      const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+      lighting.add(new PointLight({ radius: 20, intensity: 1 })).setPosition(32, 32);
+
+      if (withSpot) {
+        lighting.add(new SpotLight({ radius: 20, intensity: 1, angle: 20, coneSoftness: 0 })).setPosition(32, 32);
+      }
+
+      drawWhiteFrame(host);
+
+      try {
+        const at = await renderFrame(host, lighting);
+
+        return at === null ? null : at(14, 32);
+      } finally {
+        lighting.destroy();
+        host.destroy();
+      }
+    };
+
+    const alone = await behind(false);
+    const shared = await behind(true);
+
+    if (alone === null || shared === null) {
+      // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+      ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+      return;
+    }
+
+    // The two emitters cover the same texels, and the cone field sums its
+    // descriptions rather than compositing them - so the texel reads as
+    // "no single cone describes this" and the point light keeps its own
+    // light. See the WebGL2 twin of this test for what the alternative does.
+    expect(alone).toBeGreaterThan(10);
+    expect(shared, `alone ${alone}, shared ${shared}`).toBeGreaterThanOrEqual(alone - 2);
+  });
 });

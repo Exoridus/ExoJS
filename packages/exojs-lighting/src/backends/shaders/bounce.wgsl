@@ -57,10 +57,14 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     // frame, which is a defined value rather than an invented one.
     let known = uniforms.uHistory > 0.5 && input.history.x >= 0.0 && input.history.x <= 1.0 && input.history.y >= 0.0 && input.history.y <= 1.0;
 
+    // `textureSampleLevel` rather than `textureSample`: the read sits behind a
+    // condition the compiler cannot prove uniform across the quad, and an
+    // implicit-derivative sample is not allowed there. The light field has no
+    // mip chain, so naming level zero costs nothing.
     var light = vec3<f32>(0.0);
 
     if (known) {
-        light = textureSample(u_light, u_lightSampler, input.history).rgb;
+        light = textureSampleLevel(u_light, u_lightSampler, input.history, 0.0).rgb;
     }
 
     // What a lit surface re-emits: its colour under last frame's light, scaled
