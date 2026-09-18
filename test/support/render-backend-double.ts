@@ -108,6 +108,9 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     supportsColorFormat() {
       return true;
     },
+    readPixels(_source: RenderTexture, _x: number, _y: number, width: number, height: number) {
+      return Promise.resolve(new Uint8ClampedArray(width * height * 4));
+    },
     acquireRenderTexture(width: number, height: number) {
       return new RenderTexture(width, height);
     },

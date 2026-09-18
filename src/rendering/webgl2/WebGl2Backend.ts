@@ -409,6 +409,13 @@ export class WebGl2Backend implements RenderBackend {
   private _vao: WebGl2VertexArrayObject | null = null;
   private _clearColor: Color = new Color();
   private _boundFramebuffer: WebGLFramebuffer | null = null;
+  /**
+   * The framebuffer `readPixels` attaches its source to, created on first
+   * read. A read borrows its own rather than a render target's: the target
+   * states cache which textures are attached to theirs, and attaching for a
+   * read would leave that cache describing something else.
+   */
+  private _readbackFramebuffer: WebGLFramebuffer | null = null;
   private readonly _stats: RenderStats = createRenderStats();
   private readonly _accountant: GpuResourceAccountant = new GpuResourceAccountant(this._stats);
   private readonly _transformBuffer = new TransformBuffer();
@@ -1270,6 +1277,33 @@ export class WebGl2Backend implements RenderBackend {
    */
   public supportsColorFormat(format: ColorTextureFormat): boolean {
     return format === TextureFormat.Rgba8 || this._floatRenderable;
+  }
+
+  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray> {
+    this.flush();
+
+    const gl = this._context;
+    const handle = this._syncTexture(source).handle;
+    const framebuffer = (this._readbackFramebuffer ??= gl.createFramebuffer());
+    const previousFramebuffer = this._boundFramebuffer;
+    const rows = new Uint8ClampedArray(width * height * 4);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, handle, 0);
+
+    try {
+      // GL addresses pixels from the bottom-left, so the requested top-down
+      // rectangle starts this far up, and the rows arrive in reverse order.
+      gl.readPixels(x, source.height - (y + height), width, height, gl.RGBA, gl.UNSIGNED_BYTE, rows);
+    } finally {
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+      this._boundFramebuffer = previousFramebuffer;
+    }
+
+    this._accountant.recordDownload(rows.byteLength);
+
+    return Promise.resolve(flipRowsInPlace(rows, width, height));
   }
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
@@ -2273,6 +2307,11 @@ export class WebGl2Backend implements RenderBackend {
     this._attachmentBlendActive = false;
     this._boundHandles.length = 0;
     this._boundFramebuffer = null;
+    if (this._readbackFramebuffer !== null) {
+      this._context.deleteFramebuffer(this._readbackFramebuffer);
+      this._readbackFramebuffer = null;
+    }
+
     this._activeDrawCommand = null;
     this._transformTextureCount = -1;
     this._transformTextureHash = 0;
@@ -2478,6 +2517,7 @@ export class WebGl2Backend implements RenderBackend {
     // the next bind must run unconditionally rather than short-circuiting on a
     // stale identity match.
     this._boundFramebuffer = null;
+    this._readbackFramebuffer = null;
     this._boundHandles.length = 0;
     this._textureUnit = 0;
     this._vao = null;
@@ -3460,4 +3500,27 @@ const webgl2DataTextureFormat = (format: DataTextureFormat | ColorTextureFormat)
   }
 
   return table[format];
+};
+
+/**
+ * Turn the bottom-up rows `gl.readPixels` writes into top-down ones, in place.
+ *
+ * Swapping halves through a single scratch row keeps the read at one extra row
+ * of memory rather than a second copy of the image, which for a full-frame
+ * capture is the difference between kilobytes and megabytes.
+ */
+const flipRowsInPlace = (pixels: Uint8ClampedArray, width: number, height: number): Uint8ClampedArray => {
+  const stride = width * 4;
+  const scratch = new Uint8ClampedArray(stride);
+
+  for (let row = 0; row < height >> 1; row++) {
+    const top = row * stride;
+    const bottom = (height - 1 - row) * stride;
+
+    scratch.set(pixels.subarray(top, top + stride));
+    pixels.copyWithin(top, bottom, bottom + stride);
+    pixels.set(scratch, bottom);
+  }
+
+  return pixels;
 };

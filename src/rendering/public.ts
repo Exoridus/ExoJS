@@ -23,7 +23,7 @@ export { RenderBackendType } from './RenderBackendType';
 export { RenderBatch } from './RenderBatch';
 export type { RenderErrorCode, RenderErrorOptions } from './RenderError';
 export { formatShaderError, RenderError } from './RenderError';
-export type { CaptureOptions, DrawBatchOptions, DrawGeometryOptions, RenderOptions } from './RenderingContext';
+export type { CaptureOptions, DrawBatchOptions, DrawGeometryOptions, PixelData, ReadPixelsOptions, RenderOptions } from './RenderingContext';
 export { RenderingContext } from './RenderingContext';
 export type { HitArea, MaskSource } from './RenderNode';
 export { RenderNode } from './RenderNode';
