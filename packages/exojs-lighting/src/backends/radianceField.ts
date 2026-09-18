@@ -108,6 +108,26 @@ const bounceUniforms: BounceUniforms = {
   uHistory: UniformType.Float,
 };
 
+/**
+ * The shader pair behind the bounce quad.
+ *
+ * Exported so the repository's shader-compile gate can compose the uniform
+ * block the authored stages read but do not declare, the way it does for the
+ * lit sprite. Nothing else should reach for it.
+ * @internal
+ */
+export const bounceShader = new Shader({
+  uniforms: bounceUniforms,
+  glsl: {
+    vertex: `#version 300 es
+${INSTANCE_TRANSFORM_GLSL}
+${bounceVertex}`,
+    fragment: bounceFragment,
+  },
+  wgsl: `${INSTANCE_TRANSFORM_WGSL}
+${bounceWgsl}`,
+});
+
 /** Unit quad in `-1..1`, which is the emitter's own space. */
 const unitQuad = (): Geometry =>
   new Geometry({
@@ -297,11 +317,7 @@ export class RadianceField {
       ],
     });
     this._bounceMaterial = new MeshMaterial({
-      shader: new Shader({
-        uniforms: bounceUniforms,
-        glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${bounceVertex}`, fragment: bounceFragment },
-        wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${bounceWgsl}`,
-      }),
+      shader: bounceShader,
       // Declaration order is the group(2) binding order on WebGPU: the frame
       // at bindings 1/2 and last frame's light at 3/4, matching `bounce.wgsl`.
       textures: { u_frame: frame, u_light: target },

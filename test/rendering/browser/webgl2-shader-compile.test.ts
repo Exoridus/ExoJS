@@ -27,7 +27,7 @@ import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots'
 import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 
 import { sdfResolveShader, sdfStepShader } from '../../../packages/exojs-lighting/src/backends/distanceField';
-import { cascadeGatherShader, cascadeShader, probeVisibilityShader } from '../../../packages/exojs-lighting/src/backends/radianceField';
+import { bounceShader, cascadeGatherShader, cascadeShader, probeVisibilityShader } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
 import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
@@ -82,6 +82,8 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
+  ['bounce.frag', generateGlslUniformDeclarations(bounceShader.uniformSchema!)],
+  ['bounce.vert', generateGlslUniformDeclarations(bounceShader.uniformSchema!)],
   ['cascade.frag', generateGlslUniformDeclarations(cascadeShader.uniformSchema!)],
   ['cascade-gather.frag', generateGlslUniformDeclarations(cascadeGatherShader.uniformSchema!)],
   ['probe-visibility.frag', generateGlslUniformDeclarations(probeVisibilityShader.uniformSchema!)],
