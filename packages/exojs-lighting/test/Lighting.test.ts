@@ -48,6 +48,7 @@ const fakeApp = (floatTargets = true): Application =>
         height: 64,
         rotation: 0,
         getBounds: (): Rectangle => new Rectangle(0, 0, 64, 64),
+        getTransform: (): Matrix => new Matrix(),
         getInverseTransform: (): Matrix => new Matrix(),
       },
     },
@@ -266,6 +267,46 @@ describe('Lighting', () => {
     expect(regions).toEqual(['-36,-36,36,36']);
   });
 
+  test('radiance asks for the field it traces rather than for the lights own reach', () => {
+    const lighting = new Lighting({ quality: radiance(), app: fakeApp(), ambient: Color.black });
+    const regions: number[][] = [];
+
+    lighting.occludeFrom({
+      collect: (bounds): void => {
+        regions.push([bounds.left, bounds.top, bounds.right, bounds.bottom]);
+      },
+    });
+    // A lamp with almost no reach at all. Radiance carries its light across
+    // the whole field regardless, so a wall anywhere in that field still
+    // casts and the region has to hold it: the 64x64 view with a quarter of
+    // it as margin on each side.
+    lighting.add(new PointLight({ radius: 4 })).setPosition(32, 32);
+    lighting.update();
+
+    expect(regions).toHaveLength(1);
+    expect(regions[0]![0]).toBeCloseTo(-16, 6);
+    expect(regions[0]![1]).toBeCloseTo(-16, 6);
+    expect(regions[0]![2]).toBeCloseTo(80, 6);
+    expect(regions[0]![3]).toBeCloseTo(80, 6);
+
+    lighting.destroy();
+  });
+
+  test('the lightmap quads keep asking for the reach, which is where their shadows end', () => {
+    const lighting = lightmapLighting();
+    const regions: string[] = [];
+
+    lighting.occludeFrom({
+      collect: (bounds): void => {
+        regions.push(`${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}`);
+      },
+    });
+    lighting.add(new PointLight({ radius: 4 })).setPosition(32, 32);
+    lighting.update();
+
+    expect(regions).toEqual(['28,28,36,36']);
+  });
+
   test('no light means no region, so a source is never walked for nothing', () => {
     const lighting = lightmapLighting();
 
@@ -445,6 +486,30 @@ describe('Lighting', () => {
     expect(lighting.surfaces[0]?.normals).toBe(second);
     expect(lighting.stopNormals(drawable)).toBe(true);
     expect(lighting.stopNormals(drawable)).toBe(false);
+  });
+
+  test('radiance records a registered surface and takes no normals from it', () => {
+    const app = fakeApp();
+    const lighting = new Lighting({ quality: radiance(), app, ambient: Color.black });
+    const drawable = {
+      texture: Texture.fromColor(Color.white, 1),
+      textureFrame: new Rectangle(0, 0, 1, 1),
+      visible: true,
+      getLocalBounds: () => new Rectangle(0, 0, 16, 16),
+      getWorldTransform: () => new Matrix(),
+    };
+
+    lighting.normalsFrom(drawable, new NormalMap(Texture.fromColor(Color.white, 1)));
+    lighting.update();
+
+    // The gather averages a probe's rays into one arriving colour, so there is
+    // no incident direction a normal could be measured against. The surface
+    // stays registered - a renderer switch would read it - and no prepass is
+    // drawn for it.
+    expect(lighting.surfaces).toHaveLength(1);
+    expect(lighting.activeSurfaceCount).toBe(0);
+
+    lighting.destroy();
   });
 
   test('destroying the system forgets its normal surfaces', () => {

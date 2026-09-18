@@ -68,8 +68,12 @@ export const sdfResolveShader = createFilterShader({
  */
 const EXACT_INDEX = 2048;
 
-/** The seed format a field of this size needs to name every one of its texels exactly. */
-const seedFormat = (width: number, height: number): TextureFormat.Rgba16F | TextureFormat.Rgba32F =>
+/**
+ * The seed format a field of this size needs to name every one of its texels
+ * exactly.
+ * @internal
+ */
+export const seedFormat = (width: number, height: number): TextureFormat.Rgba16F | TextureFormat.Rgba32F =>
   Math.max(width, height) > EXACT_INDEX ? TextureFormat.Rgba32F : TextureFormat.Rgba16F;
 
 /** The ping-pong pair. Unfiltered: interpolating two seeds would name a texel where neither wall is. */
