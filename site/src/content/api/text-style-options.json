@@ -392,7 +392,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Multiplier of fontSize for the distance between lines. Default 1.2 - not a pixel value."
         },
         {
           "name": "outlineColor",
