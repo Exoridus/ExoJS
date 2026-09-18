@@ -96,6 +96,18 @@ const gatherUniforms = {
 /** The finest cascade, read back out as the light arriving at each fragment. @internal */
 export const cascadeGatherShader = createFilterShader({ glsl: { fragment: cascadeGatherFragment }, wgsl: cascadeGatherWgsl, uniforms: gatherUniforms });
 
+/**
+ * Screen clip of this frame to screen clip of the last one, and whether the
+ * last one exists at all.
+ */
+type BounceUniforms = Readonly<{ uReproject: UniformType.Vec4; uReprojectOffset: UniformType.Vec2; uHistory: UniformType.Float }>;
+
+const bounceUniforms: BounceUniforms = {
+  uReproject: UniformType.Vec4,
+  uReprojectOffset: UniformType.Vec2,
+  uHistory: UniformType.Float,
+};
+
 /** Unit quad in `-1..1`, which is the emitter's own space. */
 const unitQuad = (): Geometry =>
   new Geometry({
@@ -220,9 +232,13 @@ export class RadianceField {
   private readonly _coneMaterial: MeshMaterial;
   private readonly _coneBatch: RenderBatch;
   private readonly _bounceGeometry: Geometry = frameQuad();
-  private readonly _bounceMaterial: MeshMaterial;
+  private readonly _bounceMaterial: MeshMaterial<BounceUniforms>;
   private readonly _bounceBatch: RenderBatch;
   private readonly _bounceTint: Color;
+  /** World to clip as the previous frame's camera saw it, which is the frame the light field holds. */
+  private readonly _previousToClip = new Matrix();
+  private readonly _reproject = new Matrix();
+  private _history = false;
   /** Ping-pong pair: a level reads the one above it whole, so it cannot write into it. */
   private readonly _chain: readonly [RenderTexture, RenderTexture];
   /** Stands in for the level above the coarsest, which nothing reads. */
@@ -282,6 +298,7 @@ export class RadianceField {
     });
     this._bounceMaterial = new MeshMaterial({
       shader: new Shader({
+        uniforms: bounceUniforms,
         glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${bounceVertex}`, fragment: bounceFragment },
         wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${bounceWgsl}`,
       }),
@@ -331,6 +348,10 @@ export class RadianceField {
   }
 
   public set enabled(enabled: boolean) {
+    if (!enabled) {
+      this.invalidateHistory();
+    }
+
     this.emissionPass.enabled = enabled;
     this.conePass.enabled = enabled;
     this.cascadePass.enabled = enabled;
@@ -492,9 +513,40 @@ export class RadianceField {
     this._bounceBatch.clear();
 
     if (this._options.bounce > 0) {
+      this._writeReprojection(view, toWorld);
       this._transform.set(2 * toWorld.a, 2 * toWorld.b, toWorld.x - toWorld.a - toWorld.b, 2 * toWorld.c, 2 * toWorld.d, toWorld.y - toWorld.c - toWorld.d);
       this._bounceBatch.add(this._transform, this._bounceTint);
     }
+  }
+
+  /**
+   * Forget the gathered light field.
+   *
+   * The bounce reads it as the previous frame's answer, and a target that has
+   * just been resized or has never been written holds whatever the driver
+   * left there. The next frame bounces nothing and the one after it resumes.
+   */
+  public invalidateHistory(): void {
+    this._history = false;
+  }
+
+  /**
+   * Point the bounce at where each of this frame's pixels sat in the previous
+   * frame's camera.
+   *
+   * Without it a camera that moves by a pixel reads last frame's light one
+   * pixel across, and a scene that pans smears its own bounce along the
+   * direction of travel. The map is clip to clip - this frame's inverse into
+   * the last frame's transform - because that is what the quad's corners are
+   * expressed in.
+   */
+  private _writeReprojection(view: View, toWorld: Matrix): void {
+    this._reproject.copy(toWorld).combine(this._previousToClip);
+    this._bounceMaterial.uniforms.uReproject.set(this._reproject.a, this._reproject.b, this._reproject.c, this._reproject.d);
+    this._bounceMaterial.uniforms.uReprojectOffset.set(this._reproject.x, this._reproject.y);
+    this._bounceMaterial.uniforms.uHistory.set(this._history ? 1 : 0);
+    this._previousToClip.copy(view.getTransform());
+    this._history = true;
   }
 
   public destroy(): void {

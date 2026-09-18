@@ -1339,6 +1339,9 @@ ${normalPrepassWgsl}`,
     }
 
     this._target.setSize(width, height);
+    // A resized target holds nothing the bounce can read back as last frame's
+    // light, whatever the driver left in it.
+    this._radiance?.invalidateHistory();
     this._compositeScale = scale;
     this._compositeBatch.clear();
     this._compositeBatch.add(
