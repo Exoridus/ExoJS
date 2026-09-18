@@ -2,8 +2,9 @@
 precision highp float;
 precision highp int;
 
-// The seed field from the previous round: `xy` is the nearest blocking texel
-// and `zw` the nearest open one, each `-1` where none was found yet.
+// The seed field from the previous round: `xy` is the index of the nearest
+// blocking texel and `zw` that of the nearest open one, each `-1` where none
+// was found yet. An index names its texel's centre at `index + 0.5`.
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -36,7 +37,7 @@ void main() {
             vec4 candidate = texelFetch(uTexture, at, 0);
 
             if (candidate.x >= 0.0) {
-                vec2 delta = here - candidate.xy;
+                vec2 delta = here - (candidate.xy + 0.5);
                 float squared = dot(delta, delta);
 
                 if (squared < nearestBlocking) {
@@ -46,7 +47,7 @@ void main() {
             }
 
             if (candidate.z >= 0.0) {
-                vec2 delta = here - candidate.zw;
+                vec2 delta = here - (candidate.zw + 0.5);
                 float squared = dot(delta, delta);
 
                 if (squared < nearestOpen) {

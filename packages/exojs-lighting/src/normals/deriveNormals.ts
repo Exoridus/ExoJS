@@ -88,7 +88,8 @@ export const normalsFromAlphaField = (
       // The gradient points out of the silhouette, so the normal tilts along it
       // and z carries whatever is left of a unit vector. `y` is negated because
       // a derived map is written in the same convention an authored one is:
-      // green above the midpoint means "faces up", which is world -y here.
+      // green above the midpoint means "leans towards the top of the image",
+      // and the gradient was taken with y growing downwards.
       const nx = gradientX * strength;
       const ny = -gradientY * strength;
       const length = Math.hypot(nx, ny, 1);

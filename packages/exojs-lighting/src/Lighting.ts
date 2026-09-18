@@ -312,7 +312,7 @@ export class Lighting {
   /**
    * Surfaces the last frame actually took normals from. Lower than
    * {@link surfaces} when some are hidden or carry no texture, and zero under
-   * a renderer that takes its normals from a material.
+   * every renderer but `lightmap`. See {@link normalsFrom}.
    */
   public get activeSurfaceCount(): number {
     return this._backend.activeSurfaceCount;
@@ -427,11 +427,14 @@ export class Lighting {
    * lighting.normalsFrom(crate, new NormalMap(crateNormals));
    * ```
    *
-   * Only a renderer that shades a light field of its own reads these -
-   * `forward` shades inside the sprite stage and takes its normals from
-   * {@link LitMaterial} instead. Nothing is required of a drawable that is not
-   * registered: it is lit as a plane, which is what the renderer already
-   * assumed of everything.
+   * Only `lightmap` reads these. `forward` shades inside the sprite stage and
+   * takes its normals from {@link LitMaterial} instead, and `radiance` gathers
+   * each probe's rays into one arriving colour, which leaves no incident
+   * direction at a fragment for a normal to be measured against - under both,
+   * registering a surface is recorded and ignored, and
+   * {@link activeSurfaceCount} stays at zero. Nothing is required of a
+   * drawable that is not registered: it is lit as a plane, which is what the
+   * renderer already assumed of everything.
    *
    * The drawable and the source are the caller's; the system only reads them.
    * Registering the same drawable twice replaces its source rather than
@@ -485,7 +488,8 @@ export class Lighting {
   }
 
   /**
-   * Gather the occluders for the region the lights jointly reach.
+   * Gather the occluders for the region the renderer asks for, or for the one
+   * the lights jointly reach where it asks for none.
    *
    * One region for the whole scene rather than one per light: a source is then
    * walked once a frame however many lights are on screen, and each light
@@ -499,6 +503,15 @@ export class Lighting {
 
     if (this._occluders.length === 0 || !this._backend.castsShadows) {
       this._field.clear();
+
+      return;
+    }
+
+    // A renderer that transports light through a field answers with the field
+    // itself: what it can see is what is worth collecting, and a light's
+    // nominal radius bounds neither.
+    if (this._backend.collectRegion(this._region)) {
+      this._field.collect(this._occluders, this._region);
 
       return;
     }

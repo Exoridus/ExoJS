@@ -1,5 +1,6 @@
-// The seed field from the previous round: `xy` is the nearest blocking texel
-// and `zw` the nearest open one, each `-1` where none was found yet.
+// The seed field from the previous round: `xy` is the index of the nearest
+// blocking texel and `zw` that of the nearest open one, each `-1` where none
+// was found yet. An index names its texel's centre at `index + 0.5`.
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
 
@@ -33,7 +34,7 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
             let candidate = textureLoad(uTexture, at, 0);
 
             if (candidate.x >= 0.0) {
-                let delta = here - candidate.xy;
+                let delta = here - (candidate.xy + 0.5);
                 let squared = dot(delta, delta);
 
                 if (squared < nearestBlocking) {
@@ -43,7 +44,7 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
             }
 
             if (candidate.z >= 0.0) {
-                let delta = here - candidate.zw;
+                let delta = here - (candidate.zw + 0.5);
                 let squared = dot(delta, delta);
 
                 if (squared < nearestOpen) {

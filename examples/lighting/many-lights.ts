@@ -43,6 +43,9 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
 
 // Matching normal map: a rounded bevel around the tile edge and a shallow dome
 // in the middle, so a light sweeping past visibly rakes across the relief.
+// Both are built with image-space y, which grows downwards, and the green
+// channel is negated on the way out: the engine reads the OpenGL convention,
+// where green above the midpoint leans towards the top of the image.
 const normalTexture = canvasTexture(TILE_SIZE, context => {
   const image = context.createImageData(TILE_SIZE, TILE_SIZE);
   const half = TILE_SIZE / 2;
@@ -59,7 +62,7 @@ const normalTexture = canvasTexture(TILE_SIZE, context => {
       const length = Math.hypot(nx, ny, 1);
       const offset = (y * TILE_SIZE + x) * 4;
       image.data[offset] = ((nx / length) * 0.5 + 0.5) * 255;
-      image.data[offset + 1] = ((ny / length) * 0.5 + 0.5) * 255;
+      image.data[offset + 1] = ((-ny / length) * 0.5 + 0.5) * 255;
       image.data[offset + 2] = (1 / length) * 0.5 * 255 + 127.5;
       image.data[offset + 3] = 255;
     }

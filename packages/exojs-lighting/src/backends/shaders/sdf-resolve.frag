@@ -2,8 +2,8 @@
 precision highp float;
 precision highp int;
 
-// The finished seed field: `xy` is the nearest blocking texel's coordinate and
-// `zw` the nearest open one's.
+// The finished seed field: `xy` is the index of the nearest blocking texel and
+// `zw` that of the nearest open one.
 uniform sampler2D uTexture;
 // The mask the seeds came from. A seed's own coverage says where inside it the
 // edge actually runs.
@@ -26,9 +26,13 @@ float reach(vec2 seed) {
         return uniforms.uFar;
     }
 
-    float coverage = texelFetch(uMask, ivec2(seed), 0).a;
+    // Clamped: the mask accumulates additively, so two emitters over one texel
+    // leave a coverage above one, and the offset below is a position inside a
+    // texel rather than a quantity.
+    float coverage = clamp(texelFetch(uMask, ivec2(seed), 0).a, 0.0, 1.0);
 
-    return max(length(gl_FragCoord.xy - seed) - abs(coverage - 0.5), 0.0) * uniforms.uScale;
+    // `seed` is an index; `seed + 0.5` is the centre `gl_FragCoord` measures in.
+    return max(length(gl_FragCoord.xy - (seed + 0.5)) - abs(coverage - 0.5), 0.0) * uniforms.uScale;
 }
 
 void main() {

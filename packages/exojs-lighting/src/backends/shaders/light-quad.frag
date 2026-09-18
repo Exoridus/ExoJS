@@ -27,37 +27,37 @@ uniform sampler2D u_cookie;
 out vec4 fragColor;
 
 const float PI = 3.14159265359;
-const int SHADOW_TAPS = 5;
+/**
+ * Fetch budget for one fragment's penumbra. The taps sit at most one bin
+ * apart, so this also sets how wide a kernel can be sampled without gaps: at
+ * the default 256 bins it covers the whole softness range.
+ */
+const int MAX_TAPS = 21;
 /** Fraction of a full turn the widest penumbra spans. */
 const float MAX_PENUMBRA = 0.03;
 /** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
 const float SHADOW_BIAS = 0.004;
-
 /**
- * Tap weights across the kernel. They sum to one, and they are UNEQUAL on
- * purpose: five equally weighted taps can only ever add up to six distinct
- * values, so a soft edge comes out as six bands that read as several shadows
- * lying on top of each other. Weighting them spreads those sums over the whole
- * range at no extra cost - same five fetches, a gradient instead of a staircase.
+ * Kernel half-width, in bins, at zero softness. The row samples each bin at
+ * its centre and is accurate to half a bin, so a kernel narrower than this
+ * would show the bin grid itself along an edge.
  */
-const float SHADOW_WEIGHTS[5] = float[5](0.07, 0.24, 0.38, 0.24, 0.07);
+const float MIN_RADIUS = 1.5;
 
 /**
- * The stored distance at a fractional bin, blended between the two bins it
- * falls between.
+ * Whether the light reaches `distance` along bin `bin`, which wraps around the
+ * circle.
  *
- * Reading the nearest bin alone is what makes a shadow edge a staircase: a row
- * is a few hundred bins around the whole circle, so at a large radius one bin
- * is many pixels wide and every one of them shows. Blending costs one more
- * fetch per tap and turns the step into the ramp a filtered shadow map has.
+ * One comparison per bin, and the kernel below filters these ANSWERS. Blending
+ * two stored blocker distances and comparing once instead describes a blocker
+ * at a depth neither bin holds, which moves a hard edge around rather than
+ * softening it - and a handful of such comparisons spread across a wide kernel
+ * is what made one edge come out as several separate shadows.
  */
-float distanceAt(float position, int row, float bins) {
-    float lower = floor(position);
-    float weight = position - lower;
-    int first = int(mod(lower, bins));
-    int second = int(mod(lower + 1.0, bins));
+float visibleAt(int bin, int bins, int row, float distance) {
+    int slot = bin - bins * int(floor(float(bin) / float(bins)));
 
-    return mix(texelFetch(u_shadow, ivec2(first, row), 0).r, texelFetch(u_shadow, ivec2(second, row), 0).r, weight);
+    return step(distance, texelFetch(u_shadow, ivec2(slot, row), 0).r + SHADOW_BIAS);
 }
 
 /**
@@ -65,27 +65,46 @@ float distanceAt(float position, int row, float bins) {
  * fraction of the light's whole reach - the frame the polar rows were built in.
  * The falloff term measures to the segment instead, which is a different
  * quantity for a line light and the same one for every other shape.
+ *
+ * The filter is a normalized tent over the bins the penumbra spans. It is an
+ * ANGULAR filter, not an area source: it widens the edge a point source casts,
+ * and it does not make the shadow behave like one cast by a disc of that size.
  */
 float shadowTerm(float distance) {
     if (v_shadowRow < 0.0) {
         return 1.0;
     }
 
-    float bins = float(textureSize(u_shadow, 0).x);
-    // A kernel narrower than one bin would alias along the bin grid, so one
-    // bin is the floor: softness widens the penumbra from there.
-    float spread = max(1.0, v_softness * bins * MAX_PENUMBRA);
-    float center = (atan(v_local.y, v_local.x) + PI) / (2.0 * PI) * bins - 0.5;
+    int bins = textureSize(u_shadow, 0).x;
     int row = int(v_shadowRow);
+    float radius = MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA;
+    float center = (atan(v_local.y, v_local.x) + PI) / (2.0 * PI) * float(bins) - 0.5;
+    // One tap per bin while that fits the budget, and evenly spread over the
+    // kernel when it does not: the sampling follows the filter's own width
+    // instead of leaving gaps across it.
+    int taps = min(2 * int(ceil(radius)) + 1, MAX_TAPS);
+    float stride = 2.0 * radius / float(taps - 1);
     float lit = 0.0;
+    float total = 0.0;
 
-    for (int tap = 0; tap < SHADOW_TAPS; tap++) {
-        float offset = (float(tap) / float(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
+    for (int tap = 0; tap < MAX_TAPS; tap++) {
+        if (tap >= taps) {
+            break;
+        }
 
-        lit += SHADOW_WEIGHTS[tap] * step(distance, distanceAt(center + offset, row, bins) + SHADOW_BIAS);
+        float at = center + (float(tap) - 0.5 * float(taps - 1)) * stride;
+        // Weighted by the tap's true distance from the centre rather than by
+        // the bin it rounds to, so the weights slide continuously as the
+        // fragment's angle moves - and the outermost tap, the one whose bin
+        // index jumps when the centre crosses a half-bin, carries no weight
+        // at the moment it does.
+        float weight = max(0.0, 1.0 - abs(at - center) / radius);
+
+        lit += weight * visibleAt(int(floor(at + 0.5)), bins, row, distance);
+        total += weight;
     }
 
-    return lit;
+    return total > 0.0 ? lit / total : 1.0;
 }
 
 /**

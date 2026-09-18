@@ -57,13 +57,35 @@ export const sdfResolveShader = createFilterShader({
  * measurement attached, not a different algorithm.
  * @internal
  */
+/**
+ * Largest texel index a half-float seed holds exactly.
+ *
+ * A seed is an integer index, and half-float carries integers exactly up to
+ * `2 ** 11`. Past that the stored index is rounded, which both moves the
+ * distance by up to half a texel and - because the index is fetched from the
+ * mask again to read the edge's position inside its texel - reads the coverage
+ * of a texel the wall is not in, or one outside the field entirely.
+ */
+const EXACT_INDEX = 2048;
+
+/** The seed format a field of this size needs to name every one of its texels exactly. */
+const seedFormat = (width: number, height: number): TextureFormat.Rgba16F | TextureFormat.Rgba32F =>
+  Math.max(width, height) > EXACT_INDEX ? TextureFormat.Rgba32F : TextureFormat.Rgba16F;
+
+/** The ping-pong pair. Unfiltered: interpolating two seeds would name a texel where neither wall is. */
+const createSeeds = (format: TextureFormat.Rgba16F | TextureFormat.Rgba32F): readonly [RenderTexture, RenderTexture] => [
+  new RenderTexture(1, 1, { format, scaleMode: ScaleModes.Nearest }),
+  new RenderTexture(1, 1, { format, scaleMode: ScaleModes.Nearest }),
+];
+
 export class DistanceField {
   /** The whole build, as one pass. Owned by the caller's pipeline and disabled until something reads the field. */
   public readonly pass: CallbackRenderPass;
 
   private readonly _mask: RenderTexture;
   /** Ping-pong pair: a jump-flood round reads every texel of its input, so it cannot write it. */
-  private readonly _seeds: readonly [RenderTexture, RenderTexture];
+  private _seeds: readonly [RenderTexture, RenderTexture];
+  private _seedFormat: TextureFormat.Rgba16F | TextureFormat.Rgba32F = TextureFormat.Rgba16F;
   private readonly _distance: RenderTexture;
   private readonly _seedFilter: ShaderFilter;
   private readonly _stepFilter: ShaderFilter<{ readonly uStep: UniformType.Float }>;
@@ -72,13 +94,7 @@ export class DistanceField {
 
   public constructor(mask: RenderTexture) {
     this._mask = mask;
-    // Half-float and unfiltered: a seed is a texel coordinate, which half-float
-    // holds exactly to 1024, and interpolating two seeds would name a texel
-    // where neither wall is.
-    this._seeds = [
-      new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest }),
-      new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest }),
-    ];
+    this._seeds = createSeeds(this._seedFormat);
     // Filtered, because what reads this samples between texels while it traces.
     this._distance = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Linear });
     this._seedFilter = ShaderFilter.from(sdfSeedShader);
@@ -102,6 +118,20 @@ export class DistanceField {
 
   /** Match the mask's grid, so a texel of one is a texel of the other. */
   public setSize(width: number, height: number): void {
+    const format = seedFormat(width, height);
+
+    // Rebuilt rather than resized when the grid outgrows half-float's exact
+    // integers. Both float formats are renderable under the same condition -
+    // `EXT_color_buffer_float` on WebGL2, core on WebGPU - and the caller only
+    // builds this field where that condition holds, so the wider one is
+    // available whenever it is needed.
+    if (format !== this._seedFormat) {
+      this._seeds[0].destroy();
+      this._seeds[1].destroy();
+      this._seedFormat = format;
+      this._seeds = createSeeds(format);
+    }
+
     this._seeds[0].setSize(width, height);
     this._seeds[1].setSize(width, height);
     this._distance.setSize(width, height);

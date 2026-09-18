@@ -1,5 +1,5 @@
-// The finished seed field: `xy` is the nearest blocking texel's coordinate and
-// `zw` the nearest open one's.
+// The finished seed field: `xy` is the index of the nearest blocking texel and
+// `zw` that of the nearest open one.
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
 // The mask the seeds came from. A seed's own coverage says where inside it the
@@ -22,9 +22,13 @@ fn reach(here: vec2<f32>, seed: vec2<f32>) -> f32 {
         return uniforms.uFar;
     }
 
-    let coverage = textureLoad(uMask, vec2<i32>(seed), 0).a;
+    // Clamped: the mask accumulates additively, so two emitters over one texel
+    // leave a coverage above one, and the offset below is a position inside a
+    // texel rather than a quantity.
+    let coverage = clamp(textureLoad(uMask, vec2<i32>(seed), 0).a, 0.0, 1.0);
 
-    return max(length(here - seed) - abs(coverage - 0.5), 0.0) * uniforms.uScale;
+    // `seed` is an index; `seed + 0.5` is the centre `here` measures in.
+    return max(length(here - (seed + 0.5)) - abs(coverage - 0.5), 0.0) * uniforms.uScale;
 }
 
 @fragment

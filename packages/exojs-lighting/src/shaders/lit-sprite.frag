@@ -22,13 +22,15 @@ void main(void) {
 
     // Rotate the tangent-space normal by the instance's local-to-world basis so
     // a spinning or mirrored sprite keeps its bumps facing the right way.
-    // Green above the midpoint means "faces up" - the convention every
-    // authoring tool writes - and up on screen is world -y here, so the tangent
-    // normal's y is negated on the way in. Without it a normal map lights its
-    // bevels from the wrong side of the horizon, and only the vertical ones:
-    // left and right stay correct, which is what makes it hard to see.
+    // Green above the midpoint means "leans towards the top of the image" in
+    // the canonical OpenGL convention, and the top of a sprite is local -y
+    // here, so the tangent normal's y is negated on the way in. `normalY`
+    // carries the source's own convention and is -1 for a DirectX map, which
+    // undoes that negation. Without either, a normal map lights its vertical
+    // detail from the wrong side while its horizontal detail stays correct,
+    // which is what makes it hard to see.
     vec3 tangentNormal = texture(u_normalMap, v_texcoord).xyz * 2.0 - 1.0;
-    tangentNormal.y = -tangentNormal.y;
+    tangentNormal.y = -tangentNormal.y * uniforms.normalY;
     vec2 axisX = normalize(vec2(v_basis.x, v_basis.z));
     vec2 axisY = normalize(vec2(v_basis.y, v_basis.w));
     vec3 normal = normalize(vec3(axisX * tangentNormal.x + axisY * tangentNormal.y, tangentNormal.z));

@@ -16,13 +16,14 @@ uniform sampler2D uEmission;
 // probes around it is open: `x` to the one left and above, `y` right and
 // above, `z` left and below, `w` right and below.
 uniform sampler2D uVisibility;
-// Wherever a source's colour is, its cone: outer and inner cosines in `rg`,
-// the axis in `ba`. Zero where nothing described one.
+// Wherever a source's colour is, its cone: outer and inner half-angles in
+// `rg`, the axis angle in `b`, and in `a` how many emitters wrote here.
 uniform sampler2D uEmitterCone;
 
 out vec4 fragColor;
 
 const float TAU = 6.28318530718;
+const float PI = 3.14159265359;
 /**
  * Hard ceiling on a ray's walk. Sphere tracing converges in far fewer in the
  * open; the ceiling is what a ray running along a wall spends, a texel or two
@@ -66,19 +67,29 @@ float share(float depth, float width) {
  * A source's colour where a ray reads it, through the source's cone: light
  * leaves the source along the ray, against the direction the ray walked, and
  * a cone light gives none of it outside its own opening. A point light wrote
- * both cosines as -1, which no direction can fail; a wall wrote nothing.
+ * a half-angle of pi, which no direction can fail; a wall wrote nothing.
+ *
+ * The cone field is a SUM, and its alpha counts what was summed. One emitter
+ * is a cone; none is a wall; more than one is a texel no single cone
+ * describes, and the conservative reading of that is no cone at all - the
+ * union of the openings, which never takes light away that one of the sources
+ * actually emits.
  */
 vec3 sourceColour(vec2 colourAt, vec2 direction) {
     vec2 uv = fieldUv(colourAt);
     vec3 colour = texture(uEmission, uv).rgb;
     vec4 cone = texture(uEmitterCone, uv);
 
-    if (dot(cone.zw, cone.zw) < 0.5) {
+    if (cone.w < 0.5 || cone.w > 1.5) {
         return colour;
     }
 
-    float alignment = dot(-direction, normalize(cone.zw));
-    float coneTerm = cone.x == cone.y ? step(cone.x, alignment) : smoothstep(cone.x, cone.y, alignment);
+    vec2 axis = vec2(cos(cone.z - PI), sin(cone.z - PI));
+    float away = acos(clamp(dot(-direction, axis), -1.0, 1.0));
+    // Inner half-angle first: the term is one inside the opening and falls to
+    // zero at the outer edge, and a cone softness of zero collapses the two
+    // into the hard edge `step` gives.
+    float coneTerm = cone.x == cone.y ? step(away, cone.x) : 1.0 - smoothstep(cone.y, cone.x, away);
 
     return colour * coneTerm;
 }
@@ -179,7 +190,12 @@ void trace(vec2 origin, vec2 direction, vec4 ends, out vec4 results[4]) {
             }
         }
 
-        if (travelled >= end) {
+        // Not while the walk is inside a source: the ends above wait for the
+        // exit because the coarser ray skips a source it begins in, so this
+        // ray owns the whole encounter. Stopping at the interval instead would
+        // settle those ends on however deep the axis had got by then, which is
+        // a source dimmer the further past the boundary it reaches.
+        if (travelled >= end && !inside) {
             break;
         }
 

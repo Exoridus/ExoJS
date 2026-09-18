@@ -16,14 +16,17 @@ const float NONE = -1.0;
 void main() {
     // `gl_FragCoord.xy` is the destination texel's own centre on both backends -
     // a render target's row 0 is the row the fragment at 0.5 writes either way -
-    // so a seed can be stored as a texel coordinate and read back as one.
-    // Half-float holds those exactly to 1024, and the field is never wider.
+    // so its floor is the texel's INDEX. The index rather than the centre is
+    // what is stored: it is a whole number, which the seed format holds
+    // exactly across the field, and it is also what indexes the mask again
+    // when the resolve reads back where inside the texel the edge runs.
     //
     // Two seed classes in one field: `xy` names the nearest BLOCKING texel and
     // `zw` the nearest OPEN one. Every texel is a seed of exactly one class -
     // itself - so the flood that follows resolves the distance out of a surface
     // and the depth into one in the same rounds.
     bool blocking = texture(uTexture, vUv).a >= SEEDED;
+    vec2 index = floor(gl_FragCoord.xy);
 
-    fragColor = blocking ? vec4(gl_FragCoord.xy, NONE, NONE) : vec4(NONE, NONE, gl_FragCoord.xy);
+    fragColor = blocking ? vec4(index, NONE, NONE) : vec4(NONE, NONE, index);
 }

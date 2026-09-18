@@ -1,4 +1,4 @@
-import type { Color } from '@codexo/exojs';
+import type { Color, Rectangle } from '@codexo/exojs';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { Light } from '../lights/Light';
@@ -70,6 +70,19 @@ export interface LightingBackend {
    * surfaces.
    */
   publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void;
+
+  /**
+   * Write the world region this renderer needs occluders for into `out` and
+   * answer `true`, or answer `false` to be given the region the lights' own
+   * reach spans.
+   *
+   * A renderer whose shadows end at each light's radius is served by that
+   * reach. One that transports light through a field is not: light arrives
+   * well past any light's nominal radius, so a wall outside every radius still
+   * casts, and a region bounded by the radii drops it from the frame as soon
+   * as a lamp moves away from it.
+   */
+  collectRegion(out: Rectangle): boolean;
 
   /** Release GPU resources. The lights are not owned. */
   destroy(): void;

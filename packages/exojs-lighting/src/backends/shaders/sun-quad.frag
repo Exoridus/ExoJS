@@ -16,39 +16,24 @@ uniform sampler2D u_normal;
 
 out vec4 fragColor;
 
-const int SHADOW_TAPS = 5;
+/** Fetch budget for one fragment's penumbra. See the same constant in `light-quad.frag`. */
+const int MAX_TAPS = 21;
 /** Fraction of the strip range the widest penumbra spans. */
 const float MAX_PENUMBRA = 0.03;
 /** Tolerance, in the row's own units, that keeps an occluder out of its own shadow. */
 const float SHADOW_BIAS = 0.004;
+/** Kernel half-width, in strips, at zero softness. See `light-quad.frag`. */
+const float MIN_RADIUS = 1.5;
 
 /**
- * Tap weights across the kernel. They sum to one, and they are UNEQUAL on
- * purpose: five equally weighted taps can only ever add up to six distinct
- * values, so a soft edge comes out as six bands that read as several shadows
- * lying on top of each other. Weighting them spreads those sums over the whole
- * range at no extra cost - same five fetches, a gradient instead of a staircase.
- */
-const float SHADOW_WEIGHTS[5] = float[5](0.07, 0.24, 0.38, 0.24, 0.07);
-
-/**
- * The stored depth at a fractional strip, blended between the two strips it
- * falls between.
+ * Whether the light reaches `depth` in strip `strip`.
  *
- * Reading the nearest strip alone is what makes a shadow edge a staircase: the
- * row is a few hundred strips across the whole view, so a silhouette moves in
- * whole strips and shows every one of them. Blending costs one more fetch per
- * tap and turns the step into the ramp a filtered shadow map has.
+ * One comparison per strip, and the kernel below filters these ANSWERS - see
+ * the same note in `light-quad.frag`. Clamped rather than wrapped: strips are
+ * a line, and the far side of the range is not the near side of it.
  */
-float depthAt(float strip, int row, float bins) {
-    float lower = floor(strip);
-    float weight = strip - lower;
-    // Clamped rather than wrapped: strips are a line, and the far side of the
-    // range is not the near side of it.
-    int first = int(clamp(lower, 0.0, bins - 1.0));
-    int second = int(clamp(lower + 1.0, 0.0, bins - 1.0));
-
-    return mix(texelFetch(u_shadow, ivec2(first, row), 0).r, texelFetch(u_shadow, ivec2(second, row), 0).r, weight);
+float visibleAt(int strip, int bins, int row, float depth) {
+    return step(depth, texelFetch(u_shadow, ivec2(clamp(strip, 0, bins - 1), row), 0).r + SHADOW_BIAS);
 }
 
 float shadowTerm() {
@@ -56,21 +41,28 @@ float shadowTerm() {
         return 1.0;
     }
 
-    float bins = float(textureSize(u_shadow, 0).x);
-    // A kernel narrower than one strip would alias along the strip grid, so one
-    // strip is the floor: softness widens the penumbra from there.
-    float spread = max(1.0, v_softness * bins * MAX_PENUMBRA);
-    float center = v_sun.x * bins - 0.5;
+    int bins = textureSize(u_shadow, 0).x;
     int row = int(v_shadowRow);
+    float radius = MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA;
+    float center = v_sun.x * float(bins) - 0.5;
+    int taps = min(2 * int(ceil(radius)) + 1, MAX_TAPS);
+    float stride = 2.0 * radius / float(taps - 1);
     float lit = 0.0;
+    float total = 0.0;
 
-    for (int tap = 0; tap < SHADOW_TAPS; tap++) {
-        float offset = (float(tap) / float(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
+    for (int tap = 0; tap < MAX_TAPS; tap++) {
+        if (tap >= taps) {
+            break;
+        }
 
-        lit += SHADOW_WEIGHTS[tap] * step(v_sun.y, depthAt(center + offset, row, bins) + SHADOW_BIAS);
+        float at = center + (float(tap) - 0.5 * float(taps - 1)) * stride;
+        float weight = max(0.0, 1.0 - abs(at - center) / radius);
+
+        lit += weight * visibleAt(int(floor(at + 0.5)), bins, row, v_sun.y);
+        total += weight;
     }
 
-    return lit;
+    return total > 0.0 ? lit / total : 1.0;
 }
 
 /** See the same term in `light-quad.frag`: `1` wherever nothing described a surface. */

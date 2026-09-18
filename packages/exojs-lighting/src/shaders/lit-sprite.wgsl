@@ -16,13 +16,15 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
     // Rotate the tangent-space normal by the instance's local-to-world basis so
     // a spinning or mirrored sprite keeps its bumps facing the right way.
-    // Green above the midpoint means "faces up" - the convention every
-    // authoring tool writes - and up on screen is world -y here, so the tangent
-    // normal's y is negated on the way in. Without it a normal map lights its
-    // bevels from the wrong side of the horizon, and only the vertical ones:
-    // left and right stay correct, which is what makes it hard to see.
+    // Green above the midpoint means "leans towards the top of the image" in
+    // the canonical OpenGL convention, and the top of a sprite is local -y
+    // here, so the tangent normal's y is negated on the way in. `normalY`
+    // carries the source's own convention and is -1 for a DirectX map, which
+    // undoes that negation. Without either, a normal map lights its vertical
+    // detail from the wrong side while its horizontal detail stays correct,
+    // which is what makes it hard to see.
     let encodedNormal = textureSample(u_normalMap, u_normalMapSampler, input.texcoord).xyz * 2.0 - 1.0;
-    let tangentNormal = vec3<f32>(encodedNormal.x, -encodedNormal.y, encodedNormal.z);
+    let tangentNormal = vec3<f32>(encodedNormal.x, -encodedNormal.y * uniforms.normalY, encodedNormal.z);
     let axisX = normalize(vec2<f32>(input.basis.x, input.basis.z));
     let axisY = normalize(vec2<f32>(input.basis.y, input.basis.w));
     let normal = normalize(vec3<f32>(axisX * tangentNormal.x + axisY * tangentNormal.y, tangentNormal.z));

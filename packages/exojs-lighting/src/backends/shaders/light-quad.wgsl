@@ -42,39 +42,37 @@ struct VertexOutput {
 @group(2) @binding(6) var u_cookieSampler: sampler;
 
 const PI: f32 = 3.14159265359;
-const SHADOW_TAPS: i32 = 5;
+/**
+ * Fetch budget for one fragment's penumbra. The taps sit at most one bin
+ * apart, so this also sets how wide a kernel can be sampled without gaps: at
+ * the default 256 bins it covers the whole softness range.
+ */
+const MAX_TAPS: i32 = 21;
 /** Fraction of a full turn the widest penumbra spans. */
 const MAX_PENUMBRA: f32 = 0.03;
 /** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
 const SHADOW_BIAS: f32 = 0.004;
-
 /**
- * Tap weights across the kernel. They sum to one, and they are UNEQUAL on
- * purpose: five equally weighted taps can only ever add up to six distinct
- * values, so a soft edge comes out as six bands that read as several shadows
- * lying on top of each other.
+ * Kernel half-width, in bins, at zero softness. The row samples each bin at
+ * its centre and is accurate to half a bin, so a kernel narrower than this
+ * would show the bin grid itself along an edge.
  */
-fn shadowWeight(tap: i32) -> f32 {
-    var weights = array<f32, 5>(0.07, 0.24, 0.38, 0.24, 0.07);
-
-    return weights[tap];
-}
+const MIN_RADIUS: f32 = 1.5;
 
 /**
- * The stored distance at a fractional bin, blended between the two bins it
- * falls between.
+ * Whether the light reaches `distance` along bin `bin`, which wraps around the
+ * circle.
  *
- * Reading the nearest bin alone is what makes a shadow edge a staircase: a row
- * is a few hundred bins around the whole circle, so at a large radius one bin
- * is many pixels wide and every one of them shows.
+ * One comparison per bin, and the kernel below filters these ANSWERS. Blending
+ * two stored blocker distances and comparing once instead describes a blocker
+ * at a depth neither bin holds, which moves a hard edge around rather than
+ * softening it - and a handful of such comparisons spread across a wide kernel
+ * is what made one edge come out as several separate shadows.
  */
-fn distanceAt(position: f32, row: i32, bins: f32) -> f32 {
-    let lower = floor(position);
-    let weight = position - lower;
-    let first = i32(fract(lower / bins) * bins);
-    let second = i32(fract((lower + 1.0) / bins) * bins);
+fn visibleAt(bin: i32, bins: i32, row: i32, distance: f32) -> f32 {
+    let slot = bin - bins * i32(floor(f32(bin) / f32(bins)));
 
-    return mix(textureLoad(u_shadow, vec2<i32>(first, row), 0).r, textureLoad(u_shadow, vec2<i32>(second, row), 0).r, weight);
+    return step(distance, textureLoad(u_shadow, vec2<i32>(slot, row), 0).r + SHADOW_BIAS);
 }
 
 /**
@@ -82,28 +80,47 @@ fn distanceAt(position: f32, row: i32, bins: f32) -> f32 {
  * fraction of the light's whole reach - the frame the polar rows were built in.
  * The falloff term measures to the segment instead, which is a different
  * quantity for a line light and the same one for every other shape.
+ *
+ * The filter is a normalized tent over the bins the penumbra spans. It is an
+ * ANGULAR filter, not an area source: it widens the edge a point source casts,
+ * and it does not make the shadow behave like one cast by a disc of that size.
  */
 fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) -> f32 {
     if (shadowRow < 0.0) {
         return 1.0;
     }
 
-    let bins = f32(textureDimensions(u_shadow, 0).x);
-    // A kernel narrower than one bin would alias along the bin grid, so one
-    // bin is the floor: softness widens the penumbra from there.
-    let spread = max(1.0, softness * bins * MAX_PENUMBRA);
-    let center = (atan2(local.y, local.x) + PI) / (2.0 * PI) * bins - 0.5;
+    let bins = i32(textureDimensions(u_shadow, 0).x);
     let row = i32(shadowRow);
+    let radius = MIN_RADIUS + max(0.0, softness) * f32(bins) * MAX_PENUMBRA;
+    let center = (atan2(local.y, local.x) + PI) / (2.0 * PI) * f32(bins) - 0.5;
+    // One tap per bin while that fits the budget, and evenly spread over the
+    // kernel when it does not: the sampling follows the filter's own width
+    // instead of leaving gaps across it.
+    let taps = min(2 * i32(ceil(radius)) + 1, MAX_TAPS);
+    let stride = 2.0 * radius / f32(taps - 1);
 
     var lit = 0.0;
+    var total = 0.0;
 
-    for (var tap: i32 = 0; tap < SHADOW_TAPS; tap = tap + 1) {
-        let offset = (f32(tap) / f32(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
+    for (var tap: i32 = 0; tap < MAX_TAPS; tap = tap + 1) {
+        if (tap >= taps) {
+            break;
+        }
 
-        lit = lit + shadowWeight(tap) * step(distance, distanceAt(center + offset, row, bins) + SHADOW_BIAS);
+        let at = center + (f32(tap) - 0.5 * f32(taps - 1)) * stride;
+        // Weighted by the tap's true distance from the centre rather than by
+        // the bin it rounds to, so the weights slide continuously as the
+        // fragment's angle moves - and the outermost tap, the one whose bin
+        // index jumps when the centre crosses a half-bin, carries no weight
+        // at the moment it does.
+        let weight = max(0.0, 1.0 - abs(at - center) / radius);
+
+        lit = lit + weight * visibleAt(i32(floor(at + 0.5)), bins, row, distance);
+        total = total + weight;
     }
 
-    return lit;
+    return select(1.0, lit / total, total > 0.0);
 }
 
 /**

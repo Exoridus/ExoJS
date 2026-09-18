@@ -11,7 +11,8 @@ struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) local: vec2<f32>,
     @location(1) @interpolate(flat) emit: vec4<f32>,
-    // Outer and inner cone cosines, and the axis the cone opens along.
+    // Outer and inner cone half-angles, the angle of the axis the cone opens
+    // along offset into `0..2pi`, and a count of one.
     @location(2) @interpolate(flat) cone: vec4<f32>,
 };
 
@@ -31,8 +32,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     // The same capsule the emitter's colour fills, halo included, so that
-    // wherever a ray reads the colour it can read the cone as well. Written
-    // whole rather than blended: a cone is a description, not a quantity.
+    // wherever a ray reads the colour it can read the cone as well. Summed
+    // with whatever is already there: the count in `a` is what tells a reader
+    // whether the sum describes one emitter or several.
     let toSegment = vec2<f32>(input.local.x - clamp(input.local.x, -input.emit.z, input.emit.z), input.local.y);
 
     if (length(toSegment) > 1.0 + input.emit.y) {

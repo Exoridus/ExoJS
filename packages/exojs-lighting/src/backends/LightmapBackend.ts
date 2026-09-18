@@ -12,6 +12,7 @@ import {
   Matrix,
   MeshMaterial,
   type PassContext,
+  type Rectangle,
   RenderBatch,
   RenderTexture,
   ScaleModes,
@@ -26,6 +27,7 @@ import type { Light } from '../lights/Light';
 import { lightFalloff, lightHalfLength, lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 import { SunLight } from '../lights/SunLight';
+import { normalGreenSign } from '../normals/NormalSource';
 import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
@@ -178,7 +180,14 @@ export interface LightmapBackendOptions {
 export class LightmapBackend implements LightingBackend {
   public readonly quality: LightingQuality;
   public readonly castsShadows = true;
-  public readonly readsSurfaces = true;
+  /**
+   * The light quads shade against the prepass; the cascades do not. Radiance
+   * carries a direction per probe ray but the gather averages a probe's rays
+   * into one arriving colour, so there is no incident direction left at a
+   * fragment for a normal to be measured against - and running the prepass
+   * anyway would draw a screen-sized target nothing reads.
+   */
+  public readonly readsSurfaces: boolean;
   public readonly hdr: boolean;
 
   private readonly _app: Application;
@@ -276,6 +285,7 @@ export class LightmapBackend implements LightingBackend {
     this._fieldMargin = options.fieldMargin;
     this.hdr = options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F);
     this.quality = options.fields === null ? 'lightmap' : 'radiance';
+    this.readsSurfaces = options.fields === null;
     // Half-float is filterable and blendable in WebGL2 and WebGPU alike, so the
     // only thing the format changes is the ceiling. It is not the default for a
     // render target, though, and a float target would otherwise point-sample -
@@ -507,8 +517,32 @@ ${sunQuadWgsl}`,
     return this._radiance !== null || this.shadowFiller === 'gpu';
   }
 
+  /**
+   * The field's own bounds wherever the renderer rasterises occluders, and the
+   * lights' reach otherwise.
+   *
+   * What the mask holds is what the cascades and the shadow march can see, so
+   * that region - the camera's view plus the configured margin - is exactly
+   * the set of occluders worth collecting. Bounding it by the lights' radii
+   * instead drops a wall that still shadows: radiance carries light past a
+   * light's nominal radius, and a pillar just outside it would appear and
+   * disappear as a lamp drifts.
+   */
+  public collectRegion(out: Rectangle): boolean {
+    if (!this.rasterisesOccluders) {
+      return false;
+    }
+
+    // Placed before `publish` gets to it, because the region is asked for
+    // first: the field has to describe this frame's camera, not the last.
+    this._followCamera();
+    this._fieldView.getBounds(out);
+
+    return true;
+  }
+
   public publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void {
-    this._writeSurfaces(surfaces);
+    this._writeSurfaces(this.readsSurfaces ? surfaces : []);
     this._resize();
     this._followCamera();
     this._ambient.copy(ambient);
@@ -955,10 +989,17 @@ ${sunQuadWgsl}`,
       // The drawable's own basis, not the composed one: the box scale would
       // survive the shader's normalize either way, but a mirrored box must flip
       // the normal and only the drawable knows whether it is mirrored.
+      //
+      // The source's channel convention rides in the same columns. The shader
+      // builds its local y axis out of `(b, d)` alone, so negating that column
+      // is exactly a green-channel flip - and it costs neither an instance
+      // attribute nor a second batch for a DirectX map.
+      const greenSign = normalGreenSign(normals);
+
       scratchSurface.a_basis[0] = world.a;
-      scratchSurface.a_basis[1] = world.b;
+      scratchSurface.a_basis[1] = world.b * greenSign;
       scratchSurface.a_basis[2] = world.c;
-      scratchSurface.a_basis[3] = world.d;
+      scratchSurface.a_basis[3] = world.d * greenSign;
 
       this._normalBatch(albedo, normals.texture).add(this._transform, Color.white, scratchSurface);
       written++;

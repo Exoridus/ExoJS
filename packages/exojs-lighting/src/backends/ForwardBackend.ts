@@ -76,6 +76,11 @@ export class ForwardBackend implements LightingBackend {
   /** Always zero: a registered surface is never read, so none is ever written. */
   public readonly activeSurfaceCount = 0;
 
+  /** This renderer casts no shadows, so it needs no occluders at all. */
+  public collectRegion(): boolean {
+    return false;
+  }
+
   /** Lights the texture is sized for. */
   public readonly maxLights: number;
 

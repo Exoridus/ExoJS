@@ -164,12 +164,12 @@ const SUN_SIZE = EMITTER_SIZE * Math.PI;
  */
 const EMITTER_GAIN = Math.PI / 8;
 
-/** Cone cosine that no direction can fail, which is how a point light says "no cone". */
-const noCone = -1;
+/** Cone half-angle that no direction can fail, which is how a point light says "no cone". */
+const noCone = Math.PI;
 
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
-const scratchEmitter = { a_emit: [1, 0, 0, 0], a_cone: [noCone, noCone, 1, 0] };
+const scratchEmitter = { a_emit: [1, 0, 0, 0], a_cone: [noCone, noCone, Math.PI, 1] };
 
 /** Tuning for the radiance field. Every entry has a default derived from the surface. */
 export interface RadianceFieldOptions {
@@ -267,7 +267,12 @@ export class RadianceField {
         glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${emitterConeVertex}`, fragment: emitterConeFragment },
         wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${emitterConeWgsl}`,
       }),
-      blendMode: BlendModes.Normal,
+      // Summed, not composited. Alpha here is a count of emitters rather than
+      // an opacity, and the other channels are a signed description: ordinary
+      // source-over would scale whatever a previous emitter wrote by one minus
+      // an axis angle. Summing is order-independent, and the count is what
+      // lets the tracer notice that no single cone describes the texel.
+      blendMode: BlendModes.Additive,
     });
     this._coneBatch = new RenderBatch(this._geometry, this._coneMaterial, {
       instanceAttributes: [
@@ -388,8 +393,11 @@ export class RadianceField {
       light.getWorldPosition(scratchPosition);
       light.getWorldDirection(scratchDirection);
       writeCone(scratchEmitter.a_cone, light);
-      scratchEmitter.a_cone[2] = scratchDirection.x;
-      scratchEmitter.a_cone[3] = scratchDirection.y;
+      // The axis as its angle, offset into `0..2pi`, and a count of one. The
+      // field adds these up, so a texel two emitters cover reads a count of
+      // two and the tracer stops trying to describe it with a single cone.
+      scratchEmitter.a_cone[2] = Math.atan2(scratchDirection.y, scratchDirection.x) + Math.PI;
+      scratchEmitter.a_cone[3] = 1;
       scratchEmitter.a_emit[0] = light.intensity * EMITTER_GAIN * (falloff / radius);
       scratchEmitter.a_emit[1] = halo;
       scratchEmitter.a_emit[2] = half;
@@ -632,6 +640,15 @@ export class RadianceField {
   }
 }
 
+/**
+ * A light's opening as two half-angles in radians rather than as their
+ * cosines.
+ *
+ * The cone field sums its descriptions, so what it holds has to survive being
+ * added up and divided by the count - and a cosine near `1`, which is where a
+ * tight spot lives, loses two decimal places of angle to half-float there. An
+ * angle is linear in the quantity the tracer compares.
+ */
 const writeCone = (target: number[], light: Light): void => {
   if (!(light instanceof SpotLight)) {
     target[0] = noCone;
@@ -640,11 +657,10 @@ const writeCone = (target: number[], light: Light): void => {
     return;
   }
 
-  const outer = Math.cos((Math.max(0, Math.min(90, light.angle)) * Math.PI) / 180);
+  const outer = (Math.max(0, Math.min(90, light.angle)) * Math.PI) / 180;
+
   // The inner edge sits where the fade begins, so a cone softness of 0 collapses
   // the two and the shader's smoothstep degenerates to a hard edge on its own.
-  const inner = Math.cos((Math.max(0, Math.min(90, light.angle * (1 - Math.min(1, Math.max(0, light.coneSoftness))))) * Math.PI) / 180);
-
   target[0] = outer;
-  target[1] = inner;
+  target[1] = outer * (1 - Math.min(1, Math.max(0, light.coneSoftness)));
 };
