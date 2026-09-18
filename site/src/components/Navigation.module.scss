@@ -11,54 +11,6 @@
   border-right: 1px solid var(--line-soft);
 }
 
-.side-head {
-  flex: 0 0 auto;
-  padding: 0.9rem 0.8rem 0.72rem;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.search {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  height: 34px;
-  padding: 0 0.62rem;
-  border-radius: var(--r-2);
-  border: 1px solid var(--line-soft);
-  background: var(--bg-canvas);
-  color: var(--fg-faint);
-}
-
-.search:focus-within {
-  border-color: var(--accent-line);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent-line), transparent 35%);
-}
-
-.search-icon {
-  flex: 0 0 auto;
-}
-
-.search-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  color: var(--fg);
-  font-size: 0.79rem;
-  outline: none;
-}
-
-.search-input::placeholder {
-  color: var(--fg-faint);
-}
-
-.search kbd {
-  flex: 0 0 auto;
-  font-family: var(--f-mono);
-  font-size: 0.63rem;
-  color: var(--fg-faint);
-}
-
 nav {
   flex: 1 1 auto;
   min-height: 0;
@@ -67,31 +19,8 @@ nav {
   padding: 0.45rem 0.38rem;
 }
 
-@media (max-width: 760px) {
-  .search kbd {
-    display: none;
-  }
-
-  .search {
-    height: 40px;
-  }
-}
-
 .error {
   margin: 0;
   padding: 1rem;
   color: oklch(76% 0.15 27);
-}
-
-.empty-state {
-  margin: 0;
-  padding: 1.2rem 1rem;
-  color: var(--fg-muted);
-  font-size: 0.82rem;
-  line-height: 1.55;
-}
-
-.empty-hint {
-  color: var(--fg-faint);
-  font-size: 0.76rem;
 }

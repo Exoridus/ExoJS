@@ -1,0 +1,12 @@
+---
+import PlaygroundExamplePage from '../../../../components/pages/PlaygroundExamplePage.astro';
+import { getAllExamples } from '../../../../lib/examples-catalog';
+
+export async function getStaticPaths() {
+    return getAllExamples().map(entry => ({ params: { path: entry.path.replace(/\.js$/, '') } }));
+}
+
+const routePath = (Astro.params as Record<string, string | undefined>).path ?? '';
+---
+
+<PlaygroundExamplePage locale="en" path={`${routePath}.js`} />

@@ -1,0 +1,118 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
+import { getAllExamples } from '../../lib/examples-catalog';
+import { CHAPTER_BY_SLUG } from '../../lib/chapters';
+import { CURRENT_VERSION_ID } from '../../lib/versions';
+
+interface Props {
+    locale: 'en' | 'de';
+    path: string;
+}
+
+const { locale, path } = Astro.props;
+
+const entry = getAllExamples().find(item => item.path === path);
+
+if (!entry) {
+    throw new Error(`Unknown playground example: ${path}`);
+}
+
+const categoryTitle = CHAPTER_BY_SLUG.get(entry.chapter)?.title ?? entry.chapter;
+const slug = entry.path.replace(/\.js$/, '');
+const playgroundHref = `${import.meta.env.BASE_URL}${locale}/playground/?version=${CURRENT_VERSION_ID}&example=${slug}`;
+const title = `${entry.title} — ExoJS Playground`;
+---
+
+<Layout title={title} description={entry.description}>
+    <div class="playground-example">
+        {/* en-only index feed, same convention as the API and Guide pages: only the
+            English copy is indexed, and the explicit meta title is what a search
+            result shows instead of this page's own h1. */}
+        <article
+            class="prose example-prose"
+            data-pagefind-body={locale === 'en' ? true : undefined}
+            data-pagefind-meta={locale === 'en' ? `title:${entry.title}` : undefined}
+        >
+            {locale === 'de' && <EnglishFallbackNotice />}
+            <p class="example-eyebrow">{categoryTitle} &middot; Playground example</p>
+            <h1>{entry.title}</h1>
+            <p class="example-description">{entry.description}</p>
+            <p class="example-facts">
+                <span>{entry.backend}</span>
+                {entry.level && <span>{entry.level}</span>}
+                {entry.language === 'typescript' && <span>TypeScript</span>}
+                <span><code>{entry.path}</code></span>
+            </p>
+            {entry.tags && entry.tags.length > 0 && (
+                <ul class="example-chips" aria-label="Tags">
+                    {entry.tags.map(tag => <li>{tag}</li>)}
+                </ul>
+            )}
+            {entry.capabilities && entry.capabilities.length > 0 && (
+                <ul class="example-chips" aria-label="Capabilities used">
+                    {entry.capabilities.map(capability => <li>{capability}</li>)}
+                </ul>
+            )}
+            <p><a class="example-cta" href={playgroundHref}>Open in Playground →</a></p>
+        </article>
+    </div>
+</Layout>
+
+<style>
+    .playground-example {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 2rem 1.2rem 4rem;
+    }
+
+    .example-eyebrow {
+        margin: 0 0 0.4rem;
+        color: var(--fg-faint);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .example-description {
+        color: var(--fg-muted);
+        line-height: 1.6;
+    }
+
+    .example-facts {
+        display: flex;
+        gap: 0.5rem;
+        margin: 0 0 0.8rem;
+        color: var(--fg-faint);
+        font-size: 0.78rem;
+        text-transform: capitalize;
+    }
+
+    .example-facts span + span::before {
+        content: '\00b7';
+        margin-right: 0.5rem;
+    }
+
+    .example-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin: 0 0 1rem;
+        padding: 0;
+        list-style: none;
+    }
+
+    .example-chips li {
+        padding: 0.18rem 0.55rem;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-pill);
+        color: var(--fg-muted);
+        font-size: 0.74rem;
+    }
+
+    .example-cta {
+        display: inline-block;
+        margin-top: 0.6rem;
+        font-weight: 600;
+    }
+</style>
