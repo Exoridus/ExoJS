@@ -296,6 +296,78 @@ describe('emitters that overlap', () => {
   });
 });
 
+describe('the cascade chain against an analytic reference', () => {
+  /**
+   * An unoccluded point emitter in an empty scene, which has an answer nothing
+   * in the renderer is involved in deriving: a source of size `2R` delivers
+   * `2R / (2 pi d)` of what it emits at distance `d`, so the light arriving at
+   * a receiver falls as one over the distance and is the same in every
+   * direction.
+   *
+   * Multiplying the reading by its own radius therefore has to come out flat.
+   * What would break it is the thing this level of the chain is approximating:
+   * each level merges with the one above at an interval boundary, and a
+   * boundary the two levels disagree across shows up as a ring - a step in
+   * this profile at one radius, the same one at every angle.
+   */
+  const profileOf = async (): Promise<{ radial: number[]; angular: number[] }> => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 64, intensity: 0.5, softness: 0.35 })).setPosition(64, 64);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      const radial: number[] = [];
+      const angular: number[] = [];
+
+      // From well outside the emitter's own halo to the edge of the canvas.
+      for (let radius = 12; radius <= 56; radius += 2) {
+        radial.push(readRed(host.backend, 64 + radius, 64) * radius);
+      }
+
+      // One radius, all the way round: a ring shows up in the radial profile,
+      // an axis-aligned bias in this one.
+      for (let step = 0; step < 32; step++) {
+        const angle = (step / 32) * Math.PI * 2;
+
+        angular.push(readRed(host.backend, Math.round(64 + 32 * Math.cos(angle)), Math.round(64 + 32 * Math.sin(angle))));
+      }
+
+      return { radial, angular };
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  };
+
+  test('the arriving light falls as one over the distance, with no ring at a cascade boundary', async () => {
+    const { radial, angular } = await profileOf();
+    const spread = Math.max(...radial) / Math.min(...radial);
+    const angularRange = Math.max(...angular) - Math.min(...angular);
+
+    // Nothing saturated and nothing lost in the noise floor, so the numbers
+    // below mean what they say.
+    expect(Math.min(...radial) / 12).toBeGreaterThan(8);
+    expect(Math.max(...radial) / 56).toBeLessThan(250);
+
+    // The residual of the single-trace merge, quantified rather than asserted
+    // away: every level boundary of the chain falls inside this sweep, and
+    // what is left is a slow bow of about a tenth either side of the mean
+    // rather than a step at any one radius. A disagreement across a boundary
+    // would be a step, and a step is what a cascade ring is.
+    expect(spread, `r * L: ${radial.map(value => value.toFixed(0)).join(' ')}`).toBeLessThan(1.25);
+
+    // Around one circle the tolerance is the quantisation, not a fraction:
+    // the reading is ~32 of 255 here, one 8-bit step is 3 percent of it, and
+    // the arc's own pixel rounding moves each sample by up to half a texel.
+    // Four steps peak to peak is that floor; a ring would be many times it.
+    expect(angularRange, `ring: ${angular.join(' ')}`).toBeLessThanOrEqual(4);
+  });
+});
+
 describe('the tangent-space convention reaching the sprite shader', () => {
   const tile = 32;
 

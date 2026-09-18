@@ -404,6 +404,16 @@ void main() {
     // probe, is what makes the two intervals meet: one end for all four would
     // leave a gap towards the probes ahead and count the band twice towards
     // the ones behind, and either shows as a ring of blotches at the boundary.
+    //
+    // It is the offset ALONG the ray, not the whole of it. The exact join -
+    // the bilinear fix - would walk from this probe to where each coarser
+    // ray actually begins, which is four walks in four slightly different
+    // directions instead of one walk read at four distances. What is left out
+    // is the component of the offset across the ray, and what it costs is
+    // measured rather than assumed: over an unoccluded point source the
+    // arriving light times its own distance stays within about a tenth either
+    // side of flat across every boundary of the chain, as a slow bow and not
+    // as a step at any one radius. Four walks is four times the tracing.
     for (int index = 0; index < 4; index++) {
         ivec2 corner = clamp(base + ivec2(index % 2, index / 2), ivec2(0), coarseProbes - 1);
         vec2 coarseOrigin = uniforms.uOrigin + (vec2(corner) + 0.5) * coarseSpacing;
