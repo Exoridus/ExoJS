@@ -1,5 +1,17 @@
 // Auto-generated from infinite-terrain.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  PixelSnapMode,
+  Scene,
+  Spritesheet,
+  TextureRegion,
+  View,
+} from '@codexo/exojs';
 import { ChunkStreamer, createSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // An infinite, procedurally generated world: the TileLayer has NO width/height
@@ -90,6 +102,9 @@ class InfiniteTerrainScene extends Scene {
     this.terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
     const map = new TileMap({ name: 'infinite-world', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.terrain] });
     this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
+    // The camera flies to fractional positions; without snapping every tile
+    // boundary samples between two device pixels and the seams shimmer.
+    this.mapView.pixelSnapMode = PixelSnapMode.Geometry;
     const characters = new Spritesheet(
       await this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)),
       await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data)),

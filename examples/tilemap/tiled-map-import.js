@@ -1,5 +1,5 @@
 // Auto-generated from tiled-map-import.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, PixelSnapMode, Scene } from '@codexo/exojs';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { ObjectKind } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
@@ -45,6 +45,9 @@ class TiledMapImportScene extends Scene {
     const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/harbor-plaza.tmj'));
     const runtimeMap = source.toTileMap();
     this.mapNode = new TileMapNode(runtimeMap);
+    // Without snapping, a tile boundary that lands between two device pixels
+    // samples across both and the seams shimmer whenever the view moves.
+    this.mapNode.pixelSnapMode = PixelSnapMode.Geometry;
     const zones = runtimeMap.getObjectLayer('Zones');
     if (!zones) {
       throw new Error('harbor-plaza.tmj is missing its "Zones" object layer');

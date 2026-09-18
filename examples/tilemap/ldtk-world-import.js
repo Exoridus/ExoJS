@@ -1,5 +1,5 @@
 // Auto-generated from ldtk-world-import.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, PixelSnapMode, Scene, Text } from '@codexo/exojs';
 import { getLdtkIntGridValueAt, ldtkExtension } from '@codexo/exojs-ldtk';
 import { TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -67,6 +67,9 @@ class LdtkWorldImportScene extends Scene {
       return;
     }
     const mapNode = new TileMapNode(level);
+    // Without snapping, a tile boundary that lands between two device pixels
+    // samples across both and the seams shimmer whenever the view moves.
+    mapNode.pixelSnapMode = PixelSnapMode.Geometry;
     this.content.addChild(mapNode);
     if (this.showIntGrid) {
       this.content.addChild(this.buildIntGridOverlay(level));

@@ -1,4 +1,15 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, View } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  PixelSnapMode,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  View,
+} from '@codexo/exojs';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { ChunkStreamer, TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
@@ -36,6 +47,9 @@ class TiledInfiniteMapScene extends Scene {
     const runtimeMap = source.toTileMap();
 
     this.mapNode = new TileMapNode(runtimeMap);
+    // Without snapping, a camera at a fractional position samples every tile
+    // boundary between two texels and the seams shimmer as it moves.
+    this.mapNode.pixelSnapMode = PixelSnapMode.Geometry;
 
     const ground = runtimeMap.getTileLayer('Ground');
     const props = runtimeMap.getTileLayer('Props');
