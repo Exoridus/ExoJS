@@ -12,6 +12,7 @@ import type { ColorTextureFormat } from '#rendering/types';
 
 import type { BackendRenderPass } from './BackendRenderPass';
 import type { Drawable } from './Drawable';
+import type { PixelReadback } from './PixelReadback';
 import type { RenderBackendType } from './RenderBackendType';
 import type { RendererRegistry } from './RendererRegistry';
 import type { RenderError } from './RenderError';
@@ -197,6 +198,16 @@ export interface RenderBackend {
    * @advanced
    */
   readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray>;
+
+  /**
+   * Open a standing, non-blocking readback over `width × height` pixels of
+   * `source` at `x`, `y` from its top-left corner, with `slots` staging
+   * buffers. The backend drains it at every frame start and invalidates it on
+   * device loss; the caller destroys it. `PixelReader` is the checked,
+   * caller-facing wrapper and the way application code should reach this.
+   * @advanced
+   */
+  createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback;
 
   /**
    * Borrow a temporary {@link RenderTexture} of exactly `width × height` from

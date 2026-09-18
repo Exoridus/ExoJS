@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 17,
+  "memberCount": 18,
   "counts": {
     "constructors": 1,
-    "methods": 12,
+    "methods": 13,
     "properties": 4,
     "events": 0
   },
@@ -199,6 +199,74 @@
           ],
           "returnType": "void",
           "description": "Clear the active render target to color. Routes through the pass coordinator so it respects the clear-vs-load policy and never leaks the clear onto another target. Falls back to a raw backend clear when no coordinator is present (test stubs). clear here is the graphics-API verb (as in gl.clear) - it overwrites the target's pixels. It is deliberately **not** the collection clear() used elsewhere in the engine, which empties a container; nothing is released or reset by this call."
+        },
+        {
+          "name": "createPixelReader",
+          "signature": "createPixelReader(source: RenderTexture, options: PixelReaderOptions): PixelReader",
+          "signatureTokens": [
+            {
+              "text": "createPixelReader",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PixelReaderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PixelReader",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "PixelReaderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PixelReader",
+          "description": "Open a standing readback over source for a caller that reads it repeatedly. Where readPixels answers once and, on WebGL2, waits for the GPU to do it, a PixelReader never blocks and never allocates per read: each request copies into one of the reader's own slots and is polled from the frame loop until the pixels land, a frame or more later. ts const probe = app.rendering.createPixelReader(app.frameTexture, { region: cursorRect });  The reader is yours: destroy it when the reads stop. Its slots cost slots * width * height * 4 bytes for as long as it lives, which is why a reader is created for a purpose rather than kept around just in case. Formats and regions are checked as for readPixels."
         },
         {
           "name": "drawBatch",

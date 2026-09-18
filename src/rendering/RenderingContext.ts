@@ -8,8 +8,9 @@ import { ImmediateMesh } from '#rendering/mesh/ImmediateMesh';
 import type { RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordinator';
 import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
+import { PixelReader, type PixelReaderOptions, resolvePixelRegion } from '#rendering/texture/PixelReader';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
-import { type ColorTextureFormat, TextureFormat } from '#rendering/types';
+import type { ColorTextureFormat } from '#rendering/types';
 
 import type { DrawContext, RenderToOptions } from './DrawContext';
 import { type RenderBackend } from './RenderBackend';
@@ -355,23 +356,30 @@ export class RenderingContext implements DrawContext {
    * payload this does not have.
    */
   public async readPixels(source: RenderTexture, options: ReadPixelsOptions = {}): Promise<PixelData> {
-    if (source.format !== TextureFormat.Rgba8) {
-      throw new Error(
-        `RenderingContext.readPixels reads 'rgba8' targets, and this one is '${source.format}'. A float target's values do not fit the byte payload this returns.`,
-      );
-    }
-
-    const region = options.region;
-    const x = region !== undefined ? Math.trunc(region.left) : 0;
-    const y = region !== undefined ? Math.trunc(region.top) : 0;
-    const width = region !== undefined ? Math.trunc(region.width) : source.width;
-    const height = region !== undefined ? Math.trunc(region.height) : source.height;
-
-    if (width <= 0 || height <= 0 || x < 0 || y < 0 || x + width > source.width || y + height > source.height) {
-      throw new Error(`RenderingContext.readPixels region ${width}x${height} at ${x},${y} does not lie inside the ${source.width}x${source.height} texture.`);
-    }
+    const { x, y, width, height } = resolvePixelRegion('RenderingContext.readPixels', source, options.region);
 
     return { width, height, data: await this._backend.readPixels(source, x, y, width, height) };
+  }
+
+  /**
+   * Open a standing readback over `source` for a caller that reads it
+   * repeatedly. Where {@link readPixels} answers once and, on WebGL2, waits
+   * for the GPU to do it, a {@link PixelReader} never blocks and never
+   * allocates per read: each request copies into one of the reader's own
+   * slots and is polled from the frame loop until the pixels land, a frame
+   * or more later.
+   *
+   * ```ts
+   * const probe = app.rendering.createPixelReader(app.frameTexture, { region: cursorRect });
+   * ```
+   *
+   * The reader is yours: destroy it when the reads stop. Its slots cost
+   * `slots * width * height * 4` bytes for as long as it lives, which is why
+   * a reader is created for a purpose rather than kept around just in case.
+   * Formats and regions are checked as for {@link readPixels}.
+   */
+  public createPixelReader(source: RenderTexture, options: PixelReaderOptions = {}): PixelReader {
+    return new PixelReader(this._backend, source, options);
   }
 
   /**
