@@ -2,9 +2,17 @@ import { type BlendModes, type SamplerOptions, Shader, SpriteMaterial, type Text
 
 import type { ForwardBackend } from './backends/ForwardBackend';
 import type { Lighting } from './Lighting';
-import { flatNormals, type NormalSource } from './normals/Normals';
+import { flatNormals, type NormalSource } from './normals/NormalSource';
 import glslFragment from './shaders/lit-sprite.frag';
 import wgslSource from './shaders/lit-sprite.wgsl';
+
+// Spelled out rather than inferred from the value: `LitMaterial` is public and
+// carries this as a type argument, and the declaration emit keeps no trace of a
+// module-local const - a `typeof` over one leaves the emitted `.d.ts` naming
+// something it does not declare.
+type LitUniforms = Readonly<{ emissive: UniformType.Float }>;
+
+const litUniforms: LitUniforms = { emissive: UniformType.Float };
 
 /**
  * The one shader pair behind every {@link LitMaterial}. Renderers key their
@@ -17,10 +25,6 @@ import wgslSource from './shaders/lit-sprite.wgsl';
  * pipeline and its uniform layout without sharing its meaning.
  * @internal
  */
-const litUniforms = { emissive: UniformType.Float } as const;
-
-type LitUniforms = typeof litUniforms;
-
 export const litSpriteShader = new Shader({ uniforms: litUniforms, glsl: { fragment: glslFragment }, wgsl: wgslSource });
 
 /** Construction options for {@link LitMaterial}. */
@@ -55,7 +59,7 @@ export interface LitMaterialOptions {
  *
  * ```ts
  * crate.material = new LitMaterial({ lighting });
- * hero.material = new LitMaterial({ lighting, normals: Normals.map(heroNormalMap) });
+ * hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormalMap) });
  * ```
  *
  * The shaded result is `albedo * (ambient + sum over lights)`, each light

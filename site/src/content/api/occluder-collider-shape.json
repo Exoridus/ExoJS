@@ -180,11 +180,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+        "label": "packages/exojs-lighting/src/occluders/PhysicsOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PhysicsOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/PhysicsOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PhysicsOccluder.ts"
 }

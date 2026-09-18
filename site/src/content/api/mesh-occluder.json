@@ -1,0 +1,198 @@
+{
+  "title": "MeshOccluder",
+  "description": "Shadows from a triangle mesh's own silhouette. ```ts lighting.occludeFrom(new MeshOccluder(platform)); ``` Only edges one triangle owns are kept: an edge two triangles share is interior and casts no shadow anybody can see, and a tessellated shape has far more of those than of the other kind. Holes come back as outlines of their own, so a ring shadows like a ring. The outline is extracted once. The mesh places it, so moving or rotating it moves its shadow; deforming its vertices afterwards does not, and wants a fresh occluder.",
+  "symbol": "MeshOccluder",
+  "kind": "class",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Shadows from a triangle mesh's own silhouette.",
+        "```ts lighting.occludeFrom(new MeshOccluder(platform)); ```",
+        "Only edges one triangle owns are kept: an edge two triangles share is interior and casts no shadow anybody can see, and a tessellated shape has far more of those than of the other kind. Holes come back as outlines of their own, so a ring shadows like a ring.",
+        "The outline is extracted once. The mesh places it, so moving or rotating it moves its shadow; deforming its vertices afterwards does not, and wants a fresh occluder."
+      ],
+      "importLine": "import { MeshOccluder } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(mesh: OccluderMesh, options: MeshOccluderOptions): MeshOccluder",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mesh",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderMesh",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshOccluderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshOccluder",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "mesh",
+              "type": "OccluderMesh",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "MeshOccluderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "MeshOccluder",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "collect",
+          "signature": "collect(bounds: ReadonlyRectangle, out: OccluderSink): void",
+          "signatureTokens": [
+            {
+              "text": "collect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bounds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderSink",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "bounds",
+              "type": "ReadonlyRectangle",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "OccluderSink",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Append the segments overlapping bounds to out. Called once per frame with the region the visible lights actually reach, so a source that can narrow its search by region should. Reporting more than bounds covers is allowed and only costs work; reporting less than it covers leaks light. bounds is valid for the duration of the call and is reused afterwards."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/MeshOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/MeshOccluder.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/MeshOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/MeshOccluder.ts"
+}

@@ -1,8 +1,8 @@
 import { Matrix, type ReadonlyRectangle, Rectangle, Texture } from '@codexo/exojs';
 import { describe, expect, test, vi } from 'vitest';
 
+import { AlphaOccluder } from '../src/occluders/AlphaOccluder';
 import { OccluderField } from '../src/occluders/OccluderField';
-import { Occluders } from '../src/occluders/Occluders';
 import type { OccluderSource } from '../src/occluders/OccluderSource';
 
 /**
@@ -63,7 +63,7 @@ describe('an animated alpha occluder', () => {
     probe.regions.length = 0;
 
     const drawable = animated(new Texture(null));
-    const source = Occluders.fromAlpha(drawable, { simplify: 0 });
+    const source = new AlphaOccluder(drawable, { simplify: 0 });
 
     // Construction traces frame 0.
     expect(probe.regions).toEqual(['0,0 8x8']);
@@ -96,7 +96,7 @@ describe('an animated alpha occluder', () => {
     probe.regions.length = 0;
 
     const drawable = animated(new Texture(null));
-    const source = Occluders.fromAlpha(drawable, { simplify: 0 });
+    const source = new AlphaOccluder(drawable, { simplify: 0 });
 
     expect(segmentCount(source)).toBe(0);
 
@@ -113,7 +113,7 @@ describe('an animated alpha occluder', () => {
     probe.regions.length = 0;
 
     const drawable = animated(new Texture(null));
-    const source = Occluders.fromAlpha(drawable, { simplify: 0 });
+    const source = new AlphaOccluder(drawable, { simplify: 0 });
 
     segmentCount(source);
     expect(probe.regions).toHaveLength(1);

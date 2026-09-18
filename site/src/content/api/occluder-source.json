@@ -1,6 +1,6 @@
 {
   "title": "OccluderSource",
-  "description": "Something that can say which edges block light in a region. Occluders are registered sources rather than a flag on a drawable. A flag would put lighting vocabulary on a class with no lighting concern, and it would tie the shadow silhouette to the sprite's shape - which is wrong often enough that a tree wants the shadow of its trunk, not of its alpha channel. Implement this to feed shadows from anything: a navmesh, a server message, a procedural generator. The stock sources in Occluders are ordinary implementations of the same interface, with no privilege over yours. ```ts lighting.occludeFrom({ collect(bounds, out) { out.addSegment(bounds.left, 0, bounds.right, 0); }, }); ```",
+  "description": "Something that can say which edges block light in a region. Occluders are registered sources rather than a flag on a drawable. A flag would put lighting vocabulary on a class with no lighting concern, and it would tie the shadow silhouette to the sprite's shape - which is wrong often enough that a tree wants the shadow of its trunk, not of its alpha channel. Implement this to feed shadows from anything: a navmesh, a server message, a procedural generator. The stock occluders - PhysicsOccluder, TilemapOccluder, AlphaOccluder, MeshOccluder and PolygonOccluder - are ordinary implementations of the same interface, with no privilege over yours. ```ts lighting.occludeFrom({ collect(bounds, out) { out.addSegment(bounds.left, 0, bounds.right, 0); }, }); ```",
   "symbol": "OccluderSource",
   "kind": "interface",
   "subsystem": "lighting",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Something that can say which edges block light in a region.",
         "Occluders are registered sources rather than a flag on a drawable. A flag would put lighting vocabulary on a class with no lighting concern, and it would tie the shadow silhouette to the sprite's shape - which is wrong often enough that a tree wants the shadow of its trunk, not of its alpha channel.",
-        "Implement this to feed shadows from anything: a navmesh, a server message, a procedural generator. The stock sources in Occluders are ordinary implementations of the same interface, with no privilege over yours.",
+        "Implement this to feed shadows from anything: a navmesh, a server message, a procedural generator. The stock occluders - PhysicsOccluder, TilemapOccluder, AlphaOccluder, MeshOccluder and PolygonOccluder - are ordinary implementations of the same interface, with no privilege over yours.",
         "```ts lighting.occludeFrom({ collect(bounds, out) { out.addSegment(bounds.left, 0, bounds.right, 0); }, }); ```"
       ],
       "importLine": "import { OccluderSource } from '@codexo/exojs-lighting'",

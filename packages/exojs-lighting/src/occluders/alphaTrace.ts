@@ -18,7 +18,7 @@ export interface AlphaOccluderDrawable extends OccluderPlacement {
   getLocalBounds(): ReadonlyRectangle;
 }
 
-/** Tuning for {@link Occluders.fromAlpha}. */
+/** Tuning for {@link AlphaOccluder}. */
 export interface AlphaOccluderOptions {
   /** Alpha at or above which a pixel blocks light, in `0..1`. Defaults to `0.5`. */
   readonly threshold?: number;
@@ -49,7 +49,7 @@ export interface AlphaPlacement {
 export const identityPlacement: AlphaPlacement = { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
 
 /**
- * The tracing half of {@link Occluders.fromAlpha}, over an alpha field that is
+ * The tracing half of {@link AlphaOccluder}, over an alpha field that is
  * already in hand.
  *
  * Separate from the pixel read because that half needs a browser canvas and

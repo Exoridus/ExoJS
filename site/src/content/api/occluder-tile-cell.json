@@ -1,6 +1,6 @@
 {
   "title": "OccluderTileCell",
-  "description": "One occupied cell of a tile layer, as Occluders.fromTilemap walks them.",
+  "description": "One occupied cell of a tile layer, as TilemapOccluder walks them.",
   "symbol": "OccluderTileCell",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One occupied cell of a tile layer, as Occluders.fromTilemap walks them."
+        "One occupied cell of a tile layer, as TilemapOccluder walks them."
       ],
       "importLine": "import { OccluderTileCell } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -103,11 +103,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromTilemap.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromTilemap.ts"
+        "label": "packages/exojs-lighting/src/occluders/TilemapOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/TilemapOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromTilemap.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromTilemap.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/TilemapOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/TilemapOccluder.ts"
 }

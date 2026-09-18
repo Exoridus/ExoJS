@@ -1,6 +1,6 @@
 {
   "title": "OccluderTileLayer",
-  "description": "What Occluders.fromTilemap needs of a tile layer: its cell metrics, a way to walk the cells of a region, and a revision that changes when the cells do. Structural on purpose, and generic over whatever a layer calls a tile, so `@codexo/exojs-tilemap`'s `TileLayer` satisfies it as it stands while this package depends on neither it nor physics. Anything else that can answer \"which cells are occupied around here\" works as well.",
+  "description": "What TilemapOccluder needs of a tile layer: its cell metrics, a way to walk the cells of a region, and a revision that changes when the cells do. Structural on purpose, and generic over whatever a layer calls a tile, so `@codexo/exojs-tilemap`'s `TileLayer` satisfies it as it stands while this package depends on neither it nor physics. Anything else that can answer \"which cells are occupied around here\" works as well.",
   "symbol": "OccluderTileLayer",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "What Occluders.fromTilemap needs of a tile layer: its cell metrics, a way to walk the cells of a region, and a revision that changes when the cells do.",
+        "What TilemapOccluder needs of a tile layer: its cell metrics, a way to walk the cells of a region, and a revision that changes when the cells do.",
         "Structural on purpose, and generic over whatever a layer calls a tile, so `@codexo/exojs-tilemap`'s `TileLayer` satisfies it as it stands while this package depends on neither it nor physics. Anything else that can answer \"which cells are occupied around here\" works as well."
       ],
       "importLine": "import { OccluderTileLayer } from '@codexo/exojs-lighting'",
@@ -289,11 +289,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromTilemap.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromTilemap.ts"
+        "label": "packages/exojs-lighting/src/occluders/TilemapOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/TilemapOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromTilemap.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromTilemap.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/TilemapOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/TilemapOccluder.ts"
 }

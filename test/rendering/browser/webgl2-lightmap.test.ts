@@ -8,8 +8,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import type { LightmapBackend } from '@codexo/exojs-lighting';
-import { Lighting, LineLight, normalMap, Occluders, PointLight, radiance, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, Lighting, LineLight, NormalMap, PointLight, PolygonOccluder, radiance, SpotLight, SunLight } from '@codexo/exojs-lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -25,6 +24,7 @@ import { TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
@@ -259,7 +259,7 @@ describe('WebGL2 lightmap renderer', () => {
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
     // A normal leaning along the drawable's own +x, which is the one encoding
     // that says something different once the drawable turns.
-    const normals = normalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
     const crate = new Sprite(Texture.fromColor(Color.white, 1));
 
     crate.width = 32;
@@ -308,7 +308,7 @@ describe('WebGL2 lightmap renderer', () => {
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
     // Leaning along +x, so the ground faces the light more on the light's own
     // left than on its right.
-    const normals = normalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
     const ground = new Sprite(Texture.fromColor(Color.white, 1));
 
     ground.width = canvasSize;
@@ -439,7 +439,7 @@ describe('WebGL2 lightmap renderer', () => {
       // A short wall: its shadow is a band of the wall's own width, not a
       // widening wedge, and it reaches the edge of the view.
       lighting.occludeFrom(
-        Occluders.fromPolygon(
+        new PolygonOccluder(
           [
             { x: 20, y: 24 },
             { x: 20, y: 40 },
@@ -507,7 +507,7 @@ describe('WebGL2 lightmap renderer', () => {
     lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(20, 24);
     // A wall with no thickness at all: two points, one segment.
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 44, y: 12 },
           { x: 44, y: 52 },
@@ -606,7 +606,7 @@ describe('WebGL2 lightmap renderer', () => {
     lighting.add(new PointLight({ radius: 40, intensity: 1, softness: 0 })).setPosition(32, 32);
     // A wall at x = 40, tall enough to cover the light's whole right side.
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 40, y: 4 },
           { x: 40, y: 60 },
@@ -630,8 +630,8 @@ describe('WebGL2 lightmap renderer', () => {
   });
 
   test('softness widens the shadow edge instead of adding a pass', async () => {
-    const wall = (): ReturnType<typeof Occluders.fromPolygon> =>
-      Occluders.fromPolygon(
+    const wall = (): PolygonOccluder =>
+      new PolygonOccluder(
         [
           { x: 38, y: 32 },
           { x: 38, y: 62 },
@@ -674,7 +674,7 @@ describe('WebGL2 lightmap renderer', () => {
 
     lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(32, 32);
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 40, y: 4 },
           { x: 40, y: 60 },
@@ -730,7 +730,7 @@ describe('WebGL2 lightmap renderer', () => {
     // The same wall the segment walk's own case uses, so the two pictures are
     // compared over a shape whose shadow is already on the record.
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 40, y: 4 },
           { x: 40, y: 60 },
@@ -794,7 +794,7 @@ describe('WebGL2 lightmap renderer', () => {
     wall.setPosition(40, 10);
 
     lighting.add(new PointLight({ radius: 40, intensity: 1, softness: 0 })).setPosition(32, 32);
-    lighting.occludeFrom(Occluders.fromAlpha(wall));
+    lighting.occludeFrom(new AlphaOccluder(wall));
     drawWhiteFrame(host);
 
     try {
@@ -835,7 +835,7 @@ describe('WebGL2 lightmap renderer', () => {
     // would still look plausible on a wall through the middle.
     lighting.add(new PointLight({ radius: 60, intensity: 1 })).setPosition(20, 24);
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 44, y: 4 },
           { x: 44, y: 60 },
@@ -902,7 +902,7 @@ describe('WebGL2 lightmap renderer', () => {
 
     lighting.add(new PointLight({ radius: 40, intensity: 0.6 })).setPosition(16, 32);
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 32, y: 4 },
           { x: 32, y: 60 },
@@ -960,7 +960,7 @@ describe('WebGL2 lightmap renderer', () => {
     // Green above the midpoint is "faces up" in the convention an authored map
     // carries. Up on screen is world -y, so this is the axis a renderer gets
     // wrong without anyone noticing: left and right stay right either way.
-    const normals = normalMap(Texture.fromColor(new Color(128, 218, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(128, 218, 218), 1));
     const ground = new Sprite(Texture.fromColor(Color.white, 1));
 
     ground.width = canvasSize;
@@ -1009,7 +1009,7 @@ describe('WebGL2 lightmap renderer', () => {
     test.each(cases)('a normal facing $faces is lit from $lit and black at $dark', async ({ encoded, lit, dark }) => {
       const host = await createHost();
       const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
-      const normals = normalMap(Texture.fromColor(encoded, 1));
+      const normals = new NormalMap(Texture.fromColor(encoded, 1));
       const ground = new Sprite(Texture.fromColor(Color.white, 1));
 
       ground.width = canvasSize;
@@ -1044,7 +1044,7 @@ describe('WebGL2 lightmap renderer', () => {
       ground.width = canvasSize;
       ground.height = canvasSize;
       lighting.add(new PointLight({ radius: 60, intensity: 1, height: 0 })).setPosition(32, 32);
-      lighting.normalsFrom(ground, normalMap(Texture.fromColor(new Color(128, 128, 255), 1)));
+      lighting.normalsFrom(ground, new NormalMap(Texture.fromColor(new Color(128, 128, 255), 1)));
       drawWhiteFrame(host);
 
       try {
@@ -1174,7 +1174,7 @@ describe('WebGL2 lightmap renderer', () => {
     // and the side behind it is in its shadow.
     lighting.add(new SunLight({ intensity: 1 }));
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 32, y: -20 },
           { x: 32, y: 84 },
@@ -1224,7 +1224,7 @@ describe('WebGL2 lightmap renderer', () => {
 
       lighting.add(new PointLight({ radius: 40, intensity: 2 })).setPosition(20, 32);
       lighting.occludeFrom(
-        Occluders.fromPolygon(
+        new PolygonOccluder(
           [
             { x: 42, y: 4 },
             { x: 42, y: 60 },

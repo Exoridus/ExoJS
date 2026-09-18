@@ -1,6 +1,6 @@
 {
   "title": "MeshOccluderOptions",
-  "description": "Tuning for Occluders.fromMesh.",
+  "description": "Tuning for MeshOccluder.",
   "symbol": "MeshOccluderOptions",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Tuning for Occluders.fromMesh."
+        "Tuning for MeshOccluder."
       ],
       "importLine": "import { MeshOccluderOptions } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -115,11 +115,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromMesh.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromMesh.ts"
+        "label": "packages/exojs-lighting/src/occluders/MeshOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/MeshOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromMesh.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromMesh.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/MeshOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/MeshOccluder.ts"
 }

@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { Lighting, LitMaterial, Normals, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControls } from '@examples/runtime';
 
 // Forward normal mapping on plain sprites. A LitMaterial samples a
@@ -94,7 +94,7 @@ class NormalMappedSpritesScene extends Scene {
     this.layer = new Container();
 
     this.lighting = new Lighting({ maxLights: LIGHT_COUNT, ambient: new Color(30, 30, 40) });
-    this.material = new LitMaterial({ lighting: this.lighting, normals: Normals.map(normalTexture) });
+    this.material = new LitMaterial({ lighting: this.lighting, normals: new NormalMap(normalTexture) });
 
     // Scene systems tick after Scene.update(), so the packed light texture
     // always describes the frame that is about to be drawn.

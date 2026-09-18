@@ -1,6 +1,6 @@
 {
   "title": "Lighting",
-  "description": "The lighting system: lights, materials and occluders in, a shaded frame out. ```ts const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(11, 16, 32) }); scene.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); lighting.occludeFrom(Occluders.fromPhysics(world)); ``` # What it owns The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Occluder sources and filters passed as `post` are the caller's too. # Ordering Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want.",
+  "description": "The lighting system: lights, materials and occluders in, a shaded frame out. ```ts const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(11, 16, 32) }); scene.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); lighting.occludeFrom(new PhysicsOccluder(world)); ``` # What it owns The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Occluder sources and filters passed as `post` are the caller's too. # Ordering Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want.",
   "symbol": "Lighting",
   "kind": "class",
   "subsystem": "lighting",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "The lighting system: lights, materials and occluders in, a shaded frame out.",
         "```ts const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(11, 16, 32) });",
-        "scene.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); lighting.occludeFrom(Occluders.fromPhysics(world)); ```",
+        "scene.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); lighting.occludeFrom(new PhysicsOccluder(world)); ```",
         "# What it owns",
         "The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Occluder sources and filters passed as `post` are the caller's too.",
         "# Ordering",
@@ -319,7 +319,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, normalMap(crateNormals));  Only a renderer that shades a light field of its own reads these - forward shades inside the sprite stage and takes its normals from LitMaterial instead. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
+          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, new NormalMap(crateNormals));  Only a renderer that shades a light field of its own reads these - forward shades inside the sprite stage and takes its normals from LitMaterial instead. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
         },
         {
           "name": "occludeFrom",
@@ -366,7 +366,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(Occluders.fromPhysics(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice collects it twice, so the second registration is ignored instead."
+          "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(new PhysicsOccluder(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice collects it twice, so the second registration is ignored instead."
         },
         {
           "name": "remove",

@@ -1,0 +1,129 @@
+{
+  "title": "NormalMap",
+  "description": "An authored tangent-space normal map. ```ts hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals) }); ``` Green above the midpoint means \"faces up\", which is what Blender, Substance, Krita and every sprite-lighting tool write and what the engine reads - the OpenGL convention. A map authored the other way up (the DirectX one) lights its vertical detail from the wrong side while its horizontal detail stays correct; invert the green channel of the texture to fix it.",
+  "symbol": "NormalMap",
+  "kind": "class",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An authored tangent-space normal map.",
+        "```ts hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals) }); ```",
+        "Green above the midpoint means \"faces up\", which is what Blender, Substance, Krita and every sprite-lighting tool write and what the engine reads - the OpenGL convention. A map authored the other way up (the DirectX one) lights its vertical detail from the wrong side while its horizontal detail stays correct; invert the green channel of the texture to fix it."
+      ],
+      "importLine": "import { NormalMap } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(texture: Texture): NormalMap",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalMap",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "texture",
+              "type": "Texture",
+              "optional": false
+            }
+          ],
+          "returnType": "NormalMap",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "texture",
+          "signature": "texture: Texture",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The tangent-space normal map to bind."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/normals/NormalMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/NormalMap.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/normals/NormalMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/NormalMap.ts"
+}

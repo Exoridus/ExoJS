@@ -1,6 +1,6 @@
 // Auto-generated from lightmap-normals.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { Lighting, normalsFromAlpha, PointLight } from '@codexo/exojs-lighting';
+import { AlphaNormals, Lighting, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // The lightmap renderer multiplies a frame that was already drawn, so by the
 // time the light field is composited there is no surface normal anywhere. A
@@ -13,7 +13,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // term at all. That is what the "Normals" toggle below shows: switching them
 // off cannot darken anything, it only flattens what asked for them.
 //
-// Nobody authored a normal map here either. `normalsFromAlpha` reads the
+// Nobody authored a normal map here either. `AlphaNormals` reads the
 // silhouette as a height field, once at load.
 const canvasTexture = (width, height, paint) => {
   const canvas = document.createElement('canvas');
@@ -67,7 +67,7 @@ class LightmapNormalsScene extends Scene {
     this.world.addChild(floor);
     // Derived once, shared by every cobble: the source holds the baked texture,
     // and deriving it per sprite would run the same Sobel pass sixty times.
-    this.normals = normalsFromAlpha(cobbleTexture);
+    this.normals = new AlphaNormals(cobbleTexture);
     for (let row = 0; row < 5; row++) {
       for (let column = 0; column < 9; column++) {
         const cobble = new Sprite(cobbleTexture).setAnchor(0.5);

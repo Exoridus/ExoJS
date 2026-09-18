@@ -37,15 +37,6 @@
  */
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
-import {
-  cascadeGatherShader,
-  cascadeShader,
-  probeVisibilityShader,
-  sdfResolveShader,
-  sdfSeedShader,
-  sdfStepShader,
-  shadowMarchShader,
-} from '@codexo/exojs-lighting';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
@@ -62,6 +53,10 @@ import { commonWgsl, geoPathEntries, shaderPathEntries } from '#rendering/webgpu
 import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
+
+import { sdfResolveShader, sdfSeedShader, sdfStepShader } from '../../../packages/exojs-lighting/src/backends/distanceField';
+import { cascadeGatherShader, cascadeShader, probeVisibilityShader } from '../../../packages/exojs-lighting/src/backends/radianceField';
+import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
 
 interface ShaderEntry {
   readonly name: string;

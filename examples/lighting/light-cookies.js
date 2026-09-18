@@ -1,6 +1,6 @@
 // Auto-generated from light-cookies.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture, WrapModes } from '@codexo/exojs';
-import { alphaOccluder, Lighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, Lighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Four light shapes, one scene, and the shape of the light doing the work that
 // a texture would otherwise have to do.
@@ -93,7 +93,7 @@ class LightCookiesScene extends Scene {
       // `{ node: pillar }` would be in the pillar's LOCAL space - eight texels
       // across, because a sized sprite carries its size as a scale - so points
       // written at the size it appears at come out scaled a second time.
-      this.lighting.occludeFrom(alphaOccluder(pillar));
+      this.lighting.occludeFrom(new AlphaOccluder(pillar));
     }
     // Directional: no position, no falloff, parallel shadows. It travels along
     // the node's rotation, so the time of day below is one number.

@@ -1,6 +1,6 @@
 // Auto-generated from shadow-casters.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { Lighting, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, Lighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Nothing here models a shadow. Each wall registers the outline it already
 // has - its own rectangle, or, for the pillar, the silhouette traced out of
@@ -75,13 +75,13 @@ class ShadowCastersScene extends Scene {
     walls.push(this.turntable);
     for (const piece of walls) {
       this.world.addChild(piece);
-      this.lighting.occludeFrom(Occluders.fromAlpha(piece));
+      this.lighting.occludeFrom(new AlphaOccluder(piece));
     }
     // The cross is the same one line, and the same nothing to author: what
     // differs is that its silhouette is a cross rather than its bounding box.
     const pillar = new Sprite(pillarTexture).setAnchor(0.5).setPosition(640, 380);
     this.world.addChild(pillar);
-    this.lighting.occludeFrom(Occluders.fromAlpha(pillar));
+    this.lighting.occludeFrom(new AlphaOccluder(pillar));
     this.torch = this.lighting.add(new PointLight({ radius: 520, intensity: 2.1, softness: 0.35, color: new Color(255, 196, 140) }));
     this.beam = this.lighting.add(
       new SpotLight({ radius: 760, angle: 28, coneSoftness: 0.35, intensity: 2.3, softness: 0.2, color: new Color(150, 210, 255) }),

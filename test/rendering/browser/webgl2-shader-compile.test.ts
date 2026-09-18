@@ -14,15 +14,6 @@
 // fails right here, on either form, whether or not any spec renders it.
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
-import {
-  cascadeGatherShader,
-  cascadeShader,
-  litSpriteShader,
-  probeVisibilityShader,
-  sdfResolveShader,
-  sdfStepShader,
-  shadowMarchShader,
-} from '@codexo/exojs-lighting';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
@@ -35,6 +26,10 @@ import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSou
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
 import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 
+import { sdfResolveShader, sdfStepShader } from '../../../packages/exojs-lighting/src/backends/distanceField';
+import { cascadeGatherShader, cascadeShader, probeVisibilityShader } from '../../../packages/exojs-lighting/src/backends/radianceField';
+import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
+import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 
 // Core shaders plus the extension packages' own - the particle stage ships

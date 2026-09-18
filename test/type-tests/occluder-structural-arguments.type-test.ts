@@ -9,7 +9,16 @@
 // adapt by hand, which is the thing the structural typing exists to avoid.
 
 import type { Mesh, Sprite, Video } from '@codexo/exojs';
-import { type AlphaOccluderDrawable, type OccluderMesh, type OccluderPhysicsWorld, Occluders, type OccluderTileLayer } from '@codexo/exojs-lighting';
+import {
+  AlphaOccluder,
+  type AlphaOccluderDrawable,
+  MeshOccluder,
+  type OccluderMesh,
+  type OccluderPhysicsWorld,
+  type OccluderTileLayer,
+  PhysicsOccluder,
+  TilemapOccluder,
+} from '@codexo/exojs-lighting';
 import type { PhysicsWorld } from '@codexo/exojs-physics';
 import type { ResolvedTile, TileLayer } from '@codexo/exojs-tilemap';
 
@@ -36,11 +45,11 @@ takesAlphaDrawable(video);
 takesMesh(mesh);
 
 // The factories themselves, as a caller writes them.
-Occluders.fromPhysics(world, { staticOnly: true });
-Occluders.fromTilemap(layer);
+new PhysicsOccluder(world, { staticOnly: true });
+new TilemapOccluder(layer);
 
 // `solid` infers the layer's own tile type, so a predicate can read a tile
 // definition without a cast.
-Occluders.fromTilemap(layer, { solid: tile => tile.tileset.getTileDefinition(tile.localTileId)?.collision !== undefined });
-Occluders.fromAlpha(sprite);
-Occluders.fromMesh(mesh);
+new TilemapOccluder(layer, { solid: tile => tile.tileset.getTileDefinition(tile.localTileId)?.collision !== undefined });
+new AlphaOccluder(sprite);
+new MeshOccluder(mesh);

@@ -1,6 +1,6 @@
 {
   "title": "AlphaOccluderOptions",
-  "description": "Tuning for Occluders.fromAlpha.",
+  "description": "Tuning for AlphaOccluder.",
   "symbol": "AlphaOccluderOptions",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Tuning for Occluders.fromAlpha."
+        "Tuning for AlphaOccluder."
       ],
       "importLine": "import { AlphaOccluderOptions } from '@codexo/exojs-lighting'",
       "sourceLink": null

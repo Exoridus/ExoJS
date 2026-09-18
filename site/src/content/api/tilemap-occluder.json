@@ -1,0 +1,234 @@
+{
+  "title": "TilemapOccluder",
+  "description": "Shadows from the occupied cells of a tile layer. ```ts lighting.occludeFrom(new TilemapOccluder(tilemap.layer('walls'))); ``` Only the boundary between occupied and empty cells is emitted, and runs of it are merged, so a corridor costs a handful of segments rather than one per tile. Outlines are cached per block of cells and rebuilt when the layer's revision changes, which is what lets a streamed map bring its shadows in with its chunks. Every tile in the layer blocks light unless `solid` says otherwise, which suits a layer dedicated to walls.",
+  "symbol": "TilemapOccluder",
+  "kind": "class",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Shadows from the occupied cells of a tile layer.",
+        "```ts lighting.occludeFrom(new TilemapOccluder(tilemap.layer('walls'))); ```",
+        "Only the boundary between occupied and empty cells is emitted, and runs of it are merged, so a corridor costs a handful of segments rather than one per tile. Outlines are cached per block of cells and rebuilt when the layer's revision changes, which is what lets a streamed map bring its shadows in with its chunks.",
+        "Every tile in the layer blocks light unless `solid` says otherwise, which suits a layer dedicated to walls."
+      ],
+      "importLine": "import { TilemapOccluder } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(layer: OccluderTileLayer<Tile>, options: TilemapOccluderOptions<Tile>): TilemapOccluder<Tile>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderTileLayer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tile",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TilemapOccluderOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tile",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TilemapOccluder",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tile",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "OccluderTileLayer<Tile>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TilemapOccluderOptions<Tile>",
+              "optional": false
+            }
+          ],
+          "returnType": "TilemapOccluder<Tile>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "collect",
+          "signature": "collect(bounds: ReadonlyRectangle, out: OccluderSink): void",
+          "signatureTokens": [
+            {
+              "text": "collect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bounds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderSink",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "bounds",
+              "type": "ReadonlyRectangle",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "OccluderSink",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Append the segments overlapping bounds to out. Called once per frame with the region the visible lights actually reach, so a source that can narrow its search by region should. Reporting more than bounds covers is allowed and only costs work; reporting less than it covers leaks light. bounds is valid for the duration of the call and is reused afterwards."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/TilemapOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/TilemapOccluder.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/TilemapOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/TilemapOccluder.ts"
+}

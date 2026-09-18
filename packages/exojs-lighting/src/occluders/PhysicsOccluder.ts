@@ -27,7 +27,7 @@ export interface OccluderColliderShape {
   readonly closed?: boolean;
 }
 
-/** What {@link Occluders.fromPhysics} reads off one collider. */
+/** What {@link PhysicsOccluder} reads off one collider. */
 export interface OccluderCollider {
   readonly shape: OccluderColliderShape;
   readonly worldTransform: OccluderColliderTransform;
@@ -36,7 +36,7 @@ export interface OccluderCollider {
 }
 
 /**
- * What {@link Occluders.fromPhysics} needs of a physics world: an AABB query
+ * What {@link PhysicsOccluder} needs of a physics world: an AABB query
  * over its live colliders.
  *
  * Structural on purpose. `@codexo/exojs-physics` satisfies it as it stands,
@@ -48,7 +48,7 @@ export interface OccluderPhysicsWorld {
   forEachAabbHit(bounds: AabbLike, filter: undefined, callback: (collider: OccluderCollider) => void): void;
 }
 
-/** Tuning for {@link Occluders.fromPhysics}. */
+/** Tuning for {@link PhysicsOccluder}. */
 export interface PhysicsOccluderOptions {
   /**
    * Restrict to colliders on static bodies. Level geometry is static, and a
@@ -64,49 +64,67 @@ export interface PhysicsOccluderOptions {
   readonly accept?: (collider: OccluderCollider) => boolean;
 }
 
-/** @internal - see {@link Occluders.fromPhysics}. */
-export const fromPhysics = (world: OccluderPhysicsWorld, options: PhysicsOccluderOptions = {}): OccluderSource => {
-  const staticOnly = options.staticOnly ?? true;
-  const sensors = options.sensors ?? false;
-  const circleSegments = Math.max(3, Math.round(options.circleSegments ?? 12));
-  const accept = options.accept;
-  const query: AabbLike = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
-
-  let scratch = new Float32Array(64);
-
-  const reserve = (floats: number): Float32Array => {
-    if (scratch.length < floats) {
-      scratch = new Float32Array(floats);
+/**
+ * Shadows from physics colliders.
+ *
+ * ```ts
+ * lighting.occludeFrom(new PhysicsOccluder(world));
+ * ```
+ *
+ * Static colliders only by default, and never sensors. The world is queried
+ * per frame for the region the lights reach, so a body that moves casts a
+ * shadow that moves with it, at the cost of rebuilding the field.
+ *
+ * Circles and capsules are approximated by their outline; polygons, segments
+ * and chains are exact.
+ */
+export class PhysicsOccluder implements OccluderSource {
+  private readonly _world: OccluderPhysicsWorld;
+  private readonly _staticOnly: boolean;
+  private readonly _sensors: boolean;
+  private readonly _circleSegments: number;
+  private readonly _accept: ((collider: OccluderCollider) => boolean) | undefined;
+  private readonly _query: AabbLike = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  private _scratch = new Float32Array(64);
+  private readonly _reserve = (floats: number): Float32Array => {
+    if (this._scratch.length < floats) {
+      this._scratch = new Float32Array(floats);
     }
 
-    return scratch;
+    return this._scratch;
   };
 
-  return {
-    collect(bounds: ReadonlyRectangle, out: OccluderSink): void {
-      query.minX = bounds.left;
-      query.minY = bounds.top;
-      query.maxX = bounds.right;
-      query.maxY = bounds.bottom;
+  public constructor(world: OccluderPhysicsWorld, options: PhysicsOccluderOptions = {}) {
+    this._world = world;
+    this._staticOnly = options.staticOnly ?? true;
+    this._sensors = options.sensors ?? false;
+    this._circleSegments = Math.max(3, Math.round(options.circleSegments ?? 12));
+    this._accept = options.accept;
+  }
 
-      world.forEachAabbHit(query, undefined, collider => {
-        if (staticOnly && collider.body.type !== 'static') {
-          return;
-        }
+  public collect(bounds: ReadonlyRectangle, out: OccluderSink): void {
+    this._query.minX = bounds.left;
+    this._query.minY = bounds.top;
+    this._query.maxX = bounds.right;
+    this._query.maxY = bounds.bottom;
 
-        if (!sensors && collider.isSensor) {
-          return;
-        }
+    this._world.forEachAabbHit(this._query, undefined, collider => {
+      if (this._staticOnly && collider.body.type !== 'static') {
+        return;
+      }
 
-        if (accept !== undefined && !accept(collider)) {
-          return;
-        }
+      if (!this._sensors && collider.isSensor) {
+        return;
+      }
 
-        emit(collider, circleSegments, reserve, out);
-      });
-    },
-  };
-};
+      if (this._accept !== undefined && !this._accept(collider)) {
+        return;
+      }
+
+      emit(collider, this._circleSegments, this._reserve, out);
+    });
+  }
+}
 
 const emit = (collider: OccluderCollider, circleSegments: number, reserve: (floats: number) => Float32Array, out: OccluderSink): void => {
   const shape = collider.shape;

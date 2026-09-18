@@ -1,6 +1,6 @@
 {
   "title": "PhysicsOccluderOptions",
-  "description": "Tuning for Occluders.fromPhysics.",
+  "description": "Tuning for PhysicsOccluder.",
   "symbol": "PhysicsOccluderOptions",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Tuning for Occluders.fromPhysics."
+        "Tuning for PhysicsOccluder."
       ],
       "importLine": "import { PhysicsOccluderOptions } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -160,11 +160,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+        "label": "packages/exojs-lighting/src/occluders/PhysicsOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PhysicsOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/PhysicsOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PhysicsOccluder.ts"
 }

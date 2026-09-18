@@ -7,7 +7,7 @@
  * Run via:  pnpm test:browser:webgl2
  */
 
-import { Lighting, LitMaterial, Normals, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -89,7 +89,7 @@ describe('lighting WebGL2 browser', () => {
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
     const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
-    const material = new LitMaterial({ lighting, normals: Normals.map(normalMap) });
+    const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
     const root = new Container();
     const upright = new Sprite(albedo);
     const mirrored = new Sprite(albedo);
@@ -188,7 +188,7 @@ describe('lighting WebGL2 browser', () => {
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
     const lighting = new Lighting({ maxLights: 4, ambient: new Color(64, 64, 64) });
-    const material = new LitMaterial({ lighting, normals: Normals.map(normalMap) });
+    const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
     const root = new Container();
     const sprite = new Sprite(albedo);
 

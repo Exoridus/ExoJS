@@ -7,7 +7,7 @@ import type { LightingRenderer } from './backends/radiance';
 import type { Light } from './lights/Light';
 import { lightRadius } from './lights/reach';
 import { SunLight } from './lights/SunLight';
-import type { NormalSource } from './normals/Normals';
+import type { NormalSource } from './normals/NormalSource';
 import type { NormalSurface, NormalSurfaceDrawable } from './normals/NormalSurface';
 import { OccluderField } from './occluders/OccluderField';
 import type { OccluderSource } from './occluders/OccluderSource';
@@ -222,7 +222,7 @@ export interface LightingOptions {
  *
  * scene.systems.add(lighting);
  * lighting.add(player.addChild(new PointLight({ radius: 260 })));
- * lighting.occludeFrom(Occluders.fromPhysics(world));
+ * lighting.occludeFrom(new PhysicsOccluder(world));
  * ```
  *
  * # What it owns
@@ -378,7 +378,7 @@ export class Lighting {
    * `forward` has no light field to darken, and skips collecting entirely.
    *
    * ```ts
-   * lighting.occludeFrom(Occluders.fromPhysics(world));
+   * lighting.occludeFrom(new PhysicsOccluder(world));
    * ```
    *
    * The source is asked, once per frame, for the edges in the region the
@@ -424,7 +424,7 @@ export class Lighting {
    * parented and registered in one expression.
    *
    * ```ts
-   * lighting.normalsFrom(crate, normalMap(crateNormals));
+   * lighting.normalsFrom(crate, new NormalMap(crateNormals));
    * ```
    *
    * Only a renderer that shades a light field of its own reads these -

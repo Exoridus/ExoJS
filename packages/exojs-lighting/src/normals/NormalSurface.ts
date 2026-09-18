@@ -1,6 +1,6 @@
 import type { Matrix, ReadonlyRectangle, RenderTexture, Texture } from '@codexo/exojs';
 
-import type { NormalSource } from './Normals';
+import type { NormalSource } from './NormalSource';
 
 /**
  * A drawable whose own texture, frame and layout box say where its normals

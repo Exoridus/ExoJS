@@ -2,12 +2,8 @@
 // Importing this entry performs no registration: a Lighting system is
 // constructed directly and added to the system registry that should tick it.
 
-export { sdfResolveShader, sdfSeedShader, sdfStepShader } from './backends/distanceField';
-export type { LightmapBackend, ShadowFillerOption } from './backends/LightmapBackend';
 export type { LightingRenderer, RadianceOptions } from './backends/radiance';
 export { radiance } from './backends/radiance';
-export { cascadeGatherShader, cascadeShader, probeVisibilityShader } from './backends/radianceField';
-export { shadowMarchShader } from './backends/shadowMarch';
 export type { LightingDebugView, LightingOptions, LightingQuality, LightingQualityOption } from './Lighting';
 export { Lighting } from './Lighting';
 export type { LightOptions } from './lights/Light';
@@ -21,21 +17,27 @@ export { SpotLight } from './lights/SpotLight';
 export type { SunLightOptions } from './lights/SunLight';
 export { SunLight } from './lights/SunLight';
 export type { LitMaterialOptions } from './LitMaterial';
-export { LitMaterial, litSpriteShader } from './LitMaterial';
+export { LitMaterial } from './LitMaterial';
+export { AlphaNormals } from './normals/AlphaNormals';
 export type { DeriveNormalsOptions } from './normals/deriveNormals';
-export type { NormalSource } from './normals/Normals';
-export { normalMap, Normals, normalsFromAlpha } from './normals/Normals';
+export { NormalMap } from './normals/NormalMap';
+export type { NormalSource } from './normals/NormalSource';
 export type { NormalSurface, NormalSurfaceDrawable } from './normals/NormalSurface';
+export { AlphaOccluder } from './occluders/AlphaOccluder';
 export type { AlphaOccluderDrawable, AlphaOccluderOptions } from './occluders/alphaTrace';
-export { fromAlpha as alphaOccluder } from './occluders/fromAlpha';
-export type { MeshOccluderOptions, OccluderMesh } from './occluders/fromMesh';
-export { fromMesh as meshOccluder } from './occluders/fromMesh';
-export type { OccluderCollider, OccluderColliderShape, OccluderColliderTransform, OccluderPhysicsWorld, PhysicsOccluderOptions } from './occluders/fromPhysics';
-export { fromPhysics as physicsOccluder } from './occluders/fromPhysics';
-export type { PolygonOccluderOptions } from './occluders/fromPolygon';
-export { fromPolygon as polygonOccluder } from './occluders/fromPolygon';
-export type { OccluderTileCell, OccluderTileLayer, TilemapOccluderOptions } from './occluders/fromTilemap';
-export { fromTilemap as tilemapOccluder } from './occluders/fromTilemap';
+export type { MeshOccluderOptions, OccluderMesh } from './occluders/MeshOccluder';
+export { MeshOccluder } from './occluders/MeshOccluder';
 export type { OccluderPlacement } from './occluders/OccluderPlacement';
-export { Occluders } from './occluders/Occluders';
 export type { OccluderDrawable, OccluderSink, OccluderSource } from './occluders/OccluderSource';
+export type {
+  OccluderCollider,
+  OccluderColliderShape,
+  OccluderColliderTransform,
+  OccluderPhysicsWorld,
+  PhysicsOccluderOptions,
+} from './occluders/PhysicsOccluder';
+export { PhysicsOccluder } from './occluders/PhysicsOccluder';
+export type { PolygonOccluderOptions } from './occluders/PolygonOccluder';
+export { PolygonOccluder } from './occluders/PolygonOccluder';
+export type { OccluderTileCell, OccluderTileLayer, TilemapOccluderOptions } from './occluders/TilemapOccluder';
+export { TilemapOccluder } from './occluders/TilemapOccluder';

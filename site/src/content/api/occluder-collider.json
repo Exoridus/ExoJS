@@ -1,6 +1,6 @@
 {
   "title": "OccluderCollider",
-  "description": "What Occluders.fromPhysics reads off one collider.",
+  "description": "What PhysicsOccluder reads off one collider.",
   "symbol": "OccluderCollider",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "What Occluders.fromPhysics reads off one collider."
+        "What PhysicsOccluder reads off one collider."
       ],
       "importLine": "import { OccluderCollider } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -140,11 +140,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+        "label": "packages/exojs-lighting/src/occluders/PhysicsOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PhysicsOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/PhysicsOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PhysicsOccluder.ts"
 }

@@ -12,7 +12,7 @@ import { tileBoundarySegments } from './tileBoundary';
  */
 const coordinateStride = 0x100000;
 
-/** One occupied cell of a tile layer, as {@link Occluders.fromTilemap} walks them. */
+/** One occupied cell of a tile layer, as {@link TilemapOccluder} walks them. */
 export interface OccluderTileCell<Tile> {
   readonly tx: number;
   readonly ty: number;
@@ -20,7 +20,7 @@ export interface OccluderTileCell<Tile> {
 }
 
 /**
- * What {@link Occluders.fromTilemap} needs of a tile layer: its cell metrics,
+ * What {@link TilemapOccluder} needs of a tile layer: its cell metrics,
  * a way to walk the cells of a region, and a revision that changes when the
  * cells do.
  *
@@ -39,7 +39,7 @@ export interface OccluderTileLayer<Tile> {
   tilesInRect(x: number, y: number, width: number, height: number): Iterable<OccluderTileCell<Tile>>;
 }
 
-/** Tuning for {@link Occluders.fromTilemap}. */
+/** Tuning for {@link TilemapOccluder}. */
 export interface TilemapOccluderOptions<Tile> {
   /**
    * Whether an occupied cell blocks light. Defaults to "every tile in this
@@ -73,122 +73,145 @@ const emptySegments = new Float32Array(0);
  */
 const maxBlocks = 256;
 
-/** @internal - see {@link Occluders.fromTilemap}. */
-export const fromTilemap = <Tile>(layer: OccluderTileLayer<Tile>, options: TilemapOccluderOptions<Tile> = {}): OccluderSource => {
-  const isSolid = options.solid;
-  const node = options.node ?? null;
-  const blockSize = Math.max(1, Math.round(options.blockSize ?? 16));
-  const blocks = new Map<number, Block>();
-  const occupied = new Set<number>();
-  const placement = placementMap();
+/**
+ * Shadows from the occupied cells of a tile layer.
+ *
+ * ```ts
+ * lighting.occludeFrom(new TilemapOccluder(tilemap.layer('walls')));
+ * ```
+ *
+ * Only the boundary between occupied and empty cells is emitted, and runs of
+ * it are merged, so a corridor costs a handful of segments rather than one per
+ * tile. Outlines are cached per block of cells and rebuilt when the layer's
+ * revision changes, which is what lets a streamed map bring its shadows in
+ * with its chunks.
+ *
+ * Every tile in the layer blocks light unless `solid` says otherwise, which
+ * suits a layer dedicated to walls.
+ */
+export class TilemapOccluder<Tile> implements OccluderSource {
+  private readonly _layer: OccluderTileLayer<Tile>;
+  private readonly _isSolid: ((tile: Tile, tx: number, ty: number) => boolean) | undefined;
+  private readonly _node: OccluderPlacement | null;
+  private readonly _blockSize: number;
+  private readonly _blocks = new Map<number, Block>();
+  private readonly _occupied = new Set<number>();
+  private readonly _placement = placementMap();
+  private _frame = 0;
+
+  public constructor(layer: OccluderTileLayer<Tile>, options: TilemapOccluderOptions<Tile> = {}) {
+    this._layer = layer;
+    this._isSolid = options.solid;
+    this._node = options.node ?? null;
+    this._blockSize = Math.max(1, Math.round(options.blockSize ?? 16));
+  }
+
+  public collect(bounds: ReadonlyRectangle, out: OccluderSink): void {
+    this._frame++;
+
+    const layer = this._layer;
+    const map = readPlacement(this._node, this._placement);
+    const local = toLayerSpace(bounds, map);
+
+    if (local === null) {
+      return;
+    }
+
+    const spanX = this._blockSize * layer.tileWidth;
+    const spanY = this._blockSize * layer.tileHeight;
+    const firstX = Math.floor((local.minX - layer.offsetX) / spanX);
+    const lastX = Math.floor((local.maxX - layer.offsetX) / spanX);
+    const firstY = Math.floor((local.minY - layer.offsetY) / spanY);
+    const lastY = Math.floor((local.maxY - layer.offsetY) / spanY);
+
+    for (let blockY = firstY; blockY <= lastY; blockY++) {
+      for (let blockX = firstX; blockX <= lastX; blockX++) {
+        const segments = this._blockAt(blockX, blockY);
+
+        for (let index = 0; index < segments.length; index += 4) {
+          const x1 = segments[index]!;
+          const y1 = segments[index + 1]!;
+          const x2 = segments[index + 2]!;
+          const y2 = segments[index + 3]!;
+
+          out.addSegment(map.a * x1 + map.b * y1 + map.x, map.c * x1 + map.d * y1 + map.y, map.a * x2 + map.b * y2 + map.x, map.c * x2 + map.d * y2 + map.y);
+        }
+      }
+    }
+
+    this._evict();
+  }
 
   /**
    * Cell occupancy for one block plus a one-cell skirt: without the skirt a
    * cell on the block's edge cannot tell an empty neighbour from an unwalked
    * one, and every block boundary would grow a wall.
    */
-  const build = (blockX: number, blockY: number): Float32Array => {
-    const minTx = blockX * blockSize;
-    const minTy = blockY * blockSize;
+  private _build(blockX: number, blockY: number): Float32Array {
+    const layer = this._layer;
+    const isSolid = this._isSolid;
+    const minTx = blockX * this._blockSize;
+    const minTy = blockY * this._blockSize;
 
-    occupied.clear();
+    this._occupied.clear();
 
-    for (const cell of layer.tilesInRect(minTx - 1, minTy - 1, blockSize + 2, blockSize + 2)) {
+    for (const cell of layer.tilesInRect(minTx - 1, minTy - 1, this._blockSize + 2, this._blockSize + 2)) {
       if (isSolid === undefined || isSolid(cell.tile, cell.tx, cell.ty)) {
-        occupied.add(cell.ty * coordinateStride + cell.tx);
+        this._occupied.add(cell.ty * coordinateStride + cell.tx);
       }
     }
 
-    if (occupied.size === 0) {
+    if (this._occupied.size === 0) {
       return emptySegments;
     }
 
     return tileBoundarySegments(
-      (tx, ty) => occupied.has(ty * coordinateStride + tx),
+      (tx, ty) => this._occupied.has(ty * coordinateStride + tx),
       minTx,
       minTy,
-      minTx + blockSize - 1,
-      minTy + blockSize - 1,
+      minTx + this._blockSize - 1,
+      minTy + this._blockSize - 1,
       layer.tileWidth,
       layer.tileHeight,
       layer.offsetX,
       layer.offsetY,
     );
-  };
+  }
 
-  let frame = 0;
-
-  const blockAt = (blockX: number, blockY: number): Float32Array => {
+  private _blockAt(blockX: number, blockY: number): Float32Array {
     const key = blockY * coordinateStride + blockX;
-    const cached = blocks.get(key);
+    const cached = this._blocks.get(key);
 
     if (cached === undefined) {
-      const created: Block = { revision: layer.revision, lastUse: frame, segments: build(blockX, blockY) };
+      const created: Block = { revision: this._layer.revision, lastUse: this._frame, segments: this._build(blockX, blockY) };
 
-      blocks.set(key, created);
+      this._blocks.set(key, created);
 
       return created.segments;
     }
 
-    cached.lastUse = frame;
+    cached.lastUse = this._frame;
 
-    if (cached.revision !== layer.revision) {
-      cached.revision = layer.revision;
-      cached.segments = build(blockX, blockY);
+    if (cached.revision !== this._layer.revision) {
+      cached.revision = this._layer.revision;
+      cached.segments = this._build(blockX, blockY);
     }
 
     return cached.segments;
-  };
+  }
 
-  const evict = (): void => {
-    if (blocks.size <= maxBlocks) {
+  private _evict(): void {
+    if (this._blocks.size <= maxBlocks) {
       return;
     }
 
-    for (const [key, block] of blocks) {
-      if (block.lastUse !== frame) {
-        blocks.delete(key);
+    for (const [key, block] of this._blocks) {
+      if (block.lastUse !== this._frame) {
+        this._blocks.delete(key);
       }
     }
-  };
-
-  return {
-    collect(bounds: ReadonlyRectangle, out: OccluderSink): void {
-      frame++;
-
-      const map = readPlacement(node, placement);
-      const local = toLayerSpace(bounds, map);
-
-      if (local === null) {
-        return;
-      }
-
-      const spanX = blockSize * layer.tileWidth;
-      const spanY = blockSize * layer.tileHeight;
-      const firstX = Math.floor((local.minX - layer.offsetX) / spanX);
-      const lastX = Math.floor((local.maxX - layer.offsetX) / spanX);
-      const firstY = Math.floor((local.minY - layer.offsetY) / spanY);
-      const lastY = Math.floor((local.maxY - layer.offsetY) / spanY);
-
-      for (let blockY = firstY; blockY <= lastY; blockY++) {
-        for (let blockX = firstX; blockX <= lastX; blockX++) {
-          const segments = blockAt(blockX, blockY);
-
-          for (let index = 0; index < segments.length; index += 4) {
-            const x1 = segments[index]!;
-            const y1 = segments[index + 1]!;
-            const x2 = segments[index + 2]!;
-            const y2 = segments[index + 3]!;
-
-            out.addSegment(map.a * x1 + map.b * y1 + map.x, map.c * x1 + map.d * y1 + map.y, map.a * x2 + map.b * y2 + map.x, map.c * x2 + map.d * y2 + map.y);
-          }
-        }
-      }
-
-      evict();
-    },
-  };
-};
+  }
+}
 
 const scratchBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
 

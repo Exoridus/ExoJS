@@ -1,6 +1,6 @@
 {
   "title": "LitMaterial",
-  "description": "Makes a sprite respond to the lights of a Lighting system. ```ts crate.material = new LitMaterial({ lighting }); hero.material = new LitMaterial({ lighting, normals: Normals.map(heroNormalMap) }); ``` The shaded result is `albedo * (ambient + sum over lights)`, each light falling off quadratically to nothing at its radius and, for a cone light, fading across its edge. # One normal source per material Normals are a material binding, not a per-sprite one, so every sprite drawn with a given material shares them - in practice one material per atlas. Sprites from a second atlas need a second material, which breaks the batch at the material boundary. Both shade against the same system. # Ownership The material owns neither the lighting system nor the textures. `destroy()` releases only the GPU resources cached against this material.",
+  "description": "Makes a sprite respond to the lights of a Lighting system. ```ts crate.material = new LitMaterial({ lighting }); hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormalMap) }); ``` The shaded result is `albedo * (ambient + sum over lights)`, each light falling off quadratically to nothing at its radius and, for a cone light, fading across its edge. # One normal source per material Normals are a material binding, not a per-sprite one, so every sprite drawn with a given material shares them - in practice one material per atlas. Sprites from a second atlas need a second material, which breaks the batch at the material boundary. Both shade against the same system. # Ownership The material owns neither the lighting system nor the textures. `destroy()` releases only the GPU resources cached against this material.",
   "symbol": "LitMaterial",
   "kind": "class",
   "subsystem": "lighting",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Makes a sprite respond to the lights of a Lighting system.",
-        "```ts crate.material = new LitMaterial({ lighting }); hero.material = new LitMaterial({ lighting, normals: Normals.map(heroNormalMap) }); ```",
+        "```ts crate.material = new LitMaterial({ lighting }); hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormalMap) }); ```",
         "The shaded result is `albedo * (ambient + sum over lights)`, each light falling off quadratically to nothing at its radius and, for a cone light, fading across its edge.",
         "# One normal source per material",
         "Normals are a material binding, not a per-sprite one, so every sprite drawn with a given material shares them - in practice one material per atlas. Sprites from a second atlas need a second material, which breaks the batch at the material boundary. Both shade against the same system.",
@@ -753,7 +753,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: Shader<{ emissive: Float }, undefined>",
+          "signature": "shader: Shader<Readonly<{ emissive: Float }>, undefined>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -765,6 +765,14 @@
             },
             {
               "text": "Shader",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
               "kind": "type"
             },
             {
@@ -789,6 +797,10 @@
             },
             {
               "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             },
             {

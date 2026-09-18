@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { Lighting, Occluders, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, Lighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Nothing here models a shadow. Each wall registers the outline it already
@@ -101,7 +101,7 @@ class ShadowCastersScene extends Scene {
 
     for (const piece of walls) {
       this.world.addChild(piece);
-      this.lighting.occludeFrom(Occluders.fromAlpha(piece));
+      this.lighting.occludeFrom(new AlphaOccluder(piece));
     }
 
     // The cross is the same one line, and the same nothing to author: what
@@ -109,7 +109,7 @@ class ShadowCastersScene extends Scene {
     const pillar = new Sprite(pillarTexture).setAnchor(0.5).setPosition(640, 380);
 
     this.world.addChild(pillar);
-    this.lighting.occludeFrom(Occluders.fromAlpha(pillar));
+    this.lighting.occludeFrom(new AlphaOccluder(pillar));
 
     this.torch = this.lighting.add(new PointLight({ radius: 520, intensity: 2.1, softness: 0.35, color: new Color(255, 196, 140) }));
     this.beam = this.lighting.add(

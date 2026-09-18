@@ -62,11 +62,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/normals/Normals.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/Normals.ts"
+        "label": "packages/exojs-lighting/src/normals/NormalSource.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/NormalSource.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/normals/Normals.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/Normals.ts"
+  "sourcePath": "packages/exojs-lighting/src/normals/NormalSource.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/NormalSource.ts"
 }

@@ -6,8 +6,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import type { LightmapBackend } from '@codexo/exojs-lighting';
-import { Lighting, LineLight, normalMap, Occluders, PointLight, radiance, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, Lighting, LineLight, NormalMap, PointLight, PolygonOccluder, radiance, SpotLight, SunLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -23,6 +22,7 @@ import { TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
 import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -195,7 +195,7 @@ describe('lightmap renderer WebGPU browser', () => {
     // A wall running down from the light's own row, so its shadow edge lies
     // along y = 32 and a pixel just above it is the penumbra's first victim.
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 38, y: 32 },
           { x: 38, y: 62 },
@@ -248,7 +248,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
     lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(32, 32);
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 40, y: 4 },
           { x: 40, y: 60 },
@@ -309,7 +309,7 @@ describe('lightmap renderer WebGPU browser', () => {
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
     // A normal leaning along the drawable's own +x, which is the one encoding
     // that says something different once the drawable turns.
-    const normals = normalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
     const crate = new Sprite(Texture.fromColor(Color.white, 1));
 
     crate.width = 32;
@@ -367,7 +367,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
     lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(20, 24);
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 44, y: 12 },
           { x: 44, y: 52 },
@@ -408,7 +408,7 @@ describe('lightmap renderer WebGPU browser', () => {
     // right of whatever blocks it.
     lighting.add(new SunLight({ intensity: 1, softness: 0 }));
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 20, y: 24 },
           { x: 20, y: 40 },
@@ -521,7 +521,7 @@ describe('lightmap renderer WebGPU browser', () => {
     const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
     // Leaning along +x, so the ground faces the light more on the light's own
     // left than on its right.
-    const normals = normalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
     const ground = new Sprite(Texture.fromColor(Color.white, 1));
 
     ground.width = canvasSize;
@@ -621,7 +621,7 @@ describe('lightmap renderer WebGPU browser', () => {
     // The same wall the segment walk's own case uses, so the two pictures are
     // compared over a shape whose shadow is already on the record.
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 40, y: 4 },
           { x: 40, y: 60 },
@@ -695,7 +695,7 @@ describe('lightmap renderer WebGPU browser', () => {
     wall.setPosition(40, 10);
 
     lighting.add(new PointLight({ radius: 40, intensity: 1, softness: 0 })).setPosition(32, 32);
-    lighting.occludeFrom(Occluders.fromAlpha(wall));
+    lighting.occludeFrom(new AlphaOccluder(wall));
     drawWhiteFrame(host);
 
     try {
@@ -750,7 +750,7 @@ describe('lightmap renderer WebGPU browser', () => {
     // would still look plausible on a wall through the middle.
     lighting.add(new PointLight({ radius: 60, intensity: 1 })).setPosition(20, 24);
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 44, y: 4 },
           { x: 44, y: 60 },
@@ -791,7 +791,7 @@ describe('lightmap renderer WebGPU browser', () => {
     // look plausible around a light in the middle.
     lighting.add(new PointLight({ radius: 40, intensity: 0.6 })).setPosition(16, 32);
     lighting.occludeFrom(
-      Occluders.fromPolygon(
+      new PolygonOccluder(
         [
           { x: 32, y: 4 },
           { x: 32, y: 60 },

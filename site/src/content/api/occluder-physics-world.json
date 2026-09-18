@@ -1,6 +1,6 @@
 {
   "title": "OccluderPhysicsWorld",
-  "description": "What Occluders.fromPhysics needs of a physics world: an AABB query over its live colliders. Structural on purpose. `@codexo/exojs-physics` satisfies it as it stands, and this package does not depend on it, so a project without physics pulls none of it in and a project with a collision layer of its own can still feed shadows from it.",
+  "description": "What PhysicsOccluder needs of a physics world: an AABB query over its live colliders. Structural on purpose. `@codexo/exojs-physics` satisfies it as it stands, and this package does not depend on it, so a project without physics pulls none of it in and a project with a collision layer of its own can still feed shadows from it.",
   "symbol": "OccluderPhysicsWorld",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "What Occluders.fromPhysics needs of a physics world: an AABB query over its live colliders.",
+        "What PhysicsOccluder needs of a physics world: an AABB query over its live colliders.",
         "Structural on purpose. `@codexo/exojs-physics` satisfies it as it stands, and this package does not depend on it, so a project without physics pulls none of it in and a project with a collision layer of its own can still feed shadows from it."
       ],
       "importLine": "import { OccluderPhysicsWorld } from '@codexo/exojs-lighting'",
@@ -150,11 +150,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+        "label": "packages/exojs-lighting/src/occluders/PhysicsOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PhysicsOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromPhysics.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPhysics.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/PhysicsOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PhysicsOccluder.ts"
 }

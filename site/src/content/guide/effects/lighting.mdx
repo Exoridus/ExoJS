@@ -175,7 +175,7 @@ Under `forward`, they are a **material** binding:
 
 ```ts
 import type { Sprite, Texture } from '@codexo/exojs';
-import { Lighting, LitMaterial, normalMap, normalsFromAlpha } from '@codexo/exojs-lighting';
+import { AlphaNormals, Lighting, LitMaterial, NormalMap } from '@codexo/exojs-lighting';
 
 declare const lighting: Lighting;
 declare const crate: Sprite;
@@ -187,10 +187,10 @@ declare const crateTexture: Texture;
 crate.material = new LitMaterial({ lighting });
 
 // An authored tangent-space map.
-hero.material = new LitMaterial({ lighting, normals: normalMap(heroNormals) });
+hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals) });
 
 // Derived from the texture's own alpha, once at load.
-crate.material = new LitMaterial({ lighting, normals: normalsFromAlpha(crateTexture) });
+crate.material = new LitMaterial({ lighting, normals: new AlphaNormals(crateTexture) });
 ```
 
 Every sprite drawn with a given material shares its map — in practice one material per atlas — and the map must have the same layout as the albedo atlas, frame for frame. Rotation and mirroring are handled in the shader.
@@ -199,13 +199,13 @@ Under `lightmap` there is no per-fragment surface to bind to: the renderer multi
 
 ```ts
 import type { Sprite, Texture } from '@codexo/exojs';
-import { Lighting, normalMap } from '@codexo/exojs-lighting';
+import { Lighting, NormalMap } from '@codexo/exojs-lighting';
 
 declare const lighting: Lighting;
 declare const crate: Sprite;
 declare const crateNormals: Texture;
 
-lighting.normalsFrom(crate, normalMap(crateNormals));
+lighting.normalsFrom(crate, new NormalMap(crateNormals));
 ```
 
 <Callout type="note" title="Registering nothing costs nothing">
@@ -222,7 +222,7 @@ Instead, what blocks light is a **source**, and the useful sources read descript
 
 ```ts
 import type { Sprite } from '@codexo/exojs';
-import { alphaOccluder, Lighting, physicsOccluder, polygonOccluder, tilemapOccluder } from '@codexo/exojs-lighting';
+import { AlphaOccluder, Lighting, PhysicsOccluder, PolygonOccluder, TilemapOccluder } from '@codexo/exojs-lighting';
 import type { OccluderPhysicsWorld, OccluderTileLayer } from '@codexo/exojs-lighting';
 
 declare const lighting: Lighting;
@@ -231,18 +231,18 @@ declare const walls: OccluderTileLayer<unknown>;
 declare const tree: Sprite;
 
 // You already have colliders, so you already have shadows.
-lighting.occludeFrom(physicsOccluder(world, { staticOnly: true }));
+lighting.occludeFrom(new PhysicsOccluder(world, { staticOnly: true }));
 
 // Follows the chunk streamer, so an infinite map streams its shadows.
-lighting.occludeFrom(tilemapOccluder(walls));
+lighting.occludeFrom(new TilemapOccluder(walls));
 
 // A sprite's own silhouette, traced once at load.
-lighting.occludeFrom(alphaOccluder(tree));
+lighting.occludeFrom(new AlphaOccluder(tree));
 
 // The escape hatch, and the right answer whenever the shadow outline is not
 // the drawn one.
 lighting.occludeFrom(
-    polygonOccluder([
+    new PolygonOccluder([
         { x: 0, y: 0 },
         { x: 64, y: 0 },
         { x: 64, y: 96 },
@@ -250,12 +250,12 @@ lighting.occludeFrom(
 );
 ```
 
-`physicsOccluder` and `tilemapOccluder` take structurally typed arguments, so this package depends on neither the physics nor the tilemap package: a project without them pulls in nothing, and a project with a collision layer of its own can feed shadows from that instead.
+`PhysicsOccluder` and `TilemapOccluder` take structurally typed arguments, so this package depends on neither the physics nor the tilemap package: a project without them pulls in nothing, and a project with a collision layer of its own can feed shadows from that instead.
 
 `softness` is a property of the light, in `0..1`. `0` is a point source with a hard edge; higher values widen the penumbra the way a larger lamp would. It widens the shadow sample kernel rather than adding a pass, so it costs nothing per light and can differ between them.
 
 <Callout type="pitfall" title="A render target cannot be traced">
-  `alphaOccluder` reads pixels, and a `RenderTexture` has none this side of the GPU. It returns an empty source rather than a wrong outline, and a development build says which of three cases it was. If you need both a live surface and its outline, draw into an `HTMLCanvasElement` and wrap that in a `Texture`.
+  `AlphaOccluder` reads pixels, and a `RenderTexture` has none this side of the GPU. It returns an empty source rather than a wrong outline, and a development build says which of three cases it was. If you need both a live surface and its outline, draw into an `HTMLCanvasElement` and wrap that in a `Texture`.
 </Callout>
 
 ### How a shadow is computed

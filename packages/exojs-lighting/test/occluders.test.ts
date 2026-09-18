@@ -1,12 +1,14 @@
 import { type AabbLike, Container, logger, Matrix, Rectangle, RenderTexture, Sprite, Texture } from '@codexo/exojs';
 import { describe, expect, test, vi } from 'vitest';
 
-import { type OccluderCollider, type OccluderPhysicsWorld } from '../src/occluders/fromPhysics';
-import type { OccluderTileCell, OccluderTileLayer } from '../src/occluders/fromTilemap';
+import { AlphaOccluder } from '../src/occluders/AlphaOccluder';
+import { MeshOccluder } from '../src/occluders/MeshOccluder';
 import { OccluderField } from '../src/occluders/OccluderField';
-import { Occluders } from '../src/occluders/Occluders';
 import type { OccluderSource } from '../src/occluders/OccluderSource';
+import { type OccluderCollider, type OccluderPhysicsWorld, PhysicsOccluder } from '../src/occluders/PhysicsOccluder';
+import { PolygonOccluder } from '../src/occluders/PolygonOccluder';
 import { tileBoundarySegments } from '../src/occluders/tileBoundary';
+import { type OccluderTileCell, type OccluderTileLayer, TilemapOccluder } from '../src/occluders/TilemapOccluder';
 
 const everywhere = new Rectangle(-1000, -1000, 2000, 2000);
 
@@ -100,9 +102,9 @@ describe('OccluderField', () => {
   });
 });
 
-describe('Occluders.fromPolygon', () => {
+describe('PolygonOccluder', () => {
   test('a closed outline joins its last point back to its first', () => {
-    const source = Occluders.fromPolygon([
+    const source = new PolygonOccluder([
       { x: 0, y: 0 },
       { x: 10, y: 0 },
       { x: 10, y: 10 },
@@ -113,7 +115,7 @@ describe('Occluders.fromPolygon', () => {
 
   test('the node transform places the outline, so a moved carrier moves its shadow', () => {
     const carrier = new Container().setPosition(100, 50);
-    const source = Occluders.fromPolygon(
+    const source = new PolygonOccluder(
       [
         { x: 0, y: 0 },
         { x: 10, y: 0 },
@@ -129,7 +131,7 @@ describe('Occluders.fromPolygon', () => {
   });
 
   test('an outline entirely outside the region is skipped', () => {
-    const source = Occluders.fromPolygon([
+    const source = new PolygonOccluder([
       { x: 900, y: 900 },
       { x: 910, y: 900 },
     ]);
@@ -138,7 +140,7 @@ describe('Occluders.fromPolygon', () => {
   });
 
   test('fewer than two points describes nothing', () => {
-    expect(collect(Occluders.fromPolygon([{ x: 1, y: 2 }]))).toEqual([]);
+    expect(collect(new PolygonOccluder([{ x: 1, y: 2 }]))).toEqual([]);
   });
 });
 
@@ -174,7 +176,7 @@ describe('tileBoundarySegments', () => {
   });
 });
 
-describe('Occluders.fromTilemap', () => {
+describe('TilemapOccluder', () => {
   class FakeLayer implements OccluderTileLayer<number> {
     public readonly tileWidth = 16;
     public readonly tileHeight = 16;
@@ -198,14 +200,14 @@ describe('Occluders.fromTilemap', () => {
   }
 
   test('an occupied cell outlines as its four edges', () => {
-    const source = Occluders.fromTilemap(new FakeLayer(), { blockSize: 4 });
+    const source = new TilemapOccluder(new FakeLayer(), { blockSize: 4 });
 
     expect(collect(source, new Rectangle(0, 0, 64, 64))).toHaveLength(4);
   });
 
   test('a second collect over the same block reuses the cached outline', () => {
     const layer = new FakeLayer();
-    const source = Occluders.fromTilemap(layer, { blockSize: 4 });
+    const source = new TilemapOccluder(layer, { blockSize: 4 });
     const region = new Rectangle(0, 0, 64, 64);
 
     collect(source, region);
@@ -217,7 +219,7 @@ describe('Occluders.fromTilemap', () => {
 
   test('a changed revision rebuilds the block, which is how a streamed chunk arrives', () => {
     const layer = new FakeLayer();
-    const source = Occluders.fromTilemap(layer, { blockSize: 4 });
+    const source = new TilemapOccluder(layer, { blockSize: 4 });
     const region = new Rectangle(0, 0, 64, 64);
 
     collect(source, region);
@@ -232,20 +234,20 @@ describe('Occluders.fromTilemap', () => {
 
     layer.cells.add('1,0');
 
-    const source = Occluders.fromTilemap(layer, { blockSize: 4, solid: (_tile, tx) => tx === 0 });
+    const source = new TilemapOccluder(layer, { blockSize: 4, solid: (_tile, tx) => tx === 0 });
 
     expect(collect(source, new Rectangle(0, 0, 64, 64))).toHaveLength(4);
   });
 
   test('the node transform places the layer', () => {
     const carrier = new Container().setPosition(1000, 0);
-    const source = Occluders.fromTilemap(new FakeLayer(), { blockSize: 4, node: carrier });
+    const source = new TilemapOccluder(new FakeLayer(), { blockSize: 4, node: carrier });
 
     expect(collect(source, new Rectangle(1000, 0, 64, 64))[0]).toBe('1000,0,1016,0');
   });
 });
 
-describe('Occluders.fromPhysics', () => {
+describe('PhysicsOccluder', () => {
   const transform = (x: number, y: number, angle = 0) => ({ x, y, sin: Math.sin(angle), cos: Math.cos(angle) });
 
   const worldOf = (...colliders: OccluderCollider[]): OccluderPhysicsWorld => ({
@@ -262,31 +264,31 @@ describe('Occluders.fromPhysics', () => {
   });
 
   test('a polygon collider outlines as its world-space ring', () => {
-    expect(collect(Occluders.fromPhysics(worldOf(box())))).toEqual(['92,92,108,92', '108,92,108,108', '108,108,92,108', '92,108,92,92']);
+    expect(collect(new PhysicsOccluder(worldOf(box())))).toEqual(['92,92,108,92', '108,92,108,108', '108,108,92,108', '92,108,92,92']);
   });
 
   test('the collider rotation reaches the outline', () => {
     const rotated = { ...box(), worldTransform: transform(0, 0, Math.PI / 2) };
 
-    expect(collect(Occluders.fromPhysics(worldOf(rotated)))[0]).toBe('8,-8,8,8');
+    expect(collect(new PhysicsOccluder(worldOf(rotated)))[0]).toBe('8,-8,8,8');
   });
 
   test('a dynamic body is left out unless asked for', () => {
     const dynamic = { ...box(), body: { type: 'dynamic' } };
 
-    expect(collect(Occluders.fromPhysics(worldOf(dynamic)))).toEqual([]);
-    expect(collect(Occluders.fromPhysics(worldOf(dynamic), { staticOnly: false }))).toHaveLength(4);
+    expect(collect(new PhysicsOccluder(worldOf(dynamic)))).toEqual([]);
+    expect(collect(new PhysicsOccluder(worldOf(dynamic), { staticOnly: false }))).toHaveLength(4);
   });
 
   test('a sensor is a trigger volume, not a wall', () => {
     const sensor = { ...box(), isSensor: true };
 
-    expect(collect(Occluders.fromPhysics(worldOf(sensor)))).toEqual([]);
-    expect(collect(Occluders.fromPhysics(worldOf(sensor), { sensors: true }))).toHaveLength(4);
+    expect(collect(new PhysicsOccluder(worldOf(sensor)))).toEqual([]);
+    expect(collect(new PhysicsOccluder(worldOf(sensor), { sensors: true }))).toHaveLength(4);
   });
 
   test('`accept` has the last word', () => {
-    expect(collect(Occluders.fromPhysics(worldOf(box()), { accept: () => false }))).toEqual([]);
+    expect(collect(new PhysicsOccluder(worldOf(box()), { accept: () => false }))).toEqual([]);
   });
 
   test('a circle is approximated with the requested number of edges', () => {
@@ -297,7 +299,7 @@ describe('Occluders.fromPhysics', () => {
       body: { type: 'static' },
     };
 
-    expect(collect(Occluders.fromPhysics(worldOf(circle), { circleSegments: 8 }))).toHaveLength(8);
+    expect(collect(new PhysicsOccluder(worldOf(circle), { circleSegments: 8 }))).toHaveLength(8);
   });
 
   test('a segment collider is one edge and is never closed into a loop', () => {
@@ -308,7 +310,7 @@ describe('Occluders.fromPhysics', () => {
       body: { type: 'static' },
     };
 
-    expect(collect(Occluders.fromPhysics(worldOf(segment)))).toEqual(['5,5,25,5']);
+    expect(collect(new PhysicsOccluder(worldOf(segment)))).toEqual(['5,5,25,5']);
   });
 
   test('an open chain stays open and a closed one comes back closed', () => {
@@ -320,8 +322,8 @@ describe('Occluders.fromPhysics', () => {
       body: { type: 'static' },
     };
 
-    expect(collect(Occluders.fromPhysics(worldOf(open)))).toHaveLength(2);
-    expect(collect(Occluders.fromPhysics(worldOf({ ...open, shape: { type: 'chain', vertices: path, closed: true } })))).toHaveLength(3);
+    expect(collect(new PhysicsOccluder(worldOf(open)))).toHaveLength(2);
+    expect(collect(new PhysicsOccluder(worldOf({ ...open, shape: { type: 'chain', vertices: path, closed: true } })))).toHaveLength(3);
   });
 
   test('a capsule closes into a ring of both its caps', () => {
@@ -332,7 +334,7 @@ describe('Occluders.fromPhysics', () => {
       body: { type: 'static' },
     };
 
-    expect(collect(Occluders.fromPhysics(worldOf(capsule), { circleSegments: 4 }))).toHaveLength(8);
+    expect(collect(new PhysicsOccluder(worldOf(capsule), { circleSegments: 4 }))).toHaveLength(8);
   });
 
   test('the query is the region the lights reach', () => {
@@ -343,7 +345,7 @@ describe('Occluders.fromPhysics', () => {
       },
     };
 
-    collect(Occluders.fromPhysics(world), new Rectangle(10, 20, 30, 40));
+    collect(new PhysicsOccluder(world), new Rectangle(10, 20, 30, 40));
 
     expect(seen).toEqual([{ minX: 10, minY: 20, maxX: 40, maxY: 60 }]);
   });
@@ -352,7 +354,7 @@ describe('Occluders.fromPhysics', () => {
 describe('OccluderPlacement', () => {
   test('anything with a world transform places an outline, node or not', () => {
     const matrix = new Matrix().set(2, 0, 7, 0, 2, 9);
-    const source = Occluders.fromPolygon(
+    const source = new PolygonOccluder(
       [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
@@ -364,7 +366,7 @@ describe('OccluderPlacement', () => {
   });
 });
 
-describe('Occluders.fromMesh', () => {
+describe('MeshOccluder', () => {
   /** Two triangles forming a 10x10 square, sharing the diagonal. */
   const square = {
     vertices: new Float32Array([0, 0, 10, 0, 10, 10, 0, 10]),
@@ -373,7 +375,7 @@ describe('Occluders.fromMesh', () => {
   };
 
   test('the shared diagonal is interior, so only the outline is emitted', () => {
-    expect(collect(Occluders.fromMesh(square))).toEqual(['0,0,10,0', '10,0,10,10', '10,10,0,10', '0,10,0,0']);
+    expect(collect(new MeshOccluder(square))).toEqual(['0,0,10,0', '10,0,10,10', '10,10,0,10', '0,10,0,0']);
   });
 
   test('a mesh without an index stream is welded by position rather than read as loose triangles', () => {
@@ -384,7 +386,7 @@ describe('Occluders.fromMesh', () => {
       getWorldTransform: () => new Matrix(),
     };
 
-    expect(collect(Occluders.fromMesh(loose))).toHaveLength(4);
+    expect(collect(new MeshOccluder(loose))).toHaveLength(4);
   });
 
   test('a hole comes back as an outline of its own', () => {
@@ -405,7 +407,7 @@ describe('Occluders.fromMesh', () => {
       getWorldTransform: () => new Matrix(),
     };
 
-    expect(collect(Occluders.fromMesh(ring))).toHaveLength(8);
+    expect(collect(new MeshOccluder(ring))).toHaveLength(8);
   });
 
   test('collinear points along a tessellated edge are dropped', () => {
@@ -417,23 +419,23 @@ describe('Occluders.fromMesh', () => {
       getWorldTransform: () => new Matrix(),
     };
 
-    expect(collect(Occluders.fromMesh(strip))).toHaveLength(4);
+    expect(collect(new MeshOccluder(strip))).toHaveLength(4);
   });
 
   test('the mesh places its own outline unless a node overrides it', () => {
     const carrier = new Container().setPosition(100, 0);
     const placed = { ...square, getWorldTransform: () => carrier.getWorldTransform() };
 
-    expect(collect(Occluders.fromMesh(placed))[0]).toBe('100,0,110,0');
-    expect(collect(Occluders.fromMesh(square, { node: carrier }))[0]).toBe('100,0,110,0');
+    expect(collect(new MeshOccluder(placed))[0]).toBe('100,0,110,0');
+    expect(collect(new MeshOccluder(square, { node: carrier }))[0]).toBe('100,0,110,0');
   });
 
   test('a mesh with no triangles describes nothing', () => {
-    expect(collect(Occluders.fromMesh({ ...square, vertices: new Float32Array(), indices: null }))).toEqual([]);
+    expect(collect(new MeshOccluder({ ...square, vertices: new Float32Array(), indices: null }))).toEqual([]);
   });
 });
 
-describe('Occluders.fromAlpha', () => {
+describe('AlphaOccluder', () => {
   const drawableOver = (texture: Texture | null) => ({
     texture,
     textureFrame: new Rectangle(0, 0, 8, 8),
@@ -444,17 +446,17 @@ describe('Occluders.fromAlpha', () => {
   // jsdom has no 2D canvas, so a trace yields nothing here: what these pin is
   // which inputs are accepted and which are refused, not the silhouette.
   test('a drawable supplies its own texture, frame and placement', () => {
-    expect(collect(Occluders.fromAlpha(drawableOver(new Texture(null))))).toEqual([]);
+    expect(collect(new AlphaOccluder(drawableOver(new Texture(null))))).toEqual([]);
   });
 
   test('a drawable with no texture yields no outline', () => {
-    expect(collect(Occluders.fromAlpha(drawableOver(null)))).toEqual([]);
+    expect(collect(new AlphaOccluder(drawableOver(null)))).toEqual([]);
   });
 
   test('a bare texture is still accepted, placed by an optional node', () => {
     const carrier = new Container().setPosition(50, 60);
 
-    expect(collect(Occluders.fromAlpha(new Texture(null), { node: carrier }))).toEqual([]);
+    expect(collect(new AlphaOccluder(new Texture(null), { node: carrier }))).toEqual([]);
   });
 
   test('a render target says so rather than silently casting nothing', () => {
@@ -462,7 +464,7 @@ describe('Occluders.fromAlpha', () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
 
     try {
-      Occluders.fromAlpha({ ...drawableOver(null), texture: target });
+      new AlphaOccluder({ ...drawableOver(null), texture: target });
 
       expect(warn).toHaveBeenCalledTimes(1);
       expect(warn.mock.calls[0]?.[0]).toContain('RenderTexture');
@@ -476,7 +478,7 @@ describe('Occluders.fromAlpha', () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
 
     try {
-      Occluders.fromAlpha(drawableOver(null));
+      new AlphaOccluder(drawableOver(null));
 
       expect(warn.mock.calls[0]?.[0]).toContain('no texture');
     } finally {
@@ -519,7 +521,7 @@ describe('the drawable channel', () => {
 
   test('an alpha occluder offers its drawable before it traces, and traces when the offer is refused', () => {
     const sprite = new Sprite(new Texture(null));
-    const source = Occluders.fromAlpha(sprite);
+    const source = new AlphaOccluder(sprite);
     const field = new OccluderField();
 
     field.rasterisesDrawables = true;
@@ -540,7 +542,7 @@ describe('the drawable channel', () => {
     const sprite = new Sprite(new Texture(null));
     // "This texture, placed over there" is a shape a rasteriser cannot express:
     // it can only draw the node where the node is.
-    const source = Occluders.fromAlpha(sprite, { node: new Container().setPosition(50, 60) });
+    const source = new AlphaOccluder(sprite, { node: new Container().setPosition(50, 60) });
     const field = new OccluderField();
 
     field.rasterisesDrawables = true;

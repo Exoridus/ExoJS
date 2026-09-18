@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { Lighting, LitMaterial, Normals, PointLight } from '@codexo/exojs-lighting';
+import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // The light list is a data texture, not a uniform array, so the light count is
@@ -105,7 +105,7 @@ class ManyLightsScene extends Scene {
     this.lighting = new Lighting({ maxLights: MAX_LIGHTS, ambient: new Color(16, 16, 24) });
     this.systems.add(this.lighting);
 
-    const material = new LitMaterial({ lighting: this.lighting, normals: Normals.map(normalTexture) });
+    const material = new LitMaterial({ lighting: this.lighting, normals: new NormalMap(normalTexture) });
 
     for (let y = 0; y < Math.ceil(height / TILE_SIZE); y++) {
       for (let x = 0; x < Math.ceil(width / TILE_SIZE); x++) {

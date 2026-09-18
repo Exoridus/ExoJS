@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { Lighting, type LightingQualityOption, PointLight, polygonOccluder, radiance } from '@codexo/exojs-lighting';
+import { Lighting, type LightingQualityOption, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
@@ -182,7 +182,7 @@ class RadianceRoomsScene extends Scene {
       const halfHeight = wall.height / 2;
 
       this.lighting.occludeFrom(
-        polygonOccluder([
+        new PolygonOccluder([
           { x: wall.x - halfWidth, y: wall.y - halfHeight },
           { x: wall.x + halfWidth, y: wall.y - halfHeight },
           { x: wall.x + halfWidth, y: wall.y + halfHeight },

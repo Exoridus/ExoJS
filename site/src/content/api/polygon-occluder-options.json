@@ -1,6 +1,6 @@
 {
   "title": "PolygonOccluderOptions",
-  "description": "Tuning for Occluders.fromPolygon.",
+  "description": "Tuning for PolygonOccluder.",
   "symbol": "PolygonOccluderOptions",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Tuning for Occluders.fromPolygon."
+        "Tuning for PolygonOccluder."
       ],
       "importLine": "import { PolygonOccluderOptions } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Node whose world transform places the outline, making the points local to it. Without one the points are world space. Local means the node's OWN space, scale included. A drawable sized through width / height carries that size as a scale, so its local space is its texture's pixels and not the size it appears at - points written in the size you see are then multiplied by it a second time, and the outline comes out many times too large. Where the shape you want IS the drawable's, Occluders.fromAlpha(drawable) takes it from the drawable itself and this cannot happen."
+          "description": "Node whose world transform places the outline, making the points local to it. Without one the points are world space. Local means the node's OWN space, scale included. A drawable sized through width / height carries that size as a scale, so its local space is its texture's pixels and not the size it appears at - points written in the size you see are then multiplied by it a second time, and the outline comes out many times too large. Where the shape you want IS the drawable's, AlphaOccluder takes it from the drawable itself and this cannot happen."
         }
       ],
       "paragraphs": [],
@@ -90,11 +90,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromPolygon.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPolygon.ts"
+        "label": "packages/exojs-lighting/src/occluders/PolygonOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PolygonOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromPolygon.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromPolygon.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/PolygonOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PolygonOccluder.ts"
 }

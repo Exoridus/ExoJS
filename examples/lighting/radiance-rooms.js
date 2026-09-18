@@ -1,6 +1,6 @@
 // Auto-generated from radiance-rooms.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { Lighting, PointLight, polygonOccluder, radiance } from '@codexo/exojs-lighting';
+import { Lighting, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
 // draws a light and the one that transports it.
@@ -140,7 +140,7 @@ class RadianceRoomsScene extends Scene {
       const halfWidth = wall.width / 2;
       const halfHeight = wall.height / 2;
       this.lighting.occludeFrom(
-        polygonOccluder([
+        new PolygonOccluder([
           { x: wall.x - halfWidth, y: wall.y - halfHeight },
           { x: wall.x + halfWidth, y: wall.y - halfHeight },
           { x: wall.x + halfWidth, y: wall.y + halfHeight },

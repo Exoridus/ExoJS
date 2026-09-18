@@ -1,4 +1,4 @@
-import { Lighting, PointLight, polygonOccluder } from '@codexo/exojs-lighting';
+import { Lighting, PointLight, PolygonOccluder } from '@codexo/exojs-lighting';
 import { AlphaFadeOverLifetime, Curve, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
 
@@ -766,7 +766,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
     if (spec.lights === 'shadowed') {
       for (let index = 0; index < LIT_OCCLUDER_BOXES; index++) {
-        lighting.occludeFrom(polygonOccluder(litOccluderBox(index)));
+        lighting.occludeFrom(new PolygonOccluder(litOccluderBox(index)));
       }
     }
 

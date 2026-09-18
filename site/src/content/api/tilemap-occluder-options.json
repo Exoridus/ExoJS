@@ -1,6 +1,6 @@
 {
   "title": "TilemapOccluderOptions",
-  "description": "Tuning for Occluders.fromTilemap.",
+  "description": "Tuning for TilemapOccluder.",
   "symbol": "TilemapOccluderOptions",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Tuning for Occluders.fromTilemap."
+        "Tuning for TilemapOccluder."
       ],
       "importLine": "import { TilemapOccluderOptions } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -167,11 +167,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromTilemap.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromTilemap.ts"
+        "label": "packages/exojs-lighting/src/occluders/TilemapOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/TilemapOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromTilemap.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromTilemap.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/TilemapOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/TilemapOccluder.ts"
 }

@@ -1,6 +1,6 @@
 {
   "title": "OccluderMesh",
-  "description": "What Occluders.fromMesh reads off a mesh: a flat `(x, y)` vertex stream in local space, its triangle list, and the transform that places it. Core's `Mesh` satisfies it as it stands. So does a plain object over geometry of your own, which is the point: the outline is derived from triangles, not from a class.",
+  "description": "What MeshOccluder reads off a mesh: a flat `(x, y)` vertex stream in local space, its triangle list, and the transform that places it. Core's `Mesh` satisfies it as it stands. So does a plain object over geometry of your own, which is the point: the outline is derived from triangles, not from a class.",
   "symbol": "OccluderMesh",
   "kind": "interface",
   "subsystem": "lighting",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "What Occluders.fromMesh reads off a mesh: a flat `(x, y)` vertex stream in local space, its triangle list, and the transform that places it.",
+        "What MeshOccluder reads off a mesh: a flat `(x, y)` vertex stream in local space, its triangle list, and the transform that places it.",
         "Core's `Mesh` satisfies it as it stands. So does a plain object over geometry of your own, which is the point: the outline is derived from triangles, not from a class."
       ],
       "importLine": "import { OccluderMesh } from '@codexo/exojs-lighting'",
@@ -161,11 +161,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/occluders/fromMesh.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromMesh.ts"
+        "label": "packages/exojs-lighting/src/occluders/MeshOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/MeshOccluder.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/occluders/fromMesh.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/fromMesh.ts"
+  "sourcePath": "packages/exojs-lighting/src/occluders/MeshOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/MeshOccluder.ts"
 }

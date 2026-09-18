@@ -23,7 +23,7 @@ import { LineLight } from '../src/lights/LineLight';
 import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
 import { LitMaterial } from '../src/LitMaterial';
-import { normalMap } from '../src/normals/Normals';
+import { NormalMap } from '../src/normals/NormalMap';
 
 const channels = 4;
 
@@ -435,8 +435,8 @@ describe('Lighting', () => {
       getLocalBounds: () => new Rectangle(),
       getWorldTransform: () => new Matrix(),
     };
-    const first = normalMap(Texture.fromColor(Color.white, 1));
-    const second = normalMap(Texture.fromColor(Color.black, 1));
+    const first = new NormalMap(Texture.fromColor(Color.white, 1));
+    const second = new NormalMap(Texture.fromColor(Color.black, 1));
 
     expect(lighting.normalsFrom(drawable, first)).toBe(drawable);
     lighting.normalsFrom(drawable, second);
@@ -457,7 +457,7 @@ describe('Lighting', () => {
       getWorldTransform: () => new Matrix(),
     };
 
-    lighting.normalsFrom(drawable, normalMap(Texture.fromColor(Color.white, 1)));
+    lighting.normalsFrom(drawable, new NormalMap(Texture.fromColor(Color.white, 1)));
     lighting.destroy();
 
     expect(lighting.surfaces).toHaveLength(0);

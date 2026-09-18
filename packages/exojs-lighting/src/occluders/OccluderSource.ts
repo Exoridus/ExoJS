@@ -52,8 +52,10 @@ export interface OccluderSink {
  * enough that a tree wants the shadow of its trunk, not of its alpha channel.
  *
  * Implement this to feed shadows from anything: a navmesh, a server message, a
- * procedural generator. The stock sources in {@link Occluders} are ordinary
- * implementations of the same interface, with no privilege over yours.
+ * procedural generator. The stock occluders - {@link PhysicsOccluder},
+ * {@link TilemapOccluder}, {@link AlphaOccluder}, {@link MeshOccluder} and
+ * {@link PolygonOccluder} - are ordinary implementations of the same
+ * interface, with no privilege over yours.
  *
  * ```ts
  * lighting.occludeFrom({
