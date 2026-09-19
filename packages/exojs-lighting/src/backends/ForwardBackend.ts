@@ -62,6 +62,8 @@ export class ForwardBackend implements LightingBackend {
 
   /** Ignored: this renderer shades inside the sprite shader and has no intermediate to show. */
   public debug: LightingDebugView = null;
+  /** Nothing is composited here - each sprite shades itself - so there is nothing to scale. */
+  public debugExposure = 1;
 
   /** Shading happens inside the sprite fragment stage, which has no light field to fold a shadow term into. */
   public readonly castsShadows = false;

@@ -61,6 +61,12 @@ export interface LightingBackend {
   debug: LightingDebugView;
 
   /**
+   * Scale applied to the shaded output. See {@link Lighting.debugExposure}.
+   * A renderer that composites nothing ignores it.
+   */
+  debugExposure: number;
+
+  /**
    * Take this frame's lights, ambient term and occluder field. Called once per
    * frame from the system's update phase, before anything draws.
    *

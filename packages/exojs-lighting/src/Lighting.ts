@@ -257,6 +257,26 @@ export class Lighting {
     this._backend.debug = view;
   }
 
+  /**
+   * Scale applied to the shaded output, `1` by default.
+   *
+   * It moves the exposure only: the lights, the transport and the bounce
+   * history are all untouched, so raising it shows what a light field holds
+   * above `1.0` without changing what any of it computed. That is what makes
+   * it the right knob for looking at an overbright scene - turning a light
+   * down instead would change the scene being looked at. Under `forward`,
+   * where nothing is composited, it does nothing.
+   *
+   * It is not a tone map: values still clip, one stop further along.
+   */
+  public get debugExposure(): number {
+    return this._backend.debugExposure;
+  }
+
+  public set debugExposure(exposure: number) {
+    this._backend.debugExposure = exposure;
+  }
+
   private readonly _app: Application | null;
   private readonly _post: readonly Filter[];
   private readonly _lights: Light[] = [];

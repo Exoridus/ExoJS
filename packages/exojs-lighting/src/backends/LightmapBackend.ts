@@ -19,6 +19,7 @@ import {
   Shader,
   Texture,
   TextureFormat,
+  UniformType,
   View,
 } from '@codexo/exojs';
 
@@ -222,7 +223,7 @@ export class LightmapBackend implements LightingBackend {
    */
   private readonly _sunBatch: RenderBatch;
   private readonly _sunMaterial: MeshMaterial;
-  private readonly _compositeMaterial: MeshMaterial;
+  private readonly _compositeMaterial: MeshMaterial<{ readonly u_exposure: UniformType.Float }>;
   private readonly _debugMaterial: MeshMaterial;
   private readonly _compositeBatch: RenderBatch;
   private readonly _debugBatch: RenderBatch;
@@ -277,6 +278,7 @@ export class LightmapBackend implements LightingBackend {
   private _activeCount = 0;
   private _surfaceCount = 0;
   private _debug: LightingDebugView = null;
+  private _debugExposure = 1;
 
   public constructor(options: LightmapBackendOptions) {
     this._app = options.app;
@@ -317,12 +319,15 @@ ${sunQuadWgsl}`,
 
     this._compositeMaterial = new MeshMaterial({
       shader: new Shader({
+        uniforms: { u_exposure: UniformType.Float },
         glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightCompositeVertex}`, fragment: lightCompositeFragment },
         wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightCompositeWgsl}`,
       }),
       textures: { u_frame: this._app.frameTexture, u_light: this._target },
       blendMode: BlendModes.Normal,
     });
+    // A uniform starts at zero, and this one multiplies the whole composite.
+    this._compositeMaterial.uniforms.u_exposure.set(this._debugExposure);
 
     this._debugMaterial = new MeshMaterial({
       shader: new Shader({
@@ -442,6 +447,15 @@ ${sunQuadWgsl}`,
 
   public get activeLightCount(): number {
     return this._activeCount;
+  }
+
+  public get debugExposure(): number {
+    return this._debugExposure;
+  }
+
+  public set debugExposure(exposure: number) {
+    this._debugExposure = Math.max(0, exposure);
+    this._compositeMaterial.uniforms.u_exposure.set(this._debugExposure);
   }
 
   public get debug(): LightingDebugView {
