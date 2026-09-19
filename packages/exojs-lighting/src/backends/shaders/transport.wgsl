@@ -20,21 +20,35 @@
 // Uniform block fields: `uGridOrigin` (vec2<f32>), `uGridCells` (vec2<f32>),
 // `uCellSize` (f32) and `uTableWidth` (f32).
 
-/** What a finite stretch amounts to: the radiance found along it, and what got through. */
+/**
+ * What a finite stretch amounts to: the radiance found along it, what got
+ * through, and how many grid cells the walk visited.
+ *
+ * The count is diagnostic. It exists so a walk that ran out of its step budget
+ * can be told apart from one that finished, which no radiance value can show
+ * on its own.
+ */
 struct Transfer {
     radiance: vec3<f32>,
     transmittance: f32,
+    visited: f32,
 };
 
 /**
- * Cells a straight stretch may cross before it must have left the grid.
+ * Cells one walk may visit.
  *
- * A segment crosses at most `width + height` cell boundaries plus the cell it
- * starts in, so a grid of 128 cells a side - the largest the 2048-texel field
- * produces at the default cell size - never reaches this. Running out is
- * therefore impossible for a configured grid rather than a case with a
- * fallback, and the walk reports darkness if it ever does: inventing light
- * where the scene was never read is the one answer that cannot be right.
+ * Every step advances the cell index along exactly one axis, so a stretch
+ * clipped to the grid visits `1 + |di_x| + |di_y|` cells, at most
+ * `width + height - 1`. The largest grid the 2048-texel field produces at the
+ * default cell size is 128 a side, so 255 is the true ceiling and this is
+ * twice it. The clip is what makes that hold: unclipped, a stretch beginning
+ * far outside would walk empty cells to reach the grid, and no bound taken
+ * from the grid's own size would cover it.
+ *
+ * Running out is therefore unreachable rather than a case with a fallback. The
+ * walk reports darkness if it ever does - inventing light where the scene was
+ * never read is the one answer that cannot be right - and `visited` reaching
+ * this value is what a contract test fails on.
  */
 const MAX_CELL_STEPS: i32 = 512;
 
@@ -46,7 +60,7 @@ const TRANSPORT_EPSILON: f32 = 1e-6;
  * blocked, the far one never lit.
  */
 fn composeTransfer(near: Transfer, far: Transfer) -> Transfer {
-    return Transfer(near.radiance + near.transmittance * far.radiance, near.transmittance * far.transmittance);
+    return Transfer(near.radiance + near.transmittance * far.radiance, near.transmittance * far.transmittance, near.visited + far.visited);
 }
 
 /**
@@ -240,22 +254,58 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     let span = length(delta);
 
     if (span <= 0.0) {
-        return Transfer(vec3<f32>(0.0), 1.0);
+        return Transfer(vec3<f32>(0.0), 1.0, 0.0);
     }
 
     let direction = delta / span;
     let cells = uniforms.uGridCells;
     let size = uniforms.uCellSize;
-    let place = (a - uniforms.uGridOrigin) / size;
-    var cell = vec2<i32>(floor(place));
+    let lower = uniforms.uGridOrigin;
+    let upper = lower + cells * size;
+    var entry = 0.0;
+    var leave = span;
+    // Copied into variables because the clip below indexes them.
+    var ray = direction;
+    var start = a;
+    var low = lower;
+    var high = upper;
+
+    // Clipped to the grid before it is walked. Outside the grid there is
+    // nothing to find, and a stretch beginning far away would otherwise spend
+    // its whole step budget crossing cells that do not exist - which is also
+    // what makes the bound on MAX_CELL_STEPS hold for any input rather than
+    // only for a stretch that starts inside.
+    for (var axis = 0; axis < 2; axis = axis + 1) {
+        if (abs(ray[axis]) < TRANSPORT_EPSILON) {
+            if (start[axis] < low[axis] || start[axis] > high[axis]) {
+                return Transfer(vec3<f32>(0.0), 1.0, 0.0);
+            }
+
+            continue;
+        }
+
+        let first = (low[axis] - start[axis]) / ray[axis];
+        let last = (high[axis] - start[axis]) / ray[axis];
+
+        entry = max(entry, min(first, last));
+        leave = min(leave, max(first, last));
+    }
+
+    if (leave <= entry) {
+        return Transfer(vec3<f32>(0.0), 1.0, 0.0);
+    }
+
+    let place = (a + direction * entry - lower) / size;
+    var cell = clamp(vec2<i32>(floor(place)), vec2<i32>(0), vec2<i32>(cells) - vec2<i32>(1));
     let stepping = vec2<i32>(select(-1, 1, direction.x >= 0.0), select(-1, 1, direction.y >= 0.0));
     // Distance along the ray between two boundaries of the same axis, and to
-    // the first one. An axis the ray does not move along never advances.
+    // the first one past the entry point. An axis the ray does not move along
+    // never advances.
     let spacing = vec2<f32>(
         select(size / abs(direction.x), 1e30, abs(direction.x) < TRANSPORT_EPSILON),
         select(size / abs(direction.y), 1e30, abs(direction.y) < TRANSPORT_EPSILON)
     );
-    var next = vec2<f32>(
+    var next = entry + vec2<f32>(
         select(
             (select(place.x - f32(cell.x), f32(cell.x + 1) - place.x, direction.x >= 0.0) * size) / abs(direction.x),
             1e30,
@@ -269,14 +319,17 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     );
 
     var found = vec3<f32>(0.0);
-    var travelled = 0.0;
+    var travelled = entry;
+    var visited = 0.0;
 
     for (var taken = 0; taken < MAX_CELL_STEPS; taken = taken + 1) {
-        if (travelled >= span) {
-            return Transfer(found, 1.0);
+        if (travelled >= leave) {
+            return Transfer(found, 1.0, visited);
         }
 
-        let leaving = min(min(next.x, next.y), span);
+        visited = visited + 1.0;
+
+        let leaving = min(min(next.x, next.y), leave);
 
         if (cell.x >= 0 && cell.y >= 0 && f32(cell.x) < cells.x && f32(cell.y) < cells.y) {
             let listing = textureLoad(uCells, cell, 0);
@@ -309,7 +362,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
             }
 
             if (blocked < leaving) {
-                return Transfer(found, 0.0);
+                return Transfer(found, 0.0, visited);
             }
         }
 
@@ -324,5 +377,5 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
         }
     }
 
-    return Transfer(found, 0.0);
+    return Transfer(found, 0.0, visited);
 }

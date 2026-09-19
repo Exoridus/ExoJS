@@ -10,6 +10,7 @@
 import { expect } from 'vitest';
 
 import { Color } from '#core/Color';
+import { Rectangle } from '#math/Rectangle';
 
 import type { Light } from '../../../packages/exojs-lighting/src/lights/Light';
 import { LineLight } from '../../../packages/exojs-lighting/src/lights/LineLight';
@@ -43,6 +44,9 @@ export const line = (x: number, y: number, radius: number, halfLength: number): 
 /** One traced stretch: where it runs and what the probe should make of it. */
 export interface Case {
   readonly name: string;
+  /** The grid this scene is indexed into, where the default does not show what the case is about. */
+  readonly region?: Rectangle;
+  readonly cell?: number;
   /** `(x1, y1, x2, y2)` quadruples. */
   readonly segments: readonly number[];
   readonly lights: readonly Light[];
@@ -228,6 +232,23 @@ export const transportCases = (): readonly Case[] => [
       // it, 2 * radius = 20. A capsule whose caps were added to the box would
       // read 120 along the axis.
       near(radiance[0]![0]! / Math.max(radiance[1]![0]!, 1), 5, 1);
+    },
+  },
+  {
+    name: 'a walk across the whole grid visits one cell per boundary it crosses',
+    // 64 cells a side, entered at the corner and left at the far one: the walk
+    // changes cell index 63 times along each axis and visits 127 cells. A
+    // bound taken from the euclidean diagonal would be 91 and would cut the
+    // walk short of the far corner.
+    region: new Rectangle(0, 0, 64, 64),
+    cell: 1,
+    segments: [],
+    lights: [],
+    traces: [[0.1, 0.2, 63.9, 63.7]],
+    scale: 1,
+    check: (_radiance, through, visited) => {
+      near(visited[0]![0]!, 127, 0);
+      near(through[0]![0]!, OPEN);
     },
   },
   {

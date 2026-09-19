@@ -13,7 +13,16 @@ import { Texture } from '#rendering/texture/Texture';
 
 import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
 import { type Case, transportCases } from './_transportCases';
-import { PROBE_CLEAR, PROBE_RADIANCE, PROBE_SIZE, PROBE_TRANSMITTANCE, probeFragmentSource, probeTables, probeUniforms } from './_transportProbe';
+import {
+  PROBE_CLEAR,
+  PROBE_RADIANCE,
+  PROBE_SIZE,
+  PROBE_TRANSMITTANCE,
+  PROBE_VISITED,
+  probeFragmentSource,
+  probeTables,
+  probeUniforms,
+} from './_transportProbe';
 
 const probeShader = createFilterShader({ glsl: { fragment: probeFragmentSource }, uniforms: probeUniforms });
 
@@ -36,7 +45,7 @@ const coverTexture = (): Texture => {
 
 const runCase = async (scenario: Case): Promise<void> => {
   const backend = await createWebGl2TestBackend(PROBE_SIZE);
-  const tables = probeTables(scenario.segments, scenario.lights);
+  const tables = probeTables(scenario.segments, scenario.lights, scenario.region, scenario.cell);
   const filter = ShaderFilter.from(probeShader, {
     textures: { uSegments: tables.segments, uEmitters: tables.emitters, uCells: tables.cells, uIndices: tables.indices },
   });
@@ -55,6 +64,7 @@ const runCase = async (scenario: Case): Promise<void> => {
 
   const radiance: number[][] = [];
   const through: number[][] = [];
+  const visited: number[][] = [];
 
   try {
     for (const [ax, ay, bx, by] of scenario.traces) {
@@ -64,6 +74,7 @@ const runCase = async (scenario: Case): Promise<void> => {
       for (const [mode, into] of [
         [PROBE_RADIANCE, radiance],
         [PROBE_TRANSMITTANCE, through],
+        [PROBE_VISITED, visited],
       ] as const) {
         filter.uniforms.uMode.set(mode);
         renderWebGl2Once(backend, root, PROBE_CLEAR);
@@ -71,7 +82,14 @@ const runCase = async (scenario: Case): Promise<void> => {
       }
     }
 
-    scenario.check(radiance, through);
+    for (const reading of visited) {
+      // A walk that saturated the byte either ran out of its step budget or
+      // came within one of it; neither is reachable on a grid this small.
+      expect(reading[0], 'cells visited').toBeGreaterThan(0);
+      expect(reading[0], 'cells visited').toBeLessThan(255);
+    }
+
+    scenario.check(radiance, through, visited);
   } finally {
     root.destroy();
     filter.destroy();

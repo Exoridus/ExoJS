@@ -20,21 +20,35 @@
 // Uniform block fields: `uGridOrigin` (vec2), `uGridCells` (vec2),
 // `uCellSize` (float) and `uTableWidth` (float).
 
-/** What a finite stretch amounts to: the radiance found along it, and what got through. */
+/**
+ * What a finite stretch amounts to: the radiance found along it, what got
+ * through, and how many grid cells the walk visited.
+ *
+ * The count is diagnostic. It exists so a walk that ran out of its step budget
+ * can be told apart from one that finished, which no radiance value can show
+ * on its own.
+ */
 struct Transfer {
     vec3 radiance;
     float transmittance;
+    float visited;
 };
 
 /**
- * Cells a straight stretch may cross before it must have left the grid.
+ * Cells one walk may visit.
  *
- * A segment crosses at most `width + height` cell boundaries plus the cell it
- * starts in, so a grid of 128 cells a side - the largest the 2048-texel field
- * produces at the default cell size - never reaches this. Running out is
- * therefore impossible for a configured grid rather than a case with a
- * fallback, and the walk reports darkness if it ever does: inventing light
- * where the scene was never read is the one answer that cannot be right.
+ * Every step advances the cell index along exactly one axis, so a stretch
+ * clipped to the grid visits `1 + |di_x| + |di_y|` cells, at most
+ * `width + height - 1`. The largest grid the 2048-texel field produces at the
+ * default cell size is 128 a side, so 255 is the true ceiling and this is
+ * twice it. The clip is what makes that hold: unclipped, a stretch beginning
+ * far outside would walk empty cells to reach the grid, and no bound taken
+ * from the grid's own size would cover it.
+ *
+ * Running out is therefore unreachable rather than a case with a fallback. The
+ * walk reports darkness if it ever does - inventing light where the scene was
+ * never read is the one answer that cannot be right - and `visited` reaching
+ * this value is what a contract test fails on.
  */
 const int MAX_CELL_STEPS = 512;
 
@@ -52,7 +66,7 @@ vec4 transportTexel(sampler2D table, int index) {
  * blocked, the far one never lit.
  */
 Transfer composeTransfer(Transfer near, Transfer far) {
-    return Transfer(near.radiance + near.transmittance * far.radiance, near.transmittance * far.transmittance);
+    return Transfer(near.radiance + near.transmittance * far.radiance, near.transmittance * far.transmittance, near.visited + far.visited);
 }
 
 /**
@@ -218,33 +232,66 @@ Transfer traceSegment(vec2 a, vec2 b) {
     float span = length(delta);
 
     if (span <= 0.0) {
-        return Transfer(vec3(0.0), 1.0);
+        return Transfer(vec3(0.0), 1.0, 0.0);
     }
 
     vec2 direction = delta / span;
     vec2 cells = uniforms.uGridCells;
     float size = uniforms.uCellSize;
-    vec2 place = (a - uniforms.uGridOrigin) / size;
-    ivec2 cell = ivec2(floor(place));
+    vec2 lower = uniforms.uGridOrigin;
+    vec2 upper = lower + cells * size;
+    float entry = 0.0;
+    float leave = span;
+
+    // Clipped to the grid before it is walked. Outside the grid there is
+    // nothing to find, and a stretch beginning far away would otherwise spend
+    // its whole step budget crossing cells that do not exist - which is also
+    // what makes the bound below hold for any input rather than only for a
+    // stretch that starts inside.
+    for (int axis = 0; axis < 2; axis++) {
+        if (abs(direction[axis]) < TRANSPORT_EPSILON) {
+            if (a[axis] < lower[axis] || a[axis] > upper[axis]) {
+                return Transfer(vec3(0.0), 1.0, 0.0);
+            }
+
+            continue;
+        }
+
+        float first = (lower[axis] - a[axis]) / direction[axis];
+        float last = (upper[axis] - a[axis]) / direction[axis];
+
+        entry = max(entry, min(first, last));
+        leave = min(leave, max(first, last));
+    }
+
+    if (leave <= entry) {
+        return Transfer(vec3(0.0), 1.0, 0.0);
+    }
+
+    vec2 place = (a + direction * entry - lower) / size;
+    ivec2 cell = clamp(ivec2(floor(place)), ivec2(0), ivec2(cells) - 1);
     ivec2 stepping = ivec2(direction.x >= 0.0 ? 1 : -1, direction.y >= 0.0 ? 1 : -1);
     // Distance along the ray between two boundaries of the same axis, and to
-    // the first one. An axis the ray does not move along never advances.
+    // the first one past the entry point. An axis the ray does not move along
+    // never advances.
     vec2 spacing = vec2(abs(direction.x) < TRANSPORT_EPSILON ? 1e30 : size / abs(direction.x), abs(direction.y) < TRANSPORT_EPSILON ? 1e30 : size / abs(direction.y));
-    vec2 next = vec2(
+    vec2 next = entry + vec2(
         abs(direction.x) < TRANSPORT_EPSILON ? 1e30 : ((direction.x >= 0.0 ? float(cell.x + 1) - place.x : place.x - float(cell.x)) * size) / abs(direction.x),
         abs(direction.y) < TRANSPORT_EPSILON ? 1e30 : ((direction.y >= 0.0 ? float(cell.y + 1) - place.y : place.y - float(cell.y)) * size) / abs(direction.y)
     );
 
     vec3 found = vec3(0.0);
-    float travelled = 0.0;
-    int width = int(cells.x);
+    float travelled = entry;
+    float visited = 0.0;
 
     for (int taken = 0; taken < MAX_CELL_STEPS; taken++) {
-        if (travelled >= span) {
-            return Transfer(found, 1.0);
+        if (travelled >= leave) {
+            return Transfer(found, 1.0, visited);
         }
 
-        float leaving = min(min(next.x, next.y), span);
+        visited += 1.0;
+
+        float leaving = min(min(next.x, next.y), leave);
 
         if (cell.x >= 0 && cell.y >= 0 && float(cell.x) < cells.x && float(cell.y) < cells.y) {
             vec4 listing = texelFetch(uCells, ivec2(cell.x, cell.y), 0);
@@ -277,7 +324,7 @@ Transfer traceSegment(vec2 a, vec2 b) {
             }
 
             if (blocked < leaving) {
-                return Transfer(found, 0.0);
+                return Transfer(found, 0.0, visited);
             }
         }
 
@@ -292,5 +339,5 @@ Transfer traceSegment(vec2 a, vec2 b) {
         }
     }
 
-    return Transfer(found, 0.0);
+    return Transfer(found, 0.0, visited);
 }

@@ -12,7 +12,7 @@ import { Texture } from '#rendering/texture/Texture';
 
 import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
 import { type Case, transportCases } from './_transportCases';
-import { PROBE_CLEAR, PROBE_RADIANCE, PROBE_SIZE, PROBE_TRANSMITTANCE, probeTables, probeUniforms, probeWgslSource } from './_transportProbe';
+import { PROBE_CLEAR, PROBE_RADIANCE, PROBE_SIZE, PROBE_TRANSMITTANCE, PROBE_VISITED, probeTables, probeUniforms, probeWgslSource } from './_transportProbe';
 
 const probeShader = createFilterShader({ wgsl: probeWgslSource, uniforms: probeUniforms });
 
@@ -37,7 +37,7 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
   for (const scenario of transportCases()) {
     test(scenario.name, async ctx => {
       const backend = await createWebGpuTestBackend(PROBE_SIZE);
-      const tables = probeTables(scenario.segments, scenario.lights);
+      const tables = probeTables(scenario.segments, scenario.lights, scenario.region, scenario.cell);
       const filter = ShaderFilter.from(probeShader, {
         textures: { uSegments: tables.segments, uEmitters: tables.emitters, uCells: tables.cells, uIndices: tables.indices },
       });
@@ -56,6 +56,7 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
 
       const radiance: number[][] = [];
       const through: number[][] = [];
+      const visited: number[][] = [];
 
       try {
         for (const [ax, ay, bx, by] of scenario.traces) {
@@ -65,6 +66,7 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
           for (const [mode, into] of [
             [PROBE_RADIANCE, radiance],
             [PROBE_TRANSMITTANCE, through],
+            [PROBE_VISITED, visited],
           ] as const) {
             filter.uniforms.uMode.set(mode);
 
@@ -74,7 +76,15 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
           }
         }
 
-        (scenario as Case).check(radiance, through);
+        for (const reading of visited) {
+          // A walk that saturated the byte either ran out of its step budget
+          // or came within one of it; neither is reachable on a grid this
+          // small.
+          expect(reading[0], 'cells visited').toBeGreaterThan(0);
+          expect(reading[0], 'cells visited').toBeLessThan(255);
+        }
+
+        (scenario as Case).check(radiance, through, visited);
       } finally {
         root.destroy();
         filter.destroy();

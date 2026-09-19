@@ -42,9 +42,17 @@ export const probeUniforms = {
   uMode: UniformType.Float,
 } as const;
 
-/** What a probe draw writes: the scaled radiance, or the transmittance in every channel. */
+/**
+ * What a probe draw writes: the scaled radiance, the transmittance in every
+ * channel, or the number of grid cells the walk visited.
+ *
+ * The cell count is written as `visited / 255`, so the byte read back IS the
+ * count. A reading of 255 means the walk either visited that many or saturated,
+ * and every probe grid here is small enough that it cannot legitimately.
+ */
 export const PROBE_RADIANCE = 0;
 export const PROBE_TRANSMITTANCE = 1;
+export const PROBE_VISITED = 2;
 
 export const probeFragmentSource = `#version 300 es
 precision highp float;
@@ -62,7 +70,9 @@ ${transportGlsl}
 
 void main() {
     Transfer walked = traceSegment(uniforms.uA, uniforms.uB);
-    vec3 shown = uniforms.uMode < 0.5 ? clamp(walked.radiance * uniforms.uScale, 0.0, 1.0) : vec3(walked.transmittance);
+    vec3 shown = uniforms.uMode < 0.5
+        ? clamp(walked.radiance * uniforms.uScale, 0.0, 1.0)
+        : (uniforms.uMode < 1.5 ? vec3(walked.transmittance) : vec3(clamp(walked.visited / 255.0, 0.0, 1.0)));
 
     // Opaque: the probe is composited onto the frame like any other draw, and
     // an alpha channel would not survive that to be read back.
@@ -87,7 +97,8 @@ ${transportWgsl}
 @fragment
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let walked = traceSegment(uniforms.uA, uniforms.uB);
-    let shown = select(vec3<f32>(walked.transmittance), clamp(walked.radiance * uniforms.uScale, vec3<f32>(0.0), vec3<f32>(1.0)), uniforms.uMode < 0.5);
+    let counted = select(vec3<f32>(clamp(walked.visited / 255.0, 0.0, 1.0)), vec3<f32>(walked.transmittance), uniforms.uMode < 1.5);
+    let shown = select(counted, clamp(walked.radiance * uniforms.uScale, vec3<f32>(0.0), vec3<f32>(1.0)), uniforms.uMode < 0.5);
 
     // Opaque: the probe is composited onto the frame like any other draw, and
     // an alpha channel would not survive that to be read back.
@@ -119,10 +130,10 @@ const table = (data: Float32Array, width: number, height: number): DataTexture<T
   });
 
 /** Build this scene's tables. `segments` holds `(x1, y1, x2, y2)` quadruples. */
-export const probeTables = (segments: readonly number[], lights: readonly Light[]): ProbeTables => {
+export const probeTables = (segments: readonly number[], lights: readonly Light[], region = PROBE_REGION, cell = PROBE_CELL): ProbeTables => {
   const geometry = new TransportGeometry();
 
-  geometry.build(Float32Array.from(segments), segments.length / 4, lights, PROBE_REGION, PROBE_CELL);
+  geometry.build(Float32Array.from(segments), segments.length / 4, lights, region, cell);
 
   const built = geometry.tables;
   const textures = {
