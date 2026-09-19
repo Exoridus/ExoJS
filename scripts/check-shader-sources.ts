@@ -29,8 +29,16 @@ import { SHADER_EXTENSIONS, stripShaderSource } from '@codexo/exojs-build/shader
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
-/** Roots that hold engine-owned shaders and the modules importing them. */
+/** Roots that hold engine-owned shaders. */
 const SCAN_ROOTS = ['src', 'packages'];
+
+/**
+ * Roots searched for whatever imports them. Wider than {@link SCAN_ROOTS}
+ * because a chunk can legitimately be compiled only by the browser suite: a
+ * shader the specs build into a probe shader reaches a real compiler, which is
+ * what the orphan rule is about.
+ */
+const IMPORTER_ROOTS = [...SCAN_ROOTS, 'test'];
 
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', 'test-results']);
 
@@ -271,7 +279,7 @@ export const scanShaderSources = async (repoRoot: string = REPO_ROOT): Promise<S
     await Promise.all(SCAN_ROOTS.map(root => collectFiles(repoRoot, root, name => SHADER_EXTENSIONS.some(ext => name.endsWith(ext)))))
   ).flat();
   const importerFiles = (
-    await Promise.all(SCAN_ROOTS.map(root => collectFiles(repoRoot, root, name => IMPORTER_EXTENSIONS.some(ext => name.endsWith(ext)))))
+    await Promise.all(IMPORTER_ROOTS.map(root => collectFiles(repoRoot, root, name => IMPORTER_EXTENSIONS.some(ext => name.endsWith(ext)))))
   ).flat();
   const importerText = (await Promise.all(importerFiles.map(path => readFile(path, 'utf8')))).join('\n');
 
