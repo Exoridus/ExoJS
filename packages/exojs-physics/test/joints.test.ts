@@ -921,15 +921,25 @@ describe('revolute chain stability', () => {
   /** How far a link may hang below where it was built. A soft constraint stretches under load; it must not drift. */
   const MAX_SAG_PX = 8;
 
-  const hangChain = (links: number): { world: PhysicsWorld; chain: readonly PhysicsBody[] } => {
-    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+  const hangChain = (
+    links: number,
+    options: { subStepCount?: number; enableSleeping?: boolean; contacts?: boolean } = {},
+  ): { world: PhysicsWorld; chain: readonly PhysicsBody[] } => {
+    const { contacts = true, ...worldOptions } = options;
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY }, ...worldOptions });
     const chain: PhysicsBody[] = [];
     let previous = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 200 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
 
     for (let link = 1; link <= links; link++) {
       const y = 200 + link * 16;
       const body = world.add(
-        new PhysicsBody({ type: 'dynamic', position: { x: 0, y }, colliders: [{ shape: new BoxShape(16, 16), density: 1, friction: 0.5 }] }),
+        new PhysicsBody({
+          type: 'dynamic',
+          position: { x: 0, y },
+          // Identical negative groups never collide, so `contacts: false` takes
+          // every pair in the chain out, not just the connected seams.
+          colliders: [{ shape: new BoxShape(16, 16), density: 1, friction: 0.5, ...(contacts ? {} : { filter: { group: -1 } }) }],
+        }),
       );
 
       // Connected-body collision off: the seam contacts are exactly what used
@@ -944,6 +954,17 @@ describe('revolute chain stability', () => {
 
   const fastest = (chain: readonly PhysicsBody[]): number =>
     chain.reduce((peak, body) => Math.max(peak, Math.hypot(body.linearVelocityX, body.linearVelocityY)), 0);
+
+  /** Kinetic plus potential energy, taken against the anchor row (+Y is down, so a link below it has negative potential). */
+  const mechanicalEnergy = (chain: readonly PhysicsBody[]): number =>
+    chain.reduce(
+      (total, body) =>
+        total +
+        0.5 * body.mass * (body.linearVelocityX * body.linearVelocityX + body.linearVelocityY * body.linearVelocityY) +
+        0.5 * body.inertia * body.angularVelocity * body.angularVelocity -
+        body.mass * GRAVITY * (body.y - 200),
+      0,
+    );
 
   for (const links of [7, 8, 12]) {
     it(`holds a ${String(links)}-link chain still for ${String(WINDOW)} steps`, () => {
@@ -973,6 +994,40 @@ describe('revolute chain stability', () => {
     });
   }
 
+  for (const subStepCount of [1, 2, 4, 8, 16]) {
+    it(`gives a kicked chain no energy back at ${String(subStepCount)} sub-steps`, () => {
+      // Contacts off entirely: they are the only sink in this scene, and with
+      // them gone the joints are the only thing left that could be a source.
+      const { world, chain } = hangChain(8, { subStepCount, contacts: false, enableSleeping: false });
+      const tip = chain[chain.length - 1]!;
+
+      tip.linearVelocityX = 400;
+      tip.linearVelocityY = -400;
+
+      const given = mechanicalEnergy(chain);
+      let peak = -Infinity;
+
+      for (let step = 0; step < WINDOW * 2; step++) {
+        world.step(FRAME);
+        peak = Math.max(peak, mechanicalEnergy(chain));
+      }
+
+      // Nothing drives the chain after the kick, so the sum of kinetic and
+      // potential energy can only fall - and it has to fall the same way at
+      // every sub-step count, since a sub-step is a solver detail and not a
+      // force. Warm-starting on the frame-start arms broke exactly that: the
+      // accumulated impulse went in on the arms as they stood at frame start
+      // and came back out on the arms as they stand now, and from the second
+      // sub-step on those differ by however far the body has turned. The
+      // leftover is angular momentum out of nothing, once per sub-step, which
+      // is why a single sub-step never showed it.
+      expect(peak).toBeLessThanOrEqual(given);
+
+      // The chain ends where a chain hangs: 8 links of 16 px below the anchor.
+      expect(tip.y).toBeGreaterThan(200 + 8 * 16 - 16);
+    });
+  }
+
   it('lets a long chain come to rest and sleep', () => {
     const { world, chain } = hangChain(12);
 
@@ -986,36 +1041,56 @@ describe('revolute chain stability', () => {
     // so a chain that dropped out of that list while it slept has to be picked
     // back up - otherwise the woken link is integrated with nothing holding it
     // and simply leaves.
+    const pivotY = 200 + 8; // the seam the top link is pinned to the static anchor at
+
+    const kick = (world: PhysicsWorld, chain: readonly PhysicsBody[]): { swing: number[]; offPivot: number } => {
+      const swing = chain.map(() => 0);
+      let offPivot = 0;
+
+      chain[0]!.applyImpulse(40_000, 0);
+
+      for (let step = 0; step < 60; step++) {
+        world.step(FRAME);
+
+        for (const [index, body] of chain.entries()) {
+          swing[index] = Math.max(swing[index]!, Math.abs(body.x));
+        }
+
+        offPivot = Math.max(offPivot, Math.hypot(chain[0]!.x, chain[0]!.y - pivotY));
+      }
+
+      return { swing, offPivot };
+    };
+
     const { world, chain } = hangChain(6);
 
     advance(world, WINDOW * FRAME);
 
     expect(chain.every(body => body.isSleeping)).toBe(true);
 
-    const pulled = chain[0]!;
-    const pivotY = 200 + 8; // the seam this link is pinned to the static anchor at
+    // The same chain, settled just as long but never allowed to sleep. It is
+    // the reference the woken one has to reproduce: same build, same state at
+    // the moment of the kick, only the sleep pass in between.
+    const reference = hangChain(6, { enableSleeping: false });
 
-    pulled.applyImpulse(40_000, 0);
+    advance(reference.world, WINDOW * FRAME);
 
-    let swing = 0;
-    let offPivot = 0;
+    const woken = kick(world, chain);
+    const awake = kick(reference.world, reference.chain);
 
-    for (let step = 0; step < 60; step++) {
-      world.step(FRAME);
-      swing = Math.max(swing, Math.abs(pulled.x));
-      offPivot = Math.max(offPivot, Math.hypot(pulled.x, pulled.y - pivotY));
+    // Waking one link wakes its island, and the links hang in the x = 0 column
+    // at rest, so a peak below the links the kick did not touch would mean the
+    // comparison below is comparing two chains that both stayed put.
+    expect(Math.max(...woken.swing.slice(1))).toBeGreaterThan(1);
+
+    // Every link answers the kick the way the chain that never slept does.
+    for (const [index, peak] of woken.swing.entries()) {
+      expect(peak).toBeCloseTo(awake.swing[index]!, 1);
     }
 
-    // Moved at all - an unsolved joint would still let it move, so this only
-    // says the measurement is not vacuous.
-    expect(swing).toBeGreaterThan(4);
-
-    // Unconstrained, the impulse carries the link over 300px in this window.
-    // Held on its pivot, it can only swing about it at arm's length.
-    expect(offPivot).toBeLessThan(24);
-
-    // Waking one link wakes its island, so the joints below it solve too.
-    expect(chain.some(body => body !== pulled && Math.abs(body.x) > 4)).toBe(true);
+    // Unconstrained, the impulse carries the top link over 300px in this
+    // window. Pinned 8 px from its centre, it can only turn about that seam.
+    expect(woken.offPivot).toBeLessThan(16);
 
     for (const body of chain) {
       expect(Number.isFinite(body.x)).toBe(true);
