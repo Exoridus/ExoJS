@@ -89,6 +89,10 @@ The value is what keeps the cascades out of a bundle that never runs them: they 
   A wall the field lit gives part of that light off again in its own colour, one frame later - `radiance({ bounce: 0.5 })` sets how much, and `0` switches it off. A `SunLight` is the sky every unblocked ray ends in, a `SpotLight` emits across its cone, and the fields reach a margin past the picture (`fieldMargin`), so what stands just outside it still shadows and lights what is in it.
 </Callout>
 
+<Callout type="pitfall" title="Close to a moving lamp">
+  Within roughly five times a source's own size the cascades are resolving it with the few directions their coarsest levels have, and its disc is rasterised at the light field's resolution. Moving the lamp by less than a texel redistributes light there — around a tenth of the arriving brightness per quarter texel, seen as a shimmer on the lamp's own halo rather than anywhere it lights. Past that radius it settles below what eight bits can express.
+</Callout>
+
 <Callout type="note" title="The axis is properties, not quality">
   `forward` is not the low setting and `lightmap` is not the high one. One shades inside the sprite stage and can therefore reach a per-material normal map; the other shades a field of its own and can therefore carry shadows and any number of lights. Neither is a downgrade of the other.
 </Callout>

@@ -738,3 +738,97 @@ describe('the bounce history', () => {
     }
   });
 });
+
+describe('a light moving by less than a texel', () => {
+  /** Receiver distance inside a few source radii, where the source is not a point to the coarse levels. */
+  const nearField = 14;
+
+  /**
+   * What fixed receivers read while the emitter slides a whole texel in
+   * quarter-texel steps.
+   *
+   * Everything the cascade chain is built on is anchored to the screen: the
+   * probe grid, the interval a receiver's distance falls in, the directions a
+   * probe spends its rays on, and the mask the emitter is rasterized into. A
+   * light moving across that grid changes its relationship to all of them, and
+   * a static profile cannot see any of it - it reads one arrangement of light
+   * and grid. This walks the light through a texel of arrangements and reads
+   * the same receivers throughout, which is the shape a flicker in a moving
+   * scene has.
+   *
+   * Both axes, because they are not the same measurement: along `x` the
+   * receiver distance changes as well, and along `y` it barely does, which
+   * isolates the grid relationship from the falloff.
+   */
+  const sweep = async (axis: 'x' | 'y'): Promise<Map<number, number[]>> => {
+    const host = await createHost();
+    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const light = lighting.add(new PointLight({ radius: 64, intensity: 0.5, softness: 0.35 }));
+    const distances = [nearField, 26, 42];
+    const series = new Map<number, number[]>(distances.map(distance => [distance, []]));
+
+    drawWhiteFrame(host);
+
+    try {
+      for (let step = 0; step < 13; step++) {
+        const offset = step * 0.25;
+
+        light.setPosition(40 + (axis === 'x' ? offset : 0), 64 + (axis === 'y' ? offset : 0));
+        runFrame(host, lighting);
+
+        for (const distance of distances) {
+          series.get(distance)!.push(readRed(host.backend, 40 + distance, 64));
+        }
+      }
+
+      return series;
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  };
+
+  test.each(['x', 'y'] as const)('a receiver clear of the source reads the same light as the emitter crosses a texel in %s', async axis => {
+    const series = await sweep(axis);
+    const shown = [...series].map(([distance, profile]) => `d=${distance}: ${profile.join(' ')}`).join(' | ');
+
+    for (const [distance, profile] of series) {
+      if (distance === nearField) {
+        continue;
+      }
+
+      expect(Math.min(...profile), `${shown}`).toBeGreaterThan(8);
+
+      // Counts rather than a fraction: these receivers read in the twenties
+      // and forties, where one 8-bit count is already four percent, so a
+      // relative bound would be measuring the quantisation. Three counts is
+      // that floor with a step either side of it, and anything the grid does
+      // is many times it.
+      for (let index = 1; index < profile.length; index++) {
+        expect(Math.abs(profile[index]! - profile[index - 1]!), `${shown}`).toBeLessThanOrEqual(3);
+      }
+    }
+  });
+
+  test.each(['x', 'y'] as const)('a receiver beside the source stays inside the near-field envelope in %s', async axis => {
+    const series = await sweep(axis);
+    const profile = series.get(nearField)!;
+    const shown = `d=${nearField}: ${profile.join(' ')}`;
+    let largest = 0;
+
+    for (let index = 1; index < profile.length; index++) {
+      largest = Math.max(largest, Math.abs(profile[index]! - profile[index - 1]!) / profile[index - 1]!);
+    }
+
+    // A bound on a known approximation rather than a correctness claim, and
+    // deliberately the loosest assertion here. Within a few source radii the
+    // emitter subtends more than the coarse levels resolve, and its own disc
+    // is rasterized into the mask at texel resolution, so a subtexel move
+    // redistributes light the merge cannot smooth out. It measures around 13
+    // percent per quarter texel on either axis, and the same figure comes out
+    // of the chain as it stood before these corrections, so it is the
+    // renderer's near field rather than something they introduced. The bound
+    // is here to catch it getting worse.
+    expect(largest, `${shown}`).toBeLessThan(0.2);
+  });
+});
