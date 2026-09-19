@@ -195,7 +195,7 @@ crate.material = new LitMaterial({ lighting, normals: new AlphaNormals(crateText
 
 Every sprite drawn with a given material shares its map — in practice one material per atlas — and the map must have the same layout as the albedo atlas, frame for frame. Rotation and mirroring are handled in the shader.
 
-The canonical input convention is **OpenGL**: green above the midpoint means the normal leans towards the top of the image, blue points out of the sprite plane, and a flat texel is `(128, 128, 255)`. Blender, Substance, Krita, Godot and Unity's default sprite import all write that. A map authored the other way up is declared rather than edited:
+The canonical input convention is **OpenGL**: green above the midpoint means the normal leans towards the top of the image, blue points out of the sprite plane, and a flat texel is `(128, 128, 255)`. This is ExoJS's own choice, not a universal standard: most authoring tools can write either convention and several — Substance's mesh bakers among them — default to DirectX, so check what your exporter is set to. A map authored the other way up is declared rather than edited:
 
 ```ts
 import type { Texture } from '@codexo/exojs';
@@ -271,7 +271,7 @@ lighting.occludeFrom(
 
 `softness` is a property of the light, in `0..1`, and the two renderers mean different things by it. Under `lightmap` it is **filter width**: the light stays a point and the shadow term is averaged over a band of its angular shadow row, up to three percent of a full turn. The edge widens, but it widens with distance from the *light* rather than from the wall, and it does not behave like a shadow cast by a source of that size. Under `radiance` it is **source size**: the emitter is given a width, and the penumbra follows from the geometry — it grows with the distance between the wall and what the shadow falls on.
 
-Neither adds a pass. Under `lightmap` the filter costs between 5 and 21 texture fetches per shadowed fragment, in step with the width asked for, and can differ between lights.
+Neither adds a pass. Under `lightmap` the filter samples every bin under its kernel and spends between 5 and 21 texture fetches per shadowed fragment doing it, which also bounds the kernel at ten bins either side — three percent of a turn at the default `shadowResolution`, and proportionally less as that rises.
 
 <Callout type="pitfall" title="A render target cannot be traced">
   `AlphaOccluder` reads pixels, and a `RenderTexture` has none this side of the GPU. It returns an empty source rather than a wrong outline, and a development build says which of three cases it was. If you need both a live surface and its outline, draw into an `HTMLCanvasElement` and wrap that in a `Texture`.

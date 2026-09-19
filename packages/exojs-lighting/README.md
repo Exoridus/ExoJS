@@ -16,7 +16,7 @@ npm install @codexo/exojs @codexo/exojs-lighting
 - `Lighting` - the system: collects the registered lights, hands them to a renderer, and carries the ambient term. Registers on a `SystemRegistry` like any other system.
 - `LitMaterial` - a `SpriteMaterial` (GLSL + WGSL) that shades a sprite against those lights. Normals are optional: without them the surface is lit as a plane rather than left black.
 - `NormalMap`, `AlphaNormals` - where a material's surface normals come from. `new NormalMap(texture)` binds an authored tangent-space map, `new AlphaNormals(texture)` derives one from the texture's own silhouette; `NormalSource` is an interface, so a source of your own is a valid argument without this package knowing about it.
-- `Occluders` - what blocks light, read out of the description of the world a project already has: physics colliders, tile layers, a sprite's own silhouette, or an outline you author. Occluders are registered sources rather than a flag on a drawable, and `OccluderSource` is an interface you can implement. Each factory is also exported by name - `physicsOccluder`, `tilemapOccluder`, `alphaOccluder`, `meshOccluder`, `polygonOccluder`.
+- `PhysicsOccluder`, `TilemapOccluder`, `AlphaOccluder`, `MeshOccluder`, `PolygonOccluder` - what blocks light, read out of the description of the world a project already has: physics colliders, tile layers, a sprite's own silhouette, or an outline you author. Occluders are registered sources rather than a flag on a drawable, and `OccluderSource` is an interface you can implement.
 
 ## Usage
 
@@ -80,7 +80,7 @@ import { Lighting, PointLight, radiance } from '@codexo/exojs-lighting';
 const lighting = new Lighting({ quality: radiance({ probeSpacing: 2 }), app, ambient: new Color(8, 8, 14) });
 
 lighting.add(new PointLight({ radius: 300, intensity: 3, softness: 0.4 }));
-lighting.occludeFrom(Occluders.fromTilemap(level.layer('walls')));
+lighting.occludeFrom(new TilemapOccluder(level.layer('walls')));
 ```
 
 That is not decoration. The cascades and the distance field they trace are linked only by a project that imports `radiance`, so a project that does not never pays for them - `'radiance'` as a string would put the whole of it into every bundle that reads `quality` from a config file. `lighting.quality` still reports `'radiance'`, and `'auto'` still never picks it.
@@ -124,45 +124,38 @@ The work in 2D shadows is data entry, not rendering. Engines that ask for a silh
 ```ts
 const lighting = new Lighting({ quality: 'lightmap', app });
 
-lighting.occludeFrom(Occluders.fromPhysics(world));
-lighting.occludeFrom(Occluders.fromTilemap(tilemap.layer('walls')));
-lighting.occludeFrom(Occluders.fromAlpha(tree));
-lighting.occludeFrom(Occluders.fromMesh(platform));
-lighting.occludeFrom(Occluders.fromPolygon(trunkOutline, { node: tree }));
+lighting.occludeFrom(new PhysicsOccluder(world));
+lighting.occludeFrom(new TilemapOccluder(tilemap.layer('walls')));
+lighting.occludeFrom(new AlphaOccluder(tree));
+lighting.occludeFrom(new MeshOccluder(platform));
+lighting.occludeFrom(new PolygonOccluder(trunkOutline, { node: tree }));
 ```
 
-| Factory                         | Reads                          | Notes                                                                          |
-| ------------------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
-| `Occluders.fromPhysics(world)`  | collider geometry              | static bodies only by default, never sensors; queried per frame by region      |
-| `Occluders.fromTilemap(layer)`  | occupied cells of a tile layer | boundary edges only, merged into runs; cached per block, keyed on the revision |
-| `Occluders.fromAlpha(sprite)`   | the drawable's own silhouette  | its atlas frame, traced and simplified once, never per frame                   |
-| `Occluders.fromMesh(mesh)`      | a triangle mesh's outline      | interior edges dropped, holes kept; extracted once                             |
-| `Occluders.fromPolygon(points)` | an outline you author          | the escape hatch, and the right answer when the shadow is not the drawing      |
+| Source                        | Reads                          | Notes                                                                          |
+| ----------------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
+| `new PhysicsOccluder(world)`  | collider geometry              | static bodies only by default, never sensors; queried per frame by region      |
+| `new TilemapOccluder(layer)`  | occupied cells of a tile layer | boundary edges only, merged into runs; cached per block, keyed on the revision |
+| `new AlphaOccluder(sprite)`   | the drawable's own silhouette  | its atlas frame, traced and simplified once, never per frame                   |
+| `new MeshOccluder(mesh)`      | a triangle mesh's outline      | interior edges dropped, holes kept; extracted once                             |
+| `new PolygonOccluder(points)` | an outline you author          | the escape hatch, and the right answer when the shadow is not the drawing      |
 
-`fromAlpha` and `fromMesh` take the drawable itself, which then supplies both its geometry and its placement: `fromAlpha` the texture, the frame of it the drawable shows and the box that frame is drawn into, `fromMesh` the vertices and the index stream. The anchor needs no mention - a drawable's transform already carries it. Pass a bare `Texture` to `fromAlpha` instead and the whole of it is traced, placed by `node`; that form cannot know about an atlas frame or a resize, so prefer the drawable wherever there is one.
+`AlphaOccluder` and `MeshOccluder` take the drawable itself, which then supplies both its geometry and its placement: `AlphaOccluder` the texture, the frame of it the drawable shows and the box that frame is drawn into, `MeshOccluder` the vertices and the index stream. The anchor needs no mention - a drawable's transform already carries it. Pass a bare `Texture` to `AlphaOccluder` instead and the whole of it is traced, placed by `node`; that form cannot know about an atlas frame or a resize, so prefer the drawable wherever there is one.
 
-`fromMesh` extracts once. `fromAlpha` extracts per distinct frame: an animation is a finite set of silhouettes, not a continuous one, so each region of the atlas is traced the first time the clip reaches it and looked up every time after. A rendered frame costs a comparison and the transform; the marching-squares pass happens once per frame of the clip, however long the clip runs. Moving, rotating or scaling either carrier is free.
+`MeshOccluder` extracts once. `AlphaOccluder` extracts per distinct frame: an animation is a finite set of silhouettes, not a continuous one, so each region of the atlas is traced the first time the clip reaches it and looked up every time after. A rendered frame costs a comparison and the transform; the marching-squares pass happens once per frame of the clip, however long the clip runs. Moving, rotating or scaling either carrier is free.
 
 What neither follows is a change with nothing to key on: deforming a mesh's vertices, or a texture whose pixels move while its frame stays put. That second case is video and anything drawn into every frame - see below.
 
-Two sources give no outline, by construction rather than by omission. A **render target** has no pixels this side of the GPU: reading one back is asynchronous and backend-specific, and its content is dynamic anyway, so `fromAlpha` refuses it - draw into an `HTMLCanvasElement` or `OffscreenCanvas` and wrap that in a `Texture` if you need both a live surface and its outline. **Video** is the opposite case: an `HTMLVideoElement` is a perfectly readable texture source, so `Video` (which extends `Sprite`) traces the frame that was decoded at the time. It will not follow the playback, because a video's frame rectangle never changes while its pixels do, and the per-frame cache has nothing to distinguish one moment from the next. It hardly matters in practice: almost no video carries an alpha channel, so what you get is the frame rectangle, which `fromPolygon` describes with four points and no tracing pass at all.
+Two sources give no outline, by construction rather than by omission. A **render target** has no pixels this side of the GPU: reading one back is asynchronous and backend-specific, and its content is dynamic anyway, so `AlphaOccluder` refuses it - draw into an `HTMLCanvasElement` or `OffscreenCanvas` and wrap that in a `Texture` if you need both a live surface and its outline. **Video** is the opposite case: an `HTMLVideoElement` is a perfectly readable texture source, so `Video` (which extends `Sprite`) traces the frame that was decoded at the time. It will not follow the playback, because a video's frame rectangle never changes while its pixels do, and the per-frame cache has nothing to distinguish one moment from the next. It hardly matters in practice: almost no video carries an alpha channel, so what you get is the frame rectangle, which `PolygonOccluder` describes with four points and no tracing pass at all.
 
-`Sprite.texture` accepts a `RenderTexture`, so "a sprite that cannot be traced" is a shape the types allow, and a shadow that silently never appears is a bad way to find out. A development build says which of the three it was - no texture, a render target, or a texture that could not be read yet - on the `Occluders` log source. A production build carries neither the check nor the message.
+`Sprite.texture` accepts a `RenderTexture`, so "a sprite that cannot be traced" is a shape the types allow, and a shadow that silently never appears is a bad way to find out. A development build says which of the three it was - no texture, a render target, or a texture that could not be read yet - on the `AlphaOccluder` log source. A production build carries neither the check nor the message.
 
 There is no `castsShadow` flag, in this package or in the core. A flag on a drawable would put lighting vocabulary on a class with no lighting concern, and it would tie the shadow silhouette to the sprite's shape - which is wrong often enough that a tree casts the shadow of its trunk, not of its canopy. Sources keep the two apart while letting the common case stay one line.
 
-`Occluders.fromPhysics` and `Occluders.fromTilemap` take structurally typed arguments, so this package depends on neither `@codexo/exojs-physics` nor `@codexo/exojs-tilemap`: a project without them pulls in nothing, and a project with a collision layer of its own can feed shadows from that instead.
+`PhysicsOccluder` and `TilemapOccluder` take structurally typed arguments, so this package depends on neither `@codexo/exojs-physics` nor `@codexo/exojs-tilemap`: a project without them pulls in nothing, and a project with a collision layer of its own can feed shadows from that instead.
 
-### Two spellings, and which one your bundler can act on
+### What your bundler can drop
 
-Every occluder source and every normal source is exported twice: as a property of `Occluders` / `Normals`, and under its own name.
-
-```ts
-import { Occluders, Normals } from '@codexo/exojs-lighting'; // discoverable
-import { physicsOccluder, normalMap } from '@codexo/exojs-lighting'; // tree-shakeable
-```
-
-They do the same thing. The difference is that reaching one property of a namespace object keeps the whole object, so `Occluders.fromPhysics` also carries the marching-squares tracer, the alpha readback and the tile boundary walker that a physics-only project never runs - measured at 34.0 KB against 25.1 KB minified for the named form. Use the namespace while you are finding your way around, and the named form when the bundle matters.
+Every occluder source and every normal source is a class of its own, exported by name, and nothing gathers them into a namespace object. That is the reason: reaching one property of such an object keeps the whole of it, so a physics-only project would carry the marching-squares tracer, the alpha readback and the tile boundary walker it never runs.
 
 The two built-in renderers do not split this way: `quality` is a string read at runtime, so a `forward` project carries the lightmap renderer whether or not it runs it. `radiance` does split, because it is imported rather than named - the package as a whole is 28.1 KB gzip and a `forward` project that never mentions `radiance` uses 17.0 KB. Both figures are budgeted in CI.
 
@@ -206,7 +199,7 @@ Lights sharing a cookie share a draw. A scene with three distinct cookies costs 
 
 `softness` is a property of the light, in `0..1`, and it means a different quantity in each renderer. Under `lightmap` it is FILTER WIDTH: the light stays a point, and the shadow term is averaged over a band of the angular shadow row up to three percent of a full turn wide. A wider band widens the edge, but the edge widens with distance from the LIGHT rather than from the wall, and it is not a model of an area source. Under `radiance` it is SOURCE SIZE: the emitter is given a width, and the penumbra follows from the geometry - it grows with the distance between the wall and the surface the shadow falls on, the way a real one does.
 
-Neither adds a pass. Under `lightmap` the filter costs between 5 and 21 texture fetches per shadowed fragment, scaling with the width asked for, and can differ between lights.
+Neither adds a pass. Under `lightmap` the filter samples every bin under its kernel and spends between 5 and 21 texture fetches per shadowed fragment doing it, which also bounds the kernel at ten bins either side - three percent of a turn at the default `shadowResolution`, and proportionally less as that rises.
 
 ```ts
 lighting.add(new PointLight({ radius: 320, softness: 0.6 }));
@@ -243,7 +236,7 @@ Normals are optional, in three steps. A `LitMaterial` without them binds a share
 
 ### Which way up the green channel is
 
-The canonical input convention is **OpenGL**: green above the midpoint means the normal leans towards the TOP of the image, blue points out of the sprite plane, and a flat texel is `(128, 128, 255)`. That is what Blender, Substance, Krita, Godot and Unity's default sprite import write. A map authored the other way up - the DirectX convention - lights its vertical detail from the wrong side while its horizontal detail stays correct, which is the shape that symptom always has.
+The canonical input convention is **OpenGL**: green above the midpoint means the normal leans towards the TOP of the image, blue points out of the sprite plane, and a flat texel is `(128, 128, 255)`. This is ExoJS's own choice, not a universal standard: most authoring tools can write either convention and several - Substance's mesh bakers among them - default to DirectX, so check what your exporter is set to rather than assuming. A map authored the other way up lights its vertical detail from the wrong side while its horizontal detail stays correct, which is the shape that symptom always has.
 
 Declare the other convention rather than editing the texture:
 
@@ -285,7 +278,7 @@ It is a live property (`material.emissive = 0.5`), so a pulsing forge is a tween
 | Extra render passes or draw calls           | `forward`: none; `lightmap`: two; `radiance`: four to nine; a `post` chain adds one |
 | Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                                                  |
 | Overbright light accumulation               | `lightmap`: `rgba16f`, `rgba8` where floats are not renderable                      |
-| Shadows from physics, tilemaps, alpha, mesh | yes, via `Occluders.*`                                                              |
+| Shadows from physics, tilemaps, alpha, mesh | yes, one occluder class per source                                                  |
 | Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                                                 |
 | Light cookies                               | `lightmap`, one draw per distinct cookie                                            |
 | Line lights (capsule falloff)               | yes; `forward` approximates one as a point light                                    |

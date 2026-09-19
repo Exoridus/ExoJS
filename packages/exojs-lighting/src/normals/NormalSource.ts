@@ -6,9 +6,11 @@ import { DataTexture, type Texture, TextureFormat } from '@codexo/exojs';
  * `opengl` is the canonical input convention of this package: green above the
  * midpoint means the normal leans towards the TOP of the image, blue means out
  * of the sprite plane towards the light, and a flat texel is `(128, 128, 255)`.
- * Blender, Substance, Krita, Godot and Unity's default sprite import all write
- * that. `directx` is the same map with its green channel mirrored, which is
- * what 3ds Max and some Unreal pipelines write.
+ * `directx` is the same map with its green channel mirrored.
+ *
+ * Which one a tool writes is a setting rather than a property of the tool -
+ * several bakers default to DirectX - so this is a declaration about the
+ * asset, not a claim about any authoring pipeline.
  *
  * It describes the CHANNELS, not the image: a map in the other convention is
  * not an upside-down picture, and flipping the texture vertically is not a

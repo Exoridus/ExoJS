@@ -205,6 +205,12 @@ export interface LightingOptions {
    * the renderer can resolve, so a large light on a high-resolution canvas
    * wants more of them; the cost is linear in the light count. Defaults to
    * `256`.
+   *
+   * It trades against how wide a penumbra can get. The shadow filter samples
+   * every bin under its kernel and spends at most 21 fetches doing it, so the
+   * widest kernel is ten bins either side - three percent of a turn at the
+   * default, and proportionally less as the resolution rises. Raising this
+   * sharpens the hard edge rather than widening the softest one.
    */
   readonly shadowResolution?: number;
   /**
