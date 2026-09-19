@@ -88,15 +88,27 @@ fn depthAt(bin: i32, bins: i32, row: i32) -> f32 {
  * arcs across the penumbra. The blocker's distance varies within the bin, and
  * the one-sided differences to the neighbouring bins measure how steeply.
  *
- * The SMALLER of the two is what that is read from: across a silhouette one
- * side jumps by the whole distance to whatever lies behind, and taking that
- * would spread the edge over the jump. Note that the transition stays centred
- * on the bin's OWN stored distance - blending two stored distances and
- * comparing once would instead put the edge at a depth neither bin holds,
- * which is a different thing and the wrong one.
+ * Two conditions before that reading is trusted. The differences have to run
+ * the same way, or the bin holds an isolated blocker rather than a surface;
+ * and of two that do, the SMALLER is taken, because across a silhouette one
+ * side jumps by the whole distance to whatever lies behind. Failing either,
+ * the bin flips at its stored distance, which is what a blocker that the row
+ * cannot resolve any further should do.
+ *
+ * The transition stays centred on the bin's OWN stored distance either way -
+ * blending two stored distances and comparing once would instead put the edge
+ * at a depth neither bin holds, which is a different thing and the wrong one.
  */
 fn coverageAt(here: f32, previous: f32, next: f32, distance: f32) -> f32 {
-    let slope = min(abs(here - previous), abs(next - here));
+    let rising = here - previous;
+    let falling = next - here;
+    // A slope only means something where the blocker distance runs the SAME
+    // way on both sides. A bin whose neighbours BOTH lie further away holds an
+    // isolated blocker seen end-on rather than a surface seen at a slant, and
+    // reading its two one-sided jumps as a slope would spread it over the whole
+    // distance to whatever stands behind it - darkening what stands in FRONT of
+    // it, the one place a blocker cannot reach.
+    let slope = select(min(abs(rising), abs(falling)), 0.0, rising * falling <= 0.0);
 
     return clamp(0.5 + (here + SHADOW_BIAS - distance) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }

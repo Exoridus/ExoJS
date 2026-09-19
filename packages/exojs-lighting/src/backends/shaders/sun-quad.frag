@@ -42,7 +42,15 @@ float depthAt(int strip, int bins, int row) {
  * yes or no, and why the slope is the smaller of the two one-sided differences.
  */
 float coverageAt(float here, float previous, float next, float depth) {
-    float slope = min(abs(here - previous), abs(next - here));
+    float rising = here - previous;
+    float falling = next - here;
+    // A slope only means something where the blocker distance runs the SAME
+    // way on both sides. A bin whose neighbours BOTH lie further away holds an
+    // isolated blocker seen end-on rather than a surface seen at a slant, and
+    // reading its two one-sided jumps as a slope would spread it over the whole
+    // distance to whatever stands behind it - darkening what stands in FRONT of
+    // it, the one place a blocker cannot reach.
+    float slope = rising * falling <= 0.0 ? 0.0 : min(abs(rising), abs(falling));
 
     return clamp(0.5 + (here + SHADOW_BIAS - depth) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }

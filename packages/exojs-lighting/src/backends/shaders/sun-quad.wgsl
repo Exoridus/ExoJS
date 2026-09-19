@@ -57,7 +57,15 @@ fn depthAt(strip: i32, bins: i32, row: i32) -> f32 {
  * yes or no, and why the slope is the smaller of the two one-sided differences.
  */
 fn coverageAt(here: f32, previous: f32, next: f32, depth: f32) -> f32 {
-    let slope = min(abs(here - previous), abs(next - here));
+    let rising = here - previous;
+    let falling = next - here;
+    // A slope only means something where the blocker distance runs the SAME
+    // way on both sides. A bin whose neighbours BOTH lie further away holds an
+    // isolated blocker seen end-on rather than a surface seen at a slant, and
+    // reading its two one-sided jumps as a slope would spread it over the whole
+    // distance to whatever stands behind it - darkening what stands in FRONT of
+    // it, the one place a blocker cannot reach.
+    let slope = select(min(abs(rising), abs(falling)), 0.0, rising * falling <= 0.0);
 
     return clamp(0.5 + (here + SHADOW_BIAS - depth) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }

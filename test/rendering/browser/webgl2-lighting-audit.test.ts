@@ -913,3 +913,86 @@ describe('the shadow filter as the fragment moves away from the light', () => {
     expect(crossings, `${shown}`).toBe(1);
   });
 });
+
+describe('the shadow filter against a blocker no wider than one bin', () => {
+  const wide = 256;
+  const lightX = 40;
+  const lightY = 128;
+  const reach = 220;
+  const standoff = 44;
+
+  /**
+   * One short blocker, square-on to the ray and narrower than a bin at the
+   * distance it stands: the bin that catches it has two unoccluded neighbours,
+   * so no surface runs through them and there is no slope to read off them.
+   *
+   * A filter that takes a slope from the neighbours anyway reads the whole
+   * distance to whatever lies behind as though the blocker's own face sloped
+   * that steeply, and then darkens what stands in FRONT of it - the one place
+   * a blocker cannot reach.
+   *
+   * The bins sit where they sit, so the ray this lands on is found rather than
+   * assumed: the fan below is read behind the blocker, the darkest sample is
+   * its shadow, and the reading in front is taken along that same ray.
+   */
+  const sweep = async (blocking: boolean): Promise<{ behind: number[]; front: number[] }> => {
+    const host = await createHost(wide);
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1, shadowResolution: 64 });
+
+    lighting.add(new PointLight({ radius: reach, intensity: 1, softness: 0.35 })).setPosition(lightX, lightY);
+
+    if (blocking) {
+      lighting.occludeFrom(
+        new PolygonOccluder(
+          [
+            { x: lightX + standoff, y: lightY + 0.5 },
+            { x: lightX + standoff, y: lightY + 3.5 },
+          ],
+          { closed: false },
+        ),
+      );
+    }
+
+    drawWhiteFrame(host, wide);
+
+    try {
+      runFrame(host, lighting);
+
+      const behind: number[] = [];
+      const front: number[] = [];
+
+      for (let step = -12; step <= 12; step++) {
+        const angle = (step * 0.6 * Math.PI) / 180;
+
+        behind.push(readRed(host.backend, lightX + 88 * Math.cos(angle), lightY + 88 * Math.sin(angle)));
+        front.push(readRed(host.backend, lightX + 22 * Math.cos(angle), lightY + 22 * Math.sin(angle)));
+      }
+
+      return { behind, front };
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  };
+
+  test('what stands in front of it is lit as if it were not there', async () => {
+    const blocked = await sweep(true);
+    const clear = await sweep(false);
+    const shown = `behind ${blocked.behind.join(' ')} | front ${blocked.front.join(' ')} against ${clear.front.join(' ')}`;
+    let darkest = 0;
+
+    for (let index = 1; index < blocked.behind.length; index++) {
+      if (blocked.behind[index]! < blocked.behind[darkest]!) {
+        darkest = index;
+      }
+    }
+
+    // The blocker casts a shadow at all, so the ray below is the one it falls
+    // along rather than an arbitrary one.
+    expect(blocked.behind[darkest]!, `${shown}`).toBeLessThan(clear.behind[darkest]! * 0.85);
+
+    // And along that same ray, nearer to the light than the blocker, nothing
+    // of it may show. A couple of counts is the quantisation.
+    expect(blocked.front[darkest]!, `${shown}`).toBeGreaterThanOrEqual(clear.front[darkest]! - 2);
+  });
+});
