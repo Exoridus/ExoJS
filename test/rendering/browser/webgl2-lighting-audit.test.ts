@@ -93,14 +93,16 @@ const drawWhiteFrame = (host: Host, size: number = canvasSize): void => {
   sprite.destroy();
 };
 
-const readRed = (backend: WebGl2Backend, x: number, y: number): number => {
+const readPixel = (backend: WebGl2Backend, x: number, y: number): Uint8Array => {
   const pixel = new Uint8Array(4);
   const gl = backend.context;
 
   gl.readPixels(Math.floor(x), gl.drawingBufferHeight - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
-  return pixel[0]!;
+  return pixel;
 };
+
+const readRed = (backend: WebGl2Backend, x: number, y: number): number => readPixel(backend, x, y)[0]!;
 
 const runFrame = (host: Host, lighting: Lighting): void => {
   lighting.update();
@@ -310,7 +312,7 @@ describe('the cascade chain against an analytic reference', () => {
    * boundary the two levels disagree across shows up as a ring - a step in
    * this profile at one radius, the same one at every angle.
    */
-  const profileOf = async (): Promise<{ radial: number[]; angular: number[] }> => {
+  const profileOf = async (): Promise<{ radial: Array<{ radius: number; product: number }>; angular: number[] }> => {
     const host = await createHost();
     const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
 
@@ -653,7 +655,7 @@ describe('the bounce history', () => {
    * pairing the two reprojects last frame's light through a camera it was
    * never rendered through.
    */
-  const bounceAfter = async (skipped: number): Promise<number> => {
+  const bounceAfter = async (skipped: number): Promise<number[]> => {
     const host = await createHost();
     const lighting = new Lighting({ quality: radiance({ bounce: 0.9 }), app: host.app, ambient: Color.black, lightResolution: 1 });
     const floor = new Sprite(Texture.fromColor(Color.white, 1));
@@ -666,7 +668,22 @@ describe('the bounce history', () => {
     wall.setPosition(84, 0);
     host.context.renderTo(floor, { target: host.frameTexture, clear: Color.black });
     host.context.renderTo(wall, { target: host.frameTexture });
-    lighting.add(new PointLight({ radius: 80, intensity: 4 })).setPosition(40, 64);
+    // The wall has to be an occluder as well as a sprite: the bounce writes a
+    // colour with no coverage, so it is only ever read where the mask already
+    // says a ray ends.
+    lighting.occludeFrom(
+      new PolygonOccluder(
+        [
+          { x: 84, y: 4 },
+          { x: 84, y: 124 },
+        ],
+        { closed: false },
+      ),
+    );
+    // A white lamp over a white floor with a red wall: the direct light is
+    // neutral and only the bounce is tinted, so red MINUS blue is the bounce
+    // on its own, whatever the direct term does.
+    lighting.add(new PointLight({ radius: 80, intensity: 0.5 })).setPosition(40, 64);
 
     try {
       // One drawn frame, so there is a light field to bounce from.
@@ -675,14 +692,25 @@ describe('the bounce history', () => {
       // Then some updates the renderer never got to draw. Each prepares a
       // camera; none of them gathers anything.
       for (let index = 0; index < skipped; index++) {
-        host.context.view.center.set(64 + index + 1, 64);
+        host.context.view.center.set(64 + (index + 1) * 24, 64);
         lighting.update();
       }
 
       host.context.view.center.set(64, 64);
       runFrame(host, lighting);
 
-      return readRed(host.backend, 70, 64);
+      // The bounce along a row, as red minus blue. One texel of it is worth
+      // a couple of counts; the profile as a whole is what a reprojection
+      // error moves, so the comparison is over the row rather than a point.
+      const profile: number[] = [];
+
+      for (let x = 44; x <= 82; x += 2) {
+        const pixel = readPixel(host.backend, x, 64);
+
+        profile.push(pixel[0]! - pixel[2]!);
+      }
+
+      return profile;
     } finally {
       floor.destroy();
       wall.destroy();
@@ -694,11 +722,19 @@ describe('the bounce history', () => {
   test('an update the renderer never drew does not become the frame the bounce reads from', async () => {
     const drawn = await bounceAfter(0);
     const afterSkips = await bounceAfter(3);
+    const shown = `drawn ${drawn.join(',')} | after skips ${afterSkips.join(',')}`;
 
-    expect(drawn).toBeGreaterThan(10);
+    // There is a bounce to compare at all.
+    const total = drawn.reduce((sum, value) => sum + value, 0);
+
+    expect(total, `${shown}`).toBeGreaterThan(20);
+
     // The camera ends where it started in both runs and the light field is
     // the same one, so the bounce has to be too. Committing the camera during
-    // `update` instead leaves the last skipped one paired with it.
-    expect(Math.abs(afterSkips - drawn), `drawn ${drawn}, after skips ${afterSkips}`).toBeLessThanOrEqual(2);
+    // `update` instead pairs the field with the last camera that was merely
+    // prepared, and the whole profile shifts.
+    for (let index = 0; index < drawn.length; index++) {
+      expect(Math.abs(afterSkips[index]! - drawn[index]!), `${shown}`).toBeLessThanOrEqual(1);
+    }
   });
 });
