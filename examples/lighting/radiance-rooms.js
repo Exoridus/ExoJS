@@ -1,5 +1,5 @@
 // Auto-generated from radiance-rooms.ts - edit the .ts source, not this file.
-import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, RepeatingSprite, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
 import { Lighting, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
@@ -93,7 +93,10 @@ class RadianceRoomsScene extends Scene {
   init() {
     const { width, height } = this.app;
     this.world = new Container();
-    const floor = new Sprite(floorTexture);
+    // Repeated, not stretched: a 64px tile scaled to the whole canvas turns its
+    // own checker into two quadrant-sized blocks whose edges read as a defect
+    // in the light rather than as a floor.
+    const floor = new RepeatingSprite(floorTexture);
     floor.width = width;
     floor.height = height;
     this.world.addChild(floor);

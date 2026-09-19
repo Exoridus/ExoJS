@@ -4,6 +4,7 @@ import {
   Container,
   FixedResolutionCanvasSizing,
   type RenderingContext,
+  RepeatingSprite,
   ScaleModes,
   Scene,
   type Seconds,
@@ -124,7 +125,10 @@ class RadianceRoomsScene extends Scene {
 
     this.world = new Container();
 
-    const floor = new Sprite(floorTexture);
+    // Repeated, not stretched: a 64px tile scaled to the whole canvas turns its
+    // own checker into two quadrant-sized blocks whose edges read as a defect
+    // in the light rather than as a floor.
+    const floor = new RepeatingSprite(floorTexture);
 
     floor.width = width;
     floor.height = height;
