@@ -364,13 +364,20 @@ describe('the cascade chain against an analytic reference', () => {
     expect(Math.min(...products) / 52).toBeGreaterThan(8);
     expect(Math.max(...products) / 6).toBeLessThan(250);
 
-    // The residual of the single-trace merge, quantified rather than asserted
-    // away. Two bounds, because a global ratio alone says nothing about where
-    // the error sits: the SPREAD is how far the product wanders over the
-    // whole sweep, and the per-sample bound is how much of that can happen
-    // between two neighbouring texels. A cascade ring is a step at one
-    // radius, and only the second bound can see one.
-    expect(spread, `r * L: ${shown}`).toBeLessThan(1.3);
+    // The residual of the merge, quantified rather than asserted away. Two
+    // bounds, because a global ratio alone says nothing about where the error
+    // sits: the SPREAD is how far the product wanders over the whole sweep,
+    // and the per-sample bound is how much of that can happen between two
+    // neighbouring texels. A cascade ring is a step at one radius, and only
+    // the second bound can see one.
+    //
+    // The spread is a BOW, and it is the one thing connecting the join to
+    // where each coarser ray begins does not remove: measured at 1.29 reading
+    // one walk at four distances and 1.32 walking to each of the four, on a
+    // field the two otherwise agree on to below an 8-bit count. Whatever
+    // leaves it is shared by both, so this bound is a watch on the bow rather
+    // than a claim about the join.
+    expect(spread, `r * L: ${shown}`).toBeLessThan(1.35);
 
     for (let index = 1; index < radial.length; index++) {
       const here = radial[index]!;
@@ -801,11 +808,17 @@ describe('a light moving by less than a texel', () => {
 
       // Counts rather than a fraction: these receivers read in the twenties
       // and forties, where one 8-bit count is already four percent, so a
-      // relative bound would be measuring the quantisation. Three counts is
+      // relative bound would be measuring the quantisation. Four counts is
       // that floor with a step either side of it, and anything the grid does
       // is many times it.
+      //
+      // It was three while the join was read off one walk. Walking to each
+      // coarser ray's own start costs a count here - four walks land on four
+      // slightly different paths, and a subtexel move changes each of them -
+      // while removing the beads along every lit edge, which is a structural
+      // artefact rather than a count of noise.
       for (let index = 1; index < profile.length; index++) {
-        expect(Math.abs(profile[index]! - profile[index - 1]!), `${shown}`).toBeLessThanOrEqual(3);
+        expect(Math.abs(profile[index]! - profile[index - 1]!), `${shown}`).toBeLessThanOrEqual(4);
       }
     }
   });
@@ -994,5 +1007,69 @@ describe('the shadow filter against a blocker no wider than one bin', () => {
     // And along that same ray, nearer to the light than the blocker, nothing
     // of it may show. A couple of counts is the quantisation.
     expect(blocked.front[darkest]!, `${shown}`).toBeGreaterThanOrEqual(clear.front[darkest]! - 2);
+  });
+});
+
+describe('the cascade merge along a lit edge', () => {
+  const wide = 720;
+  const lamp = { x: 403, y: 498 };
+  /** The rooms example's own bar, which is where the beads showed. */
+  const bar = { x: 300, y: 560, width: 150, height: 34 };
+
+  /**
+   * A row one texel inside an occluder, read out of the light field itself.
+   *
+   * A probe there reaches nothing, so the row is black - unless the merge
+   * hands it light from the cascade above. Joining the two intervals by
+   * projecting each coarser probe's offset onto this ray keeps only the part
+   * along it: the walk then ends beside where that coarser ray begins rather
+   * than at it, and beside a wall that is the far side of the wall. What comes
+   * through is one bead per coarser probe, which is why this is read as a row
+   * and not as a pixel - the period is the giveaway, not the height.
+   */
+  const insideTheBar = async (): Promise<number[]> => {
+    const host = await createHost(wide);
+    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const halfWidth = bar.width / 2;
+    const halfHeight = bar.height / 2;
+
+    lighting.debug = 'light';
+    // Read with headroom rather than with a dimmer lamp: the setting that
+    // showed the beads is the setting they have to be gone at.
+    lighting.debugExposure = 1 / 8;
+    lighting.add(new PointLight({ radius: 600, intensity: 3, softness: 0.6, color: Color.white })).setPosition(lamp.x, lamp.y);
+    lighting.occludeFrom(
+      new PolygonOccluder([
+        { x: bar.x - halfWidth, y: bar.y - halfHeight },
+        { x: bar.x + halfWidth, y: bar.y - halfHeight },
+        { x: bar.x + halfWidth, y: bar.y + halfHeight },
+        { x: bar.x - halfWidth, y: bar.y + halfHeight },
+      ]),
+    );
+    drawWhiteFrame(host, wide);
+
+    try {
+      runFrame(host, lighting);
+
+      const row: number[] = [];
+
+      for (let x = 312; x <= 370; x++) {
+        row.push(readRed(host.backend, x, bar.y - halfHeight + 1));
+      }
+
+      return row;
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  };
+
+  test('lights nothing inside an occluder', async () => {
+    const row = await insideTheBar();
+    const shown = row.join(' ');
+
+    // One count at this exposure is a hundredth of what the lit floor beside
+    // the bar reads, so this is not a tolerance so much as the noise floor.
+    expect(Math.max(...row), `${shown}`).toBeLessThanOrEqual(1);
   });
 });

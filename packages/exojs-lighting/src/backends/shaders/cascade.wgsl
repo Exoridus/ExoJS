@@ -425,31 +425,10 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
     let open = textureLoad(uVisibility, probe, 0);
 
     var corners: array<vec2<i32>, 4>;
-    var ends = vec4<f32>(0.0);
     var shares = vec4<f32>(0.0);
 
-    // Each coarser probe's ray in this direction begins a fixed distance from
-    // THAT probe, which along this ray is short of or past where this level's
-    // interval ends by the probe's own offset. Ending the walk there, per
-    // probe, is what makes the two intervals meet: one end for all four would
-    // leave a gap towards the probes ahead and count the band twice towards
-    // the ones behind, and either shows as a ring of blotches at the boundary.
-    //
-    // It is the offset ALONG the ray, not the whole of it. The exact join -
-    // the bilinear fix - would walk from this probe to where each coarser
-    // ray actually begins, which is four walks in four slightly different
-    // directions instead of one walk read at four distances. What is left out
-    // is the component of the offset across the ray, and what it costs is
-    // measured rather than assumed: over an unoccluded point source the
-    // arriving light times its own distance stays within about a tenth either
-    // side of flat across every boundary of the chain, as a slow bow and not
-    // as a step at any one radius. Four walks is four times the tracing.
     for (var index: i32 = 0; index < 4; index = index + 1) {
-        let corner = clamp(base + vec2<i32>(index % 2, index / 2), vec2<i32>(0, 0), coarseProbes - vec2<i32>(1, 1));
-        let coarseOrigin = uniforms.uOrigin + (vec2<f32>(corner) + 0.5) * coarseSpacing;
-
-        corners[index] = corner;
-        ends[index] = uniforms.uRange.y + dot(coarseOrigin - origin, heading);
+        corners[index] = clamp(base + vec2<i32>(index % 2, index / 2), vec2<i32>(0, 0), coarseProbes - vec2<i32>(1, 1));
         shares[index] = bilinear(weight, index) * open[index];
     }
 
@@ -464,12 +443,33 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
         totalShare = 1.0;
     }
 
-    let results = trace(origin, heading, ends);
-
     var total = vec3<f32>(0.0);
 
+    // Each coarser probe's ray in this direction begins a fixed distance from
+    // THAT probe, so the walk that meets it goes to where it begins - one walk
+    // per coarser probe, in four slightly different directions.
+    //
+    // Reading one walk along this ray at four distances instead keeps only the
+    // part of each probe's offset that lies ALONG the ray and drops the part
+    // across it. That costs one walk rather than four, and it is wrong exactly
+    // where the dropped part crosses something: a probe beside a wall then
+    // merges with a coarser ray whose start is on the far side of it, which
+    // shows as a bead of light per coarser probe along every lit edge. Against
+    // the fully connected form - four probes times the four directions that
+    // subdivide this one, sixteen walks - this one measures the same inside a
+    // wall and costs a quarter as much.
     for (var index: i32 = 0; index < 4; index = index + 1) {
-        var walked = results[index];
+        let coarseOrigin = uniforms.uOrigin + (vec2<f32>(corners[index]) + 0.5) * coarseSpacing;
+        let way = coarseOrigin + heading * uniforms.uRange.y - origin;
+        let reach = length(way);
+        var aimed = heading;
+
+        if (reach > 0.0) {
+            aimed = way / reach;
+        }
+
+        let walks = trace(origin, aimed, vec4<f32>(reach));
+        var walked = walks[0];
 
         // Scaled by what got through: a ray that ended on a surface is already
         // carrying that surface's radiance, and one that grazed it carries
