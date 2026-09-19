@@ -804,6 +804,7 @@ export default defineConfig([
       'packages/exojs-lighting/src/readAlphaField.ts',
       'packages/exojs-lighting/src/occluders/*.ts',
       'packages/exojs-lighting/src/backends/LightmapBackend.ts',
+      'packages/exojs-lighting/src/backends/transportGeometry.ts',
     ],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
