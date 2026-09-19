@@ -1606,7 +1606,7 @@ export class WebGpuBackend implements RenderBackend {
       // fresh record costs nothing measurable; giving them the state's own
       // record would mean the default path and an override path could not be
       // resolved in the same batch.
-      return { view: state.view, sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this._isNonFilterable(texture)) };
+      return { view: state.view, sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this.isNonFilterableTexture(texture)) };
     }
 
     // Refreshed in place: `_syncTexture` may have replaced the GPU texture (and
@@ -1629,7 +1629,7 @@ export class WebGpuBackend implements RenderBackend {
    * sampling state and safe to hold across frames as long as the device lives.
    */
   public getTextureSampler(texture: Texture | RenderTexture): GPUSampler {
-    return this._getSampler(texture.scaleMode, texture.wrapMode, this._isNonFilterable(texture));
+    return this._getSampler(texture.scaleMode, texture.wrapMode, this.isNonFilterableTexture(texture));
   }
 
   /**
@@ -2915,7 +2915,7 @@ export class WebGpuBackend implements RenderBackend {
       const mipLevelCount = this._getMipLevelCount(texture);
 
       const view = gpuTexture.createView();
-      const nonFilterable = this._isNonFilterable(texture);
+      const nonFilterable = this.isNonFilterableTexture(texture);
       const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
       const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
 
@@ -3146,7 +3146,7 @@ export class WebGpuBackend implements RenderBackend {
     const compressedPayload = compressedPayloadOf(texture);
     const textureVersion = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
     const mipLevelCount = this._getMipLevelCount(texture);
-    const nonFilterable = this._isNonFilterable(texture);
+    const nonFilterable = this.isNonFilterableTexture(texture);
     const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
 
     if (state.samplerKey !== samplerKey) {
@@ -3452,12 +3452,17 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
+   * Whether this texture may only be sampled unfiltered.
+   *
    * Float32 textures (r32float, rgba32float) are non-filterable by default in
    * WebGPU, so a linear sampler on one is a validation error. Apps that need
    * linear filtering on floats can opt into the 'float32-filterable' device
-   * feature, which this backend does not expose yet.
+   * feature, which this backend does not expose yet. A bind group layout that
+   * declares such a texture has to agree with the sampler this decides on, so
+   * the answer is shared rather than restated per call site.
+   * @internal
    */
-  private _isNonFilterable(texture: Texture | RenderTexture): boolean {
+  public isNonFilterableTexture(texture: Texture | RenderTexture): boolean {
     if (texture instanceof DepthTexture) {
       return true;
     }
