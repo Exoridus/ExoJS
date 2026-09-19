@@ -194,7 +194,10 @@ class RadianceRoomsScene extends Scene {
       label: 'Phase',
       min: 0,
       max: 1,
-      step: 0.005,
+      // A step is a step along the PATH, and the path is `loopSeconds` long:
+      // at this rate one is about ten pixels of lamp, which is what makes the
+      // slider a way to place the lamp rather than to jump it across the room.
+      step: 0.001,
       value: 0,
       onChange: value => {
         // Placing the lamp by hand is what makes a comparison reproducible:
