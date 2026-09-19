@@ -69,8 +69,15 @@ const lampAt = phase => ({
   x: 340 + Math.sin(phase * 0.3) * 120,
   y: 360 + Math.cos(phase * 0.22) * 150,
 });
-/** Seconds for one full loop of both terms, so a phase slider covers the whole path. */
-const loopSeconds = (Math.PI * 2) / 0.06;
+/**
+ * Seconds for one full loop of BOTH terms, so a phase slider covers the whole
+ * path and the same phase is always the same place. The two rates are 0.3 and
+ * 0.22, whose common period is `2 * pi` over their greatest common measure of
+ * 0.02 - not over their difference.
+ */
+const loopSeconds = (Math.PI * 2) / 0.02;
+/** Where the status line reads the lamp's real position into. */
+const lampPosition = { x: 0, y: 0 };
 class RadianceRoomsScene extends Scene {
   world;
   lighting;
@@ -198,10 +205,13 @@ class RadianceRoomsScene extends Scene {
   }
   draw(context) {
     context.render(this.world);
-    const { x, y } = lampAt(this.elapsed);
+    // Read off the lamp itself, not recomputed from the clock: the status line
+    // is what says two renderers were compared under the same conditions, so
+    // it has to report where the light actually is.
+    this.lamp.getWorldPosition(lampPosition);
     const bounce = typeof this.quality === 'object' && this.bounce ? 'bounce' : 'no bounce';
     this.hud.setStatus(
-      `${this.lighting.quality} - ${bounce} - ${this.app.width}x${this.app.height} at ${lightResolution}x - lamp ${x.toFixed(1)}, ${y.toFixed(1)} - draw calls ${context.stats.drawCalls}`,
+      `${this.lighting.quality} - ${bounce} - ${this.app.width}x${this.app.height} at ${lightResolution}x - lamp ${lampPosition.x.toFixed(1)}, ${lampPosition.y.toFixed(1)} - draw calls ${context.stats.drawCalls}`,
     );
   }
   moveLamp() {
@@ -226,6 +236,11 @@ class RadianceRoomsScene extends Scene {
     this.lighting.debug = this.debug;
     this.systems.add(this.lighting);
     this.lighting.add(new PointLight({ radius: 600, intensity: this.intensity, softness: this.softness, color: new Color(255, 226, 180) }));
+    // Placed straight away rather than on the next tick: switching renderer
+    // while the motion is paused would otherwise leave the new lamp at the
+    // origin, and the A/B this scene exists for would compare two different
+    // scenes.
+    this.moveLamp();
     for (const wall of walls) {
       const halfWidth = wall.width / 2;
       const halfHeight = wall.height / 2;
