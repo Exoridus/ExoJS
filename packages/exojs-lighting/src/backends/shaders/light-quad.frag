@@ -29,7 +29,8 @@ out vec4 fragColor;
 const float PI = 3.14159265359;
 /**
  * Widest kernel, as a half-width in bins, and therefore also the fetch budget:
- * one tap per bin, `2 * MAX_HALF + 1` of them.
+ * one tap per bin, and a bin either side of the kernel for the slope its
+ * outermost taps read - `2 * MAX_HALF + 3` fetches.
  *
  * It bounds the penumbra in BINS, so a larger `shadowResolution` buys a
  * sharper hard edge rather than a wider softest penumbra. Sampling every bin
@@ -47,21 +48,41 @@ const float SHADOW_BIAS = 0.004;
  * would show the bin grid itself along an edge.
  */
 const float MIN_RADIUS = 1.5;
-
 /**
- * Whether the light reaches `distance` along bin `bin`, which wraps around the
- * circle.
- *
- * One comparison per bin, and the kernel below filters these ANSWERS. Blending
- * two stored blocker distances and comparing once instead describes a blocker
- * at a depth neither bin holds, which moves a hard edge around rather than
- * softening it - and a handful of such comparisons spread across a wide kernel
- * is what made one edge come out as several separate shadows.
+ * Narrowest blocker slope, in the row's own units, that a bin is allowed to
+ * resolve. Below it a bin flips at its stored distance, which is what a wall
+ * square-on to the ray should do.
  */
-float visibleAt(int bin, int bins, int row, float distance) {
+const float MIN_SLOPE = 1e-4;
+
+/** The blocker distance bin `bin` holds. The row is polar, so the index wraps. */
+float depthAt(int bin, int bins, int row) {
     int slot = bin - bins * int(floor(float(bin) / float(bins)));
 
-    return step(distance, texelFetch(u_shadow, ivec2(slot, row), 0).r + SHADOW_BIAS);
+    return texelFetch(u_shadow, ivec2(slot, row), 0).r;
+}
+
+/**
+ * How much of one bin's own angular width the light reaches past `distance`.
+ *
+ * A bin holds a single blocker distance, so comparing against that alone makes
+ * the whole bin flip at once and a kernel of such comparisons has no more
+ * levels than it has taps. Along a wall that is not square-on to the ray the
+ * taps flip at DIFFERENT distances, and the levels then show up as a fan of
+ * arcs across the penumbra. The blocker's distance varies within the bin, and
+ * the one-sided differences to the neighbouring bins measure how steeply.
+ *
+ * The SMALLER of the two is what that is read from: across a silhouette one
+ * side jumps by the whole distance to whatever lies behind, and taking that
+ * would spread the edge over the jump. Note that the transition stays centred
+ * on the bin's OWN stored distance - blending two stored distances and
+ * comparing once would instead put the edge at a depth neither bin holds,
+ * which is a different thing and the wrong one.
+ */
+float coverageAt(float here, float previous, float next, float distance) {
+    float slope = min(abs(here - previous), abs(next - here));
+
+    return clamp(0.5 + (here + SHADOW_BIAS - distance) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 /**
@@ -77,7 +98,9 @@ float visibleAt(int bin, int bins, int row, float distance) {
  * angle crosses a bin carries no weight at the moment it does. Placing the
  * taps at fixed offsets from the angle instead - and rounding each to a bin -
  * makes every weight constant and moves the whole window at once, which puts
- * a step the size of the centre tap back into the edge.
+ * a step the size of the centre tap back into the edge. Each tap then reads a
+ * COVERAGE rather than a yes or no, which is what leaves the term continuous
+ * in the fragment's distance as well as in its angle.
  *
  * It is an ANGULAR filter, not an area source: it widens the edge a point
  * source casts, and it does not make the shadow behave like one cast by a
@@ -96,6 +119,11 @@ float shadowTerm(float distance) {
     int reach = int(ceil(radius));
     float lit = 0.0;
     float total = 0.0;
+    // Rolling, so the bin either side of a tap costs no extra fetch: every bin
+    // under the kernel is read once and serves as its own tap and as both its
+    // neighbours' slope.
+    float previous = depthAt(base - reach - 1, bins, row);
+    float here = depthAt(base - reach, bins, row);
 
     for (int offset = -MAX_HALF; offset <= MAX_HALF; offset++) {
         if (offset < -reach || offset > reach) {
@@ -103,14 +131,16 @@ float shadowTerm(float distance) {
         }
 
         int bin = base + offset;
+        float next = depthAt(bin + 1, bins, row);
         float weight = max(0.0, 1.0 - abs(float(bin) - center) / radius);
 
-        if (weight <= 0.0) {
-            continue;
+        if (weight > 0.0) {
+            lit += weight * coverageAt(here, previous, next, distance);
+            total += weight;
         }
 
-        lit += weight * visibleAt(bin, bins, row, distance);
-        total += weight;
+        previous = here;
+        here = next;
     }
 
     return total > 0.0 ? lit / total : 1.0;

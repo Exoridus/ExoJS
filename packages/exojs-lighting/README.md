@@ -201,7 +201,7 @@ Lights sharing a cookie share a draw. A scene with three distinct cookies costs 
 
 `softness` is a property of the light, in `0..1`, and it means a different quantity in each renderer. Under `lightmap` it is FILTER WIDTH: the light stays a point, and the shadow term is averaged over a band of the angular shadow row up to three percent of a full turn wide. A wider band widens the edge, but the edge widens with distance from the LIGHT rather than from the wall, and it is not a model of an area source. Under `radiance` it is SOURCE SIZE: the emitter is given a width, and the penumbra follows from the geometry - it grows with the distance between the wall and the surface the shadow falls on, the way a real one does.
 
-Neither adds a pass. Under `lightmap` the filter samples every bin under its kernel and spends between 5 and 21 texture fetches per shadowed fragment doing it, which also bounds the kernel at ten bins either side - three percent of a turn at the default `shadowResolution`, and proportionally less as that rises.
+Neither adds a pass. Under `lightmap` the filter samples every bin under its kernel and spends between 7 and 23 texture fetches per shadowed fragment doing it, which also bounds the kernel at ten bins either side - three percent of a turn at the default `shadowResolution`, and proportionally less as that rises.
 
 ```ts
 lighting.add(new PointLight({ radius: 320, softness: 0.6 }));

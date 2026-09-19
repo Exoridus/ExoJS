@@ -25,15 +25,26 @@ const float SHADOW_BIAS = 0.004;
 /** Kernel half-width, in strips, at zero softness. See `light-quad.frag`. */
 const float MIN_RADIUS = 1.5;
 
+/** Narrowest blocker slope a strip is allowed to resolve. See `light-quad.frag`. */
+const float MIN_SLOPE = 1e-4;
+
 /**
- * Whether the light reaches `depth` in strip `strip`.
- *
- * One comparison per strip, and the kernel below filters these ANSWERS - see
- * the same note in `light-quad.frag`. Clamped rather than wrapped: strips are
- * a line, and the far side of the range is not the near side of it.
+ * The blocker depth strip `strip` holds. Clamped rather than wrapped: strips
+ * are a line, and the far side of the range is not the near side of it.
  */
-float visibleAt(int strip, int bins, int row, float depth) {
-    return step(depth, texelFetch(u_shadow, ivec2(clamp(strip, 0, bins - 1), row), 0).r + SHADOW_BIAS);
+float depthAt(int strip, int bins, int row) {
+    return texelFetch(u_shadow, ivec2(clamp(strip, 0, bins - 1), row), 0).r;
+}
+
+/**
+ * How much of one strip's own width the light reaches past `depth`. See
+ * `light-quad.frag` for why a strip is read as a coverage rather than as a
+ * yes or no, and why the slope is the smaller of the two one-sided differences.
+ */
+float coverageAt(float here, float previous, float next, float depth) {
+    float slope = min(abs(here - previous), abs(next - here));
+
+    return clamp(0.5 + (here + SHADOW_BIAS - depth) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 float shadowTerm() {
@@ -53,20 +64,25 @@ float shadowTerm() {
     // Taps on the strips rather than at fixed offsets from the fragment. See
     // the same filter in `light-quad.frag` for why that is what makes it
     // continuous.
+    float previous = depthAt(base - reach - 1, bins, row);
+    float here = depthAt(base - reach, bins, row);
+
     for (int offset = -MAX_HALF; offset <= MAX_HALF; offset++) {
         if (offset < -reach || offset > reach) {
             continue;
         }
 
         int strip = base + offset;
+        float next = depthAt(strip + 1, bins, row);
         float weight = max(0.0, 1.0 - abs(float(strip) - center) / radius);
 
-        if (weight <= 0.0) {
-            continue;
+        if (weight > 0.0) {
+            lit += weight * coverageAt(here, previous, next, v_sun.y);
+            total += weight;
         }
 
-        lit += weight * visibleAt(strip, bins, row, v_sun.y);
-        total += weight;
+        previous = here;
+        here = next;
     }
 
     return total > 0.0 ? lit / total : 1.0;

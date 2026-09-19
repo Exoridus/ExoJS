@@ -40,15 +40,26 @@ const SHADOW_BIAS: f32 = 0.004;
 /** Kernel half-width, in strips, at zero softness. See `light-quad.wgsl`. */
 const MIN_RADIUS: f32 = 1.5;
 
+/** Narrowest blocker slope a strip is allowed to resolve. See `light-quad.wgsl`. */
+const MIN_SLOPE: f32 = 1e-4;
+
 /**
- * Whether the light reaches `depth` in strip `strip`.
- *
- * One comparison per strip, and the kernel below filters these ANSWERS - see
- * the same note in `light-quad.wgsl`. Clamped rather than wrapped: strips are
- * a line, and the far side of the range is not the near side of it.
+ * The blocker depth strip `strip` holds. Clamped rather than wrapped: strips
+ * are a line, and the far side of the range is not the near side of it.
  */
-fn visibleAt(strip: i32, bins: i32, row: i32, depth: f32) -> f32 {
-    return step(depth, textureLoad(u_shadow, vec2<i32>(clamp(strip, 0, bins - 1), row), 0).r + SHADOW_BIAS);
+fn depthAt(strip: i32, bins: i32, row: i32) -> f32 {
+    return textureLoad(u_shadow, vec2<i32>(clamp(strip, 0, bins - 1), row), 0).r;
+}
+
+/**
+ * How much of one strip's own width the light reaches past `depth`. See
+ * `light-quad.wgsl` for why a strip is read as a coverage rather than as a
+ * yes or no, and why the slope is the smaller of the two one-sided differences.
+ */
+fn coverageAt(here: f32, previous: f32, next: f32, depth: f32) -> f32 {
+    let slope = min(abs(here - previous), abs(next - here));
+
+    return clamp(0.5 + (here + SHADOW_BIAS - depth) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32) -> f32 {
@@ -69,20 +80,25 @@ fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32) -> f32 {
     // Taps on the strips rather than at fixed offsets from the fragment. See
     // the same filter in `light-quad.wgsl` for why that is what makes it
     // continuous.
+    var previous = depthAt(base - reach - 1, bins, row);
+    var here = depthAt(base - reach, bins, row);
+
     for (var offset: i32 = -MAX_HALF; offset <= MAX_HALF; offset = offset + 1) {
         if (offset < -reach || offset > reach) {
             continue;
         }
 
         let strip = base + offset;
+        let next = depthAt(strip + 1, bins, row);
         let weight = max(0.0, 1.0 - abs(f32(strip) - center) / radius);
 
-        if (weight <= 0.0) {
-            continue;
+        if (weight > 0.0) {
+            lit = lit + weight * coverageAt(here, previous, next, sun.y);
+            total = total + weight;
         }
 
-        lit = lit + weight * visibleAt(strip, bins, row, sun.y);
-        total = total + weight;
+        previous = here;
+        here = next;
     }
 
     return select(1.0, lit / total, total > 0.0);

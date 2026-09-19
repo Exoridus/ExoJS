@@ -832,3 +832,84 @@ describe('a light moving by less than a texel', () => {
     expect(largest, `${shown}`).toBeLessThan(0.2);
   });
 });
+
+describe('the shadow filter as the fragment moves away from the light', () => {
+  const wide = 256;
+  const lightX = 40;
+  const lightY = 128;
+
+  /**
+   * The light term straight along the light's own row, which is one exact ray:
+   * every sample has the same angle, so the only thing varying along the
+   * profile is the distance the filter compares against.
+   *
+   * This is the direction the angular filter does NOT smooth. A bin holds one
+   * blocker distance, so a kernel of plain comparisons flips a whole tap at a
+   * time and has no more levels than it has taps; where the wall is not
+   * square-on to the ray, neighbouring taps flip at different distances and
+   * the levels spread out into a fan of arcs across the penumbra.
+   */
+  const rayProfile = async (wall: readonly [number, number, number, number], from: number, to: number): Promise<number[]> => {
+    const host = await createHost(wide);
+    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 220, intensity: 2, softness: 0.35 })).setPosition(lightX, lightY);
+    lighting.occludeFrom(
+      new PolygonOccluder(
+        [
+          { x: wall[0], y: wall[1] },
+          { x: wall[2], y: wall[3] },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host, wide);
+
+    try {
+      runFrame(host, lighting);
+
+      const profile: number[] = [];
+
+      for (let distance = from; distance <= to; distance++) {
+        profile.push(readRed(host.backend, lightX + distance, lightY));
+      }
+
+      return profile;
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  };
+
+  test('a wall crossed at a slant darkens smoothly instead of in steps', async () => {
+    const profile = await rayProfile([100, 100, 200, 150], 60, 205);
+    const shown = profile.join(' ');
+
+    // The ray really does leave the light and reach full shadow, so the step
+    // below is measured against a transition that happened.
+    expect(Math.max(...profile), `${shown}`).toBeGreaterThan(200);
+    expect(Math.min(...profile), `${shown}`).toBeLessThan(4);
+
+    // Comparing against each bin's own distance alone leaves one step per tap:
+    // measured at 26 of 205 counts here, against 7 for a filter that reads a
+    // coverage. The falloff's own slope is a couple of counts per sample.
+    expect(largestStep(profile), `${shown}`).toBeLessThan(0.06);
+  });
+
+  test('a wall square-on to the ray keeps its contact edge', async () => {
+    const profile = await rayProfile([120, 60, 120, 200], 40, 140);
+    const shown = profile.join(' ');
+    let crossings = 0;
+
+    // Every bin under the kernel holds the same distance there, so there is no
+    // slope to resolve and the term has to stay a step. A filter that softened
+    // by depth alone would spread this edge over the whole kernel instead.
+    for (let index = 1; index < profile.length; index++) {
+      if (profile[index - 1]! > 100 && profile[index]! < 20) {
+        crossings++;
+      }
+    }
+
+    expect(crossings, `${shown}`).toBe(1);
+  });
+});

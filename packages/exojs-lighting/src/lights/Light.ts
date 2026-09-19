@@ -26,7 +26,7 @@ export interface LightOptions {
    *
    * Neither adds a pass, so it is free of extra draws and can differ per
    * light. Under `lightmap` the filter samples every bin under its kernel and
-   * spends between 5 and 21 texture fetches per shadowed fragment doing it,
+   * spends between 7 and 23 texture fetches per shadowed fragment doing it,
    * which also bounds the kernel at ten bins either side - see
    * {@link LightingOptions.shadowResolution}.
    */
