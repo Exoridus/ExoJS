@@ -1742,6 +1742,7 @@ export class WebGl2Backend implements RenderBackend {
   private _releaseSampledAttachments(state: ManagedRenderTargetState): void {
     const attached = state.attachedTextures;
     const boundHandles = this._boundHandles;
+    const activeUnit = this._textureUnit;
 
     for (let index = 0; index < attached.length; index++) {
       const handle = attached[index];
@@ -1755,10 +1756,17 @@ export class WebGl2Backend implements RenderBackend {
           continue;
         }
 
+        // Through the unit cache rather than around it: the binding that is
+        // gone from GL has to be gone from the cache as well, or the next
+        // sampler set up on this unit would skip a bind GL still needs.
         this._setTextureUnit(unit);
         this._bindTextureHandle(null);
       }
     }
+
+    // Whoever called this was pointed at a unit of their own; sweeping is not
+    // a reason to leave them pointed somewhere else.
+    this._setTextureUnit(activeUnit);
   }
 
   /**
