@@ -14,6 +14,7 @@ import {
   ScaleModes,
   Shader,
   ShaderFilter,
+  type Texture,
   TextureFormat,
   UniformType,
   type View,
@@ -38,6 +39,7 @@ import emitterQuadVertex from './shaders/emitter-quad.vert';
 import emitterQuadWgsl from './shaders/emitter-quad.wgsl';
 import probeVisibilityFragment from './shaders/probe-visibility.frag';
 import probeVisibilityWgsl from './shaders/probe-visibility.wgsl';
+import { transportCascadeShader, type transportUniforms, transportVisibilityShader } from './transportShaders';
 
 const cascadeUniforms = {
   uToField: UniformType.Vec4,
@@ -200,6 +202,29 @@ const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
 const scratchEmitter = { a_emit: [1, 0, 0, 0], a_cone: [Math.PI, Math.PI, Math.PI, 0] };
 
+/**
+ * What the geometry walk needs bound, as the renderer hands it over.
+ *
+ * `revision` names the upload: a table that outgrew its texture is a new
+ * texture, and a filter binds its textures once, so the filters are rebuilt
+ * when this changes rather than every frame.
+ * @internal
+ */
+export interface TransportBinding {
+  readonly textures: Readonly<Record<string, RenderTexture | Texture>>;
+  readonly revision: number;
+  readonly originX: number;
+  readonly originY: number;
+  readonly cellSize: number;
+  readonly cellsX: number;
+  readonly cellsY: number;
+  readonly maskWidth: number;
+  readonly maskHeight: number;
+  readonly blocksWidth: number;
+  readonly blocksHeight: number;
+  readonly tableWidth: number;
+}
+
 /** Tuning for the radiance field. Every entry has a default derived from the surface. */
 export interface RadianceFieldOptions {
   /** Light-field texels between the finest cascade's probes. */
@@ -266,6 +291,11 @@ export class RadianceField {
   private readonly _visibility: RenderTexture;
   private readonly _cascadeFilter: ShaderFilter<typeof cascadeUniforms>;
   private readonly _visibilityFilter: ShaderFilter<typeof visibilityUniforms>;
+  /** The same two over the transport chunk, built when a walk over geometry is bound. */
+  private _transportCascade: ShaderFilter<typeof cascadeUniforms & typeof transportUniforms> | null = null;
+  private _transportVisibility: ShaderFilter<typeof visibilityUniforms & typeof transportUniforms> | null = null;
+  private _walk: TransportBinding | null = null;
+  private _walkRevision = -1;
   private readonly _gatherFilter: ShaderFilter<typeof gatherUniforms>;
   private readonly _transform = new Matrix();
   private _field: View | null = null;
@@ -475,6 +505,29 @@ export class RadianceField {
   }
 
   /**
+   * Point the chain at this frame's geometry, or back at the distance field
+   * with `null`.
+   *
+   * Called before {@link update}, because the terms that describe the tables
+   * are written with the rest of the frame's uniforms.
+   */
+  public useTransport(binding: TransportBinding | null): void {
+    this._walk = binding;
+
+    if (binding === null || binding.revision === this._walkRevision) {
+      return;
+    }
+
+    this._transportCascade?.destroy();
+    this._transportVisibility?.destroy();
+    this._transportCascade = ShaderFilter.from(transportCascadeShader(cascadeUniforms), {
+      textures: { uVisibility: this._visibility, ...binding.textures },
+    });
+    this._transportVisibility = ShaderFilter.from(transportVisibilityShader(visibilityUniforms), { textures: { ...binding.textures } });
+    this._walkRevision = binding.revision;
+  }
+
+  /**
    * Lay out the chain for this frame's camera and hand it the terms it shades
    * with.
    *
@@ -510,12 +563,35 @@ export class RadianceField {
     this._chain[1].setSize(this._probesX * 2, this._probesY * 2);
     this._visibility.setSize(this._probesX, this._probesY);
 
-    for (const filter of [this._cascadeFilter, this._visibilityFilter]) {
+    const walking = this._walk;
+
+    for (const filter of [this._cascadeFilter, this._visibilityFilter, this._transportCascade, this._transportVisibility]) {
+      if (filter === null) {
+        continue;
+      }
+
       filter.uniforms.uToField.set(toField.a, toField.b, toField.c, toField.d);
       filter.uniforms.uFieldOffset.set(toField.x, toField.y);
       filter.uniforms.uOrigin.set(bounds.left, bounds.top);
       filter.uniforms.uTexel.set(texel);
       filter.uniforms.uFar.set(far);
+
+      if (walking === null) {
+        continue;
+      }
+
+      // The mask is read through the view it was drawn with, which is the same
+      // transform the fields are read with.
+      const chunk = filter.uniforms as unknown as Record<string, { set: (...values: number[]) => void }>;
+
+      chunk.uGridOrigin?.set(walking.originX, walking.originY);
+      chunk.uGridCells?.set(walking.cellsX, walking.cellsY);
+      chunk.uCellSize?.set(walking.cellSize);
+      chunk.uTableWidth?.set(walking.tableWidth);
+      chunk.uMaskCells?.set(walking.maskWidth, walking.maskHeight);
+      chunk.uMaskBasis?.set(toField.a, toField.b, toField.c, toField.d);
+      chunk.uMaskOffset?.set(toField.x, toField.y);
+      chunk.uMaskBlocks?.set(walking.blocksWidth, walking.blocksHeight);
     }
 
     this._writeSun();
@@ -595,6 +671,8 @@ export class RadianceField {
     this._above.destroy();
     this._visibility.destroy();
     this._emission.destroy();
+    this._transportCascade?.destroy();
+    this._transportVisibility?.destroy();
     this._emitterCount = 0;
     this._sun = null;
   }
@@ -682,6 +760,16 @@ export class RadianceField {
   private _build(pass: PassContext): void {
     const { backend } = pass;
     const [first, second] = this._chain;
+    // Either pair walks the same probes over the same intervals; what differs
+    // is what a ray reads on the way.
+    const overGeometry = this._walk !== null ? this._transportCascade : null;
+    const waysOverGeometry = this._walk !== null ? this._transportVisibility : null;
+    const walking = overGeometry !== null && waysOverGeometry !== null;
+    const cascade = overGeometry ?? this._cascadeFilter;
+    const visibility = waysOverGeometry ?? this._visibilityFilter;
+    // The walk over geometry reads no field, and a filter still needs an
+    // input: the placeholder stands in for one.
+    const seen = walking ? this._above : this._distance;
 
     let source = this._above;
     let flipped = false;
@@ -694,20 +782,20 @@ export class RadianceField {
       const top = level === this._levels - 1;
 
       if (!top) {
-        this._visibilityFilter.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
-        this._visibilityFilter.uniforms.uSpacing.set(spacing);
-        this._visibilityFilter.apply(backend, this._distance, this._visibility);
+        visibility.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
+        visibility.uniforms.uSpacing.set(spacing);
+        visibility.apply(backend, seen, this._visibility);
       }
 
-      this._cascadeFilter.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
-      this._cascadeFilter.uniforms.uSpacing.set(spacing);
-      this._cascadeFilter.uniforms.uTile.set(tile);
-      this._cascadeFilter.uniforms.uRange.set(start, (this._interval * (4 ** (level + 1) - 1)) / 3);
-      this._cascadeFilter.uniforms.uMerge.set(top ? 0 : 1);
+      cascade.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
+      cascade.uniforms.uSpacing.set(spacing);
+      cascade.uniforms.uTile.set(tile);
+      cascade.uniforms.uRange.set(start, (this._interval * (4 ** (level + 1) - 1)) / 3);
+      cascade.uniforms.uMerge.set(top ? 0 : 1);
       // Half the angular sector one ray owns, as a slope: the coarser the
       // level, the more directions it has and the narrower each one is.
-      this._cascadeFilter.uniforms.uCone.set(Math.tan(Math.PI / (tile * tile)));
-      this._cascadeFilter.apply(backend, source, destination);
+      cascade.uniforms.uCone.set(Math.tan(Math.PI / (tile * tile)));
+      cascade.apply(backend, source, destination);
 
       source = destination;
       flipped = !flipped;

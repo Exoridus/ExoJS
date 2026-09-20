@@ -57,6 +57,7 @@ import sunQuadFragment from './shaders/sun-quad.frag';
 import sunQuadVertex from './shaders/sun-quad.vert';
 import sunQuadWgsl from './shaders/sun-quad.wgsl';
 import { ShadowMarchFiller } from './shadowMarch';
+import { transportTableWidth } from './transportGeometry';
 import { TransportTextures } from './transportTextures';
 
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
@@ -1158,7 +1159,9 @@ ${sunQuadWgsl}`,
   private _syncMask(): void {
     const marching = this.shadowFiller === 'gpu';
     const cascades = this._radiance !== null;
-    const distance = cascades || (this._debug === 'distance' && this._distanceField !== null);
+    // The geometry walk reads no distance field, so the flood that builds one
+    // only runs for the walk that does, or for the view that shows it.
+    const distance = (cascades && this._lightWalk === 'field') || (this._debug === 'distance' && this._distanceField !== null);
 
     this._maskPass.enabled = cascades || this._debug === 'mask' || marching || distance;
     // The cascades fill the light target themselves, ambient included, so the
@@ -1327,12 +1330,38 @@ ${normalPrepassWgsl}`,
    * field, and a walk that crosses one crosses the other at a comparable rate.
    */
   private _writeTransport(lights: readonly Light[], occluders: OccluderField): void {
-    if (this._transport === null || this._lightWalk !== 'transport' || !this.rasterisesOccluders) {
+    if (this._transport === null || this._blocks === null || this._lightWalk !== 'transport' || !this.rasterisesOccluders) {
+      this._radiance?.useTransport(null);
+
       return;
     }
 
     this._fieldView.getBounds(scratchRegion);
     this._transport.build(occluders.segments, occluders.count, lights, scratchRegion, Math.max(this._maskTexel() * MASK_COARSE, 1));
+
+    const grid = this._transport.grid;
+
+    this._radiance?.useTransport({
+      textures: {
+        uSegments: this._transport.segments,
+        uEmitters: this._transport.emitters,
+        uCells: this._transport.cells,
+        uIndices: this._transport.indices,
+        uMask: this._maskTarget,
+        uMaskCoarse: this._blocks.texture,
+      },
+      revision: this._transport.revision,
+      originX: grid.originX,
+      originY: grid.originY,
+      cellSize: grid.cellSize,
+      cellsX: grid.width,
+      cellsY: grid.height,
+      maskWidth: this._maskTarget.width,
+      maskHeight: this._maskTarget.height,
+      blocksWidth: this._blocks.texture.width,
+      blocksHeight: this._blocks.texture.height,
+      tableWidth: transportTableWidth,
+    });
   }
 
   private _drawOccluders(pass: PassContext): void {

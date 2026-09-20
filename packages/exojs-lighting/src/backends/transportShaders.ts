@@ -1,0 +1,91 @@
+import { createFilterShader, type Shader, UniformType } from '@codexo/exojs';
+
+import cascadeTransportFragment from './shaders/cascade-transport.frag';
+import cascadeTransportWgsl from './shaders/cascade-transport.wgsl';
+import visibilityTransportFragment from './shaders/probe-visibility-transport.frag';
+import visibilityTransportWgsl from './shaders/probe-visibility-transport.wgsl';
+import transportFragment from './shaders/transport.frag';
+import transportWgsl from './shaders/transport.wgsl';
+
+/**
+ * What the transport chunk adds to a shader's uniform block, on top of
+ * whatever that shader needs of its own.
+ * @internal
+ */
+export const transportUniforms = {
+  uGridOrigin: UniformType.Vec2,
+  uGridCells: UniformType.Vec2,
+  uMaskCells: UniformType.Vec2,
+  uMaskBasis: UniformType.Vec4,
+  uMaskOffset: UniformType.Vec2,
+  uMaskBlocks: UniformType.Vec2,
+  uCellSize: UniformType.Float,
+  uTableWidth: UniformType.Float,
+} as const;
+
+/**
+ * The tables and the mask, in the order a filter that binds them has to list
+ * them: on WebGPU the numbering follows the order of the textures a filter was
+ * created with, and this text spells that numbering out.
+ */
+const bindings = (names: readonly string[], language: 'glsl' | 'wgsl'): string =>
+  names
+    .map((name, index) =>
+      language === 'glsl'
+        ? `uniform sampler2D ${name};`
+        : `@group(1) @binding(${index * 2 + 1}) var ${name}: texture_2d<f32>;\n@group(1) @binding(${index * 2 + 2}) var ${name}Sampler: sampler;`,
+    )
+    .join('\n');
+
+/** The chunk's own textures, which every shader that walks binds. */
+const WALK_TEXTURES = ['uSegments', 'uEmitters', 'uCells', 'uIndices', 'uMask', 'uMaskCoarse'] as const;
+
+/** A cascade level also reads the merge weights; the pass that writes them cannot. */
+const CASCADE_TEXTURES = ['uVisibility', ...WALK_TEXTURES] as const;
+
+const glsl = (textures: readonly string[], body: string): string =>
+  `#version 300 es
+precision highp float;
+precision highp int;
+
+// The filter's own input: the cascade above for a level, and nothing a
+// visibility pass reads.
+uniform sampler2D uTexture;
+${bindings(textures, 'glsl')}
+
+out vec4 fragColor;
+
+${transportFragment}
+
+${body}`;
+
+const wgsl = (textures: readonly string[], body: string): string =>
+  `@group(0) @binding(1) var uTexture: texture_2d<f32>;
+@group(0) @binding(2) var uSampler: sampler;
+${bindings(textures, 'wgsl')}
+
+${transportWgsl}
+
+${body}`;
+
+/**
+ * One cascade level, walked over this frame's geometry and occluder mask.
+ *
+ * The uniform schema is the field walk's plus the chunk's, so the host sets
+ * the same probe, interval and merge terms either way.
+ * @internal
+ */
+export const transportCascadeShader = <U extends Record<string, UniformType>>(uniforms: U): Shader<U & typeof transportUniforms> =>
+  createFilterShader({
+    glsl: { fragment: glsl(CASCADE_TEXTURES, cascadeTransportFragment) },
+    wgsl: wgsl(CASCADE_TEXTURES, cascadeTransportWgsl),
+    uniforms: { ...uniforms, ...transportUniforms },
+  });
+
+/** The merge weights for one level, answered by the same walk. @internal */
+export const transportVisibilityShader = <U extends Record<string, UniformType>>(uniforms: U): Shader<U & typeof transportUniforms> =>
+  createFilterShader({
+    glsl: { fragment: glsl(WALK_TEXTURES, visibilityTransportFragment) },
+    wgsl: wgsl(WALK_TEXTURES, visibilityTransportWgsl),
+    uniforms: { ...uniforms, ...transportUniforms },
+  });
