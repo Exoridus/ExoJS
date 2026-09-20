@@ -739,12 +739,17 @@ describe('lightmap renderer WebGPU browser', () => {
       host.destroy();
     }
   });
+  // The distance field is the walk that sphere-traces it, which radiance no
+  // longer runs by default: the case names that walk rather than taking
+  // whichever one is current.
   test('the distance field grows away from the wall the mask drew', async ctx => {
     const host = await createHost();
     // Through the renderer that brings the field with it: a project on the
     // light quads never links the jump flood, so there is nothing for the view
     // to show there.
     const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    (lighting.backend as LightmapBackend).lightWalk = 'field';
 
     // Asymmetric in both axes on purpose: a field built in the wrong space
     // would still look plausible on a wall through the middle.

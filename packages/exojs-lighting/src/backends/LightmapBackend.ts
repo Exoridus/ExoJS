@@ -75,9 +75,10 @@ export const lightCompositeShader = new Shader({
 /**
  * How a cascade ray finds what is in its way.
  *
- * `field` sphere-traces the distance field the mask is flooded into; the
- * geometry walk reads this frame's segments and sources out of the transport
- * tables and the mask itself.
+ * `transport` reads this frame's segments and sources out of the transport
+ * tables and the occluder mask, and is what radiance runs. `field`
+ * sphere-traces the distance field the mask is flooded into, and stays for
+ * measuring one against the other.
  * @internal
  */
 export type LightWalk = 'field' | 'transport';
@@ -265,7 +266,7 @@ export class LightmapBackend implements LightingBackend {
   /** Built where the cascades could run, so their passes can sit in the right order; idle until the walk asks for them. */
   private readonly _blocks: MaskBlocks | null;
   private readonly _transport: TransportTextures | null;
-  private _lightWalk: LightWalk = 'field';
+  private _lightWalk: LightWalk = 'transport';
   private readonly _maskBatch: RenderBatch;
   private readonly _maskPass: CallbackRenderPass;
   /**
@@ -551,12 +552,14 @@ ${sunQuadWgsl}`,
   }
 
   /**
-   * How a cascade ray finds what is in its way: through the distance field it
-   * sphere-traces, or by walking this frame's geometry and the occluder mask.
+   * How a cascade ray finds what is in its way: by walking this frame's
+   * geometry and the occluder mask, or through the distance field it
+   * sphere-traces.
    *
-   * The second is the one under construction. It is not a quality setting and
-   * will not stay a choice; until its picture is on the record against the
-   * field's, it is off and internal.
+   * The walk over geometry is what radiance runs. The field walk is kept for
+   * comparing the two on the same scene and is not a quality setting: it is
+   * measurably further from a direct reference on the falloff a small source
+   * produces, and it costs more.
    * @internal
    */
   public get lightWalk(): LightWalk {
@@ -1308,8 +1311,11 @@ ${normalPrepassWgsl}`,
     const segments = occluders.segments;
     // Under the geometry walk an outline is already in the tables, exactly
     // where it runs. Rasterising it here as well would widen it to the two
-    // texels this batch draws and make the same wall block twice.
-    const count = this._lightWalk === 'field' ? occluders.count : 0;
+    // texels this batch draws and make the same wall block twice - so it is
+    // drawn only for the readers that have no tables to consult: the field
+    // walk, and the march that paints shadow rows out of the mask.
+    const rasterises = this._radiance === null || this._lightWalk === 'field' || this.shadowFiller === 'gpu';
+    const count = rasterises ? occluders.count : 0;
 
     for (let index = 0; index < count; index++) {
       const offset = index * 4;

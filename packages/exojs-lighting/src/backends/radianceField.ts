@@ -752,19 +752,29 @@ export class RadianceField {
    */
   private _writeSun(): void {
     const sun = this._sun;
+    // Both levels of the chain, whichever walk runs it: the sky is what a ray
+    // that reached the top of the chain unobstructed carries, and that is the
+    // same term either way.
+    const levels = [this._cascadeFilter, this._transportCascade];
 
-    if (sun === null) {
-      this._cascadeFilter.uniforms.uSun.set(0, 0, 0, 0);
-      this._cascadeFilter.uniforms.uSunColor.set(0, 0, 0);
+    for (const filter of levels) {
+      if (filter === null) {
+        continue;
+      }
 
-      return;
+      if (sun === null) {
+        filter.uniforms.uSun.set(0, 0, 0, 0);
+        filter.uniforms.uSunColor.set(0, 0, 0);
+
+        continue;
+      }
+
+      const radius = Math.max(0.001, sun.softness * SUN_SIZE);
+
+      sun.getWorldDirection(scratchDirection);
+      filter.uniforms.uSun.set(scratchDirection.x, scratchDirection.y, radius, (sun.intensity * Math.PI) / radius);
+      filter.uniforms.uSunColor.set(sun.color.r / 255, sun.color.g / 255, sun.color.b / 255);
     }
-
-    const radius = Math.max(0.001, sun.softness * SUN_SIZE);
-
-    sun.getWorldDirection(scratchDirection);
-    this._cascadeFilter.uniforms.uSun.set(scratchDirection.x, scratchDirection.y, radius, (sun.intensity * Math.PI) / radius);
-    this._cascadeFilter.uniforms.uSunColor.set(sun.color.r / 255, sun.color.g / 255, sun.color.b / 255);
   }
 
   /**

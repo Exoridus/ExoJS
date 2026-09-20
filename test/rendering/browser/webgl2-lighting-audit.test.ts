@@ -26,6 +26,7 @@ import { TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
 import { wireCoreRenderers } from './_coreRenderers';
 
 const canvasSize = 128;
@@ -394,8 +395,16 @@ describe('the cascade chain against an analytic reference', () => {
     // Around one circle the tolerance is the quantisation, not a fraction:
     // the reading is ~32 of 255 here, one 8-bit step is 3 percent of it, and
     // the arc's own pixel rounding moves each sample by up to half a texel.
-    // Four steps peak to peak is that floor; a ring would be many times it.
-    expect(angularRange, `ring: ${angular.join(' ')}`).toBeLessThanOrEqual(4);
+    //
+    // Five steps peak to peak under the walk over geometry, four under the
+    // walk over the distance field. The extra one is periodic around the
+    // circle with the finest level's four directions, which is the same
+    // angular sampling the sub-texel case in `webgl2-lightmap.test.ts`
+    // measures: an exact hit resolves a source by which rays cross it, where
+    // the field walk spread it over the rays beside them. A ring - a step at
+    // one radius - would be many times either figure, and the per-sample
+    // bound above is what would see one.
+    expect(angularRange, `ring: ${angular.join(' ')}`).toBeLessThanOrEqual(5);
   });
 });
 
@@ -665,6 +674,9 @@ describe('the bounce history', () => {
   const bounceAfter = async (skipped: number): Promise<number[]> => {
     const host = await createHost();
     const lighting = new Lighting({ quality: radiance({ bounce: 0.9 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    (lighting.backend as LightmapBackend).lightWalk = 'field';
+
     const floor = new Sprite(Texture.fromColor(Color.white, 1));
     const wall = new Sprite(Texture.fromColor(new Color(255, 0, 0), 1));
 
@@ -726,6 +738,9 @@ describe('the bounce history', () => {
     }
   };
 
+  // The bounce the field walk paints into the emission field: the walk over
+  // geometry reads its surfaces out of the mask and gives nothing back for an
+  // outline, so the history this case is about is that walk's.
   test('an update the renderer never drew does not become the frame the bounce reads from', async () => {
     const drawn = await bounceAfter(0);
     const afterSkips = await bounceAfter(3);

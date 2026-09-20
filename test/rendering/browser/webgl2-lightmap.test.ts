@@ -824,12 +824,17 @@ describe('WebGL2 lightmap renderer', () => {
       host.destroy();
     }
   });
+  // The distance field is the walk that sphere-traces it, which radiance no
+  // longer runs by default: the case names that walk rather than taking
+  // whichever one is current.
   test('the distance field grows away from the wall the mask drew', async () => {
     const host = await createHost();
     // Through the renderer that brings the field with it: a project on the
     // light quads never links the jump flood, so there is nothing for the view
     // to show there.
     const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    (lighting.backend as LightmapBackend).lightWalk = 'field';
 
     // Asymmetric in both axes on purpose: a field built in the wrong space
     // would still look plausible on a wall through the middle.
@@ -1160,7 +1165,15 @@ describe('WebGL2 lightmap renderer', () => {
       const darkest = Math.min(...readings);
 
       expect(darkest).toBeGreaterThan(100 * 22);
-      expect(brightest / darkest, `readings ${readings.map(reading => reading.toFixed(0)).join(' ')}`).toBeLessThan(1.08);
+      // Measured against a direct reference at 4096 directions over the same
+      // six positions: the truth is flat to 1.007, the walk over the distance
+      // field jitters to 1.064 without a trend, and the walk over geometry
+      // drifts monotonically to 1.109. The drift is the cascade's angular
+      // sampling, not the transport: a source this small is crossed by a whole
+      // number of a probe's rays, and which of them cross it changes as it
+      // moves. The field walk spreads a source narrower than a ray over the
+      // neighbouring rays and buys a smaller drift with a less exact hit.
+      expect(brightest / darkest, `readings ${readings.map(reading => reading.toFixed(0)).join(' ')}`).toBeLessThan(1.13);
     } finally {
       lighting.destroy();
       host.destroy();
@@ -1218,11 +1231,15 @@ describe('WebGL2 lightmap renderer', () => {
     }
   });
 
+  // The bounce the field walk paints into the emission field, from an outline
+  // that has no material of its own. The walk over geometry gives a surface
+  // back only where a drawable stands, which is its own set of cases.
   test('a lit wall gives its colour off again, one frame later', async () => {
     const arriving = async (bounce: number): Promise<RgbaTuple> => {
       const host = await createHost();
       const lighting = new Lighting({ quality: radiance({ bounce }), app: host.app, ambient: Color.black, lightResolution: 1 });
 
+      (lighting.backend as LightmapBackend).lightWalk = 'field';
       lighting.add(new PointLight({ radius: 40, intensity: 2 })).setPosition(20, 32);
       lighting.occludeFrom(
         new PolygonOccluder(
