@@ -62,6 +62,17 @@ import { TransportTextures } from './transportTextures';
 
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 /**
+ * The composite that multiplies the frame by the light: one instanced quad,
+ * told the debug exposure and nothing else.
+ * @internal
+ */
+export const lightCompositeShader = new Shader({
+  uniforms: { u_exposure: UniformType.Float },
+  glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightCompositeVertex}`, fragment: lightCompositeFragment },
+  wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightCompositeWgsl}`,
+});
+
+/**
  * How a cascade ray finds what is in its way.
  *
  * `field` sphere-traces the distance field the mask is flooded into; the
@@ -336,11 +347,7 @@ ${sunQuadWgsl}`,
     });
 
     this._compositeMaterial = new MeshMaterial({
-      shader: new Shader({
-        uniforms: { u_exposure: UniformType.Float },
-        glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightCompositeVertex}`, fragment: lightCompositeFragment },
-        wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightCompositeWgsl}`,
-      }),
+      shader: lightCompositeShader,
       textures: { u_frame: this._app.frameTexture, u_light: this._target },
       blendMode: BlendModes.Normal,
     });

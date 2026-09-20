@@ -27,8 +27,17 @@ import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots'
 import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 
 import { sdfResolveShader, sdfStepShader } from '../../../packages/exojs-lighting/src/backends/distanceField';
-import { bounceShader, cascadeGatherShader, cascadeShader, probeVisibilityShader } from '../../../packages/exojs-lighting/src/backends/radianceField';
+import { lightCompositeShader } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
+import {
+  bounceShader,
+  cascadeGatherShader,
+  cascadeShader,
+  cascadeUniforms,
+  gatherUniforms,
+  probeVisibilityShader,
+} from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
+import { transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 
@@ -90,12 +99,39 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['sdf-resolve.frag', generateGlslUniformDeclarations(sdfResolveShader.uniformSchema!)],
   ['sdf-step.frag', generateGlslUniformDeclarations(sdfStepShader.uniformSchema!)],
   ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],
+  ['light-composite.frag', generateGlslUniformDeclarations(lightCompositeShader.uniformSchema!)],
+]);
+
+/**
+ * Fragments that are chunks rather than stages: the transport walk and the two
+ * bodies built on it are authored without a version directive, bindings or an
+ * entry point of their own, because the module that assembles them has to put
+ * the walk between the textures it reads and the body that calls it.
+ *
+ * They are compiled here in exactly the form that module produces, which is
+ * the form the renderer submits - taken from the shaders themselves rather
+ * than rebuilt, so a change to the assembly cannot pass this lane by.
+ */
+const composedCascade = transportCascadeShader(cascadeUniforms);
+const composedGather = transportGatherShader(gatherUniforms);
+const composedFragments: ReadonlyMap<string, string> = new Map([
+  ['cascade-transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
+  ['cascade-gather-transport.frag', withGlslUniformDeclarations(composedGather.glsl!.fragment, generateGlslUniformDeclarations(composedGather.uniformSchema!))],
+  // The chunk itself has no body of its own; the cascade's composition is the
+  // smallest whole program that contains it.
+  ['transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
 ]);
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
 // handing a source to the driver, so a shader that reads the shared transform
 // store only compiles in its resolved form - the same form the renderer submits.
 const composeRuntimeSource = (name: string, source: string): string => {
+  const composedChunk = composedFragments.get(name);
+
+  if (composedChunk !== undefined) {
+    return composedChunk;
+  }
+
   const values = placeholderValues[name];
   const filled = values ? fillShaderSource(source, values) : source;
   const declarations = generatedUniformBlocks.get(name);
@@ -181,6 +217,8 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'sdf-seed.frag'],
   ['default-vertex.vert', 'sdf-step.frag'],
   ['default-vertex.vert', 'sdf-resolve.frag'],
+  // The reduction of the occluder mask to one texel per block, on the same quad.
+  ['default-vertex.vert', 'mask-blocks.frag'],
   // The radiance chain: one level of it, the merge weights written before it,
   // and the gather that reads the finest.
   ['default-vertex.vert', 'cascade.frag'],
@@ -269,7 +307,7 @@ describe('WebGL2 GLSL shader sources', () => {
     // engine-owned counterpart has to say so rather than simply not appear.
     for (const { name } of shaders) {
       expect(
-        referencedShaderFiles.has(name) || standaloneStages.has(name),
+        referencedShaderFiles.has(name) || standaloneStages.has(name) || composedFragments.has(name),
         `${name} is neither in a program pair nor declared standalone — wire it up, declare it, or delete it`,
       ).toBe(true);
     }

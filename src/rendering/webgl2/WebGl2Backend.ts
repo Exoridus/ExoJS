@@ -1724,6 +1724,44 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
+   * Unbind this target's colour textures from any sampler unit still holding
+   * them.
+   *
+   * A texture bound to a sampled unit while it is the framebuffer's colour
+   * attachment is a feedback loop: GL raises `INVALID_OPERATION` and drops the
+   * whole draw, silently as far as the caller is concerned. The binding does
+   * not have to come from the draw being made - a filter that sampled this
+   * target earlier leaves its unit bound, and the next frame's render INTO the
+   * target is the one that disappears. Nothing that renders can know which
+   * units some earlier pass left behind, so the release belongs here, where
+   * the target becomes a destination.
+   *
+   * Costs a loop over the units and one GL call per unit that actually held
+   * the texture, which is none in the ordinary case.
+   */
+  private _releaseSampledAttachments(state: ManagedRenderTargetState): void {
+    const attached = state.attachedTextures;
+    const boundHandles = this._boundHandles;
+
+    for (let index = 0; index < attached.length; index++) {
+      const handle = attached[index];
+
+      if (handle === null || handle === undefined) {
+        continue;
+      }
+
+      for (let unit = 0; unit < boundHandles.length; unit++) {
+        if (boundHandles[unit] !== handle) {
+          continue;
+        }
+
+        this._setTextureUnit(unit);
+        this._bindTextureHandle(null);
+      }
+    }
+  }
+
+  /**
    * Drop every cached binding of `handle`. Deleting a texture unbinds it from
    * every unit of the current context (GL spec), so the cache has to follow
    * without issuing any GL call of its own.
@@ -2784,6 +2822,8 @@ export class WebGl2Backend implements RenderBackend {
 
   private _bindRenderTarget(target: RenderTarget): void {
     const state = this._prepareRenderTarget(target);
+
+    this._releaseSampledAttachments(state);
 
     if (this._boundFramebuffer !== state.framebuffer || state.version !== target.version) {
       const gl = this._context;
