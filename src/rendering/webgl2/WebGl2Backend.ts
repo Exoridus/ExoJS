@@ -2831,9 +2831,13 @@ export class WebGl2Backend implements RenderBackend {
   private _bindRenderTarget(target: RenderTarget): void {
     const state = this._prepareRenderTarget(target);
 
-    this._releaseSampledAttachments(state);
-
     if (this._boundFramebuffer !== state.framebuffer || state.version !== target.version) {
+      // Only where the target changes: a pass that keeps drawing into the
+      // framebuffer it already has cannot have picked up a sampler binding of
+      // its own attachments in between, and sweeping per draw would cost every
+      // draw in a pass the rebind of whatever it samples.
+      this._releaseSampledAttachments(state);
+
       const gl = this._context;
       const viewport = target.getViewport();
       const scaleX = target.root && target.width > 0 ? this._canvas.width / target.width : 1;
