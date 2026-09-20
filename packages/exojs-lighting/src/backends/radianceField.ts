@@ -649,6 +649,9 @@ export class RadianceField {
       // A whole texel back along the ray, which is the texel the stretch came
       // through: half of one can still land inside the texel that stopped it.
       cascade.uBounceStep.set(texel);
+      // One pixel of the frame, in world units: what the albedo is quantised
+      // by, which is not what the light field is quantised by.
+      cascade.uAlbedoStep.set(bounds.width / Math.max(1, this._frame.width));
       cascade.uHistoryValid.set(this._history ? 1 : 0);
     }
   }

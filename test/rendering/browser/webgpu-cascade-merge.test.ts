@@ -75,6 +75,7 @@ const runCase = async (ctx: { skip: (reason: string) => void }, scenario: MergeC
   filter.uniforms.uSunColor.set(0, 0, 0);
   filter.uniforms.uBounce.set(0);
   filter.uniforms.uBounceStep.set(1);
+  filter.uniforms.uAlbedoStep.set(1);
   filter.uniforms.uHistoryValid.set(0);
   filter.uniforms.uToClip.set(1, 0, 0, 1);
   filter.uniforms.uClipOffset.set(0, 0);

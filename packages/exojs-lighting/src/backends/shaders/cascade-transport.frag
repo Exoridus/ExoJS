@@ -72,7 +72,13 @@ vec3 bounced(vec2 surface, vec2 direction) {
     // is what fell on the free side of it. Reading both in one place would
     // either tint the bounce with whatever stands in front of the surface or
     // read the light from inside it.
-    vec2 onIt = surface + direction * (uniforms.uBounceStep * 0.5);
+    //
+    // Two different steps, because the two are quantised by different things:
+    // the free side is a mask texel away, since the mask is what says where
+    // the surface begins, and the colour is a FRAME pixel in, since the frame
+    // is what holds it. A single step measured in field texels reads the floor
+    // instead of the wall as soon as the field is finer than the frame.
+    vec2 onIt = surface + direction * uniforms.uAlbedoStep;
     vec2 clip = vec2(dot(uniforms.uToClip.xy, free), dot(uniforms.uToClip.zw, free)) + uniforms.uClipOffset;
     vec2 colourClip = vec2(dot(uniforms.uToClip.xy, onIt), dot(uniforms.uToClip.zw, onIt)) + uniforms.uClipOffset;
     vec2 was = vec2(dot(uniforms.uReproject.xy, clip), dot(uniforms.uReproject.zw, clip)) + uniforms.uReprojectOffset;

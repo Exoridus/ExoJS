@@ -61,6 +61,7 @@ export const transportBounceUniforms = {
   uReprojectOffset: UniformType.Vec2,
   uBounce: UniformType.Float,
   uBounceStep: UniformType.Float,
+  uAlbedoStep: UniformType.Float,
   uHistoryValid: UniformType.Float,
 } as const;
 

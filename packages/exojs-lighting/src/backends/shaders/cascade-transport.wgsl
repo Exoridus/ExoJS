@@ -55,7 +55,7 @@ fn bounced(surface: vec2<f32>, direction: vec2<f32>) -> vec3<f32> {
 
     // The colour is the surface's own, read where the surface is; the light is
     // what fell on the free side of it. See the GLSL half.
-    let onIt = surface + direction * (uniforms.uBounceStep * 0.5);
+    let onIt = surface + direction * uniforms.uAlbedoStep;
     let clip = vec2<f32>(dot(uniforms.uToClip.xy, free), dot(uniforms.uToClip.zw, free)) + uniforms.uClipOffset;
     let colourClip = vec2<f32>(dot(uniforms.uToClip.xy, onIt), dot(uniforms.uToClip.zw, onIt)) + uniforms.uClipOffset;
     let was = vec2<f32>(dot(uniforms.uReproject.xy, clip), dot(uniforms.uReproject.zw, clip)) + uniforms.uReprojectOffset;
