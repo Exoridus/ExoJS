@@ -29,6 +29,7 @@ import {
   probeUniforms,
   starvedSource,
 } from './_transportProbe';
+import { sweepMask, sweepRays } from './_transportSweep';
 
 const probeShader = createFilterShader({ glsl: { fragment: probeFragmentSource }, uniforms: probeUniforms });
 
@@ -207,6 +208,64 @@ const runStarved = async (mask: MaskSpec | undefined, stretch: readonly [number,
 
   return readings;
 };
+
+describe('the block level against the flat walk (WebGL2)', () => {
+  test('every stretch of the sweep finds the same wall either way', async () => {
+    const backend = await createWebGl2TestBackend(PROBE_SIZE);
+    const tables = probeTables([], []);
+    const mask = probeMask(sweepMask());
+    const filter = ShaderFilter.from(probeShader, {
+      textures: {
+        uSegments: tables.segments,
+        uEmitters: tables.emitters,
+        uCells: tables.cells,
+        uIndices: tables.indices,
+        uMask: mask.texture,
+        uMaskCoarse: mask.coarse,
+      },
+    });
+    const texture = coverTexture();
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    sprite.filters = [filter];
+    root.addChild(sprite);
+
+    filter.uniforms.uGridOrigin.set(tables.originX, tables.originY);
+    filter.uniforms.uGridCells.set(tables.gridWidth, tables.gridHeight);
+    filter.uniforms.uCellSize.set(tables.cellSize);
+    filter.uniforms.uTableWidth.set(256);
+    filter.uniforms.uScale.set(1);
+    filter.uniforms.uMaskCells.set(mask.cells[0], mask.cells[1]);
+    filter.uniforms.uMaskBasis.set(mask.basis[0], mask.basis[1], mask.basis[2], mask.basis[3]);
+    filter.uniforms.uMaskOffset.set(mask.offset[0], mask.offset[1]);
+    filter.uniforms.uMode.set(PROBE_MASK_HIT);
+
+    try {
+      for (const [ax, ay, bx, by] of sweepRays()) {
+        filter.uniforms.uA.set(ax, ay);
+        filter.uniforms.uB.set(bx, by);
+
+        const readings: number[] = [];
+
+        for (const blocks of [mask.blocks, [0, 0] as const]) {
+          filter.uniforms.uMaskBlocks.set(blocks[0]!, blocks[1]!);
+          renderWebGl2Once(backend, root, PROBE_CLEAR);
+          readings.push(readWebGl2Pixel(backend, PROBE_SIZE / 2, PROBE_SIZE / 2)[0]);
+        }
+
+        expect(Math.abs(readings[0]! - readings[1]!), `${ax},${ay} to ${bx},${by}`).toBeLessThanOrEqual(1);
+      }
+    } finally {
+      root.destroy();
+      filter.destroy();
+      texture.destroy();
+      tables.destroy();
+      mask.destroy();
+      backend.destroy();
+    }
+  });
+});
 
 describe('a walk with no budget left (WebGL2)', () => {
   test('the cell walk reports running out and blocks rather than reporting what it never read', async () => {

@@ -390,6 +390,62 @@ export const transportCases = (): readonly Case[] => [
     },
   },
   {
+    name: 'a stretch over both kinds of wall and three sources composes out of any three pieces of itself',
+    // The one case that puts every part of the operator into the same walk:
+    // a source, a rasterised wall, a source behind it, an outline as a second
+    // wall, and a third source beyond that. Walked whole and walked in three
+    // pieces, from either end, the answer has to be the same - which is what
+    // says the two representations settle the earliest hit BEFORE anything is
+    // integrated rather than after.
+    //
+    // World along y = 16: A at -150, the mask texel (8, 8) over x 0..32, B at
+    // 60, the outline at x = 100, C at 160. From the left only A arrives, and
+    // a walk that let the raster wall through would pick up B as well; from
+    // the right only C does, and the outline is what stops it.
+    mask: { texels: 16, world: PROBE_REGION, blocked: [[8, 8]] },
+    segments: [100, -200, 100, 200],
+    lights: [point(-150, 16, 20), point(60, 16, 20), point(160, 16, 20)],
+    traces: [
+      [-240, 16, 240, 16],
+      // Split inside A, and again inside the raster wall: neither boundary is
+      // a place the walk may gain or lose anything.
+      [-240, 16, -145, 16],
+      [-145, 16, 20, 16],
+      [20, 16, 240, 16],
+      [240, 16, -240, 16],
+      // The same from the other side: inside C, then exactly on the outline.
+      [240, 16, 165, 16],
+      [165, 16, 100, 16],
+      [100, 16, -240, 16],
+    ],
+    scale: 0.01,
+    check: (radiance, through) => {
+      for (const [whole, first, second, third] of [
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+      ]) {
+        const nearThrough = through[first!]![0]! / 255;
+        const middleThrough = through[second!]![0]! / 255;
+
+        for (let channel = 0; channel < 3; channel++) {
+          const composed = radiance[first!]![channel]! + nearThrough * (radiance[second!]![channel]! + middleThrough * radiance[third!]![channel]!);
+
+          near(radiance[whole!]![channel]!, composed, 4);
+        }
+
+        // What got through the whole is what got through the pieces, and both
+        // walls are opaque, so nothing does.
+        near(through[whole!]![0]!, nearThrough * middleThrough * through[third!]![0]!, 1);
+      }
+
+      // One source arrives from either side: the walls take the rest.
+      expect(radiance[0]![0]!).toBeGreaterThan(20);
+      expect(radiance[4]![0]!).toBeGreaterThan(20);
+      near(through[0]![0]!, BLOCKED);
+      near(through[4]![0]!, BLOCKED);
+    },
+  },
+  {
     name: 'the merge stretch is traced where it actually runs, not along its projection',
     segments: [80, 20, 80, 120],
     lights: [],
