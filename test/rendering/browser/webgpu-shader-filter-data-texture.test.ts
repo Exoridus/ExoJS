@@ -23,7 +23,7 @@ import { ShaderFilter } from '#rendering/filters/ShaderFilter';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
-import { ScaleModes, TextureFormat } from '#rendering/types';
+import { TextureFormat } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { wireCoreRenderers } from './_coreRenderers';
@@ -131,7 +131,6 @@ const floatTable = (): DataTexture<TextureFormat.Rgba32F> =>
     width: 2,
     height: 1,
     format: TextureFormat.Rgba32F,
-    scaleMode: ScaleModes.Nearest,
     data: new Float32Array([1, 0, 0, 1, 0, 0, 1, 1]),
   });
 

@@ -152,7 +152,9 @@ export const renderWebGpuOnce = async (
     backend.clear(clear);
     root.render(backend);
     backend.flush();
-    expect(await device.popErrorScope()).toBeNull();
+    // Asserted on the message rather than the error: a bare `GPUValidationError`
+    // prints as `{}`, which names neither the shader nor the rule it broke.
+    expect((await device.popErrorScope())?.message ?? null).toBeNull();
   } catch (error) {
     if (isDeviceLoss(error)) {
       ctx.skip('WebGPU device lost mid-test — unstable software adapter');
