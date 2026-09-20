@@ -171,7 +171,9 @@ describe('the block level against the flat walk (WebGPU)', () => {
       mask.destroy();
       backend.destroy();
     }
-  });
+    // Eighty round-trips through one device: three seconds on a quiet machine,
+    // and past the default the moment the rest of the lane shares the adapter.
+  }, 60000);
 });
 
 describe('a walk with no budget left (WebGPU)', () => {
