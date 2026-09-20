@@ -48,12 +48,14 @@ export const probeUniforms = {
 
 /**
  * What a probe draw writes: the scaled radiance, the transmittance in every
- * channel, the number of grid cells the walk visited, or where along the
- * stretch the occluder mask first blocks it.
+ * channel, the work the walk did, where along the stretch the occluder mask
+ * first blocks it, or whether the walk ran out of its budget.
  *
- * The cell count is written as `visited / 255`, so the byte read back IS the
- * count. A reading of 255 means the walk either visited that many or saturated,
- * and every probe grid here is small enough that it cannot legitimately.
+ * The work count is written as `visited / 255`, so the byte read back IS the
+ * count until it saturates. It is a counter, not a verdict: a stretch that
+ * misses the grid reads zero and a long legitimate walk can reach the top of
+ * the byte, so only a case about counting should read it, and whether a walk
+ * finished is what {@link PROBE_EXHAUSTED} answers.
  *
  * The mask hit is a fraction of the stretch, so the byte is `fraction * 255`:
  * a whole stretch with nothing in its way reads 255, and one blocked at its
@@ -63,6 +65,7 @@ export const PROBE_RADIANCE = 0;
 export const PROBE_TRANSMITTANCE = 1;
 export const PROBE_VISITED = 2;
 export const PROBE_MASK_HIT = 3;
+export const PROBE_EXHAUSTED = 4;
 
 export const probeFragmentSource = `#version 300 es
 precision highp float;
@@ -90,8 +93,10 @@ void main() {
         shown = vec3(walked.transmittance);
     } else if (uniforms.uMode < 2.5) {
         shown = vec3(clamp(walked.visited / 255.0, 0.0, 1.0));
-    } else {
+    } else if (uniforms.uMode < 3.5) {
         shown = vec3(maskHit(uniforms.uA, uniforms.uB).fraction);
+    } else {
+        shown = vec3(walked.exhausted ? 1.0 : 0.0);
     }
 
     // Opaque: the probe is composited onto the frame like any other draw, and
@@ -129,8 +134,10 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
         shown = vec3<f32>(walked.transmittance);
     } else if (uniforms.uMode < 2.5) {
         shown = vec3<f32>(clamp(walked.visited / 255.0, 0.0, 1.0));
-    } else {
+    } else if (uniforms.uMode < 3.5) {
         shown = vec3<f32>(maskHit(uniforms.uA, uniforms.uB).fraction);
+    } else {
+        shown = vec3<f32>(select(0.0, 1.0, walked.exhausted));
     }
 
     // Opaque: the probe is composited onto the frame like any other draw, and
@@ -138,6 +145,20 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     return vec4<f32>(shown, 1.0);
 }
 `;
+
+/**
+ * The same probe over a chunk whose step budgets have been cut to `steps`.
+ *
+ * The budgets are constants of the chunk, sized so that exhaustion is out of
+ * reach for any scene the field can hold. Shrinking them in the shader text is
+ * what makes the state reachable at all, and it is the text itself that is
+ * shrunk, so what the test exercises is the chunk's own reporting rather than
+ * a second implementation of it.
+ */
+export const starvedSource = (source: string, steps: number): string =>
+  source
+    .replace(/MAX_CELL_STEPS(: i32)? = \d+/, (match: string) => match.replace(/\d+$/, String(steps)))
+    .replace(/MAX_MASK_STEPS(: i32)? = \d+/, (match: string) => match.replace(/\d+$/, String(steps)));
 
 /** The four tables of a scene, as textures a filter can bind. */
 export interface ProbeTables {

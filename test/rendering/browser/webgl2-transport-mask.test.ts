@@ -22,7 +22,7 @@ import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { makeTestApp, makeTestCanvas, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { checkMaskTrace, createMaskScene } from './_transportMaskScene';
-import { PROBE_CLEAR, PROBE_MASK_HIT, PROBE_TRANSMITTANCE, probeFragmentSource, probeTables, probeUniforms } from './_transportProbe';
+import { PROBE_CLEAR, PROBE_EXHAUSTED, PROBE_MASK_HIT, PROBE_TRANSMITTANCE, probeFragmentSource, probeTables, probeUniforms } from './_transportProbe';
 
 const canvasSize = 128;
 
@@ -126,6 +126,7 @@ describe('the transport walk over a rasterised drawable (WebGL2)', () => {
           [bindings.blocks, PROBE_MASK_HIT],
           [bindings.blocks, PROBE_TRANSMITTANCE],
           [[0, 0] as const, PROBE_MASK_HIT],
+          [bindings.blocks, PROBE_EXHAUSTED],
         ] as const) {
           filter.uniforms.uMaskBlocks.set(blocks[0]!, blocks[1]!);
           filter.uniforms.uMode.set(mode);
@@ -133,6 +134,7 @@ describe('the transport walk over a rasterised drawable (WebGL2)', () => {
           readings.push([...readWebGl2Pixel(host.backend, canvasSize / 2, canvasSize / 2)]);
         }
 
+        expect(readings[3]![0], `${trace.name}: the walk ran out of its budget`).toBe(0);
         checkMaskTrace(trace, readings[0]!, readings[1]!, readings[2]!);
       }
     } finally {

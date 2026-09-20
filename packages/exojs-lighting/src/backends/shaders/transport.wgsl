@@ -34,16 +34,20 @@
 
 /**
  * What a finite stretch amounts to: the radiance found along it, what got
- * through, and how many grid cells the walk visited.
+ * through, the work the walk did, and whether it ran out of budget doing it.
  *
- * The count is diagnostic. It exists so a walk that ran out of its step budget
- * can be told apart from one that finished, which no radiance value can show
- * on its own.
+ * Both diagnostics, and they say different things. `visited` is a work
+ * counter - grid cells and mask texels read - which a caller compares against
+ * another walk's; it is not a status, and a stretch that misses everything
+ * legitimately reads zero. `exhausted` is the status: it is the only thing
+ * that tells a conservatively dark answer apart from a wall, which no
+ * radiance value can show on its own.
  */
 struct Transfer {
     radiance: vec3<f32>,
     transmittance: f32,
     visited: f32,
+    exhausted: bool,
 };
 
 /**
@@ -59,8 +63,10 @@ struct Transfer {
  *
  * Running out is therefore unreachable rather than a case with a fallback. The
  * walk reports darkness if it ever does - inventing light where the scene was
- * never read is the one answer that cannot be right - and `visited` reaching
- * this value is what a contract test fails on.
+ * never read is the one answer that cannot be right - and says so through
+ * `exhausted`, which every contract case expects to be false. The work count
+ * is no substitute: it saturates at whatever a caller stores it in, and a
+ * stretch that finds nothing reads zero either way.
  */
 const MAX_CELL_STEPS: i32 = 512;
 
@@ -72,7 +78,12 @@ const TRANSPORT_EPSILON: f32 = 1e-6;
  * blocked, the far one never lit.
  */
 fn composeTransfer(near: Transfer, far: Transfer) -> Transfer {
-    return Transfer(near.radiance + near.transmittance * far.radiance, near.transmittance * far.transmittance, near.visited + far.visited);
+    return Transfer(
+        near.radiance + near.transmittance * far.radiance,
+        near.transmittance * far.transmittance,
+        near.visited + far.visited,
+        near.exhausted || far.exhausted
+    );
 }
 
 /**
@@ -261,6 +272,8 @@ struct MaskHit {
     fraction: f32,
     /** Mask texels the walk read, on the same terms as the transfer's own count. */
     visited: f32,
+    /** Whether the walk ran out of its step budget, in which case it blocks where it stopped. */
+    exhausted: bool,
 };
 
 /** Coverage at or above which a mask texel blocks, as the distance field reads it too. */
@@ -285,8 +298,10 @@ const MASK_COARSE: i32 = 8;
  * inner sweep cannot buy the outer one more steps.
  *
  * Exhaustion is therefore unreachable, and if it were reached the walk reports
- * blocking where it stopped: a wall that is too far to be read is the
- * conservative answer, since the alternative is light arriving through it.
+ * blocking where it stopped, and sets `exhausted` on what it hands back: a
+ * wall that is too far to be read is the conservative answer, since the
+ * alternative is light arriving through it, but a caller must be able to tell
+ * the two apart.
  */
 const MAX_MASK_STEPS: i32 = 8192;
 
@@ -344,7 +359,7 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
     let cells = uniforms.uMaskCells;
 
     if (cells.x < 1.0 || cells.y < 1.0) {
-        return MaskHit(1.0, 0.0);
+        return MaskHit(1.0, 0.0, false);
     }
 
     let origin = maskPlace(a);
@@ -362,7 +377,7 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
     for (var axis = 0; axis < 2; axis = axis + 1) {
         if (abs(run[axis]) < TRANSPORT_EPSILON) {
             if (start[axis] < 0.0 || start[axis] > grid[axis]) {
-                return MaskHit(1.0, 0.0);
+                return MaskHit(1.0, 0.0, false);
             }
 
             continue;
@@ -376,7 +391,7 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
     }
 
     if (leave <= entry) {
-        return MaskHit(1.0, 0.0);
+        return MaskHit(1.0, 0.0, false);
     }
 
     let blocks = uniforms.uMaskBlocks;
@@ -449,7 +464,7 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
             visited = visited + 1.0;
 
             if (maskBlocks(texel, cells)) {
-                return MaskHit(clamp(travelled, 0.0, 1.0), visited);
+                return MaskHit(clamp(travelled, 0.0, 1.0), visited, false);
             }
 
             let crossing = min(next.x, next.y);
@@ -461,7 +476,7 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
                 // than by this block, because a corner on a block's own edge
                 // belongs to neither sweep otherwise.
                 if (maskBlocks(texel + vec2<i32>(stepping.x, 0), cells) || maskBlocks(texel + vec2<i32>(0, stepping.y), cells)) {
-                    return MaskHit(clamp(crossing, 0.0, 1.0), visited);
+                    return MaskHit(clamp(crossing, 0.0, 1.0), visited, false);
                 }
 
                 travelled = crossing;
@@ -494,10 +509,10 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
     }
 
     if (taken >= MAX_MASK_STEPS) {
-        return MaskHit(clamp(travelled, 0.0, 1.0), visited);
+        return MaskHit(clamp(travelled, 0.0, 1.0), visited, true);
     }
 
-    return MaskHit(1.0, visited);
+    return MaskHit(1.0, visited, false);
 }
 
 /**
@@ -519,7 +534,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     let span = length(delta);
 
     if (span <= 0.0) {
-        return Transfer(vec3<f32>(0.0), 1.0, 0.0);
+        return Transfer(vec3<f32>(0.0), 1.0, 0.0, false);
     }
 
     let rastered = maskHit(a, b);
@@ -548,7 +563,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     for (var axis = 0; axis < 2; axis = axis + 1) {
         if (abs(ray[axis]) < TRANSPORT_EPSILON) {
             if (start[axis] < low[axis] || start[axis] > high[axis]) {
-                return Transfer(vec3<f32>(0.0), open, rastered.visited);
+                return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted);
             }
 
             continue;
@@ -562,7 +577,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     }
 
     if (leave <= entry) {
-        return Transfer(vec3<f32>(0.0), open, rastered.visited);
+        return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted);
     }
 
     let place = (a + direction * entry - lower) / size;
@@ -594,7 +609,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
 
     for (var taken = 0; taken < MAX_CELL_STEPS; taken = taken + 1) {
         if (travelled >= leave) {
-            return Transfer(found, open, visited);
+            return Transfer(found, open, visited, rastered.exhausted);
         }
 
         visited = visited + 1.0;
@@ -632,7 +647,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
             }
 
             if (blocked < leaving) {
-                return Transfer(found, 0.0, visited);
+                return Transfer(found, 0.0, visited, rastered.exhausted);
             }
         }
 
@@ -647,5 +662,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
         }
     }
 
-    return Transfer(found, 0.0, visited);
+    // Out of steps: dark and blocking, and saying so. What the walk did not
+    // read cannot be reported as open.
+    return Transfer(found, 0.0, visited, true);
 }

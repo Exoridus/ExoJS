@@ -5,6 +5,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { createFilterShader, ShaderFilter } from '#rendering/filters/ShaderFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -12,8 +13,10 @@ import { Texture } from '#rendering/texture/Texture';
 
 import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
 import { type Case, transportCases } from './_transportCases';
+import type { MaskSpec } from './_transportProbe';
 import {
   PROBE_CLEAR,
+  PROBE_EXHAUSTED,
   PROBE_MASK_HIT,
   PROBE_RADIANCE,
   PROBE_SIZE,
@@ -23,6 +26,7 @@ import {
   probeTables,
   probeUniforms,
   probeWgslSource,
+  starvedSource,
 } from './_transportProbe';
 
 const probeShader = createFilterShader({ wgsl: probeWgslSource, uniforms: probeUniforms });
@@ -43,6 +47,92 @@ const coverTexture = (): Texture => {
 
   return new Texture(source);
 };
+
+const starvedShader = createFilterShader({ wgsl: starvedSource(probeWgslSource, 4), uniforms: probeUniforms });
+
+/**
+ * One trace over a chunk with four steps to spend, which every stretch here
+ * outruns. Answers whether the walk says it ran out, and what got through.
+ */
+const runStarved = async (
+  ctx: { skip: (reason: string) => void },
+  mask: MaskSpec | undefined,
+  stretch: readonly [number, number, number, number],
+): Promise<readonly number[][] | null> => {
+  const backend = await createWebGpuTestBackend(PROBE_SIZE);
+  const tables = probeTables([], [], new Rectangle(0, 0, 64, 64), 1);
+  const bound = probeMask(mask, true);
+  const filter = ShaderFilter.from(starvedShader, {
+    textures: {
+      uSegments: tables.segments,
+      uEmitters: tables.emitters,
+      uCells: tables.cells,
+      uIndices: tables.indices,
+      uMask: bound.texture,
+      uMaskCoarse: bound.coarse,
+    },
+  });
+  const texture = coverTexture();
+  const root = new Container();
+  const sprite = new Sprite(texture);
+
+  sprite.filters = [filter];
+  root.addChild(sprite);
+
+  filter.uniforms.uGridOrigin.set(tables.originX, tables.originY);
+  filter.uniforms.uGridCells.set(tables.gridWidth, tables.gridHeight);
+  filter.uniforms.uCellSize.set(tables.cellSize);
+  filter.uniforms.uTableWidth.set(256);
+  filter.uniforms.uScale.set(1);
+  filter.uniforms.uMaskCells.set(bound.cells[0], bound.cells[1]);
+  filter.uniforms.uMaskBasis.set(bound.basis[0], bound.basis[1], bound.basis[2], bound.basis[3]);
+  filter.uniforms.uMaskOffset.set(bound.offset[0], bound.offset[1]);
+  filter.uniforms.uMaskBlocks.set(bound.blocks[0], bound.blocks[1]);
+  filter.uniforms.uA.set(stretch[0], stretch[1]);
+  filter.uniforms.uB.set(stretch[2], stretch[3]);
+
+  const readings: number[][] = [];
+
+  try {
+    for (const mode of [PROBE_EXHAUSTED, PROBE_TRANSMITTANCE, PROBE_VISITED] as const) {
+      filter.uniforms.uMode.set(mode);
+
+      if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) return null;
+
+      readings.push([...readWebGpuPixels(backend, PROBE_SIZE)(PROBE_SIZE / 2, PROBE_SIZE / 2)]);
+    }
+  } finally {
+    root.destroy();
+    filter.destroy();
+    texture.destroy();
+    tables.destroy();
+    bound.destroy();
+    backend.destroy();
+  }
+
+  return readings;
+};
+
+describe('a walk with no budget left (WebGPU)', () => {
+  test('the cell walk reports running out and blocks rather than reporting what it never read', async ctx => {
+    const readings = await runStarved(ctx, undefined, [0.1, 0.2, 63.9, 63.7]);
+
+    if (readings === null) return;
+
+    expect(readings[0]![0], 'ran out').toBe(255);
+    expect(readings[1]![0], 'what got through').toBe(0);
+    expect(readings[2]![0], 'cells read').toBe(4);
+  });
+
+  test('the mask walk reports running out and blocks the stretch where it stopped', async ctx => {
+    const readings = await runStarved(ctx, { texels: 64, world: new Rectangle(0, 0, 64, 64), blocked: [] }, [0.1, 32, 63.9, 32]);
+
+    if (readings === null) return;
+
+    expect(readings[0]![0], 'ran out').toBe(255);
+    expect(readings[1]![0], 'what got through').toBe(0);
+  });
+});
 
 describe('traceSegment holds its transport contracts (WebGPU)', () => {
   for (const scenario of transportCases()) {
@@ -81,6 +171,7 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
       const through: number[][] = [];
       const visited: number[][] = [];
       const hit: number[][] = [];
+      const drained: number[][] = [];
       const flatHit: number[][] = [];
       const flatVisited: number[][] = [];
 
@@ -94,6 +185,7 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
             [PROBE_TRANSMITTANCE, through],
             [PROBE_VISITED, visited],
             [PROBE_MASK_HIT, hit],
+            [PROBE_EXHAUSTED, drained],
           ] as const) {
             filter.uniforms.uMode.set(mode);
 
@@ -122,12 +214,12 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
           filter.uniforms.uMaskBlocks.set(mask.blocks[0], mask.blocks[1]);
         }
 
-        for (const reading of visited) {
-          // A walk that saturated the byte either ran out of its step budget
-          // or came within one of it; neither is reachable on a grid this
-          // small.
-          expect(reading[0], 'cells visited').toBeGreaterThan(0);
-          expect(reading[0], 'cells visited').toBeLessThan(255);
+        for (const reading of drained) {
+          // The work count says nothing about this: a stretch that misses the
+          // grid legitimately reads zero and a long one can fill the byte.
+          // Whether the walk finished is its own answer, and every contract
+          // case expects one that did.
+          expect(reading[0], 'the walk ran out of its budget').toBe(0);
         }
 
         for (let index = 0; index < flatHit.length; index++) {
