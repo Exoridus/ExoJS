@@ -24,12 +24,13 @@
 // `uMaskBasis` (vec4<f32>), `uMaskOffset` (vec2<f32>) and `uMaskBlocks`
 // (vec2<f32>).
 //
-// `uMaskBasis` and `uMaskOffset` map a world position into the mask's texel
-// space, rows of the matrix first: the host owns that mapping, including which
-// way its rows run, because a mask bound as a render target is oriented by the
-// backend that wrote it. `uMaskCells` of zero says nothing was rasterised, and
-// `uMaskBlocks` of zero says no block level was built, which the walk answers
-// the same way at more cost.
+// `uMaskBasis` and `uMaskOffset` are the view the mask was drawn through, as
+// world to clip, rows of the matrix first - the same transform the distance
+// field is read with. Which way the rows of a render target run is the
+// backend's, so this half of the chunk applies its own order and the host
+// passes the same numbers to both. `uMaskCells` of zero says nothing was
+// rasterised, and `uMaskBlocks` of zero says no block level was built, which
+// the walk answers the same way at more cost.
 
 /**
  * What a finite stretch amounts to: the radiance found along it, what got
@@ -289,9 +290,15 @@ const MASK_COARSE: i32 = 8;
  */
 const MAX_MASK_STEPS: i32 = 8192;
 
-/** World position to the mask's texel space, in whatever orientation the host bound it in. */
+/**
+ * World position to the mask's texel space, through the view the mask was drawn
+ * with. Flipped on the second axis because a render target's rows run the other
+ * way here than in the GLSL half.
+ */
 fn maskPlace(world: vec2<f32>) -> vec2<f32> {
-    return vec2<f32>(dot(uniforms.uMaskBasis.xy, world), dot(uniforms.uMaskBasis.zw, world)) + uniforms.uMaskOffset;
+    let clip = vec2<f32>(dot(uniforms.uMaskBasis.xy, world), dot(uniforms.uMaskBasis.zw, world)) + uniforms.uMaskOffset;
+
+    return (vec2<f32>(clip.x, -clip.y) * 0.5 + 0.5) * uniforms.uMaskCells;
 }
 
 /** Whether a mask texel blocks, reading outside the grid as open. */

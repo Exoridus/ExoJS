@@ -49,7 +49,7 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
     test(scenario.name, async ctx => {
       const backend = await createWebGpuTestBackend(PROBE_SIZE);
       const tables = probeTables(scenario.segments, scenario.lights, scenario.region, scenario.cell);
-      const mask = probeMask(scenario.mask);
+      const mask = probeMask(scenario.mask, true);
       const filter = ShaderFilter.from(probeShader, {
         textures: {
           uSegments: tables.segments,

@@ -256,8 +256,17 @@ const coarseLevel = (data: Uint8Array, size: number): { readonly data: Uint8Arra
   return { data: reduced, size: blocks };
 };
 
-/** An empty 1x1 mask, which the shader reads as "nothing was rasterised". */
-export const probeMask = (spec?: MaskSpec): ProbeMask => {
+/**
+ * A mask of named texels, or - with no spec - an empty 1x1 one, which the
+ * shader reads as "nothing was rasterised".
+ *
+ * `rowsDown` is the backend's own row order, which the chunk applies to a mask
+ * it expects to be a render target. These fixtures are data textures, whose
+ * first row is the first row on either backend, so the mapping handed over
+ * undoes that flip where the backend has one. Every case can then name one
+ * texel and mean the same texel on both.
+ */
+export const probeMask = (spec?: MaskSpec, rowsDown = false): ProbeMask => {
   const size = spec?.texels ?? 1;
   const data = new Uint8Array(size * size * 4);
   const coverage = Math.round(255 * (spec?.coverage ?? 1));
@@ -269,15 +278,19 @@ export const probeMask = (spec?: MaskSpec): ProbeMask => {
   const reduced = coarseLevel(data, size);
   const texture = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8, data });
   const coarse = new DataTexture({ width: reduced.size, height: reduced.size, format: TextureFormat.Rgba8, data: reduced.data });
-  const scale = spec === undefined ? 0 : size / spec.world.width;
+  const world = spec?.world ?? PROBE_REGION;
+  const rows = rowsDown ? -1 : 1;
+  // World to clip over the region, which is what the chunk turns into a texel.
+  const across = 2 / world.width;
+  const up = (2 / world.height) * rows;
 
   return {
     texture,
     coarse,
     cells: spec === undefined ? [0, 0] : [size, size],
     blocks: spec === undefined ? [0, 0] : [reduced.size, reduced.size],
-    basis: [scale, 0, 0, spec === undefined ? 0 : size / spec.world.height],
-    offset: spec === undefined ? [0, 0] : [-spec.world.x * scale, (-spec.world.y * size) / spec.world.height],
+    basis: [across, 0, 0, up],
+    offset: [-(world.x + world.width / 2) * across, -(world.y + world.height / 2) * up],
     destroy: (): void => {
       texture.destroy();
       coarse.destroy();
