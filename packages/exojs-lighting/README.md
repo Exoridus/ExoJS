@@ -83,7 +83,7 @@ lighting.add(new PointLight({ radius: 300, intensity: 3, softness: 0.4 }));
 lighting.occludeFrom(new TilemapOccluder(level.layer('walls')));
 ```
 
-That is not decoration. The cascades and the distance field they trace are linked only by a project that imports `radiance`, so a project that does not never pays for them - `'radiance'` as a string would put the whole of it into every bundle that reads `quality` from a config file. `lighting.quality` still reports `'radiance'`, and `'auto'` still never picks it.
+That is not decoration. The cascades and the transport tables they walk are linked only by a project that imports `radiance`, so a project that does not never pays for them - `'radiance'` as a string would put the whole of it into every bundle that reads `quality` from a config file. `lighting.quality` still reports `'radiance'`, and `'auto'` still never picks it.
 
 Its tuning rides on the factory - `probeSpacing`, `cascades` and `interval`, all optional and all defaulting to something derived from the surface. They change how finely the same scene is sampled, never what is in it.
 
@@ -94,7 +94,7 @@ What else the transport carries:
 - **A lit surface re-emits.** A wall the field lit gives part of that light off again in its own colour, one frame later - `radiance({ bounce: 0.5 })` sets how much, and `0` switches it off. It is the previous frame's light field that says how lit a wall was, so the bounce trails a moving lamp by a frame.
 - **A `SunLight` is the sky.** A ray that reaches the top of the chain without hitting anything ends in it, so a directional light comes in wherever the sky is open and every wall blocks it. The first enabled one is taken; `softness` is its angular size.
 - **A `SpotLight` emits across its cone** and blocks all round, the way a lamp's body does.
-- **The fields reach past the picture.** The mask, the distance field and the emission field cover the view and a margin around it (`fieldMargin`, a quarter of the view per side by default), so a wall or a lamp just outside the picture still shadows or lights what is in it as the camera moves. The probes themselves cover only the view.
+- **The fields reach past the picture.** The occluder mask and the geometry a ray walks cover the view and a margin around it (`fieldMargin`, a quarter of the view per side by default), so a wall or a lamp just outside the picture still shadows or lights what is in it as the camera moves. The probes themselves cover only the view.
 
 One limit is worth knowing before a bright lamp goes in the middle of the picture. Close to a source - within roughly five times its own size - the chain is resolving that source with the few directions the coarsest levels have, and the source's own disc is rasterised at the light field's resolution. Moving the lamp by less than a texel therefore redistributes light there in a way the merge does not smooth over: around a tenth of the arriving brightness per quarter texel, which reads as a shimmer on the lamp's own halo rather than anywhere it lights. Past that radius it settles to within what eight bits can even express. It is a property of the transport rather than of a particular scene.
 

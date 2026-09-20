@@ -739,55 +739,6 @@ describe('lightmap renderer WebGPU browser', () => {
       host.destroy();
     }
   });
-  // The distance field is the walk that sphere-traces it, which radiance no
-  // longer runs by default: the case names that walk rather than taking
-  // whichever one is current.
-  test('the distance field grows away from the wall the mask drew', async ctx => {
-    const host = await createHost();
-    // Through the renderer that brings the field with it: a project on the
-    // light quads never links the jump flood, so there is nothing for the view
-    // to show there.
-    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
-
-    (lighting.backend as LightmapBackend).lightWalk = 'field';
-
-    // Asymmetric in both axes on purpose: a field built in the wrong space
-    // would still look plausible on a wall through the middle.
-    lighting.add(new PointLight({ radius: 60, intensity: 1 })).setPosition(20, 24);
-    lighting.occludeFrom(
-      new PolygonOccluder(
-        [
-          { x: 44, y: 4 },
-          { x: 44, y: 60 },
-        ],
-        { closed: false },
-      ),
-    );
-    lighting.debug = 'distance';
-
-    try {
-      const at = await renderFrame(host, lighting);
-
-      if (at === null) {
-        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
-        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
-
-        return;
-      }
-
-      const atWall = at(44, 32);
-      const near = at(36, 32);
-
-      // Zero at the wall, and further the further off it, as a fraction of the
-      // view's own diagonal.
-      expect(atWall).toBeLessThan(10);
-      expect(near).toBeGreaterThan(atWall);
-      expect(at(8, 32)).toBeGreaterThan(near);
-    } finally {
-      lighting.destroy();
-      host.destroy();
-    }
-  });
   test('radiance carries an emitter across the scene, and an occluder still cuts it', async ctx => {
     const host = await createHost();
     const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });

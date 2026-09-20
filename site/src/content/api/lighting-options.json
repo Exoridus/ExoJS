@@ -113,7 +113,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How far beyond the camera's view the occluder mask and the emission field reach, as a fraction of the view's size on each side. Under radiance it is what lets a wall or a lamp just outside the picture still shadow or light what is in it, so neither pops in at the edge as the camera moves; the probes themselves still cover only the view. Defaults to 0.25, and costs that much more mask, distance field and emission fill."
+          "description": "How far beyond the camera's view the occluder mask and the transport tables reach, as a fraction of the view's size on each side. Under radiance it is what lets a wall or a lamp just outside the picture still shadow or light what is in it, so neither pops in at the edge as the camera moves; the probes themselves still cover only the view. Defaults to 0.25, and costs that much more mask fill and collected geometry."
         },
         {
           "name": "lightResolution",

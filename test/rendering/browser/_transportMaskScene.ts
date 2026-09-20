@@ -84,8 +84,7 @@ export const createMaskScene = (app: Application, size: number): MaskScene => {
   sprite.position.set(OCCLUDER.x, OCCLUDER.y);
 
   // No light in the scene, deliberately: this fixture is about what blocks,
-  // and what emits reaches this walk through the tables rather than the mask.
-  backend.lightWalk = 'transport';
+  // and what emits reaches the walk through the tables rather than the mask.
   lighting.occludeFrom(new AlphaOccluder(sprite));
   lighting.occludeFrom(
     new PolygonOccluder(

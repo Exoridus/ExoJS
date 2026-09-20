@@ -11,7 +11,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { Lighting, type LightingDebugView, type LightingQualityOption, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
+import { AlphaOccluder, Lighting, type LightingDebugView, type LightingQualityOption, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
@@ -34,6 +34,12 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //   term is blurred across a fixed fraction of a turn around it, so the
 //   penumbra widens with the distance from the LIGHT rather than from the
 //   wall, and no shadow ever behaves like one cast by an area source.
+//
+// The third thing to watch is the BOUNCE, which is what the red panel beside
+// the doorway is for. The walls are outlines: they block, and an outline has
+// no material to give anything back with. The panel is a drawable the camera
+// paints, so the cascades read its own colour where a ray ends on it - switch
+// the bounce off and the floor in front of it goes neutral.
 //
 // The panel controls pause the motion, place the lamp at a reproducible point
 // on its own path, switch the bounce off, and show the intermediate fields, so
@@ -63,6 +69,13 @@ const stoneTexture = canvasTexture(8, context => {
   context.fillRect(0, 0, 8, 8);
 });
 
+// Saturated on purpose: what a surface gives back carries its own colour, and
+// a grey panel would return the lamp's light looking like more lamp.
+const panelTexture = canvasTexture(8, context => {
+  context.fillStyle = '#c0392b';
+  context.fillRect(0, 0, 8, 8);
+});
+
 interface Wall {
   readonly x: number;
   readonly y: number;
@@ -81,8 +94,28 @@ const walls: readonly Wall[] = [
   { x: 300, y: 560, width: 150, height: 34 },
 ];
 
+/**
+ * The one surface in the scene with a material: a slab across the lamp's side
+ * of the doorway, drawn by the camera and occluding as coverage rather than as
+ * an outline, so what falls on it comes back off it in its own colour.
+ */
+const bouncePanel: Wall = { x: 545, y: 400, width: 30, height: 230 };
+
+/** A wall's own box, as the four corners an occluder takes. */
+const outline = (wall: Wall): readonly { x: number; y: number }[] => {
+  const halfWidth = wall.width / 2;
+  const halfHeight = wall.height / 2;
+
+  return [
+    { x: wall.x - halfWidth, y: wall.y - halfHeight },
+    { x: wall.x + halfWidth, y: wall.y - halfHeight },
+    { x: wall.x + halfWidth, y: wall.y + halfHeight },
+    { x: wall.x - halfWidth, y: wall.y + halfHeight },
+  ];
+};
+
 /** Levels the debug cycle walks, in the order it walks them. */
-const debugViews: readonly LightingDebugView[] = [null, 'light', 'mask', 'distance', 'occluders'];
+const debugViews: readonly LightingDebugView[] = [null, 'light', 'mask', 'occluders'];
 
 /** Texels of light field per logical pixel. Stated here so the panel can show what was actually run at. */
 const lightResolution = 1;
@@ -109,6 +142,7 @@ const lampPosition = { x: 0, y: 0 };
 
 class RadianceRoomsScene extends Scene {
   private world!: Container;
+  private panel!: Sprite;
   private lighting!: Lighting;
   private quality: LightingQualityOption = radiance();
   private intensity = 3;
@@ -142,6 +176,12 @@ class RadianceRoomsScene extends Scene {
       sprite.setPosition(wall.x, wall.y);
       this.world.addChild(sprite);
     }
+
+    this.panel = new Sprite(panelTexture).setAnchor(0.5);
+    this.panel.width = bouncePanel.width;
+    this.panel.height = bouncePanel.height;
+    this.panel.setPosition(bouncePanel.x, bouncePanel.y);
+    this.world.addChild(this.panel);
 
     this.build();
 
@@ -210,7 +250,7 @@ class RadianceRoomsScene extends Scene {
 
     panel.addCycle({
       label: 'Field',
-      options: ['shaded', 'light', 'mask', 'distance', 'occluders'],
+      options: ['shaded', 'light', 'mask', 'occluders'],
       index: 0,
       onChange: index => {
         this.debug = debugViews[index] ?? null;
@@ -305,17 +345,18 @@ class RadianceRoomsScene extends Scene {
     this.moveLamp();
 
     for (const wall of walls) {
-      const halfWidth = wall.width / 2;
-      const halfHeight = wall.height / 2;
+      this.lighting.occludeFrom(new PolygonOccluder(outline(wall)));
+    }
 
-      this.lighting.occludeFrom(
-        new PolygonOccluder([
-          { x: wall.x - halfWidth, y: wall.y - halfHeight },
-          { x: wall.x + halfWidth, y: wall.y - halfHeight },
-          { x: wall.x + halfWidth, y: wall.y + halfHeight },
-          { x: wall.x - halfWidth, y: wall.y + halfHeight },
-        ]),
-      );
+    // The panel is the drawable one, and only under the cascades: they take a
+    // drawable as the coverage it paints and read its colour back out of the
+    // frame, which is what a bounce is. The quads walk segments instead, so
+    // there the same slab is registered as the outline of its own box - it
+    // still casts, it just has nothing to give back.
+    if (typeof this.quality === 'object') {
+      this.lighting.occludeFrom(new AlphaOccluder(this.panel));
+    } else {
+      this.lighting.occludeFrom(new PolygonOccluder(outline(bouncePanel)));
     }
   }
 }

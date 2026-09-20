@@ -329,11 +329,10 @@ lighting.debug = 'light'; // the accumulated light field, without the scene's co
 lighting.debug = 'normals'; // the prepass normals, encoded the way a normal map is
 lighting.debug = 'occluders'; // the silhouettes the sources collected, over the scene
 lighting.debug = 'mask'; // the same silhouettes rasterised at the light field's own resolution
-lighting.debug = 'distance'; // how far the nearest occluder is, as a ramp across the view
 lighting.debug = null;
 ```
 
-`mask` and `distance` are the two the GPU-resident paths read: the mask says whether a wall is thick enough to be seen at the light field's resolution, and the distance field is what a ray steps along instead of marching a texel at a time.
+`mask` is the one the GPU-resident paths read: it says whether a wall is thick enough to be seen at the light field's own resolution, which is what a cascade ray samples where an occluder is a drawable rather than an outline.
 
 The `occluders` view is the one that explains the feature: it draws what the shadows are actually being cast from, which is usually the fastest way to find out that a source is reading the wrong thing.
 

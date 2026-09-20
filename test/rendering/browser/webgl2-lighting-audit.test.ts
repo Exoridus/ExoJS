@@ -26,7 +26,6 @@ import { TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
 import { wireCoreRenderers } from './_coreRenderers';
 
 const canvasSize = 128;
@@ -657,107 +656,6 @@ describe('two spots that overlap', () => {
     // at two percent of the other's intensity moves the opening by about two
     // percent rather than switching the strong one off.
     expect(withFaint.back, `strong ${strong.back}, with faint ${withFaint.back}`).toBeLessThan(strong.back + 6);
-  });
-});
-
-describe('the bounce history', () => {
-  /**
-   * A red wall beside a white floor, lit hard enough that the bounce is worth
-   * several counts, with the camera moved by updates that are never drawn.
-   *
-   * What is under test is which frame the light field being read belongs to.
-   * The field is gathered at the END of a frame, so a camera prepared by an
-   * `update()` that was never drawn describes no light field at all - and
-   * pairing the two reprojects last frame's light through a camera it was
-   * never rendered through.
-   */
-  const bounceAfter = async (skipped: number): Promise<number[]> => {
-    const host = await createHost();
-    const lighting = new Lighting({ quality: radiance({ bounce: 0.9 }), app: host.app, ambient: Color.black, lightResolution: 1 });
-
-    (lighting.backend as LightmapBackend).lightWalk = 'field';
-
-    const floor = new Sprite(Texture.fromColor(Color.white, 1));
-    const wall = new Sprite(Texture.fromColor(new Color(255, 0, 0), 1));
-
-    floor.width = canvasSize;
-    floor.height = canvasSize;
-    wall.width = 8;
-    wall.height = canvasSize;
-    wall.setPosition(84, 0);
-    host.context.renderTo(floor, { target: host.frameTexture, clear: Color.black });
-    host.context.renderTo(wall, { target: host.frameTexture });
-    // The wall has to be an occluder as well as a sprite: the bounce writes a
-    // colour with no coverage, so it is only ever read where the mask already
-    // says a ray ends.
-    lighting.occludeFrom(
-      new PolygonOccluder(
-        [
-          { x: 84, y: 4 },
-          { x: 84, y: 124 },
-        ],
-        { closed: false },
-      ),
-    );
-    // A white lamp over a white floor with a red wall: the direct light is
-    // neutral and only the bounce is tinted, so red MINUS blue is the bounce
-    // on its own, whatever the direct term does.
-    lighting.add(new PointLight({ radius: 80, intensity: 0.5 })).setPosition(40, 64);
-
-    try {
-      // One drawn frame, so there is a light field to bounce from.
-      runFrame(host, lighting);
-
-      // Then some updates the renderer never got to draw. Each prepares a
-      // camera; none of them gathers anything.
-      for (let index = 0; index < skipped; index++) {
-        host.context.view.center.set(64 + (index + 1) * 24, 64);
-        lighting.update();
-      }
-
-      host.context.view.center.set(64, 64);
-      runFrame(host, lighting);
-
-      // The bounce along a row, as red minus blue. One texel of it is worth
-      // a couple of counts; the profile as a whole is what a reprojection
-      // error moves, so the comparison is over the row rather than a point.
-      const profile: number[] = [];
-
-      for (let x = 44; x <= 82; x += 2) {
-        const pixel = readPixel(host.backend, x, 64);
-
-        profile.push(pixel[0]! - pixel[2]!);
-      }
-
-      return profile;
-    } finally {
-      floor.destroy();
-      wall.destroy();
-      lighting.destroy();
-      host.destroy();
-    }
-  };
-
-  // The bounce the field walk paints into the emission field: the walk over
-  // geometry reads its surfaces out of the mask and gives nothing back for an
-  // outline, so the history this case is about is that walk's.
-  test('an update the renderer never drew does not become the frame the bounce reads from', async () => {
-    const drawn = await bounceAfter(0);
-    const afterSkips = await bounceAfter(3);
-    const shown = `drawn ${drawn.join(',')} | after skips ${afterSkips.join(',')}`;
-
-    // There is a bounce to compare at all.
-    const total = drawn.reduce((sum, value) => sum + value, 0);
-
-    expect(total, `${shown}`).toBeGreaterThan(20);
-
-    // The camera ends where it started in both runs and the light field is
-    // the same one, so the bounce has to be too. Committing the camera during
-    // `update` instead pairs the field with the last camera that was merely
-    // prepared, and the whole profile shifts.
-    for (let index = 0; index < drawn.length; index++) {
-      expect(Math.abs(afterSkips[index]! - drawn[index]!), `${shown}`).toBeLessThanOrEqual(1);
-    }
   });
 });
 

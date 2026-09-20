@@ -1,18 +1,10 @@
 import {
-  BlendModes,
   CallbackRenderPass,
-  Color,
-  createFilterShader,
-  Geometry,
-  INSTANCE_TRANSFORM_GLSL,
-  INSTANCE_TRANSFORM_WGSL,
+  type Color,
   Matrix,
-  MeshMaterial,
   type PassContext,
-  RenderBatch,
   RenderTexture,
   ScaleModes,
-  Shader,
   ShaderFilter,
   type Texture,
   TextureFormat,
@@ -21,30 +13,12 @@ import {
 } from '@codexo/exojs';
 
 import type { Light } from '../lights/Light';
-import { lightFalloff, lightHalfLength, lightRadius } from '../lights/reach';
-import { SpotLight } from '../lights/SpotLight';
+import { lightRadius } from '../lights/reach';
 import { SunLight } from '../lights/SunLight';
-import bounceFragment from './shaders/bounce.frag';
-import bounceVertex from './shaders/bounce.vert';
-import bounceWgsl from './shaders/bounce.wgsl';
-import cascadeFragment from './shaders/cascade.frag';
-import cascadeWgsl from './shaders/cascade.wgsl';
-import cascadeGatherFragment from './shaders/cascade-gather.frag';
-import cascadeGatherWgsl from './shaders/cascade-gather.wgsl';
-import emitterConeFragment from './shaders/emitter-cone.frag';
-import emitterConeVertex from './shaders/emitter-cone.vert';
-import emitterConeWgsl from './shaders/emitter-cone.wgsl';
-import emitterQuadFragment from './shaders/emitter-quad.frag';
-import emitterQuadVertex from './shaders/emitter-quad.vert';
-import emitterQuadWgsl from './shaders/emitter-quad.wgsl';
-import probeVisibilityFragment from './shaders/probe-visibility.frag';
-import probeVisibilityWgsl from './shaders/probe-visibility.wgsl';
 import { type transportBounceUniforms, transportCascadeShader, transportGatherShader, type transportUniforms } from './transportShaders';
 
-/** What one cascade level is told about this frame, whichever walk it runs. @internal */
+/** What one cascade level is told about this frame. @internal */
 export const cascadeUniforms = {
-  uToField: UniformType.Vec4,
-  uFieldOffset: UniformType.Vec2,
   uOrigin: UniformType.Vec2,
   uProbes: UniformType.Vec2,
   uRange: UniformType.Vec2,
@@ -52,39 +26,9 @@ export const cascadeUniforms = {
   uSunColor: UniformType.Vec3,
   uSpacing: UniformType.Float,
   uTile: UniformType.Float,
-  uTexel: UniformType.Float,
-  uFar: UniformType.Float,
   uMerge: UniformType.Float,
   uCone: UniformType.Float,
 } as const;
-
-/**
- * One cascade: march every probe's rays over this level's interval, then add
- * what the level above found along the same directions.
- * @internal
- */
-export const cascadeShader = createFilterShader({ glsl: { fragment: cascadeFragment }, wgsl: cascadeWgsl, uniforms: cascadeUniforms });
-
-const visibilityUniforms = {
-  uToField: UniformType.Vec4,
-  uFieldOffset: UniformType.Vec2,
-  uOrigin: UniformType.Vec2,
-  uProbes: UniformType.Vec2,
-  uSpacing: UniformType.Float,
-  uTexel: UniformType.Float,
-  uFar: UniformType.Float,
-} as const;
-
-/**
- * Per probe of one level, how open the way to each of the four coarser probes
- * it merges from is.
- * @internal
- */
-export const probeVisibilityShader = createFilterShader({
-  glsl: { fragment: probeVisibilityFragment },
-  wgsl: probeVisibilityWgsl,
-  uniforms: visibilityUniforms,
-});
 
 /** What the reconstruction at each fragment is told about this frame. @internal */
 export const gatherUniforms = {
@@ -97,112 +41,19 @@ export const gatherUniforms = {
   uTile: UniformType.Float,
 } as const;
 
-/** The finest cascade, read back out as the light arriving at each fragment. @internal */
-export const cascadeGatherShader = createFilterShader({ glsl: { fragment: cascadeGatherFragment }, wgsl: cascadeGatherWgsl, uniforms: gatherUniforms });
-
-/**
- * Screen clip of this frame to screen clip of the last one, and whether the
- * last one exists at all.
- */
-type BounceUniforms = Readonly<{ uReproject: UniformType.Vec4; uReprojectOffset: UniformType.Vec2; uHistory: UniformType.Float }>;
-
-const bounceUniforms: BounceUniforms = {
-  uReproject: UniformType.Vec4,
-  uReprojectOffset: UniformType.Vec2,
-  uHistory: UniformType.Float,
-};
-
-/**
- * The shader pair behind the bounce quad.
- *
- * Exported so the repository's shader-compile gate can compose the uniform
- * block the authored stages read but do not declare, the way it does for the
- * lit sprite. Nothing else should reach for it.
- * @internal
- */
-export const bounceShader = new Shader({
-  uniforms: bounceUniforms,
-  glsl: {
-    vertex: `#version 300 es
-${INSTANCE_TRANSFORM_GLSL}
-${bounceVertex}`,
-    fragment: bounceFragment,
-  },
-  wgsl: `${INSTANCE_TRANSFORM_WGSL}
-${bounceWgsl}`,
-});
-
-/** Unit quad in `-1..1`, which is the emitter's own space. */
-const unitQuad = (): Geometry =>
-  new Geometry({
-    attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
-    stride: 8,
-    vertexData: new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]),
-    indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
-  });
-
-/** Unit quad in `0..1` carrying its own corners as texture coordinates, for the bounce. */
-const frameQuad = (): Geometry =>
-  new Geometry({
-    attributes: [
-      { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
-      { name: 'a_texcoord', size: 2, type: 'f32', normalized: false, offset: 8 },
-    ],
-    stride: 16,
-    vertexData: new Float32Array([0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1]),
-    indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
-  });
-
 /** Levels the chain is allowed to grow to. Each one quadruples the reach, so six cover any surface. */
 const MAX_CASCADES = 6;
+
 /**
- * How far past its shape an emitter's radiance extends, as a multiple of the
- * finest cascade interval.
+ * A directional light's angular radius per unit of `softness`, in radians.
  *
- * A ray reads radiance from where it STOPPED, and it stops short of the shape
- * by up to its own width - or passes beside it by that much and still counts
- * the source in part. The widest a ray gets over any level is about the finest
- * interval, so a halo of that size is what makes every such read land on the
- * source's colour rather than on the black beside it.
+ * It is the fraction of its own reach a positional source takes as its
+ * emitting radius, read as an angle, so the same `softness` softens a shadow
+ * by about as much whichever shape casts it.
  */
-const EMITTER_HALO = 1.25;
+const SUN_SIZE = 0.05 * Math.PI;
 
-/**
- * An emitter's size as a fraction of its reach, per unit of `softness`.
- *
- * It is the same scale the light quads read `softness` at - their penumbra
- * spans at most three percent of a turn - so a light keeps the size it already
- * had rather than becoming an area source the moment the renderer changes.
- * Reading `softness` as the size directly made a default light a quarter of its
- * own reach across, which fills the scene AND blocks it: an emitter goes into
- * the occluder mask, so an oversized one is an oversized wall.
- */
-const EMITTER_SIZE = 0.05;
-
-/**
- * A directional light's angular radius per unit of `softness`, in radians: the
- * emitter size read as an angle, so the same `softness` softens a shadow by
- * about as much whichever shape casts it.
- */
-const SUN_SIZE = EMITTER_SIZE * Math.PI;
-
-/**
- * What one unit of `intensity` emits, per unit of reach over emitter size.
- *
- * A source delivers its own angular size: `2R / (2 pi d)` of what it emits, at
- * distance `d`. That is the physics, and it is also why a lamp the size of a
- * lamp lights a room at a hundredth of what the light quads put there for the
- * same `intensity` - the quads do not model a source at all, they paint a
- * falloff. Scaling the emitted radiance by `reach / size` makes the two agree
- * at HALF the light's radius, where the quads' own `(1 - d/r)^2` is a quarter,
- * and it is what keeps `softness` a penumbra knob rather than an exposure one:
- * a bigger source emits less per unit area for the same arriving light.
- */
-const EMITTER_GAIN = Math.PI / 8;
-
-const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
-const scratchEmitter = { a_emit: [1, 0, 0, 0], a_cone: [Math.PI, Math.PI, Math.PI, 0] };
 
 /**
  * What the geometry walk needs bound, as the renderer hands it over.
@@ -258,29 +109,13 @@ export interface RadianceFieldOptions {
  * @internal
  */
 export class RadianceField {
-  /** Draws the emitters and the bounce into a field of their own. */
-  public readonly emissionPass: CallbackRenderPass;
-  /** Draws each emitter's cone over the same capsule, into a field beside the colour. */
-  public readonly conePass: CallbackRenderPass;
   /** Builds the chain from the coarsest level down and gathers it into the light target. */
   public readonly cascadePass: CallbackRenderPass;
 
   private readonly _options: RadianceFieldOptions;
-  private readonly _distance: RenderTexture;
   private readonly _target: RenderTexture;
   /** What the camera drew before the light was applied: the albedo a bounce is tinted by. */
   private readonly _frame: RenderTexture;
-  private readonly _emission: RenderTexture;
-  private readonly _geometry: Geometry = unitQuad();
-  private readonly _material: MeshMaterial;
-  private readonly _batch: RenderBatch;
-  private readonly _cone: RenderTexture;
-  private readonly _coneMaterial: MeshMaterial;
-  private readonly _coneBatch: RenderBatch;
-  private readonly _bounceGeometry: Geometry = frameQuad();
-  private readonly _bounceMaterial: MeshMaterial<BounceUniforms>;
-  private readonly _bounceBatch: RenderBatch;
-  private readonly _bounceTint: Color;
   /** World to clip as the camera saw it when the light field was last GATHERED. */
   private readonly _gatheredToClip = new Matrix();
   /** World to clip for the frame being prepared, promoted above once its gather has run. */
@@ -291,23 +126,16 @@ export class RadianceField {
   private readonly _chain: readonly [RenderTexture, RenderTexture];
   /** Stands in for the level above the coarsest, which nothing reads. */
   private readonly _above: RenderTexture;
-  /** One level's merge weights, rewritten before each level reads them. */
-  private readonly _visibility: RenderTexture;
-  private readonly _cascadeFilter: ShaderFilter<typeof cascadeUniforms>;
-  private readonly _visibilityFilter: ShaderFilter<typeof visibilityUniforms>;
   /**
    * The cascade over the transport chunk, built when a walk over geometry is
-   * bound. It has no companion that measures merge weights: the walk to a
-   * coarser probe already reports what reached it.
+   * bound. Nothing measures merge weights beforehand: the walk to a coarser
+   * probe already reports what reached it.
    */
   private _transportCascade: ShaderFilter<typeof cascadeUniforms & typeof transportUniforms & typeof transportBounceUniforms> | null = null;
   /** The receiver reconstruction over the same walk: a fragment reaches its probes or it does not. */
   private _transportGather: ShaderFilter<typeof gatherUniforms & typeof transportUniforms> | null = null;
   private _walk: TransportBinding | null = null;
   private _walkRevision = -1;
-  private readonly _gatherFilter: ShaderFilter<typeof gatherUniforms>;
-  private readonly _transform = new Matrix();
-  private _field: View | null = null;
   private _levels = 1;
   private _probesX = 1;
   private _probesY = 1;
@@ -316,83 +144,19 @@ export class RadianceField {
   private _emitterCount = 0;
   private _sun: SunLight | null = null;
 
-  public constructor(distance: RenderTexture, target: RenderTexture, frame: RenderTexture, options: RadianceFieldOptions) {
-    this._distance = distance;
+  public constructor(target: RenderTexture, frame: RenderTexture, options: RadianceFieldOptions) {
     this._target = target;
     this._frame = frame;
     this._options = options;
-    this._emission = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Linear });
     this._chain = [
       new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest }),
       new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest }),
     ];
     this._above = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
-    this._visibility = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
-    this._cone = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
-    this._material = new MeshMaterial({
-      shader: new Shader({
-        glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${emitterQuadVertex}`, fragment: emitterQuadFragment },
-        wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${emitterQuadWgsl}`,
-      }),
-      blendMode: BlendModes.Additive,
-    });
-    this._batch = new RenderBatch(this._geometry, this._material, { instanceAttributes: [{ name: 'a_emit', format: 'float32x4' }] });
-    this._coneMaterial = new MeshMaterial({
-      shader: new Shader({
-        glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${emitterConeVertex}`, fragment: emitterConeFragment },
-        wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${emitterConeWgsl}`,
-      }),
-      // Summed, not composited. Alpha here is a count of emitters rather than
-      // an opacity, and the other channels are a signed description: ordinary
-      // source-over would scale whatever a previous emitter wrote by one minus
-      // an axis angle. Summing is order-independent, and the count is what
-      // lets the tracer notice that no single cone describes the texel.
-      blendMode: BlendModes.Additive,
-    });
-    this._coneBatch = new RenderBatch(this._geometry, this._coneMaterial, {
-      instanceAttributes: [
-        { name: 'a_emit', format: 'float32x4' },
-        { name: 'a_cone', format: 'float32x4' },
-      ],
-    });
-    this._bounceMaterial = new MeshMaterial({
-      shader: bounceShader,
-      // Declaration order is the group(2) binding order on WebGPU: the frame
-      // at bindings 1/2 and last frame's light at 3/4, matching `bounce.wgsl`.
-      textures: { u_frame: frame, u_light: target },
-      blendMode: BlendModes.Additive,
-    });
-    this._bounceBatch = new RenderBatch(this._bounceGeometry, this._bounceMaterial);
-    this._bounceTint = new Color(255 * options.bounce, 255 * options.bounce, 255 * options.bounce, 255);
-    // Bound once and read live: every field is this object's own target and
-    // never changes identity, which is what lets them ride on the filter's
-    // fixed texture bindings while the cascade being read changes per level.
-    this._cascadeFilter = ShaderFilter.from(cascadeShader, {
-      textures: { uDistance: this._distance, uEmission: this._emission, uVisibility: this._visibility, uEmitterCone: this._cone },
-    });
-    this._visibilityFilter = ShaderFilter.from(probeVisibilityShader);
-    this._gatherFilter = ShaderFilter.from(cascadeGatherShader);
-    this.emissionPass = new CallbackRenderPass((pass: PassContext) => this._drawEmission(pass), {
-      target: this._emission,
-      clear: Color.transparentBlack,
-      label: 'lighting:emission',
-      enabled: false,
-    });
-    this.conePass = new CallbackRenderPass((pass: PassContext) => this._drawCones(pass), {
-      target: this._cone,
-      clear: Color.transparentBlack,
-      label: 'lighting:emitter-cones',
-      enabled: false,
-    });
     this.cascadePass = new CallbackRenderPass((pass: PassContext) => this._build(pass), { label: 'lighting:cascades', enabled: false });
   }
 
-  /** The emitters' own field, for a debug view that wants to show it. */
-  public get emissionTexture(): RenderTexture {
-    return this._emission;
-  }
-
-  /** Emitters the last {@link writeEmitters} actually wrote, the sky's directional light included. */
+  /** Lights the last {@link collectSources} counted, the sky's directional light included. */
   public get emitterCount(): number {
     return this._emitterCount;
   }
@@ -407,32 +171,19 @@ export class RadianceField {
       this.invalidateHistory();
     }
 
-    this.emissionPass.enabled = enabled;
-    this.conePass.enabled = enabled;
     this.cascadePass.enabled = enabled;
   }
 
-  /** Match the mask's grid: the emission field is read at the same places. */
-  public setSize(width: number, height: number): void {
-    this._emission.setSize(width, height);
-    this._cone.setSize(width, height);
-  }
-
   /**
-   * Turn this frame's lights into emitters.
+   * Take this frame's sky from its lights, and answer how many of them light
+   * anything at all.
    *
-   * A light's SIZE is its `softness` across its own reach, floored at three
-   * texels: that property is the only one in the vocabulary that says a light
-   * is not a point, and a source with no size at all would cast shadows with no
-   * penumbra at any distance - which is the thing this renderer is for.
-   *
-   * A directional light has no place to emit from: the first enabled one
-   * becomes the sky, which every ray that reaches the top of the chain
-   * unblocked ends in.
+   * Every positional source reaches the chain as an entry in the transport
+   * tables, which carry their own shape and density. A directional light has
+   * no place to emit from, so the first enabled one becomes the sky instead:
+   * what every ray that reaches the top of the chain unblocked ends in.
    */
-  public writeEmitters(lights: readonly Light[], texel: number): number {
-    this._batch.clear();
-    this._coneBatch.clear();
+  public collectSources(lights: readonly Light[]): number {
     this._sun = null;
 
     let written = 0;
@@ -451,51 +202,9 @@ export class RadianceField {
         continue;
       }
 
-      const reach = lightRadius(light);
-
-      if (reach <= 0) {
-        continue;
+      if (lightRadius(light) > 0) {
+        written++;
       }
-
-      // Floored well above the tracer's own step: a source the size of one step
-      // loses the grazing rays that stop on its rim, and loses more of them the
-      // further away the probe is.
-      const falloff = lightFalloff(light);
-      const radius = Math.max(3 * texel, falloff * light.softness * EMITTER_SIZE);
-      const half = lightHalfLength(light) / radius;
-      const halo = (EMITTER_HALO * this._intervalFor(texel)) / radius;
-      const extent = 1 + halo;
-
-      light.getWorldPosition(scratchPosition);
-      light.getWorldDirection(scratchDirection);
-      scratchEmitter.a_emit[0] = light.intensity * EMITTER_GAIN * (falloff / radius);
-      scratchEmitter.a_emit[1] = halo;
-      scratchEmitter.a_emit[2] = half;
-      scratchEmitter.a_emit[3] = (0.5 * texel) / radius;
-      // The quad covers the halo as well as the shape, so the fragment stage
-      // can fade the radiance out where nothing reads it any more.
-      this._transform.set(
-        radius * (half + extent) * scratchDirection.x,
-        -radius * extent * scratchDirection.y,
-        scratchPosition.x,
-        radius * (half + extent) * scratchDirection.y,
-        radius * extent * scratchDirection.x,
-        scratchPosition.y,
-      );
-      this._batch.add(this._transform, light.color, scratchEmitter);
-
-      // Only a spot describes a cone. A point light writing an accept-all one
-      // would be averaged together with any spot over the same texel and drag
-      // that spot's opening wide; leaving it out is what lets the reader tell
-      // the two contributions apart by weight instead.
-      if (light instanceof SpotLight) {
-        writeCone(scratchEmitter.a_cone, light);
-        // The axis as its angle, offset into `0..2pi` so the field can sum it.
-        scratchEmitter.a_cone[2] = Math.atan2(scratchDirection.y, scratchDirection.x) + Math.PI;
-        this._coneBatch.add(this._transform, light.color, scratchEmitter);
-      }
-
-      written++;
     }
 
     this._emitterCount = written;
@@ -504,19 +213,7 @@ export class RadianceField {
   }
 
   /**
-   * Draw the emitters wherever the caller's pass points. The occluder mask
-   * takes the same draw: an emitter is something a ray ends on, and the alpha
-   * this batch writes is its shape.
-   */
-  public drawEmitters(pass: PassContext, view: View): void {
-    if (this._batch.count > 0) {
-      pass.drawBatch(this._batch, { view });
-    }
-  }
-
-  /**
-   * Point the chain at this frame's geometry, or back at the distance field
-   * with `null`.
+   * Point the chain at this frame's geometry, or stand it down with `null`.
    *
    * Called before {@link update}, because the terms that describe the tables
    * are written with the rest of the frame's uniforms.
@@ -542,19 +239,17 @@ export class RadianceField {
    * with.
    *
    * `view` is the camera, whose axis-aligned bounds the probes cover and whose
-   * target the gather writes; `field` is the wider view the mask, the distance
-   * field and the emission field were drawn through. `texel` is one field
-   * texel in world units and `far` what the distance field's `1.0` stands
-   * for. The number of levels follows the view's own diagonal, because each
-   * level quadruples the reach of the one below.
+   * target the gather writes; `field` is the wider view the occluder mask was
+   * drawn through, which is how a ray reads it. `texel` is one field texel in
+   * world units. The number of levels follows the view's own diagonal, because
+   * each level quadruples the reach of the one below.
    */
-  public update(view: View, field: View, texel: number, far: number, ambient: Color): void {
+  public update(view: View, field: View, texel: number, ambient: Color): void {
     const bounds = view.getBounds();
     const spacing = Math.max(1, this._options.probeSpacing) * texel;
     const toField = field.getTransform();
     const toWorld = view.getInverseTransform();
 
-    this._field = field;
     this._interval = this._intervalFor(texel);
     this._levels = this._levelsFor(Math.hypot(bounds.width, bounds.height));
 
@@ -571,70 +266,41 @@ export class RadianceField {
     // axis and doubling the directions per axis leaves the product alone.
     this._chain[0].setSize(this._probesX * 2, this._probesY * 2);
     this._chain[1].setSize(this._probesX * 2, this._probesY * 2);
-    this._visibility.setSize(this._probesX, this._probesY);
 
     const walking = this._walk;
 
-    for (const filter of [this._cascadeFilter, this._visibilityFilter, this._transportCascade]) {
-      if (filter === null) {
-        continue;
-      }
+    if (this._transportCascade !== null && walking !== null) {
+      const chunk = this._transportCascade.uniforms;
 
-      filter.uniforms.uToField.set(toField.a, toField.b, toField.c, toField.d);
-      filter.uniforms.uFieldOffset.set(toField.x, toField.y);
-      filter.uniforms.uOrigin.set(bounds.left, bounds.top);
-      filter.uniforms.uTexel.set(texel);
-      filter.uniforms.uFar.set(far);
-
-      if (walking === null) {
-        continue;
-      }
-
-      // The mask is read through the view it was drawn with, which is the same
-      // transform the fields are read with.
-      const chunk = filter.uniforms as unknown as Record<string, { set: (...values: number[]) => void }>;
-
-      chunk.uGridOrigin?.set(walking.originX, walking.originY);
-      chunk.uGridCells?.set(walking.cellsX, walking.cellsY);
-      chunk.uCellSize?.set(walking.cellSize);
-      chunk.uTableWidth?.set(walking.tableWidth);
-      chunk.uMaskCells?.set(walking.maskWidth, walking.maskHeight);
-      chunk.uMaskBasis?.set(toField.a, toField.b, toField.c, toField.d);
-      chunk.uMaskOffset?.set(toField.x, toField.y);
-      chunk.uMaskBlocks?.set(walking.blocksWidth, walking.blocksHeight);
+      chunk.uOrigin.set(bounds.left, bounds.top);
+      chunk.uGridOrigin.set(walking.originX, walking.originY);
+      chunk.uGridCells.set(walking.cellsX, walking.cellsY);
+      chunk.uCellSize.set(walking.cellSize);
+      chunk.uTableWidth.set(walking.tableWidth);
+      chunk.uMaskCells.set(walking.maskWidth, walking.maskHeight);
+      // The mask is read through the view it was drawn with, which is the
+      // wider field view rather than the camera's.
+      chunk.uMaskBasis.set(toField.a, toField.b, toField.c, toField.d);
+      chunk.uMaskOffset.set(toField.x, toField.y);
+      chunk.uMaskBlocks.set(walking.blocksWidth, walking.blocksHeight);
     }
 
     this._writeSun();
-    for (const filter of [this._gatherFilter, this._transportGather]) {
-      if (filter === null) {
-        continue;
-      }
 
-      filter.uniforms.uToWorld.set(toWorld.a, toWorld.b, toWorld.c, toWorld.d);
-      filter.uniforms.uWorldOffset.set(toWorld.x, toWorld.y);
-      filter.uniforms.uOrigin.set(bounds.left, bounds.top);
-      filter.uniforms.uProbes.set(this._probesX, this._probesY);
-      filter.uniforms.uSpacing.set(spacing);
-      filter.uniforms.uTile.set(2);
-      filter.uniforms.uAmbient.set(ambient.r / 255, ambient.g / 255, ambient.b / 255);
+    if (this._transportGather !== null) {
+      const gather = this._transportGather.uniforms;
+
+      gather.uToWorld.set(toWorld.a, toWorld.b, toWorld.c, toWorld.d);
+      gather.uWorldOffset.set(toWorld.x, toWorld.y);
+      gather.uOrigin.set(bounds.left, bounds.top);
+      gather.uProbes.set(this._probesX, this._probesY);
+      gather.uSpacing.set(spacing);
+      gather.uTile.set(2);
+      gather.uAmbient.set(ambient.r / 255, ambient.g / 255, ambient.b / 255);
     }
-
-    // The bounce quad is the camera's own view rectangle, in the world: the
-    // unit quad's corners are clip -1 and +1 through the camera's inverse, so
-    // each fragment of it lands on the frame's own pixel.
-    this._bounceBatch.clear();
 
     if (this._options.bounce > 0) {
       this._writeReprojection(view, toWorld);
-
-      // The quad paints the bounce into the emission field, which only the
-      // field walk reads. The walk over geometry asks the surface a ray
-      // actually ended on instead, so it takes the same terms as uniforms and
-      // draws nothing.
-      if (walking === null) {
-        this._transform.set(2 * toWorld.a, 2 * toWorld.b, toWorld.x - toWorld.a - toWorld.b, 2 * toWorld.c, 2 * toWorld.d, toWorld.y - toWorld.c - toWorld.d);
-        this._bounceBatch.add(this._transform, this._bounceTint);
-      }
     }
 
     if (this._transportCascade !== null) {
@@ -674,8 +340,8 @@ export class RadianceField {
    * Without it a camera that moves by a pixel reads last frame's light one
    * pixel across, and a scene that pans smears its own bounce along the
    * direction of travel. The map is clip to clip - this frame's inverse into
-   * the gathered frame's transform - because that is what the quad's corners
-   * are expressed in.
+   * the gathered frame's transform - because that is the space a ray's
+   * end point is looked up in.
    *
    * The camera it reprojects FROM is the one the last gather actually ran
    * with, not the last one prepared. Promoting it here instead would pair the
@@ -685,33 +351,14 @@ export class RadianceField {
    */
   private _writeReprojection(view: View, toWorld: Matrix): void {
     this._reproject.copy(toWorld).combine(this._gatheredToClip);
-    this._bounceMaterial.uniforms.uReproject.set(this._reproject.a, this._reproject.b, this._reproject.c, this._reproject.d);
-    this._bounceMaterial.uniforms.uReprojectOffset.set(this._reproject.x, this._reproject.y);
-    this._bounceMaterial.uniforms.uHistory.set(this._history ? 1 : 0);
     this._pendingToClip.copy(view.getTransform());
   }
 
   public destroy(): void {
-    this.emissionPass.destroy();
-    this.conePass.destroy();
     this.cascadePass.destroy();
-    this._cascadeFilter.destroy();
-    this._visibilityFilter.destroy();
-    this._gatherFilter.destroy();
-    this._batch.destroy();
-    this._material.destroy();
-    this._coneBatch.destroy();
-    this._coneMaterial.destroy();
-    this._cone.destroy();
-    this._geometry.destroy();
-    this._bounceBatch.destroy();
-    this._bounceMaterial.destroy();
-    this._bounceGeometry.destroy();
     this._chain[0].destroy();
     this._chain[1].destroy();
     this._above.destroy();
-    this._visibility.destroy();
-    this._emission.destroy();
     this._transportCascade?.destroy();
     this._transportGather?.destroy();
     this._emitterCount = 0;
@@ -752,51 +399,24 @@ export class RadianceField {
    */
   private _writeSun(): void {
     const sun = this._sun;
-    // Both levels of the chain, whichever walk runs it: the sky is what a ray
-    // that reached the top of the chain unobstructed carries, and that is the
-    // same term either way.
-    const levels = [this._cascadeFilter, this._transportCascade];
+    const cascade = this._transportCascade;
 
-    for (const filter of levels) {
-      if (filter === null) {
-        continue;
-      }
-
-      if (sun === null) {
-        filter.uniforms.uSun.set(0, 0, 0, 0);
-        filter.uniforms.uSunColor.set(0, 0, 0);
-
-        continue;
-      }
-
-      const radius = Math.max(0.001, sun.softness * SUN_SIZE);
-
-      sun.getWorldDirection(scratchDirection);
-      filter.uniforms.uSun.set(scratchDirection.x, scratchDirection.y, radius, (sun.intensity * Math.PI) / radius);
-      filter.uniforms.uSunColor.set(sun.color.r / 255, sun.color.g / 255, sun.color.b / 255);
-    }
-  }
-
-  /**
-   * The emitters, then the bounce over them: what a surface re-emits is added
-   * to what emits outright, and where a lamp stands the frame shows the lamp.
-   */
-  private _drawEmission(pass: PassContext): void {
-    if (this._field === null) {
+    if (cascade === null) {
       return;
     }
 
-    this.drawEmitters(pass, this._field);
+    if (sun === null) {
+      cascade.uniforms.uSun.set(0, 0, 0, 0);
+      cascade.uniforms.uSunColor.set(0, 0, 0);
 
-    if (this._bounceBatch.count > 0) {
-      pass.drawBatch(this._bounceBatch, { view: this._field });
+      return;
     }
-  }
 
-  private _drawCones(pass: PassContext): void {
-    if (this._field !== null && this._coneBatch.count > 0) {
-      pass.drawBatch(this._coneBatch, { view: this._field });
-    }
+    const radius = Math.max(0.001, sun.softness * SUN_SIZE);
+
+    sun.getWorldDirection(scratchDirection);
+    cascade.uniforms.uSun.set(scratchDirection.x, scratchDirection.y, radius, (sun.intensity * Math.PI) / radius);
+    cascade.uniforms.uSunColor.set(sun.color.r / 255, sun.color.g / 255, sun.color.b / 255);
   }
 
   /**
@@ -805,17 +425,21 @@ export class RadianceField {
    *
    * Coarse to fine is the whole order of the technique: a level can only add
    * what the level above it already knows, so the merge has to happen on the
-   * way down and each level is read exactly once. Before each level but the
-   * top, its merge weights are written for it.
+   * way down and each level is read exactly once.
+   *
+   * Nothing is built before the geometry to walk is bound: without the tables
+   * a level has nothing to trace against, and a chain built over an unbound
+   * walk would gather a frame of whatever its targets happened to hold.
    */
   private _build(pass: PassContext): void {
     const { backend } = pass;
     const [first, second] = this._chain;
-    // Either pair walks the same probes over the same intervals; what differs
-    // is what a ray reads on the way.
-    const overGeometry = this._walk !== null ? this._transportCascade : null;
-    const walking = overGeometry !== null;
-    const cascade = overGeometry ?? this._cascadeFilter;
+    const cascade = this._transportCascade;
+    const gather = this._transportGather;
+
+    if (cascade === null || gather === null || this._walk === null) {
+      return;
+    }
 
     let source = this._above;
     let flipped = false;
@@ -826,15 +450,6 @@ export class RadianceField {
       const spacing = this._spacing * 2 ** level;
       const destination = flipped ? second : first;
       const top = level === this._levels - 1;
-
-      // Merge weights are a term of the field walk alone. The walk over
-      // geometry gets the same answer out of the walk it already makes to each
-      // coarser probe, so there is nothing to measure for it beforehand.
-      if (!top && !walking) {
-        this._visibilityFilter.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
-        this._visibilityFilter.uniforms.uSpacing.set(spacing);
-        this._visibilityFilter.apply(backend, this._distance, this._visibility);
-      }
 
       cascade.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
       cascade.uniforms.uSpacing.set(spacing);
@@ -850,7 +465,7 @@ export class RadianceField {
       flipped = !flipped;
     }
 
-    (walking && this._transportGather !== null ? this._transportGather : this._gatherFilter).apply(backend, source, this._target);
+    gather.apply(backend, source, this._target);
 
     // The light field now holds this frame, so the camera it was gathered
     // through becomes what the next bounce reprojects from - and only now is
@@ -859,20 +474,3 @@ export class RadianceField {
     this._history = true;
   }
 }
-
-/**
- * A spot's opening as two half-angles in radians rather than as their cosines.
- *
- * The cone field sums its descriptions and divides by the summed weight, so
- * what it holds has to survive being added up - and a cosine near `1`, which
- * is where a tight spot lives, loses two decimal places of angle to half-float
- * there. An angle is linear in the quantity the tracer compares.
- */
-const writeCone = (target: number[], light: SpotLight): void => {
-  const outer = (Math.max(0, Math.min(90, light.angle)) * Math.PI) / 180;
-
-  // The inner edge sits where the fade begins, so a cone softness of 0 collapses
-  // the two and the shader's smoothstep degenerates to a hard edge on its own.
-  target[0] = outer;
-  target[1] = outer * (1 - Math.min(1, Math.max(0, light.coneSoftness)));
-};

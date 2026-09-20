@@ -31,8 +31,6 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
 
-import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
-
 export const BOUNCE_SIZE = 128;
 
 /**
@@ -136,7 +134,6 @@ export const createBounceScene = (host: BounceHost, options: BounceOptions): Bou
   host.scene.addChild(floor);
   host.scene.addChild(bar);
 
-  (lighting.backend as LightmapBackend).lightWalk = 'transport';
   lighting.add(new PointLight({ radius: LAMP.radius, intensity: LAMP.intensity, softness: 0.2 })).setPosition(LAMP.x, LAMP.y);
 
   if (options.outline === true) {

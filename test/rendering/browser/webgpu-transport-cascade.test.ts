@@ -87,7 +87,6 @@ describe('the cascades over the transport walk (WebGPU)', () => {
     const lighting = new Lighting({ quality: radiance({ probeSpacing: 2, bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
     const backend = lighting.backend as LightmapBackend;
 
-    backend.lightWalk = 'transport';
     lighting.add(new PointLight({ radius: 96, intensity: 1, softness: 0 })).setPosition(24, 64);
     lighting.occludeFrom(
       new PolygonOccluder(

@@ -1,12 +1,8 @@
-// One cascade level, with the transport operator in place of the sphere trace.
+// One cascade level: every probe ray walked over this frame's geometry.
 //
-// The probe grid, the intervals and the merge are the ones the field walk
-// uses; what changes is how a ray finds what is in its way. The operator
-// integrates the sources it crosses and stops at the first wall, so the cone
-// share, the emission field and the cone field have no part here: a source is
-// a shape in the tables, and what a ray collects from it is the length it
-// travels inside it.
-
+// The operator integrates the sources it crosses and stops at the first wall,
+// so a source is a shape in the tables rather than a field of its own, and
+// what a ray collects from it is the length it travels inside it.
 //
 // The bindings, the version directive and the transport chunk itself are
 // prepended by the module that builds this shader: the chunk has to be

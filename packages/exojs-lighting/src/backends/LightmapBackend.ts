@@ -33,7 +33,7 @@ import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
 import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
-import { type DistanceField, fieldGrid } from './distanceField';
+import { fieldGrid } from './fieldGrid';
 import type { LightingBackend } from './LightingBackend';
 import { MASK_COARSE, MaskBlocks } from './maskBlocks';
 import type { LightingFields } from './radiance';
@@ -71,17 +71,6 @@ export const lightCompositeShader = new Shader({
   glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightCompositeVertex}`, fragment: lightCompositeFragment },
   wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightCompositeWgsl}`,
 });
-
-/**
- * How a cascade ray finds what is in its way.
- *
- * `transport` reads this frame's segments and sources out of the transport
- * tables and the occluder mask, and is what radiance runs. `field`
- * sphere-traces the distance field the mask is flooded into, and stays for
- * measuring one against the other.
- * @internal
- */
-export type LightWalk = 'field' | 'transport';
 
 const noCone = -1;
 /** Shadow row a light without occluders in reach carries: the shader reads it as "nothing blocks". */
@@ -153,7 +142,7 @@ export interface LightmapBackendOptions {
   readonly resolution: number;
   /** Angular bins in each light's shadow map. */
   readonly shadowResolution: number;
-  /** How far beyond the view the mask and the emission field reach, as a fraction of the view per side. */
+  /** How far beyond the view the mask and the geometry a ray walks reach, as a fraction of the view per side. */
   readonly fieldMargin: number;
   /**
    * The value-selected renderer's own pieces, or `null` for the light quads.
@@ -222,8 +211,8 @@ export class LightmapBackend implements LightingBackend {
   private readonly _shadowResolution: number;
   private readonly _fieldMargin: number;
   /**
-   * The view the mask, the distance field and the emission field are drawn
-   * through: the camera's own, widened by the margin. What reads them maps a
+   * The view the mask is drawn through and the transport tables are collected
+   * over: the camera's own, widened by the margin. What reads them maps a
    * world position through this view's transform, so a turned camera turns
    * them with it.
    */
@@ -266,7 +255,6 @@ export class LightmapBackend implements LightingBackend {
   /** Built where the cascades could run, so their passes can sit in the right order; idle until the walk asks for them. */
   private readonly _blocks: MaskBlocks | null;
   private readonly _transport: TransportTextures | null;
-  private _lightWalk: LightWalk = 'transport';
   private readonly _maskBatch: RenderBatch;
   private readonly _maskPass: CallbackRenderPass;
   /**
@@ -299,8 +287,6 @@ export class LightmapBackend implements LightingBackend {
   private _sunShadowMap: DataTexture<TextureFormat.R32F>;
   /** Built only where a float render target exists; `null` pins the renderer to the CPU filler. */
   private readonly _filler: ShadowMarchFiller | null;
-  /** The distance field over the mask. Built on the same condition as the filler, and read by the `distance` view. */
-  private readonly _distanceField: DistanceField | null;
   /** The cascade chain, when it is what fills the light field rather than the quads. */
   private readonly _radiance: RadianceField | null;
   private _fillerRequest: ShadowFillerOption = 'auto';
@@ -383,8 +369,8 @@ ${sunQuadWgsl}`,
     this._debugBatch = new RenderBatch(this._debugGeometry, this._debugMaterial);
     // The same geometry as the debug overlay, with a material of its own: an
     // edge in the mask is two texels wide with its coverage fading across them,
-    // which is what the distance field reads back as the edge's place within a
-    // texel. The overlay draws the same edge as a solid line over the frame.
+    // which is what a reader takes back as the edge's place within a texel.
+    // The overlay draws the same edge as a solid line over the frame.
     this._maskBatch = new RenderBatch(this._debugGeometry, this._maskMaterial);
 
     // Stock passes rather than passes of our own: the light field is a draw
@@ -410,18 +396,18 @@ ${sunQuadWgsl}`,
     // the accumulation in the frame slot: the pipeline appends, and a filler
     // switched on later would otherwise march after the light field read it.
     this._filler = this.hdr ? new ShadowMarchFiller(this._maskTarget, this._shadowResolution) : null;
-    // Both come from the selected renderer rather than from an import here: a
-    // project on the quads never links a cascade or a jump flood.
-    this._distanceField = options.fields === null || !this.hdr ? null : options.fields.distance(this._maskTarget);
-    // Built beside the distance field and for the same reason: where the
-    // cascades can run at all, the geometry they could walk has to be able to
-    // take its place in the frame between the mask and them.
-    this._blocks = this._distanceField === null ? null : new MaskBlocks(this._maskTarget);
-    this._transport = this._distanceField === null ? null : new TransportTextures();
-    this._radiance =
-      options.fields === null || this._distanceField === null
-        ? null
-        : options.fields.radiance(this._distanceField.texture, this._target, this._app.frameTexture);
+    // The cascades come from the selected renderer rather than from an import
+    // here: a project on the quads never links one. They need a float target
+    // to accumulate radiance in, so where there is none the renderer falls
+    // back to the quads.
+    const cascading = options.fields !== null && this.hdr ? options.fields : null;
+
+    // The geometry a cascade walks and the block level it skips over take
+    // their place in the frame between the mask and the chain, so they are
+    // built with it rather than on first use.
+    this._blocks = cascading === null ? null : new MaskBlocks(this._maskTarget);
+    this._transport = cascading === null ? null : new TransportTextures();
+    this._radiance = cascading === null ? null : cascading.radiance(this._target, this._app.frameTexture);
     this._normalTarget = new RenderTexture(1, 1);
     this._normalPass = new CallbackRenderPass(pass => this._drawNormals(pass), {
       target: this._normalTarget,
@@ -458,14 +444,8 @@ ${sunQuadWgsl}`,
       this._app.framePasses.addPass(this._filler.pass);
     }
 
-    if (this._distanceField !== null) {
-      this._app.framePasses.addPass(this._distanceField.pass);
-    }
-
     if (this._radiance !== null) {
-      // The emitters go into the mask, so their field is drawn after it and
-      // before the cascades that march what the mask seeded.
-      this._app.framePasses.addPass(this._radiance.emissionPass).addPass(this._radiance.conePass).addPass(this._radiance.cascadePass);
+      this._app.framePasses.addPass(this._radiance.cascadePass);
     }
 
     this._app.framePasses.addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
@@ -506,7 +486,7 @@ ${sunQuadWgsl}`,
     // Showing an intermediate is multiplying a white frame by it, so the debug
     // views swap the composite's two inputs rather than carrying a second
     // shader that would have to be kept in step with the first.
-    const intermediate = view === 'light' || view === 'normals' || view === 'mask' || view === 'distance';
+    const intermediate = view === 'light' || view === 'normals' || view === 'mask';
 
     this._syncMask();
     this._compositeMaterial.setTexture('u_frame', intermediate ? whiteTexture() : this._app.frameTexture);
@@ -517,10 +497,6 @@ ${sunQuadWgsl}`,
   private _debugTexture(view: LightingDebugView): RenderTexture {
     if (view === 'normals') {
       return this._normalTarget;
-    }
-
-    if (view === 'distance' && this._distanceField !== null) {
-      return this._distanceField.texture;
     }
 
     return view === 'mask' ? this._maskTarget : this._target;
@@ -541,40 +517,14 @@ ${sunQuadWgsl}`,
     return this._maskTarget;
   }
 
-  /** What each block of that mask holds, where the walk that skips blocks is the one running. @internal */
+  /** What each block of that mask holds, for the walk that skips whole blocks of it. @internal */
   public get maskBlocks(): MaskBlocks | null {
     return this._blocks;
   }
 
-  /** This frame's occluders and sources as geometry, where the walk that reads geometry is running. @internal */
+  /** This frame's occluders and sources as the geometry a cascade ray walks. @internal */
   public get transport(): TransportTextures | null {
     return this._transport;
-  }
-
-  /**
-   * How a cascade ray finds what is in its way: by walking this frame's
-   * geometry and the occluder mask, or through the distance field it
-   * sphere-traces.
-   *
-   * The walk over geometry is what radiance runs. The field walk is kept for
-   * comparing the two on the same scene and is not a quality setting: it sits
-   * measurably further from a direct reference on the falloff a small source
-   * produces. It is the cheaper of the two where a scene has few lights, but
-   * its cost grows with the lights it draws into the mask, and the walk over
-   * geometry pays for the geometry instead - by about 64 lights the two meet.
-   * @internal
-   */
-  public get lightWalk(): LightWalk {
-    return this._lightWalk;
-  }
-
-  public set lightWalk(walk: LightWalk) {
-    if (this._lightWalk === walk) {
-      return;
-    }
-
-    this._lightWalk = walk;
-    this._syncMask();
   }
 
   /**
@@ -645,7 +595,7 @@ ${sunQuadWgsl}`,
     const marching = this._radiance === null ? this._writeLights(lights, occluders) : false;
 
     if (this._radiance !== null) {
-      this._activeCount = this._radiance.writeEmitters(lights, this._maskTexel());
+      this._activeCount = this._radiance.collectSources(lights);
     }
 
     this._writeTransport(lights, occluders);
@@ -751,8 +701,8 @@ ${sunQuadWgsl}`,
 
   /**
    * Point whatever reads the mask at this frame's camera, once the mask itself
-   * has been written: the marcher steps in mask texels, and the distance field
-   * normalizes against what the camera can see.
+   * has been written: the marcher steps in mask texels, and the cascade chain
+   * lays its probes out over what the camera can see.
    */
   private _updateFields(marching: boolean): void {
     const texel = this._maskTexel();
@@ -761,14 +711,8 @@ ${sunQuadWgsl}`,
       this._filler!.end(this._fieldView, texel);
     }
 
-    if (this._distanceField?.pass.enabled === true) {
-      this._distanceField.update(texel, Math.hypot(this._fieldView.width, this._fieldView.height));
-    }
-
-    // After the distance field, which is what tells the cascades the scale
-    // their sphere tracing steps in.
-    if (this._radiance !== null && this._distanceField !== null) {
-      this._radiance.update(this._app.rendering.view, this._fieldView, texel, this._distanceField.far, this._ambient);
+    if (this._radiance !== null) {
+      this._radiance.update(this._app.rendering.view, this._fieldView, texel, this._ambient);
     }
   }
 
@@ -924,14 +868,7 @@ ${sunQuadWgsl}`,
       this._filler.destroy();
     }
 
-    if (this._distanceField !== null) {
-      this._app.framePasses.removePass(this._distanceField.pass);
-      this._distanceField.destroy();
-    }
-
     if (this._radiance !== null) {
-      this._app.framePasses.removePass(this._radiance.emissionPass);
-      this._app.framePasses.removePass(this._radiance.conePass);
       this._app.framePasses.removePass(this._radiance.cascadePass);
       this._radiance.destroy();
     }
@@ -1169,17 +1106,15 @@ ${sunQuadWgsl}`,
   }
 
   /**
-   * Keep the mask pass on for whoever reads the mask - the debug view, or the
-   * march - and off for everyone else, and keep its target sized to match.
+   * Keep the mask pass on for whoever reads the mask - the cascades, the debug
+   * view, or the march - and off for everyone else, and keep its target sized
+   * to match.
    */
   private _syncMask(): void {
     const marching = this.shadowFiller === 'gpu';
     const cascades = this._radiance !== null;
-    // The geometry walk reads no distance field, so the flood that builds one
-    // only runs for the walk that does, or for the view that shows it.
-    const distance = (cascades && this._lightWalk === 'field') || (this._debug === 'distance' && this._distanceField !== null);
 
-    this._maskPass.enabled = cascades || this._debug === 'mask' || marching || distance;
+    this._maskPass.enabled = cascades || this._debug === 'mask' || marching;
     // The cascades fill the light target themselves, ambient included, so the
     // quad accumulation has nothing left to do and its clear would undo them.
     this._lightPass.enabled = !cascades;
@@ -1188,12 +1123,8 @@ ${sunQuadWgsl}`,
       this._filler.pass.enabled = marching;
     }
 
-    if (this._distanceField !== null) {
-      this._distanceField.pass.enabled = distance;
-    }
-
     if (this._blocks !== null) {
-      this._blocks.pass.enabled = cascades && this._lightWalk === 'transport';
+      this._blocks.pass.enabled = cascades;
     }
 
     if (this._radiance !== null) {
@@ -1275,16 +1206,6 @@ ${normalPrepassWgsl}`,
     for (const drawable of this._maskDrawables) {
       pass.render(drawable, { view });
     }
-
-    // An emitter is something a ray ends on, so it belongs in the mask as much
-    // as a wall does - otherwise the cascades would trace straight through the
-    // lamp and find whatever is behind it.
-    // Only for the walk that reads its sources out of the mask. The geometry
-    // walk takes them from the transport tables, and a lamp drawn here would
-    // read to it as a wall in front of itself.
-    if (this._lightWalk === 'field') {
-      this._radiance?.drawEmitters(pass, view);
-    }
   }
 
   /**
@@ -1311,12 +1232,12 @@ ${normalPrepassWgsl}`,
 
     const texel = this._maskTexel();
     const segments = occluders.segments;
-    // Under the geometry walk an outline is already in the tables, exactly
-    // where it runs. Rasterising it here as well would widen it to the two
-    // texels this batch draws and make the same wall block twice - so it is
-    // drawn only for the readers that have no tables to consult: the field
-    // walk, and the march that paints shadow rows out of the mask.
-    const rasterises = this._radiance === null || this._lightWalk === 'field' || this.shadowFiller === 'gpu';
+    // Under the cascades an outline is already in the transport tables,
+    // exactly where it runs. Rasterising it here as well would widen it to the
+    // two texels this batch draws and make the same wall block twice - so it
+    // is drawn only for the readers that have no tables to consult: the light
+    // quads, and the march that paints shadow rows out of the mask.
+    const rasterises = this._radiance === null || this.shadowFiller === 'gpu';
     const count = rasterises ? occluders.count : 0;
 
     for (let index = 0; index < count; index++) {
@@ -1349,7 +1270,7 @@ ${normalPrepassWgsl}`,
    * field, and a walk that crosses one crosses the other at a comparable rate.
    */
   private _writeTransport(lights: readonly Light[], occluders: OccluderField): void {
-    if (this._transport === null || this._blocks === null || this._lightWalk !== 'transport' || !this.rasterisesOccluders) {
+    if (this._transport === null || this._blocks === null || !this.rasterisesOccluders) {
       this._radiance?.useTransport(null);
 
       return;
@@ -1474,12 +1395,11 @@ ${normalPrepassWgsl}`,
     // that registers none.
     this._normalTarget.setSize(this._surfaceCount > 0 ? width : 1, this._surfaceCount > 0 ? height : 1);
     // At the light field's density over the view and its margin, so a texel of
-    // the mask is a texel of the distance field and of the emission field.
+    // the mask is a texel of the block level reduced from it.
     //
-    // Bounded on both axes, at the same aspect: past that the distance field
-    // can no longer name its own texels exactly (see `MAX_FIELD_TEXELS`), and
-    // every field here shares the grid, so they are all clamped together or
-    // none of them are.
+    // Bounded on both axes, at the same aspect: past the bound the fields cost
+    // more than the screen can show (see `MAX_FIELD_TEXELS`), and they share
+    // the grid, so they are clamped together or not at all.
     const field = fieldGrid(Math.round(width * (1 + 2 * this._fieldMargin)), Math.round(height * (1 + 2 * this._fieldMargin)));
     const fieldWidth = field.width;
     const fieldHeight = field.height;
@@ -1487,21 +1407,11 @@ ${normalPrepassWgsl}`,
     this._maskTarget.setSize(this._maskPass.enabled ? fieldWidth : 1, this._maskPass.enabled ? fieldHeight : 1);
     this._blocks?.setSize(this._maskTarget.width, this._maskTarget.height);
 
-    if (this._distanceField !== null) {
-      // On the mask's own grid, so a texel of one is a texel of the other, and
-      // parked at one texel while nothing reads it.
-      const wanted = this._distanceField.pass.enabled;
-
-      this._distanceField.setSize(wanted ? fieldWidth : 1, wanted ? fieldHeight : 1);
-    }
-
-    this._radiance?.setSize(fieldWidth, fieldHeight);
-
     // A debug view of a field-sized intermediate is drawn through a quad the
     // margin's worth larger than the screen, so what shows is the view's own
     // part of it, where the frame's pixels are, rather than the whole field
     // shrunk to fit.
-    const scale = this._debug === 'mask' || this._debug === 'distance' ? 1 + 2 * this._fieldMargin : 1;
+    const scale = this._debug === 'mask' ? 1 + 2 * this._fieldMargin : 1;
 
     if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0 && this._compositeScale === scale) {
       return;

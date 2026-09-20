@@ -42,8 +42,8 @@ export type LightingQuality = 'forward' | 'lightmap' | 'radiance';
  * reports what it settled on - so a scene still never has to name a renderer,
  * and asking which one ran is still answerable.
  *
- * `'radiance'` is deliberately NOT a name here. Its cascades and the distance
- * field they trace are linked only by a project that imports `radiance()`, so
+ * `'radiance'` is deliberately NOT a name here. Its cascades and the transport
+ * tables they walk are linked only by a project that imports `radiance()`, so
  * naming it as a string would put the whole of it into every bundle that reads
  * `quality` from a config file.
  */
@@ -60,11 +60,6 @@ export type LightingQualityOption = 'auto' | 'forward' | 'lightmap' | LightingRe
  *   view by {@link LightingOptions.fieldMargin}; the view shows its own part.
  *   It is the input a GPU-resident occluder field marches, and the view that
  *   says whether a wall is thick enough to be seen at that resolution.
- * - `'distance'` shows the distance field built from that mask: how far the
- *   nearest occluder is, as a ramp from black at a wall to white at the far end
- *   of what the camera can see, and inside an occluder how deep, in green. It
- *   is what a ray steps along instead of marching a texel at a time, and the
- *   view that says whether the field found the walls at all.
  * - `'normals'` shows the normal prepass: the world-space normals the
  *   registered surfaces described this frame, encoded the way a normal map is.
  *   Black is where nothing described a surface, and light lands there with no
@@ -76,7 +71,7 @@ export type LightingQualityOption = 'auto' | 'forward' | 'lightmap' | LightingRe
  * A renderer with no such intermediate - `forward` shades inside the sprite
  * shader and casts no shadows - ignores it.
  */
-export type LightingDebugView = 'distance' | 'light' | 'mask' | 'normals' | 'occluders' | null;
+export type LightingDebugView = 'light' | 'mask' | 'normals' | 'occluders' | null;
 
 const scratchPosition = { x: 0, y: 0 };
 
@@ -192,12 +187,12 @@ export interface LightingOptions {
    */
   readonly post?: readonly Filter[];
   /**
-   * How far beyond the camera's view the occluder mask and the emission field
-   * reach, as a fraction of the view's size on each side. Under `radiance` it
-   * is what lets a wall or a lamp just outside the picture still shadow or
-   * light what is in it, so neither pops in at the edge as the camera moves;
-   * the probes themselves still cover only the view. Defaults to `0.25`, and
-   * costs that much more mask, distance field and emission fill.
+   * How far beyond the camera's view the occluder mask and the transport
+   * tables reach, as a fraction of the view's size on each side. Under
+   * `radiance` it is what lets a wall or a lamp just outside the picture still
+   * shadow or light what is in it, so neither pops in at the edge as the
+   * camera moves; the probes themselves still cover only the view. Defaults to
+   * `0.25`, and costs that much more mask fill and collected geometry.
    */
   readonly fieldMargin?: number;
   /**

@@ -1,7 +1,6 @@
 import type { RenderTexture } from '@codexo/exojs';
 
 import type { LightingQuality } from '../Lighting';
-import { DistanceField } from './distanceField';
 import { RadianceField } from './radianceField';
 
 /** Tuning for {@link radiance}. Every entry is optional and defaults to something derived from the surface. */
@@ -43,8 +42,7 @@ export interface RadianceOptions {
  * @internal
  */
 export interface LightingFields {
-  distance(mask: RenderTexture): DistanceField;
-  radiance(distance: RenderTexture, target: RenderTexture, frame: RenderTexture): RadianceField;
+  radiance(target: RenderTexture, frame: RenderTexture): RadianceField;
 }
 
 /**
@@ -71,7 +69,7 @@ export interface LightingRenderer {
  * ```
  *
  * It is a VALUE rather than a name because everything it needs - the cascade
- * chain and the distance field it traces - is linked only by projects that
+ * chain and the transport tables it walks - is linked only by projects that
  * import it. Naming it as a string would put the whole of it into every bundle
  * that reads `quality` from a config file.
  *
@@ -96,8 +94,7 @@ export const radiance = (options: RadianceOptions = {}): LightingRenderer => {
   return {
     quality: 'radiance',
     _fields: {
-      distance: (mask: RenderTexture): DistanceField => new DistanceField(mask),
-      radiance: (distance: RenderTexture, target: RenderTexture, frame: RenderTexture): RadianceField => new RadianceField(distance, target, frame, tuning),
+      radiance: (target: RenderTexture, frame: RenderTexture): RadianceField => new RadianceField(target, frame, tuning),
     },
   };
 };

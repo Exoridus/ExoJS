@@ -824,52 +824,6 @@ describe('WebGL2 lightmap renderer', () => {
       host.destroy();
     }
   });
-  // The distance field is the walk that sphere-traces it, which radiance no
-  // longer runs by default: the case names that walk rather than taking
-  // whichever one is current.
-  test('the distance field grows away from the wall the mask drew', async () => {
-    const host = await createHost();
-    // Through the renderer that brings the field with it: a project on the
-    // light quads never links the jump flood, so there is nothing for the view
-    // to show there.
-    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
-
-    (lighting.backend as LightmapBackend).lightWalk = 'field';
-
-    // Asymmetric in both axes on purpose: a field built in the wrong space
-    // would still look plausible on a wall through the middle.
-    lighting.add(new PointLight({ radius: 60, intensity: 1 })).setPosition(20, 24);
-    lighting.occludeFrom(
-      new PolygonOccluder(
-        [
-          { x: 44, y: 4 },
-          { x: 44, y: 60 },
-        ],
-        { closed: false },
-      ),
-    );
-    lighting.debug = 'distance';
-
-    try {
-      runFrame(host, lighting);
-
-      const atWall = readPixel(host.backend, 43, 32)[0]!;
-      const near = readPixel(host.backend, 36, 32)[0]!;
-      const far = readPixel(host.backend, 8, 32)[0]!;
-
-      // Zero at the wall, and further the further off it, as a fraction of the
-      // view's own diagonal.
-      expect(atWall).toBeLessThan(10);
-      expect(near).toBeGreaterThan(atWall);
-      expect(far).toBeGreaterThan(near);
-      // Off the end of the wall the nearest blocking texel is its corner, not
-      // the column it stands in, so the distance there is the diagonal one.
-      expect(readPixel(host.backend, 43, 1)[0]!).toBeGreaterThan(atWall);
-    } finally {
-      lighting.destroy();
-      host.destroy();
-    }
-  });
   test('radiance carries an emitter across the scene and dims with distance', async () => {
     const host = await createHost();
     const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
@@ -1229,63 +1183,6 @@ describe('WebGL2 lightmap renderer', () => {
       lighting.destroy();
       host.destroy();
     }
-  });
-
-  // The bounce the field walk paints into the emission field, from an outline
-  // that has no material of its own. The walk over geometry gives a surface
-  // back only where a drawable stands, which is its own set of cases.
-  test('a lit wall gives its colour off again, one frame later', async () => {
-    const arriving = async (bounce: number): Promise<RgbaTuple> => {
-      const host = await createHost();
-      const lighting = new Lighting({ quality: radiance({ bounce }), app: host.app, ambient: Color.black, lightResolution: 1 });
-
-      (lighting.backend as LightmapBackend).lightWalk = 'field';
-      lighting.add(new PointLight({ radius: 40, intensity: 2 })).setPosition(20, 32);
-      lighting.occludeFrom(
-        new PolygonOccluder(
-          [
-            { x: 42, y: 4 },
-            { x: 42, y: 60 },
-          ],
-          { closed: false },
-        ),
-      );
-
-      // A white floor with a red wall standing where the occluder is: the
-      // bounce reads the wall's colour from the frame.
-      const floor = new Sprite(Texture.fromColor(Color.white, 1));
-      const wall = new Sprite(Texture.fromColor(new Color(255, 0, 0), 1));
-
-      floor.width = canvasSize;
-      floor.height = canvasSize;
-      wall.width = 4;
-      wall.height = canvasSize;
-      wall.setPosition(40, 0);
-      host.context.renderTo(floor, { target: host.frameTexture, clear: Color.black });
-      host.context.renderTo(wall, { target: host.frameTexture });
-
-      try {
-        // Two frames: the bounce reads the light field the frame before left.
-        runFrame(host, lighting);
-        runFrame(host, lighting);
-
-        return readPixel(host.backend, 34, 32);
-      } finally {
-        floor.destroy();
-        wall.destroy();
-        lighting.destroy();
-        host.destroy();
-      }
-    };
-
-    const without = await arriving(0);
-    const withBounce = await arriving(0.9);
-
-    // The floor in front of the wall is white, so what the lamp puts there is
-    // grey; what the red wall adds is red. The lamp's own body, white in the
-    // frame, adds a little of everything, which is why the red is measured
-    // against the green rather than on its own.
-    expect(withBounce[0]! - withBounce[1]!).toBeGreaterThan(without[0]! - without[1]! + 8);
   });
 
   test('a lamp just outside the picture still lights it, through the field margin', async () => {

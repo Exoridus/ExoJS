@@ -165,6 +165,56 @@ describe('what a surface gives back (WebGL2)', () => {
     }
   });
 
+  /**
+   * Which frame the light field being read belongs to. The field is gathered
+   * at the END of a frame, so a camera prepared by an update that was never
+   * drawn describes no light field at all - and pairing the two reprojects
+   * last frame's light through a camera it was never rendered through.
+   */
+  test('an update the renderer never drew does not become the frame the bounce reads from', async () => {
+    /**
+     * Three drawn frames, with `skipped` updates between the second and the
+     * third. Each of those prepares a camera elsewhere and gathers nothing, so
+     * the two runs have to agree - the bounce settles over a run of frames, and
+     * only the same number of DRAWN frames is comparable.
+     */
+    const bounceAfter = async (skipped: number): Promise<number> => {
+      const live = await host();
+      // A red bar over a white floor: the direct light is neutral and only the
+      // bounce is tinted, so red minus blue is the bounce on its own.
+      const scene = createBounceScene(live, { bounce: 0.5, colour: new Color(255, 0, 0) });
+
+      try {
+        live.frame(scene.lighting);
+        live.frame(scene.lighting);
+
+        for (let step = 1; step <= skipped; step++) {
+          live.context.view = new View(BOUNCE_SIZE / 2 + step * 12, BOUNCE_SIZE / 2, BOUNCE_SIZE, BOUNCE_SIZE);
+          scene.lighting.update();
+        }
+
+        live.context.view = new View(BOUNCE_SIZE / 2, BOUNCE_SIZE / 2, BOUNCE_SIZE, BOUNCE_SIZE);
+        live.frame(scene.lighting);
+
+        const read = pixel(live, ABOVE);
+
+        return read[0] - read[2];
+      } finally {
+        scene.destroy();
+        live.destroy();
+      }
+    };
+
+    const drawn = await bounceAfter(0);
+    const afterSkips = await bounceAfter(3);
+
+    expect(drawn, 'there is a bounce to compare at all').toBeGreaterThan(4);
+    // The camera ends where it started in both runs and the light field is the
+    // same one, so the bounce has to be too. Committing the camera during
+    // `update` instead pairs the field with a camera that was merely prepared.
+    expect(Math.abs(afterSkips - drawn), `drawn ${drawn}, after the skipped updates ${afterSkips}`).toBeLessThanOrEqual(2);
+  });
+
   test('a view of another size starts the history again', async () => {
     const live = await host();
     const scene = createBounceScene(live, white(0.5));

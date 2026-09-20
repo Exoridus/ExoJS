@@ -428,11 +428,12 @@ describe('Lighting', () => {
     const lighting = new Lighting({ quality: radiance(), app });
 
     expect(lighting.quality).toBe('radiance');
-    // The light quads' accumulation plus the emitters' field and the chain that
-    // reads it, and the reduction of the mask that the walk over geometry
-    // skips blocks with; the quad pass stays registered and switched off, and
-    // so does that reduction until the walk asks for it.
-    expect(app.framePasses.size).toBe(11);
+    // The occluder mask, the reduction of it the walk skips blocks with, the
+    // shadow march, the cascade chain, the normal prepass, the quad
+    // accumulation, the composite and the occluder debug view. The quad pass
+    // stays registered and switched off, because the chain fills the light
+    // target itself.
+    expect(app.framePasses.size).toBe(8);
     // Auto never picks it: it is the renderer with an unbounded tuning surface.
     expect(new Lighting({ app: fakeApp(), quality: 'auto' }).quality).toBe('lightmap');
 
