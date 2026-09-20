@@ -12,7 +12,18 @@ import { Texture } from '#rendering/texture/Texture';
 
 import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
 import { type Case, transportCases } from './_transportCases';
-import { PROBE_CLEAR, PROBE_RADIANCE, PROBE_SIZE, PROBE_TRANSMITTANCE, PROBE_VISITED, probeTables, probeUniforms, probeWgslSource } from './_transportProbe';
+import {
+  PROBE_CLEAR,
+  PROBE_MASK_HIT,
+  PROBE_RADIANCE,
+  PROBE_SIZE,
+  PROBE_TRANSMITTANCE,
+  PROBE_VISITED,
+  probeMask,
+  probeTables,
+  probeUniforms,
+  probeWgslSource,
+} from './_transportProbe';
 
 const probeShader = createFilterShader({ wgsl: probeWgslSource, uniforms: probeUniforms });
 
@@ -38,8 +49,15 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
     test(scenario.name, async ctx => {
       const backend = await createWebGpuTestBackend(PROBE_SIZE);
       const tables = probeTables(scenario.segments, scenario.lights, scenario.region, scenario.cell);
+      const mask = probeMask(scenario.mask);
       const filter = ShaderFilter.from(probeShader, {
-        textures: { uSegments: tables.segments, uEmitters: tables.emitters, uCells: tables.cells, uIndices: tables.indices },
+        textures: {
+          uSegments: tables.segments,
+          uEmitters: tables.emitters,
+          uCells: tables.cells,
+          uIndices: tables.indices,
+          uMask: mask.texture,
+        },
       });
       const texture = coverTexture();
       const root = new Container();
@@ -52,11 +70,15 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
       filter.uniforms.uGridCells.set(tables.gridWidth, tables.gridHeight);
       filter.uniforms.uCellSize.set(tables.cellSize);
       filter.uniforms.uTableWidth.set(256);
+      filter.uniforms.uMaskCells.set(mask.cells[0], mask.cells[1]);
+      filter.uniforms.uMaskBasis.set(mask.basis[0], mask.basis[1], mask.basis[2], mask.basis[3]);
+      filter.uniforms.uMaskOffset.set(mask.offset[0], mask.offset[1]);
       filter.uniforms.uScale.set(scenario.scale);
 
       const radiance: number[][] = [];
       const through: number[][] = [];
       const visited: number[][] = [];
+      const hit: number[][] = [];
 
       try {
         for (const [ax, ay, bx, by] of scenario.traces) {
@@ -67,6 +89,7 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
             [PROBE_RADIANCE, radiance],
             [PROBE_TRANSMITTANCE, through],
             [PROBE_VISITED, visited],
+            [PROBE_MASK_HIT, hit],
           ] as const) {
             filter.uniforms.uMode.set(mode);
 
@@ -84,12 +107,14 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
           expect(reading[0], 'cells visited').toBeLessThan(255);
         }
 
-        (scenario as Case).check(radiance, through, visited);
+        (scenario as Case).check(radiance, through, visited, hit);
       } finally {
         root.destroy();
         filter.destroy();
         texture.destroy();
         tables.destroy();
+        mask.destroy();
+        mask.destroy();
         backend.destroy();
       }
     });

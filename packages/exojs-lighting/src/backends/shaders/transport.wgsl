@@ -16,9 +16,16 @@
 //                `(axisX, axisY, cosOuter, cosInner)`, `(density.rgb, directional)`
 //   uCells     - per grid cell `(segmentOffset, segmentCount, emitterOffset, emitterCount)`
 //   uIndices   - the primitive ids those ranges point into, in the red channel
+//   uMask      - rasterised occluders, coverage in alpha, on a grid of its own
 //
 // Uniform block fields: `uGridOrigin` (vec2<f32>), `uGridCells` (vec2<f32>),
-// `uCellSize` (f32) and `uTableWidth` (f32).
+// `uCellSize` (f32), `uTableWidth` (f32), `uMaskCells` (vec2<f32>),
+// `uMaskBasis` (vec4<f32>) and `uMaskOffset` (vec2<f32>).
+//
+// `uMaskBasis` and `uMaskOffset` map a world position into the mask's texel
+// space, rows of the matrix first: the host owns that mapping, including which
+// way its rows run, because a mask bound as a render target is oriented by the
+// backend that wrote it. `uMaskCells` of zero says nothing was rasterised.
 
 /**
  * What a finite stretch amounts to: the radiance found along it, what got
@@ -239,6 +246,169 @@ fn transportTexel(table: texture_2d<f32>, index: i32) -> vec4<f32> {
     return textureLoad(table, vec2<i32>(index - (index / width) * width, index / width), 0);
 }
 
+/** What a walk over the occluder mask found. */
+struct MaskHit {
+    /**
+     * Where along the stretch the mask first blocks, as a fraction of it, or
+     * 1.0 where it does not. A stretch that starts inside a blocking texel
+     * reads 0.0.
+     */
+    fraction: f32,
+    /** Mask texels the walk read, on the same terms as the transfer's own count. */
+    visited: f32,
+};
+
+/** Coverage at or above which a mask texel blocks, as the distance field reads it too. */
+const MASK_BLOCKING: f32 = 0.5;
+
+/**
+ * Mask texels one walk may read.
+ *
+ * The same step accounting as the cell walk, over the mask's own grid: a
+ * stretch clipped to it visits `1 + |di_x| + |di_y|` texels, and a corner
+ * crossing advances both indices in one step rather than two. The field is
+ * capped at 2048 texels an axis, so 4095 is the true ceiling and this is one
+ * above it.
+ *
+ * Exhaustion is therefore unreachable, and if it were reached the walk reports
+ * blocking where it stopped: a wall that is too far to be read is the
+ * conservative answer, since the alternative is light arriving through it.
+ */
+const MAX_MASK_STEPS: i32 = 4096;
+
+/** World position to the mask's texel space, in whatever orientation the host bound it in. */
+fn maskPlace(world: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(dot(uniforms.uMaskBasis.xy, world), dot(uniforms.uMaskBasis.zw, world)) + uniforms.uMaskOffset;
+}
+
+/** Whether a mask texel blocks, reading outside the grid as open. */
+fn maskBlocks(texel: vec2<i32>, cells: vec2<f32>) -> bool {
+    if (texel.x < 0 || texel.y < 0 || f32(texel.x) >= cells.x || f32(texel.y) >= cells.y) {
+        return false;
+    }
+
+    return textureLoad(uMask, texel, 0).a >= MASK_BLOCKING;
+}
+
+/**
+ * Where the rasterised occluders first block the stretch from `a` to `b`.
+ *
+ * A texel blocks as a whole: the walk stops where it crosses into one, which
+ * is conservative to within the texel the mask quantises an outline to. Two
+ * blockers sharing nothing but a corner therefore cannot leak, because a
+ * stretch that passes exactly through that corner is stopped by either of
+ * them - the same convention the segment path applies to an endpoint.
+ *
+ * A host that rasterised nothing sets the texel count to zero and the walk
+ * costs one comparison.
+ */
+fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
+    let cells = uniforms.uMaskCells;
+
+    if (cells.x < 1.0 || cells.y < 1.0) {
+        return MaskHit(1.0, 0.0);
+    }
+
+    let origin = maskPlace(a);
+    let delta = maskPlace(b) - origin;
+    var entry = 0.0;
+    var leave = 1.0;
+    // Copied into variables because the clip below indexes them.
+    var run = delta;
+    var start = origin;
+    var grid = cells;
+
+    // Clipped to the mask, in fractions of the stretch, for the reason the
+    // cell walk is: the step bound is taken from the grid's size and only
+    // holds for a stretch that does not approach it from outside.
+    for (var axis = 0; axis < 2; axis = axis + 1) {
+        if (abs(run[axis]) < TRANSPORT_EPSILON) {
+            if (start[axis] < 0.0 || start[axis] > grid[axis]) {
+                return MaskHit(1.0, 0.0);
+            }
+
+            continue;
+        }
+
+        let first = -start[axis] / run[axis];
+        let last = (grid[axis] - start[axis]) / run[axis];
+
+        entry = max(entry, min(first, last));
+        leave = min(leave, max(first, last));
+    }
+
+    if (leave <= entry) {
+        return MaskHit(1.0, 0.0);
+    }
+
+    let place = origin + delta * entry;
+    var texel = clamp(vec2<i32>(floor(place)), vec2<i32>(0), vec2<i32>(cells) - vec2<i32>(1));
+    let stepping = vec2<i32>(select(-1, 1, delta.x >= 0.0), select(-1, 1, delta.y >= 0.0));
+    let spacing = vec2<f32>(
+        select(1.0 / abs(delta.x), 1e30, abs(delta.x) < TRANSPORT_EPSILON),
+        select(1.0 / abs(delta.y), 1e30, abs(delta.y) < TRANSPORT_EPSILON)
+    );
+    var next = entry + vec2<f32>(
+        select(
+            select(place.x - f32(texel.x), f32(texel.x + 1) - place.x, delta.x >= 0.0) / abs(delta.x),
+            1e30,
+            abs(delta.x) < TRANSPORT_EPSILON
+        ),
+        select(
+            select(place.y - f32(texel.y), f32(texel.y + 1) - place.y, delta.y >= 0.0) / abs(delta.y),
+            1e30,
+            abs(delta.y) < TRANSPORT_EPSILON
+        )
+    );
+    // A crossing counts as a corner when the two boundaries fall within a
+    // rounding of each other, since an exact tie is what a tile grid and a
+    // diagonal ray produce and what float32 cannot be relied on to reproduce.
+    let corner = TRANSPORT_EPSILON * min(spacing.x, spacing.y);
+    var travelled = entry;
+    var visited = 0.0;
+
+    for (var taken = 0; taken < MAX_MASK_STEPS; taken = taken + 1) {
+        if (travelled >= leave) {
+            return MaskHit(1.0, visited);
+        }
+
+        visited = visited + 1.0;
+
+        if (maskBlocks(texel, cells)) {
+            return MaskHit(clamp(travelled, 0.0, 1.0), visited);
+        }
+
+        let crossing = min(next.x, next.y);
+
+        if (abs(next.x - next.y) <= corner && crossing < leave) {
+            // Only the corner point itself is shared with the two texels the
+            // stretch does not otherwise enter. Either of them blocking stops
+            // it there.
+            if (maskBlocks(texel + vec2<i32>(stepping.x, 0), cells) || maskBlocks(texel + vec2<i32>(0, stepping.y), cells)) {
+                return MaskHit(clamp(crossing, 0.0, 1.0), visited);
+            }
+
+            travelled = crossing;
+            next = next + spacing;
+            texel = texel + stepping;
+
+            continue;
+        }
+
+        travelled = crossing;
+
+        if (next.x < next.y) {
+            next.x = next.x + spacing.x;
+            texel.x = texel.x + stepping.x;
+        } else {
+            next.y = next.y + spacing.y;
+            texel.y = texel.y + stepping.y;
+        }
+    }
+
+    return MaskHit(clamp(travelled, 0.0, 1.0), visited);
+}
+
 /**
  * The transfer of the world-space stretch from `a` to `b`.
  *
@@ -248,6 +418,10 @@ fn transportTexel(table: texture_2d<f32>, index: i32) -> vec4<f32> {
  * nearest opaque hit is found first and emission integrated only up to it,
  * because light collected past a wall that a later candidate turns out to have
  * put closer cannot be taken back.
+ *
+ * Rasterised occluders are found first, over their own grid, and the walk is
+ * cut where they block. Whichever wall comes first therefore ends the stretch,
+ * whether it was given as geometry or as coverage.
  */
 fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     let delta = b - a;
@@ -257,13 +431,18 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
         return Transfer(vec3<f32>(0.0), 1.0, 0.0);
     }
 
+    let rastered = maskHit(a, b);
+    let stopped = rastered.fraction * span;
+    let open = select(0.0, 1.0, rastered.fraction >= 1.0);
     let direction = delta / span;
     let cells = uniforms.uGridCells;
     let size = uniforms.uCellSize;
     let lower = uniforms.uGridOrigin;
     let upper = lower + cells * size;
     var entry = 0.0;
-    var leave = span;
+    // A rasterised wall inside the stretch ends it even where it stands
+    // outside the grid: the grid holds what emits, the mask what blocks.
+    var leave = min(span, stopped);
     // Copied into variables because the clip below indexes them.
     var ray = direction;
     var start = a;
@@ -278,7 +457,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     for (var axis = 0; axis < 2; axis = axis + 1) {
         if (abs(ray[axis]) < TRANSPORT_EPSILON) {
             if (start[axis] < low[axis] || start[axis] > high[axis]) {
-                return Transfer(vec3<f32>(0.0), 1.0, 0.0);
+                return Transfer(vec3<f32>(0.0), open, rastered.visited);
             }
 
             continue;
@@ -292,7 +471,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     }
 
     if (leave <= entry) {
-        return Transfer(vec3<f32>(0.0), 1.0, 0.0);
+        return Transfer(vec3<f32>(0.0), open, rastered.visited);
     }
 
     let place = (a + direction * entry - lower) / size;
@@ -320,11 +499,11 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
 
     var found = vec3<f32>(0.0);
     var travelled = entry;
-    var visited = 0.0;
+    var visited = rastered.visited;
 
     for (var taken = 0; taken < MAX_CELL_STEPS; taken = taken + 1) {
         if (travelled >= leave) {
-            return Transfer(found, 1.0, visited);
+            return Transfer(found, open, visited);
         }
 
         visited = visited + 1.0;

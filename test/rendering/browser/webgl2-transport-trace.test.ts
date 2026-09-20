@@ -15,11 +15,13 @@ import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_b
 import { type Case, transportCases } from './_transportCases';
 import {
   PROBE_CLEAR,
+  PROBE_MASK_HIT,
   PROBE_RADIANCE,
   PROBE_SIZE,
   PROBE_TRANSMITTANCE,
   PROBE_VISITED,
   probeFragmentSource,
+  probeMask,
   probeTables,
   probeUniforms,
 } from './_transportProbe';
@@ -46,8 +48,15 @@ const coverTexture = (): Texture => {
 const runCase = async (scenario: Case): Promise<void> => {
   const backend = await createWebGl2TestBackend(PROBE_SIZE);
   const tables = probeTables(scenario.segments, scenario.lights, scenario.region, scenario.cell);
+  const mask = probeMask(scenario.mask);
   const filter = ShaderFilter.from(probeShader, {
-    textures: { uSegments: tables.segments, uEmitters: tables.emitters, uCells: tables.cells, uIndices: tables.indices },
+    textures: {
+      uSegments: tables.segments,
+      uEmitters: tables.emitters,
+      uCells: tables.cells,
+      uIndices: tables.indices,
+      uMask: mask.texture,
+    },
   });
   const texture = coverTexture();
   const root = new Container();
@@ -60,11 +69,15 @@ const runCase = async (scenario: Case): Promise<void> => {
   filter.uniforms.uGridCells.set(tables.gridWidth, tables.gridHeight);
   filter.uniforms.uCellSize.set(tables.cellSize);
   filter.uniforms.uTableWidth.set(256);
+  filter.uniforms.uMaskCells.set(mask.cells[0], mask.cells[1]);
+  filter.uniforms.uMaskBasis.set(mask.basis[0], mask.basis[1], mask.basis[2], mask.basis[3]);
+  filter.uniforms.uMaskOffset.set(mask.offset[0], mask.offset[1]);
   filter.uniforms.uScale.set(scenario.scale);
 
   const radiance: number[][] = [];
   const through: number[][] = [];
   const visited: number[][] = [];
+  const hit: number[][] = [];
 
   try {
     for (const [ax, ay, bx, by] of scenario.traces) {
@@ -75,6 +88,7 @@ const runCase = async (scenario: Case): Promise<void> => {
         [PROBE_RADIANCE, radiance],
         [PROBE_TRANSMITTANCE, through],
         [PROBE_VISITED, visited],
+        [PROBE_MASK_HIT, hit],
       ] as const) {
         filter.uniforms.uMode.set(mode);
         renderWebGl2Once(backend, root, PROBE_CLEAR);
@@ -89,12 +103,13 @@ const runCase = async (scenario: Case): Promise<void> => {
       expect(reading[0], 'cells visited').toBeLessThan(255);
     }
 
-    scenario.check(radiance, through, visited);
+    scenario.check(radiance, through, visited, hit);
   } finally {
     root.destroy();
     filter.destroy();
     texture.destroy();
     tables.destroy();
+    mask.destroy();
     backend.destroy();
   }
 };

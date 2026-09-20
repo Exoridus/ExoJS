@@ -16,6 +16,7 @@ import type { Light } from '../../../packages/exojs-lighting/src/lights/Light';
 import { LineLight } from '../../../packages/exojs-lighting/src/lights/LineLight';
 import { PointLight } from '../../../packages/exojs-lighting/src/lights/PointLight';
 import { SpotLight } from '../../../packages/exojs-lighting/src/lights/SpotLight';
+import { type MaskSpec, PROBE_REGION } from './_transportProbe';
 
 /** A light placed in world space, since a `Light` takes its position from its node. */
 const at = <T extends Light>(light: T, x: number, y: number): T => {
@@ -49,16 +50,23 @@ export interface Case {
   readonly cell?: number;
   /** `(x1, y1, x2, y2)` quadruples. */
   readonly segments: readonly number[];
+  /** Rasterised occluders, where the case has any; the walk reads no mask without one. */
+  readonly mask?: MaskSpec;
   readonly lights: readonly Light[];
   /** Stretches to trace, as `[ax, ay, bx, by]`. */
   readonly traces: ReadonlyArray<readonly [number, number, number, number]>;
   /** Scale that brings this scene's radiance into the target's range. */
   readonly scale: number;
   /**
-   * What the probes must satisfy. `radiance[i]` and `through[i]` hold the two
-   * draws of trace `i`, each as four 8-bit channels.
+   * What the probes must satisfy. `radiance[i]`, `through[i]`, `visited[i]` and
+   * `hit[i]` hold the four draws of trace `i`, each as four 8-bit channels.
    */
-  check(radiance: ReadonlyArray<readonly number[]>, through: ReadonlyArray<readonly number[]>): void;
+  check(
+    radiance: ReadonlyArray<readonly number[]>,
+    through: ReadonlyArray<readonly number[]>,
+    visited: ReadonlyArray<readonly number[]>,
+    hit: ReadonlyArray<readonly number[]>,
+  ): void;
 }
 
 /** Two 8-bit readings that must agree within the rounding a byte allows. */
@@ -249,6 +257,93 @@ export const transportCases = (): readonly Case[] => [
     check: (_radiance, through, visited) => {
       near(visited[0]![0]!, 127, 0);
       near(through[0]![0]!, OPEN);
+    },
+  },
+  {
+    name: 'a raster wall is entered where the stretch crosses into its texel, not where it crosses its column',
+    // Mask texel (8, 9) covers world x 0..32, y 32..64. The stretch reaches
+    // x = 0 at 0.4 of its length, still a row below, and enters the texel at
+    // 0.5, where it crosses y = 32. A walk that took the column crossing for
+    // the entry would stop at 0.4.
+    mask: { texels: 16, world: PROBE_REGION, blocked: [[8, 9]] },
+    segments: [],
+    lights: [],
+    traces: [[-64, 0, 96, 64]],
+    scale: 1,
+    check: (_radiance, through, _visited, hit) => {
+      near(hit[0]![0]!, 128);
+      near(through[0]![0]!, BLOCKED);
+    },
+  },
+  {
+    name: 'a raster wall touched only at its corner still blocks',
+    // The stretch meets texel (8, 8) - world 0..32 square - at the single
+    // point (0, 0) and is in its diagonal neighbours on either side. Letting
+    // it through is what opens a seam between two blockers that share nothing
+    // but a corner.
+    mask: { texels: 16, world: PROBE_REGION, blocked: [[8, 8]] },
+    segments: [],
+    lights: [],
+    traces: [[-32, 32, 32, -32]],
+    scale: 1,
+    check: (_radiance, through, _visited, hit) => {
+      near(hit[0]![0]!, 128);
+      near(through[0]![0]!, BLOCKED);
+    },
+  },
+  {
+    name: 'a stretch beginning inside a raster wall carries nothing at all',
+    mask: { texels: 16, world: PROBE_REGION, blocked: [[8, 8]] },
+    segments: [],
+    lights: [point(60, 16, 20)],
+    traces: [
+      [0.01, 16, 120, 16],
+      [-0.01, 16, -120, 16],
+    ],
+    scale: 0.02,
+    check: (radiance, through, _visited, hit) => {
+      near(hit[0]![0]!, 0);
+      near(through[0]![0]!, BLOCKED);
+      expect(radiance[0]!.slice(0, 3)).toEqual([0, 0, 0]);
+      // A quarter of a texel the other way is outside the wall, and the walk
+      // that leaves it behind is unobstructed.
+      near(hit[1]![0]!, 255);
+      near(through[1]![0]!, OPEN);
+    },
+  },
+  {
+    name: 'a mask texel below the coverage threshold is not a wall',
+    mask: { texels: 16, world: PROBE_REGION, blocked: [[8, 8]], coverage: 0.4 },
+    segments: [],
+    lights: [],
+    traces: [[-160, 16, 160, 16]],
+    scale: 1,
+    check: (_radiance, through, _visited, hit) => {
+      near(hit[0]![0]!, 255);
+      near(through[0]![0]!, OPEN);
+    },
+  },
+  {
+    name: 'the earliest wall wins whether it was rasterised or not',
+    // A source, then a raster wall at x = 0, then a vector wall at x = 64.
+    // What arrives has to be what the stretch up to the raster wall collects,
+    // and the stretch has to report stopping there rather than at the segment.
+    mask: { texels: 16, world: PROBE_REGION, blocked: [[8, 8]] },
+    segments: [64, -200, 64, 200],
+    lights: [point(-100, 16, 20)],
+    traces: [
+      [-160, 16, 160, 16],
+      [-160, 16, -0.5, 16],
+    ],
+    scale: 0.02,
+    check: (radiance, through, _visited, hit) => {
+      near(hit[0]![0]!, 128);
+      near(through[0]![0]!, BLOCKED);
+      expect(radiance[0]![0]!).toBeGreaterThan(20);
+
+      for (let channel = 0; channel < 3; channel++) {
+        near(radiance[0]![channel]!, radiance[1]![channel]!);
+      }
     },
   },
   {

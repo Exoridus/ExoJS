@@ -15,7 +15,7 @@
 import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
 import { DataTexture } from '#rendering/texture/DataTexture';
-import { ScaleModes, TextureFormat } from '#rendering/types';
+import { TextureFormat } from '#rendering/types';
 import { UniformType } from '#rendering/uniforms/UniformType';
 
 import transportGlsl from '../../../packages/exojs-lighting/src/backends/shaders/transport.frag';
@@ -36,6 +36,9 @@ export const probeUniforms = {
   uGridCells: UniformType.Vec2,
   uCellSize: UniformType.Float,
   uTableWidth: UniformType.Float,
+  uMaskCells: UniformType.Vec2,
+  uMaskBasis: UniformType.Vec4,
+  uMaskOffset: UniformType.Vec2,
   uA: UniformType.Vec2,
   uB: UniformType.Vec2,
   uScale: UniformType.Float,
@@ -44,15 +47,21 @@ export const probeUniforms = {
 
 /**
  * What a probe draw writes: the scaled radiance, the transmittance in every
- * channel, or the number of grid cells the walk visited.
+ * channel, the number of grid cells the walk visited, or where along the
+ * stretch the occluder mask first blocks it.
  *
  * The cell count is written as `visited / 255`, so the byte read back IS the
  * count. A reading of 255 means the walk either visited that many or saturated,
  * and every probe grid here is small enough that it cannot legitimately.
+ *
+ * The mask hit is a fraction of the stretch, so the byte is `fraction * 255`:
+ * a whole stretch with nothing in its way reads 255, and one blocked at its
+ * own start reads 0.
  */
 export const PROBE_RADIANCE = 0;
 export const PROBE_TRANSMITTANCE = 1;
 export const PROBE_VISITED = 2;
+export const PROBE_MASK_HIT = 3;
 
 export const probeFragmentSource = `#version 300 es
 precision highp float;
@@ -63,6 +72,7 @@ uniform sampler2D uSegments;
 uniform sampler2D uEmitters;
 uniform sampler2D uCells;
 uniform sampler2D uIndices;
+uniform sampler2D uMask;
 
 out vec4 fragColor;
 
@@ -70,9 +80,17 @@ ${transportGlsl}
 
 void main() {
     Transfer walked = traceSegment(uniforms.uA, uniforms.uB);
-    vec3 shown = uniforms.uMode < 0.5
-        ? clamp(walked.radiance * uniforms.uScale, 0.0, 1.0)
-        : (uniforms.uMode < 1.5 ? vec3(walked.transmittance) : vec3(clamp(walked.visited / 255.0, 0.0, 1.0)));
+    vec3 shown;
+
+    if (uniforms.uMode < 0.5) {
+        shown = clamp(walked.radiance * uniforms.uScale, 0.0, 1.0);
+    } else if (uniforms.uMode < 1.5) {
+        shown = vec3(walked.transmittance);
+    } else if (uniforms.uMode < 2.5) {
+        shown = vec3(clamp(walked.visited / 255.0, 0.0, 1.0));
+    } else {
+        shown = vec3(maskHit(uniforms.uA, uniforms.uB).fraction);
+    }
 
     // Opaque: the probe is composited onto the frame like any other draw, and
     // an alpha channel would not survive that to be read back.
@@ -91,14 +109,25 @@ export const probeWgslSource = `
 @group(1) @binding(6) var uCellsSampler: sampler;
 @group(1) @binding(7) var uIndices: texture_2d<f32>;
 @group(1) @binding(8) var uIndicesSampler: sampler;
+@group(1) @binding(9) var uMask: texture_2d<f32>;
+@group(1) @binding(10) var uMaskSampler: sampler;
 
 ${transportWgsl}
 
 @fragment
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let walked = traceSegment(uniforms.uA, uniforms.uB);
-    let counted = select(vec3<f32>(clamp(walked.visited / 255.0, 0.0, 1.0)), vec3<f32>(walked.transmittance), uniforms.uMode < 1.5);
-    let shown = select(counted, clamp(walked.radiance * uniforms.uScale, vec3<f32>(0.0), vec3<f32>(1.0)), uniforms.uMode < 0.5);
+    var shown: vec3<f32>;
+
+    if (uniforms.uMode < 0.5) {
+        shown = clamp(walked.radiance * uniforms.uScale, vec3<f32>(0.0), vec3<f32>(1.0));
+    } else if (uniforms.uMode < 1.5) {
+        shown = vec3<f32>(walked.transmittance);
+    } else if (uniforms.uMode < 2.5) {
+        shown = vec3<f32>(clamp(walked.visited / 255.0, 0.0, 1.0));
+    } else {
+        shown = vec3<f32>(maskHit(uniforms.uA, uniforms.uB).fraction);
+    }
 
     // Opaque: the probe is composited onto the frame like any other draw, and
     // an alpha channel would not survive that to be read back.
@@ -125,7 +154,6 @@ const table = (data: Float32Array, width: number, height: number): DataTexture<T
     width,
     height,
     format: TextureFormat.Rgba32F,
-    scaleMode: ScaleModes.Nearest,
     data: data.subarray(0, width * height * 4),
   });
 
@@ -155,6 +183,56 @@ export const probeTables = (segments: readonly number[], lights: readonly Light[
         texture.destroy();
       }
     },
+  };
+};
+
+/**
+ * A synthetic occluder mask: which texels block, over what world region.
+ *
+ * The production mask is rasterised from drawables at the light field's
+ * resolution; naming texels directly is what lets a case state where a wall
+ * begins to a fraction of a texel instead of inferring it from a rasteriser.
+ */
+export interface MaskSpec {
+  /** Texels across and up. */
+  readonly texels: number;
+  /** World region those texels cover. */
+  readonly world: Rectangle;
+  /** Texel indices that block, as `[x, y]`, with `y` counted up from the region's bottom. */
+  readonly blocked: ReadonlyArray<readonly [number, number]>;
+  /** Coverage written for a blocking texel, where the case is about the threshold. */
+  readonly coverage?: number;
+}
+
+/** A bound mask: the texture plus the world-to-texel mapping the shader needs. */
+export interface ProbeMask {
+  readonly texture: DataTexture<TextureFormat.Rgba8>;
+  readonly cells: readonly [number, number];
+  /** Rows of the 2x2 world-to-texel matrix, as `(xx, xy, yx, yy)`. */
+  readonly basis: readonly [number, number, number, number];
+  readonly offset: readonly [number, number];
+  destroy(): void;
+}
+
+/** An empty 1x1 mask, which the shader reads as "nothing was rasterised". */
+export const probeMask = (spec?: MaskSpec): ProbeMask => {
+  const size = spec?.texels ?? 1;
+  const data = new Uint8Array(size * size * 4);
+  const coverage = Math.round(255 * (spec?.coverage ?? 1));
+
+  for (const [x, y] of spec?.blocked ?? []) {
+    data.fill(coverage, (y * size + x) * 4, (y * size + x) * 4 + 4);
+  }
+
+  const texture = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8, data });
+  const scale = spec === undefined ? 0 : size / spec.world.width;
+
+  return {
+    texture,
+    cells: spec === undefined ? [0, 0] : [size, size],
+    basis: [scale, 0, 0, spec === undefined ? 0 : size / spec.world.height],
+    offset: spec === undefined ? [0, 0] : [-spec.world.x * scale, (-spec.world.y * size) / spec.world.height],
+    destroy: (): void => texture.destroy(),
   };
 };
 
