@@ -903,6 +903,10 @@ ${sunQuadWgsl}`,
     this._app.onResize.remove(this._onResize);
     this._app.framePasses.removePass(this._maskPass);
 
+    if (this._blocks !== null) {
+      this._app.framePasses.removePass(this._blocks.pass);
+    }
+
     if (this._filler !== null) {
       this._app.framePasses.removePass(this._filler.pass);
       this._filler.destroy();

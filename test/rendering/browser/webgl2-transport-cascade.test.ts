@@ -105,17 +105,14 @@ describe('the cascades over the transport walk (WebGL2)', () => {
       host.app.framePasses.execute(host.context);
       host.backend.flush();
 
-      // What is left behind the wall is a third of the lit reading rather than
-      // nothing: a probe with every way to its coarser neighbours blocked
-      // falls back to the plain merge weights, and the walk answers visibility
-      // as open or shut where the field walk fades it over the last texel.
-      // Measured 24% here and 31% on the other backend; the difference between
-      // the two walks belongs to the comparison, not to this bound.
+      // Nothing is left behind the wall. What used to read a quarter of the
+      // lit value came from an occluder on a cell boundary that the index
+      // dropped, not from the merge.
       const lit = readWebGl2Pixel(host.backend, 48, 64)[0]!;
       const shadowed = readWebGl2Pixel(host.backend, 96, 64)[0]!;
 
       expect(lit, 'in front of the wall').toBeGreaterThan(20);
-      expect(shadowed, 'behind the wall').toBeLessThan(lit / 3);
+      expect(shadowed, 'behind the wall').toBeLessThanOrEqual(2);
     } finally {
       lighting.destroy();
       host.destroy();
