@@ -39,9 +39,10 @@ import emitterQuadVertex from './shaders/emitter-quad.vert';
 import emitterQuadWgsl from './shaders/emitter-quad.wgsl';
 import probeVisibilityFragment from './shaders/probe-visibility.frag';
 import probeVisibilityWgsl from './shaders/probe-visibility.wgsl';
-import { transportCascadeShader, type transportUniforms, transportVisibilityShader } from './transportShaders';
+import { transportCascadeShader, transportGatherShader, type transportUniforms } from './transportShaders';
 
-const cascadeUniforms = {
+/** What one cascade level is told about this frame, whichever walk it runs. @internal */
+export const cascadeUniforms = {
   uToField: UniformType.Vec4,
   uFieldOffset: UniformType.Vec2,
   uOrigin: UniformType.Vec2,
@@ -85,7 +86,8 @@ export const probeVisibilityShader = createFilterShader({
   uniforms: visibilityUniforms,
 });
 
-const gatherUniforms = {
+/** What the reconstruction at each fragment is told about this frame. @internal */
+export const gatherUniforms = {
   uToWorld: UniformType.Vec4,
   uWorldOffset: UniformType.Vec2,
   uOrigin: UniformType.Vec2,
@@ -291,9 +293,14 @@ export class RadianceField {
   private readonly _visibility: RenderTexture;
   private readonly _cascadeFilter: ShaderFilter<typeof cascadeUniforms>;
   private readonly _visibilityFilter: ShaderFilter<typeof visibilityUniforms>;
-  /** The same two over the transport chunk, built when a walk over geometry is bound. */
+  /**
+   * The cascade over the transport chunk, built when a walk over geometry is
+   * bound. It has no companion that measures merge weights: the walk to a
+   * coarser probe already reports what reached it.
+   */
   private _transportCascade: ShaderFilter<typeof cascadeUniforms & typeof transportUniforms> | null = null;
-  private _transportVisibility: ShaderFilter<typeof visibilityUniforms & typeof transportUniforms> | null = null;
+  /** The receiver reconstruction over the same walk: a fragment reaches its probes or it does not. */
+  private _transportGather: ShaderFilter<typeof gatherUniforms & typeof transportUniforms> | null = null;
   private _walk: TransportBinding | null = null;
   private _walkRevision = -1;
   private readonly _gatherFilter: ShaderFilter<typeof gatherUniforms>;
@@ -519,11 +526,9 @@ export class RadianceField {
     }
 
     this._transportCascade?.destroy();
-    this._transportVisibility?.destroy();
-    this._transportCascade = ShaderFilter.from(transportCascadeShader(cascadeUniforms), {
-      textures: { uVisibility: this._visibility, ...binding.textures },
-    });
-    this._transportVisibility = ShaderFilter.from(transportVisibilityShader(visibilityUniforms), { textures: { ...binding.textures } });
+    this._transportGather?.destroy();
+    this._transportCascade = ShaderFilter.from(transportCascadeShader(cascadeUniforms), { textures: { ...binding.textures } });
+    this._transportGather = ShaderFilter.from(transportGatherShader(gatherUniforms), { textures: { ...binding.textures } });
     this._walkRevision = binding.revision;
   }
 
@@ -565,7 +570,7 @@ export class RadianceField {
 
     const walking = this._walk;
 
-    for (const filter of [this._cascadeFilter, this._visibilityFilter, this._transportCascade, this._transportVisibility]) {
+    for (const filter of [this._cascadeFilter, this._visibilityFilter, this._transportCascade]) {
       if (filter === null) {
         continue;
       }
@@ -595,13 +600,19 @@ export class RadianceField {
     }
 
     this._writeSun();
-    this._gatherFilter.uniforms.uToWorld.set(toWorld.a, toWorld.b, toWorld.c, toWorld.d);
-    this._gatherFilter.uniforms.uWorldOffset.set(toWorld.x, toWorld.y);
-    this._gatherFilter.uniforms.uOrigin.set(bounds.left, bounds.top);
-    this._gatherFilter.uniforms.uProbes.set(this._probesX, this._probesY);
-    this._gatherFilter.uniforms.uSpacing.set(spacing);
-    this._gatherFilter.uniforms.uTile.set(2);
-    this._gatherFilter.uniforms.uAmbient.set(ambient.r / 255, ambient.g / 255, ambient.b / 255);
+    for (const filter of [this._gatherFilter, this._transportGather]) {
+      if (filter === null) {
+        continue;
+      }
+
+      filter.uniforms.uToWorld.set(toWorld.a, toWorld.b, toWorld.c, toWorld.d);
+      filter.uniforms.uWorldOffset.set(toWorld.x, toWorld.y);
+      filter.uniforms.uOrigin.set(bounds.left, bounds.top);
+      filter.uniforms.uProbes.set(this._probesX, this._probesY);
+      filter.uniforms.uSpacing.set(spacing);
+      filter.uniforms.uTile.set(2);
+      filter.uniforms.uAmbient.set(ambient.r / 255, ambient.g / 255, ambient.b / 255);
+    }
 
     // The bounce quad is the camera's own view rectangle, in the world: the
     // unit quad's corners are clip -1 and +1 through the camera's inverse, so
@@ -672,7 +683,7 @@ export class RadianceField {
     this._visibility.destroy();
     this._emission.destroy();
     this._transportCascade?.destroy();
-    this._transportVisibility?.destroy();
+    this._transportGather?.destroy();
     this._emitterCount = 0;
     this._sun = null;
   }
@@ -763,13 +774,8 @@ export class RadianceField {
     // Either pair walks the same probes over the same intervals; what differs
     // is what a ray reads on the way.
     const overGeometry = this._walk !== null ? this._transportCascade : null;
-    const waysOverGeometry = this._walk !== null ? this._transportVisibility : null;
-    const walking = overGeometry !== null && waysOverGeometry !== null;
+    const walking = overGeometry !== null;
     const cascade = overGeometry ?? this._cascadeFilter;
-    const visibility = waysOverGeometry ?? this._visibilityFilter;
-    // The walk over geometry reads no field, and a filter still needs an
-    // input: the placeholder stands in for one.
-    const seen = walking ? this._above : this._distance;
 
     let source = this._above;
     let flipped = false;
@@ -781,10 +787,13 @@ export class RadianceField {
       const destination = flipped ? second : first;
       const top = level === this._levels - 1;
 
-      if (!top) {
-        visibility.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
-        visibility.uniforms.uSpacing.set(spacing);
-        visibility.apply(backend, seen, this._visibility);
+      // Merge weights are a term of the field walk alone. The walk over
+      // geometry gets the same answer out of the walk it already makes to each
+      // coarser probe, so there is nothing to measure for it beforehand.
+      if (!top && !walking) {
+        this._visibilityFilter.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
+        this._visibilityFilter.uniforms.uSpacing.set(spacing);
+        this._visibilityFilter.apply(backend, this._distance, this._visibility);
       }
 
       cascade.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
@@ -801,7 +810,7 @@ export class RadianceField {
       flipped = !flipped;
     }
 
-    this._gatherFilter.apply(backend, source, this._target);
+    (walking && this._transportGather !== null ? this._transportGather : this._gatherFilter).apply(backend, source, this._target);
 
     // The light field now holds this frame, so the camera it was gathered
     // through becomes what the next bounce reprojects from - and only now is

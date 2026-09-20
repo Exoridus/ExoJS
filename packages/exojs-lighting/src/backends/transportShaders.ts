@@ -1,9 +1,9 @@
 import { createFilterShader, type Shader, UniformType } from '@codexo/exojs';
 
+import cascadeGatherTransportFragment from './shaders/cascade-gather-transport.frag';
+import cascadeGatherTransportWgsl from './shaders/cascade-gather-transport.wgsl';
 import cascadeTransportFragment from './shaders/cascade-transport.frag';
 import cascadeTransportWgsl from './shaders/cascade-transport.wgsl';
-import visibilityTransportFragment from './shaders/probe-visibility-transport.frag';
-import visibilityTransportWgsl from './shaders/probe-visibility-transport.wgsl';
 import transportFragment from './shaders/transport.frag';
 import transportWgsl from './shaders/transport.wgsl';
 
@@ -40,9 +40,6 @@ const bindings = (names: readonly string[], language: 'glsl' | 'wgsl'): string =
 /** The chunk's own textures, which every shader that walks binds. */
 const WALK_TEXTURES = ['uSegments', 'uEmitters', 'uCells', 'uIndices', 'uMask', 'uMaskCoarse'] as const;
 
-/** A cascade level also reads the merge weights; the pass that writes them cannot. */
-const CASCADE_TEXTURES = ['uVisibility', ...WALK_TEXTURES] as const;
-
 const glsl = (textures: readonly string[], body: string): string =>
   `#version 300 es
 precision highp float;
@@ -53,6 +50,7 @@ precision highp int;
 uniform sampler2D uTexture;
 ${bindings(textures, 'glsl')}
 
+in vec2 vUv;
 out vec4 fragColor;
 
 ${transportFragment}
@@ -69,6 +67,18 @@ ${transportWgsl}
 ${body}`;
 
 /**
+ * The finest cascade read back out at each fragment, with the way from the
+ * fragment to each of its four probes walked.
+ * @internal
+ */
+export const transportGatherShader = <U extends Record<string, UniformType>>(uniforms: U): Shader<U & typeof transportUniforms> =>
+  createFilterShader({
+    glsl: { fragment: glsl(WALK_TEXTURES, cascadeGatherTransportFragment) },
+    wgsl: wgsl(WALK_TEXTURES, cascadeGatherTransportWgsl),
+    uniforms: { ...uniforms, ...transportUniforms },
+  });
+
+/**
  * One cascade level, walked over this frame's geometry and occluder mask.
  *
  * The uniform schema is the field walk's plus the chunk's, so the host sets
@@ -77,15 +87,7 @@ ${body}`;
  */
 export const transportCascadeShader = <U extends Record<string, UniformType>>(uniforms: U): Shader<U & typeof transportUniforms> =>
   createFilterShader({
-    glsl: { fragment: glsl(CASCADE_TEXTURES, cascadeTransportFragment) },
-    wgsl: wgsl(CASCADE_TEXTURES, cascadeTransportWgsl),
-    uniforms: { ...uniforms, ...transportUniforms },
-  });
-
-/** The merge weights for one level, answered by the same walk. @internal */
-export const transportVisibilityShader = <U extends Record<string, UniformType>>(uniforms: U): Shader<U & typeof transportUniforms> =>
-  createFilterShader({
-    glsl: { fragment: glsl(WALK_TEXTURES, visibilityTransportFragment) },
-    wgsl: wgsl(WALK_TEXTURES, visibilityTransportWgsl),
+    glsl: { fragment: glsl(WALK_TEXTURES, cascadeTransportFragment) },
+    wgsl: wgsl(WALK_TEXTURES, cascadeTransportWgsl),
     uniforms: { ...uniforms, ...transportUniforms },
   });

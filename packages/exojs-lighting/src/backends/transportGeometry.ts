@@ -354,9 +354,17 @@ export class TransportGeometry {
    * off the edge of the field still blocks inside it.
    */
   private _forEachCellIn(minX: number, minY: number, maxX: number, maxY: number, id: number, visit: (cell: number, id: number) => void): void {
-    const firstX = Math.floor((minX - this._originX) / this._cellSize);
+    // `ceil - 1` rather than `floor` on the low edge: the two agree except
+    // where the edge lands exactly on a cell boundary, and there the box
+    // touches the cell on the other side of it too. A wall along a tile edge
+    // is the ordinary case, and a ray reaching that boundary from the far side
+    // crosses it exactly where the wall stands - in a cell that would
+    // otherwise never list it and so never test it. The high edge needs no
+    // such treatment: a box ending on a boundary already lands in the cell
+    // beyond it by rounding down.
+    const firstX = Math.ceil((minX - this._originX) / this._cellSize) - 1;
     const lastX = Math.floor((maxX - this._originX) / this._cellSize);
-    const firstY = Math.floor((minY - this._originY) / this._cellSize);
+    const firstY = Math.ceil((minY - this._originY) / this._cellSize) - 1;
     const lastY = Math.floor((maxY - this._originY) / this._cellSize);
     const fromX = Math.max(0, firstX);
     const toX = Math.min(this._gridWidth - 1, lastX);

@@ -101,43 +101,25 @@ void main() {
     vec2 place = (vec2(probe) + 0.5) * 0.5 - 0.5;
     vec2 weight = fract(place);
     ivec2 base = ivec2(floor(place));
-    // Weighted as well by how much of the way to each coarser probe is open: a
-    // probe beside a wall would otherwise take half its light from probes on
-    // the far side of it, and the wall's shadow would glow along its edge.
-    vec4 open = texelFetch(uVisibility, probe, 0);
-    ivec2 corners[4];
-    vec4 shares;
-
-    for (int index = 0; index < 4; index++) {
-        corners[index] = clamp(base + ivec2(index % 2, index / 2), ivec2(0), coarseProbes - 1);
-        shares[index] = bilinear(weight, index) * open[index];
-    }
-
-    float totalShare = shares.x + shares.y + shares.z + shares.w;
-
-    // Every way blocked: fall back to the plain weights rather than to darkness.
-    if (totalShare <= 0.0) {
-        for (int index = 0; index < 4; index++) {
-            shares[index] = bilinear(weight, index);
-        }
-
-        totalShare = 1.0;
-    }
-
     vec3 total = vec3(0.0);
 
     // Each coarser probe's ray in this direction begins a fixed distance from
     // THAT probe, so the walk that meets it goes to where it begins - one walk
     // per coarser probe, in four slightly different directions.
+    //
+    // The walk is the only thing that decides how much of a coarser probe
+    // reaches here: what it let through scales that probe's radiance, and a
+    // way that ends on a wall contributes what it collected before the wall
+    // and nothing else. The weights stay the plain bilinear ones, unscaled and
+    // unnormalised - a way that is shut needs no weight of its own, and
+    // spreading its weight over the open ones would report light that arrived
+    // by no path at all.
     for (int index = 0; index < 4; index++) {
-        vec2 coarseOrigin = uniforms.uOrigin + (vec2(corners[index]) + 0.5) * coarseSpacing;
+        ivec2 corner = clamp(base + ivec2(index % 2, index / 2), ivec2(0), coarseProbes - 1);
+        vec2 coarseOrigin = uniforms.uOrigin + (vec2(corner) + 0.5) * coarseSpacing;
         Transfer walked = traceSegment(near, coarseOrigin + heading * uniforms.uRange.y);
 
-        // Scaled by what got through: a ray that ended on a wall carries what
-        // it collected up to it and nothing from beyond.
-        vec3 carried = walked.radiance + walked.transmittance * coarseRays(corners[index], direction, coarseTile);
-
-        total += carried * (shares[index] / totalShare);
+        total += bilinear(weight, index) * (walked.radiance + walked.transmittance * coarseRays(corner, direction, coarseTile));
     }
 
     fragColor = vec4(total, 1.0);

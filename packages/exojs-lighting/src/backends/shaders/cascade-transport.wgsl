@@ -97,43 +97,25 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
     let place = (vec2<f32>(probe) + 0.5) * 0.5 - 0.5;
     let weight = fract(place);
     let base = vec2<i32>(floor(place));
-    // Weighted as well by how much of the way to each coarser probe is open: a
-    // probe beside a wall would otherwise take half its light from probes on
-    // the far side of it, and the wall's shadow would glow along its edge.
-    let open = textureLoad(uVisibility, probe, 0);
-    var corners = array<vec2<i32>, 4>();
-    var shares = vec4<f32>(0.0);
-
-    for (var index = 0; index < 4; index = index + 1) {
-        corners[index] = clamp(base + vec2<i32>(index % 2, index / 2), vec2<i32>(0), coarseProbes - vec2<i32>(1));
-        shares[index] = bilinear(weight, index) * open[index];
-    }
-
-    var totalShare = shares.x + shares.y + shares.z + shares.w;
-
-    // Every way blocked: fall back to the plain weights rather than to darkness.
-    if (totalShare <= 0.0) {
-        for (var index = 0; index < 4; index = index + 1) {
-            shares[index] = bilinear(weight, index);
-        }
-
-        totalShare = 1.0;
-    }
-
     var total = vec3<f32>(0.0);
 
     // Each coarser probe's ray in this direction begins a fixed distance from
     // THAT probe, so the walk that meets it goes to where it begins - one walk
     // per coarser probe, in four slightly different directions.
+    //
+    // The walk is the only thing that decides how much of a coarser probe
+    // reaches here: what it let through scales that probe's radiance, and a
+    // way that ends on a wall contributes what it collected before the wall
+    // and nothing else. The weights stay the plain bilinear ones, unscaled and
+    // unnormalised - a way that is shut needs no weight of its own, and
+    // spreading its weight over the open ones would report light that arrived
+    // by no path at all.
     for (var index = 0; index < 4; index = index + 1) {
-        let coarseOrigin = uniforms.uOrigin + (vec2<f32>(corners[index]) + 0.5) * coarseSpacing;
+        let corner = clamp(base + vec2<i32>(index % 2, index / 2), vec2<i32>(0), coarseProbes - vec2<i32>(1));
+        let coarseOrigin = uniforms.uOrigin + (vec2<f32>(corner) + 0.5) * coarseSpacing;
         let walked = traceSegment(near, coarseOrigin + heading * uniforms.uRange.y);
 
-        // Scaled by what got through: a ray that ended on a wall carries what
-        // it collected up to it and nothing from beyond.
-        let carried = walked.radiance + walked.transmittance * coarseRays(corners[index], direction, coarseTile);
-
-        total = total + carried * (shares[index] / totalShare);
+        total = total + bilinear(weight, index) * (walked.radiance + walked.transmittance * coarseRays(corner, direction, coarseTile));
     }
 
     return vec4<f32>(total, 1.0);

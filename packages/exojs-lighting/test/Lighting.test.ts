@@ -429,8 +429,10 @@ describe('Lighting', () => {
 
     expect(lighting.quality).toBe('radiance');
     // The light quads' accumulation plus the emitters' field and the chain that
-    // reads it; the quad pass stays registered and switched off.
-    expect(app.framePasses.size).toBe(10);
+    // reads it, and the reduction of the mask that the walk over geometry
+    // skips blocks with; the quad pass stays registered and switched off, and
+    // so does that reduction until the walk asks for it.
+    expect(app.framePasses.size).toBe(11);
     // Auto never picks it: it is the renderer with an unbounded tuning surface.
     expect(new Lighting({ app: fakeApp(), quality: 'auto' }).quality).toBe('lightmap');
 

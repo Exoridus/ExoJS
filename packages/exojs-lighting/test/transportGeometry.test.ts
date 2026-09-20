@@ -84,6 +84,22 @@ describe('TransportGeometry', () => {
     expect(segmentsAt(tables, 5, 15)).toEqual([]);
   });
 
+  test('lists a segment lying on a cell boundary in the cells on both sides of it', () => {
+    const geometry = new TransportGeometry();
+
+    // A wall along a tile edge is the common case, not an awkward one, and the
+    // cell it belongs to by rounding is only one of the two it touches. A ray
+    // arriving from the other side crosses the boundary exactly where the wall
+    // is, and a cell that never lists it never tests it.
+    geometry.build(segmentBuffer([20, 5, 20, 35]), 1, [], region, 10);
+
+    const tables = geometry.tables;
+
+    expect(segmentsAt(tables, 15, 15)).toEqual([0]);
+    expect(segmentsAt(tables, 25, 15)).toEqual([0]);
+    expect(segmentsAt(tables, 5, 15)).toEqual([]);
+  });
+
   test('covers a diagonal segment conservatively rather than exactly', () => {
     const geometry = new TransportGeometry();
 
