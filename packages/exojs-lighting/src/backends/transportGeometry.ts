@@ -232,7 +232,11 @@ export class TransportGeometry {
     const placed: Light[] = [];
 
     for (const light of lights) {
-      if (light.enabled && lightFalloff(light) > 0) {
+      // Emission scales by the intensity, so a negative one would subtract
+      // light along every ray that crossed the source and a non-finite one
+      // would poison the table. Written as a positive test so that both are
+      // left out, on the same terms the chain counts its sources by.
+      if (light.enabled && light.intensity > 0 && lightFalloff(light) > 0) {
         placed.push(light);
       }
     }

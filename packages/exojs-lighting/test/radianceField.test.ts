@@ -2,6 +2,7 @@ import { Color, RenderTexture, TextureFormat, View } from '@codexo/exojs';
 import { describe, expect, test } from 'vitest';
 
 import { RadianceField, type TransportBinding } from '../src/backends/radianceField';
+import { PointLight } from '../src/lights/PointLight';
 
 /**
  * The filters are built inside {@link RadianceField.useTransport} and are not
@@ -108,6 +109,22 @@ describe('RadianceField transport wiring', () => {
       expect([walker!.uniforms['uMaskBasis']!.z, walker!.uniforms['uMaskBasis']!.w]).toEqual([stored(expected.c), stored(expected.d)]);
       expect([walker!.uniforms['uMaskOffset']!.x, walker!.uniforms['uMaskOffset']!.y]).toEqual([stored(expected.x), stored(expected.y)]);
     }
+
+    field.destroy();
+  });
+
+  test('counts only the sources that emit, on the terms the tables place them by', () => {
+    const field = fieldWith();
+    const lights = [
+      new PointLight({ radius: 100 }),
+      new PointLight({ radius: 100, intensity: 0 }),
+      new PointLight({ radius: 100, intensity: -1 }),
+      new PointLight({ radius: 100, intensity: Number.NaN }),
+      new PointLight({ radius: 100, enabled: false }),
+    ];
+
+    expect(field.collectSources(lights)).toBe(1);
+    expect(field.emitterCount).toBe(1);
 
     field.destroy();
   });

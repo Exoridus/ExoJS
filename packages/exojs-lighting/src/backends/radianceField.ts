@@ -210,7 +210,10 @@ export class RadianceField {
     let written = 0;
 
     for (const light of lights) {
-      if (!light.enabled || light.intensity <= 0) {
+      // A positive test rather than `<= 0`, so a non-finite intensity counts
+      // as emitting nothing here too rather than as a source the tables then
+      // leave out.
+      if (!light.enabled || !(light.intensity > 0)) {
         continue;
       }
 

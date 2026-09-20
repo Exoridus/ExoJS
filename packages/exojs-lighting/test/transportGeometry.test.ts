@@ -217,6 +217,27 @@ describe('TransportGeometry', () => {
     expect(emittersAt(geometry.tables, 40, 40)).toEqual([0]);
   });
 
+  test('skips a light that emits nothing, whichever way its intensity says so', () => {
+    const geometry = new TransportGeometry();
+    const dark = new PointLight({ radius: 100, intensity: 0 });
+    const inverted = new PointLight({ radius: 100, intensity: -1 });
+    const broken = new PointLight({ radius: 100, intensity: Number.NaN });
+    const on = new PointLight({ radius: 100 });
+
+    dark.position.set(10, 10);
+    inverted.position.set(20, 20);
+    broken.position.set(30, 30);
+    on.position.set(40, 40);
+    geometry.build(new Float32Array(0), 0, [dark, inverted, broken, on], region, 10);
+
+    // A negative intensity would otherwise be written as a negative density
+    // and subtract light along every ray that crossed the source.
+    expect(geometry.tables.emitterCount).toBe(1);
+    expect(emittersAt(geometry.tables, 40, 40)).toEqual([0]);
+    expect(emittersAt(geometry.tables, 10, 10)).toEqual([]);
+    expect(emittersAt(geometry.tables, 20, 20)).toEqual([]);
+  });
+
   test('stores a spot axis as a vector and its opening as cosines', () => {
     const geometry = new TransportGeometry();
     const spot = new SpotLight({ radius: 100, angle: 30, coneSoftness: 0, softness: 0 });
