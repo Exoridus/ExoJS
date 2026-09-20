@@ -6,6 +6,7 @@ import cascadeTransportFragment from './shaders/cascade-transport.frag';
 import cascadeTransportWgsl from './shaders/cascade-transport.wgsl';
 import transportFragment from './shaders/transport.frag';
 import transportWgsl from './shaders/transport.wgsl';
+import transportFilterHead from './shaders/transport-filter.frag';
 
 /**
  * What the transport chunk adds to a shader's uniform block, on top of
@@ -66,17 +67,8 @@ export const transportBounceUniforms = {
 } as const;
 
 const glsl = (textures: readonly string[], body: string): string =>
-  `#version 300 es
-precision highp float;
-precision highp int;
-
-// The filter's own input: the cascade above for a level, and nothing a
-// visibility pass reads.
-uniform sampler2D uTexture;
+  `${transportFilterHead}
 ${bindings(textures, 'glsl')}
-
-in vec2 vUv;
-out vec4 fragColor;
 
 ${transportFragment}
 

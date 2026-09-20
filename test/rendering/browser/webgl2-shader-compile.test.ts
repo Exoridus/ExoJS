@@ -117,9 +117,10 @@ const composedGather = transportGatherShader(gatherUniforms);
 const composedFragments: ReadonlyMap<string, string> = new Map([
   ['cascade-transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
   ['cascade-gather-transport.frag', withGlslUniformDeclarations(composedGather.glsl!.fragment, generateGlslUniformDeclarations(composedGather.uniformSchema!))],
-  // The chunk itself has no body of its own; the cascade's composition is the
-  // smallest whole program that contains it.
+  // Neither the chunk nor the preamble has a body of its own; the cascade's
+  // composition is the smallest whole program that contains them.
   ['transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
+  ['transport-filter.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
 ]);
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
