@@ -48,6 +48,9 @@ const runCase = async (scenario: MergeCase): Promise<void> => {
       uIndices: tables.indices,
       uMask: mask.texture,
       uMaskCoarse: mask.coarse,
+      // The bounce reads these; with the factor at zero neither is sampled.
+      uFrame: mask.texture,
+      uHistory: mask.texture,
     },
   });
   const root = new Container();
@@ -70,6 +73,13 @@ const runCase = async (scenario: MergeCase): Promise<void> => {
   filter.uniforms.uCone.set(Math.tan(Math.PI / (MERGE_TILE * MERGE_TILE)));
   filter.uniforms.uSun.set(0, 0, 0, 0);
   filter.uniforms.uSunColor.set(0, 0, 0);
+  filter.uniforms.uBounce.set(0);
+  filter.uniforms.uBounceStep.set(1);
+  filter.uniforms.uHistoryValid.set(0);
+  filter.uniforms.uToClip.set(1, 0, 0, 1);
+  filter.uniforms.uClipOffset.set(0, 0);
+  filter.uniforms.uReproject.set(1, 0, 0, 1);
+  filter.uniforms.uReprojectOffset.set(0, 0);
 
   try {
     for (const level of [COARSE_LEVEL, 0]) {

@@ -39,6 +39,59 @@ vec3 sky(vec2 direction, float sector) {
 }
 
 /**
+ * What a surface a stretch ended on gives back, from the light that fell on it
+ * last frame.
+ *
+ * Only a rasterised surface has anything to give: it is a drawable the camera
+ * also drew, so the frame holds its albedo where it stands. A segment is an
+ * outline with no material, and this returns nothing for one.
+ *
+ * Three things have to hold before last frame's light may be read at all. The
+ * sample has to sit on the side of the surface the stretch came from, which a
+ * step back along the ray gives. That place has to be open NOW, or a wall that
+ * has moved into it would hand out the light that stood there before it. And
+ * the place has to have been inside the previous frame, since a surface the
+ * camera has only just revealed was never lit.
+ *
+ * What comes out is an artistic term, not a solved bounce: a factor, the
+ * albedo, and last frame's light clamped at one so a surface beside a lamp
+ * cannot feed the lamp its own light back.
+ */
+vec3 bounced(vec2 surface, vec2 direction) {
+    if (uniforms.uBounce <= 0.0 || uniforms.uHistoryValid < 0.5) {
+        return vec3(0.0);
+    }
+
+    vec2 free = surface - direction * uniforms.uBounceStep;
+
+    if (maskBlocks(ivec2(floor(maskPlace(free))), uniforms.uMaskCells)) {
+        return vec3(0.0);
+    }
+
+    // The colour is the surface's own, read where the surface is; the light
+    // is what fell on the free side of it. Reading both in one place would
+    // either tint the bounce with whatever stands in front of the surface or
+    // read the light from inside it.
+    vec2 onIt = surface + direction * (uniforms.uBounceStep * 0.5);
+    vec2 clip = vec2(dot(uniforms.uToClip.xy, free), dot(uniforms.uToClip.zw, free)) + uniforms.uClipOffset;
+    vec2 colourClip = vec2(dot(uniforms.uToClip.xy, onIt), dot(uniforms.uToClip.zw, onIt)) + uniforms.uClipOffset;
+    vec2 was = vec2(dot(uniforms.uReproject.xy, clip), dot(uniforms.uReproject.zw, clip)) + uniforms.uReprojectOffset;
+    vec2 here = colourClip * 0.5 + 0.5;
+    vec2 lit = clip * 0.5 + 0.5;
+    vec2 before = was * 0.5 + 0.5;
+
+    if (here.x < 0.0 || here.x > 1.0 || here.y < 0.0 || here.y > 1.0 || lit.x < 0.0 || lit.x > 1.0 || lit.y < 0.0 || lit.y > 1.0) {
+        return vec3(0.0);
+    }
+
+    if (before.x < 0.0 || before.x > 1.0 || before.y < 0.0 || before.y > 1.0) {
+        return vec3(0.0);
+    }
+
+    return texture(uFrame, here).rgb * min(texture(uHistory, before).rgb, vec3(1.0)) * uniforms.uBounce;
+}
+
+/**
  * The cascade above, for one of its probes: the average of the four
  * directions there that subdivide this ray's own. Taking one would lose three
  * quarters of the angular detail the level above paid for.
@@ -83,10 +136,11 @@ void main() {
 
     if (uniforms.uMerge < 0.5) {
         Transfer walked = traceSegment(near, origin + heading * uniforms.uRange.y);
+        vec3 gave = walked.rastered > 0.5 ? bounced(walked.surface, heading) : vec3(0.0);
 
         // The top of the chain: what got through here reached the sky, and a
         // directional light is what the sky holds.
-        fragColor = vec4(walked.radiance + walked.transmittance * sky(heading, 0.5 * sector), 1.0);
+        fragColor = vec4(walked.radiance + gave + walked.transmittance * sky(heading, 0.5 * sector), 1.0);
 
         return;
     }
@@ -118,8 +172,11 @@ void main() {
         ivec2 corner = clamp(base + ivec2(index % 2, index / 2), ivec2(0), coarseProbes - 1);
         vec2 coarseOrigin = uniforms.uOrigin + (vec2(corner) + 0.5) * coarseSpacing;
         Transfer walked = traceSegment(near, coarseOrigin + heading * uniforms.uRange.y);
+        // A stretch that ended on a drawable carries what that drawable gives
+        // back; one that ended on an outline carries only what it collected.
+        vec3 gave = walked.rastered > 0.5 ? bounced(walked.surface, normalize(coarseOrigin + heading * uniforms.uRange.y - near)) : vec3(0.0);
 
-        total += bilinear(weight, index) * (walked.radiance + walked.transmittance * coarseRays(corner, direction, coarseTile));
+        total += bilinear(weight, index) * (walked.radiance + gave + walked.transmittance * coarseRays(corner, direction, coarseTile));
     }
 
     fragColor = vec4(total, 1.0);

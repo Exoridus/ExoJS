@@ -38,6 +38,45 @@ fn sky(direction: vec2<f32>, sector: f32) -> vec3<f32> {
 }
 
 /**
+ * What a surface a stretch ended on gives back, from the light that fell on it
+ * last frame. See the GLSL half for what has to hold before last frame's light
+ * may be read at all.
+ */
+fn bounced(surface: vec2<f32>, direction: vec2<f32>) -> vec3<f32> {
+    if (uniforms.uBounce <= 0.0 || uniforms.uHistoryValid < 0.5) {
+        return vec3<f32>(0.0);
+    }
+
+    let free = surface - direction * uniforms.uBounceStep;
+
+    if (maskBlocks(vec2<i32>(floor(maskPlace(free))), uniforms.uMaskCells)) {
+        return vec3<f32>(0.0);
+    }
+
+    // The colour is the surface's own, read where the surface is; the light is
+    // what fell on the free side of it. See the GLSL half.
+    let onIt = surface + direction * (uniforms.uBounceStep * 0.5);
+    let clip = vec2<f32>(dot(uniforms.uToClip.xy, free), dot(uniforms.uToClip.zw, free)) + uniforms.uClipOffset;
+    let colourClip = vec2<f32>(dot(uniforms.uToClip.xy, onIt), dot(uniforms.uToClip.zw, onIt)) + uniforms.uClipOffset;
+    let was = vec2<f32>(dot(uniforms.uReproject.xy, clip), dot(uniforms.uReproject.zw, clip)) + uniforms.uReprojectOffset;
+    let here = vec2<f32>(colourClip.x, -colourClip.y) * 0.5 + 0.5;
+    let lit = vec2<f32>(clip.x, -clip.y) * 0.5 + 0.5;
+    let before = vec2<f32>(was.x, -was.y) * 0.5 + 0.5;
+
+    if (here.x < 0.0 || here.x > 1.0 || here.y < 0.0 || here.y > 1.0 || lit.x < 0.0 || lit.x > 1.0 || lit.y < 0.0 || lit.y > 1.0) {
+        return vec3<f32>(0.0);
+    }
+
+    if (before.x < 0.0 || before.x > 1.0 || before.y < 0.0 || before.y > 1.0) {
+        return vec3<f32>(0.0);
+    }
+
+    return textureSampleLevel(uFrame, uFrameSampler, here, 0.0).rgb
+        * min(textureSampleLevel(uHistory, uHistorySampler, before, 0.0).rgb, vec3<f32>(1.0))
+        * uniforms.uBounce;
+}
+
+/**
  * The cascade above, for one of its probes: the average of the four
  * directions there that subdivide this ray's own. Taking one would lose three
  * quarters of the angular detail the level above paid for.
@@ -81,10 +120,11 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
 
     if (uniforms.uMerge < 0.5) {
         let walked = traceSegment(near, origin + heading * uniforms.uRange.y);
+        let gave = select(vec3<f32>(0.0), bounced(walked.surface, heading), walked.rastered > 0.5);
 
         // The top of the chain: what got through here reached the sky, and a
         // directional light is what the sky holds.
-        return vec4<f32>(walked.radiance + walked.transmittance * sky(heading, 0.5 * sector), 1.0);
+        return vec4<f32>(walked.radiance + gave + walked.transmittance * sky(heading, 0.5 * sector), 1.0);
     }
 
     // The four probes of the coarser grid around this one, bilinearly weighted:
@@ -114,8 +154,12 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
         let corner = clamp(base + vec2<i32>(index % 2, index / 2), vec2<i32>(0), coarseProbes - vec2<i32>(1));
         let coarseOrigin = uniforms.uOrigin + (vec2<f32>(corner) + 0.5) * coarseSpacing;
         let walked = traceSegment(near, coarseOrigin + heading * uniforms.uRange.y);
+        // A stretch that ended on a drawable carries what that drawable gives
+        // back; one that ended on an outline carries only what it collected.
+        let along = normalize(coarseOrigin + heading * uniforms.uRange.y - near);
+        let gave = select(vec3<f32>(0.0), bounced(walked.surface, along), walked.rastered > 0.5);
 
-        total = total + bilinear(weight, index) * (walked.radiance + walked.transmittance * coarseRays(corner, direction, coarseTile));
+        total = total + bilinear(weight, index) * (walked.radiance + gave + walked.transmittance * coarseRays(corner, direction, coarseTile));
     }
 
     return vec4<f32>(total, 1.0);

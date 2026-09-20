@@ -40,6 +40,30 @@ const bindings = (names: readonly string[], language: 'glsl' | 'wgsl'): string =
 /** The chunk's own textures, which every shader that walks binds. */
 const WALK_TEXTURES = ['uSegments', 'uEmitters', 'uCells', 'uIndices', 'uMask', 'uMaskCoarse'] as const;
 
+/**
+ * A cascade level also reads what a surface it ends on gives back: the frame
+ * the camera drew, for the albedo, and the light field of the previous frame,
+ * for what fell on it.
+ */
+const CASCADE_TEXTURES = [...WALK_TEXTURES, 'uFrame', 'uHistory'] as const;
+
+/**
+ * What the bounce term needs on top of the chunk's own: the factor, how far
+ * back along a ray the free side of a surface is, the camera this frame, and
+ * where a point of it sat in the frame the light field was last gathered
+ * through.
+ * @internal
+ */
+export const transportBounceUniforms = {
+  uToClip: UniformType.Vec4,
+  uClipOffset: UniformType.Vec2,
+  uReproject: UniformType.Vec4,
+  uReprojectOffset: UniformType.Vec2,
+  uBounce: UniformType.Float,
+  uBounceStep: UniformType.Float,
+  uHistoryValid: UniformType.Float,
+} as const;
+
 const glsl = (textures: readonly string[], body: string): string =>
   `#version 300 es
 precision highp float;
@@ -85,9 +109,11 @@ export const transportGatherShader = <U extends Record<string, UniformType>>(uni
  * the same probe, interval and merge terms either way.
  * @internal
  */
-export const transportCascadeShader = <U extends Record<string, UniformType>>(uniforms: U): Shader<U & typeof transportUniforms> =>
+export const transportCascadeShader = <U extends Record<string, UniformType>>(
+  uniforms: U,
+): Shader<U & typeof transportUniforms & typeof transportBounceUniforms> =>
   createFilterShader({
-    glsl: { fragment: glsl(WALK_TEXTURES, cascadeTransportFragment) },
-    wgsl: wgsl(WALK_TEXTURES, cascadeTransportWgsl),
-    uniforms: { ...uniforms, ...transportUniforms },
+    glsl: { fragment: glsl(CASCADE_TEXTURES, cascadeTransportFragment) },
+    wgsl: wgsl(CASCADE_TEXTURES, cascadeTransportWgsl),
+    uniforms: { ...uniforms, ...transportUniforms, ...transportBounceUniforms },
   });

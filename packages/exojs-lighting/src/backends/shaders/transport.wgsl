@@ -34,20 +34,30 @@
 
 /**
  * What a finite stretch amounts to: the radiance found along it, what got
- * through, the work the walk did, and whether it ran out of budget doing it.
+ * through, the work the walk did, whether it ran out of budget doing it, and
+ * where it ended if it ended on a rasterised surface.
  *
- * Both diagnostics, and they say different things. `visited` is a work
- * counter - grid cells and mask texels read - which a caller compares against
- * another walk's; it is not a status, and a stretch that misses everything
- * legitimately reads zero. `exhausted` is the status: it is the only thing
- * that tells a conservatively dark answer apart from a wall, which no
- * radiance value can show on its own.
+ * `visited` and `exhausted` are both diagnostics, and they say different
+ * things. `visited` is a work counter - grid cells and mask texels read -
+ * which a caller compares against another walk's; it is not a status, and a
+ * stretch that misses everything legitimately reads zero. `exhausted` is the
+ * status: it is the only thing that tells a conservatively dark answer apart
+ * from a wall, which no radiance value can show on its own.
+ *
+ * `rastered` is one only where a texel of the occluder mask is what stopped
+ * the stretch, and `surface` is where. A stretch stopped by a segment reports
+ * neither: an outline is geometry with nothing on it, and a caller that gives
+ * a surface something to re-emit has to know which of the two it has. A walk
+ * that ran out of budget reports neither either - it stops somewhere it never
+ * read, which is no surface at all.
  */
 struct Transfer {
     radiance: vec3<f32>,
     transmittance: f32,
     visited: f32,
     exhausted: bool,
+    surface: vec2<f32>,
+    rastered: f32,
 };
 
 /**
@@ -82,7 +92,12 @@ fn composeTransfer(near: Transfer, far: Transfer) -> Transfer {
         near.radiance + near.transmittance * far.radiance,
         near.transmittance * far.transmittance,
         near.visited + far.visited,
-        near.exhausted || far.exhausted
+        near.exhausted || far.exhausted,
+        // What the near stretch ended on, if it ended on anything: nothing
+        // beyond it was reached, so the far stretch's surface is not this
+        // stretch's.
+        select(far.surface, near.surface, near.rastered > 0.5),
+        select(far.rastered, near.rastered, near.rastered > 0.5)
     );
 }
 
@@ -534,13 +549,18 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     let span = length(delta);
 
     if (span <= 0.0) {
-        return Transfer(vec3<f32>(0.0), 1.0, 0.0, false);
+        return Transfer(vec3<f32>(0.0), 1.0, 0.0, false, vec2<f32>(0.0), 0.0);
     }
 
     let rastered = maskHit(a, b);
     let stopped = rastered.fraction * span;
     let open = select(0.0, 1.0, rastered.fraction >= 1.0);
     let direction = delta / span;
+    // Where the rasterised half of the scene stopped this stretch, and whether
+    // it did. A segment found on the way overrides both: it is the nearer wall
+    // and it carries nothing to re-emit.
+    let surface = a + direction * stopped;
+    let onSurface = 1.0 - open;
     let cells = uniforms.uGridCells;
     let size = uniforms.uCellSize;
     let lower = uniforms.uGridOrigin;
@@ -563,7 +583,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     for (var axis = 0; axis < 2; axis = axis + 1) {
         if (abs(ray[axis]) < TRANSPORT_EPSILON) {
             if (start[axis] < low[axis] || start[axis] > high[axis]) {
-                return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted);
+                return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
             }
 
             continue;
@@ -577,7 +597,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     }
 
     if (leave <= entry) {
-        return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted);
+        return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
     }
 
     let place = (a + direction * entry - lower) / size;
@@ -609,7 +629,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
 
     for (var taken = 0; taken < MAX_CELL_STEPS; taken = taken + 1) {
         if (travelled >= leave) {
-            return Transfer(found, open, visited, rastered.exhausted);
+            return Transfer(found, open, visited, rastered.exhausted, surface, onSurface);
         }
 
         visited = visited + 1.0;
@@ -647,7 +667,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
             }
 
             if (blocked < leaving) {
-                return Transfer(found, 0.0, visited, rastered.exhausted);
+                return Transfer(found, 0.0, visited, rastered.exhausted, vec2<f32>(0.0), 0.0);
             }
         }
 
@@ -664,5 +684,5 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
 
     // Out of steps: dark and blocking, and saying so. What the walk did not
     // read cannot be reported as open.
-    return Transfer(found, 0.0, visited, true);
+    return Transfer(found, 0.0, visited, true, vec2<f32>(0.0), 0.0);
 }

@@ -39,7 +39,7 @@ import emitterQuadVertex from './shaders/emitter-quad.vert';
 import emitterQuadWgsl from './shaders/emitter-quad.wgsl';
 import probeVisibilityFragment from './shaders/probe-visibility.frag';
 import probeVisibilityWgsl from './shaders/probe-visibility.wgsl';
-import { transportCascadeShader, transportGatherShader, type transportUniforms } from './transportShaders';
+import { type transportBounceUniforms, transportCascadeShader, transportGatherShader, type transportUniforms } from './transportShaders';
 
 /** What one cascade level is told about this frame, whichever walk it runs. @internal */
 export const cascadeUniforms = {
@@ -268,6 +268,8 @@ export class RadianceField {
   private readonly _options: RadianceFieldOptions;
   private readonly _distance: RenderTexture;
   private readonly _target: RenderTexture;
+  /** What the camera drew before the light was applied: the albedo a bounce is tinted by. */
+  private readonly _frame: RenderTexture;
   private readonly _emission: RenderTexture;
   private readonly _geometry: Geometry = unitQuad();
   private readonly _material: MeshMaterial;
@@ -298,7 +300,7 @@ export class RadianceField {
    * bound. It has no companion that measures merge weights: the walk to a
    * coarser probe already reports what reached it.
    */
-  private _transportCascade: ShaderFilter<typeof cascadeUniforms & typeof transportUniforms> | null = null;
+  private _transportCascade: ShaderFilter<typeof cascadeUniforms & typeof transportUniforms & typeof transportBounceUniforms> | null = null;
   /** The receiver reconstruction over the same walk: a fragment reaches its probes or it does not. */
   private _transportGather: ShaderFilter<typeof gatherUniforms & typeof transportUniforms> | null = null;
   private _walk: TransportBinding | null = null;
@@ -317,6 +319,7 @@ export class RadianceField {
   public constructor(distance: RenderTexture, target: RenderTexture, frame: RenderTexture, options: RadianceFieldOptions) {
     this._distance = distance;
     this._target = target;
+    this._frame = frame;
     this._options = options;
     this._emission = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Linear });
     this._chain = [
@@ -527,7 +530,9 @@ export class RadianceField {
 
     this._transportCascade?.destroy();
     this._transportGather?.destroy();
-    this._transportCascade = ShaderFilter.from(transportCascadeShader(cascadeUniforms), { textures: { ...binding.textures } });
+    this._transportCascade = ShaderFilter.from(transportCascadeShader(cascadeUniforms), {
+      textures: { ...binding.textures, uFrame: this._frame, uHistory: this._target },
+    });
     this._transportGather = ShaderFilter.from(transportGatherShader(gatherUniforms), { textures: { ...binding.textures } });
     this._walkRevision = binding.revision;
   }
@@ -621,8 +626,30 @@ export class RadianceField {
 
     if (this._options.bounce > 0) {
       this._writeReprojection(view, toWorld);
-      this._transform.set(2 * toWorld.a, 2 * toWorld.b, toWorld.x - toWorld.a - toWorld.b, 2 * toWorld.c, 2 * toWorld.d, toWorld.y - toWorld.c - toWorld.d);
-      this._bounceBatch.add(this._transform, this._bounceTint);
+
+      // The quad paints the bounce into the emission field, which only the
+      // field walk reads. The walk over geometry asks the surface a ray
+      // actually ended on instead, so it takes the same terms as uniforms and
+      // draws nothing.
+      if (walking === null) {
+        this._transform.set(2 * toWorld.a, 2 * toWorld.b, toWorld.x - toWorld.a - toWorld.b, 2 * toWorld.c, 2 * toWorld.d, toWorld.y - toWorld.c - toWorld.d);
+        this._bounceBatch.add(this._transform, this._bounceTint);
+      }
+    }
+
+    if (this._transportCascade !== null) {
+      const cascade = this._transportCascade.uniforms;
+      const toClip = this._pendingToClip;
+
+      cascade.uToClip.set(toClip.a, toClip.b, toClip.c, toClip.d);
+      cascade.uClipOffset.set(toClip.x, toClip.y);
+      cascade.uReproject.set(this._reproject.a, this._reproject.b, this._reproject.c, this._reproject.d);
+      cascade.uReprojectOffset.set(this._reproject.x, this._reproject.y);
+      cascade.uBounce.set(this._options.bounce);
+      // A whole texel back along the ray, which is the texel the stretch came
+      // through: half of one can still land inside the texel that stopped it.
+      cascade.uBounceStep.set(texel);
+      cascade.uHistoryValid.set(this._history ? 1 : 0);
     }
   }
 

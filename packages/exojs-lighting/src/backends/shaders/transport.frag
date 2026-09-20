@@ -33,20 +33,30 @@
 
 /**
  * What a finite stretch amounts to: the radiance found along it, what got
- * through, the work the walk did, and whether it ran out of budget doing it.
+ * through, the work the walk did, whether it ran out of budget doing it, and
+ * where it ended if it ended on a rasterised surface.
  *
- * Both diagnostics, and they say different things. `visited` is a work
- * counter - grid cells and mask texels read - which a caller compares against
- * another walk's; it is not a status, and a stretch that misses everything
- * legitimately reads zero. `exhausted` is the status: it is the only thing
- * that tells a conservatively dark answer apart from a wall, which no
- * radiance value can show on its own.
+ * `visited` and `exhausted` are both diagnostics, and they say different
+ * things. `visited` is a work counter - grid cells and mask texels read -
+ * which a caller compares against another walk's; it is not a status, and a
+ * stretch that misses everything legitimately reads zero. `exhausted` is the
+ * status: it is the only thing that tells a conservatively dark answer apart
+ * from a wall, which no radiance value can show on its own.
+ *
+ * `rastered` is one only where a texel of the occluder mask is what stopped
+ * the stretch, and `surface` is where. A stretch stopped by a segment reports
+ * neither: an outline is geometry with nothing on it, and a caller that gives
+ * a surface something to re-emit has to know which of the two it has. A walk
+ * that ran out of budget reports neither either - it stops somewhere it never
+ * read, which is no surface at all.
  */
 struct Transfer {
     vec3 radiance;
     float transmittance;
     float visited;
     bool exhausted;
+    vec2 surface;
+    float rastered;
 };
 
 /**
@@ -87,7 +97,12 @@ Transfer composeTransfer(Transfer near, Transfer far) {
         near.radiance + near.transmittance * far.radiance,
         near.transmittance * far.transmittance,
         near.visited + far.visited,
-        near.exhausted || far.exhausted
+        near.exhausted || far.exhausted,
+        // What the near stretch ended on, if it ended on anything: nothing
+        // beyond it was reached, so the far stretch's surface is not this
+        // stretch's.
+        near.rastered > 0.5 ? near.surface : far.surface,
+        near.rastered > 0.5 ? near.rastered : far.rastered
     );
 }
 
@@ -500,13 +515,18 @@ Transfer traceSegment(vec2 a, vec2 b) {
     float span = length(delta);
 
     if (span <= 0.0) {
-        return Transfer(vec3(0.0), 1.0, 0.0, false);
+        return Transfer(vec3(0.0), 1.0, 0.0, false, vec2(0.0), 0.0);
     }
 
     MaskHit rastered = maskHit(a, b);
     float stopped = rastered.fraction * span;
     float open = rastered.fraction >= 1.0 ? 1.0 : 0.0;
     vec2 direction = delta / span;
+    // Where the rasterised half of the scene stopped this stretch, and whether
+    // it did. A segment found on the way overrides both: it is the nearer wall
+    // and it carries nothing to re-emit.
+    vec2 surface = a + direction * stopped;
+    float onSurface = 1.0 - open;
     vec2 cells = uniforms.uGridCells;
     float size = uniforms.uCellSize;
     vec2 lower = uniforms.uGridOrigin;
@@ -524,7 +544,7 @@ Transfer traceSegment(vec2 a, vec2 b) {
     for (int axis = 0; axis < 2; axis++) {
         if (abs(direction[axis]) < TRANSPORT_EPSILON) {
             if (a[axis] < lower[axis] || a[axis] > upper[axis]) {
-                return Transfer(vec3(0.0), open, rastered.visited, rastered.exhausted);
+                return Transfer(vec3(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
             }
 
             continue;
@@ -538,7 +558,7 @@ Transfer traceSegment(vec2 a, vec2 b) {
     }
 
     if (leave <= entry) {
-        return Transfer(vec3(0.0), open, rastered.visited, rastered.exhausted);
+        return Transfer(vec3(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
     }
 
     vec2 place = (a + direction * entry - lower) / size;
@@ -559,7 +579,7 @@ Transfer traceSegment(vec2 a, vec2 b) {
 
     for (int taken = 0; taken < MAX_CELL_STEPS; taken++) {
         if (travelled >= leave) {
-            return Transfer(found, open, visited, rastered.exhausted);
+            return Transfer(found, open, visited, rastered.exhausted, surface, onSurface);
         }
 
         visited += 1.0;
@@ -597,7 +617,7 @@ Transfer traceSegment(vec2 a, vec2 b) {
             }
 
             if (blocked < leaving) {
-                return Transfer(found, 0.0, visited, rastered.exhausted);
+                return Transfer(found, 0.0, visited, rastered.exhausted, vec2(0.0), 0.0);
             }
         }
 
@@ -614,5 +634,5 @@ Transfer traceSegment(vec2 a, vec2 b) {
 
     // Out of steps: dark and blocking, and saying so. What the walk did not
     // read cannot be reported as open.
-    return Transfer(found, 0.0, visited, true);
+    return Transfer(found, 0.0, visited, true, vec2(0.0), 0.0);
 }
