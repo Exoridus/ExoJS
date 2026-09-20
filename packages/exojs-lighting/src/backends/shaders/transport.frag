@@ -64,11 +64,15 @@ struct Transfer {
  *
  * Every step advances the cell index along exactly one axis, so a stretch
  * clipped to the grid visits `1 + |di_x| + |di_y|` cells, at most
- * `width + height - 1`. The largest grid the 2048-texel field produces at the
- * default cell size is 128 a side, so 255 is the true ceiling and this is
- * twice it. The clip is what makes that hold: unclipped, a stretch beginning
- * far outside would walk empty cells to reach the grid, and no bound taken
- * from the grid's own size would cover it.
+ * `width + height - 1`. The grid covers the world-space box of the field view,
+ * which a rotated camera makes larger than the field itself: the largest field
+ * is 2048 texels an axis, a square one turned 45 degrees spans about 2896 of
+ * them, and at a cell of eight texels that is 362 cells each way and 723 steps
+ * - not the 255 an unrotated grid of 128 cells would need. This is the next
+ * power of two above it, and the host widens its cells rather than lay out a
+ * grid that could exceed it. The clip is what makes any such bound hold:
+ * unclipped, a stretch beginning far outside would walk empty cells to reach
+ * the grid, and no bound taken from the grid's own size would cover it.
  *
  * Running out is therefore unreachable rather than a case with a fallback. The
  * walk reports darkness if it ever does - inventing light where the scene was
@@ -77,7 +81,7 @@ struct Transfer {
  * is no substitute: it saturates at whatever a caller stores it in, and a
  * stretch that finds nothing reads zero either way.
  */
-const int MAX_CELL_STEPS = 512;
+const int MAX_CELL_STEPS = 1024;
 
 /** Below this, two directions are parallel and two cosines are one edge. */
 const float TRANSPORT_EPSILON = 1e-6;

@@ -26,6 +26,19 @@ const TABLE_WIDTH = 256;
 const MIN_CELL = 1e-3;
 
 /**
+ * Cells one walk over the grid may visit, as the shaders' `MAX_CELL_STEPS`
+ * fixes it.
+ *
+ * A stretch clipped to the grid advances one cell index per step, so it visits
+ * at most `gridWidth + gridHeight - 1` cells. The budget is a shader constant
+ * and the grid is laid out here, so this is what a frame is laid out against:
+ * {@link TransportGeometry.build} widens its cells rather than produce a grid
+ * the walk could run out on. Widening is free of consequence because the cell
+ * size decides which primitives a ray tests and never whether one is hit.
+ */
+const MAX_CELL_STEPS = 1024;
+
+/**
  * Upper bound on a table's texel count, from the smallest guaranteed WebGL2 and
  * WebGPU 2D texture dimension. A build that would exceed it reports rather than
  * silently dropping geometry, which would show as light through a wall.
@@ -166,11 +179,19 @@ export class TransportGeometry {
   }
 
   private _layOutGrid(bounds: ReadonlyRectangle, cellSize: number): void {
-    this._cellSize = Math.max(cellSize, MIN_CELL);
+    const width = Math.max(0, bounds.width);
+    const height = Math.max(0, bounds.height);
+
+    // `bounds` is the world-space box the field covers, which a rotated camera
+    // makes larger than the field itself - so a cell size chosen from the
+    // field's own density can produce a grid wider than the walk's budget. The
+    // floor below is what keeps `gridWidth + gridHeight - 1` within it for any
+    // bounds a caller hands over: `ceil(w/s) + ceil(h/s) - 1 <= (w + h)/s + 1`.
+    this._cellSize = Math.max(cellSize, MIN_CELL, (width + height) / (MAX_CELL_STEPS - 1));
     this._originX = bounds.x;
     this._originY = bounds.y;
-    this._gridWidth = Math.max(1, Math.ceil(Math.max(0, bounds.width) / this._cellSize));
-    this._gridHeight = Math.max(1, Math.ceil(Math.max(0, bounds.height) / this._cellSize));
+    this._gridWidth = Math.max(1, Math.ceil(width / this._cellSize));
+    this._gridHeight = Math.max(1, Math.ceil(height / this._cellSize));
 
     const cells = this._gridWidth * this._gridHeight;
 
@@ -399,6 +420,7 @@ const fit = (buffer: Float32Array<ArrayBuffer>, floats: number): Float32Array<Ar
 export {
   CHANNELS as transportChannels,
   EMITTER_TEXELS as transportEmitterTexels,
+  MAX_CELL_STEPS as transportMaxCellSteps,
   SEGMENT_TEXELS as transportSegmentTexels,
   TABLE_WIDTH as transportTableWidth,
 };

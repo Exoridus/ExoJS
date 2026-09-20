@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { Color, Rectangle } from '@codexo/exojs';
 import { describe, expect, test } from 'vitest';
 
@@ -8,6 +11,7 @@ import {
   transportChannels,
   transportEmitterTexels,
   TransportGeometry,
+  transportMaxCellSteps,
   type TransportTables,
 } from '../src/backends/transportGeometry';
 import { LineLight } from '../src/lights/LineLight';
@@ -287,5 +291,65 @@ describe('TransportGeometry', () => {
     const count = 256 * 2048 + 1;
 
     expect(() => geometry.build(new Float32Array(count * 4), count, [], region, 10)).toThrow(TransportCapacityError);
+  });
+
+  describe('against the walk budget', () => {
+    /** The world box a field of `width` by `height` covers once the camera is turned. */
+    const turned = (width: number, height: number, rotation: number): Rectangle =>
+      new Rectangle(
+        0,
+        0,
+        width * Math.abs(Math.cos(rotation)) + height * Math.abs(Math.sin(rotation)),
+        width * Math.abs(Math.sin(rotation)) + height * Math.abs(Math.cos(rotation)),
+      );
+
+    const walkOf = (bounds: Rectangle, cellSize: number): TransportTables => {
+      const geometry = new TransportGeometry();
+
+      geometry.build(new Float32Array(), 0, [], bounds, cellSize);
+
+      return geometry.tables;
+    };
+
+    test('is the same budget the shaders were written against', () => {
+      const declared = [
+        readFileSync(resolve(__dirname, '../src/backends/shaders/transport.frag'), 'utf8'),
+        readFileSync(resolve(__dirname, '../src/backends/shaders/transport.wgsl'), 'utf8'),
+      ].map(source => Number(/MAX_CELL_STEPS(?:: i32)? = (\d+)/.exec(source)?.[1]));
+
+      expect(declared).toEqual([transportMaxCellSteps, transportMaxCellSteps]);
+    });
+
+    test.each([0, 45, 89])('keeps the grid the largest field asks for at %i degrees within it', degrees => {
+      // The mask is capped at 2048 texels an axis and a cell spans eight of
+      // them, so this is the widest grid the renderer can ask for - and a
+      // turned camera spreads its world box well past the field's own size.
+      const tables = walkOf(turned(2048, 2048, (degrees * Math.PI) / 180), 8);
+
+      expect(tables.gridWidth + tables.gridHeight - 1).toBeLessThanOrEqual(transportMaxCellSteps);
+      // Turning the camera must not coarsen the grid: the cells stay the size
+      // the field's own density asked for.
+      expect(tables.cellSize).toBe(8);
+    });
+
+    test('widens its cells rather than lay out a grid the walk could run out on', () => {
+      const asked = 8;
+      const tables = walkOf(new Rectangle(0, 0, 1e5, 4e4), asked);
+
+      expect(tables.gridWidth + tables.gridHeight - 1).toBeLessThanOrEqual(transportMaxCellSteps);
+      expect(tables.cellSize).toBeGreaterThan(asked);
+    });
+
+    test('still lists a segment lying on a boundary of the widened grid in the cells on both sides', () => {
+      const geometry = new TransportGeometry();
+      const bounds = new Rectangle(0, 0, 1e5, 4e4);
+
+      geometry.build(segmentBuffer([0, 0, 0, 0]), 1, [], bounds, 8);
+
+      const tables = geometry.tables;
+
+      expect(tables.cellSize).toBeGreaterThan(8);
+      expect(segmentsAt(tables, 0, 0)).toEqual([0]);
+    });
   });
 });
