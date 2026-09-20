@@ -60,12 +60,18 @@ export interface Case {
   /**
    * What the probes must satisfy. `radiance[i]`, `through[i]`, `visited[i]` and
    * `hit[i]` hold the four draws of trace `i`, each as four 8-bit channels.
+   *
+   * `flatVisited[i]` is the cell count of the same trace walked without the
+   * block level, and is collected only where the case brings a mask. That the
+   * two walks find the same wall is asserted for every trace by the runners
+   * themselves; a case only reads it to say how much cheaper the walk got.
    */
   check(
     radiance: ReadonlyArray<readonly number[]>,
     through: ReadonlyArray<readonly number[]>,
     visited: ReadonlyArray<readonly number[]>,
     hit: ReadonlyArray<readonly number[]>,
+    flatVisited: ReadonlyArray<readonly number[]>,
   ): void;
 }
 
@@ -344,6 +350,43 @@ export const transportCases = (): readonly Case[] => [
       for (let channel = 0; channel < 3; channel++) {
         near(radiance[0]![channel]!, radiance[1]![channel]!);
       }
+    },
+  },
+  {
+    name: 'the block level skips what it says is empty',
+    // A mask of 64 texels an axis - 8 world units each - with its one blocker
+    // nowhere near the stretch. The flat walk reads a texel per 8 world units
+    // it crosses; the walk that consults the block level reads a texel per
+    // block, and the two have to agree on finding nothing.
+    mask: { texels: 64, world: PROBE_REGION, blocked: [[32, 50]] },
+    segments: [],
+    lights: [],
+    traces: [[-252, 4, 252, 4]],
+    scale: 1,
+    check: (_radiance, through, visited, hit, flatVisited) => {
+      near(hit[0]![0]!, 255);
+      near(through[0]![0]!, OPEN);
+      // The stretch crosses 63 texels and 8 blocks, none of them marked: the
+      // blocker sits two blocks off the row, which its one-texel margin does
+      // not reach. Both counts also carry the cell walk, the same either way,
+      // so the difference is what the block level saved.
+      expect(flatVisited[0]![0]! - visited[0]![0]!, 'texels the block level saved').toBeGreaterThan(45);
+    },
+  },
+  {
+    name: 'a block holding a blocker the stretch misses is not itself a wall',
+    // Mask texel (8, 8) blocks, and the block that holds it spans texels 8..15
+    // on both axes. The stretch crosses that block along row 14 and has to
+    // come out the other side: a walk that took a marked block for a wall
+    // would stop where it entered one.
+    mask: { texels: 64, world: PROBE_REGION, blocked: [[8, 8]] },
+    segments: [],
+    lights: [],
+    traces: [[-200, -140, -120, -140]],
+    scale: 1,
+    check: (_radiance, through, _visited, hit) => {
+      near(hit[0]![0]!, 255);
+      near(through[0]![0]!, OPEN);
     },
   },
   {

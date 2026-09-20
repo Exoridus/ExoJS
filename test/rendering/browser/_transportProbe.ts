@@ -39,6 +39,7 @@ export const probeUniforms = {
   uMaskCells: UniformType.Vec2,
   uMaskBasis: UniformType.Vec4,
   uMaskOffset: UniformType.Vec2,
+  uMaskBlocks: UniformType.Vec2,
   uA: UniformType.Vec2,
   uB: UniformType.Vec2,
   uScale: UniformType.Float,
@@ -73,6 +74,7 @@ uniform sampler2D uEmitters;
 uniform sampler2D uCells;
 uniform sampler2D uIndices;
 uniform sampler2D uMask;
+uniform sampler2D uMaskCoarse;
 
 out vec4 fragColor;
 
@@ -111,6 +113,8 @@ export const probeWgslSource = `
 @group(1) @binding(8) var uIndicesSampler: sampler;
 @group(1) @binding(9) var uMask: texture_2d<f32>;
 @group(1) @binding(10) var uMaskSampler: sampler;
+@group(1) @binding(11) var uMaskCoarse: texture_2d<f32>;
+@group(1) @binding(12) var uMaskCoarseSampler: sampler;
 
 ${transportWgsl}
 
@@ -204,15 +208,53 @@ export interface MaskSpec {
   readonly coverage?: number;
 }
 
-/** A bound mask: the texture plus the world-to-texel mapping the shader needs. */
+/** Fine mask texels one coarse block covers on each axis, as the shader walks them. */
+export const MASK_COARSE = 8;
+
+/** A bound mask: the textures plus the world-to-texel mapping the shader needs. */
 export interface ProbeMask {
   readonly texture: DataTexture<TextureFormat.Rgba8>;
+  /** The block level: one texel per {@link MASK_COARSE} square of the mask, dilated by a texel. */
+  readonly coarse: DataTexture<TextureFormat.Rgba8>;
   readonly cells: readonly [number, number];
+  readonly blocks: readonly [number, number];
   /** Rows of the 2x2 world-to-texel matrix, as `(xx, xy, yx, yy)`. */
   readonly basis: readonly [number, number, number, number];
   readonly offset: readonly [number, number];
   destroy(): void;
 }
+
+/**
+ * The block level of a mask: a block is marked wherever a mask texel within one
+ * texel of it blocks.
+ *
+ * The extra texel is what lets the walk skip an unmarked block outright. A
+ * stretch inside a block can still be stopped by a texel just outside it - the
+ * two that share only the corner it crosses - so a block reduced over its own
+ * eight texels alone would let that stretch through.
+ */
+const coarseLevel = (data: Uint8Array, size: number): { readonly data: Uint8Array; readonly size: number } => {
+  const blocks = Math.ceil(size / MASK_COARSE);
+  const reduced = new Uint8Array(blocks * blocks * 4);
+
+  for (let by = 0; by < blocks; by++) {
+    for (let bx = 0; bx < blocks; bx++) {
+      let most = 0;
+
+      for (let y = by * MASK_COARSE - 1; y <= by * MASK_COARSE + MASK_COARSE; y++) {
+        for (let x = bx * MASK_COARSE - 1; x <= bx * MASK_COARSE + MASK_COARSE; x++) {
+          if (x < 0 || y < 0 || x >= size || y >= size) continue;
+
+          most = Math.max(most, data[(y * size + x) * 4 + 3]!);
+        }
+      }
+
+      reduced.fill(most, (by * blocks + bx) * 4, (by * blocks + bx) * 4 + 4);
+    }
+  }
+
+  return { data: reduced, size: blocks };
+};
 
 /** An empty 1x1 mask, which the shader reads as "nothing was rasterised". */
 export const probeMask = (spec?: MaskSpec): ProbeMask => {
@@ -224,15 +266,22 @@ export const probeMask = (spec?: MaskSpec): ProbeMask => {
     data.fill(coverage, (y * size + x) * 4, (y * size + x) * 4 + 4);
   }
 
+  const reduced = coarseLevel(data, size);
   const texture = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8, data });
+  const coarse = new DataTexture({ width: reduced.size, height: reduced.size, format: TextureFormat.Rgba8, data: reduced.data });
   const scale = spec === undefined ? 0 : size / spec.world.width;
 
   return {
     texture,
+    coarse,
     cells: spec === undefined ? [0, 0] : [size, size],
+    blocks: spec === undefined ? [0, 0] : [reduced.size, reduced.size],
     basis: [scale, 0, 0, spec === undefined ? 0 : size / spec.world.height],
     offset: spec === undefined ? [0, 0] : [-spec.world.x * scale, (-spec.world.y * size) / spec.world.height],
-    destroy: (): void => texture.destroy(),
+    destroy: (): void => {
+      texture.destroy();
+      coarse.destroy();
+    },
   };
 };
 

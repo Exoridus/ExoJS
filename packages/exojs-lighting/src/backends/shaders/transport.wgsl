@@ -17,15 +17,19 @@
 //   uCells     - per grid cell `(segmentOffset, segmentCount, emitterOffset, emitterCount)`
 //   uIndices   - the primitive ids those ranges point into, in the red channel
 //   uMask      - rasterised occluders, coverage in alpha, on a grid of its own
+//   uMaskCoarse - one texel per block of the mask, holding what that block holds
 //
 // Uniform block fields: `uGridOrigin` (vec2<f32>), `uGridCells` (vec2<f32>),
 // `uCellSize` (f32), `uTableWidth` (f32), `uMaskCells` (vec2<f32>),
-// `uMaskBasis` (vec4<f32>) and `uMaskOffset` (vec2<f32>).
+// `uMaskBasis` (vec4<f32>), `uMaskOffset` (vec2<f32>) and `uMaskBlocks`
+// (vec2<f32>).
 //
 // `uMaskBasis` and `uMaskOffset` map a world position into the mask's texel
 // space, rows of the matrix first: the host owns that mapping, including which
 // way its rows run, because a mask bound as a render target is oriented by the
-// backend that wrote it. `uMaskCells` of zero says nothing was rasterised.
+// backend that wrote it. `uMaskCells` of zero says nothing was rasterised, and
+// `uMaskBlocks` of zero says no block level was built, which the walk answers
+// the same way at more cost.
 
 /**
  * What a finite stretch amounts to: the radiance found along it, what got
@@ -261,20 +265,29 @@ struct MaskHit {
 /** Coverage at or above which a mask texel blocks, as the distance field reads it too. */
 const MASK_BLOCKING: f32 = 0.5;
 
+/** Mask texels one block of the coarse level covers, on each axis. */
+const MASK_COARSE: i32 = 8;
+
 /**
- * Mask texels one walk may read.
+ * Texels one walk may read, over both levels together.
  *
  * The same step accounting as the cell walk, over the mask's own grid: a
- * stretch clipped to it visits `1 + |di_x| + |di_y|` texels, and a corner
+ * stretch clipped to it enters `1 + |di_x| + |di_y|` texels, and a corner
  * crossing advances both indices in one step rather than two. The field is
- * capped at 2048 texels an axis, so 4095 is the true ceiling and this is one
- * above it.
+ * capped at 2048 texels an axis, so 4095 texels is the ceiling, and the block
+ * level adds one read per block the stretch enters, at most 511 of them.
+ *
+ * Descending into a block and leaving it again cost nothing of their own: the
+ * block read that decides it is the same read either way, and the walk carries
+ * no state per level to unwind. The true ceiling is therefore 4606, and both
+ * loops are bounded by a budget they share rather than by one each, so a long
+ * inner sweep cannot buy the outer one more steps.
  *
  * Exhaustion is therefore unreachable, and if it were reached the walk reports
  * blocking where it stopped: a wall that is too far to be read is the
  * conservative answer, since the alternative is light arriving through it.
  */
-const MAX_MASK_STEPS: i32 = 4096;
+const MAX_MASK_STEPS: i32 = 8192;
 
 /** World position to the mask's texel space, in whatever orientation the host bound it in. */
 fn maskPlace(world: vec2<f32>) -> vec2<f32> {
@@ -288,6 +301,24 @@ fn maskBlocks(texel: vec2<i32>, cells: vec2<f32>) -> bool {
     }
 
     return textureLoad(uMask, texel, 0).a >= MASK_BLOCKING;
+}
+
+/**
+ * Whether a block of the coarse level holds anything, reading outside it as
+ * empty.
+ *
+ * A block is marked wherever a mask texel within one texel of it blocks. That
+ * margin is what makes an unmarked block skippable outright: a stretch inside
+ * one can still be stopped by a texel just beyond its edge - the two that
+ * share only the corner it crosses - and a block reduced over its own texels
+ * alone would let that stretch through.
+ */
+fn blockHolds(block: vec2<i32>, blocks: vec2<f32>) -> bool {
+    if (block.x < 0 || block.y < 0 || f32(block.x) >= blocks.x || f32(block.y) >= blocks.y) {
+        return false;
+    }
+
+    return textureLoad(uMaskCoarse, block, 0).a >= MASK_BLOCKING;
 }
 
 /**
@@ -341,72 +372,125 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
         return MaskHit(1.0, 0.0);
     }
 
-    let place = origin + delta * entry;
-    var texel = clamp(vec2<i32>(floor(place)), vec2<i32>(0), vec2<i32>(cells) - vec2<i32>(1));
+    let blocks = uniforms.uMaskBlocks;
+    let coarse = blocks.x >= 1.0 && blocks.y >= 1.0;
     let stepping = vec2<i32>(select(-1, 1, delta.x >= 0.0), select(-1, 1, delta.y >= 0.0));
-    let spacing = vec2<f32>(
+    let reciprocal = vec2<f32>(
         select(1.0 / abs(delta.x), 1e30, abs(delta.x) < TRANSPORT_EPSILON),
         select(1.0 / abs(delta.y), 1e30, abs(delta.y) < TRANSPORT_EPSILON)
-    );
-    var next = entry + vec2<f32>(
-        select(
-            select(place.x - f32(texel.x), f32(texel.x + 1) - place.x, delta.x >= 0.0) / abs(delta.x),
-            1e30,
-            abs(delta.x) < TRANSPORT_EPSILON
-        ),
-        select(
-            select(place.y - f32(texel.y), f32(texel.y + 1) - place.y, delta.y >= 0.0) / abs(delta.y),
-            1e30,
-            abs(delta.y) < TRANSPORT_EPSILON
-        )
     );
     // A crossing counts as a corner when the two boundaries fall within a
     // rounding of each other, since an exact tie is what a tile grid and a
     // diagonal ray produce and what float32 cannot be relied on to reproduce.
-    let corner = TRANSPORT_EPSILON * min(spacing.x, spacing.y);
+    let corner = TRANSPORT_EPSILON * min(reciprocal.x, reciprocal.y);
+    let blockSize = f32(MASK_COARSE);
+    let blockPlace = (origin + delta * entry) / blockSize;
+    var block = clamp(vec2<i32>(floor(blockPlace)), vec2<i32>(0), vec2<i32>(blocks) - vec2<i32>(1));
+    var blockNext = entry + vec2<f32>(
+        select(blockPlace.x - f32(block.x), f32(block.x + 1) - blockPlace.x, delta.x >= 0.0) * blockSize * reciprocal.x,
+        select(blockPlace.y - f32(block.y), f32(block.y + 1) - blockPlace.y, delta.y >= 0.0) * blockSize * reciprocal.y
+    );
     var travelled = entry;
     var visited = 0.0;
+    var taken = 0;
 
-    for (var taken = 0; taken < MAX_MASK_STEPS; taken = taken + 1) {
-        if (travelled >= leave) {
-            return MaskHit(1.0, visited);
+    // One pass per block of the coarse level, or one pass over the whole
+    // stretch where no block level is bound.
+    for (var sweep = 0; sweep < MAX_MASK_STEPS; sweep = sweep + 1) {
+        if (travelled >= leave || taken >= MAX_MASK_STEPS) {
+            break;
         }
 
-        visited = visited + 1.0;
+        var until = leave;
 
-        if (maskBlocks(texel, cells)) {
-            return MaskHit(clamp(travelled, 0.0, 1.0), visited);
+        if (coarse) {
+            until = min(min(blockNext.x, blockNext.y), leave);
+            taken = taken + 1;
+            visited = visited + 1.0;
+
+            if (!blockHolds(block, blocks)) {
+                travelled = until;
+
+                if (blockNext.x < blockNext.y) {
+                    blockNext.x = blockNext.x + blockSize * reciprocal.x;
+                    block.x = block.x + stepping.x;
+                } else {
+                    blockNext.y = blockNext.y + blockSize * reciprocal.y;
+                    block.y = block.y + stepping.y;
+                }
+
+                continue;
+            }
         }
 
-        let crossing = min(next.x, next.y);
+        // Texel by texel over what this block covers of the stretch. Started
+        // from where the stretch has got to rather than carried across blocks,
+        // so a skipped block leaves nothing to unwind.
+        let place = origin + delta * travelled;
+        var texel = clamp(vec2<i32>(floor(place)), vec2<i32>(0), vec2<i32>(cells) - vec2<i32>(1));
+        var next = travelled + vec2<f32>(
+            select(place.x - f32(texel.x), f32(texel.x + 1) - place.x, delta.x >= 0.0) * reciprocal.x,
+            select(place.y - f32(texel.y), f32(texel.y + 1) - place.y, delta.y >= 0.0) * reciprocal.y
+        );
 
-        if (abs(next.x - next.y) <= corner && crossing < leave) {
-            // Only the corner point itself is shared with the two texels the
-            // stretch does not otherwise enter. Either of them blocking stops
-            // it there.
-            if (maskBlocks(texel + vec2<i32>(stepping.x, 0), cells) || maskBlocks(texel + vec2<i32>(0, stepping.y), cells)) {
-                return MaskHit(clamp(crossing, 0.0, 1.0), visited);
+        for (var step = 0; step < MAX_MASK_STEPS; step = step + 1) {
+            if (travelled >= until || taken >= MAX_MASK_STEPS) {
+                break;
+            }
+
+            taken = taken + 1;
+            visited = visited + 1.0;
+
+            if (maskBlocks(texel, cells)) {
+                return MaskHit(clamp(travelled, 0.0, 1.0), visited);
+            }
+
+            let crossing = min(next.x, next.y);
+
+            if (abs(next.x - next.y) <= corner && crossing < leave) {
+                // Only the corner point itself is shared with the two texels
+                // the stretch does not otherwise enter. Either of them
+                // blocking stops it there. Bounded by the whole stretch rather
+                // than by this block, because a corner on a block's own edge
+                // belongs to neither sweep otherwise.
+                if (maskBlocks(texel + vec2<i32>(stepping.x, 0), cells) || maskBlocks(texel + vec2<i32>(0, stepping.y), cells)) {
+                    return MaskHit(clamp(crossing, 0.0, 1.0), visited);
+                }
+
+                travelled = crossing;
+                next = next + reciprocal;
+                texel = texel + stepping;
+
+                continue;
             }
 
             travelled = crossing;
-            next = next + spacing;
-            texel = texel + stepping;
 
-            continue;
+            if (next.x < next.y) {
+                next.x = next.x + reciprocal.x;
+                texel.x = texel.x + stepping.x;
+            } else {
+                next.y = next.y + reciprocal.y;
+                texel.y = texel.y + stepping.y;
+            }
         }
 
-        travelled = crossing;
-
-        if (next.x < next.y) {
-            next.x = next.x + spacing.x;
-            texel.x = texel.x + stepping.x;
-        } else {
-            next.y = next.y + spacing.y;
-            texel.y = texel.y + stepping.y;
+        if (coarse) {
+            if (blockNext.x < blockNext.y) {
+                blockNext.x = blockNext.x + blockSize * reciprocal.x;
+                block.x = block.x + stepping.x;
+            } else {
+                blockNext.y = blockNext.y + blockSize * reciprocal.y;
+                block.y = block.y + stepping.y;
+            }
         }
     }
 
-    return MaskHit(clamp(travelled, 0.0, 1.0), visited);
+    if (taken >= MAX_MASK_STEPS) {
+        return MaskHit(clamp(travelled, 0.0, 1.0), visited);
+    }
+
+    return MaskHit(1.0, visited);
 }
 
 /**

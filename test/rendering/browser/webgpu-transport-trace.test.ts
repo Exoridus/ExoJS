@@ -57,6 +57,7 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
           uCells: tables.cells,
           uIndices: tables.indices,
           uMask: mask.texture,
+          uMaskCoarse: mask.coarse,
         },
       });
       const texture = coverTexture();
@@ -73,12 +74,15 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
       filter.uniforms.uMaskCells.set(mask.cells[0], mask.cells[1]);
       filter.uniforms.uMaskBasis.set(mask.basis[0], mask.basis[1], mask.basis[2], mask.basis[3]);
       filter.uniforms.uMaskOffset.set(mask.offset[0], mask.offset[1]);
+      filter.uniforms.uMaskBlocks.set(mask.blocks[0], mask.blocks[1]);
       filter.uniforms.uScale.set(scenario.scale);
 
       const radiance: number[][] = [];
       const through: number[][] = [];
       const visited: number[][] = [];
       const hit: number[][] = [];
+      const flatHit: number[][] = [];
+      const flatVisited: number[][] = [];
 
       try {
         for (const [ax, ay, bx, by] of scenario.traces) {
@@ -97,6 +101,25 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
 
             into.push([...readWebGpuPixels(backend, PROBE_SIZE)(PROBE_SIZE / 2, PROBE_SIZE / 2)]);
           }
+
+          if (scenario.mask === undefined) continue;
+
+          // The same stretch again with no block level bound, which is the
+          // walk the hierarchy has to agree with texel for texel.
+          filter.uniforms.uMaskBlocks.set(0, 0);
+
+          for (const [mode, into] of [
+            [PROBE_MASK_HIT, flatHit],
+            [PROBE_VISITED, flatVisited],
+          ] as const) {
+            filter.uniforms.uMode.set(mode);
+
+            if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) return;
+
+            into.push([...readWebGpuPixels(backend, PROBE_SIZE)(PROBE_SIZE / 2, PROBE_SIZE / 2)]);
+          }
+
+          filter.uniforms.uMaskBlocks.set(mask.blocks[0], mask.blocks[1]);
         }
 
         for (const reading of visited) {
@@ -107,7 +130,13 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
           expect(reading[0], 'cells visited').toBeLessThan(255);
         }
 
-        (scenario as Case).check(radiance, through, visited, hit);
+        for (let index = 0; index < flatHit.length; index++) {
+          // Skipping a block may not skip a wall: the hierarchy exists to read
+          // fewer texels, not to answer differently.
+          expect(Math.abs(hit[index]![0]! - flatHit[index]![0]!), 'hit with and without the block level').toBeLessThanOrEqual(1);
+        }
+
+        (scenario as Case).check(radiance, through, visited, hit, flatVisited);
       } finally {
         root.destroy();
         filter.destroy();
