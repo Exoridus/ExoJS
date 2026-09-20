@@ -69,10 +69,20 @@ const stoneTexture = canvasTexture(8, context => {
   context.fillRect(0, 0, 8, 8);
 });
 
-// Saturated on purpose: what a surface gives back carries its own colour, and
-// a grey panel would return the lamp's light looking like more lamp.
+// Saturated and bright on purpose: what a surface gives back is its own colour
+// times what fell on it, so a dark or grey panel returns either nothing worth
+// seeing or the lamp's own light again.
 const panelTexture = canvasTexture(8, context => {
-  context.fillStyle = '#c0392b';
+  context.fillStyle = '#ff3b2f';
+  context.fillRect(0, 0, 8, 8);
+});
+
+// A mid neutral, where the rest of the floor is dark stone. The bounce is
+// multiplied by whatever colour the receiver already has, so a dark floor
+// shows a correct bounce as nothing at all - and a near-white one shows it as
+// a wash the direct light saturates anyway.
+const apronTexture = canvasTexture(8, context => {
+  context.fillStyle = '#8d8a82';
   context.fillRect(0, 0, 8, 8);
 });
 
@@ -99,7 +109,14 @@ const walls: readonly Wall[] = [
  * of the doorway, drawn by the camera and occluding as coverage rather than as
  * an outline, so what falls on it comes back off it in its own colour.
  */
-const bouncePanel: Wall = { x: 545, y: 400, width: 30, height: 230 };
+const bouncePanel: Wall = { x: 452, y: 400, width: 26, height: 230 };
+
+/**
+ * The floor the panel gives its colour back onto: on the lamp's side of it,
+ * which is the side a surface re-emits from, and far enough from the lamp that
+ * the direct term does not saturate the tint away.
+ */
+const bounceApron: Wall = { x: 360, y: 400, width: 150, height: 250 };
 
 /** A wall's own box, as the four corners an occluder takes. */
 const outline = (wall: Wall): readonly { x: number; y: number }[] => {
@@ -113,6 +130,14 @@ const outline = (wall: Wall): readonly { x: number; y: number }[] => {
     { x: wall.x - halfWidth, y: wall.y + halfHeight },
   ];
 };
+
+/**
+ * What the bounce toggle switches on, rather than the renderer's own default
+ * of `0.5`. The panel returns its colour once, across a room, onto a floor the
+ * lamp already lights directly; at the default the tint is a couple of counts
+ * and the toggle reads as doing nothing.
+ */
+const bounceFactor = 0.9;
 
 /** Levels the debug cycle walks, in the order it walks them. */
 const debugViews: readonly LightingDebugView[] = [null, 'light', 'mask', 'occluders'];
@@ -144,7 +169,7 @@ class RadianceRoomsScene extends Scene {
   private world!: Container;
   private panel!: Sprite;
   private lighting!: Lighting;
-  private quality: LightingQualityOption = radiance();
+  private quality: LightingQualityOption = radiance({ bounce: bounceFactor });
   private intensity = 3;
   private softness = 0.35;
   private bounce = true;
@@ -177,6 +202,13 @@ class RadianceRoomsScene extends Scene {
       this.world.addChild(sprite);
     }
 
+    const apron = new Sprite(apronTexture).setAnchor(0.5);
+
+    apron.width = bounceApron.width;
+    apron.height = bounceApron.height;
+    apron.setPosition(bounceApron.x, bounceApron.y);
+    this.world.addChild(apron);
+
     this.panel = new Sprite(panelTexture).setAnchor(0.5);
     this.panel.width = bouncePanel.width;
     this.panel.height = bouncePanel.height;
@@ -202,7 +234,7 @@ class RadianceRoomsScene extends Scene {
         // passes and takes them out again on `destroy()`. `radiance` is a value
         // rather than a name because that is what lets a project that never
         // uses it leave the cascades out of its bundle.
-        this.quality = value ? radiance({ bounce: this.bounce ? 0.5 : 0 }) : 'lightmap';
+        this.quality = value ? radiance({ bounce: this.bounce ? bounceFactor : 0 }) : 'lightmap';
         this.build();
       },
     });
@@ -216,7 +248,7 @@ class RadianceRoomsScene extends Scene {
         // Only the cascades bounce; under the quads the toggle has nothing to
         // rebuild.
         if (typeof this.quality === 'object') {
-          this.quality = radiance({ bounce: value ? 0.5 : 0 });
+          this.quality = radiance({ bounce: value ? bounceFactor : 0 });
           this.build();
         }
       },
