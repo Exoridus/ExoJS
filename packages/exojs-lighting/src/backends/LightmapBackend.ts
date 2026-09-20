@@ -497,6 +497,16 @@ ${sunQuadWgsl}`,
   }
 
   /**
+   * This frame's occluders as coverage, for what walks them: the block level
+   * reduced from it and the transport walk that reads both. Holds nothing
+   * unless {@link rasterisesOccluders} does.
+   * @internal
+   */
+  public get maskTexture(): RenderTexture {
+    return this._maskTarget;
+  }
+
+  /**
    * The filler actually writing the polar shadow rows, which is what a caller
    * reads back after asking for one: `'gpu'` needs a float render target, and
    * where there is none the request resolves to `'cpu'` rather than failing.
