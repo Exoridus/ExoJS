@@ -7,8 +7,8 @@ import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';
 import { defineConfig, type Plugin } from 'vitest/config';
 
-import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands';
-import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink';
+import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands.ts';
+import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink.ts';
 
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
 // before the root alias so '@codexo/exojs/renderer-sdk' resolves before '@codexo/exojs'.
