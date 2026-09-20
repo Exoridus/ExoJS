@@ -557,9 +557,11 @@ ${sunQuadWgsl}`,
    * sphere-traces.
    *
    * The walk over geometry is what radiance runs. The field walk is kept for
-   * comparing the two on the same scene and is not a quality setting: it is
+   * comparing the two on the same scene and is not a quality setting: it sits
    * measurably further from a direct reference on the falloff a small source
-   * produces, and it costs more.
+   * produces. It is the cheaper of the two where a scene has few lights, but
+   * its cost grows with the lights it draws into the mask, and the walk over
+   * geometry pays for the geometry instead - by about 64 lights the two meet.
    * @internal
    */
   public get lightWalk(): LightWalk {
