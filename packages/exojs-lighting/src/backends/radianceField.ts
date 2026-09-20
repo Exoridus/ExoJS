@@ -8,6 +8,7 @@ import {
   ShaderFilter,
   type Texture,
   TextureFormat,
+  type UniformFieldAccessors,
   UniformType,
   type View,
 } from '@codexo/exojs';
@@ -54,6 +55,26 @@ const MAX_CASCADES = 6;
 const SUN_SIZE = 0.05 * Math.PI;
 
 const scratchDirection = { x: 0, y: 0 };
+
+/**
+ * Describe this frame's tables and occluder mask to one filter that walks them.
+ *
+ * Every filter carries its own uniform block, so each walking filter has to be
+ * told separately rather than once for the chain: an unwritten block reads
+ * zero, and a walk over a grid of no cells and a mask of no texels reports
+ * every stretch as unobstructed and empty. `toField` is the view the mask was
+ * drawn through, which is the wider field view rather than the camera's.
+ */
+const writeTransportUniforms = (target: UniformFieldAccessors<typeof transportUniforms>, binding: TransportBinding, toField: Matrix): void => {
+  target.uGridOrigin.set(binding.originX, binding.originY);
+  target.uGridCells.set(binding.cellsX, binding.cellsY);
+  target.uCellSize.set(binding.cellSize);
+  target.uTableWidth.set(binding.tableWidth);
+  target.uMaskCells.set(binding.maskWidth, binding.maskHeight);
+  target.uMaskBasis.set(toField.a, toField.b, toField.c, toField.d);
+  target.uMaskOffset.set(toField.x, toField.y);
+  target.uMaskBlocks.set(binding.blocksWidth, binding.blocksHeight);
+};
 
 /**
  * What the geometry walk needs bound, as the renderer hands it over.
@@ -270,19 +291,8 @@ export class RadianceField {
     const walking = this._walk;
 
     if (this._transportCascade !== null && walking !== null) {
-      const chunk = this._transportCascade.uniforms;
-
-      chunk.uOrigin.set(bounds.left, bounds.top);
-      chunk.uGridOrigin.set(walking.originX, walking.originY);
-      chunk.uGridCells.set(walking.cellsX, walking.cellsY);
-      chunk.uCellSize.set(walking.cellSize);
-      chunk.uTableWidth.set(walking.tableWidth);
-      chunk.uMaskCells.set(walking.maskWidth, walking.maskHeight);
-      // The mask is read through the view it was drawn with, which is the
-      // wider field view rather than the camera's.
-      chunk.uMaskBasis.set(toField.a, toField.b, toField.c, toField.d);
-      chunk.uMaskOffset.set(toField.x, toField.y);
-      chunk.uMaskBlocks.set(walking.blocksWidth, walking.blocksHeight);
+      this._transportCascade.uniforms.uOrigin.set(bounds.left, bounds.top);
+      writeTransportUniforms(this._transportCascade.uniforms, walking, toField);
     }
 
     this._writeSun();
@@ -297,6 +307,10 @@ export class RadianceField {
       gather.uSpacing.set(spacing);
       gather.uTile.set(2);
       gather.uAmbient.set(ambient.r / 255, ambient.g / 255, ambient.b / 255);
+
+      if (walking !== null) {
+        writeTransportUniforms(gather, walking, toField);
+      }
     }
 
     if (this._options.bounce > 0) {

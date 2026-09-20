@@ -884,6 +884,41 @@ describe('WebGL2 lightmap renderer', () => {
     }
   });
 
+  test('a fragment just behind a wall takes nothing from the lit probe beside it', async () => {
+    const host = await createHost();
+    // Four field texels between probes, so the wall falls between two of them
+    // rather than between two pixels: the column behind it is then reconstructed
+    // from a probe in front of it and one behind it.
+    const lighting = new Lighting({ quality: radiance({ probeSpacing: 4 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 0.6 })).setPosition(16, 32);
+    lighting.occludeFrom(
+      new PolygonOccluder(
+        [
+          { x: 32, y: 4 },
+          { x: 32, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+
+      // The reconstruction walks the stretch from each fragment to each of its
+      // probes over the same tables the chain walks. A walk that was never
+      // handed those tables reports every stretch open, and the two columns
+      // behind the wall take their share of the lit probe through it.
+      expect(readPixel(host.backend, 30, 32)[0]).toBeGreaterThan(20);
+      expect(readPixel(host.backend, 32, 32)[0]).toBeLessThan(3);
+      expect(readPixel(host.backend, 33, 32)[0]).toBeLessThan(3);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
   test('doubling an emitter doubles what arrives', async () => {
     const arriving = async (intensity: number): Promise<number> => {
       const host = await createHost();

@@ -778,6 +778,48 @@ describe('lightmap renderer WebGPU browser', () => {
       host.destroy();
     }
   });
+  test('a fragment just behind a wall takes nothing from the lit probe beside it', async ctx => {
+    const host = await createHost();
+    // Four field texels between probes, so the wall falls between two of them
+    // rather than between two pixels: the column behind it is then reconstructed
+    // from a probe in front of it and one behind it.
+    const lighting = new Lighting({ quality: radiance({ probeSpacing: 4 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 0.6 })).setPosition(16, 32);
+    lighting.occludeFrom(
+      new PolygonOccluder(
+        [
+          { x: 32, y: 4 },
+          { x: 32, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      // The reconstruction walks the stretch from each fragment to each of its
+      // probes over the same tables the chain walks. A walk that was never
+      // handed those tables reports every stretch open, and the two columns
+      // behind the wall take their share of the lit probe through it.
+      expect(at(30, 32)).toBeGreaterThan(20);
+      expect(at(32, 32)).toBeLessThan(3);
+      expect(at(33, 32)).toBeLessThan(3);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
   test('a spot standing inside a point light never darkens it', async ctx => {
     /** The light arriving behind a lamp at (32, 32), where a spot pointing along +x emits nothing. */
     const behind = async (withSpot: boolean): Promise<number | null> => {
