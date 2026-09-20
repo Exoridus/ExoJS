@@ -1,4 +1,4 @@
-import { Lighting, PointLight, PolygonOccluder } from '@codexo/exojs-lighting';
+import { type Lighting, LightmapLighting, PointLight, PolygonOccluder } from '@codexo/exojs-lighting';
 import { AlphaFadeOverLifetime, Curve, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
 
@@ -756,7 +756,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       field.addChild(sprite);
     }
 
-    const lighting = new Lighting({ app: app!, ambient: new Color(18, 18, 26), lightResolution: 0.5 });
+    const lighting = new LightmapLighting(app!, { ambient: new Color(18, 18, 26), lightResolution: 0.5 });
 
     for (let index = 0; index < nodeCount; index++) {
       const light = litLightAt(index);

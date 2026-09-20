@@ -10,7 +10,18 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import { Lighting, LitMaterial, type NormalConvention, NormalMap, PointLight, PolygonOccluder, radiance, SpotLight } from '@codexo/exojs-lighting';
+import {
+  ForwardLighting,
+  type Lighting,
+  LightmapLighting,
+  LitMaterial,
+  type NormalConvention,
+  NormalMap,
+  PointLight,
+  PolygonOccluder,
+  RadianceLighting,
+  SpotLight,
+} from '@codexo/exojs-lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -165,7 +176,7 @@ describe('the shadow filter over one isolated edge', () => {
 
   const profileAt = async (softness: number): Promise<number[]> => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
 
     lighting.add(new PointLight({ radius: 120, intensity: 1, softness })).setPosition(64, 64);
     lighting.occludeFrom(wall());
@@ -226,7 +237,7 @@ describe('the shadow filter over one isolated edge', () => {
 describe('the occluders radiance is given', () => {
   test('a wall well outside every light radius still casts', async () => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1, bounce: 0 });
 
     // A lamp whose nominal radius is 10 and a wall 40 away from it. Radiance
     // carries the lamp's light across the whole field, so the wall shadows
@@ -265,7 +276,7 @@ describe('emitters that overlap', () => {
   /** The light arriving behind a lamp at (64, 64), where a spot pointing along +x emits nothing. */
   const behind = async (withSpot: boolean): Promise<number> => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1, bounce: 0 });
 
     lighting.add(new PointLight({ radius: 30, intensity: 1 })).setPosition(64, 64);
 
@@ -314,7 +325,7 @@ describe('the cascade chain against an analytic reference', () => {
    */
   const profileOf = async (): Promise<{ radial: Array<{ radius: number; product: number }>; angular: number[] }> => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1, bounce: 0 });
 
     lighting.add(new PointLight({ radius: 64, intensity: 0.5, softness: 0.35 })).setPosition(64, 64);
     drawWhiteFrame(host);
@@ -462,7 +473,7 @@ describe('the tangent-space convention reaching the sprite shader', () => {
    */
   const rim = async (normals: Texture, convention: NormalConvention, lightX: number, lightY: number): Promise<Record<string, number>> => {
     const host = await createHost();
-    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const lighting = new ForwardLighting({ maxLights: 4, ambient: Color.black });
     const material = new LitMaterial({ lighting, normals: new NormalMap(normals, { convention }) });
     const albedo = Texture.fromColor(Color.white, 1);
     const root = new Container();
@@ -561,7 +572,7 @@ describe('the shadow filter as the fragment crosses a bin', () => {
   const denseProfile = async (softness: number): Promise<number[]> => {
     const size = 512;
     const host = await createHost(size);
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
 
     lighting.add(new PointLight({ radius: 460, intensity: 1, softness })).setPosition(256, 256);
     lighting.occludeFrom(
@@ -601,7 +612,7 @@ describe('two spots that overlap', () => {
   /** The light arriving behind and ahead of a pair of lamps at (64, 64) that both point along +x. */
   const around = async (build: (lighting: Lighting) => void): Promise<{ back: number; front: number }> => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1, bounce: 0 });
 
     build(lighting);
     drawWhiteFrame(host);
@@ -682,7 +693,7 @@ describe('a light moving by less than a texel', () => {
    */
   const sweep = async (axis: 'x' | 'y'): Promise<Map<number, number[]>> => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1, bounce: 0 });
     const light = lighting.add(new PointLight({ radius: 64, intensity: 0.5, softness: 0.35 }));
     const distances = [nearField, 26, 42];
     const series = new Map<number, number[]>(distances.map(distance => [distance, []]));
@@ -777,7 +788,7 @@ describe('the shadow filter as the fragment moves away from the light', () => {
    */
   const rayProfile = async (wall: readonly [number, number, number, number], from: number, to: number): Promise<number[]> => {
     const host = await createHost(wide);
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
 
     lighting.add(new PointLight({ radius: 220, intensity: 2, softness: 0.35 })).setPosition(lightX, lightY);
     lighting.occludeFrom(
@@ -863,7 +874,7 @@ describe('the shadow filter against a blocker no wider than one bin', () => {
    */
   const sweep = async (blocking: boolean): Promise<{ behind: number[]; front: number[] }> => {
     const host = await createHost(wide);
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1, shadowResolution: 64 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1, shadowResolution: 64 });
 
     lighting.add(new PointLight({ radius: reach, intensity: 1, softness: 0.35 })).setPosition(lightX, lightY);
 
@@ -942,7 +953,7 @@ describe('the cascade merge along a lit edge', () => {
    */
   const insideTheBar = async (): Promise<number[]> => {
     const host = await createHost(wide);
-    const lighting = new Lighting({ quality: radiance({ bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1, bounce: 0 });
     const halfWidth = bar.width / 2;
     const halfHeight = bar.height / 2;
 

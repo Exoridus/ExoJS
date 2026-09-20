@@ -16,7 +16,7 @@
  * which is what the product path does too.
  */
 
-import { AlphaOccluder, Lighting, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
+import { AlphaOccluder, type Lighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -119,11 +119,11 @@ export const createBounceScene = (host: BounceHost, options: BounceOptions): Bou
   const offsetY = options.offsetY ?? 0;
   const floor = new Sprite(Texture.fromColor(Color.white, 1));
   const bar = new Sprite(Texture.fromColor(options.colour, 1));
-  const lighting = new Lighting({
-    quality: radiance({ probeSpacing: 2, bounce: options.bounce }),
-    app: host.app,
+  const lighting = new RadianceLighting(host.app, {
     ambient: Color.black,
     lightResolution: options.resolution ?? 1,
+    probeSpacing: 2,
+    bounce: options.bounce,
   });
 
   floor.width = BOUNCE_SIZE;

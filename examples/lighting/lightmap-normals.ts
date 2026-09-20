@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaNormals, Lighting, type NormalSource, PointLight } from '@codexo/exojs-lighting';
+import { AlphaNormals, Lighting, LightmapLighting, type NormalSource, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // The lightmap renderer multiplies a frame that was already drawn, so by the
@@ -79,7 +79,7 @@ class LightmapNormalsScene extends Scene {
     this.world = new Container();
     // `auto` with an application resolves to the lightmap renderer, which is
     // the one with a light field for a prepass to feed.
-    this.lighting = new Lighting({ app: this.app, ambient: new Color(20, 21, 30), lightResolution: 1 });
+    this.lighting = new LightmapLighting(this.app, { ambient: new Color(20, 21, 30), lightResolution: 1 });
     this.systems.add(this.lighting);
 
     const floor = new Sprite(floorTexture);

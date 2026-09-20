@@ -11,7 +11,7 @@ import {
   Texture,
   WrapModes,
 } from '@codexo/exojs';
-import { AlphaOccluder, Lighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, Lighting, LightmapLighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Four light shapes, one scene, and the shape of the light doing the work that
@@ -101,7 +101,7 @@ class LightCookiesScene extends Scene {
     const { width, height } = this.app;
 
     this.world = new Container();
-    this.lighting = new Lighting({ app: this.app, ambient: new Color(16, 18, 28), lightResolution: 1 });
+    this.lighting = new LightmapLighting(this.app, { ambient: new Color(16, 18, 28), lightResolution: 1 });
     this.systems.add(this.lighting);
 
     const floor = new Sprite(floorTexture);

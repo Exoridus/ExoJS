@@ -803,7 +803,7 @@ export default defineConfig([
       'packages/exojs-lighting/src/normals/deriveNormals.ts',
       'packages/exojs-lighting/src/readAlphaField.ts',
       'packages/exojs-lighting/src/occluders/*.ts',
-      'packages/exojs-lighting/src/backends/LightmapBackend.ts',
+      'packages/exojs-lighting/src/backends/FrameLightingBackend.ts',
       'packages/exojs-lighting/src/backends/transportGeometry.ts',
     ],
     rules: {
@@ -845,7 +845,7 @@ export default defineConfig([
   {
     files: [
       'packages/exojs-lighting/src/LitMaterial.ts',
-      'packages/exojs-lighting/src/backends/LightmapBackend.ts',
+      'packages/exojs-lighting/src/backends/FrameLightingBackend.ts',
       'packages/exojs-lighting/src/backends/radianceField.ts',
     ],
     rules: {

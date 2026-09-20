@@ -1,5 +1,4 @@
 import {
-  type Application,
   Color,
   ColorMatrixFilter,
   Container,
@@ -16,14 +15,17 @@ import {
 import { describe, expect, test } from 'vitest';
 
 import type { ForwardBackend } from '../src/backends/ForwardBackend';
-import type { LightmapBackend } from '../src/backends/LightmapBackend';
-import { radiance } from '../src/backends/radiance';
-import { Lighting } from '../src/Lighting';
+import type { FrameLightingBackend } from '../src/backends/FrameLightingBackend';
+import { ForwardLighting } from '../src/ForwardLighting';
+import type { Lighting } from '../src/Lighting';
+import type { LightingHost } from '../src/LightingHost';
+import { LightmapLighting } from '../src/LightmapLighting';
 import { LineLight } from '../src/lights/LineLight';
 import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
 import { LitMaterial } from '../src/LitMaterial';
 import { NormalMap } from '../src/normals/NormalMap';
+import { RadianceLighting } from '../src/RadianceLighting';
 
 const channels = 4;
 
@@ -34,7 +36,7 @@ const textureOf = (lighting: Lighting): (typeof ForwardBackend.prototype)['light
  * Enough of an application for a renderer that never draws here: a frame slot,
  * a frame to multiply, a surface size, and an answer about float targets.
  */
-const fakeApp = (floatTargets = true): Application =>
+const fakeApp = (floatTargets = true): LightingHost =>
   ({
     framePasses: new RenderPipeline(),
     frameTexture: new RenderTexture(64, 64),
@@ -54,17 +56,17 @@ const fakeApp = (floatTargets = true): Application =>
     },
     width: 64,
     height: 64,
-  }) as unknown as Application;
+  }) as unknown as LightingHost;
 
-/** A `Lighting` on the renderer that reads occluders. */
-const lightmapLighting = (floatTargets = true): Lighting => new Lighting({ quality: 'lightmap', app: fakeApp(floatTargets), ambient: Color.black });
+/** A lighting system on the renderer that reads occluders. */
+const lightmapLighting = (floatTargets = true): Lighting => new LightmapLighting(fakeApp(floatTargets), { ambient: Color.black });
 
 /** Byte offset of light `index`'s slot in row `row`. */
 const slot = (lighting: Lighting, row: number, index: number): number => (textureOf(lighting).width * row + index + 1) * channels;
 
 describe('Lighting', () => {
   test('allocates one header column plus one column per light slot, three rows deep', () => {
-    const lighting = new Lighting({ maxLights: 8 });
+    const lighting = new ForwardLighting({ maxLights: 8 });
     const texture = textureOf(lighting);
 
     expect(texture.format).toBe(TextureFormat.Rgba32F);
@@ -73,7 +75,7 @@ describe('Lighting', () => {
   });
 
   test('publishes the light count and the ambient term in the header column', () => {
-    const lighting = new Lighting({ maxLights: 4, ambient: new Color(51, 102, 153) });
+    const lighting = new ForwardLighting({ maxLights: 4, ambient: new Color(51, 102, 153) });
 
     lighting.add(new PointLight());
     lighting.add(new PointLight());
@@ -87,7 +89,7 @@ describe('Lighting', () => {
   });
 
   test('a light publishes the world position its transform gives it', () => {
-    const lighting = new Lighting({ maxLights: 2 });
+    const lighting = new ForwardLighting({ maxLights: 2 });
     const carrier = new Container().setPosition(300, 120);
     const light = lighting.add(new PointLight({ radius: 90 }));
 
@@ -103,7 +105,7 @@ describe('Lighting', () => {
   });
 
   test('a disabled light and one without intensity are skipped, and the rest close the gap', () => {
-    const lighting = new Lighting({ maxLights: 4 });
+    const lighting = new ForwardLighting({ maxLights: 4 });
 
     lighting.add(new PointLight({ enabled: false, radius: 10 }));
     lighting.add(new PointLight({ intensity: 0, radius: 20 }));
@@ -118,7 +120,7 @@ describe('Lighting', () => {
   });
 
   test('lights beyond the renderer capacity are dropped rather than overwriting the last slot', () => {
-    const lighting = new Lighting({ maxLights: 2 });
+    const lighting = new ForwardLighting({ maxLights: 2 });
 
     lighting.add(new PointLight({ radius: 1 }));
     lighting.add(new PointLight({ radius: 2 }));
@@ -132,7 +134,7 @@ describe('Lighting', () => {
   });
 
   test('a point light writes a cone no direction can fail', () => {
-    const lighting = new Lighting({ maxLights: 1 });
+    const lighting = new ForwardLighting({ maxLights: 1 });
 
     lighting.add(new PointLight());
     lighting.update();
@@ -145,7 +147,7 @@ describe('Lighting', () => {
   });
 
   test('a spot light aims along its own rotation and fades across its cone softness', () => {
-    const lighting = new Lighting({ maxLights: 1 });
+    const lighting = new ForwardLighting({ maxLights: 1 });
     const spot = lighting.add(new SpotLight({ angle: 60, coneSoftness: 0.5 }));
 
     // Unrotated, the cone points along the node's local +x.
@@ -168,7 +170,7 @@ describe('Lighting', () => {
   });
 
   test('a hard-edged spot collapses both cone cosines onto one value', () => {
-    const lighting = new Lighting({ maxLights: 1 });
+    const lighting = new ForwardLighting({ maxLights: 1 });
 
     lighting.add(new SpotLight({ angle: 45, coneSoftness: 0 }));
     lighting.update();
@@ -180,7 +182,7 @@ describe('Lighting', () => {
   });
 
   test('registering a light twice shades it once', () => {
-    const lighting = new Lighting({ maxLights: 4 });
+    const lighting = new ForwardLighting({ maxLights: 4 });
     const light = new PointLight();
 
     lighting.add(light);
@@ -192,8 +194,8 @@ describe('Lighting', () => {
   });
 
   test('registering with a second system moves the light rather than shading it twice', () => {
-    const first = new Lighting({ maxLights: 4 });
-    const second = new Lighting({ maxLights: 4 });
+    const first = new ForwardLighting({ maxLights: 4 });
+    const second = new ForwardLighting({ maxLights: 4 });
     const light = new PointLight();
 
     first.add(light);
@@ -204,7 +206,7 @@ describe('Lighting', () => {
   });
 
   test('destroying a registered light unregisters it', () => {
-    const lighting = new Lighting({ maxLights: 4 });
+    const lighting = new ForwardLighting({ maxLights: 4 });
     const light = lighting.add(new PointLight());
 
     light.destroy();
@@ -213,7 +215,7 @@ describe('Lighting', () => {
   });
 
   test('destroying the system unregisters its lights without destroying them', () => {
-    const lighting = new Lighting({ maxLights: 4 });
+    const lighting = new ForwardLighting({ maxLights: 4 });
     const light = lighting.add(new PointLight());
 
     lighting.destroy();
@@ -222,7 +224,7 @@ describe('Lighting', () => {
     expect(light.destroyed).toBe(false);
   });
   test('registering an occluder source twice collects it once', () => {
-    const lighting = new Lighting({ maxLights: 4 });
+    const lighting = new ForwardLighting({ maxLights: 4 });
     const source = { collect: (): void => {} };
 
     lighting.occludeFrom(source);
@@ -268,7 +270,7 @@ describe('Lighting', () => {
   });
 
   test('radiance asks for the field it traces rather than for the lights own reach', () => {
-    const lighting = new Lighting({ quality: radiance(), app: fakeApp(), ambient: Color.black });
+    const lighting = new RadianceLighting(fakeApp(), { ambient: Color.black });
     const regions: number[][] = [];
 
     lighting.occludeFrom({
@@ -319,7 +321,7 @@ describe('Lighting', () => {
   });
 
   test('a renderer without shadows never walks a source at all', () => {
-    const lighting = new Lighting({ maxLights: 4 });
+    const lighting = new ForwardLighting({ maxLights: 4 });
 
     let walks = 0;
 
@@ -331,7 +333,7 @@ describe('Lighting', () => {
   });
 
   test('destroying the system forgets its occluder sources', () => {
-    const lighting = new Lighting({ maxLights: 4 });
+    const lighting = new ForwardLighting({ maxLights: 4 });
 
     lighting.occludeFrom({ collect: (): void => {} });
     lighting.destroy();
@@ -342,35 +344,40 @@ describe('Lighting', () => {
     const lighting = lightmapLighting();
 
     expect(lighting.hdr).toBe(true);
-    expect((lighting.backend as LightmapBackend).lightTexture.format).toBe(TextureFormat.Rgba16F);
+    expect((lighting.backend as FrameLightingBackend).lightTexture.format).toBe(TextureFormat.Rgba16F);
   });
 
   test('a context without renderable floats falls back to rgba8 and reports it', () => {
     const lighting = lightmapLighting(false);
 
     expect(lighting.hdr).toBe(false);
-    expect((lighting.backend as LightmapBackend).lightTexture.format).toBe(TextureFormat.Rgba8);
+    expect((lighting.backend as FrameLightingBackend).lightTexture.format).toBe(TextureFormat.Rgba8);
   });
 
   test('the forward renderer shades into the frame, so it never has headroom', () => {
-    expect(new Lighting({ maxLights: 4 }).hdr).toBe(false);
+    expect(new ForwardLighting({ maxLights: 4 }).hdr).toBe(false);
   });
 
-  test('auto takes the lightmap renderer when there is a frame to light, and forward when there is not', () => {
-    expect(new Lighting({ app: fakeApp() }).quality).toBe('lightmap');
-    expect(new Lighting({}).quality).toBe('forward');
-    // The default, so a scene that names nothing still gets shadows where it
-    // can have them.
-    expect(new Lighting({ app: fakeApp(), quality: 'auto' }).quality).toBe('lightmap');
-    // Naming one still wins over what auto would have picked.
-    expect(new Lighting({ app: fakeApp(), quality: 'forward' }).quality).toBe('forward');
+  test('each system reports the renderer it is', () => {
+    expect(new LightmapLighting(fakeApp()).quality).toBe('lightmap');
+    expect(new ForwardLighting().quality).toBe('forward');
+    expect(new ForwardLighting(fakeApp()).quality).toBe('forward');
+    expect(new RadianceLighting(fakeApp()).quality).toBe('radiance');
+  });
+
+  test('a plain options record is not mistaken for a host', () => {
+    // The overload taking a host and the one taking options both accept a
+    // single object, so the distinction has to be made on what the object is
+    // rather than on how many arguments arrived.
+    const lighting = new ForwardLighting({ maxLights: 7 });
+
+    expect((lighting.backend as ForwardBackend).maxLights).toBe(7);
   });
 
   test('a filter chain with no application to run in is refused rather than ignored', () => {
     const post: readonly Filter[] = [new ColorMatrixFilter()];
 
-    expect(() => new Lighting({ post })).toThrow(/post/);
-    expect(() => new Lighting({ quality: 'lightmap', post })).toThrow();
+    expect(() => new ForwardLighting({ post } as never)).toThrow(/post/);
   });
 
   test('a filter chain installs one pass, in either renderer, and takes it out again', () => {
@@ -378,14 +385,14 @@ describe('Lighting', () => {
     const lightmapApp = fakeApp();
     const grade = new ColorMatrixFilter();
 
-    const forward = new Lighting({ app: forwardApp, quality: 'forward', post: [grade] });
-    const lightmap = new Lighting({ quality: 'lightmap', app: lightmapApp, post: [grade] });
+    const forward = new ForwardLighting(forwardApp, { post: [grade] });
+    const lightmap = new LightmapLighting(lightmapApp, { post: [grade] });
 
     expect(forwardApp.framePasses.size).toBe(1);
     expect(lightmap.post).toEqual([grade]);
-    // The lightmap renderer's own six, plus the chain. The distance field and
-    // the cascades are not among them: they arrive with the renderer that is
-    // imported rather than named.
+    // The lightmap renderer's own six, plus the chain. The mask block level
+    // and the cascades are not among them: they arrive with the renderer whose
+    // class was imported.
     expect(lightmapApp.framePasses.size).toBe(7);
 
     forward.destroy();
@@ -397,7 +404,7 @@ describe('Lighting', () => {
 
   test('a source may hand a drawable over only while the renderer rasterises occluders', () => {
     const lighting = lightmapLighting();
-    const backend = lighting.backend as LightmapBackend;
+    const backend = lighting.backend as FrameLightingBackend;
     const sprite = new Sprite(new Texture(null));
 
     let taken: boolean | null = null;
@@ -425,7 +432,7 @@ describe('Lighting', () => {
 
   test('radiance is a renderer of its own, and only ever had by asking for it', () => {
     const app = fakeApp();
-    const lighting = new Lighting({ quality: radiance(), app });
+    const lighting = new RadianceLighting(app);
 
     expect(lighting.quality).toBe('radiance');
     // The occluder mask, the reduction of it the walk skips blocks with, the
@@ -435,20 +442,22 @@ describe('Lighting', () => {
     // target itself.
     expect(app.framePasses.size).toBe(8);
     // Auto never picks it: it is the renderer with an unbounded tuning surface.
-    expect(new Lighting({ app: fakeApp(), quality: 'auto' }).quality).toBe('lightmap');
+    expect(new LightmapLighting(fakeApp()).quality).toBe('lightmap');
 
     lighting.destroy();
   });
 
   test('radiance is refused where its float targets cannot be rendered into', () => {
-    expect(() => new Lighting({ quality: radiance(), app: fakeApp(false) })).toThrow(/float/);
-    expect(() => new Lighting({ quality: radiance() })).toThrow(/app/);
+    expect(() => new RadianceLighting(fakeApp(false))).toThrow(/float/);
+    // Nothing was installed on the way out: the refusal happens before the
+    // renderer takes its place in the frame slot.
+    expect(fakeApp(false).framePasses.size).toBe(0);
   });
 
   test('the shadow march is installed only where its float atlas can be rendered into', () => {
     const app = fakeApp(false);
-    const lighting = new Lighting({ quality: 'lightmap', app });
-    const backend = lighting.backend as LightmapBackend;
+    const lighting = new LightmapLighting(app);
+    const backend = lighting.backend as FrameLightingBackend;
 
     // One pass fewer than the float-capable renderer - no march - and the
     // request for the marching filler resolves back to the segment walk rather
@@ -465,7 +474,7 @@ describe('Lighting', () => {
   test('no filters means no pass at all, which is what keeps forward free of them', () => {
     const app = fakeApp();
 
-    new Lighting({ app, quality: 'forward' });
+    new ForwardLighting(app);
 
     expect(app.framePasses.size).toBe(0);
   });
@@ -493,7 +502,7 @@ describe('Lighting', () => {
 
   test('radiance records a registered surface and takes no normals from it', () => {
     const app = fakeApp();
-    const lighting = new Lighting({ quality: radiance(), app, ambient: Color.black });
+    const lighting = new RadianceLighting(app, { ambient: Color.black });
     const drawable = {
       texture: Texture.fromColor(Color.white, 1),
       textureFrame: new Rectangle(0, 0, 1, 1),

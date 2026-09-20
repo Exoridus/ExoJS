@@ -7,7 +7,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -73,7 +73,7 @@ describe('lighting WebGPU browser', () => {
     const device = getBackendDevice(backend);
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
-    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const lighting = new ForwardLighting({ maxLights: 4, ambient: Color.black });
     const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
     const root = new Container();
     const upright = new Sprite(albedo);
@@ -146,7 +146,7 @@ describe('lighting WebGPU browser', () => {
     const backend = await createBackend();
     const device = getBackendDevice(backend);
     const albedo = createAlbedo();
-    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const lighting = new ForwardLighting({ maxLights: 4, ambient: Color.black });
     const dark = new LitMaterial({ lighting });
     const lava = new LitMaterial({ lighting, emissive: 0.75 });
     const plain = new Sprite(albedo);
@@ -214,7 +214,7 @@ describe('lighting WebGPU browser', () => {
     const device = getBackendDevice(backend);
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
-    const lighting = new Lighting({ maxLights: 4, ambient: new Color(64, 64, 64) });
+    const lighting = new ForwardLighting({ maxLights: 4, ambient: new Color(64, 64, 64) });
     const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
     const root = new Container();
     const sprite = new Sprite(albedo);

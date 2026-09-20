@@ -13,7 +13,7 @@ npm install @codexo/exojs @codexo/exojs-lighting
 ## What this package provides
 
 - `PointLight`, `SpotLight` - scene nodes that emit rather than draw. Position comes from the node's transform, a spot's cone points along its rotation, and every field is an ordinary property, so the engine's tweens animate a light with no lighting-specific animation concept.
-- `Lighting` - the system: collects the registered lights, hands them to a renderer, and carries the ambient term. Registers on a `SystemRegistry` like any other system.
+- `ForwardLighting`, `LightmapLighting`, `RadianceLighting` - the three systems: each collects the registered lights, carries the ambient term, and shades the frame its own way. They are alternatives rather than layers, they register on a `SystemRegistry` like any other system, and `Lighting` is the base they share, for a type that takes any of them.
 - `LitMaterial` - a `SpriteMaterial` (GLSL + WGSL) that shades a sprite against those lights. Normals are optional: without them the surface is lit as a plane rather than left black.
 - `NormalMap`, `AlphaNormals` - where a material's surface normals come from. `new NormalMap(texture)` binds an authored tangent-space map, `new AlphaNormals(texture)` derives one from the texture's own silhouette; `NormalSource` is an interface, so a source of your own is a valid argument without this package knowing about it.
 - `PhysicsOccluder`, `TilemapOccluder`, `AlphaOccluder`, `MeshOccluder`, `PolygonOccluder` - what blocks light, read out of the description of the world a project already has: physics colliders, tile layers, a sprite's own silhouette, or an outline you author. Occluders are registered sources rather than a flag on a drawable, and `OccluderSource` is an interface you can implement.
@@ -22,10 +22,10 @@ npm install @codexo/exojs @codexo/exojs-lighting
 
 ```ts
 import { Color, Scene, type Seconds, Sprite } from '@codexo/exojs';
-import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 
 class LitScene extends Scene {
-  private lighting = new Lighting({ ambient: new Color(30, 30, 45) });
+  private lighting = new ForwardLighting({ ambient: new Color(30, 30, 45) });
   private player = new Sprite(playerTexture);
 
   override init(): void {
@@ -50,9 +50,9 @@ class LitScene extends Scene {
 
 ## Three renderers, one vocabulary
 
-The scene describes what emits; `quality` decides how that becomes pixels. Nothing else changes between them - the same lights, the same materials.
+The scene describes what emits; which system you construct decides how that becomes pixels. Nothing else changes between them - the same lights, the same materials, the same registration.
 
-|                         | `forward`                          | `lightmap`                                          | `radiance`                                          |
+|                         | `ForwardLighting`                  | `LightmapLighting`                                  | `RadianceLighting`                                  |
 | ----------------------- | ---------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
 | Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame   | the same target, filled by transporting radiance    |
 | Normal mapping          | per material, on `LitMaterial`     | per drawable, through a prepass                     | no                                                  |
@@ -63,35 +63,35 @@ The scene describes what emits; `quality` decides how that becomes pixels. Nothi
 | Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                          | none - the field costs what the screen costs        |
 
 ```ts
-const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(20, 20, 30) });
+const lighting = new LightmapLighting(app, { ambient: new Color(20, 20, 30) });
 ```
 
-`quality` defaults to `'auto'`, which takes `lightmap` when you passed `app` and `forward` when you did not - so a scene that describes what it wants rather than how gets shadows wherever it can have them. It resolves once, at construction, and `lighting.quality` reports what it settled on. Name a renderer outright when you need a property only that one has: `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count.
+`LightmapLighting` and `RadianceLighting` light the frame the application drew, so the application is their first argument rather than an option: they read its frame, install their passes in its frame slot, and follow its surface when it resizes. `ForwardLighting` shades inside the sprite stage and needs none of that, so it is the one that can be built without a host - `new ForwardLighting({ maxLights: 16 })`. A filter chain is a frame pass, so `post` needs the host in every renderer.
 
-### `radiance`
+`lighting.quality` still reports `'forward'`, `'lightmap'` or `'radiance'`, which is what a status line or a debug overlay reads. There is no renderer to name at construction and nothing to resolve: pick the class whose properties the scene needs - `ForwardLighting` for normal maps on a `LitMaterial`, `LightmapLighting` for shadows and an uncapped light count.
 
-`radiance` fills the same light field from a chain of radiance cascades. Light PROPAGATES from what emits rather than falling off inside each light's radius, which is a different picture rather than a better one: a lamp lights the whole room it is in, a wall between two rooms leaves the second dark, and a source with a size casts a penumbra that widens with distance the way a real one does.
+### `RadianceLighting`
 
-It is the one renderer named by a VALUE rather than a string:
+It fills the same light field from a chain of radiance cascades. Light PROPAGATES from what emits rather than falling off inside each light's radius, which is a different picture rather than a better one: a lamp lights the whole room it is in, a wall between two rooms leaves the second dark, and a source with a size casts a penumbra that widens with distance the way a real one does.
 
 ```ts
-import { Lighting, PointLight, radiance } from '@codexo/exojs-lighting';
+import { PointLight, RadianceLighting } from '@codexo/exojs-lighting';
 
-const lighting = new Lighting({ quality: radiance({ probeSpacing: 2 }), app, ambient: new Color(8, 8, 14) });
+const lighting = new RadianceLighting(app, { probeSpacing: 2, ambient: new Color(8, 8, 14) });
 
 lighting.add(new PointLight({ radius: 300, intensity: 3, softness: 0.4 }));
 lighting.occludeFrom(new TilemapOccluder(level.layer('walls')));
 ```
 
-That is not decoration. The cascades and the transport tables they walk are linked only by a project that imports `radiance`, so a project that does not never pays for them - `'radiance'` as a string would put the whole of it into every bundle that reads `quality` from a config file. `lighting.quality` still reports `'radiance'`, and `'auto'` still never picks it.
+Importing the class is what links it. The cascades and the transport tables they walk hang off `RadianceLighting` alone, so a project that never constructs one never pays for them - which is also why there is no string to select a renderer by: reading one out of a config file would put every renderer into every bundle.
 
-Its tuning rides on the factory - `probeSpacing`, `cascades` and `interval`, all optional and all defaulting to something derived from the surface. They change how finely the same scene is sampled, never what is in it.
+Its tuning sits beside the rest - `probeSpacing`, `cascades` and `interval`, all optional and all defaulting to something derived from the surface. They change how finely the same scene is sampled, never what is in it.
 
 What a light means here is its SHAPE, not its falloff: `softness` sets the size of the source, and that is what sets how soft its shadows are. `radius` still bounds the region occluders are collected for, and `intensity` and `color` are what it emits - `intensity` scaled so that it means the same brightness it means under the light quads, measured at half the light's radius. Changing `softness` therefore changes how soft the shadows are and not how bright the room is.
 
 What else the transport carries:
 
-- **A lit surface re-emits.** A wall the field lit gives part of that light off again in its own colour, one frame later - `radiance({ bounce: 0.5 })` sets how much, and `0` switches it off. It is the previous frame's light field that says how lit a wall was, so the bounce trails a moving lamp by a frame.
+- **A lit surface re-emits.** A wall the field lit gives part of that light off again in its own colour, one frame later - `bounce` sets how much, and `0` switches it off. It is the previous frame's light field that says how lit a wall was, so the bounce trails a moving lamp by a frame.
 - **A `SunLight` is the sky.** A ray that reaches the top of the chain without hitting anything ends in it, so a directional light comes in wherever the sky is open and every wall blocks it. The first enabled one is taken; `softness` is its angular size.
 - **A `SpotLight` emits across its cone** and blocks all round, the way a lamp's body does.
 - **The fields reach past the picture.** The occluder mask and the geometry a ray walks cover the view and a margin around it (`fieldMargin`, a quarter of the view per side by default), so a wall or a lamp just outside the picture still shadows or lights what is in it as the camera moves. The probes themselves cover only the view.
@@ -124,7 +124,7 @@ What it costs: one pass over the registered drawables, one `rgba8` attachment at
 The work in 2D shadows is data entry, not rendering. Engines that ask for a silhouette per object mostly ship without shadows, because the bookkeeping is not worth it - and a project with physics colliders or a tile layer has described its walls once already.
 
 ```ts
-const lighting = new Lighting({ quality: 'lightmap', app });
+const lighting = new LightmapLighting(app);
 
 lighting.occludeFrom(new PhysicsOccluder(world));
 lighting.occludeFrom(new TilemapOccluder(tilemap.layer('walls')));
@@ -159,7 +159,7 @@ There is no `castsShadow` flag, in this package or in the core. A flag on a draw
 
 Every occluder source and every normal source is a class of its own, exported by name, and nothing gathers them into a namespace object. That is the reason: reaching one property of such an object keeps the whole of it, so a physics-only project would carry the marching-squares tracer, the alpha readback and the tile boundary walker it never runs.
 
-The two built-in renderers do not split this way: `quality` is a string read at runtime, so a `forward` project carries the lightmap renderer whether or not it runs it. `radiance` does split, because it is imported rather than named - the package as a whole is 28.1 KB gzip and a `forward` project that never mentions `radiance` uses 17.0 KB. Both figures are budgeted in CI.
+Every renderer splits this way, because each is a class a project imports or does not. The package as a whole is 30.3 KB gzip; a project on `LightmapLighting` alone uses 12.1 KB, and one on `ForwardLighting` alone 4.0 KB. All three figures are budgeted in CI.
 
 ### Light shapes
 

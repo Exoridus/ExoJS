@@ -1,6 +1,6 @@
 // Auto-generated from normal-mapped-sprites.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControls } from '@examples/runtime';
 // Forward normal mapping on plain sprites. A LitMaterial samples a
 // tangent-space normal map next to the base texture and shades each fragment
@@ -76,7 +76,7 @@ class NormalMappedSpritesScene extends Scene {
   init() {
     const { width, height } = this.app;
     this.layer = new Container();
-    this.lighting = new Lighting({ maxLights: LIGHT_COUNT, ambient: new Color(30, 30, 40) });
+    this.lighting = new ForwardLighting({ maxLights: LIGHT_COUNT, ambient: new Color(30, 30, 40) });
     this.material = new LitMaterial({ lighting: this.lighting, normals: new NormalMap(normalTexture) });
     // Scene systems tick after Scene.update(), so the packed light texture
     // always describes the frame that is about to be drawn.

@@ -1,6 +1,6 @@
 // Auto-generated from light-cookies.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture, WrapModes } from '@codexo/exojs';
-import { AlphaOccluder, Lighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, LightmapLighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Four light shapes, one scene, and the shape of the light doing the work that
 // a texture would otherwise have to do.
@@ -76,7 +76,7 @@ class LightCookiesScene extends Scene {
   init() {
     const { width, height } = this.app;
     this.world = new Container();
-    this.lighting = new Lighting({ app: this.app, ambient: new Color(16, 18, 28), lightResolution: 1 });
+    this.lighting = new LightmapLighting(this.app, { ambient: new Color(16, 18, 28), lightResolution: 1 });
     this.systems.add(this.lighting);
     const floor = new Sprite(floorTexture);
     floor.width = width;

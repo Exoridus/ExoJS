@@ -11,7 +11,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaOccluder, Lighting, type LightingDebugView, type LightingQualityOption, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
+import { AlphaOccluder, type Lighting, type LightingDebugView, LightmapLighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
@@ -169,7 +169,7 @@ class RadianceRoomsScene extends Scene {
   private world!: Container;
   private panel!: Sprite;
   private lighting!: Lighting;
-  private quality: LightingQualityOption = radiance({ bounce: bounceFactor });
+  private cascading = true;
   private intensity = 3;
   private softness = 0.35;
   private bounce = true;
@@ -229,12 +229,12 @@ class RadianceRoomsScene extends Scene {
       label: 'Radiance',
       value: true,
       onChange: value => {
-        // `quality` resolves once, at construction, so switching renderers means
-        // building a new system - which is all a system is here: it owns its
-        // passes and takes them out again on `destroy()`. `radiance` is a value
-        // rather than a name because that is what lets a project that never
-        // uses it leave the cascades out of its bundle.
-        this.quality = value ? radiance({ bounce: this.bounce ? bounceFactor : 0 }) : 'lightmap';
+        // A renderer is chosen by constructing it, so switching means building
+        // a new system - which is all a system is here: it owns its passes and
+        // takes them out again on `destroy()`. Importing the class is also what
+        // links it, so a project that only ever builds one leaves the other
+        // out of its bundle.
+        this.cascading = value;
         this.build();
       },
     });
@@ -247,8 +247,7 @@ class RadianceRoomsScene extends Scene {
 
         // Only the cascades bounce; under the quads the toggle has nothing to
         // rebuild.
-        if (typeof this.quality === 'object') {
-          this.quality = radiance({ bounce: value ? bounceFactor : 0 });
+        if (this.cascading) {
           this.build();
         }
       },
@@ -337,7 +336,7 @@ class RadianceRoomsScene extends Scene {
     // is what says two renderers were compared under the same conditions, so
     // it has to report where the light actually is.
     this.lamp.getWorldPosition(lampPosition);
-    const bounce = typeof this.quality === 'object' && this.bounce ? 'bounce' : 'no bounce';
+    const bounce = this.cascading && this.bounce ? 'bounce' : 'no bounce';
 
     this.hud.setStatus(
       `${this.lighting.quality} - ${bounce} - ${this.app.width}x${this.app.height} at ${lightResolution}x - lamp ${lampPosition.x.toFixed(1)}, ${lampPosition.y.toFixed(1)} - draw calls ${context.stats.drawCalls}`,
@@ -361,12 +360,11 @@ class RadianceRoomsScene extends Scene {
       this.lighting.destroy();
     }
 
-    this.lighting = new Lighting({
-      quality: this.quality,
-      app: this.app,
-      ambient: new Color(10, 11, 16),
-      lightResolution,
-    });
+    const options = { ambient: new Color(10, 11, 16), lightResolution };
+
+    this.lighting = this.cascading
+      ? new RadianceLighting(this.app, { ...options, bounce: this.bounce ? bounceFactor : 0 })
+      : new LightmapLighting(this.app, options);
     this.lighting.debug = this.debug;
     this.systems.add(this.lighting);
     this.lighting.add(new PointLight({ radius: 600, intensity: this.intensity, softness: this.softness, color: new Color(255, 226, 180) }));
@@ -385,7 +383,7 @@ class RadianceRoomsScene extends Scene {
     // frame, which is what a bounce is. The quads walk segments instead, so
     // there the same slab is registered as the outline of its own box - it
     // still casts, it just has nothing to give back.
-    if (typeof this.quality === 'object') {
+    if (this.cascading) {
       this.lighting.occludeFrom(new AlphaOccluder(this.panel));
     } else {
       this.lighting.occludeFrom(new PolygonOccluder(outline(bouncePanel)));

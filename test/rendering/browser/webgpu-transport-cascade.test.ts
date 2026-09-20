@@ -10,7 +10,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { Lighting, PointLight, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
+import { PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
 import { describe, expect, test } from 'vitest';
 
 import type { Application } from '#core/Application';
@@ -84,7 +84,7 @@ const drawWhiteFrame = (host: Host): void => {
 describe('the cascades over the transport walk (WebGPU)', () => {
   test('a lamp lights what it can see and the wall keeps it off what it cannot', async () => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: radiance({ probeSpacing: 2, bounce: 0 }), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1, probeSpacing: 2, bounce: 0 });
     const backend = lighting.backend as LightmapBackend;
 
     lighting.add(new PointLight({ radius: 96, intensity: 1, softness: 0 })).setPosition(24, 64);

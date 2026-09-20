@@ -1,6 +1,7 @@
-import { type Application, type Color, DataTexture, type Filter, FilterPass, TextureFormat } from '@codexo/exojs';
+import { type Color, DataTexture, type Filter, FilterPass, TextureFormat } from '@codexo/exojs';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
+import type { LightingHost } from '../LightingHost';
 import { type Light } from '../lights/Light';
 import { lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
@@ -26,8 +27,8 @@ export interface ForwardBackendOptions {
    * scene that does not ask for one.
    */
   readonly post: readonly Filter[];
-  /** The application whose frame the filters run on. Only read when `post` has filters. */
-  readonly app: Application | null;
+  /** The host whose frame the filters run on. Only read when `post` has filters. */
+  readonly app: LightingHost | null;
 }
 
 /**
@@ -87,7 +88,7 @@ export class ForwardBackend implements LightingBackend {
   public readonly maxLights: number;
 
   private readonly _texture: DataTexture<TextureFormat.Rgba32F>;
-  private readonly _app: Application | null = null;
+  private readonly _app: LightingHost | null = null;
   private readonly _postPass: FilterPass | null = null;
   private _activeCount = 0;
 

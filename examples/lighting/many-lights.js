@@ -1,6 +1,6 @@
 // Auto-generated from many-lights.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // The FORWARD renderer under load: the light list is a data texture, not a
 // uniform array, so the light count is a shader loop bound rather than a
@@ -82,7 +82,7 @@ class ManyLightsScene extends Scene {
     const { width, height } = this.app;
     this.floor = new Container();
     this.markerLayer = new Container();
-    this.lighting = new Lighting({ maxLights: MAX_LIGHTS, ambient: new Color(16, 16, 24) });
+    this.lighting = new ForwardLighting({ maxLights: MAX_LIGHTS, ambient: new Color(16, 16, 24) });
     this.systems.add(this.lighting);
     const material = new LitMaterial({ lighting: this.lighting, normals: new NormalMap(normalTexture) });
     for (let y = 0; y < Math.ceil(height / TILE_SIZE); y++) {

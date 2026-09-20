@@ -2,10 +2,14 @@
 // Importing this entry performs no registration: a Lighting system is
 // constructed directly and added to the system registry that should tick it.
 
-export type { LightingRenderer, RadianceOptions } from './backends/radiance';
-export { radiance } from './backends/radiance';
-export type { LightingDebugView, LightingOptions, LightingQuality, LightingQualityOption } from './Lighting';
+export type { ForwardLightingOptions, StandaloneForwardLightingOptions } from './ForwardLighting';
+export { ForwardLighting } from './ForwardLighting';
+export type { FrameLightingOptions } from './frameLighting';
+export type { LightingDebugView, LightingOptions, LightingQuality } from './Lighting';
 export { Lighting } from './Lighting';
+export type { LightingHost } from './LightingHost';
+export type { LightmapLightingOptions } from './LightmapLighting';
+export { LightmapLighting } from './LightmapLighting';
 export type { LightOptions } from './lights/Light';
 export { Light } from './lights/Light';
 export type { LineLightOptions } from './lights/LineLight';
@@ -42,3 +46,5 @@ export type { PolygonOccluderOptions } from './occluders/PolygonOccluder';
 export { PolygonOccluder } from './occluders/PolygonOccluder';
 export type { OccluderTileCell, OccluderTileLayer, TilemapOccluderOptions } from './occluders/TilemapOccluder';
 export { TilemapOccluder } from './occluders/TilemapOccluder';
+export type { RadianceLightingOptions } from './RadianceLighting';
+export { RadianceLighting } from './RadianceLighting';

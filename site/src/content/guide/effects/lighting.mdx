@@ -15,16 +15,16 @@ Most 2D projects that could have shadows ship without them, and the reason is bo
 > npm install @codexo/exojs @codexo/exojs-lighting
 > ```
 
-There is no extension to register. `Lighting` is an ordinary system you add to a scene.
+There is no extension to register. A lighting system is an ordinary system you add to a scene.
 
 ## Setup
 
 ```ts
 import { Color, Scene } from '@codexo/exojs';
-import { Lighting } from '@codexo/exojs-lighting';
+import { LightmapLighting } from '@codexo/exojs-lighting';
 
 class CaveScene extends Scene {
-    private lighting = new Lighting({ app: this.app, ambient: new Color(20, 22, 34) });
+    private lighting = new LightmapLighting(this.app, { ambient: new Color(20, 22, 34) });
 
     override init(): void {
         this.systems.add(this.lighting);
@@ -38,9 +38,9 @@ Register the system with the registry that ticks **after** the code moving your 
 
 ## Three renderers, one vocabulary
 
-The scene describes what emits and what blocks. `quality` decides how that becomes pixels, and nothing else changes between them — the same lights, the same occluders.
+The scene describes what emits and what blocks. Which system you construct decides how that becomes pixels, and nothing else changes between them — the same lights, the same occluders.
 
-|                         | `forward`                          | `lightmap`                                          | `radiance`                                          |
+|                         | `ForwardLighting`                  | `LightmapLighting`                                  | `RadianceLighting`                                  |
 | ----------------------- | ---------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
 | Where light is computed | inside the sprite fragment stage   | in a target of its own, multiplied over the frame   | the same target, filled by transporting radiance    |
 | Normal mapping          | per material, on `LitMaterial`     | per drawable, through a prepass                     | no                                                   |
@@ -49,7 +49,9 @@ The scene describes what emits and what blocks. `quality` decides how that becom
 | Extra passes            | none                               | two, a third with normals                           | four to nine, depending on the view                  |
 | Cost per light          | a loop iteration per lit fragment  | the fill of its own radius                          | none — the field costs what the screen costs         |
 
-`quality` defaults to `'auto'`, which takes `lightmap` when you passed `app` and `forward` when you did not. It resolves once, at construction, and `lighting.quality` reports what it settled on:
+`LightmapLighting` and `RadianceLighting` light the frame the application drew, so the application is their first argument: they read its frame, install their passes in its frame slot, and follow its surface when it resizes. `ForwardLighting` shades inside the sprite stage, so it is the one that can be built without one — `new ForwardLighting({ maxLights: 16 })`.
+
+Whichever you built, the running renderer answers for itself, which is what a status line or a debug overlay reads:
 
 ```ts
 import { Lighting } from '@codexo/exojs-lighting';
@@ -59,34 +61,32 @@ declare const lighting: Lighting;
 lighting.quality; // 'forward' | 'lightmap' | 'radiance'
 ```
 
-Name a renderer outright when you need a property only that one has — `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows and an uncapped light count, `radiance()` for light that spreads.
+`Lighting` is the base the three share, so it is the type to take when a function accepts any of them. Pick the class whose properties the scene needs — `ForwardLighting` for normal maps on a `LitMaterial`, `LightmapLighting` for shadows and an uncapped light count, `RadianceLighting` for light that spreads.
 
 ### Light that spreads
 
-`radiance` fills the same light field from a chain of radiance cascades. Light propagates from what emits instead of falling off inside each light's radius, so a lamp lights the room it stands in, a wall between two rooms leaves the second one dark, and a source with a size casts a penumbra that widens with distance.
-
-It is the one renderer asked for by a value rather than a name:
+`RadianceLighting` fills the same light field from a chain of radiance cascades. Light propagates from what emits instead of falling off inside each light's radius, so a lamp lights the room it stands in, a wall between two rooms leaves the second one dark, and a source with a size casts a penumbra that widens with distance.
 
 ```ts
 import { Color } from '@codexo/exojs';
-import { Lighting, PointLight, radiance } from '@codexo/exojs-lighting';
+import { PointLight, RadianceLighting } from '@codexo/exojs-lighting';
 import type { Application } from '@codexo/exojs';
 
 declare const app: Application;
 
-const lighting = new Lighting({ quality: radiance(), app, ambient: new Color(8, 8, 14) });
+const lighting = new RadianceLighting(app, { ambient: new Color(8, 8, 14) });
 
 // Under `radiance` a light's `softness` sets the SIZE of the source, which is
 // what decides how soft the shadows it casts are.
 lighting.add(new PointLight({ radius: 300, intensity: 3, softness: 0.4 }));
 ```
 
-The value is what keeps the cascades out of a bundle that never runs them: they are linked by the import, not by a string. Its tuning rides on the same call — `radiance({ probeSpacing: 2, cascades: 5, interval: 1 })`, all optional and all derived from the surface by default.
+Importing the class is what links the cascades, so a bundle that never constructs one never carries them. Its tuning sits beside the rest — `probeSpacing`, `cascades`, `interval`, all optional and all derived from the surface by default.
 
-`'auto'` never picks it. It needs a device that can render into float targets and is refused at construction where it cannot run — so you never get it by accident, and `lighting.quality` still reports `'radiance'` once it is running.
+It needs a device that can render into float targets and is refused at construction where it cannot run, so you never get it by accident.
 
 <Callout type="note" title="What the transport carries">
-  A wall the field lit gives part of that light off again in its own colour, one frame later - `radiance({ bounce: 0.5 })` sets how much, and `0` switches it off. A `SunLight` is the sky every unblocked ray ends in, a `SpotLight` emits across its cone, and the fields reach a margin past the picture (`fieldMargin`), so what stands just outside it still shadows and lights what is in it.
+  A wall the field lit gives part of that light off again in its own colour, one frame later - `bounce` sets how much, and `0` switches it off. A `SunLight` is the sky every unblocked ray ends in, a `SpotLight` emits across its cone, and the fields reach a margin past the picture (`fieldMargin`), so what stands just outside it still shadows and lights what is in it.
 </Callout>
 
 <Callout type="pitfall" title="Close to a moving lamp">
@@ -313,7 +313,7 @@ import { Lighting } from '@codexo/exojs-lighting';
 
 declare const app: Application;
 
-const lighting = new Lighting({ app, post: [new BloomFilter({ threshold: 0.9 })] });
+const lighting = new LightmapLighting(app, { post: [new BloomFilter({ threshold: 0.9 })] });
 ```
 
 It needs `app` in either renderer, and a chain passed without one is refused at construction rather than quietly ignored. Under `lightmap` the composite writes an off-screen target in the light target's own format and the chain reads that, so a threshold above `1.0` still has something to find — the light target is `rgba16f` wherever one can be rendered into, and `lighting.hdr` reports whether it is.

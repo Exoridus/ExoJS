@@ -1,6 +1,6 @@
 // Auto-generated from shadow-casters.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { AlphaOccluder, Lighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Nothing here models a shadow. Each wall registers the outline it already
 // has - its own rectangle, or, for the pillar, the silhouette traced out of
@@ -56,9 +56,7 @@ class ShadowCastersScene extends Scene {
   init() {
     const { width, height } = this.app;
     this.world = new Container();
-    this.lighting = new Lighting({
-      quality: 'lightmap',
-      app: this.app,
+    this.lighting = new LightmapLighting(this.app, {
       ambient: new Color(34, 36, 50),
       lightResolution: 1,
     });

@@ -26,7 +26,7 @@ import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSou
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
 import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 
-import { lightCompositeShader } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
+import { lightCompositeShader } from '../../../packages/exojs-lighting/src/backends/FrameLightingBackend';
 import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
 import { transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';

@@ -11,7 +11,7 @@
  * the mask at all, and that an outline reaches the tables instead of the mask.
  */
 
-import { AlphaOccluder, Lighting, PolygonOccluder, radiance } from '@codexo/exojs-lighting';
+import { AlphaOccluder, type Lighting, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
 import { expect } from 'vitest';
 
 import type { Application } from '#core/Application';
@@ -22,7 +22,7 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
 
-import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
+import type { RadianceBackend } from '../../../packages/exojs-lighting/src/backends/RadianceBackend';
 
 /**
  * Where the occluding sprite stands, in world units.
@@ -59,7 +59,7 @@ export interface MaskBindings {
 
 export interface MaskScene {
   readonly lighting: Lighting;
-  readonly backend: LightmapBackend;
+  readonly backend: RadianceBackend;
   readonly traces: readonly MaskTrace[];
   /** The textures this frame filled, valid once a frame has run. */
   textures(): Readonly<Record<string, RenderTexture | Texture>>;
@@ -75,9 +75,9 @@ export interface MaskScene {
  * under any other the field takes outlines only and the mask stays empty.
  */
 export const createMaskScene = (app: Application, size: number): MaskScene => {
-  const lighting = new Lighting({ quality: radiance({ probeSpacing: 4 }), app, ambient: Color.black, lightResolution: 1 });
+  const lighting = new RadianceLighting(app, { ambient: Color.black, lightResolution: 1, probeSpacing: 4 });
   const sprite = new Sprite(Texture.fromColor(Color.white, 1));
-  const backend = lighting.backend as LightmapBackend;
+  const backend = lighting.backend as RadianceBackend;
 
   sprite.width = OCCLUDER.width;
   sprite.height = OCCLUDER.height;
@@ -98,13 +98,8 @@ export const createMaskScene = (app: Application, size: number): MaskScene => {
 
   const middle = OCCLUDER.y + OCCLUDER.height / 2;
   const region = new Rectangle();
-  const built = (): { readonly transport: NonNullable<LightmapBackend['transport']>; readonly blocks: NonNullable<LightmapBackend['maskBlocks']> } => {
-    const transport = backend.transport;
-    const blocks = backend.maskBlocks;
-
-    if (transport === null || blocks === null) throw new Error('The renderer built no transport tables.');
-
-    return { transport, blocks };
+  const built = (): { readonly transport: RadianceBackend['transport']; readonly blocks: RadianceBackend['maskBlocks'] } => {
+    return { transport: backend.transport, blocks: backend.maskBlocks };
   };
 
   return {

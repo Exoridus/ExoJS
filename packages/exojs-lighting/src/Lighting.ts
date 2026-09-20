@@ -1,9 +1,7 @@
-import { type Application, Color, type Filter, Rectangle, TextureFormat } from '@codexo/exojs';
+import { Color, type Filter, Rectangle } from '@codexo/exojs';
 
-import { ForwardBackend } from './backends/ForwardBackend';
 import type { LightingBackend } from './backends/LightingBackend';
-import { LightmapBackend, type LightmapBackendOptions } from './backends/LightmapBackend';
-import type { LightingRenderer } from './backends/radiance';
+import type { LightingHost } from './LightingHost';
 import type { Light } from './lights/Light';
 import { lightRadius } from './lights/reach';
 import { SunLight } from './lights/SunLight';
@@ -13,9 +11,11 @@ import { OccluderField } from './occluders/OccluderField';
 import type { OccluderSource } from './occluders/OccluderSource';
 
 /**
- * Which renderer shades the scene. The scene never names one: it describes what
- * emits and what blocks, and the system reports which renderer turned that into
- * pixels.
+ * Which renderer shades the scene, as {@link Lighting.quality} reports it.
+ *
+ * A scene never names one: it constructs the system it wants - see
+ * {@link ForwardLighting}, {@link LightmapLighting} and
+ * {@link RadianceLighting} - and reads this back to say which one is running.
  *
  * - `forward` shades inside the sprite shader against a capacity-bounded light
  *   texture. One draw, no extra targets, and the only renderer that does normal
@@ -28,38 +28,22 @@ import type { OccluderSource } from './occluders/OccluderSource';
  *   instead: light propagates from the emitters rather than falling off around
  *   each light, so a lamp fills the room it stands in, thins with distance
  *   instead of ending at a radius, and casts penumbrae that widen the way a
- *   source with a size does. It is opt-in, needs a renderable float target,
- *   and does NOT make a scene look the way the other two renderers make it look.
+ *   source with a size does. It needs a renderable float target, and does NOT
+ *   make a scene look the way the other two renderers make it look.
  */
 export type LightingQuality = 'forward' | 'lightmap' | 'radiance';
-
-/**
- * What {@link LightingOptions.quality} accepts: one of the two built-in
- * renderers by name, `'auto'` to let the system pick from what it has been
- * given, or a renderer imported as a value.
- *
- * `'auto'` resolves once, at construction, and {@link Lighting.quality} then
- * reports what it settled on - so a scene still never has to name a renderer,
- * and asking which one ran is still answerable.
- *
- * `'radiance'` is deliberately NOT a name here. Its cascades and the transport
- * tables they walk are linked only by a project that imports `radiance()`, so
- * naming it as a string would put the whole of it into every bundle that reads
- * `quality` from a config file.
- */
-export type LightingQualityOption = 'auto' | 'forward' | 'lightmap' | LightingRenderer;
 
 /**
  * Intermediate to draw instead of the shaded frame. `null` shades normally.
  *
  * - `'light'` shows the accumulated light field on its own, which is how you
  *   see where a light reaches without the scene's own colours in the way.
- * - `'mask'` shows the occluder mask: the same edges the `occluders` view draws,
- *   rasterised into a target of their own at the light field's resolution and
- *   widened so none of them can fall between two texels. It reaches past the
- *   view by {@link LightingOptions.fieldMargin}; the view shows its own part.
- *   It is the input a GPU-resident occluder field marches, and the view that
- *   says whether a wall is thick enough to be seen at that resolution.
+ * - `'mask'` shows the occluder mask: this frame's blocking edges and
+ *   handed-over drawables, rasterised into a target of their own at the light
+ *   field's resolution and widened so none of them can fall between two texels.
+ *   It reaches past the view by `fieldMargin`; the view shows its own part. It
+ *   is the input a GPU-resident occluder field marches, and the view that says
+ *   whether a wall is thick enough to be seen at that resolution.
  * - `'normals'` shows the normal prepass: the world-space normals the
  *   registered surfaces described this frame, encoded the way a normal map is.
  *   Black is where nothing described a surface, and light lands there with no
@@ -73,165 +57,45 @@ export type LightingQualityOption = 'auto' | 'forward' | 'lightmap' | LightingRe
  */
 export type LightingDebugView = 'light' | 'mask' | 'normals' | 'occluders' | null;
 
-const scratchPosition = { x: 0, y: 0 };
-
-/**
- * Build the renderer the options ask for. `'lightmap'` without an application
- * is a contradiction rather than a degraded mode - it has no frame to multiply -
- * so it is refused at construction rather than silently shading differently,
- * and so is a filter chain with nowhere to run.
- */
-const createBackend = (options: LightingOptions, post: readonly Filter[]): LightingBackend => {
-  // `auto` resolves on what the caller actually handed over: the lightmap
-  // renderer works on the application's frame, so an application is the whole
-  // of what it needs, and without one there is no frame to light.
-  const requested = options.quality ?? 'auto';
-  const renderer = typeof requested === 'object' ? requested : null;
-  const resolved: LightingQuality = options.app === undefined ? 'forward' : 'lightmap';
-  const named: LightingQuality = requested === 'auto' || typeof requested === 'object' ? resolved : requested;
-  const quality: LightingQuality = renderer === null ? named : renderer.quality;
-
-  // A filter chain is a frame pass whichever renderer is in use, and a frame
-  // pass needs the frame slot to install itself in. Refusing it is the only
-  // answer that is the same in both modes; degrading to "the option was
-  // ignored" is what this option did for its first release.
-  if (post.length > 0 && options.app === undefined) {
-    throw new Error('Lighting({ post }) needs the application whose frame the filters run on: pass `app`.');
-  }
-
-  if (quality !== 'forward') {
-    if (options.app === undefined) {
-      throw new Error(`Lighting({ quality: '${quality}' }) needs the application whose frame it lights: pass \`app\`.`);
-    }
-
-    // The cascades live in float targets from end to end - a field of radiance
-    // has no ceiling to clamp at - so a surface that cannot render one is
-    // refused rather than shaded differently under the same name.
-    if (renderer !== null && !options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F)) {
-      throw new Error(`Lighting({ quality: ${quality}() }) needs renderable float targets, which this device does not have. Use 'lightmap' or 'auto'.`);
-    }
-
-    return new LightmapBackend(lightmapOptions(options, options.app, post, renderer));
-  }
-
-  return new ForwardBackend({ maxLights: options.maxLights ?? 64, post, app: options.app ?? null });
-};
-
-const lightmapOptions = (options: LightingOptions, app: Application, post: readonly Filter[], renderer: LightingRenderer | null): LightmapBackendOptions => ({
-  app,
-  post,
-  // Half resolution is the right default for the quads, which PAINT the
-  // light field: a falloff is low-frequency and halving the fill is free.
-  // The cascades SAMPLE it instead - the emitters and the distance field
-  // they trace are both rasterised into it - so a coarse field quantises
-  // the scene rather than the light, and a source that moves by less than a
-  // texel makes the whole picture jump. Measured on a moving lamp: a
-  // quarter-probe step changed the light arriving at a fixed point by 25
-  // percent at half resolution and by 2 percent at full.
-  resolution: options.lightResolution ?? (renderer === null ? 0.5 : 1),
-  shadowResolution: Math.max(8, Math.round(options.shadowResolution ?? 256)),
-  fieldMargin: Math.min(1, Math.max(0, options.fieldMargin ?? 0.25)),
-  fields: renderer?._fields ?? null,
-});
-
-/** Construction options for {@link Lighting}. */
+/** What every lighting system takes, whichever renderer it is. */
 export interface LightingOptions {
-  /**
-   * Renderer to shade with, or `'auto'` to take the best one the other options
-   * allow. Defaults to `'auto'`, which means `'lightmap'` when
-   * {@link LightingOptions.app} was passed and `'forward'` when it was not.
-   *
-   * It resolves at construction and never changes afterwards;
-   * {@link Lighting.quality} reports what it resolved to. Naming a renderer
-   * outright is what a scene does when it needs a property only that one has -
-   * `'forward'` for normal maps on a `LitMaterial`, `'lightmap'` for shadows
-   * and an uncapped light count.
-   */
-  readonly quality?: LightingQualityOption;
-  /**
-   * The application whose frame is lit. Required by `'lightmap'` and by a
-   * non-empty {@link LightingOptions.post}; a `'forward'` system without
-   * filters needs nothing else. Passing it installs the renderer's passes in
-   * `app.framePasses` and takes them out again on {@link Lighting.destroy}.
-   */
-  readonly app?: Application;
-  /**
-   * Texels per logical unit of the `lightmap` renderer's light target. Light is
-   * low-frequency, so half resolution is hard to tell apart and costs a quarter
-   * of the fill. Defaults to `0.5` - and to `1` under `radiance`, which SAMPLES
-   * the field instead of painting into it: the emitters and the distance field
-   * the cascades trace are both rasterised into it, so a coarse field quantises
-   * the scene rather than the light and a source moving by less than a texel
-   * makes the whole picture jump.
-   */
-  readonly lightResolution?: number;
   /**
    * Baseline colour every lit fragment receives regardless of any light, as a
    * multiplier on the albedo - `255` per channel means "unlit areas keep their
    * full albedo". Stored by reference and re-read every frame.
    */
   readonly ambient?: Color;
-  /**
-   * Filters applied to the shaded frame, in order. A bloom belongs here rather
-   * than on a node: it reads the light the system produced, including the parts
-   * no single node drew.
-   *
-   * They run as one pass in `app.framePasses`, so {@link LightingOptions.app}
-   * is required whenever the chain is non-empty, in either renderer. Under
-   * `lightmap` the chain reads the composite, which is where the light the
-   * system accumulated is still above `1.0` (see {@link Lighting.hdr}); under
-   * `forward` it reads the frame the sprite shader shaded.
-   *
-   * Caller-owned, and fixed for the system's lifetime - the filters' own
-   * parameters stay live, which is what an animated effect actually needs.
-   */
+  /** Filters over the shaded frame, in order. Each concrete system documents what they read. */
   readonly post?: readonly Filter[];
-  /**
-   * How far beyond the camera's view the occluder mask and the transport
-   * tables reach, as a fraction of the view's size on each side. Under
-   * `radiance` it is what lets a wall or a lamp just outside the picture still
-   * shadow or light what is in it, so neither pops in at the edge as the
-   * camera moves; the probes themselves still cover only the view. Defaults to
-   * `0.25`, and costs that much more mask fill and collected geometry.
-   */
-  readonly fieldMargin?: number;
-  /**
-   * Angular bins in each light's shadow map. A bin is the finest shadow edge
-   * the renderer can resolve, so a large light on a high-resolution canvas
-   * wants more of them; the cost is linear in the light count. Defaults to
-   * `256`.
-   *
-   * It trades against how wide a penumbra can get. The shadow filter samples
-   * every bin under its kernel and spends at most 21 fetches doing it, so the
-   * widest kernel is ten bins either side - three percent of a turn at the
-   * default, and proportionally less as the resolution rises. Raising this
-   * sharpens the hard edge rather than widening the softest one.
-   */
-  readonly shadowResolution?: number;
-  /**
-   * Lights the `forward` renderer's texture is sized for; lights beyond it are
-   * skipped. Defaults to `64`.
-   */
-  readonly maxLights?: number;
 }
 
+const scratchPosition = { x: 0, y: 0 };
+
 /**
- * The lighting system: lights, materials and occluders in, a shaded frame out.
+ * What a lighting system does with lights, materials and occluders, whichever
+ * renderer turns them into pixels.
  *
  * ```ts
- * const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(11, 16, 32) });
+ * const lighting = new LightmapLighting(app, { ambient: new Color(11, 16, 32) });
  *
  * scene.systems.add(lighting);
  * lighting.add(player.addChild(new PointLight({ radius: 260 })));
  * lighting.occludeFrom(new PhysicsOccluder(world));
  * ```
  *
+ * Construct one of {@link ForwardLighting}, {@link LightmapLighting} or
+ * {@link RadianceLighting}. They are alternatives rather than layers, and a
+ * frame is shaded by exactly one of them. This class is what they share: the
+ * registries, the collection of occluders, and the update and destroy
+ * contracts. It links no renderer of its own, which is what keeps a project
+ * using one of them from carrying the others.
+ *
  * # What it owns
  *
  * The renderer and its GPU resources. Lights are scene nodes owned by the tree
  * they hang in - registering one does not transfer ownership, and destroying a
- * registered light unregisters it. Occluder sources and filters passed as
- * `post` are the caller's too.
+ * registered light unregisters it. Occluder sources, filters passed as `post`,
+ * and the host are the caller's too.
  *
  * # Ordering
  *
@@ -240,9 +104,40 @@ export interface LightingOptions {
  * phase before the active scene's, so a system registered there sees lights the
  * scene has not moved yet; `scene.systems` is usually what you want.
  */
-export class Lighting {
+export abstract class Lighting {
   /** Baseline colour applied to every lit fragment. Mutable; re-read every frame. */
   public ambient: Color;
+
+  protected readonly _backend: LightingBackend;
+
+  private readonly _host: LightingHost | null;
+  private readonly _post: readonly Filter[];
+  private readonly _lights: Light[] = [];
+  private readonly _occluders: OccluderSource[] = [];
+  private readonly _surfaces: NormalSurface[] = [];
+  private readonly _field = new OccluderField();
+  private readonly _region = new Rectangle();
+
+  /**
+   * `backend` is built by the concrete system and belongs to this one from
+   * here on; `host` is the caller's and is never destroyed.
+   */
+  protected constructor(backend: LightingBackend, host: LightingHost | null, options: LightingOptions) {
+    this.ambient = options.ambient ?? new Color(28, 28, 38);
+    this._host = host;
+    this._post = options.post ?? [];
+    this._backend = backend;
+    // Publish once up front: a renderer that has never been told the ambient
+    // term shades an untouched scene black, and "black until the first tick"
+    // is not a state the vocabulary admits.
+    this._backend.publish(this._lights, this.ambient, this._field, this._surfaces);
+  }
+
+  /** Filters over the shaded frame, in order. Caller-owned and fixed for this system's lifetime. */
+  public get post(): readonly Filter[] {
+    return this._post;
+  }
+
   /** Intermediate to show instead of the shaded frame. See {@link LightingDebugView}. */
   public get debug(): LightingDebugView {
     return this._backend.debug;
@@ -272,31 +167,6 @@ export class Lighting {
     this._backend.debugExposure = exposure;
   }
 
-  private readonly _app: Application | null;
-  private readonly _post: readonly Filter[];
-  private readonly _lights: Light[] = [];
-  private readonly _occluders: OccluderSource[] = [];
-  private readonly _surfaces: NormalSurface[] = [];
-  private readonly _field = new OccluderField();
-  private readonly _region = new Rectangle();
-  private readonly _backend: LightingBackend;
-
-  public constructor(options: LightingOptions = {}) {
-    this.ambient = options.ambient ?? new Color(28, 28, 38);
-    this._app = options.app ?? null;
-    this._post = options.post ?? [];
-    this._backend = createBackend(options, this._post);
-    // Publish once up front: a renderer that has never been told the ambient
-    // term shades an untouched scene black, and "black until the first tick"
-    // is not a state the vocabulary admits.
-    this._backend.publish(this._lights, this.ambient, this._field, this._surfaces);
-  }
-
-  /** Filters over the shaded frame, in order. See {@link LightingOptions.post}. */
-  public get post(): readonly Filter[] {
-    return this._post;
-  }
-
   /** The renderer in use. */
   public get quality(): LightingQuality {
     return this._backend.quality;
@@ -304,8 +174,8 @@ export class Lighting {
 
   /**
    * Whether light accumulates with headroom above `1.0`, so that overlapping
-   * lights add up instead of saturating to white and a filter in
-   * {@link post} has something above the clipping point to work with.
+   * lights add up instead of saturating to white and a filter over the frame
+   * has something above the clipping point to work with.
    *
    * `false` under `forward`, which shades straight into the frame, and under
    * `lightmap` on a WebGL2 context without `EXT_color_buffer_float`. The
@@ -546,8 +416,8 @@ export class Lighting {
     // be seen: its shadows are parallel and every visible occluder casts one.
     // The renderer reads the same view when it builds the strips, so the two
     // agree without the region having to travel between them.
-    if (this._app !== null && this._lights.some(light => light instanceof SunLight && light.enabled && light.intensity > 0)) {
-      const view = this._app.rendering.view.getBounds();
+    if (this._host !== null && this._lights.some(light => light instanceof SunLight && light.enabled && light.intensity > 0)) {
+      const view = this._host.rendering.view.getBounds();
 
       minX = view.left;
       minY = view.top;

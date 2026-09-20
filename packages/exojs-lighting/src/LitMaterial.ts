@@ -95,7 +95,7 @@ export class LitMaterial extends SpriteMaterial<LitUniforms> {
     if (backend.quality !== 'forward') {
       throw new Error(
         `LitMaterial shades inside the sprite fragment stage, against the 'forward' renderer's light texture, but this Lighting uses '${backend.quality}'. ` +
-          "The 'lightmap' renderer multiplies the finished frame by a light field and has no surface normals to shade against: use quality: 'forward' for " +
+          'The other renderers multiply the finished frame by a light field and have no surface normals to shade against: use ForwardLighting for ' +
           'normal-mapped sprites, or drop the material and let the renderer light the frame.',
       );
     }
