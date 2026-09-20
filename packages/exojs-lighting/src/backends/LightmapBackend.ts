@@ -12,7 +12,7 @@ import {
   Matrix,
   MeshMaterial,
   type PassContext,
-  type Rectangle,
+  Rectangle,
   RenderBatch,
   RenderTexture,
   ScaleModes,
@@ -35,6 +35,7 @@ import type { OccluderDrawable } from '../occluders/OccluderSource';
 import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
 import { type DistanceField, fieldGrid } from './distanceField';
 import type { LightingBackend } from './LightingBackend';
+import { MASK_COARSE, MaskBlocks } from './maskBlocks';
 import type { LightingFields } from './radiance';
 import type { RadianceField } from './radianceField';
 import lightCompositeFragment from './shaders/light-composite.frag';
@@ -56,14 +57,26 @@ import sunQuadFragment from './shaders/sun-quad.frag';
 import sunQuadVertex from './shaders/sun-quad.vert';
 import sunQuadWgsl from './shaders/sun-quad.wgsl';
 import { ShadowMarchFiller } from './shadowMarch';
+import { TransportTextures } from './transportTextures';
 
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
+/**
+ * How a cascade ray finds what is in its way.
+ *
+ * `field` sphere-traces the distance field the mask is flooded into; the
+ * geometry walk reads this frame's segments and sources out of the transport
+ * tables and the mask itself.
+ * @internal
+ */
+export type LightWalk = 'field' | 'transport';
+
 const noCone = -1;
 /** Shadow row a light without occluders in reach carries: the shader reads it as "nothing blocks". */
 const noShadow = -1;
 /** Width of a debug occluder line, in world pixels. */
 const debugLineWidth = 2;
 
+const scratchRegion = new Rectangle();
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
 const scratchInstance = { a_light: [noCone, noCone, 1, 0], a_shadow: [noShadow, 0], a_surface: [1, 0, 1, 0] };
@@ -237,6 +250,10 @@ export class LightmapBackend implements LightingBackend {
    * that runs for nobody is the defect `post` shipped with once already.
    */
   private readonly _maskTarget: RenderTexture;
+  /** Built where the cascades could run, so their passes can sit in the right order; idle until the walk asks for them. */
+  private readonly _blocks: MaskBlocks | null;
+  private readonly _transport: TransportTextures | null;
+  private _lightWalk: LightWalk = 'field';
   private readonly _maskBatch: RenderBatch;
   private readonly _maskPass: CallbackRenderPass;
   /**
@@ -387,6 +404,11 @@ ${sunQuadWgsl}`,
     // Both come from the selected renderer rather than from an import here: a
     // project on the quads never links a cascade or a jump flood.
     this._distanceField = options.fields === null || !this.hdr ? null : options.fields.distance(this._maskTarget);
+    // Built beside the distance field and for the same reason: where the
+    // cascades can run at all, the geometry they could walk has to be able to
+    // take its place in the frame between the mask and them.
+    this._blocks = this._distanceField === null ? null : new MaskBlocks(this._maskTarget);
+    this._transport = this._distanceField === null ? null : new TransportTextures();
     this._radiance =
       options.fields === null || this._distanceField === null
         ? null
@@ -418,6 +440,10 @@ ${sunQuadWgsl}`,
 
     this._syncMask();
     this._app.framePasses.addPass(this._maskPass);
+
+    if (this._blocks !== null) {
+      this._app.framePasses.addPass(this._blocks.pass);
+    }
 
     if (this._filler !== null) {
       this._app.framePasses.addPass(this._filler.pass);
@@ -506,6 +532,38 @@ ${sunQuadWgsl}`,
     return this._maskTarget;
   }
 
+  /** What each block of that mask holds, where the walk that skips blocks is the one running. @internal */
+  public get maskBlocks(): MaskBlocks | null {
+    return this._blocks;
+  }
+
+  /** This frame's occluders and sources as geometry, where the walk that reads geometry is running. @internal */
+  public get transport(): TransportTextures | null {
+    return this._transport;
+  }
+
+  /**
+   * How a cascade ray finds what is in its way: through the distance field it
+   * sphere-traces, or by walking this frame's geometry and the occluder mask.
+   *
+   * The second is the one under construction. It is not a quality setting and
+   * will not stay a choice; until its picture is on the record against the
+   * field's, it is off and internal.
+   * @internal
+   */
+  public get lightWalk(): LightWalk {
+    return this._lightWalk;
+  }
+
+  public set lightWalk(walk: LightWalk) {
+    if (this._lightWalk === walk) {
+      return;
+    }
+
+    this._lightWalk = walk;
+    this._syncMask();
+  }
+
   /**
    * The filler actually writing the polar shadow rows, which is what a caller
    * reads back after asking for one: `'gpu'` needs a float render target, and
@@ -577,6 +635,7 @@ ${sunQuadWgsl}`,
       this._activeCount = this._radiance.writeEmitters(lights, this._maskTexel());
     }
 
+    this._writeTransport(lights, occluders);
     this._writeMask(occluders);
     this._writeOccluderDebug(occluders);
     this._updateFields(marching);
@@ -908,6 +967,8 @@ ${sunQuadWgsl}`,
     this._shadowMap.destroy();
     this._sunShadowMap.destroy();
     this._maskTarget.destroy();
+    this._blocks?.destroy();
+    this._transport?.destroy();
     this._normalTarget.destroy();
     this._target.destroy();
     this._activeCount = 0;
@@ -1112,6 +1173,10 @@ ${sunQuadWgsl}`,
       this._distanceField.pass.enabled = distance;
     }
 
+    if (this._blocks !== null) {
+      this._blocks.pass.enabled = cascades && this._lightWalk === 'transport';
+    }
+
     if (this._radiance !== null) {
       this._radiance.enabled = cascades;
     }
@@ -1195,7 +1260,12 @@ ${normalPrepassWgsl}`,
     // An emitter is something a ray ends on, so it belongs in the mask as much
     // as a wall does - otherwise the cascades would trace straight through the
     // lamp and find whatever is behind it.
-    this._radiance?.drawEmitters(pass, view);
+    // Only for the walk that reads its sources out of the mask. The geometry
+    // walk takes them from the transport tables, and a lamp drawn here would
+    // read to it as a wall in front of itself.
+    if (this._lightWalk === 'field') {
+      this._radiance?.drawEmitters(pass, view);
+    }
   }
 
   /**
@@ -1222,8 +1292,12 @@ ${normalPrepassWgsl}`,
 
     const texel = this._maskTexel();
     const segments = occluders.segments;
+    // Under the geometry walk an outline is already in the tables, exactly
+    // where it runs. Rasterising it here as well would widen it to the two
+    // texels this batch draws and make the same wall block twice.
+    const count = this._lightWalk === 'field' ? occluders.count : 0;
 
-    for (let index = 0; index < occluders.count; index++) {
+    for (let index = 0; index < count; index++) {
       const offset = index * 4;
       const x1 = segments[offset]!;
       const y1 = segments[offset + 1]!;
@@ -1243,6 +1317,22 @@ ${normalPrepassWgsl}`,
       this._transform.set(dirX * (length + texel * 2), -dirY * texel * 2, x1 - dirX * texel, dirY * (length + texel * 2), dirX * texel * 2, y1 - dirY * texel);
       this._maskBatch.add(this._transform, Color.white);
     }
+  }
+
+  /**
+   * Turn this frame's occluders and lights into the tables the geometry walk
+   * reads, over the region the mask covers.
+   *
+   * The cell size follows the block level's: both are indexes over the same
+   * field, and a walk that crosses one crosses the other at a comparable rate.
+   */
+  private _writeTransport(lights: readonly Light[], occluders: OccluderField): void {
+    if (this._transport === null || this._lightWalk !== 'transport' || !this.rasterisesOccluders) {
+      return;
+    }
+
+    this._fieldView.getBounds(scratchRegion);
+    this._transport.build(occluders.segments, occluders.count, lights, scratchRegion, Math.max(this._maskTexel() * MASK_COARSE, 1));
   }
 
   private _drawOccluders(pass: PassContext): void {
@@ -1347,6 +1437,7 @@ ${normalPrepassWgsl}`,
     const fieldHeight = field.height;
 
     this._maskTarget.setSize(this._maskPass.enabled ? fieldWidth : 1, this._maskPass.enabled ? fieldHeight : 1);
+    this._blocks?.setSize(this._maskTarget.width, this._maskTarget.height);
 
     if (this._distanceField !== null) {
       // On the mask's own grid, so a texel of one is a texel of the other, and

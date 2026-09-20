@@ -24,7 +24,7 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { makeTestApp, makeTestCanvas, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { checkMaskTrace, createMaskScene } from './_transportMaskScene';
-import { PROBE_CLEAR, PROBE_EXHAUSTED, PROBE_MASK_HIT, PROBE_TRANSMITTANCE, probeTables, probeUniforms, probeWgslSource } from './_transportProbe';
+import { PROBE_CLEAR, PROBE_EXHAUSTED, PROBE_MASK_HIT, PROBE_TRANSMITTANCE, probeUniforms, probeWgslSource } from './_transportProbe';
 
 const canvasSize = 128;
 
@@ -72,34 +72,25 @@ const createHost = async (): Promise<Host> => {
 /** A canvas-sized white texture, so the probe filter covers the whole frame. */
 const coverTexture = (): Texture => Texture.fromColor(Color.white, canvasSize);
 
-describe('the transport walk over a rasterised drawable (WebGPU)', () => {
-  test('a drawable occluder stops the walk where it stands', async ctx => {
+describe('the transport walk over what a frame built (WebGPU)', () => {
+  test('a drawable stops the walk where it stands and an outline stops it where it runs', async ctx => {
     const host = await createHost();
     const scene = createMaskScene(host.app, canvasSize);
-    const tables = probeTables([], []);
     const texture = coverTexture();
-    const filter = ShaderFilter.from(probeShader, {
-      textures: {
-        uSegments: tables.segments,
-        uEmitters: tables.emitters,
-        uCells: tables.cells,
-        uIndices: tables.indices,
-        uMask: scene.mask,
-        uMaskCoarse: scene.blocks.texture,
-      },
-    });
     const root = new Container();
     const sprite = new Sprite(texture);
 
-    sprite.filters = [filter];
     root.addChild(sprite);
 
+    let filter: ShaderFilter<typeof probeUniforms> | null = null;
+
     try {
-      // The frame that rasterises the mask and reduces the block level. Read
-      // back afterwards without running the pipeline again, so both targets
-      // still hold what this frame put in them.
+      // The frame that rasterises the mask, reduces the block level and
+      // uploads the tables. Read back afterwards without running the pipeline
+      // again, so all of it still holds what this frame put in it. The probe
+      // is built after it, because a table that grew this frame is a new
+      // texture.
       scene.lighting.update();
-      scene.sync();
       host.backend.clear(Color.black);
       host.app.framePasses.execute(host.context);
       host.backend.flush();
@@ -108,10 +99,14 @@ describe('the transport walk over a rasterised drawable (WebGPU)', () => {
 
       expect(bindings.cells[0], 'the mask was rasterised').toBeGreaterThan(1);
       expect(bindings.blocks[0], 'the block level follows it').toBeGreaterThan(1);
+      expect(bindings.gridCells[0], 'the tables were built').toBeGreaterThan(1);
 
-      filter.uniforms.uGridOrigin.set(tables.originX, tables.originY);
-      filter.uniforms.uGridCells.set(tables.gridWidth, tables.gridHeight);
-      filter.uniforms.uCellSize.set(tables.cellSize);
+      filter = ShaderFilter.from(probeShader, { textures: scene.textures() });
+      sprite.filters = [filter];
+
+      filter.uniforms.uGridOrigin.set(bindings.gridOrigin[0], bindings.gridOrigin[1]);
+      filter.uniforms.uGridCells.set(bindings.gridCells[0], bindings.gridCells[1]);
+      filter.uniforms.uCellSize.set(bindings.cellSize);
       filter.uniforms.uTableWidth.set(256);
       filter.uniforms.uScale.set(1);
       filter.uniforms.uMaskCells.set(bindings.cells[0], bindings.cells[1]);
@@ -143,9 +138,8 @@ describe('the transport walk over a rasterised drawable (WebGPU)', () => {
       }
     } finally {
       root.destroy();
-      filter.destroy();
+      filter?.destroy();
       texture.destroy();
-      tables.destroy();
       scene.destroy();
       host.destroy();
     }
