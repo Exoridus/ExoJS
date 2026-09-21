@@ -29,8 +29,16 @@ import { SHADER_EXTENSIONS, stripShaderSource } from '@codexo/exojs-build/shader
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
-/** Roots that hold engine-owned shaders and the modules importing them. */
+/** Roots that hold engine-owned shaders. */
 const SCAN_ROOTS = ['src', 'packages'];
+
+/**
+ * Roots searched for whatever imports them. Wider than {@link SCAN_ROOTS}
+ * because a chunk can legitimately be compiled only by the browser suite: a
+ * shader the specs build into a probe shader reaches a real compiler, which is
+ * what the orphan rule is about.
+ */
+const IMPORTER_ROOTS = [...SCAN_ROOTS, 'test'];
 
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', 'test-results']);
 
@@ -194,8 +202,14 @@ const checkLanguage = (file: string, text: string): Problem[] => {
   // one of its own. Calling `exoInstanceClipPosition` is that contract's own
   // marker, which keeps this a property of the file rather than a path list.
   const composedWithInstanceContract = text.includes('exoInstanceClipPosition(');
+  // The transport chunk is the same arrangement seen from the other side: it
+  // declares no entry point of its own and has to sit between the bindings and
+  // the body that walks with it, so a body calling `traceSegment` is composed
+  // and carries no version line either. Its own marker again, rather than a
+  // list of paths that would fall behind.
+  const composedWithTransportChunk = text.includes('traceSegment(');
 
-  if (/\bvoid\s+main\s*\(/.test(text) && !composedWithInstanceContract && firstLine.trim() !== GLSL_VERSION_DIRECTIVE) {
+  if (/\bvoid\s+main\s*\(/.test(text) && !composedWithInstanceContract && !composedWithTransportChunk && firstLine.trim() !== GLSL_VERSION_DIRECTIVE) {
     problems.push({ file, line: 1, message: `declares main() but line 1 is not '${GLSL_VERSION_DIRECTIVE}'` });
   }
 
@@ -271,7 +285,7 @@ export const scanShaderSources = async (repoRoot: string = REPO_ROOT): Promise<S
     await Promise.all(SCAN_ROOTS.map(root => collectFiles(repoRoot, root, name => SHADER_EXTENSIONS.some(ext => name.endsWith(ext)))))
   ).flat();
   const importerFiles = (
-    await Promise.all(SCAN_ROOTS.map(root => collectFiles(repoRoot, root, name => IMPORTER_EXTENSIONS.some(ext => name.endsWith(ext)))))
+    await Promise.all(IMPORTER_ROOTS.map(root => collectFiles(repoRoot, root, name => IMPORTER_EXTENSIONS.some(ext => name.endsWith(ext)))))
   ).flat();
   const importerText = (await Promise.all(importerFiles.map(path => readFile(path, 'utf8')))).join('\n');
 

@@ -1,6 +1,7 @@
-import { type Application, type Color, DataTexture, type Filter, FilterPass, TextureFormat } from '@codexo/exojs';
+import { type Color, DataTexture, type Filter, FilterPass, TextureFormat } from '@codexo/exojs';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
+import type { LightingHost } from '../LightingHost';
 import { type Light } from '../lights/Light';
 import { lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
@@ -26,8 +27,8 @@ export interface ForwardBackendOptions {
    * scene that does not ask for one.
    */
   readonly post: readonly Filter[];
-  /** The application whose frame the filters run on. Only read when `post` has filters. */
-  readonly app: Application | null;
+  /** The host whose frame the filters run on. Only read when `post` has filters. */
+  readonly app: LightingHost | null;
 }
 
 /**
@@ -62,6 +63,8 @@ export class ForwardBackend implements LightingBackend {
 
   /** Ignored: this renderer shades inside the sprite shader and has no intermediate to show. */
   public debug: LightingDebugView = null;
+  /** Nothing is composited here - each sprite shades itself - so there is nothing to scale. */
+  public debugExposure = 1;
 
   /** Shading happens inside the sprite fragment stage, which has no light field to fold a shadow term into. */
   public readonly castsShadows = false;
@@ -76,11 +79,16 @@ export class ForwardBackend implements LightingBackend {
   /** Always zero: a registered surface is never read, so none is ever written. */
   public readonly activeSurfaceCount = 0;
 
+  /** This renderer casts no shadows, so it needs no occluders at all. */
+  public collectRegion(): boolean {
+    return false;
+  }
+
   /** Lights the texture is sized for. */
   public readonly maxLights: number;
 
   private readonly _texture: DataTexture<TextureFormat.Rgba32F>;
-  private readonly _app: Application | null = null;
+  private readonly _app: LightingHost | null = null;
   private readonly _postPass: FilterPass | null = null;
   private _activeCount = 0;
 

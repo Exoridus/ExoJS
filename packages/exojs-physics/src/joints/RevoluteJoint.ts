@@ -177,7 +177,14 @@ export class RevoluteJoint extends Joint {
     this.bodyA.angularVelocity -= this.bodyA.invInertia * axial;
     this.bodyB.angularVelocity += this.bodyB.invInertia * axial;
 
-    this._applyImpulse(this._impulseX, this._impulseY, this._rAx, this._rAy, this._rBx, this._rBy);
+    const bodyA = this.bodyA;
+    const bodyB = this.bodyB;
+    const rotAx = this._rAx * bodyA._deltaCos - this._rAy * bodyA._deltaSin;
+    const rotAy = this._rAx * bodyA._deltaSin + this._rAy * bodyA._deltaCos;
+    const rotBx = this._rBx * bodyB._deltaCos - this._rBy * bodyB._deltaSin;
+    const rotBy = this._rBx * bodyB._deltaSin + this._rBy * bodyB._deltaCos;
+
+    this._applyImpulse(this._impulseX, this._impulseY, rotAx, rotAy, rotBx, rotBy);
   }
 
   /** @internal */

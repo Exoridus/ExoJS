@@ -1,0 +1,616 @@
+import type { ReadonlyRectangle } from '@codexo/exojs';
+
+import type { Light } from '../lights/Light';
+import { LineLight } from '../lights/LineLight';
+import { lightFalloff, lightHalfLength } from '../lights/reach';
+import { SpotLight } from '../lights/SpotLight';
+
+/** Floats per texel of every table, which are all RGBA32F. */
+const CHANNELS = 4;
+const GRID_EPSILON = 1e-7;
+
+/** Texels one occluder segment takes: `(ax, ay, bx, by)`. */
+const SEGMENT_TEXELS = 1;
+
+/**
+ * Texels one emitter takes.
+ *
+ * `(cx, cy, radius, halfLength)`, `(axisX, axisY, cosOuter, cosInner)`,
+ * `(densityR, densityG, densityB, directional)`.
+ */
+const EMITTER_TEXELS = 3;
+
+/** Width of the segment, emitter and index tables, in texels. */
+const TABLE_WIDTH = 256;
+
+/** Smallest world extent a grid cell may have, so a degenerate view cannot divide by zero. */
+const MIN_CELL = 1e-3;
+
+/**
+ * Cells one walk over the grid may visit, as the shaders' `MAX_CELL_STEPS`
+ * fixes it.
+ *
+ * A stretch clipped to the grid advances one cell index per step, so it visits
+ * at most `gridWidth + gridHeight - 1` cells. The budget is a shader constant
+ * and the grid is laid out here, so this is what a frame is laid out against:
+ * {@link TransportGeometry.build} widens its cells rather than produce a grid
+ * the walk could run out on. Widening is free of consequence because the cell
+ * size decides which primitives a ray tests and never whether one is hit.
+ */
+const MAX_CELL_STEPS = 1024;
+
+/**
+ * Upper bound on a table's texel count, from the smallest guaranteed WebGL2 and
+ * WebGPU 2D texture dimension. A build that would exceed it reports rather than
+ * silently dropping geometry, which would show as light through a wall.
+ */
+const MAX_TABLE_TEXELS = TABLE_WIDTH * 2048;
+
+/** Thrown when a scene holds more geometry than the transport tables can address. */
+export class TransportCapacityError extends Error {
+  public constructor(what: string, needed: number, limit: number) {
+    super(`Transport geometry exceeds its table: ${what} needs ${needed} texels, limit is ${limit}.`);
+    this.name = 'TransportCapacityError';
+  }
+}
+
+/** The world radius of a light's emitting shape, which is its disc or capsule radius. */
+export const sourceRadius = (light: Light): number => Math.max(3, lightFalloff(light) * Math.min(1, Math.max(0, light.softness)) * 0.05);
+
+/**
+ * Emission per unit of path length through a source's shape, per colour
+ * channel, in the calibration described on {@link TransportGeometry}.
+ */
+export const sourceDensity = (light: Light, radius: number, halfLength: number): number => {
+  const area = Math.PI * radius * radius + 4 * radius * halfLength;
+
+  return area <= 0 ? 0 : (light.intensity * lightFalloff(light) * Math.PI) / (4 * area);
+};
+
+/** How the transport tables are laid out for a frame, as the shaders read them. */
+export interface TransportTables {
+  /** Segment endpoints, four floats per texel, `TABLE_WIDTH` texels per row. */
+  readonly segments: Float32Array;
+  /** Occluder segments described by {@link segments}. */
+  readonly segmentCount: number;
+  /** Emitters, three texels each, in the layout {@link TransportGeometry} documents. */
+  readonly emitters: Float32Array;
+  /** Emitters described by {@link emitters}. */
+  readonly emitterCount: number;
+  /** Per cell `(segmentOffset, segmentCount, emitterOffset, emitterCount)`, row-major over the grid. */
+  readonly cells: Float32Array;
+  /** Primitive ids the cell ranges point into, one per texel in the red channel. */
+  readonly indices: Float32Array;
+  /** Texels of {@link indices} that hold an id. */
+  readonly indexCount: number;
+  /** World position of the grid's lower-left corner. */
+  readonly originX: number;
+  readonly originY: number;
+  /** World extent of one grid cell. */
+  readonly cellSize: number;
+  /** Cells across and up the grid. */
+  readonly gridWidth: number;
+  readonly gridHeight: number;
+  /** Rows each table occupies, which is what the upload needs. */
+  readonly segmentRows: number;
+  readonly emitterRows: number;
+  readonly indexRows: number;
+}
+
+/**
+ * This frame's occluder segments and virtual emitters, plus a uniform grid that
+ * narrows a ray's candidates to the cells it crosses.
+ *
+ * The grid only decides which primitives a ray tests. It never decides whether
+ * one is hit: a cell size that changes the candidate lists must not change any
+ * traced value, which is what makes the size a cost knob rather than a quality
+ * one. Primitives are therefore entered into every cell their bounding box
+ * touches, and a ray walks the cells in order so a primitive listed in several
+ * of them is integrated over each cell's own half-open parameter interval and
+ * counted once.
+ *
+ * Virtual emitters are additive emission distributions, not occluders: a point
+ * or spot light emits uniformly from a disc of {@link sourceRadius}, a line
+ * light from a capsule of that radius, and a ray collects the density
+ * {@link sourceDensity} gives over the length it actually travels inside that
+ * shape. Only registered occluders block. The calibration is chosen so the mean
+ * over a probe's directions is about `intensity * reach / (8 * distance)` in the
+ * far field, which puts the radiance scale alongside the lightmap falloff; it is
+ * a chosen 2D calibration rather than photometry.
+ *
+ * Buffers grow to the largest frame seen and are reused afterwards.
+ * @internal
+ */
+export class TransportGeometry {
+  private _segments = new Float32Array(64 * SEGMENT_TEXELS * CHANNELS);
+  private _emitters = new Float32Array(16 * EMITTER_TEXELS * CHANNELS);
+  private _cells = new Float32Array(CHANNELS);
+  private _indices = new Float32Array(256 * CHANNELS);
+  private _segmentCount = 0;
+  private _emitterCount = 0;
+  private _indexCount = 0;
+  private _originX = 0;
+  private _originY = 0;
+  private _cellSize = MIN_CELL;
+  private _gridWidth = 1;
+  private _gridHeight = 1;
+  /** Per cell, how many segments and emitters it holds, filled before the ids are placed. */
+  private _segmentTally = new Int32Array(1);
+  private _emitterTally = new Int32Array(1);
+  /** Where each cell's ids begin, and how many of each kind have been written so far. */
+  private _segmentCursor = new Int32Array(1);
+  private _emitterCursor = new Int32Array(1);
+  private readonly _clippedSegment = new Float64Array(4);
+
+  /**
+   * Rebuild from this frame's occluder segments and lights.
+   *
+   * `segments` holds `(x1, y1, x2, y2)` quadruples as {@link OccluderField}
+   * collects them, `bounds` is the region the fields cover, and `cellSize` is
+   * the world extent of one grid cell.
+   *
+   * @throws TransportCapacityError when the scene needs more table texels than
+   * a guaranteed texture dimension can address.
+   */
+  public build(segments: Float32Array, segmentCount: number, lights: readonly Light[], bounds: ReadonlyRectangle, cellSize: number): void {
+    this._layOutGrid(bounds, cellSize);
+    this._writeSegments(segments, segmentCount);
+    this._writeEmitters(lights);
+    this._buildIndex();
+  }
+
+  /** What the last {@link build} produced. */
+  public get tables(): TransportTables {
+    return {
+      segments: this._segments,
+      segmentCount: this._segmentCount,
+      emitters: this._emitters,
+      emitterCount: this._emitterCount,
+      cells: this._cells,
+      indices: this._indices,
+      indexCount: this._indexCount,
+      originX: this._originX,
+      originY: this._originY,
+      cellSize: this._cellSize,
+      gridWidth: this._gridWidth,
+      gridHeight: this._gridHeight,
+      segmentRows: rowsFor(this._segmentCount * SEGMENT_TEXELS),
+      emitterRows: rowsFor(this._emitterCount * EMITTER_TEXELS),
+      indexRows: rowsFor(this._indexCount),
+    };
+  }
+
+  private _layOutGrid(bounds: ReadonlyRectangle, cellSize: number): void {
+    const width = Math.max(0, bounds.width);
+    const height = Math.max(0, bounds.height);
+
+    // `bounds` is the world-space box the field covers, which a rotated camera
+    // makes larger than the field itself - so a cell size chosen from the
+    // field's own density can produce a grid wider than the walk's budget. The
+    // floor below is what keeps `gridWidth + gridHeight - 1` within it for any
+    // bounds a caller hands over: `ceil(w/s) + ceil(h/s) - 1 <= (w + h)/s + 1`.
+    this._cellSize = Math.max(cellSize, MIN_CELL, (width + height) / (MAX_CELL_STEPS - 1));
+    this._originX = bounds.x;
+    this._originY = bounds.y;
+    this._gridWidth = Math.max(1, Math.ceil(width / this._cellSize));
+    this._gridHeight = Math.max(1, Math.ceil(height / this._cellSize));
+
+    const cells = this._gridWidth * this._gridHeight;
+
+    if (this._segmentTally.length < cells) {
+      this._segmentTally = new Int32Array(cells);
+      this._emitterTally = new Int32Array(cells);
+      this._segmentCursor = new Int32Array(cells);
+      this._emitterCursor = new Int32Array(cells);
+      this._cells = new Float32Array(cells * CHANNELS);
+    } else {
+      this._segmentTally.fill(0, 0, cells);
+      this._emitterTally.fill(0, 0, cells);
+    }
+  }
+
+  private _writeSegments(segments: Float32Array, count: number): void {
+    const needed = count * SEGMENT_TEXELS;
+
+    if (needed > MAX_TABLE_TEXELS) {
+      throw new TransportCapacityError('occluder segments', needed, MAX_TABLE_TEXELS);
+    }
+
+    this._segments = fit(this._segments, needed * CHANNELS);
+    this._segmentCount = count;
+
+    for (let index = 0; index < count; index++) {
+      const source = index * 4;
+      const target = index * SEGMENT_TEXELS * CHANNELS;
+
+      this._segments[target] = segments[source]!;
+      this._segments[target + 1] = segments[source + 1]!;
+      this._segments[target + 2] = segments[source + 2]!;
+      this._segments[target + 3] = segments[source + 3]!;
+    }
+  }
+
+  private _writeEmitters(lights: readonly Light[]): void {
+    const placed: Light[] = [];
+
+    for (const light of lights) {
+      // Emission scales by the intensity, so a negative one would subtract
+      // light along every ray that crossed the source and a non-finite one
+      // would poison the table. Written as a positive test so that both are
+      // left out, on the same terms the chain counts its sources by.
+      if (light.enabled && light.intensity > 0 && lightFalloff(light) > 0) {
+        placed.push(light);
+      }
+    }
+
+    const needed = placed.length * EMITTER_TEXELS;
+
+    if (needed > MAX_TABLE_TEXELS) {
+      throw new TransportCapacityError('emitters', needed, MAX_TABLE_TEXELS);
+    }
+
+    this._emitters = fit(this._emitters, needed * CHANNELS);
+    this._emitterCount = placed.length;
+
+    const position = { x: 0, y: 0 };
+    const direction = { x: 0, y: 0 };
+
+    for (let index = 0; index < placed.length; index++) {
+      const light = placed[index]!;
+      const radius = sourceRadius(light);
+      const halfLength = lightHalfLength(light);
+      const density = sourceDensity(light, radius, halfLength);
+      const target = index * EMITTER_TEXELS * CHANNELS;
+
+      light.getWorldPosition(position);
+
+      // A capsule needs its axis whatever the light does with direction; a spot
+      // needs it as the direction light leaves along. Both are stored
+      // normalized, never as an angle: two spots facing nearly opposite ways
+      // average to a lobe pointing at neither of them.
+      if (light instanceof SpotLight || light instanceof LineLight) {
+        light.getWorldDirection(direction);
+      } else {
+        direction.x = 1;
+        direction.y = 0;
+      }
+
+      const length = Math.hypot(direction.x, direction.y);
+      const axisX = length > 0 ? direction.x / length : 1;
+      const axisY = length > 0 ? direction.y / length : 0;
+      const outer = light instanceof SpotLight ? (Math.max(0, Math.min(90, light.angle)) * Math.PI) / 180 : 0;
+      const inner = light instanceof SpotLight ? outer * (1 - Math.min(1, Math.max(0, light.coneSoftness))) : 0;
+
+      this._emitters[target] = position.x;
+      this._emitters[target + 1] = position.y;
+      this._emitters[target + 2] = radius;
+      this._emitters[target + 3] = halfLength;
+      this._emitters[target + 4] = axisX;
+      this._emitters[target + 5] = axisY;
+      this._emitters[target + 6] = Math.cos(outer);
+      this._emitters[target + 7] = Math.cos(inner);
+      this._emitters[target + 8] = (light.color.r / 255) * density;
+      this._emitters[target + 9] = (light.color.g / 255) * density;
+      this._emitters[target + 10] = (light.color.b / 255) * density;
+      this._emitters[target + 11] = light instanceof SpotLight ? 1 : 0;
+    }
+  }
+
+  /**
+   * Count each cell's primitives, lay the ranges out end to end, then place the
+   * ids. Counting first is what keeps one contiguous list per cell without a
+   * per-cell array, and it is why every primitive is visited twice.
+   */
+  private _buildIndex(): void {
+    const cells = this._gridWidth * this._gridHeight;
+
+    this._forEachSegmentCell(cell => {
+      this._segmentTally[cell]!++;
+    });
+    this._forEachEmitterCell(cell => {
+      this._emitterTally[cell]!++;
+    });
+
+    let offset = 0;
+
+    for (let cell = 0; cell < cells; cell++) {
+      const segments = this._segmentTally[cell]!;
+      const emitters = this._emitterTally[cell]!;
+      const target = cell * CHANNELS;
+
+      this._cells[target] = offset;
+      this._cells[target + 1] = segments;
+      this._segmentCursor[cell] = offset;
+      offset += segments;
+
+      this._cells[target + 2] = offset;
+      this._cells[target + 3] = emitters;
+      this._emitterCursor[cell] = offset;
+      offset += emitters;
+    }
+
+    if (offset > MAX_TABLE_TEXELS) {
+      throw new TransportCapacityError('cell index', offset, MAX_TABLE_TEXELS);
+    }
+
+    this._indexCount = offset;
+    this._indices = fit(this._indices, Math.max(offset, 1) * CHANNELS);
+
+    this._forEachSegmentCell((cell, id) => {
+      this._indices[this._segmentCursor[cell]!++ * CHANNELS] = id;
+    });
+    this._forEachEmitterCell((cell, id) => {
+      this._indices[this._emitterCursor[cell]!++ * CHANNELS] = id;
+    });
+  }
+
+  private _forEachSegmentCell(visit: (cell: number, id: number) => void): void {
+    for (let id = 0; id < this._segmentCount; id++) {
+      const at = id * SEGMENT_TEXELS * CHANNELS;
+      const ax = this._segments[at]!;
+      const ay = this._segments[at + 1]!;
+      const bx = this._segments[at + 2]!;
+      const by = this._segments[at + 3]!;
+
+      this._forEachCellOnSegment(ax, ay, bx, by, id, visit);
+    }
+  }
+
+  private _forEachCellOnSegment(ax: number, ay: number, bx: number, by: number, id: number, visit: (cell: number, id: number) => void): void {
+    if (!this._clipSegmentToGrid(ax, ay, bx, by)) {
+      return;
+    }
+
+    const startX = this._clippedSegment[0]!;
+    const startY = this._clippedSegment[1]!;
+    const endX = this._clippedSegment[2]!;
+    const endY = this._clippedSegment[3]!;
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    const verticalLine = deltaX === 0 ? gridLine(startX) : null;
+    const horizontalLine = deltaY === 0 ? gridLine(startY) : null;
+
+    this._visitPointCells(startX, startY, id, visit);
+
+    if (deltaX === 0 && deltaY === 0) {
+      return;
+    }
+
+    if (verticalLine !== null) {
+      this._walkGridLine(verticalLine - 1, verticalLine, startY, deltaY, true, id, visit);
+
+      return;
+    }
+
+    if (horizontalLine !== null) {
+      this._walkGridLine(horizontalLine - 1, horizontalLine, startX, deltaX, false, id, visit);
+
+      return;
+    }
+
+    this._walkSegmentCells(startX, startY, deltaX, deltaY, id, visit);
+  }
+
+  private _walkSegmentCells(startX: number, startY: number, deltaX: number, deltaY: number, id: number, visit: (cell: number, id: number) => void): void {
+    const stepX = deltaX > 0 ? 1 : -1;
+    const stepY = deltaY > 0 ? 1 : -1;
+    const startLineX = gridLine(startX);
+    const startLineY = gridLine(startY);
+    let cellX = startLineX !== null && stepX < 0 ? startLineX - 1 : Math.floor(startX);
+    let cellY = startLineY !== null && stepY < 0 ? startLineY - 1 : Math.floor(startY);
+    let nextX = deltaX === 0 ? Infinity : (stepX > 0 ? cellX + 1 - startX : startX - cellX) / Math.abs(deltaX);
+    let nextY = deltaY === 0 ? Infinity : (stepY > 0 ? cellY + 1 - startY : startY - cellY) / Math.abs(deltaY);
+    const stepAtX = deltaX === 0 ? Infinity : 1 / Math.abs(deltaX);
+    const stepAtY = deltaY === 0 ? Infinity : 1 / Math.abs(deltaY);
+
+    while (Math.min(nextX, nextY) <= 1 + GRID_EPSILON) {
+      if (Number.isFinite(nextX) && Number.isFinite(nextY) && Math.abs(nextX - nextY) <= GRID_EPSILON * Math.max(1, nextX, nextY)) {
+        const crossedX = cellX + stepX;
+        const crossedY = cellY + stepY;
+
+        this._visitCell(crossedX, cellY, id, visit);
+        this._visitCell(cellX, crossedY, id, visit);
+        this._visitCell(crossedX, crossedY, id, visit);
+        cellX = crossedX;
+        cellY = crossedY;
+        nextX += stepAtX;
+        nextY += stepAtY;
+      } else if (nextX < nextY) {
+        cellX += stepX;
+        this._visitCell(cellX, cellY, id, visit);
+        nextX += stepAtX;
+      } else {
+        cellY += stepY;
+        this._visitCell(cellX, cellY, id, visit);
+        nextY += stepAtY;
+      }
+    }
+  }
+
+  private _clipSegmentToGrid(ax: number, ay: number, bx: number, by: number): boolean {
+    const startX = (ax - this._originX) / this._cellSize;
+    const startY = (ay - this._originY) / this._cellSize;
+    const endX = (bx - this._originX) / this._cellSize;
+    const endY = (by - this._originY) / this._cellSize;
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    let enter = 0;
+    let leave = 1;
+
+    if (deltaX === 0) {
+      if (startX < 0 || startX > this._gridWidth) {
+        return false;
+      }
+    } else {
+      const first = (0 - startX) / deltaX;
+      const last = (this._gridWidth - startX) / deltaX;
+
+      enter = Math.max(enter, Math.min(first, last));
+      leave = Math.min(leave, Math.max(first, last));
+    }
+
+    if (deltaY === 0) {
+      if (startY < 0 || startY > this._gridHeight) {
+        return false;
+      }
+    } else {
+      const first = (0 - startY) / deltaY;
+      const last = (this._gridHeight - startY) / deltaY;
+
+      enter = Math.max(enter, Math.min(first, last));
+      leave = Math.min(leave, Math.max(first, last));
+    }
+
+    if (leave < enter) {
+      return false;
+    }
+
+    this._clippedSegment[0] = Math.min(this._gridWidth, Math.max(0, startX + deltaX * enter));
+    this._clippedSegment[1] = Math.min(this._gridHeight, Math.max(0, startY + deltaY * enter));
+    this._clippedSegment[2] = Math.min(this._gridWidth, Math.max(0, startX + deltaX * leave));
+    this._clippedSegment[3] = Math.min(this._gridHeight, Math.max(0, startY + deltaY * leave));
+
+    return true;
+  }
+
+  private _walkGridLine(
+    firstSide: number,
+    secondSide: number,
+    start: number,
+    delta: number,
+    vertical: boolean,
+    id: number,
+    visit: (cell: number, id: number) => void,
+  ): void {
+    const step = delta > 0 ? 1 : -1;
+    const startLine = gridLine(start);
+    let cell = startLine !== null && step < 0 ? startLine - 1 : Math.floor(start);
+    let next = (step > 0 ? cell + 1 - start : start - cell) / Math.abs(delta);
+    const interval = 1 / Math.abs(delta);
+
+    while (next <= 1 + GRID_EPSILON) {
+      cell += step;
+
+      if (vertical) {
+        this._visitCell(firstSide, cell, id, visit);
+        this._visitCell(secondSide, cell, id, visit);
+      } else {
+        this._visitCell(cell, firstSide, id, visit);
+        this._visitCell(cell, secondSide, id, visit);
+      }
+
+      next += interval;
+    }
+  }
+
+  private _visitPointCells(x: number, y: number, id: number, visit: (cell: number, id: number) => void): void {
+    const lineX = gridLine(x);
+    const lineY = gridLine(y);
+    let firstX = Math.floor(x);
+    let lastX = firstX;
+    let firstY = Math.floor(y);
+    let lastY = firstY;
+
+    if (lineX !== null) {
+      firstX = lineX - 1;
+      lastX = lineX;
+    }
+
+    if (lineY !== null) {
+      firstY = lineY - 1;
+      lastY = lineY;
+    }
+
+    for (let cellY = firstY; cellY <= lastY; cellY++) {
+      for (let cellX = firstX; cellX <= lastX; cellX++) {
+        this._visitCell(cellX, cellY, id, visit);
+      }
+    }
+  }
+
+  private _visitCell(x: number, y: number, id: number, visit: (cell: number, id: number) => void): void {
+    if (x >= 0 && y >= 0 && x < this._gridWidth && y < this._gridHeight) {
+      visit(y * this._gridWidth + x, id);
+    }
+  }
+
+  private _forEachEmitterCell(visit: (cell: number, id: number) => void): void {
+    for (let id = 0; id < this._emitterCount; id++) {
+      const at = id * EMITTER_TEXELS * CHANNELS;
+      const centreX = this._emitters[at]!;
+      const centreY = this._emitters[at + 1]!;
+      const radius = this._emitters[at + 2]!;
+      const halfLength = this._emitters[at + 3]!;
+      const axisX = this._emitters[at + 4]!;
+      const axisY = this._emitters[at + 5]!;
+      const spanX = Math.abs(axisX) * halfLength + radius;
+      const spanY = Math.abs(axisY) * halfLength + radius;
+
+      this._forEachCellIn(centreX - spanX, centreY - spanY, centreX + spanX, centreY + spanY, id, visit);
+    }
+  }
+
+  /**
+   * Every cell a world-space bounding box touches, clipped to the grid.
+   *
+   * A box that lies wholly outside contributes nothing: a ray can only ask a
+   * cell it crosses, and it never crosses one that does not exist. A box that
+   * merely reaches outside keeps the part that does exist, so a wall running
+   * off the edge of the field still blocks inside it.
+   */
+  private _forEachCellIn(minX: number, minY: number, maxX: number, maxY: number, id: number, visit: (cell: number, id: number) => void): void {
+    // `ceil - 1` rather than `floor` on the low edge: the two agree except
+    // where the edge lands exactly on a cell boundary, and there the box
+    // touches the cell on the other side of it too. A wall along a tile edge
+    // is the ordinary case, and a ray reaching that boundary from the far side
+    // crosses it exactly where the wall stands - in a cell that would
+    // otherwise never list it and so never test it. The high edge needs no
+    // such treatment: a box ending on a boundary already lands in the cell
+    // beyond it by rounding down.
+    const firstX = Math.ceil((minX - this._originX) / this._cellSize) - 1;
+    const lastX = Math.floor((maxX - this._originX) / this._cellSize);
+    const firstY = Math.ceil((minY - this._originY) / this._cellSize) - 1;
+    const lastY = Math.floor((maxY - this._originY) / this._cellSize);
+    const fromX = Math.max(0, firstX);
+    const toX = Math.min(this._gridWidth - 1, lastX);
+    const fromY = Math.max(0, firstY);
+    const toY = Math.min(this._gridHeight - 1, lastY);
+
+    for (let y = fromY; y <= toY; y++) {
+      for (let x = fromX; x <= toX; x++) {
+        visit(y * this._gridWidth + x, id);
+      }
+    }
+  }
+}
+
+const gridLine = (value: number): number | null => {
+  const nearest = Math.round(value);
+
+  return Math.abs(value - nearest) <= GRID_EPSILON * Math.max(1, Math.abs(value)) ? nearest : null;
+};
+
+/** Rows of {@link TABLE_WIDTH} texels a table of `texels` entries occupies. */
+const rowsFor = (texels: number): number => Math.max(1, Math.ceil(texels / TABLE_WIDTH));
+
+/** `buffer`, or a larger one, holding at least `floats` and a whole number of rows. */
+const fit = (buffer: Float32Array<ArrayBuffer>, floats: number): Float32Array<ArrayBuffer> => {
+  const rows = Math.max(1, Math.ceil(floats / (TABLE_WIDTH * CHANNELS)));
+  const needed = rows * TABLE_WIDTH * CHANNELS;
+
+  if (buffer.length >= needed) {
+    buffer.fill(0, 0, Math.min(buffer.length, needed));
+
+    return buffer;
+  }
+
+  return new Float32Array(needed);
+};
+
+export {
+  CHANNELS as transportChannels,
+  EMITTER_TEXELS as transportEmitterTexels,
+  MAX_CELL_STEPS as transportMaxCellSteps,
+  SEGMENT_TEXELS as transportSegmentTexels,
+  TABLE_WIDTH as transportTableWidth,
+};

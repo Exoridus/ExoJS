@@ -1,6 +1,6 @@
 {
   "recorded": {
-    "at": "2026-09-18T05:29:42.840Z",
+    "at": "2026-09-21T05:17:09.298Z",
     "engineVersion": "0.17.0",
     "adapter": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
   },
@@ -22,7 +22,7 @@
       "archetype": "composite",
       "nodeCount": 200,
       "drawCalls": 5,
-      "textureBinds": 12,
+      "textureBinds": 18,
       "bufferUploads": 5
     },
     {
@@ -62,7 +62,7 @@
       "archetype": "filter-chain-1",
       "nodeCount": 200,
       "drawCalls": 3,
-      "textureBinds": 9,
+      "textureBinds": 15,
       "bufferUploads": 1
     },
     {
@@ -72,7 +72,7 @@
       "archetype": "filter-chain-2",
       "nodeCount": 200,
       "drawCalls": 4,
-      "textureBinds": 11,
+      "textureBinds": 20,
       "bufferUploads": 1
     },
     {
@@ -82,7 +82,7 @@
       "archetype": "filter-chain-4",
       "nodeCount": 200,
       "drawCalls": 6,
-      "textureBinds": 15,
+      "textureBinds": 30,
       "bufferUploads": 1
     },
     {
@@ -92,7 +92,7 @@
       "archetype": "fx-blur",
       "nodeCount": 200,
       "drawCalls": 4,
-      "textureBinds": 11,
+      "textureBinds": 19,
       "bufferUploads": 3
     },
     {
@@ -132,8 +132,8 @@
       "archetype": "lights-shadowed",
       "nodeCount": 200,
       "drawCalls": 3,
-      "textureBinds": 6,
-      "bufferUploads": 7
+      "textureBinds": 16,
+      "bufferUploads": 6
     },
     {
       "engine": "exojs",
@@ -142,7 +142,7 @@
       "archetype": "lights-unshadowed",
       "nodeCount": 200,
       "drawCalls": 3,
-      "textureBinds": 6,
+      "textureBinds": 16,
       "bufferUploads": 6
     },
     {
@@ -322,7 +322,7 @@
       "archetype": "composite",
       "nodeCount": 200,
       "drawCalls": 7,
-      "textureBinds": 12,
+      "textureBinds": 18,
       "bufferUploads": 3
     },
     {
@@ -362,7 +362,7 @@
       "archetype": "filter-chain-1",
       "nodeCount": 200,
       "drawCalls": 4,
-      "textureBinds": 9,
+      "textureBinds": 15,
       "bufferUploads": 1
     },
     {
@@ -372,7 +372,7 @@
       "archetype": "filter-chain-2",
       "nodeCount": 200,
       "drawCalls": 5,
-      "textureBinds": 11,
+      "textureBinds": 20,
       "bufferUploads": 1
     },
     {
@@ -382,7 +382,7 @@
       "archetype": "filter-chain-4",
       "nodeCount": 200,
       "drawCalls": 7,
-      "textureBinds": 15,
+      "textureBinds": 30,
       "bufferUploads": 1
     },
     {
@@ -392,7 +392,7 @@
       "archetype": "fx-blur",
       "nodeCount": 200,
       "drawCalls": 4,
-      "textureBinds": 11,
+      "textureBinds": 19,
       "bufferUploads": 3
     },
     {
@@ -432,8 +432,8 @@
       "archetype": "lights-shadowed",
       "nodeCount": 200,
       "drawCalls": 3,
-      "textureBinds": 6,
-      "bufferUploads": 7
+      "textureBinds": 16,
+      "bufferUploads": 6
     },
     {
       "engine": "exojs",
@@ -442,7 +442,7 @@
       "archetype": "lights-unshadowed",
       "nodeCount": 200,
       "drawCalls": 3,
-      "textureBinds": 6,
+      "textureBinds": 16,
       "bufferUploads": 6
     },
     {

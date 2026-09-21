@@ -16,7 +16,6 @@ const stride = 4;
  *
  * The buffer grows to the largest frame seen and is reused afterwards, so a
  * steady scene collects without allocating.
- * @internal
  */
 export class OccluderField implements OccluderSink {
   private _segments = new Float32Array(256 * stride);

@@ -31,41 +31,43 @@ struct VertexOutput {
 @group(2) @binding(3) var u_normal: texture_2d<f32>;
 @group(2) @binding(4) var u_normalSampler: sampler;
 
-const SHADOW_TAPS: i32 = 5;
+/** Widest kernel as a half-width in strips, and the fetch budget. See `light-quad.wgsl`. */
+const MAX_HALF: i32 = 10;
 /** Fraction of the strip range the widest penumbra spans. */
 const MAX_PENUMBRA: f32 = 0.03;
 /** Tolerance, in the row's own units, that keeps an occluder out of its own shadow. */
 const SHADOW_BIAS: f32 = 0.004;
+/** Kernel half-width, in strips, at zero softness. See `light-quad.wgsl`. */
+const MIN_RADIUS: f32 = 1.5;
+
+/** Narrowest blocker slope a strip is allowed to resolve. See `light-quad.wgsl`. */
+const MIN_SLOPE: f32 = 1e-4;
 
 /**
- * Tap weights across the kernel. They sum to one, and they are UNEQUAL on
- * purpose: five equally weighted taps can only ever add up to six distinct
- * values, so a soft edge comes out as six bands that read as several shadows
- * lying on top of each other.
+ * The blocker depth strip `strip` holds. Clamped rather than wrapped: strips
+ * are a line, and the far side of the range is not the near side of it.
  */
-fn shadowWeight(tap: i32) -> f32 {
-    var weights = array<f32, 5>(0.07, 0.24, 0.38, 0.24, 0.07);
-
-    return weights[tap];
+fn depthAt(strip: i32, bins: i32, row: i32) -> f32 {
+    return textureLoad(u_shadow, vec2<i32>(clamp(strip, 0, bins - 1), row), 0).r;
 }
 
 /**
- * The stored depth at a fractional strip, blended between the two strips it
- * falls between.
- *
- * Reading the nearest strip alone is what makes a shadow edge a staircase: the
- * row is a few hundred strips across the whole view, so a silhouette moves in
- * whole strips and shows every one of them.
+ * How much of one strip's own width the light reaches past `depth`. See
+ * `light-quad.wgsl` for why a strip is read as a coverage rather than as a
+ * yes or no, and why the slope is the smaller of the two one-sided differences.
  */
-fn depthAt(strip: f32, row: i32, bins: f32) -> f32 {
-    let lower = floor(strip);
-    let weight = strip - lower;
-    // Clamped rather than wrapped: strips are a line, and the far side of the
-    // range is not the near side of it.
-    let first = i32(clamp(lower, 0.0, bins - 1.0));
-    let second = i32(clamp(lower + 1.0, 0.0, bins - 1.0));
+fn coverageAt(here: f32, previous: f32, next: f32, depth: f32) -> f32 {
+    let rising = here - previous;
+    let falling = next - here;
+    // A slope only means something where the blocker distance runs the SAME
+    // way on both sides. A bin whose neighbours BOTH lie further away holds an
+    // isolated blocker seen end-on rather than a surface seen at a slant, and
+    // reading its two one-sided jumps as a slope would spread it over the whole
+    // distance to whatever stands behind it - darkening what stands in FRONT of
+    // it, the one place a blocker cannot reach.
+    let slope = select(min(abs(rising), abs(falling)), 0.0, rising * falling <= 0.0);
 
-    return mix(textureLoad(u_shadow, vec2<i32>(first, row), 0).r, textureLoad(u_shadow, vec2<i32>(second, row), 0).r, weight);
+    return clamp(0.5 + (here + SHADOW_BIAS - depth) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32) -> f32 {
@@ -73,22 +75,41 @@ fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32) -> f32 {
         return 1.0;
     }
 
-    let bins = f32(textureDimensions(u_shadow, 0).x);
-    // A kernel narrower than one strip would alias along the strip grid, so one
-    // strip is the floor: softness widens the penumbra from there.
-    let spread = max(1.0, softness * bins * MAX_PENUMBRA);
-    let center = sun.x * bins - 0.5;
+    let bins = i32(textureDimensions(u_shadow, 0).x);
     let row = i32(shadowRow);
+    let radius = min(MIN_RADIUS + max(0.0, softness) * f32(bins) * MAX_PENUMBRA, f32(MAX_HALF));
+    let center = sun.x * f32(bins) - 0.5;
+    let base = i32(floor(center));
+    let reach = i32(ceil(radius));
 
     var lit = 0.0;
+    var total = 0.0;
 
-    for (var tap: i32 = 0; tap < SHADOW_TAPS; tap = tap + 1) {
-        let offset = (f32(tap) / f32(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
+    // Taps on the strips rather than at fixed offsets from the fragment. See
+    // the same filter in `light-quad.wgsl` for why that is what makes it
+    // continuous.
+    var previous = depthAt(base - reach - 1, bins, row);
+    var here = depthAt(base - reach, bins, row);
 
-        lit = lit + shadowWeight(tap) * step(sun.y, depthAt(center + offset, row, bins) + SHADOW_BIAS);
+    for (var offset: i32 = -MAX_HALF; offset <= MAX_HALF; offset = offset + 1) {
+        if (offset < -reach || offset > reach) {
+            continue;
+        }
+
+        let strip = base + offset;
+        let next = depthAt(strip + 1, bins, row);
+        let weight = max(0.0, 1.0 - abs(f32(strip) - center) / radius);
+
+        if (weight > 0.0) {
+            lit = lit + weight * coverageAt(here, previous, next, sun.y);
+            total = total + weight;
+        }
+
+        previous = here;
+        here = next;
     }
 
-    return lit;
+    return select(1.0, lit / total, total > 0.0);
 }
 
 /** See the same term in `light-quad.wgsl`: `1` wherever nothing described a surface. */

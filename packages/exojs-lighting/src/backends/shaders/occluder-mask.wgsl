@@ -25,8 +25,8 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    // Full coverage on the edge, none a texel away, and linear between: the
-    // distance field reads a texel's coverage back as where inside it the edge
+    // Full coverage on the edge, none a texel away, and linear between: what
+    // reads the mask takes a texel's coverage as where inside it the edge
     // runs, so the edge is placed to a fraction of a texel rather than snapped
     // to the grid - and a wall at an angle casts a straight shadow instead of a
     // stepped one. Lifted a little above the ramp, so that a segment lying

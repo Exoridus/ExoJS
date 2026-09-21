@@ -54,14 +54,20 @@ import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatch
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
-import { sdfResolveShader, sdfSeedShader, sdfStepShader } from '../../../packages/exojs-lighting/src/backends/distanceField';
-import { cascadeGatherShader, cascadeShader, probeVisibilityShader } from '../../../packages/exojs-lighting/src/backends/radianceField';
+import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
+import { transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
 
 interface ShaderEntry {
   readonly name: string;
   readonly source: string;
 }
+
+// Composed rather than rebuilt here: the walk over the transport tables is a
+// chunk, placed between the textures it reads and the body that calls it, so
+// the composition is the only whole program there is to compile.
+const composedCascade = transportCascadeShader(cascadeUniforms);
+const composedGather = transportGatherShader(gatherUniforms);
 
 const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuBackend mipmap pipeline', source: mipmapWgsl },
@@ -95,12 +101,8 @@ const shaders: readonly ShaderEntry[] = [
   // The lighting package's shadow march is a filter of the same shape, and the
   // only WGSL in that package this suite can reach as a fixed string.
   { name: 'lighting shadow march (generated uniform block)', source: shadowMarchShader._resolveWgsl(filterUniformGroup)! },
-  { name: 'lighting distance field seed', source: sdfSeedShader._resolveWgsl(filterUniformGroup)! },
-  { name: 'lighting distance field step (generated uniform block)', source: sdfStepShader._resolveWgsl(filterUniformGroup)! },
-  { name: 'lighting distance field resolve (generated uniform block)', source: sdfResolveShader._resolveWgsl(filterUniformGroup)! },
-  { name: 'lighting radiance cascade (generated uniform block)', source: cascadeShader._resolveWgsl(filterUniformGroup)! },
-  { name: 'lighting radiance gather (generated uniform block)', source: cascadeGatherShader._resolveWgsl(filterUniformGroup)! },
-  { name: 'lighting radiance merge weights (generated uniform block)', source: probeVisibilityShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting radiance cascade (composed, generated uniform block)', source: composedCascade._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting radiance gather (composed, generated uniform block)', source: composedGather._resolveWgsl(filterUniformGroup)! },
 ];
 
 // On the software (swiftshader / lavapipe) adapter the WebGPU device can drop

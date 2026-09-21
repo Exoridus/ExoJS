@@ -1,4 +1,4 @@
-import type { Color } from '@codexo/exojs';
+import type { Color, Rectangle } from '@codexo/exojs';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { Light } from '../lights/Light';
@@ -16,7 +16,6 @@ import type { OccluderField } from '../occluders/OccluderField';
  * Users who want a renderer of their own do not need this: `app.framePasses`
  * hands a pass the finished frame and lets it write the canvas, with no
  * agreement with this package at all.
- * @internal
  */
 export interface LightingBackend {
   /** Which renderer this is. */
@@ -61,6 +60,12 @@ export interface LightingBackend {
   debug: LightingDebugView;
 
   /**
+   * Scale applied to the shaded output. See {@link Lighting.debugExposure}.
+   * A renderer that composites nothing ignores it.
+   */
+  debugExposure: number;
+
+  /**
    * Take this frame's lights, ambient term and occluder field. Called once per
    * frame from the system's update phase, before anything draws.
    *
@@ -70,6 +75,19 @@ export interface LightingBackend {
    * surfaces.
    */
   publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void;
+
+  /**
+   * Write the world region this renderer needs occluders for into `out` and
+   * answer `true`, or answer `false` to be given the region the lights' own
+   * reach spans.
+   *
+   * A renderer whose shadows end at each light's radius is served by that
+   * reach. One that transports light through a field is not: light arrives
+   * well past any light's nominal radius, so a wall outside every radius still
+   * casts, and a region bounded by the radii drops it from the frame as soon
+   * as a lamp moves away from it.
+   */
+  collectRegion(out: Rectangle): boolean;
 
   /** Release GPU resources. The lights are not owned. */
   destroy(): void;

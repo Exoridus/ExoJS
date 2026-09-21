@@ -259,6 +259,7 @@ const makeWebGpuBackend = (env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
     execute,
     getTextureBinding,
     getTextureFormat,
+    isNonFilterableTexture: vi.fn(() => false),
     createColorAttachment,
     // The coordinator sizes its attachment list from this; a single-attachment
     // target is what every filter path renders into.

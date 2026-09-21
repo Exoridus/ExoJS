@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaOccluder, Lighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, Lighting, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Nothing here models a shadow. Each wall registers the outline it already
@@ -77,9 +77,7 @@ class ShadowCastersScene extends Scene {
     const { width, height } = this.app;
 
     this.world = new Container();
-    this.lighting = new Lighting({
-      quality: 'lightmap',
-      app: this.app,
+    this.lighting = new LightmapLighting(this.app, {
       ambient: new Color(34, 36, 50),
       lightResolution: 1,
     });

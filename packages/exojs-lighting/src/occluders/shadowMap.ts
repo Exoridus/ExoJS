@@ -3,6 +3,43 @@ const TAU = Math.PI * 2;
 /** No occluder along a ray, in the normalized distance the shadow map stores. */
 const unoccluded = 1;
 
+// A bounded cache of immutable bin directions, independent of scene geometry.
+const maxDirectionTables = 4;
+const directionTables = new Map<number, Float64Array>();
+
+const shadowDirections = (bins: number): Float64Array => {
+  const existing = directionTables.get(bins);
+
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  // Keep the unwrapped bins around the seam. Folding their angles into one
+  // turn before sin/cos can change floating-point endpoint decisions.
+  const directions = new Float64Array((3 * bins + 3) * 2);
+  const binsPerRadian = bins / TAU;
+
+  for (let bin = -bins - 1; bin <= 2 * bins + 1; bin++) {
+    const angle = -Math.PI + (bin + 0.5) / binsPerRadian;
+    const offset = (bin + bins + 1) * 2;
+
+    directions[offset] = Math.cos(angle);
+    directions[offset + 1] = Math.sin(angle);
+  }
+
+  if (directionTables.size >= maxDirectionTables) {
+    const oldest = directionTables.keys().next().value;
+
+    if (oldest !== undefined) {
+      directionTables.delete(oldest);
+    }
+  }
+
+  directionTables.set(bins, directions);
+
+  return directions;
+};
+
 /**
  * Fill one light's 1D shadow map: for every angular bin, how far the nearest
  * occluder is, as a fraction of the light's radius.
@@ -44,6 +81,7 @@ export const buildShadowRow = (
   }
 
   const binsPerRadian = bins / TAU;
+  let directions: Float64Array | undefined;
 
   for (let index = 0; index < segmentCount; index++) {
     const offset = index * 4;
@@ -60,6 +98,8 @@ export const buildShadowRow = (
       continue;
     }
 
+    directions ??= shadowDirections(bins);
+
     const first = Math.atan2(y1, x1);
     const span = wrapSigned(Math.atan2(y2, x2) - first);
     const start = span >= 0 ? first : first + span;
@@ -75,8 +115,8 @@ export const buildShadowRow = (
     const edgeY = y2 - y1;
 
     for (let bin = firstBin; bin <= lastBin; bin++) {
-      const angle = -Math.PI + (bin + 0.5) / binsPerRadian;
-      const distance = rayHit(x1, y1, edgeX, edgeY, Math.cos(angle), Math.sin(angle));
+      const directionOffset = (bin + bins + 1) * 2;
+      const distance = rayHit(x1, y1, edgeX, edgeY, directions[directionOffset]!, directions[directionOffset + 1]!);
 
       if (distance <= 0 || distance >= radius) {
         continue;
