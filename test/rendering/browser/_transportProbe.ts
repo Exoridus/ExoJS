@@ -40,6 +40,7 @@ export const probeUniforms = {
   uMaskBasis: UniformType.Vec4,
   uMaskOffset: UniformType.Vec2,
   uMaskBlocks: UniformType.Vec2,
+  uMaskSuperblocks: UniformType.Vec2,
   uA: UniformType.Vec2,
   uB: UniformType.Vec2,
   uScale: UniformType.Float,
@@ -78,6 +79,7 @@ uniform sampler2D uCells;
 uniform sampler2D uIndices;
 uniform sampler2D uMask;
 uniform sampler2D uMaskCoarse;
+uniform sampler2D uMaskSuper;
 
 out vec4 fragColor;
 
@@ -120,6 +122,8 @@ export const probeWgslSource = `
 @group(1) @binding(10) var uMaskSampler: sampler;
 @group(1) @binding(11) var uMaskCoarse: texture_2d<f32>;
 @group(1) @binding(12) var uMaskCoarseSampler: sampler;
+@group(1) @binding(13) var uMaskSuper: texture_2d<f32>;
+@group(1) @binding(14) var uMaskSuperSampler: sampler;
 
 ${transportWgsl}
 
@@ -237,8 +241,11 @@ export interface ProbeMask {
   readonly texture: DataTexture<TextureFormat.Rgba8>;
   /** The block level: one texel per {@link MASK_COARSE} square of the mask, dilated by a texel. */
   readonly coarse: DataTexture<TextureFormat.Rgba8>;
+  /** One texel per 4x4 square of the block level. */
+  readonly super: DataTexture<TextureFormat.Rgba8>;
   readonly cells: readonly [number, number];
   readonly blocks: readonly [number, number];
+  readonly superblocks: readonly [number, number];
   /** Rows of the 2x2 world-to-texel matrix, as `(xx, xy, yx, yy)`. */
   readonly basis: readonly [number, number, number, number];
   readonly offset: readonly [number, number];
@@ -277,6 +284,27 @@ const coarseLevel = (data: Uint8Array, size: number): { readonly data: Uint8Arra
   return { data: reduced, size: blocks };
 };
 
+const superLevel = (data: Uint8Array, size: number): { readonly data: Uint8Array; readonly size: number } => {
+  const blocks = Math.ceil(size / 4);
+  const reduced = new Uint8Array(blocks * blocks * 4);
+
+  for (let by = 0; by < blocks; by++) {
+    for (let bx = 0; bx < blocks; bx++) {
+      let most = 0;
+
+      for (let y = by * 4; y < Math.min((by + 1) * 4, size); y++) {
+        for (let x = bx * 4; x < Math.min((bx + 1) * 4, size); x++) {
+          most = Math.max(most, data[(y * size + x) * 4 + 3]!);
+        }
+      }
+
+      reduced.fill(most, (by * blocks + bx) * 4, (by * blocks + bx) * 4 + 4);
+    }
+  }
+
+  return { data: reduced, size: blocks };
+};
+
 /**
  * A mask of named texels, or - with no spec - an empty 1x1 one, which the
  * shader reads as "nothing was rasterised".
@@ -297,8 +325,10 @@ export const probeMask = (spec?: MaskSpec, rowsDown = false): ProbeMask => {
   }
 
   const reduced = coarseLevel(data, size);
+  const superReduced = superLevel(reduced.data, reduced.size);
   const texture = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8, data });
   const coarse = new DataTexture({ width: reduced.size, height: reduced.size, format: TextureFormat.Rgba8, data: reduced.data });
+  const superTexture = new DataTexture({ width: superReduced.size, height: superReduced.size, format: TextureFormat.Rgba8, data: superReduced.data });
   const world = spec?.world ?? PROBE_REGION;
   const rows = rowsDown ? -1 : 1;
   // World to clip over the region, which is what the chunk turns into a texel.
@@ -308,13 +338,16 @@ export const probeMask = (spec?: MaskSpec, rowsDown = false): ProbeMask => {
   return {
     texture,
     coarse,
+    super: superTexture,
     cells: spec === undefined ? [0, 0] : [size, size],
     blocks: spec === undefined ? [0, 0] : [reduced.size, reduced.size],
+    superblocks: spec === undefined ? [0, 0] : [superReduced.size, superReduced.size],
     basis: [across, 0, 0, up],
     offset: [-(world.x + world.width / 2) * across, -(world.y + world.height / 2) * up],
     destroy: (): void => {
       texture.destroy();
       coarse.destroy();
+      superTexture.destroy();
     },
   };
 };

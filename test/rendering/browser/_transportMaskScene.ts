@@ -50,6 +50,7 @@ export interface MaskTrace {
 export interface MaskBindings {
   readonly cells: readonly [number, number];
   readonly blocks: readonly [number, number];
+  readonly superblocks: readonly [number, number];
   readonly basis: readonly [number, number, number, number];
   readonly offset: readonly [number, number];
   readonly gridOrigin: readonly [number, number];
@@ -124,6 +125,7 @@ export const createMaskScene = (app: Application, size: number): MaskScene => {
         uIndices: transport.indices,
         uMask: backend.maskTexture,
         uMaskCoarse: blocks.texture,
+        uMaskSuper: blocks.superTexture,
       };
     },
     bindings: () => {
@@ -142,6 +144,7 @@ export const createMaskScene = (app: Application, size: number): MaskScene => {
       return {
         cells: [backend.maskTexture.width, backend.maskTexture.height],
         blocks: [blocks.texture.width, blocks.texture.height],
+        superblocks: [blocks.superTexture.width, blocks.superTexture.height],
         basis: [toMask.a, toMask.b, toMask.c, toMask.d],
         offset: [toMask.x, toMask.y],
         gridOrigin: [grid.originX, grid.originY],

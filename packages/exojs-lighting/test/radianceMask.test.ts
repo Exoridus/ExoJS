@@ -10,6 +10,8 @@ interface TransportBinding {
   readonly maskHeight: number;
   readonly blocksWidth: number;
   readonly blocksHeight: number;
+  readonly superblocksWidth: number;
+  readonly superblocksHeight: number;
 }
 
 interface RadianceInternals {
@@ -64,7 +66,7 @@ describe('radiance raster mask', () => {
 
     expect(maskPass?.enabled).toBe(false);
     expect(backend.maskBlocks.pass.enabled).toBe(false);
-    expect(backend._radiance._walk).toMatchObject({ maskWidth: 0, maskHeight: 0, blocksWidth: 0, blocksHeight: 0 });
+    expect(backend._radiance._walk).toMatchObject({ maskWidth: 0, maskHeight: 0, blocksWidth: 0, blocksHeight: 0, superblocksWidth: 0, superblocksHeight: 0 });
 
     raster = true;
     lighting.update();
@@ -75,13 +77,15 @@ describe('radiance raster mask', () => {
     expect(backend._radiance._walk?.maskHeight).toBeGreaterThan(1);
     expect(backend._radiance._walk?.blocksWidth).toBeGreaterThan(1);
     expect(backend._radiance._walk?.blocksHeight).toBeGreaterThan(1);
+    expect(backend._radiance._walk?.superblocksWidth).toBeGreaterThan(1);
+    expect(backend._radiance._walk?.superblocksHeight).toBeGreaterThan(1);
 
     raster = false;
     lighting.update();
 
     expect(maskPass?.enabled).toBe(false);
     expect(backend.maskBlocks.pass.enabled).toBe(false);
-    expect(backend._radiance._walk).toMatchObject({ maskWidth: 0, maskHeight: 0, blocksWidth: 0, blocksHeight: 0 });
+    expect(backend._radiance._walk).toMatchObject({ maskWidth: 0, maskHeight: 0, blocksWidth: 0, blocksHeight: 0, superblocksWidth: 0, superblocksHeight: 0 });
 
     lighting.destroy();
     texture.destroy();

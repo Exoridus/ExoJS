@@ -22,6 +22,7 @@ export const transportUniforms = {
   uMaskBasis: UniformType.Vec4,
   uMaskOffset: UniformType.Vec2,
   uMaskBlocks: UniformType.Vec2,
+  uMaskSuperblocks: UniformType.Vec2,
   uCellSize: UniformType.Float,
   uTableWidth: UniformType.Float,
 } as const;
@@ -41,7 +42,7 @@ const bindings = (names: readonly string[], language: 'glsl' | 'wgsl'): string =
     .join('\n');
 
 /** The chunk's own textures, which every shader that walks binds. */
-const WALK_TEXTURES = ['uSegments', 'uEmitters', 'uCells', 'uIndices', 'uMask', 'uMaskCoarse'] as const;
+const WALK_TEXTURES = ['uSegments', 'uEmitters', 'uCells', 'uIndices', 'uMask', 'uMaskCoarse', 'uMaskSuper'] as const;
 
 /** The raw direction tile reduced by the angular-average pass. @internal */
 export const angularAverageUniforms = { uTile: UniformType.Float } as const;

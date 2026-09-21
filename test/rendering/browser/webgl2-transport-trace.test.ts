@@ -62,6 +62,7 @@ const runCase = async (scenario: Case): Promise<void> => {
       uIndices: tables.indices,
       uMask: mask.texture,
       uMaskCoarse: mask.coarse,
+      uMaskSuper: mask.super,
     },
   });
   const texture = coverTexture();
@@ -79,6 +80,7 @@ const runCase = async (scenario: Case): Promise<void> => {
   filter.uniforms.uMaskBasis.set(mask.basis[0], mask.basis[1], mask.basis[2], mask.basis[3]);
   filter.uniforms.uMaskOffset.set(mask.offset[0], mask.offset[1]);
   filter.uniforms.uMaskBlocks.set(mask.blocks[0], mask.blocks[1]);
+  filter.uniforms.uMaskSuperblocks.set(mask.superblocks[0], mask.superblocks[1]);
   filter.uniforms.uScale.set(scenario.scale);
 
   const radiance: number[][] = [];
@@ -86,8 +88,16 @@ const runCase = async (scenario: Case): Promise<void> => {
   const visited: number[][] = [];
   const hit: number[][] = [];
   const drained: number[][] = [];
+  const coarseRadiance: number[][] = [];
+  const coarseThrough: number[][] = [];
+  const coarseHit: number[][] = [];
+  const coarseDrained: number[][] = [];
   const flatHit: number[][] = [];
   const flatVisited: number[][] = [];
+  const flatRadiance: number[][] = [];
+  const flatThrough: number[][] = [];
+  const flatDrained: number[][] = [];
+  const coarseVisited: number[][] = [];
 
   try {
     for (const [ax, ay, bx, by] of scenario.traces) {
@@ -108,13 +118,30 @@ const runCase = async (scenario: Case): Promise<void> => {
 
       if (scenario.mask === undefined) continue;
 
+      filter.uniforms.uMaskSuperblocks.set(0, 0);
+
+      for (const [mode, into] of [
+        [PROBE_RADIANCE, coarseRadiance],
+        [PROBE_TRANSMITTANCE, coarseThrough],
+        [PROBE_VISITED, coarseVisited],
+        [PROBE_MASK_HIT, coarseHit],
+        [PROBE_EXHAUSTED, coarseDrained],
+      ] as const) {
+        filter.uniforms.uMode.set(mode);
+        renderWebGl2Once(backend, root, PROBE_CLEAR);
+        into.push([...readWebGl2Pixel(backend, PROBE_SIZE / 2, PROBE_SIZE / 2)]);
+      }
+
       // The same stretch again with no block level bound, which is the walk
       // the hierarchy has to agree with texel for texel.
       filter.uniforms.uMaskBlocks.set(0, 0);
 
       for (const [mode, into] of [
+        [PROBE_RADIANCE, flatRadiance],
+        [PROBE_TRANSMITTANCE, flatThrough],
         [PROBE_MASK_HIT, flatHit],
         [PROBE_VISITED, flatVisited],
+        [PROBE_EXHAUSTED, flatDrained],
       ] as const) {
         filter.uniforms.uMode.set(mode);
         renderWebGl2Once(backend, root, PROBE_CLEAR);
@@ -122,6 +149,7 @@ const runCase = async (scenario: Case): Promise<void> => {
       }
 
       filter.uniforms.uMaskBlocks.set(mask.blocks[0], mask.blocks[1]);
+      filter.uniforms.uMaskSuperblocks.set(mask.superblocks[0], mask.superblocks[1]);
     }
 
     for (const reading of drained) {
@@ -133,12 +161,17 @@ const runCase = async (scenario: Case): Promise<void> => {
     }
 
     for (let index = 0; index < flatHit.length; index++) {
-      // Skipping a block may not skip a wall: the hierarchy exists to read
-      // fewer texels, not to answer differently.
       expect(Math.abs(hit[index]![0]! - flatHit[index]![0]!), 'hit with and without the block level').toBeLessThanOrEqual(1);
+      expect(Math.abs(hit[index]![0]! - coarseHit[index]![0]!), 'hit with one and two block levels').toBeLessThanOrEqual(1);
+      expect(through[index]).toEqual(flatThrough[index]);
+      expect(through[index]).toEqual(coarseThrough[index]);
+      expect(radiance[index]).toEqual(flatRadiance[index]);
+      expect(radiance[index]).toEqual(coarseRadiance[index]);
+      expect(drained[index]).toEqual(flatDrained[index]);
+      expect(drained[index]).toEqual(coarseDrained[index]);
     }
 
-    scenario.check(radiance, through, visited, hit, flatVisited);
+    scenario.check(radiance, through, visited, hit, flatVisited, coarseVisited);
   } finally {
     root.destroy();
     filter.destroy();
@@ -168,6 +201,7 @@ const runStarved = async (mask: MaskSpec | undefined, stretch: readonly [number,
       uIndices: tables.indices,
       uMask: bound.texture,
       uMaskCoarse: bound.coarse,
+      uMaskSuper: bound.super,
     },
   });
   const texture = coverTexture();
@@ -186,6 +220,7 @@ const runStarved = async (mask: MaskSpec | undefined, stretch: readonly [number,
   filter.uniforms.uMaskBasis.set(bound.basis[0], bound.basis[1], bound.basis[2], bound.basis[3]);
   filter.uniforms.uMaskOffset.set(bound.offset[0], bound.offset[1]);
   filter.uniforms.uMaskBlocks.set(bound.blocks[0], bound.blocks[1]);
+  filter.uniforms.uMaskSuperblocks.set(bound.superblocks[0], bound.superblocks[1]);
   filter.uniforms.uA.set(stretch[0], stretch[1]);
   filter.uniforms.uB.set(stretch[2], stretch[3]);
 
@@ -222,6 +257,7 @@ describe('the block level against the flat walk (WebGL2)', () => {
         uIndices: tables.indices,
         uMask: mask.texture,
         uMaskCoarse: mask.coarse,
+        uMaskSuper: mask.super,
       },
     });
     const texture = coverTexture();
@@ -239,6 +275,7 @@ describe('the block level against the flat walk (WebGL2)', () => {
     filter.uniforms.uMaskCells.set(mask.cells[0], mask.cells[1]);
     filter.uniforms.uMaskBasis.set(mask.basis[0], mask.basis[1], mask.basis[2], mask.basis[3]);
     filter.uniforms.uMaskOffset.set(mask.offset[0], mask.offset[1]);
+    filter.uniforms.uMaskSuperblocks.set(mask.superblocks[0], mask.superblocks[1]);
     filter.uniforms.uMode.set(PROBE_MASK_HIT);
 
     try {
@@ -250,6 +287,7 @@ describe('the block level against the flat walk (WebGL2)', () => {
 
         for (const blocks of [mask.blocks, [0, 0] as const]) {
           filter.uniforms.uMaskBlocks.set(blocks[0]!, blocks[1]!);
+          filter.uniforms.uMaskSuperblocks.set(blocks[0] === 0 ? 0 : mask.superblocks[0], blocks[1] === 0 ? 0 : mask.superblocks[1]);
           renderWebGl2Once(backend, root, PROBE_CLEAR);
           readings.push(readWebGl2Pixel(backend, PROBE_SIZE / 2, PROBE_SIZE / 2)[0]);
         }

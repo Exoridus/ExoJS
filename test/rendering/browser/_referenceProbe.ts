@@ -28,6 +28,7 @@ export const referenceUniforms = {
   uMaskBasis: UniformType.Vec4,
   uMaskOffset: UniformType.Vec2,
   uMaskBlocks: UniformType.Vec2,
+  uMaskSuperblocks: UniformType.Vec2,
   uCellSize: UniformType.Float,
   uTableWidth: UniformType.Float,
   uToWorld: UniformType.Vec4,
@@ -43,7 +44,8 @@ uniform sampler2D uEmitters;
 uniform sampler2D uCells;
 uniform sampler2D uIndices;
 uniform sampler2D uMask;
-uniform sampler2D uMaskCoarse;`;
+uniform sampler2D uMaskCoarse;
+uniform sampler2D uMaskSuper;`;
 
 const WGSL_BINDINGS = `@group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
@@ -58,7 +60,9 @@ const WGSL_BINDINGS = `@group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(1) @binding(9) var uMask: texture_2d<f32>;
 @group(1) @binding(10) var uMaskSampler: sampler;
 @group(1) @binding(11) var uMaskCoarse: texture_2d<f32>;
-@group(1) @binding(12) var uMaskCoarseSampler: sampler;`;
+@group(1) @binding(12) var uMaskCoarseSampler: sampler;
+@group(1) @binding(13) var uMaskSuper: texture_2d<f32>;
+@group(1) @binding(14) var uMaskSuperSampler: sampler;`;
 
 export const referenceFragmentSource = `#version 300 es
 precision highp float;

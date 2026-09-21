@@ -61,10 +61,10 @@ export interface Case {
    * What the probes must satisfy. `radiance[i]`, `through[i]`, `visited[i]` and
    * `hit[i]` hold the four draws of trace `i`, each as four 8-bit channels.
    *
-   * `flatVisited[i]` is the cell count of the same trace walked without the
-   * block level, and is collected only where the case brings a mask. That the
-   * two walks find the same wall is asserted for every trace by the runners
-   * themselves; a case only reads it to say how much cheaper the walk got.
+   * `flatVisited[i]` is the cell count of the same trace walked without either
+   * hierarchy level, while `coarseVisited[i]` keeps only the first level. Both
+   * are collected only where the case brings a mask. The runners assert that
+   * every form finds the same wall; a case reads these to compare their work.
    */
   check(
     radiance: ReadonlyArray<readonly number[]>,
@@ -72,6 +72,7 @@ export interface Case {
     visited: ReadonlyArray<readonly number[]>,
     hit: ReadonlyArray<readonly number[]>,
     flatVisited: ReadonlyArray<readonly number[]>,
+    coarseVisited: ReadonlyArray<readonly number[]>,
   ): void;
 }
 
@@ -358,19 +359,20 @@ export const transportCases = (): readonly Case[] => [
     // nowhere near the stretch. The flat walk reads a texel per 8 world units
     // it crosses; the walk that consults the block level reads a texel per
     // block, and the two have to agree on finding nothing.
-    mask: { texels: 64, world: PROBE_REGION, blocked: [[32, 50]] },
+    mask: { texels: 64, world: PROBE_REGION, blocked: [[32, 4]] },
     segments: [],
     lights: [],
     traces: [[-252, 4, 252, 4]],
     scale: 1,
-    check: (_radiance, through, visited, hit, flatVisited) => {
+    check: (_radiance, through, visited, hit, flatVisited, coarseVisited) => {
       near(hit[0]![0]!, 255);
       near(through[0]![0]!, OPEN);
       // The stretch crosses 63 texels and 8 blocks, none of them marked: the
-      // blocker sits two blocks off the row, which its one-texel margin does
-      // not reach. Both counts also carry the cell walk, the same either way,
-      // so the difference is what the block level saved.
+      // blocker sits in another superblock row, which neither hierarchy's
+      // conservative coverage reaches. Both counts also carry the cell walk,
+      // the same either way, so the difference is what the hierarchy saved.
       expect(flatVisited[0]![0]! - visited[0]![0]!, 'texels the block level saved').toBeGreaterThan(45);
+      expect(coarseVisited[0]![0]! - visited[0]![0]!, 'blocks the superblock level saved').toBeGreaterThan(4);
     },
   },
   {

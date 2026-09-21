@@ -126,6 +126,7 @@ export class RadianceBackend extends FrameLightingBackend {
         uIndices: this._transport.indices,
         uMask: this._maskTarget,
         uMaskCoarse: this._blocks.texture,
+        uMaskSuper: this._blocks.superTexture,
       },
       revision: this._transport.revision,
       originX: grid.originX,
@@ -137,6 +138,8 @@ export class RadianceBackend extends FrameLightingBackend {
       maskHeight: rasterMask ? this._maskTarget.height : 0,
       blocksWidth: rasterMask ? this._blocks.texture.width : 0,
       blocksHeight: rasterMask ? this._blocks.texture.height : 0,
+      superblocksWidth: rasterMask ? this._blocks.superTexture.width : 0,
+      superblocksHeight: rasterMask ? this._blocks.superTexture.height : 0,
       tableWidth: transportTableWidth,
     });
   }

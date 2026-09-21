@@ -48,6 +48,7 @@ const runCase = async (ctx: { skip: (reason: string) => void }, scenario: MergeC
       uIndices: tables.indices,
       uMask: mask.texture,
       uMaskCoarse: mask.coarse,
+      uMaskSuper: mask.super,
       // The bounce reads these; with the factor at zero neither is sampled.
       uFrame: mask.texture,
       uHistory: mask.texture,
@@ -62,6 +63,7 @@ const runCase = async (ctx: { skip: (reason: string) => void }, scenario: MergeC
   filter.uniforms.uTableWidth.set(256);
   filter.uniforms.uMaskCells.set(0, 0);
   filter.uniforms.uMaskBlocks.set(0, 0);
+  filter.uniforms.uMaskSuperblocks.set(0, 0);
   filter.uniforms.uMaskBasis.set(1, 0, 0, 1);
   filter.uniforms.uMaskOffset.set(0, 0);
   filter.uniforms.uOrigin.set(MERGE_WORLD.x, MERGE_WORLD.y);

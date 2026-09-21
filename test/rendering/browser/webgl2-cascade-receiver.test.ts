@@ -45,6 +45,7 @@ const runCase = async (scenario: ReceiverCase): Promise<void> => {
       uIndices: tables.indices,
       uMask: mask.texture,
       uMaskCoarse: mask.coarse,
+      uMaskSuper: mask.super,
     },
   });
   // The finest cascade, one constant everywhere: the filter's own input.
@@ -72,6 +73,7 @@ const runCase = async (scenario: ReceiverCase): Promise<void> => {
   filter.uniforms.uTableWidth.set(256);
   filter.uniforms.uMaskCells.set(0, 0);
   filter.uniforms.uMaskBlocks.set(0, 0);
+  filter.uniforms.uMaskSuperblocks.set(0, 0);
   filter.uniforms.uMaskBasis.set(1, 0, 0, 1);
   filter.uniforms.uMaskOffset.set(0, 0);
 

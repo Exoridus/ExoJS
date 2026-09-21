@@ -32,6 +32,7 @@ const bindingFor = (revision: number, cells: number): TransportBinding => ({
     uIndices: new RenderTexture(4, 1, { format: TextureFormat.Rgba32F }),
     uMask: new RenderTexture(64, 48),
     uMaskCoarse: new RenderTexture(8, 6),
+    uMaskSuper: new RenderTexture(2, 2),
   },
   revision,
   originX: -12,
@@ -43,6 +44,8 @@ const bindingFor = (revision: number, cells: number): TransportBinding => ({
   maskHeight: 48,
   blocksWidth: 8,
   blocksHeight: 6,
+  superblocksWidth: 2,
+  superblocksHeight: 2,
   tableWidth: 256,
 });
 
@@ -60,6 +63,7 @@ const transportTerms = (binding: TransportBinding): Record<string, readonly numb
   uGridCells: [binding.cellsX, binding.cellsY],
   uMaskCells: [binding.maskWidth, binding.maskHeight],
   uMaskBlocks: [binding.blocksWidth, binding.blocksHeight],
+  uMaskSuperblocks: [binding.superblocksWidth, binding.superblocksHeight],
 });
 
 const expectWalkTerms = (walker: Walker | null, binding: TransportBinding): void => {

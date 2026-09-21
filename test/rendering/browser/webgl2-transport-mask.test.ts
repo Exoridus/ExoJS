@@ -97,6 +97,7 @@ describe('the transport walk over what a frame built (WebGL2)', () => {
 
       expect(bindings.cells[0], 'the mask was rasterised').toBeGreaterThan(1);
       expect(bindings.blocks[0], 'the block level follows it').toBeGreaterThan(1);
+      expect(bindings.superblocks[0], 'the superblock level follows it').toBeGreaterThan(1);
       expect(bindings.gridCells[0], 'the tables were built').toBeGreaterThan(1);
 
       filter = ShaderFilter.from(probeShader, { textures: scene.textures() });
@@ -110,6 +111,7 @@ describe('the transport walk over what a frame built (WebGL2)', () => {
       filter.uniforms.uMaskCells.set(bindings.cells[0], bindings.cells[1]);
       filter.uniforms.uMaskBasis.set(bindings.basis[0], bindings.basis[1], bindings.basis[2], bindings.basis[3]);
       filter.uniforms.uMaskOffset.set(bindings.offset[0], bindings.offset[1]);
+      filter.uniforms.uMaskSuperblocks.set(bindings.superblocks[0], bindings.superblocks[1]);
 
       for (const trace of scene.traces) {
         const readings: number[][] = [];
@@ -124,6 +126,7 @@ describe('the transport walk over what a frame built (WebGL2)', () => {
           [bindings.blocks, PROBE_EXHAUSTED],
         ] as const) {
           filter.uniforms.uMaskBlocks.set(blocks[0]!, blocks[1]!);
+          filter.uniforms.uMaskSuperblocks.set(blocks[0] === 0 ? 0 : bindings.superblocks[0], blocks[1] === 0 ? 0 : bindings.superblocks[1]);
           filter.uniforms.uMode.set(mode);
           renderWebGl2Once(host.backend, root, PROBE_CLEAR);
           readings.push([...readWebGl2Pixel(host.backend, canvasSize / 2, canvasSize / 2)]);

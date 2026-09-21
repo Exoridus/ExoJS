@@ -81,6 +81,7 @@ const writeTransportUniforms = (target: UniformFieldAccessors<typeof transportUn
   target.uMaskBasis.set(toField.a, toField.b, toField.c, toField.d);
   target.uMaskOffset.set(toField.x, toField.y);
   target.uMaskBlocks.set(binding.blocksWidth, binding.blocksHeight);
+  target.uMaskSuperblocks.set(binding.superblocksWidth, binding.superblocksHeight);
 };
 
 /**
@@ -103,6 +104,8 @@ export interface TransportBinding {
   readonly maskHeight: number;
   readonly blocksWidth: number;
   readonly blocksHeight: number;
+  readonly superblocksWidth: number;
+  readonly superblocksHeight: number;
   readonly tableWidth: number;
 }
 

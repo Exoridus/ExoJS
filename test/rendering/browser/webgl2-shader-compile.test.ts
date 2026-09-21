@@ -203,6 +203,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'angular-average.frag'],
   // The reduction of the occluder mask to one texel per block, on the same quad.
   ['default-vertex.vert', 'mask-blocks.frag'],
+  ['default-vertex.vert', 'mask-superblocks.frag'],
   // The custom sprite-material path: the engine owns the vertex stage, and the
   // lighting package's lit fragment is the in-repo counterpart it links with.
   ['sprite-material.vert', 'lit-sprite.frag'],

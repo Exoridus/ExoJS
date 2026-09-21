@@ -18,19 +18,20 @@
 //   uIndices   - the primitive ids those ranges point into, in the red channel
 //   uMask      - rasterised occluders, coverage in alpha, on a grid of its own
 //   uMaskCoarse - one texel per block of the mask, holding what that block holds
+//   uMaskSuper - one texel per 4x4 coarse blocks
 //
 // Uniform block fields: `uGridOrigin` (vec2<f32>), `uGridCells` (vec2<f32>),
 // `uCellSize` (f32), `uTableWidth` (f32), `uMaskCells` (vec2<f32>),
-// `uMaskBasis` (vec4<f32>), `uMaskOffset` (vec2<f32>) and `uMaskBlocks`
-// (vec2<f32>).
+// `uMaskBasis` (vec4<f32>), `uMaskOffset` (vec2<f32>), `uMaskBlocks`
+// (vec2<f32>) and `uMaskSuperblocks` (vec2<f32>).
 //
 // `uMaskBasis` and `uMaskOffset` are the view the mask was drawn through, as
 // world to clip, rows of the matrix first - the same transform the distance
 // field is read with. Which way the rows of a render target run is the
 // backend's, so this half of the chunk applies its own order and the host
 // passes the same numbers to both. `uMaskCells` of zero says nothing was
-// rasterised, and `uMaskBlocks` of zero says no block level was built, which
-// the walk answers the same way at more cost.
+// rasterised, and zero block dimensions say no hierarchy was built, which the
+// walk answers the same way at more cost.
 
 /**
  * What a finite stretch amounts to: the radiance found along it, what got
@@ -301,20 +302,24 @@ const MASK_BLOCKING: f32 = 0.5;
 /** Mask texels one block of the coarse level covers, on each axis. */
 const MASK_COARSE: i32 = 8;
 
+/** Coarse blocks one superblock covers, on each axis. */
+const MASK_SUPER: i32 = 4;
+
 /**
- * Texels one walk may read, over both levels together.
+ * Texels one walk may read, over all three levels together.
  *
  * The same step accounting as the cell walk, over the mask's own grid: a
  * stretch clipped to it enters `1 + |di_x| + |di_y|` texels, and a corner
  * crossing advances both indices in one step rather than two. The field is
  * capped at 2048 texels an axis, so 4095 texels is the ceiling, and the block
- * level adds one read per block the stretch enters, at most 511 of them.
+ * level adds one read per block the stretch enters, at most 511 of them, and
+ * the superblock level adds at most another 129.
  *
  * Descending into a block and leaving it again cost nothing of their own: the
  * block read that decides it is the same read either way, and the walk carries
- * no state per level to unwind. The true ceiling is therefore 4606, and both
+ * no state per level to unwind. The true ceiling is therefore 4735, and all
  * loops are bounded by a budget they share rather than by one each, so a long
- * inner sweep cannot buy the outer one more steps.
+ * inner sweep cannot buy an outer one more steps.
  *
  * Exhaustion is therefore unreachable, and if it were reached the walk reports
  * blocking where it stopped, and sets `exhausted` on what it hands back: a
@@ -360,6 +365,15 @@ fn blockHolds(block: vec2<i32>, blocks: vec2<f32>) -> bool {
     }
 
     return textureLoad(uMaskCoarse, block, 0).a >= MASK_BLOCKING;
+}
+
+/** Whether a superblock holds any conservative coarse block. */
+fn superblockHolds(block: vec2<i32>, blocks: vec2<f32>) -> bool {
+    if (block.x < 0 || block.y < 0 || f32(block.x) >= blocks.x || f32(block.y) >= blocks.y) {
+        return false;
+    }
+
+    return textureLoad(uMaskSuper, block, 0).a >= MASK_BLOCKING;
 }
 
 /**
@@ -425,33 +439,127 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
     // diagonal ray produce and what float32 cannot be relied on to reproduce.
     let corner = TRANSPORT_EPSILON * min(reciprocal.x, reciprocal.y);
     let blockSize = f32(MASK_COARSE);
-    let blockPlace = (origin + delta * entry) / blockSize;
-    var block = clamp(vec2<i32>(floor(blockPlace)), vec2<i32>(0), vec2<i32>(blocks) - vec2<i32>(1));
-    var blockNext = entry + vec2<f32>(
-        select(blockPlace.x - f32(block.x), f32(block.x + 1) - blockPlace.x, delta.x >= 0.0) * blockSize * reciprocal.x,
-        select(blockPlace.y - f32(block.y), f32(block.y + 1) - blockPlace.y, delta.y >= 0.0) * blockSize * reciprocal.y
+    let superblocks = uniforms.uMaskSuperblocks;
+    let supercoarse = coarse && superblocks.x >= 1.0 && superblocks.y >= 1.0;
+    let superSize = blockSize * f32(MASK_SUPER);
+    let superPlace = (origin + delta * entry) / superSize;
+    var superblock = clamp(vec2<i32>(floor(superPlace)), vec2<i32>(0), max(vec2<i32>(superblocks) - vec2<i32>(1), vec2<i32>(0)));
+    var superNext = entry + vec2<f32>(
+        select(superPlace.x - f32(superblock.x), f32(superblock.x + 1) - superPlace.x, delta.x >= 0.0) * superSize * reciprocal.x,
+        select(superPlace.y - f32(superblock.y), f32(superblock.y + 1) - superPlace.y, delta.y >= 0.0) * superSize * reciprocal.y
     );
     var travelled = entry;
     var visited = 0.0;
     var taken = 0;
 
-    // One pass per block of the coarse level, or one pass over the whole
-    // stretch where no block level is bound.
-    for (var sweep = 0; sweep < MAX_MASK_STEPS; sweep = sweep + 1) {
+    // One continuous walk over the superblock grid. An occupied superblock
+    // descends through the existing coarse level and then the fine mask.
+    for (var superSweep = 0; superSweep < MAX_MASK_STEPS; superSweep = superSweep + 1) {
         if (travelled >= leave || taken >= MAX_MASK_STEPS) {
             break;
         }
 
-        var until = leave;
+        var superUntil = leave;
 
-        if (coarse) {
-            until = min(min(blockNext.x, blockNext.y), leave);
+        if (supercoarse) {
+            superUntil = min(min(superNext.x, superNext.y), leave);
             taken = taken + 1;
             visited = visited + 1.0;
 
-            if (!blockHolds(block, blocks)) {
-                travelled = until;
+            if (!superblockHolds(superblock, superblocks)) {
+                travelled = superUntil;
 
+                if (superNext.x < superNext.y) {
+                    superNext.x = superNext.x + superSize * reciprocal.x;
+                    superblock.x = superblock.x + stepping.x;
+                } else {
+                    superNext.y = superNext.y + superSize * reciprocal.y;
+                    superblock.y = superblock.y + stepping.y;
+                }
+
+                continue;
+            }
+        }
+
+        let blockPlace = (origin + delta * travelled) / blockSize;
+        var block = clamp(vec2<i32>(floor(blockPlace)), vec2<i32>(0), max(vec2<i32>(blocks) - vec2<i32>(1), vec2<i32>(0)));
+        var blockNext = travelled + vec2<f32>(
+            select(blockPlace.x - f32(block.x), f32(block.x + 1) - blockPlace.x, delta.x >= 0.0) * blockSize * reciprocal.x,
+            select(blockPlace.y - f32(block.y), f32(block.y + 1) - blockPlace.y, delta.y >= 0.0) * blockSize * reciprocal.y
+        );
+
+        for (var blockSweep = 0; blockSweep < MAX_MASK_STEPS; blockSweep = blockSweep + 1) {
+            if (travelled >= superUntil || taken >= MAX_MASK_STEPS) {
+                break;
+            }
+
+            var until = superUntil;
+
+            if (coarse) {
+                until = min(min(blockNext.x, blockNext.y), superUntil);
+                taken = taken + 1;
+                visited = visited + 1.0;
+
+                if (!blockHolds(block, blocks)) {
+                    travelled = until;
+
+                    if (blockNext.x < blockNext.y) {
+                        blockNext.x = blockNext.x + blockSize * reciprocal.x;
+                        block.x = block.x + stepping.x;
+                    } else {
+                        blockNext.y = blockNext.y + blockSize * reciprocal.y;
+                        block.y = block.y + stepping.y;
+                    }
+
+                    continue;
+                }
+            }
+
+            let place = origin + delta * travelled;
+            var texel = clamp(vec2<i32>(floor(place)), vec2<i32>(0), vec2<i32>(cells) - vec2<i32>(1));
+            var next = travelled + vec2<f32>(
+                select(place.x - f32(texel.x), f32(texel.x + 1) - place.x, delta.x >= 0.0) * reciprocal.x,
+                select(place.y - f32(texel.y), f32(texel.y + 1) - place.y, delta.y >= 0.0) * reciprocal.y
+            );
+
+            for (var step = 0; step < MAX_MASK_STEPS; step = step + 1) {
+                if (travelled >= until || taken >= MAX_MASK_STEPS) {
+                    break;
+                }
+
+                taken = taken + 1;
+                visited = visited + 1.0;
+
+                if (maskBlocks(texel, cells)) {
+                    return MaskHit(clamp(travelled, 0.0, 1.0), visited, false);
+                }
+
+                let crossing = min(next.x, next.y);
+
+                if (abs(next.x - next.y) <= corner && crossing < leave) {
+                    if (maskBlocks(texel + vec2<i32>(stepping.x, 0), cells) || maskBlocks(texel + vec2<i32>(0, stepping.y), cells)) {
+                        return MaskHit(clamp(crossing, 0.0, 1.0), visited, false);
+                    }
+
+                    travelled = crossing;
+                    next = next + reciprocal;
+                    texel = texel + stepping;
+
+                    continue;
+                }
+
+                travelled = crossing;
+
+                if (next.x < next.y) {
+                    next.x = next.x + reciprocal.x;
+                    texel.x = texel.x + stepping.x;
+                } else {
+                    next.y = next.y + reciprocal.y;
+                    texel.y = texel.y + stepping.y;
+                }
+            }
+
+            if (coarse) {
                 if (blockNext.x < blockNext.y) {
                     blockNext.x = blockNext.x + blockSize * reciprocal.x;
                     block.x = block.x + stepping.x;
@@ -459,70 +567,16 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
                     blockNext.y = blockNext.y + blockSize * reciprocal.y;
                     block.y = block.y + stepping.y;
                 }
-
-                continue;
             }
         }
 
-        // Texel by texel over what this block covers of the stretch. Started
-        // from where the stretch has got to rather than carried across blocks,
-        // so a skipped block leaves nothing to unwind.
-        let place = origin + delta * travelled;
-        var texel = clamp(vec2<i32>(floor(place)), vec2<i32>(0), vec2<i32>(cells) - vec2<i32>(1));
-        var next = travelled + vec2<f32>(
-            select(place.x - f32(texel.x), f32(texel.x + 1) - place.x, delta.x >= 0.0) * reciprocal.x,
-            select(place.y - f32(texel.y), f32(texel.y + 1) - place.y, delta.y >= 0.0) * reciprocal.y
-        );
-
-        for (var step = 0; step < MAX_MASK_STEPS; step = step + 1) {
-            if (travelled >= until || taken >= MAX_MASK_STEPS) {
-                break;
-            }
-
-            taken = taken + 1;
-            visited = visited + 1.0;
-
-            if (maskBlocks(texel, cells)) {
-                return MaskHit(clamp(travelled, 0.0, 1.0), visited, false);
-            }
-
-            let crossing = min(next.x, next.y);
-
-            if (abs(next.x - next.y) <= corner && crossing < leave) {
-                // Only the corner point itself is shared with the two texels
-                // the stretch does not otherwise enter. Either of them
-                // blocking stops it there. Bounded by the whole stretch rather
-                // than by this block, because a corner on a block's own edge
-                // belongs to neither sweep otherwise.
-                if (maskBlocks(texel + vec2<i32>(stepping.x, 0), cells) || maskBlocks(texel + vec2<i32>(0, stepping.y), cells)) {
-                    return MaskHit(clamp(crossing, 0.0, 1.0), visited, false);
-                }
-
-                travelled = crossing;
-                next = next + reciprocal;
-                texel = texel + stepping;
-
-                continue;
-            }
-
-            travelled = crossing;
-
-            if (next.x < next.y) {
-                next.x = next.x + reciprocal.x;
-                texel.x = texel.x + stepping.x;
+        if (supercoarse) {
+            if (superNext.x < superNext.y) {
+                superNext.x = superNext.x + superSize * reciprocal.x;
+                superblock.x = superblock.x + stepping.x;
             } else {
-                next.y = next.y + reciprocal.y;
-                texel.y = texel.y + stepping.y;
-            }
-        }
-
-        if (coarse) {
-            if (blockNext.x < blockNext.y) {
-                blockNext.x = blockNext.x + blockSize * reciprocal.x;
-                block.x = block.x + stepping.x;
-            } else {
-                blockNext.y = blockNext.y + blockSize * reciprocal.y;
-                block.y = block.y + stepping.y;
+                superNext.y = superNext.y + superSize * reciprocal.y;
+                superblock.y = superblock.y + stepping.y;
             }
         }
     }
