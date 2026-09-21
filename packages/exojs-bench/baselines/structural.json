@@ -1,6 +1,6 @@
 {
   "recorded": {
-    "at": "2026-09-20T07:45:58.548Z",
+    "at": "2026-09-21T05:17:09.298Z",
     "engineVersion": "0.17.0",
     "adapter": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
   },
@@ -133,7 +133,7 @@
       "nodeCount": 200,
       "drawCalls": 3,
       "textureBinds": 16,
-      "bufferUploads": 7
+      "bufferUploads": 6
     },
     {
       "engine": "exojs",
@@ -433,7 +433,7 @@
       "nodeCount": 200,
       "drawCalls": 3,
       "textureBinds": 16,
-      "bufferUploads": 7
+      "bufferUploads": 6
     },
     {
       "engine": "exojs",
