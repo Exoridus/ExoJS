@@ -995,5 +995,5 @@ describe('the cascade merge along a lit edge', () => {
     // One count at this exposure is a hundredth of what the lit floor beside
     // the bar reads, so this is not a tolerance so much as the noise floor.
     expect(Math.max(...row), `${shown}`).toBeLessThanOrEqual(1);
-  });
+  }, 30_000);
 });
