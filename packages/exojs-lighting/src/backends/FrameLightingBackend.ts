@@ -54,6 +54,7 @@ import sunQuadFragment from './shaders/sun-quad.frag';
 import sunQuadVertex from './shaders/sun-quad.vert';
 import sunQuadWgsl from './shaders/sun-quad.wgsl';
 import { ShadowMarchFiller } from './shadowMarch';
+import { removeStaleShadowRows, ShadowGeometryRevision, type ShadowRowState, type SunShadowRowState } from './shadowRows';
 
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 /**
@@ -264,6 +265,12 @@ export abstract class FrameLightingBackend implements LightingBackend {
   /** Built only where a float render target exists; `null` pins the renderer to the CPU filler. */
   private readonly _filler: ShadowMarchFiller | null;
   private _fillerRequest: ShadowFillerOption = 'auto';
+  private readonly _shadowRows = new Map<Light, ShadowRowState>();
+  private readonly _sunShadowRows = new Map<Light, SunShadowRowState>();
+  private readonly _shadowGeometry = new ShadowGeometryRevision();
+  private _shadowEpoch = 0;
+  private _shadowRowsRebuilt = 0;
+  private _shadowBytesUploaded = 0;
   private _compositeScale = 0;
   protected _activeCount = 0;
   private _surfaceCount = 0;
@@ -466,6 +473,16 @@ ${sunQuadWgsl}`,
     return this._activeCount;
   }
 
+  /** Shadow rows rebuilt by the last publish. @internal */
+  public get shadowRowsRebuilt(): number {
+    return this._shadowRowsRebuilt;
+  }
+
+  /** Shadow-atlas bytes marked for upload by the last publish. @internal */
+  public get shadowBytesUploaded(): number {
+    return this._shadowBytesUploaded;
+  }
+
   public get debugExposure(): number {
     return this._debugExposure;
   }
@@ -539,6 +556,7 @@ ${sunQuadWgsl}`,
     }
 
     this._fillerRequest = filler;
+    this._shadowRows.clear();
     this._syncMask();
 
     for (const batch of this._lightBatches.values()) {
@@ -611,12 +629,19 @@ ${sunQuadWgsl}`,
     const casting = occluders.count > 0 || (marching && occluders.drawableCount > 0);
     const segments = occluders.segments;
     const segmentCount = occluders.count;
+    const geometryRevision = casting ? this._shadowGeometry.update(segments, segmentCount) : this._shadowGeometry.current;
+    const epoch = ++this._shadowEpoch;
+
+    this._shadowRowsRebuilt = 0;
+    this._shadowBytesUploaded = 0;
 
     if (casting && marching) {
       this._filler!.begin(lights.length);
     }
 
     let written = 0;
+    let firstDirtyRow = Infinity;
+    let lastDirtyRow = -1;
 
     for (const light of lights) {
       if (!light.enabled || light.intensity <= 0) {
@@ -643,7 +668,10 @@ ${sunQuadWgsl}`,
       } else {
         scratchInstance.a_shadow[0] = written;
 
-        this._writeShadowRow(written, radius, segments, segmentCount, marching);
+        if (this._writeShadowRow(light, written, radius, segments, segmentCount, geometryRevision, epoch, marching)) {
+          firstDirtyRow = Math.min(firstDirtyRow, written);
+          lastDirtyRow = written;
+        }
       }
 
       scratchInstance.a_shadow[1] = light.softness;
@@ -673,15 +701,20 @@ ${sunQuadWgsl}`,
       written++;
     }
 
-    const suns = this._writeSuns(lights, casting, segments, segmentCount);
-
-    if (casting && written > 0 && !marching) {
-      this._shadowMap.commit();
+    if (!casting || marching) {
+      this._shadowRows.clear();
+    } else {
+      removeStaleShadowRows(this._shadowRows, epoch);
     }
 
-    if (casting && suns > 0) {
-      this._sunShadowMap.commit();
+    if (lastDirtyRow >= firstDirtyRow) {
+      const rows = lastDirtyRow - firstDirtyRow + 1;
+
+      this._shadowMap.commitRect(0, firstDirtyRow, this._shadowResolution, rows);
+      this._shadowBytesUploaded += this._shadowResolution * rows * Float32Array.BYTES_PER_ELEMENT;
     }
+
+    const suns = this._writeSuns(lights, casting, segments, segmentCount, geometryRevision, epoch);
 
     this._activeCount = written + suns;
 
@@ -747,13 +780,39 @@ ${sunQuadWgsl}`,
    * is active. The light's position and axis are the ones the caller has just
    * read into the shared scratch.
    */
-  private _writeShadowRow(row: number, radius: number, segments: Float32Array, segmentCount: number, marching: boolean): void {
+  private _writeShadowRow(
+    light: Light,
+    row: number,
+    radius: number,
+    segments: Float32Array,
+    segmentCount: number,
+    geometryRevision: number,
+    epoch: number,
+    marching: boolean,
+  ): boolean {
     const bins = this._shadowResolution;
 
     if (marching) {
       this._filler!.write(row, scratchPosition.x, scratchPosition.y, radius, scratchDirection.x, scratchDirection.y);
+      this._shadowRowsRebuilt++;
 
-      return;
+      return false;
+    }
+
+    const state = this._shadowRows.get(light);
+
+    if (
+      state?.row === row &&
+      state.x === scratchPosition.x &&
+      state.y === scratchPosition.y &&
+      state.axisX === scratchDirection.x &&
+      state.axisY === scratchDirection.y &&
+      state.radius === radius &&
+      state.geometryRevision === geometryRevision
+    ) {
+      state.epoch = epoch;
+
+      return false;
     }
 
     buildShadowRow(
@@ -767,6 +826,33 @@ ${sunQuadWgsl}`,
       this._shadowMap.buffer.subarray(row * bins, (row + 1) * bins),
       bins,
     );
+    this._shadowRowsRebuilt++;
+
+    if (state === undefined) {
+      const next: ShadowRowState = {
+        row,
+        x: scratchPosition.x,
+        y: scratchPosition.y,
+        axisX: scratchDirection.x,
+        axisY: scratchDirection.y,
+        radius,
+        geometryRevision,
+        epoch,
+      };
+
+      this._shadowRows.set(light, next);
+    } else {
+      state.row = row;
+      state.x = scratchPosition.x;
+      state.y = scratchPosition.y;
+      state.axisX = scratchDirection.x;
+      state.axisY = scratchDirection.y;
+      state.radius = radius;
+      state.geometryRevision = geometryRevision;
+      state.epoch = epoch;
+    }
+
+    return true;
   }
 
   /**
@@ -780,10 +866,19 @@ ${sunQuadWgsl}`,
    * is what the system arranges by folding the view into that region whenever a
    * sun is registered.
    */
-  private _writeSuns(lights: readonly Light[], casting: boolean, segments: Float32Array, segmentCount: number): number {
+  private _writeSuns(
+    lights: readonly Light[],
+    casting: boolean,
+    segments: Float32Array,
+    segmentCount: number,
+    geometryRevision: number,
+    epoch: number,
+  ): number {
     this._sunBatch.clear();
 
     let written = 0;
+    let firstDirtyRow = Infinity;
+    let lastDirtyRow = -1;
 
     for (const light of lights) {
       if (!(light instanceof SunLight) || !light.enabled || light.intensity <= 0) {
@@ -818,20 +913,64 @@ ${sunQuadWgsl}`,
         scratchSun.a_sun[3] = noShadow;
       } else {
         scratchSun.a_sun[3] = written;
-        buildSunShadowRow(
-          segments,
-          segmentCount,
-          alongX,
-          alongY,
-          acrossX,
-          acrossY,
-          spanMin,
-          spanSize,
-          depthMin,
-          depthSpan,
-          this._sunShadowMap.buffer.subarray(written * this._shadowResolution, (written + 1) * this._shadowResolution),
-          this._shadowResolution,
-        );
+        const state = this._sunShadowRows.get(light);
+
+        if (
+          state?.row === written &&
+          state.alongX === alongX &&
+          state.alongY === alongY &&
+          state.spanMin === spanMin &&
+          state.spanSize === spanSize &&
+          state.depthMin === depthMin &&
+          state.depthSpan === depthSpan &&
+          state.geometryRevision === geometryRevision
+        ) {
+          state.epoch = epoch;
+        } else {
+          buildSunShadowRow(
+            segments,
+            segmentCount,
+            alongX,
+            alongY,
+            acrossX,
+            acrossY,
+            spanMin,
+            spanSize,
+            depthMin,
+            depthSpan,
+            this._sunShadowMap.buffer.subarray(written * this._shadowResolution, (written + 1) * this._shadowResolution),
+            this._shadowResolution,
+          );
+          this._shadowRowsRebuilt++;
+          firstDirtyRow = Math.min(firstDirtyRow, written);
+          lastDirtyRow = written;
+
+          if (state === undefined) {
+            const next: SunShadowRowState = {
+              row: written,
+              alongX,
+              alongY,
+              spanMin,
+              spanSize,
+              depthMin,
+              depthSpan,
+              geometryRevision,
+              epoch,
+            };
+
+            this._sunShadowRows.set(light, next);
+          } else {
+            state.row = written;
+            state.alongX = alongX;
+            state.alongY = alongY;
+            state.spanMin = spanMin;
+            state.spanSize = spanSize;
+            state.depthMin = depthMin;
+            state.depthSpan = depthSpan;
+            state.geometryRevision = geometryRevision;
+            state.epoch = epoch;
+          }
+        }
       }
 
       scratchSun.a_box[0] = centerX;
@@ -852,6 +991,19 @@ ${sunQuadWgsl}`,
       this._tint.set(light.color.r, light.color.g, light.color.b, 255);
       this._sunBatch.add(this._transform, this._tint, scratchSun);
       written++;
+    }
+
+    if (!casting) {
+      this._sunShadowRows.clear();
+    } else {
+      removeStaleShadowRows(this._sunShadowRows, epoch);
+    }
+
+    if (lastDirtyRow >= firstDirtyRow) {
+      const rows = lastDirtyRow - firstDirtyRow + 1;
+
+      this._sunShadowMap.commitRect(0, firstDirtyRow, this._shadowResolution, rows);
+      this._shadowBytesUploaded += this._shadowResolution * rows * Float32Array.BYTES_PER_ELEMENT;
     }
 
     return written;
@@ -923,6 +1075,9 @@ ${sunQuadWgsl}`,
     }
 
     this._normalBatches.clear();
+    this._shadowRows.clear();
+    this._sunShadowRows.clear();
+    this._shadowGeometry.clear();
     this._shadowMap.destroy();
     this._sunShadowMap.destroy();
     this._maskTarget.destroy();
@@ -1311,6 +1466,8 @@ ${normalPrepassWgsl}`,
 
     this._shadowMap.destroy();
     this._sunShadowMap.destroy();
+    this._shadowRows.clear();
+    this._sunShadowRows.clear();
     this._shadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
     this._sunShadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
 
