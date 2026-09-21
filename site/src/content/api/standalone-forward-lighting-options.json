@@ -1,0 +1,125 @@
+{
+  "title": "StandaloneForwardLightingOptions",
+  "description": "The same, for a system built without a host - which has no frame slot for a filter chain to run in.",
+  "symbol": "StandaloneForwardLightingOptions",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The same, for a system built without a host - which has no frame slot for a filter chain to run in."
+      ],
+      "importLine": "import { StandaloneForwardLightingOptions } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "ambient",
+          "signature": "ambient?: Color",
+          "signatureTokens": [
+            {
+              "text": "ambient",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Baseline colour every lit fragment receives regardless of any light, as a multiplier on the albedo - 255 per channel means \"unlit areas keep their full albedo\". Stored by reference and re-read every frame."
+        },
+        {
+          "name": "maxLights",
+          "signature": "maxLights?: number",
+          "signatureTokens": [
+            {
+              "text": "maxLights",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lights the renderer's texture is sized for; lights beyond it are skipped. Defaults to 64."
+        },
+        {
+          "name": "post",
+          "signature": "post?: undefined",
+          "signatureTokens": [
+            {
+              "text": "post",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Filters need a frame slot, and a system without a host has none."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/ForwardLighting.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/ForwardLighting.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/ForwardLighting.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/ForwardLighting.ts"
+}

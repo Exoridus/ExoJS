@@ -1,6 +1,6 @@
 // Auto-generated from light-cookies.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture, WrapModes } from '@codexo/exojs';
-import { AlphaOccluder, Lighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, LightmapLighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Four light shapes, one scene, and the shape of the light doing the work that
 // a texture would otherwise have to do.
@@ -8,7 +8,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // A cookie is one texture slot on the light: its full 0..1 lies on the light's
 // own bounding square, so the pattern turns with a cone and scales with a
 // radius. Nothing is projected, nothing is authored per wall - the window bars
-// below are a 128x128 canvas the sun is shone through.
+// below are a 128x128 canvas carried by the lamp that casts them.
 //
 // The sun is the one shape that is not a pool of light: it has a direction and
 // no position, so its shadows are parallel and it reaches whatever the camera
@@ -76,7 +76,7 @@ class LightCookiesScene extends Scene {
   init() {
     const { width, height } = this.app;
     this.world = new Container();
-    this.lighting = new Lighting({ app: this.app, ambient: new Color(16, 18, 28), lightResolution: 1 });
+    this.lighting = new LightmapLighting(this.app, { ambient: new Color(16, 18, 28), lightResolution: 1 });
     this.systems.add(this.lighting);
     const floor = new Sprite(floorTexture);
     floor.width = width;
@@ -120,7 +120,7 @@ class LightCookiesScene extends Scene {
     this.tube.setPosition(300, 640);
     this.hud = mountControls({
       title: 'Light Cookies',
-      hint: 'Every pattern here is one texture on ONE light, carried by that light - it turns and scales with the lamp rather than being projected onto the world. The window stands still because a window does; the canopy turns because leaves do.',
+      hint: 'Every pattern here is one texture on ONE light, carried by that light - it turns and scales with the lamp rather than being projected onto the world. Watch the window drift: its bars travel with the lamp instead of staying put on the floor, which is exactly the difference between a cookie and a world projection.',
       status: '',
     });
     const panel = mountControlPanel({ title: 'Lights', corner: 'top-right' });

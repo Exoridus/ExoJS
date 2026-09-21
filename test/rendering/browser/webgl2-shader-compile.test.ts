@@ -26,9 +26,10 @@ import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSou
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
 import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 
-import { sdfResolveShader, sdfStepShader } from '../../../packages/exojs-lighting/src/backends/distanceField';
-import { cascadeGatherShader, cascadeShader, probeVisibilityShader } from '../../../packages/exojs-lighting/src/backends/radianceField';
+import { lightCompositeShader } from '../../../packages/exojs-lighting/src/backends/FrameLightingBackend';
+import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
+import { angularAverageShader, transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 
@@ -82,18 +83,42 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
-  ['cascade.frag', generateGlslUniformDeclarations(cascadeShader.uniformSchema!)],
-  ['cascade-gather.frag', generateGlslUniformDeclarations(cascadeGatherShader.uniformSchema!)],
-  ['probe-visibility.frag', generateGlslUniformDeclarations(probeVisibilityShader.uniformSchema!)],
-  ['sdf-resolve.frag', generateGlslUniformDeclarations(sdfResolveShader.uniformSchema!)],
-  ['sdf-step.frag', generateGlslUniformDeclarations(sdfStepShader.uniformSchema!)],
+  ['angular-average.frag', generateGlslUniformDeclarations(angularAverageShader.uniformSchema!)],
   ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],
+  ['light-composite.frag', generateGlslUniformDeclarations(lightCompositeShader.uniformSchema!)],
+]);
+
+/**
+ * Fragments that are chunks rather than stages: the transport walk and the two
+ * bodies built on it are authored without a version directive, bindings or an
+ * entry point of their own, because the module that assembles them has to put
+ * the walk between the textures it reads and the body that calls it.
+ *
+ * They are compiled here in exactly the form that module produces, which is
+ * the form the renderer submits - taken from the shaders themselves rather
+ * than rebuilt, so a change to the assembly cannot pass this lane by.
+ */
+const composedCascade = transportCascadeShader(cascadeUniforms);
+const composedGather = transportGatherShader(gatherUniforms);
+const composedFragments: ReadonlyMap<string, string> = new Map([
+  ['cascade-transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
+  ['cascade-gather-transport.frag', withGlslUniformDeclarations(composedGather.glsl!.fragment, generateGlslUniformDeclarations(composedGather.uniformSchema!))],
+  // Neither the chunk nor the preamble has a body of its own; the cascade's
+  // composition is the smallest whole program that contains them.
+  ['transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
+  ['transport-filter.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
 ]);
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
 // handing a source to the driver, so a shader that reads the shared transform
 // store only compiles in its resolved form - the same form the renderer submits.
 const composeRuntimeSource = (name: string, source: string): string => {
+  const composedChunk = composedFragments.get(name);
+
+  if (composedChunk !== undefined) {
+    return composedChunk;
+  }
+
   const values = placeholderValues[name];
   const filled = values ? fillShaderSource(source, values) : source;
   const declarations = generatedUniformBlocks.get(name);
@@ -175,15 +200,10 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   // The lighting package's shadow march runs on the same fullscreen quad: the
   // occluder mask in, one shadow row per light out.
   ['default-vertex.vert', 'shadow-march.frag'],
-  // Its distance field, on the same quad: seed from the mask, flood, resolve.
-  ['default-vertex.vert', 'sdf-seed.frag'],
-  ['default-vertex.vert', 'sdf-step.frag'],
-  ['default-vertex.vert', 'sdf-resolve.frag'],
-  // The radiance chain: one level of it, the merge weights written before it,
-  // and the gather that reads the finest.
-  ['default-vertex.vert', 'cascade.frag'],
-  ['default-vertex.vert', 'probe-visibility.frag'],
-  ['default-vertex.vert', 'cascade-gather.frag'],
+  ['default-vertex.vert', 'angular-average.frag'],
+  // The reduction of the occluder mask to one texel per block, on the same quad.
+  ['default-vertex.vert', 'mask-blocks.frag'],
+  ['default-vertex.vert', 'mask-superblocks.frag'],
   // The custom sprite-material path: the engine owns the vertex stage, and the
   // lighting package's lit fragment is the in-repo counterpart it links with.
   ['sprite-material.vert', 'lit-sprite.frag'],
@@ -194,10 +214,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['occluder-debug.vert', 'occluder-debug.frag'],
   ['normal-prepass.vert', 'normal-prepass.frag'],
   ['sun-quad.vert', 'sun-quad.frag'],
-  ['emitter-quad.vert', 'emitter-quad.frag'],
-  ['emitter-cone.vert', 'emitter-cone.frag'],
   ['occluder-mask.vert', 'occluder-mask.frag'],
-  ['bounce.vert', 'bounce.frag'],
 ];
 
 const referencedShaderFiles = new Set(programPairs.flat());
@@ -267,7 +284,7 @@ describe('WebGL2 GLSL shader sources', () => {
     // engine-owned counterpart has to say so rather than simply not appear.
     for (const { name } of shaders) {
       expect(
-        referencedShaderFiles.has(name) || standaloneStages.has(name),
+        referencedShaderFiles.has(name) || standaloneStages.has(name) || composedFragments.has(name),
         `${name} is neither in a program pair nor declared standalone — wire it up, declare it, or delete it`,
       ).toBe(true);
     }

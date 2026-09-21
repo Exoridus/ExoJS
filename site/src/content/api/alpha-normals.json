@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 3,
   "counts": {
     "constructors": 1,
     "methods": 0,
-    "properties": 1,
+    "properties": 2,
     "events": 0
   },
   "sections": [
@@ -112,6 +112,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "convention",
+          "signature": "convention: NormalConvention",
+          "signatureTokens": [
+            {
+              "text": "convention",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalConvention",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Derived maps are written in the canonical convention."
+        },
         {
           "name": "texture",
           "signature": "texture: Texture",

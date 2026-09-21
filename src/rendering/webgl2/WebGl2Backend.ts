@@ -1724,6 +1724,52 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
+   * Unbind this target's colour textures from any sampler unit still holding
+   * them.
+   *
+   * A texture bound to a sampled unit while it is the framebuffer's colour
+   * attachment is a feedback loop: GL raises `INVALID_OPERATION` and drops the
+   * whole draw, silently as far as the caller is concerned. The binding does
+   * not have to come from the draw being made - a filter that sampled this
+   * target earlier leaves its unit bound, and the next frame's render INTO the
+   * target is the one that disappears. Nothing that renders can know which
+   * units some earlier pass left behind, so the release belongs here, where
+   * the target becomes a destination.
+   *
+   * Costs a loop over the units and one GL call per unit that actually held
+   * the texture, which is none in the ordinary case.
+   */
+  private _releaseSampledAttachments(state: ManagedRenderTargetState): void {
+    const attached = state.attachedTextures;
+    const boundHandles = this._boundHandles;
+    const activeUnit = this._textureUnit;
+
+    for (let index = 0; index < attached.length; index++) {
+      const handle = attached[index];
+
+      if (handle === null || handle === undefined) {
+        continue;
+      }
+
+      for (let unit = 0; unit < boundHandles.length; unit++) {
+        if (boundHandles[unit] !== handle) {
+          continue;
+        }
+
+        // Through the unit cache rather than around it: the binding that is
+        // gone from GL has to be gone from the cache as well, or the next
+        // sampler set up on this unit would skip a bind GL still needs.
+        this._setTextureUnit(unit);
+        this._bindTextureHandle(null);
+      }
+    }
+
+    // Whoever called this was pointed at a unit of their own; sweeping is not
+    // a reason to leave them pointed somewhere else.
+    this._setTextureUnit(activeUnit);
+  }
+
+  /**
    * Drop every cached binding of `handle`. Deleting a texture unbinds it from
    * every unit of the current context (GL spec), so the cache has to follow
    * without issuing any GL call of its own.
@@ -2786,6 +2832,12 @@ export class WebGl2Backend implements RenderBackend {
     const state = this._prepareRenderTarget(target);
 
     if (this._boundFramebuffer !== state.framebuffer || state.version !== target.version) {
+      // Only where the target changes: a pass that keeps drawing into the
+      // framebuffer it already has cannot have picked up a sampler binding of
+      // its own attachments in between, and sweeping per draw would cost every
+      // draw in a pass the rebind of whatever it samples.
+      this._releaseSampledAttachments(state);
+
       const gl = this._context;
       const viewport = target.getViewport();
       const scaleX = target.root && target.width > 0 ? this._canvas.width / target.width : 1;

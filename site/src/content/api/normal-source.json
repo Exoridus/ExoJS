@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 1,
+  "memberCount": 2,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 1,
+    "properties": 2,
     "events": 0
   },
   "sections": [
@@ -29,6 +29,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "convention",
+          "signature": "convention?: NormalConvention",
+          "signatureTokens": [
+            {
+              "text": "convention",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalConvention",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which way up the map's green channel is authored. Defaults to opengl where a source leaves it out, which is what every generator in this package writes."
+        },
         {
           "name": "texture",
           "signature": "texture: Texture",

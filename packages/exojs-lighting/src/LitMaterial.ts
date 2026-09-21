@@ -1,8 +1,8 @@
-import { type BlendModes, type SamplerOptions, Shader, SpriteMaterial, type Texture, UniformType } from '@codexo/exojs';
+import { type BlendModes, type SamplerOptions, Shader, SpriteMaterial, UniformType } from '@codexo/exojs';
 
 import type { ForwardBackend } from './backends/ForwardBackend';
 import type { Lighting } from './Lighting';
-import { flatNormals, type NormalSource } from './normals/NormalSource';
+import { flatNormalSource, normalGreenSign, type NormalSource } from './normals/NormalSource';
 import glslFragment from './shaders/lit-sprite.frag';
 import wgslSource from './shaders/lit-sprite.wgsl';
 
@@ -10,9 +10,9 @@ import wgslSource from './shaders/lit-sprite.wgsl';
 // carries this as a type argument, and the declaration emit keeps no trace of a
 // module-local const - a `typeof` over one leaves the emitted `.d.ts` naming
 // something it does not declare.
-type LitUniforms = Readonly<{ emissive: UniformType.Float }>;
+type LitUniforms = Readonly<{ emissive: UniformType.Float; normalY: UniformType.Float }>;
 
-const litUniforms: LitUniforms = { emissive: UniformType.Float };
+const litUniforms: LitUniforms = { emissive: UniformType.Float, normalY: UniformType.Float };
 
 /**
  * The one shader pair behind every {@link LitMaterial}. Renderers key their
@@ -82,6 +82,8 @@ export class LitMaterial extends SpriteMaterial<LitUniforms> {
   /** The system this material shades against. */
   public readonly lighting: Lighting;
 
+  private _normals: NormalSource;
+
   public constructor(options: LitMaterialOptions) {
     const backend = options.lighting.backend;
 
@@ -93,7 +95,7 @@ export class LitMaterial extends SpriteMaterial<LitUniforms> {
     if (backend.quality !== 'forward') {
       throw new Error(
         `LitMaterial shades inside the sprite fragment stage, against the 'forward' renderer's light texture, but this Lighting uses '${backend.quality}'. ` +
-          "The 'lightmap' renderer multiplies the finished frame by a light field and has no surface normals to shade against: use quality: 'forward' for " +
+          'The other renderers multiply the finished frame by a light field and have no surface normals to shade against: use ForwardLighting for ' +
           'normal-mapped sprites, or drop the material and let the renderer light the frame.',
       );
     }
@@ -103,7 +105,7 @@ export class LitMaterial extends SpriteMaterial<LitUniforms> {
       // Declaration order is the group(2) binding order on WebGPU: normal map at
       // bindings 1/2, light texture at 3/4, matching `lit-sprite.wgsl`.
       textures: {
-        u_normalMap: options.normals?.texture ?? flatNormals(),
+        u_normalMap: (options.normals ?? flatNormalSource()).texture,
         u_lights: (backend as ForwardBackend).lightTexture,
       },
       ...(options.blendMode !== undefined ? { blendMode: options.blendMode } : {}),
@@ -111,7 +113,9 @@ export class LitMaterial extends SpriteMaterial<LitUniforms> {
     });
 
     this.lighting = options.lighting;
+    this._normals = options.normals ?? flatNormalSource();
     this.emissive = options.emissive ?? 0;
+    this.uniforms.normalY.set(normalGreenSign(this._normals));
   }
 
   /** How much light the surface emits of its own. See {@link LitMaterialOptions.emissive}. */
@@ -123,12 +127,17 @@ export class LitMaterial extends SpriteMaterial<LitUniforms> {
     this.uniforms.emissive.set(emissive);
   }
 
-  /** The bound normal map. Assigning a replacement takes effect on the next draw. */
-  public get normalMap(): Texture {
-    return this.textures.u_normalMap as Texture;
+  /**
+   * The bound normal source. Assigning a replacement takes effect on the next
+   * draw and carries its own channel convention with it.
+   */
+  public get normals(): NormalSource {
+    return this._normals;
   }
 
-  public set normalMap(texture: Texture) {
-    this.setTexture('u_normalMap', texture);
+  public set normals(normals: NormalSource) {
+    this._normals = normals;
+    this.setTexture('u_normalMap', normals.texture);
+    this.uniforms.normalY.set(normalGreenSign(normals));
   }
 }

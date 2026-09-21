@@ -9,12 +9,26 @@ export interface LightOptions {
   /** Linear brightness multiplier. Defaults to `1`. */
   readonly intensity?: number;
   /**
-   * How soft the shadows this light casts are, in `0..1`. `0` is a point
-   * source with a hard edge; higher values widen the penumbra, as a larger
-   * lamp would. Defaults to `0.25`.
+   * How soft the shadows this light casts are, in `0..1`. `0` is the hardest
+   * edge the renderer can draw and `1` the widest. Defaults to `0.25`.
    *
-   * Softness widens the shadow sample kernel rather than adding a pass, so it
-   * is free of extra draws and can differ per light.
+   * It means a different quantity in each renderer, and the difference is
+   * visible in a scene with depth:
+   *
+   * - `lightmap` reads it as FILTER WIDTH. The light stays a point, and the
+   *   shadow term is averaged over a band of its angular shadow row, at most
+   *   three percent of a full turn. The edge widens with distance from the
+   *   LIGHT rather than from the wall, and it does not behave like a shadow
+   *   cast by a source of that size.
+   * - `radiance` reads it as SOURCE SIZE. The emitter is given a width, and
+   *   the penumbra follows from the geometry: it grows with the distance
+   *   between the wall and what the shadow falls on.
+   *
+   * Neither adds a pass, so it is free of extra draws and can differ per
+   * light. Under `lightmap` the filter samples every bin under its kernel and
+   * spends between 7 and 23 texture fetches per shadowed fragment doing it,
+   * which also bounds the kernel at ten bins either side - see
+   * {@link LightingOptions.shadowResolution}.
    */
   readonly softness?: number;
   /**
@@ -67,7 +81,7 @@ export abstract class Light extends RenderNode {
   public color: Color;
   /** Linear brightness multiplier. */
   public intensity: number;
-  /** Penumbra width of this light's shadows, in `0..1`. See {@link LightOptions.softness}. */
+  /** How soft this light's shadows are, in `0..1`. See {@link LightOptions.softness}. */
   public softness: number;
   /** Texture the light is shone through, or `null`. See {@link LightOptions.cookie}. */
   public cookie: Texture | null;

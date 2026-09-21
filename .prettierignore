@@ -25,6 +25,11 @@ packages/exojs-bench/results/*.json
 # large edit with no formatting question behind it.
 *.mdx
 
+# GPU shader sources use language-specific formatting.
+*.frag
+*.vert
+*.wgsl
+
 *.min.*
 pnpm-lock.yaml
 

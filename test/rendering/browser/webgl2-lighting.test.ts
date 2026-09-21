@@ -7,7 +7,7 @@
  * Run via:  pnpm test:browser:webgl2
  */
 
-import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -88,7 +88,7 @@ describe('lighting WebGL2 browser', () => {
     const backend = await createBackend();
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
-    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const lighting = new ForwardLighting({ maxLights: 4, ambient: Color.black });
     const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
     const root = new Container();
     const upright = new Sprite(albedo);
@@ -136,7 +136,7 @@ describe('lighting WebGL2 browser', () => {
   test('an emissive surface lights itself where no light reaches, and keeps its alpha', async () => {
     const backend = await createBackend();
     const albedo = createAlbedo();
-    const lighting = new Lighting({ maxLights: 4, ambient: Color.black });
+    const lighting = new ForwardLighting({ maxLights: 4, ambient: Color.black });
     const dark = new LitMaterial({ lighting });
     const lava = new LitMaterial({ lighting, emissive: 0.75 });
     const plain = new Sprite(albedo);
@@ -187,7 +187,7 @@ describe('lighting WebGL2 browser', () => {
     const backend = await createBackend();
     const albedo = createAlbedo();
     const normalMap = createFlatNormalMap();
-    const lighting = new Lighting({ maxLights: 4, ambient: new Color(64, 64, 64) });
+    const lighting = new ForwardLighting({ maxLights: 4, ambient: new Color(64, 64, 64) });
     const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
     const root = new Container();
     const sprite = new Sprite(albedo);

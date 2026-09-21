@@ -17,11 +17,11 @@ void main() {
     // Rotated by the instance's local-to-world basis, the same way the forward
     // renderer does it in the sprite stage, so a spinning or mirrored drawable
     // keeps its bumps facing the right way and both renderers agree.
-    // Green above the midpoint means "faces up" - the convention every
-    // authoring tool writes - and up on screen is world -y here, so the tangent
-    // normal's y is negated on the way in. Without it a normal map lights its
-    // bevels from the wrong side of the horizon, and only the vertical ones:
-    // left and right stay correct, which is what makes it hard to see.
+    // Green above the midpoint means "leans towards the top of the image" in
+    // the canonical OpenGL convention, and the top of a drawable is local -y
+    // here, so the tangent normal's y is negated on the way in. A source
+    // authored the other way up arrives with its `(b, d)` basis column already
+    // negated, which undoes that.
     vec3 tangentNormal = texture(u_normalMap, v_uv).xyz * 2.0 - 1.0;
     tangentNormal.y = -tangentNormal.y;
     vec2 axisX = normalize(vec2(v_basis.x, v_basis.z));

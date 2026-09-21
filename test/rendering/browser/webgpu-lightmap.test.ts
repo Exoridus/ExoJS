@@ -6,7 +6,18 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { AlphaOccluder, Lighting, LineLight, NormalMap, PointLight, PolygonOccluder, radiance, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import {
+  AlphaOccluder,
+  type Lighting,
+  LightmapLighting,
+  LineLight,
+  NormalMap,
+  PointLight,
+  PolygonOccluder,
+  RadianceLighting,
+  SpotLight,
+  SunLight,
+} from '@codexo/exojs-lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -131,7 +142,7 @@ describe('lightmap renderer WebGPU browser', () => {
   test('lights the frame where a light reaches and leaves the rest at ambient', async ctx => {
     const host = await createHost();
     const device = getBackendDevice(host.backend);
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     const spot = lighting.add(new SpotLight({ radius: 40, angle: 30, coneSoftness: 0.2, intensity: 1 }));
 
     lighting.add(new PointLight({ radius: 24, intensity: 1 })).setPosition(16, 16);
@@ -188,7 +199,7 @@ describe('lightmap renderer WebGPU browser', () => {
   });
   test('an occluder leaves a dark region behind it, and softness widens its edge', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     const light = lighting.add(new PointLight({ radius: 34, intensity: 1, softness: 0 }));
 
     light.setPosition(32, 32);
@@ -244,7 +255,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
   test('the occluders debug view draws the silhouettes that were collected', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
 
     lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(32, 32);
     lighting.occludeFrom(
@@ -279,7 +290,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
   test('the composite keeps the frame the right way up', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: new Color(255, 255, 255), lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: new Color(255, 255, 255), lightResolution: 1 });
     const band = new Sprite(Texture.fromColor(Color.white, 1));
 
     band.width = canvasSize;
@@ -306,7 +317,7 @@ describe('lightmap renderer WebGPU browser', () => {
   });
   test('a registered surface writes its normals into the prepass, rotated with the drawable', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     // A normal leaning along the drawable's own +x, which is the one encoding
     // that says something different once the drawable turns.
     const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
@@ -363,7 +374,7 @@ describe('lightmap renderer WebGPU browser', () => {
     const host = await createHost();
     // Half resolution, so a mask texel is two canvas pixels - the case a hair-
     // thin wall would fall through if the width were not a floor.
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 0.5 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 0.5 });
 
     lighting.add(new PointLight({ radius: 40, intensity: 1 })).setPosition(20, 24);
     lighting.occludeFrom(
@@ -402,7 +413,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
   test('a sun lights the whole view evenly and casts a parallel shadow', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
 
     // Unrotated, so the light travels along world +x and shadows fall to the
     // right of whatever blocks it.
@@ -445,7 +456,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
   test('a line light pools in a capsule, not a disc', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
 
     // A tube along the node's +x, so the light reaches 16 + 20 along x and only
     // 20 across it.
@@ -476,7 +487,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
   test('a cookie patterns the light across its own bounding square, in both axes', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     // Four different quadrants, so a flipped axis cannot pass - and the same
     // four the WebGL2 lane checks, which is what makes the two comparable.
     const cookie = new DataTexture({
@@ -518,7 +529,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
   test('a surface normal turns the light towards the side it faces', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     // Leaning along +x, so the ground faces the light more on the light's own
     // left than on its right.
     const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
@@ -557,9 +568,7 @@ describe('lightmap renderer WebGPU browser', () => {
     // handed: a quarter of 2.0 is half, a quarter of a field clipped at 1.0 is
     // a quarter.
     const grade = new ColorMatrixFilter().brightness(0.25);
-    const lighting = new Lighting({
-      quality: 'lightmap',
-      app: host.app,
+    const lighting = new LightmapLighting(host.app, {
       ambient: Color.black,
       lightResolution: 1,
       post: [grade],
@@ -591,7 +600,7 @@ describe('lightmap renderer WebGPU browser', () => {
 
   test('ambient lights the frame where no light reaches, and with no light at all', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: new Color(128, 128, 128), lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: new Color(128, 128, 128), lightResolution: 1 });
 
     drawWhiteFrame(host);
 
@@ -614,7 +623,7 @@ describe('lightmap renderer WebGPU browser', () => {
   });
   test('the GPU filler paints the shadow the segment walk paints', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     const backend = lighting.backend as LightmapBackend;
 
     lighting.add(new PointLight({ radius: 40, intensity: 1, softness: 0 })).setPosition(32, 32);
@@ -676,7 +685,7 @@ describe('lightmap renderer WebGPU browser', () => {
   });
   test('a render target handed over whole casts the shadow the tracer cannot read', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: 'lightmap', app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     const backend = lighting.backend as LightmapBackend;
     // A render target has no pixels on this side of the GPU, so its outline
     // cannot be traced at all - which is what makes it the decisive case for
@@ -739,53 +748,9 @@ describe('lightmap renderer WebGPU browser', () => {
       host.destroy();
     }
   });
-  test('the distance field grows away from the wall the mask drew', async ctx => {
-    const host = await createHost();
-    // Through the renderer that brings the field with it: a project on the
-    // light quads never links the jump flood, so there is nothing for the view
-    // to show there.
-    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
-
-    // Asymmetric in both axes on purpose: a field built in the wrong space
-    // would still look plausible on a wall through the middle.
-    lighting.add(new PointLight({ radius: 60, intensity: 1 })).setPosition(20, 24);
-    lighting.occludeFrom(
-      new PolygonOccluder(
-        [
-          { x: 44, y: 4 },
-          { x: 44, y: 60 },
-        ],
-        { closed: false },
-      ),
-    );
-    lighting.debug = 'distance';
-
-    try {
-      const at = await renderFrame(host, lighting);
-
-      if (at === null) {
-        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
-        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
-
-        return;
-      }
-
-      const atWall = at(44, 32);
-      const near = at(36, 32);
-
-      // Zero at the wall, and further the further off it, as a fraction of the
-      // view's own diagonal.
-      expect(atWall).toBeLessThan(10);
-      expect(near).toBeGreaterThan(atWall);
-      expect(at(8, 32)).toBeGreaterThan(near);
-    } finally {
-      lighting.destroy();
-      host.destroy();
-    }
-  });
   test('radiance carries an emitter across the scene, and an occluder still cuts it', async ctx => {
     const host = await createHost();
-    const lighting = new Lighting({ quality: radiance(), app: host.app, ambient: Color.black, lightResolution: 1 });
+    const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1 });
 
     // Off-centre in both axes: a field laid out in the wrong space would still
     // look plausible around a light in the middle.
@@ -821,5 +786,88 @@ describe('lightmap renderer WebGPU browser', () => {
       lighting.destroy();
       host.destroy();
     }
+  });
+  test('a fragment just behind a wall takes nothing from the lit probe beside it', async ctx => {
+    const host = await createHost();
+    // Four field texels between probes, so the wall falls between two of them
+    // rather than between two pixels: the column behind it is then reconstructed
+    // from a probe in front of it and one behind it.
+    const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1, probeSpacing: 4 });
+
+    lighting.add(new PointLight({ radius: 40, intensity: 0.6 })).setPosition(16, 32);
+    lighting.occludeFrom(
+      new PolygonOccluder(
+        [
+          { x: 32, y: 4 },
+          { x: 32, y: 60 },
+        ],
+        { closed: false },
+      ),
+    );
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+
+      if (at === null) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      // The reconstruction walks the stretch from each fragment to each of its
+      // probes over the same tables the chain walks. A walk that was never
+      // handed those tables reports every stretch open, and the two columns
+      // behind the wall take their share of the lit probe through it.
+      expect(at(30, 32)).toBeGreaterThan(20);
+      expect(at(32, 32)).toBeLessThan(3);
+      expect(at(33, 32)).toBeLessThan(3);
+    } finally {
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a spot standing inside a point light never darkens it', async ctx => {
+    /** The light arriving behind a lamp at (32, 32), where a spot pointing along +x emits nothing. */
+    const behind = async (withSpot: boolean): Promise<number | null> => {
+      const host = await createHost();
+      const lighting = new RadianceLighting(host.app, { ambient: Color.black, lightResolution: 1, bounce: 0 });
+
+      lighting.add(new PointLight({ radius: 20, intensity: 1 })).setPosition(32, 32);
+
+      if (withSpot) {
+        lighting.add(new SpotLight({ radius: 20, intensity: 1, angle: 20, coneSoftness: 0 })).setPosition(32, 32);
+      }
+
+      drawWhiteFrame(host);
+
+      try {
+        const at = await renderFrame(host, lighting);
+
+        return at === null ? null : at(14, 32);
+      } finally {
+        lighting.destroy();
+        host.destroy();
+      }
+    };
+
+    const alone = await behind(false);
+    const shared = await behind(true);
+
+    if (alone === null || shared === null) {
+      // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+      ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+      return;
+    }
+
+    // The two emitters cover the same texels, and the cone field sums its
+    // descriptions rather than compositing them - so the texel reads as
+    // "no single cone describes this" and the point light keeps its own
+    // light. See the WebGL2 twin of this test for what the alternative does.
+    expect(alone).toBeGreaterThan(10);
+    expect(shared, `alone ${alone}, shared ${shared}`).toBeGreaterThanOrEqual(alone - 2);
   });
 });

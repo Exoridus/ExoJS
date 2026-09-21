@@ -260,7 +260,7 @@ export class WebGpuShaderFilterPass {
     });
 
     // ---- Group 1 layout: user UBO + optional texture/sampler pairs ----
-    const userBindGroupLayout = this._buildUserBindGroupLayout(device);
+    const userBindGroupLayout = this._buildUserBindGroupLayout(backend, device);
 
     // ---- Pipeline layout ----
     const pipelineLayout = device.createPipelineLayout({
@@ -374,7 +374,7 @@ export class WebGpuShaderFilterPass {
    *   binding 1, 3, 5, ... - texture entries (one per texture uniform, in order)
    *   binding 2, 4, 6, ... - sampler entries (paired with textures)
    */
-  private _buildUserBindGroupLayout(device: GPUDevice): GPUBindGroupLayout {
+  private _buildUserBindGroupLayout(backend: WebGpuBackend, device: GPUDevice): GPUBindGroupLayout {
     // A uniform binding is unconditional: `_buildUserBindGroup` always binds a
     // buffer at binding 0 (a 16-byte dummy when there are no scalar uniforms),
     // so a layout that omitted it rejected the bind group outright - which is
@@ -390,10 +390,26 @@ export class WebGpuShaderFilterPass {
 
     let bindingIndex = uniformBindings;
 
-    for (let texture = 0; texture < this._collectTextures().length; texture++) {
-      entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, texture: {} });
+    for (const texture of this._collectTextures()) {
+      // A 32-bit float texture is only filterable where the device carries the
+      // optional `float32-filterable` feature, so declaring one as an ordinary
+      // filterable float would fail validation on every device without it. It
+      // is bound as data instead, which is what such a texture holds in a
+      // filter: a lookup table, geometry, an index. WGSL reads it with
+      // `textureLoad`, and the sampler beside it exists only to fill the pair.
+      const data = backend.isNonFilterableTexture(texture);
+
+      entries.push({
+        binding: bindingIndex,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: data ? { sampleType: 'unfilterable-float' } : {},
+      });
       bindingIndex++;
-      entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, sampler: {} });
+      entries.push({
+        binding: bindingIndex,
+        visibility: GPUShaderStage.FRAGMENT,
+        sampler: data ? { type: 'non-filtering' } : {},
+      });
       bindingIndex++;
     }
 

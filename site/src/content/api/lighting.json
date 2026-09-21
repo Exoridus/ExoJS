@@ -1,16 +1,16 @@
 {
   "title": "Lighting",
-  "description": "The lighting system: lights, materials and occluders in, a shaded frame out. ```ts const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(11, 16, 32) }); scene.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); lighting.occludeFrom(new PhysicsOccluder(world)); ``` # What it owns The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Occluder sources and filters passed as `post` are the caller's too. # Ordering Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want.",
+  "description": "What a lighting system does with lights, materials and occluders, whichever renderer turns them into pixels. ```ts const lighting = new LightmapLighting(app, { ambient: new Color(11, 16, 32) }); scene.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); lighting.occludeFrom(new PhysicsOccluder(world)); ``` Construct one of ForwardLighting, LightmapLighting or RadianceLighting. They are alternatives rather than layers, and a frame is shaded by exactly one of them. This class is what they share: the registries, the collection of occluders, and the update and destroy contracts. It links no renderer of its own, which is what keeps a project using one of them from carrying the others. # What it owns The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Occluder sources, filters passed as `post`, and the host are the caller's too. # Ordering Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want.",
   "symbol": "Lighting",
   "kind": "class",
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 22,
+  "memberCount": 23,
   "counts": {
     "constructors": 1,
     "methods": 11,
-    "properties": 10,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -19,11 +19,12 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The lighting system: lights, materials and occluders in, a shaded frame out.",
-        "```ts const lighting = new Lighting({ quality: 'lightmap', app, ambient: new Color(11, 16, 32) });",
+        "What a lighting system does with lights, materials and occluders, whichever renderer turns them into pixels.",
+        "```ts const lighting = new LightmapLighting(app, { ambient: new Color(11, 16, 32) });",
         "scene.systems.add(lighting); lighting.add(player.addChild(new PointLight({ radius: 260 }))); lighting.occludeFrom(new PhysicsOccluder(world)); ```",
+        "Construct one of ForwardLighting, LightmapLighting or RadianceLighting. They are alternatives rather than layers, and a frame is shaded by exactly one of them. This class is what they share: the registries, the collection of occluders, and the update and destroy contracts. It links no renderer of its own, which is what keeps a project using one of them from carrying the others.",
         "# What it owns",
-        "The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Occluder sources and filters passed as `post` are the caller's too.",
+        "The renderer and its GPU resources. Lights are scene nodes owned by the tree they hang in - registering one does not transfer ownership, and destroying a registered light unregisters it. Occluder sources, filters passed as `post`, and the host are the caller's too.",
         "# Ordering",
         "Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want."
       ],
@@ -36,7 +37,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: LightingOptions): Lighting",
+          "signature": "new(backend: LightingBackend, host: LightingHost | null, options: LightingOptions): Lighting",
           "signatureTokens": [
             {
               "text": "new",
@@ -44,6 +45,46 @@
             },
             {
               "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backend",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingBackend",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "host",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingHost",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
               "kind": "punctuation"
             },
             {
@@ -73,13 +114,23 @@
           ],
           "params": [
             {
+              "name": "backend",
+              "type": "LightingBackend",
+              "optional": false
+            },
+            {
+              "name": "host",
+              "type": "LightingHost | null",
+              "optional": false
+            },
+            {
               "name": "options",
               "type": "LightingOptions",
               "optional": false
             }
           ],
           "returnType": "Lighting",
-          "description": ""
+          "description": "backend is built by the concrete system and belongs to this one from here on; host is the caller's and is never destroyed."
         }
       ],
       "paragraphs": [],
@@ -319,7 +370,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, new NormalMap(crateNormals));  Only a renderer that shades a light field of its own reads these - forward shades inside the sprite stage and takes its normals from LitMaterial instead. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
+          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, new NormalMap(crateNormals));  Only lightmap reads these. forward shades inside the sprite stage and takes its normals from LitMaterial instead, and radiance gathers each probe's rays into one arriving colour, which leaves no incident direction at a fragment for a normal to be measured against - under both, registering a surface is recorded and ignored, and activeSurfaceCount stays at zero. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
         },
         {
           "name": "occludeFrom",
@@ -608,7 +659,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Surfaces the last frame actually took normals from. Lower than surfaces when some are hidden or carry no texture, and zero under a renderer that takes its normals from a material."
+          "description": "Surfaces the last frame actually took normals from. Lower than surfaces when some are hidden or carry no texture, and zero under every renderer but lightmap. See normalsFrom."
         },
         {
           "name": "debug",
@@ -632,6 +683,27 @@
           "description": "Intermediate to show instead of the shaded frame. See LightingDebugView."
         },
         {
+          "name": "debugExposure",
+          "signature": "debugExposure: number",
+          "signatureTokens": [
+            {
+              "text": "debugExposure",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scale applied to the shaded output, 1 by default. It moves the exposure only: the lights, the transport and the bounce history are all untouched, so raising it shows what a light field holds above 1.0 without changing what any of it computed. That is what makes it the right knob for looking at an overbright scene - turning a light down instead would change the scene being looked at. Under forward, where nothing is composited, it does nothing. It is not a tone map: values still clip, one stop further along."
+        },
+        {
           "name": "hdr",
           "signature": "hdr: boolean",
           "signatureTokens": [
@@ -650,7 +722,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether light accumulates with headroom above 1.0, so that overlapping lights add up instead of saturating to white and a filter in post has something above the clipping point to work with. false under forward, which shades straight into the frame, and under lightmap on a WebGL2 context without EXT_color_buffer_float. The picture is still correct there - it clips earlier, and a bloom keyed on a threshold near 1.0 finds little to bloom."
+          "description": "Whether light accumulates with headroom above 1.0, so that overlapping lights add up instead of saturating to white and a filter over the frame has something above the clipping point to work with. false under forward, which shades straight into the frame, and under lightmap on a WebGL2 context without EXT_color_buffer_float. The picture is still correct there - it clips earlier, and a bloom keyed on a threshold near 1.0 finds little to bloom."
         },
         {
           "name": "lights",
@@ -749,7 +821,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Filters over the shaded frame, in order. See LightingOptions.post."
+          "description": "Filters over the shaded frame, in order. Caller-owned and fixed for this system's lifetime."
         },
         {
           "name": "quality",

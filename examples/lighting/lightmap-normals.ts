@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaNormals, Lighting, type NormalSource, PointLight } from '@codexo/exojs-lighting';
+import { AlphaNormals, Lighting, LightmapLighting, type NormalSource, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // The lightmap renderer multiplies a frame that was already drawn, so by the
@@ -21,8 +21,10 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //
 // Nothing is required of a drawable that is not registered - the attachment's
 // alpha is coverage, and where it is zero the light lands with no `N dot L`
-// term at all. That is what the "Normals" toggle below shows: switching them
-// off cannot darken anything, it only flattens what asked for them.
+// term at all. That is what the "Normals" toggle below shows: without them
+// every fragment takes the light head-on, so the relief flattens and the
+// stones read slightly BRIGHTER rather than darker. Normals redistribute
+// light across a surface; they never add any.
 //
 // Nobody authored a normal map here either. `AlphaNormals` reads the
 // silhouette as a height field, once at load.
@@ -77,7 +79,7 @@ class LightmapNormalsScene extends Scene {
     this.world = new Container();
     // `auto` with an application resolves to the lightmap renderer, which is
     // the one with a light field for a prepass to feed.
-    this.lighting = new Lighting({ app: this.app, ambient: new Color(20, 21, 30), lightResolution: 1 });
+    this.lighting = new LightmapLighting(this.app, { ambient: new Color(20, 21, 30), lightResolution: 1 });
     this.systems.add(this.lighting);
 
     const floor = new Sprite(floorTexture);
@@ -111,7 +113,7 @@ class LightmapNormalsScene extends Scene {
 
     this.hud = mountControls({
       title: 'Normals under the lightmap renderer',
-      hint: 'Nobody authored a normal map: the cobbles are round because their own alpha says so. Switch the normals off and the light stays exactly as bright - it just stops finding a surface to land on.',
+      hint: 'Nobody authored a normal map: the cobbles are round because their own alpha says so. Switch the normals off and every fragment takes the light head-on - the relief flattens and the stones read a little brighter, because a surface normal moves light around rather than adding any.',
       status: '',
     });
 

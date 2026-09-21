@@ -27,7 +27,7 @@ import { TextureFormat } from '#rendering/types';
 // Package path rather than the alias: `@codexo/exojs-lighting` is aliased for
 // the browser projects, but a parity scene is imported by the matrix entry
 // point too, and the source path is what both resolve.
-import { Lighting, LitMaterial, NormalMap, PointLight, SpotLight } from '../../../../packages/exojs-lighting/src/index';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight, SpotLight } from '../../../../packages/exojs-lighting/src/index';
 import { buildCoordinateTexture } from '../../browser/_selfDescribingFixture';
 import type { Scene } from '../types';
 
@@ -70,7 +70,7 @@ export const lightingScenes: readonly Scene[] = [
     nearestSampled: true,
     build: () => {
       const root = new Container();
-      const lighting = new Lighting({ maxLights: 4 });
+      const lighting = new ForwardLighting({ maxLights: 4 });
       const albedo = buildCoordinateTexture(FIXTURE);
       const material = new LitMaterial({ lighting, normals: new NormalMap(buildNormalMap(FIXTURE)) });
       const ground = new Sprite(albedo);

@@ -1,7 +1,7 @@
 import type { Texture } from '@codexo/exojs';
 
 import { deriveNormalsFromAlpha, type DeriveNormalsOptions } from './deriveNormals';
-import type { NormalSource } from './NormalSource';
+import type { NormalConvention, NormalSource } from './NormalSource';
 
 /**
  * Normals derived from a texture's own alpha channel, computed once.
@@ -20,6 +20,8 @@ import type { NormalSource } from './NormalSource';
  */
 export class AlphaNormals implements NormalSource {
   public readonly texture: Texture;
+  /** Derived maps are written in the canonical convention. */
+  public readonly convention: NormalConvention = 'opengl';
 
   public constructor(texture: Texture, options?: DeriveNormalsOptions) {
     this.texture = deriveNormalsFromAlpha(texture, options);

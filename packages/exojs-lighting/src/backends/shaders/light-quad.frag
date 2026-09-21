@@ -27,37 +27,74 @@ uniform sampler2D u_cookie;
 out vec4 fragColor;
 
 const float PI = 3.14159265359;
-const int SHADOW_TAPS = 5;
-/** Fraction of a full turn the widest penumbra spans. */
+/**
+ * Widest kernel, as a half-width in bins, and therefore also the fetch budget:
+ * one tap per bin, and a bin either side of the kernel for the slope its
+ * outermost taps read - `2 * MAX_HALF + 3` fetches.
+ *
+ * It bounds the penumbra in BINS, so a larger `shadowResolution` buys a
+ * sharper hard edge rather than a wider softest penumbra. Sampling every bin
+ * under the kernel is what keeps the filter continuous, and a budget that did
+ * not bound the width would have to skip bins to stay within itself.
+ */
+const int MAX_HALF = 10;
+/** Fraction of a full turn the widest penumbra spans, before the bin bound above. */
 const float MAX_PENUMBRA = 0.03;
 /** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
 const float SHADOW_BIAS = 0.004;
-
 /**
- * Tap weights across the kernel. They sum to one, and they are UNEQUAL on
- * purpose: five equally weighted taps can only ever add up to six distinct
- * values, so a soft edge comes out as six bands that read as several shadows
- * lying on top of each other. Weighting them spreads those sums over the whole
- * range at no extra cost - same five fetches, a gradient instead of a staircase.
+ * Kernel half-width, in bins, at zero softness. The row samples each bin at
+ * its centre and is accurate to half a bin, so a kernel narrower than this
+ * would show the bin grid itself along an edge.
  */
-const float SHADOW_WEIGHTS[5] = float[5](0.07, 0.24, 0.38, 0.24, 0.07);
+const float MIN_RADIUS = 1.5;
+/**
+ * Narrowest blocker slope, in the row's own units, that a bin is allowed to
+ * resolve. Below it a bin flips at its stored distance, which is what a wall
+ * square-on to the ray should do.
+ */
+const float MIN_SLOPE = 1e-4;
+
+/** The blocker distance bin `bin` holds. The row is polar, so the index wraps. */
+float depthAt(int bin, int bins, int row) {
+    int slot = bin - bins * int(floor(float(bin) / float(bins)));
+
+    return texelFetch(u_shadow, ivec2(slot, row), 0).r;
+}
 
 /**
- * The stored distance at a fractional bin, blended between the two bins it
- * falls between.
+ * How much of one bin's own angular width the light reaches past `distance`.
  *
- * Reading the nearest bin alone is what makes a shadow edge a staircase: a row
- * is a few hundred bins around the whole circle, so at a large radius one bin
- * is many pixels wide and every one of them shows. Blending costs one more
- * fetch per tap and turns the step into the ramp a filtered shadow map has.
+ * A bin holds a single blocker distance, so comparing against that alone makes
+ * the whole bin flip at once and a kernel of such comparisons has no more
+ * levels than it has taps. Along a wall that is not square-on to the ray the
+ * taps flip at DIFFERENT distances, and the levels then show up as a fan of
+ * arcs across the penumbra. The blocker's distance varies within the bin, and
+ * the one-sided differences to the neighbouring bins measure how steeply.
+ *
+ * Two conditions before that reading is trusted. The differences have to run
+ * the same way, or the bin holds an isolated blocker rather than a surface;
+ * and of two that do, the SMALLER is taken, because across a silhouette one
+ * side jumps by the whole distance to whatever lies behind. Failing either,
+ * the bin flips at its stored distance, which is what a blocker that the row
+ * cannot resolve any further should do.
+ *
+ * The transition stays centred on the bin's OWN stored distance either way -
+ * blending two stored distances and comparing once would instead put the edge
+ * at a depth neither bin holds, which is a different thing and the wrong one.
  */
-float distanceAt(float position, int row, float bins) {
-    float lower = floor(position);
-    float weight = position - lower;
-    int first = int(mod(lower, bins));
-    int second = int(mod(lower + 1.0, bins));
+float coverageAt(float here, float previous, float next, float distance) {
+    float rising = here - previous;
+    float falling = next - here;
+    // A slope only means something where the blocker distance runs the SAME
+    // way on both sides. A bin whose neighbours BOTH lie further away holds an
+    // isolated blocker seen end-on rather than a surface seen at a slant, and
+    // reading its two one-sided jumps as a slope would spread it over the whole
+    // distance to whatever stands behind it - darkening what stands in FRONT of
+    // it, the one place a blocker cannot reach.
+    float slope = rising * falling <= 0.0 ? 0.0 : min(abs(rising), abs(falling));
 
-    return mix(texelFetch(u_shadow, ivec2(first, row), 0).r, texelFetch(u_shadow, ivec2(second, row), 0).r, weight);
+    return clamp(0.5 + (here + SHADOW_BIAS - distance) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 /**
@@ -65,27 +102,60 @@ float distanceAt(float position, int row, float bins) {
  * fraction of the light's whole reach - the frame the polar rows were built in.
  * The falloff term measures to the segment instead, which is a different
  * quantity for a line light and the same one for every other shape.
+ *
+ * The filter is a normalized tent over the bins the penumbra spans. Its taps
+ * sit on the BINS, not on the fragment's own angle, and each one is weighted
+ * by how far that bin is from the angle: the weights then slide continuously
+ * as the fragment moves, and the tap that enters or leaves the window as the
+ * angle crosses a bin carries no weight at the moment it does. Placing the
+ * taps at fixed offsets from the angle instead - and rounding each to a bin -
+ * makes every weight constant and moves the whole window at once, which puts
+ * a step the size of the centre tap back into the edge. Each tap then reads a
+ * COVERAGE rather than a yes or no, which is what leaves the term continuous
+ * in the fragment's distance as well as in its angle.
+ *
+ * It is an ANGULAR filter, not an area source: it widens the edge a point
+ * source casts, and it does not make the shadow behave like one cast by a
+ * disc of that size.
  */
 float shadowTerm(float distance) {
     if (v_shadowRow < 0.0) {
         return 1.0;
     }
 
-    float bins = float(textureSize(u_shadow, 0).x);
-    // A kernel narrower than one bin would alias along the bin grid, so one
-    // bin is the floor: softness widens the penumbra from there.
-    float spread = max(1.0, v_softness * bins * MAX_PENUMBRA);
-    float center = (atan(v_local.y, v_local.x) + PI) / (2.0 * PI) * bins - 0.5;
+    int bins = textureSize(u_shadow, 0).x;
     int row = int(v_shadowRow);
+    float radius = min(MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA, float(MAX_HALF));
+    float center = (atan(v_local.y, v_local.x) + PI) / (2.0 * PI) * float(bins) - 0.5;
+    int base = int(floor(center));
+    int reach = int(ceil(radius));
     float lit = 0.0;
+    float total = 0.0;
+    // Rolling, so the bin either side of a tap costs no extra fetch: every bin
+    // under the kernel is read once and serves as its own tap and as both its
+    // neighbours' slope.
+    float previous = depthAt(base - reach - 1, bins, row);
+    float here = depthAt(base - reach, bins, row);
 
-    for (int tap = 0; tap < SHADOW_TAPS; tap++) {
-        float offset = (float(tap) / float(SHADOW_TAPS - 1) - 0.5) * 2.0 * spread;
+    for (int offset = -MAX_HALF; offset <= MAX_HALF; offset++) {
+        if (offset < -reach || offset > reach) {
+            continue;
+        }
 
-        lit += SHADOW_WEIGHTS[tap] * step(distance, distanceAt(center + offset, row, bins) + SHADOW_BIAS);
+        int bin = base + offset;
+        float next = depthAt(bin + 1, bins, row);
+        float weight = max(0.0, 1.0 - abs(float(bin) - center) / radius);
+
+        if (weight > 0.0) {
+            lit += weight * coverageAt(here, previous, next, distance);
+            total += weight;
+        }
+
+        previous = here;
+        here = next;
     }
 
-    return lit;
+    return total > 0.0 ? lit / total : 1.0;
 }
 
 /**

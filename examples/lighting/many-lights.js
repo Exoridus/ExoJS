@@ -1,11 +1,17 @@
 // Auto-generated from many-lights.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-// The light list is a data texture, not a uniform array, so the light count is
-// a shader loop bound rather than a compiled-in constant: the slider below
-// walks from 1 to 48 lights without recompiling anything and without adding a
-// draw call. The floor is one batch of sprites sharing one LitMaterial.
+// The FORWARD renderer under load: the light list is a data texture, not a
+// uniform array, so the light count is a shader loop bound rather than a
+// compiled-in constant, and the slider below walks from 1 to 48 lights without
+// recompiling anything and without adding a draw call. The floor is one batch
+// of sprites sharing one LitMaterial.
+//
+// It is a demo of that one property and not a benchmark of the package. Every
+// lit fragment walks every light here, there are no occluders and no shadows,
+// and the other two renderers reach the same scene by entirely different work -
+// numbers taken here say nothing about either of them.
 const MAX_LIGHTS = 48;
 const TILE_SIZE = 128;
 const HUE_STEP = 360 / 7;
@@ -28,6 +34,9 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
 });
 // Matching normal map: a rounded bevel around the tile edge and a shallow dome
 // in the middle, so a light sweeping past visibly rakes across the relief.
+// Both are built with image-space y, which grows downwards, and the green
+// channel is negated on the way out: the engine reads the OpenGL convention,
+// where green above the midpoint leans towards the top of the image.
 const normalTexture = canvasTexture(TILE_SIZE, context => {
   const image = context.createImageData(TILE_SIZE, TILE_SIZE);
   const half = TILE_SIZE / 2;
@@ -44,7 +53,7 @@ const normalTexture = canvasTexture(TILE_SIZE, context => {
       const length = Math.hypot(nx, ny, 1);
       const offset = (y * TILE_SIZE + x) * 4;
       image.data[offset] = ((nx / length) * 0.5 + 0.5) * 255;
-      image.data[offset + 1] = ((ny / length) * 0.5 + 0.5) * 255;
+      image.data[offset + 1] = ((-ny / length) * 0.5 + 0.5) * 255;
       image.data[offset + 2] = (1 / length) * 0.5 * 255 + 127.5;
       image.data[offset + 3] = 255;
     }
@@ -73,7 +82,7 @@ class ManyLightsScene extends Scene {
     const { width, height } = this.app;
     this.floor = new Container();
     this.markerLayer = new Container();
-    this.lighting = new Lighting({ maxLights: MAX_LIGHTS, ambient: new Color(16, 16, 24) });
+    this.lighting = new ForwardLighting({ maxLights: MAX_LIGHTS, ambient: new Color(16, 16, 24) });
     this.systems.add(this.lighting);
     const material = new LitMaterial({ lighting: this.lighting, normals: new NormalMap(normalTexture) });
     for (let y = 0; y < Math.ceil(height / TILE_SIZE); y++) {
@@ -100,8 +109,8 @@ class ManyLightsScene extends Scene {
     });
     this.setVisibleLights(this.visibleLights);
     this.hud = mountControls({
-      title: 'Many Lights',
-      hint: `Up to ${MAX_LIGHTS} point lights over ${this.floor.children.length} tiles. The light list is a data texture, so the count is a loop bound - not a recompile.`,
+      title: 'Many Lights (forward renderer)',
+      hint: `Up to ${MAX_LIGHTS} point lights over ${this.floor.children.length} tiles, all in one batch. The light list is a data texture, so the count is a loop bound - not a recompile. No shadows and no transport here: this shows what the forward renderer costs, not what the package can do.`,
       status: '',
     });
     const panel = mountControlPanel({ title: 'Lights', corner: 'top-right' });
