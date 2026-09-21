@@ -28,6 +28,7 @@ import {
   assertSingleAttachmentCompose,
 } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
+import type { PixelReadback } from '#rendering/PixelReadback';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
@@ -72,11 +73,13 @@ import type { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { probeWebgl2CompressedFormats, type Webgl2CompressedFormatSupport } from './compressedFormat';
 import { createWebGl2GpuTimer } from './createWebGl2GpuTimer';
+import { flipRowsInPlace } from './flipRowsInPlace';
 import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
 import type { PersistentSlotCapableRenderer, WebGl2PersistentSlotStore } from './WebGl2PersistentSlotStore';
+import { WebGl2PixelReadback, type WebGl2PixelReadbackHost } from './WebGl2PixelReadback';
 import {
   type WebGl2RecordedTextureState,
   type WebGl2RetainedBatchPayload,
@@ -416,6 +419,9 @@ export class WebGl2Backend implements RenderBackend {
    * read would leave that cache describing something else.
    */
   private _readbackFramebuffer: WebGLFramebuffer | null = null;
+  /** Live standing readbacks, drained at frame start and invalidated together on context loss. */
+  private readonly _pixelReadbacks = new Set<WebGl2PixelReadback>();
+  private _pixelReadbackHostInstance: WebGl2PixelReadbackHost | null = null;
   private readonly _stats: RenderStats = createRenderStats();
   private readonly _accountant: GpuResourceAccountant = new GpuResourceAccountant(this._stats);
   private readonly _transformBuffer = new TransformBuffer();
@@ -622,6 +628,13 @@ export class WebGl2Backend implements RenderBackend {
     // previously reset per render() call in _beginDrawPlan).
     this._transformBuffer.begin();
     this._gpuTimer?.beginFrame();
+
+    // Frame start rather than frame end: a fence never signals in the task
+    // that created it, so polling here is what lets a read requested in one
+    // frame's update be ready by the next one's.
+    for (const readback of this._pixelReadbacks) {
+      readback.poll();
+    }
 
     return this;
   }
@@ -1283,27 +1296,63 @@ export class WebGl2Backend implements RenderBackend {
     this.flush();
 
     const gl = this._context;
+    const rows = new Uint8ClampedArray(width * height * 4);
+
+    this._withReadFramebuffer(source, () => {
+      // GL addresses pixels from the bottom-left, so the requested top-down
+      // rectangle starts this far up, and the rows arrive in reverse order.
+      gl.readPixels(x, source.height - (y + height), width, height, gl.RGBA, gl.UNSIGNED_BYTE, rows);
+    });
+
+    this._accountant.recordDownload(rows.byteLength);
+
+    return Promise.resolve(flipRowsInPlace(rows, width, height));
+  }
+
+  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback {
+    const readback = new WebGl2PixelReadback(this._pixelReadbackHost(), source, x, y, width, height, slots);
+
+    this._pixelReadbacks.add(readback);
+
+    return readback;
+  }
+
+  private _pixelReadbackHost(): WebGl2PixelReadbackHost {
+    return (this._pixelReadbackHostInstance ??= {
+      gl: this._context,
+      accountant: this._accountant,
+      isContextLost: () => this._contextLost,
+      flushDraws: () => this._flushActiveRenderer(),
+      withReadFramebuffer: (source, body) => this._withReadFramebuffer(source, body),
+      forgetPixelReadback: readback => {
+        this._pixelReadbacks.delete(readback);
+      },
+    });
+  }
+
+  /**
+   * Run `body` with `source` attached to the read framebuffer, then restore
+   * the previous binding. A read borrows its own framebuffer rather than a
+   * render target's: the target states cache which textures are attached to
+   * theirs, and attaching for a read would leave that cache describing
+   * something else.
+   */
+  private _withReadFramebuffer(source: RenderTexture, body: () => void): void {
+    const gl = this._context;
     const handle = this._syncTexture(source).handle;
     const framebuffer = (this._readbackFramebuffer ??= gl.createFramebuffer());
     const previousFramebuffer = this._boundFramebuffer;
-    const rows = new Uint8ClampedArray(width * height * 4);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, handle, 0);
 
     try {
-      // GL addresses pixels from the bottom-left, so the requested top-down
-      // rectangle starts this far up, and the rows arrive in reverse order.
-      gl.readPixels(x, source.height - (y + height), width, height, gl.RGBA, gl.UNSIGNED_BYTE, rows);
+      body();
     } finally {
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
       gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
       this._boundFramebuffer = previousFramebuffer;
     }
-
-    this._accountant.recordDownload(rows.byteLength);
-
-    return Promise.resolve(flipRowsInPlace(rows, width, height));
   }
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
@@ -2312,6 +2361,13 @@ export class WebGl2Backend implements RenderBackend {
     this._destroyManagedResources();
     this._renderTexturePool.destroy();
 
+    // Copy first: a readback removes itself from the set as it goes.
+    for (const readback of [...this._pixelReadbacks]) {
+      readback.destroy();
+    }
+
+    this._pixelReadbacks.clear();
+
     this._clipPixelStack.length = 0;
     this._clipDepth = 0;
     this._clipPointA.destroy();
@@ -2557,6 +2613,12 @@ export class WebGl2Backend implements RenderBackend {
     // plan to treat every visible item as entering again.
     for (const store of this._persistentStores) {
       store.invalidateDeviceResources();
+    }
+
+    // Standing readbacks lose their pack buffers and fences the same way;
+    // finished reads keep their bytes, pending ones fail.
+    for (const readback of this._pixelReadbacks) {
+      readback.invalidateDeviceResources();
     }
 
     // Reset the cached GL bind state - every handle these tracked is dead, so
@@ -3552,27 +3614,4 @@ const webgl2DataTextureFormat = (format: DataTextureFormat | ColorTextureFormat)
   }
 
   return table[format];
-};
-
-/**
- * Turn the bottom-up rows `gl.readPixels` writes into top-down ones, in place.
- *
- * Swapping halves through a single scratch row keeps the read at one extra row
- * of memory rather than a second copy of the image, which for a full-frame
- * capture is the difference between kilobytes and megabytes.
- */
-const flipRowsInPlace = (pixels: Uint8ClampedArray, width: number, height: number): Uint8ClampedArray => {
-  const stride = width * 4;
-  const scratch = new Uint8ClampedArray(stride);
-
-  for (let row = 0; row < height >> 1; row++) {
-    const top = row * stride;
-    const bottom = (height - 1 - row) * stride;
-
-    scratch.set(pixels.subarray(top, top + stride));
-    pixels.copyWithin(top, bottom, bottom + stride);
-    pixels.set(scratch, bottom);
-  }
-
-  return pixels;
 };

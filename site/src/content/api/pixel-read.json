@@ -1,0 +1,161 @@
+{
+  "title": "PixelRead",
+  "description": "One read handed out by PixelReader.request: poll it from the frame loop, take its pixels once ready, then release it. A read is never ready in the frame that requested it. It becomes ready a frame or more later, or failed if the device was lost, the source was resized or the reader destroyed underneath it. Both are terminal, and `release()` is the caller's job in either case. Handles are pooled per slot: after `release()` the same object is handed out again by a later request, so keep no reference past the release.",
+  "symbol": "PixelRead",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One read handed out by PixelReader.request: poll it from the frame loop, take its pixels once ready, then release it.",
+        "A read is never ready in the frame that requested it. It becomes ready a frame or more later, or failed if the device was lost, the source was resized or the reader destroyed underneath it. Both are terminal, and `release()` is the caller's job in either case.",
+        "Handles are pooled per slot: after `release()` the same object is handed out again by a later request, so keep no reference past the release."
+      ],
+      "importLine": "import { PixelRead } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "release",
+          "signature": "release(): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Return the slot to the reader. A pending read is abandoned. Safe to call more than once."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "data",
+          "signature": "data: PixelData | null",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PixelData",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The pixels, laid out as ImageData wants them, or null until ready. The array belongs to the slot and stays valid until release; after that a later read overwrites it. Copy it out to keep it longer."
+        },
+        {
+          "name": "failed",
+          "signature": "failed: boolean",
+          "signatureTokens": [
+            {
+              "text": "failed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the read can no longer complete. Terminal; release it."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: boolean",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the pixels have landed and data is valid."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/PixelReader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/PixelReader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/PixelReader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/PixelReader.ts"
+}
