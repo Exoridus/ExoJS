@@ -271,6 +271,7 @@ export abstract class FrameLightingBackend implements LightingBackend {
   private _shadowEpoch = 0;
   private _shadowRowsRebuilt = 0;
   private _shadowBytesUploaded = 0;
+  private _walkMaskEnabled = true;
   private _compositeScale = 0;
   protected _activeCount = 0;
   private _surfaceCount = 0;
@@ -757,7 +758,7 @@ ${sunQuadWgsl}`,
   protected _invalidateWalkHistory(): void {}
 
   /** Switch the walk's passes on or off with the mask's. */
-  protected _syncWalk(_cascading: boolean): void {}
+  protected _syncWalk(_cascading: boolean, _rasterMask: boolean): void {}
 
   /* eslint-enable @typescript-eslint/no-empty-function */
 
@@ -1271,8 +1272,9 @@ ${sunQuadWgsl}`,
   protected _syncMask(): void {
     const marching = this.shadowFiller === 'gpu';
     const cascades = this._cascading;
+    const cascadeMask = cascades && this._walkMaskEnabled;
 
-    this._maskPass.enabled = cascades || this._debug === 'mask' || marching;
+    this._maskPass.enabled = cascadeMask || this._debug === 'mask' || marching;
     // The cascades fill the light target themselves, ambient included, so the
     // quad accumulation has nothing left to do and its clear would undo them.
     this._lightPass.enabled = !cascades;
@@ -1281,8 +1283,18 @@ ${sunQuadWgsl}`,
       this._filler.pass.enabled = marching;
     }
 
-    this._syncWalk(cascades);
+    this._syncWalk(cascades, cascadeMask);
     this._resize();
+  }
+
+  /** Enable the raster part of a walk only while this frame has raster geometry. */
+  protected _setWalkMaskEnabled(enabled: boolean): void {
+    if (this._walkMaskEnabled === enabled) {
+      return;
+    }
+
+    this._walkMaskEnabled = enabled;
+    this._syncMask();
   }
 
   /** One mask texel in world units, along whichever axis resolves it worse. */
@@ -1515,7 +1527,9 @@ ${normalPrepassWgsl}`,
     const fieldWidth = field.width;
     const fieldHeight = field.height;
 
-    this._maskTarget.setSize(this._maskPass.enabled ? fieldWidth : 1, this._maskPass.enabled ? fieldHeight : 1);
+    const keepsMaskGrid = this._cascading || this._maskPass.enabled;
+
+    this._maskTarget.setSize(keepsMaskGrid ? fieldWidth : 1, keepsMaskGrid ? fieldHeight : 1);
     this._resizeWalk();
 
     // A debug view of a field-sized intermediate is drawn through a quad the

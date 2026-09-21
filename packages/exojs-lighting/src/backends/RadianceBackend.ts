@@ -109,6 +109,10 @@ export class RadianceBackend extends FrameLightingBackend {
       return;
     }
 
+    const rasterMask = occluders.drawableCount > 0;
+
+    this._setWalkMaskEnabled(rasterMask);
+
     this._fieldView.getBounds(scratchRegion);
     this._transport.build(occluders.segments, occluders.count, lights, scratchRegion, Math.max(this._maskTexel() * MASK_COARSE, 1));
 
@@ -129,10 +133,10 @@ export class RadianceBackend extends FrameLightingBackend {
       cellSize: grid.cellSize,
       cellsX: grid.width,
       cellsY: grid.height,
-      maskWidth: this._maskTarget.width,
-      maskHeight: this._maskTarget.height,
-      blocksWidth: this._blocks.texture.width,
-      blocksHeight: this._blocks.texture.height,
+      maskWidth: rasterMask ? this._maskTarget.width : 0,
+      maskHeight: rasterMask ? this._maskTarget.height : 0,
+      blocksWidth: rasterMask ? this._blocks.texture.width : 0,
+      blocksHeight: rasterMask ? this._blocks.texture.height : 0,
       tableWidth: transportTableWidth,
     });
   }
@@ -149,8 +153,8 @@ export class RadianceBackend extends FrameLightingBackend {
     this._radiance.invalidateHistory();
   }
 
-  protected override _syncWalk(cascading: boolean): void {
-    this._blocks.pass.enabled = cascading;
+  protected override _syncWalk(cascading: boolean, rasterMask: boolean): void {
+    this._blocks.pass.enabled = rasterMask;
     this._radiance.enabled = cascading;
   }
 }
