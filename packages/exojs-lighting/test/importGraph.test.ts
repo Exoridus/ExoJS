@@ -87,6 +87,7 @@ const walkOnly = [
   'backends/maskBlocks.ts',
   'backends/shaders/transport.frag',
   'backends/shaders/transport.wgsl',
+  'backends/shaders/angular-average.frag',
   'backends/shaders/cascade-transport.frag',
   'backends/shaders/cascade-gather-transport.frag',
   'backends/shaders/mask-blocks.frag',

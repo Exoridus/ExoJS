@@ -29,7 +29,7 @@ import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#r
 import { lightCompositeShader } from '../../../packages/exojs-lighting/src/backends/FrameLightingBackend';
 import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
-import { transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
+import { angularAverageShader, transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 
@@ -83,6 +83,7 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
+  ['angular-average.frag', generateGlslUniformDeclarations(angularAverageShader.uniformSchema!)],
   ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],
   ['light-composite.frag', generateGlslUniformDeclarations(lightCompositeShader.uniformSchema!)],
 ]);
@@ -199,6 +200,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   // The lighting package's shadow march runs on the same fullscreen quad: the
   // occluder mask in, one shadow row per light out.
   ['default-vertex.vert', 'shadow-march.frag'],
+  ['default-vertex.vert', 'angular-average.frag'],
   // The reduction of the occluder mask to one texel per block, on the same quad.
   ['default-vertex.vert', 'mask-blocks.frag'],
   // The custom sprite-material path: the engine owns the vertex stage, and the

@@ -73,6 +73,23 @@ const expectWalkTerms = (walker: Walker | null, binding: TransportBinding): void
 };
 
 describe('RadianceField transport wiring', () => {
+  test('keeps raw directions separate from one compact angular mean per finest probe', () => {
+    const field = fieldWith();
+    const view = new View(32, 32, 64, 64);
+
+    field.useTransport(bindingFor(1, 9));
+    field.update(view, new View(32, 32, 80, 80), 1, Color.black);
+
+    const [raw, compact] = field['_chain'];
+    const gather = walkersOf(field).gather;
+
+    expect([raw.width, raw.height]).toEqual([64, 64]);
+    expect([compact.width, compact.height]).toEqual([32, 32]);
+    expect(gather!.uniforms['uTile']!.value).toBe(1);
+
+    field.destroy();
+  });
+
   test('publishes the walk terms to the receiver reconstruction as well as to the chain', () => {
     const field = fieldWith();
     const binding = bindingFor(1, 9);

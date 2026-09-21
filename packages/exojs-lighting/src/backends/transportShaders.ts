@@ -1,5 +1,7 @@
 import { createFilterShader, type Shader, UniformType } from '@codexo/exojs';
 
+import angularAverageFragment from './shaders/angular-average.frag';
+import angularAverageWgsl from './shaders/angular-average.wgsl';
 import cascadeGatherTransportFragment from './shaders/cascade-gather-transport.frag';
 import cascadeGatherTransportWgsl from './shaders/cascade-gather-transport.wgsl';
 import cascadeTransportFragment from './shaders/cascade-transport.frag';
@@ -40,6 +42,16 @@ const bindings = (names: readonly string[], language: 'glsl' | 'wgsl'): string =
 
 /** The chunk's own textures, which every shader that walks binds. */
 const WALK_TEXTURES = ['uSegments', 'uEmitters', 'uCells', 'uIndices', 'uMask', 'uMaskCoarse'] as const;
+
+/** The raw direction tile reduced by the angular-average pass. @internal */
+export const angularAverageUniforms = { uTile: UniformType.Float } as const;
+
+/** Four consecutive angular directions reduced to one compact texel. @internal */
+export const angularAverageShader = createFilterShader({
+  glsl: { fragment: angularAverageFragment },
+  wgsl: angularAverageWgsl,
+  uniforms: angularAverageUniforms,
+});
 
 /**
  * A cascade level also reads what a surface it ends on gives back: the frame

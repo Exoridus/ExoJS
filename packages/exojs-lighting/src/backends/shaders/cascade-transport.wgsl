@@ -73,21 +73,9 @@ fn bounced(surface: vec2<f32>, direction: vec2<f32>) -> vec3<f32> {
         * uniforms.uBounce;
 }
 
-/**
- * The cascade above, for one of its probes: the average of the four
- * directions there that subdivide this ray's own. Taking one would lose three
- * quarters of the angular detail the level above paid for.
- */
-fn coarseRays(probe: vec2<i32>, direction: i32, coarseTile: i32) -> vec3<f32> {
-    var sum = vec3<f32>(0.0);
-
-    for (var sub = 0; sub < 4; sub = sub + 1) {
-        let coarse = direction * 4 + sub;
-
-        sum = sum + textureLoad(uTexture, probe * coarseTile + vec2<i32>(coarse % coarseTile, coarse / coarseTile), 0).rgb;
-    }
-
-    return sum * 0.25;
+/** The pre-averaged four directions of the cascade above. */
+fn coarseRay(probe: vec2<i32>, direction: i32, tile: i32) -> vec3<f32> {
+    return textureLoad(uTexture, probe * tile + vec2<i32>(direction % tile, direction / tile), 0).rgb;
 }
 
 fn bilinear(weight: vec2<f32>, index: i32) -> f32 {
@@ -128,7 +116,6 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
     // the coarser probes sit at twice the spacing, so a probe here lands
     // halfway between two of them. Taking the nearest one would put the probe
     // grid itself into the picture as blocky steps.
-    let coarseTile = tile * 2;
     let coarseSpacing = uniforms.uSpacing * 2.0;
     let coarseProbes = vec2<i32>((i32(uniforms.uProbes.x) + 1) / 2, (i32(uniforms.uProbes.y) + 1) / 2);
     let place = (vec2<f32>(probe) + 0.5) * 0.5 - 0.5;
@@ -156,7 +143,7 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
         let along = normalize(coarseOrigin + heading * uniforms.uRange.y - near);
         let gave = select(vec3<f32>(0.0), bounced(walked.surface, along), walked.rastered > 0.5);
 
-        total = total + bilinear(weight, index) * (walked.radiance + gave + walked.transmittance * coarseRays(corner, direction, coarseTile));
+        total = total + bilinear(weight, index) * (walked.radiance + gave + walked.transmittance * coarseRay(corner, direction, tile));
     }
 
     return vec4<f32>(total, 1.0);

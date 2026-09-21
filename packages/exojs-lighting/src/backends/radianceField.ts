@@ -16,7 +16,14 @@ import {
 import type { Light } from '../lights/Light';
 import { lightRadius } from '../lights/reach';
 import { SunLight } from '../lights/SunLight';
-import { type transportBounceUniforms, transportCascadeShader, transportGatherShader, type transportUniforms } from './transportShaders';
+import {
+  angularAverageShader,
+  type angularAverageUniforms,
+  type transportBounceUniforms,
+  transportCascadeShader,
+  transportGatherShader,
+  type transportUniforms,
+} from './transportShaders';
 
 /** What one cascade level is told about this frame. @internal */
 export const cascadeUniforms = {
@@ -143,8 +150,9 @@ export class RadianceField {
   private readonly _pendingToClip = new Matrix();
   private readonly _reproject = new Matrix();
   private _history = false;
-  /** Ping-pong pair: a level reads the one above it whole, so it cannot write into it. */
+  /** Raw directions for one level, followed by their compact four-direction means. */
   private readonly _chain: readonly [RenderTexture, RenderTexture];
+  private readonly _average: ShaderFilter<typeof angularAverageUniforms>;
   /** Stands in for the level above the coarsest, which nothing reads. */
   private readonly _above: RenderTexture;
   /**
@@ -173,6 +181,7 @@ export class RadianceField {
       new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest }),
       new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest }),
     ];
+    this._average = ShaderFilter.from(angularAverageShader);
     this._above = new RenderTexture(1, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
     this.cascadePass = new CallbackRenderPass((pass: PassContext) => this._build(pass), { label: 'lighting:cascades', enabled: false });
   }
@@ -289,7 +298,7 @@ export class RadianceField {
     // Every level holds the same number of texels: halving the probe grid per
     // axis and doubling the directions per axis leaves the product alone.
     this._chain[0].setSize(this._probesX * 2, this._probesY * 2);
-    this._chain[1].setSize(this._probesX * 2, this._probesY * 2);
+    this._chain[1].setSize(this._probesX, this._probesY);
 
     const walking = this._walk;
 
@@ -308,7 +317,7 @@ export class RadianceField {
       gather.uOrigin.set(bounds.left, bounds.top);
       gather.uProbes.set(this._probesX, this._probesY);
       gather.uSpacing.set(spacing);
-      gather.uTile.set(2);
+      gather.uTile.set(1);
       gather.uAmbient.set(ambient.r / 255, ambient.g / 255, ambient.b / 255);
 
       if (walking !== null) {
@@ -375,6 +384,7 @@ export class RadianceField {
     this.cascadePass.destroy();
     this._chain[0].destroy();
     this._chain[1].destroy();
+    this._average.destroy();
     this._above.destroy();
     this._transportCascade?.destroy();
     this._transportGather?.destroy();
@@ -450,7 +460,7 @@ export class RadianceField {
    */
   private _build(pass: PassContext): void {
     const { backend } = pass;
-    const [first, second] = this._chain;
+    const [raw, compact] = this._chain;
     const cascade = this._transportCascade;
     const gather = this._transportGather;
 
@@ -459,13 +469,11 @@ export class RadianceField {
     }
 
     let source = this._above;
-    let flipped = false;
 
     for (let level = this._levels - 1; level >= 0; level--) {
       const tile = 2 ** (level + 1);
       const start = (this._interval * (4 ** level - 1)) / 3;
       const spacing = this._spacing * 2 ** level;
-      const destination = flipped ? second : first;
       const top = level === this._levels - 1;
 
       cascade.uniforms.uProbes.set(this._probesX / 2 ** level, this._probesY / 2 ** level);
@@ -476,10 +484,11 @@ export class RadianceField {
       // Half the angular sector one ray owns, as a slope: the coarser the
       // level, the more directions it has and the narrower each one is.
       cascade.uniforms.uCone.set(Math.tan(Math.PI / (tile * tile)));
-      cascade.apply(backend, source, destination);
+      cascade.apply(backend, source, raw);
+      this._average.uniforms.uTile.set(tile);
+      this._average.apply(backend, raw, compact);
 
-      source = destination;
-      flipped = !flipped;
+      source = compact;
     }
 
     gather.apply(backend, source, this._target);

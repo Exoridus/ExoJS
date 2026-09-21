@@ -93,21 +93,9 @@ vec3 bounced(vec2 surface, vec2 direction) {
     return texture(uFrame, here).rgb * min(texture(uHistory, before).rgb, vec3(1.0)) * uniforms.uBounce;
 }
 
-/**
- * The cascade above, for one of its probes: the average of the four
- * directions there that subdivide this ray's own. Taking one would lose three
- * quarters of the angular detail the level above paid for.
- */
-vec3 coarseRays(ivec2 probe, int direction, int coarseTile) {
-    vec3 sum = vec3(0.0);
-
-    for (int sub = 0; sub < 4; sub++) {
-        int coarse = direction * 4 + sub;
-
-        sum += texelFetch(uTexture, probe * coarseTile + ivec2(coarse % coarseTile, coarse / coarseTile), 0).rgb;
-    }
-
-    return sum * 0.25;
+/** The pre-averaged four directions of the cascade above. */
+vec3 coarseRay(ivec2 probe, int direction, int tile) {
+    return texelFetch(uTexture, probe * tile + ivec2(direction % tile, direction / tile), 0).rgb;
 }
 
 float bilinear(vec2 weight, int index) {
@@ -151,7 +139,6 @@ void main() {
     // the coarser probes sit at twice the spacing, so a probe here lands
     // halfway between two of them. Taking the nearest one would put the probe
     // grid itself into the picture as blocky steps.
-    int coarseTile = tile * 2;
     float coarseSpacing = uniforms.uSpacing * 2.0;
     ivec2 coarseProbes = ivec2((int(uniforms.uProbes.x) + 1) / 2, (int(uniforms.uProbes.y) + 1) / 2);
     vec2 place = (vec2(probe) + 0.5) * 0.5 - 0.5;
@@ -178,7 +165,7 @@ void main() {
         // back; one that ended on an outline carries only what it collected.
         vec3 gave = walked.rastered > 0.5 ? bounced(walked.surface, normalize(coarseOrigin + heading * uniforms.uRange.y - near)) : vec3(0.0);
 
-        total += bilinear(weight, index) * (walked.radiance + gave + walked.transmittance * coarseRays(corner, direction, coarseTile));
+        total += bilinear(weight, index) * (walked.radiance + gave + walked.transmittance * coarseRay(corner, direction, tile));
     }
 
     fragColor = vec4(total, 1.0);
