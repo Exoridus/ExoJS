@@ -67,6 +67,61 @@ const listed = (tables: TransportTables, channel: number): number[] => {
   return found;
 };
 
+/** Cells listing `id`, rejecting duplicates in the same cell. */
+const cellsListing = (tables: TransportTables, channel: number, id: number): number[] => {
+  const found: number[] = [];
+
+  for (let cell = 0; cell < tables.gridWidth * tables.gridHeight; cell++) {
+    const at = cell * transportChannels;
+    const offset = tables.cells[at + channel]!;
+    const count = tables.cells[at + channel + 1]!;
+    let copies = 0;
+
+    for (let index = 0; index < count; index++) {
+      if (tables.indices[(offset + index) * transportChannels] === id) {
+        copies++;
+      }
+    }
+
+    expect(copies).toBeLessThanOrEqual(1);
+
+    if (copies === 1) {
+      found.push(cell);
+    }
+  }
+
+  return found;
+};
+
+/** Whether a closed segment touches a closed axis-aligned box. */
+const touchesBox = (ax: number, ay: number, bx: number, by: number, left: number, top: number, right: number, bottom: number): boolean => {
+  const deltaX = bx - ax;
+  const deltaY = by - ay;
+  let enter = 0;
+  let leave = 1;
+
+  for (const [start, delta, low, high] of [
+    [ax, deltaX, left, right],
+    [ay, deltaY, top, bottom],
+  ]) {
+    if (delta === 0) {
+      if (start < low || start > high) {
+        return false;
+      }
+
+      continue;
+    }
+
+    const first = (low - start) / delta;
+    const last = (high - start) / delta;
+
+    enter = Math.max(enter, Math.min(first, last));
+    leave = Math.min(leave, Math.max(first, last));
+  }
+
+  return enter <= leave;
+};
+
 const emitter = (tables: TransportTables, id: number): number[] =>
   Array.from(tables.emitters.subarray(id * transportEmitterTexels * transportChannels, (id + 1) * transportEmitterTexels * transportChannels));
 
@@ -104,18 +159,76 @@ describe('TransportGeometry', () => {
     expect(segmentsAt(tables, 5, 15)).toEqual([]);
   });
 
-  test('covers a diagonal segment conservatively rather than exactly', () => {
+  test('lists only the cells a diagonal segment touches', () => {
     const geometry = new TransportGeometry();
 
     geometry.build(segmentBuffer([5, 5, 25, 25]), 1, [], region, 10);
 
     const tables = geometry.tables;
 
-    // The bounding box spans a 3x3 block of cells; a supercover would list six
-    // of them. Listing all nine is conservative, which is allowed - a candidate
-    // that the exact test then rejects costs time, never correctness.
-    expect(listed(tables, 0)).toHaveLength(9);
-    expect(segmentsAt(tables, 25, 5)).toEqual([0]);
+    // Each interior corner belongs to all four cells meeting there. The two
+    // diagonal cells and both side cells stay conservative without filling the
+    // rest of the segment's 3x3 bounding box.
+    expect(listed(tables, 0)).toHaveLength(7);
+    expect(segmentsAt(tables, 15, 5)).toEqual([0]);
+    expect(segmentsAt(tables, 5, 15)).toEqual([0]);
+    expect(segmentsAt(tables, 25, 5)).toEqual([]);
+    expect(segmentsAt(tables, 5, 25)).toEqual([]);
+  });
+
+  test('keeps a long diagonal index proportional to its length rather than its bounding-box area', () => {
+    const geometry = new TransportGeometry();
+
+    geometry.build(segmentBuffer([5, 5, 95, 95]), 1, [], region, 10);
+
+    expect(listed(geometry.tables, 0)).toHaveLength(28);
+    expect(segmentsAt(geometry.tables, 95, 5)).toEqual([]);
+    expect(segmentsAt(geometry.tables, 5, 95)).toEqual([]);
+  });
+
+  test('matches an exact cell-intersection reference across clipped and reversed segments', () => {
+    const geometry = new TransportGeometry();
+    let state = 0x9e3779b9;
+    const random = (): number => {
+      state = Math.imul(state ^ (state >>> 16), 0x21f0aaad);
+      state = Math.imul(state ^ (state >>> 15), 0x735a2d97);
+      state ^= state >>> 15;
+
+      return (state >>> 0) / 0x1_0000_0000;
+    };
+    const cases: number[][] = [
+      [20, 5, 20, 95],
+      [5, 20, 95, 20],
+      [0, 0, 100, 100],
+      [100, 0, 0, 100],
+      [-50, 50, 150, 50],
+      [50, -50, 50, 150],
+      [20, 20, 20, 20],
+    ];
+
+    for (let index = 0; index < 500; index++) {
+      cases.push(Array.from({ length: 4 }, () => random() * 200 - 50));
+    }
+
+    for (const [ax, ay, bx, by] of cases) {
+      geometry.build(segmentBuffer([ax!, ay!, bx!, by!]), 1, [], region, 10);
+
+      const tables = geometry.tables;
+      const expected: number[] = [];
+
+      for (let y = 0; y < tables.gridHeight; y++) {
+        for (let x = 0; x < tables.gridWidth; x++) {
+          const left = tables.originX + x * tables.cellSize;
+          const top = tables.originY + y * tables.cellSize;
+
+          if (touchesBox(ax!, ay!, bx!, by!, left, top, left + tables.cellSize, top + tables.cellSize)) {
+            expected.push(y * tables.gridWidth + x);
+          }
+        }
+      }
+
+      expect(cellsListing(tables, 0, 0)).toEqual(expected);
+    }
   });
 
   test('keeps the part of a segment that reaches outside the grid', () => {

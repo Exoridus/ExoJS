@@ -7,6 +7,7 @@ import { SpotLight } from '../lights/SpotLight';
 
 /** Floats per texel of every table, which are all RGBA32F. */
 const CHANNELS = 4;
+const GRID_EPSILON = 1e-7;
 
 /** Texels one occluder segment takes: `(ax, ay, bx, by)`. */
 const SEGMENT_TEXELS = 1;
@@ -139,6 +140,7 @@ export class TransportGeometry {
   /** Where each cell's ids begin, and how many of each kind have been written so far. */
   private _segmentCursor = new Int32Array(1);
   private _emitterCursor = new Int32Array(1);
+  private readonly _clippedSegment = new Float64Array(4);
 
   /**
    * Rebuild from this frame's occluder segments and lights.
@@ -350,7 +352,185 @@ export class TransportGeometry {
       const bx = this._segments[at + 2]!;
       const by = this._segments[at + 3]!;
 
-      this._forEachCellIn(Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by), id, visit);
+      this._forEachCellOnSegment(ax, ay, bx, by, id, visit);
+    }
+  }
+
+  private _forEachCellOnSegment(ax: number, ay: number, bx: number, by: number, id: number, visit: (cell: number, id: number) => void): void {
+    if (!this._clipSegmentToGrid(ax, ay, bx, by)) {
+      return;
+    }
+
+    const startX = this._clippedSegment[0]!;
+    const startY = this._clippedSegment[1]!;
+    const endX = this._clippedSegment[2]!;
+    const endY = this._clippedSegment[3]!;
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    const verticalLine = deltaX === 0 ? gridLine(startX) : null;
+    const horizontalLine = deltaY === 0 ? gridLine(startY) : null;
+
+    this._visitPointCells(startX, startY, id, visit);
+
+    if (deltaX === 0 && deltaY === 0) {
+      return;
+    }
+
+    if (verticalLine !== null) {
+      this._walkGridLine(verticalLine - 1, verticalLine, startY, deltaY, true, id, visit);
+
+      return;
+    }
+
+    if (horizontalLine !== null) {
+      this._walkGridLine(horizontalLine - 1, horizontalLine, startX, deltaX, false, id, visit);
+
+      return;
+    }
+
+    this._walkSegmentCells(startX, startY, deltaX, deltaY, id, visit);
+  }
+
+  private _walkSegmentCells(startX: number, startY: number, deltaX: number, deltaY: number, id: number, visit: (cell: number, id: number) => void): void {
+    const stepX = deltaX > 0 ? 1 : -1;
+    const stepY = deltaY > 0 ? 1 : -1;
+    const startLineX = gridLine(startX);
+    const startLineY = gridLine(startY);
+    let cellX = startLineX !== null && stepX < 0 ? startLineX - 1 : Math.floor(startX);
+    let cellY = startLineY !== null && stepY < 0 ? startLineY - 1 : Math.floor(startY);
+    let nextX = deltaX === 0 ? Infinity : (stepX > 0 ? cellX + 1 - startX : startX - cellX) / Math.abs(deltaX);
+    let nextY = deltaY === 0 ? Infinity : (stepY > 0 ? cellY + 1 - startY : startY - cellY) / Math.abs(deltaY);
+    const stepAtX = deltaX === 0 ? Infinity : 1 / Math.abs(deltaX);
+    const stepAtY = deltaY === 0 ? Infinity : 1 / Math.abs(deltaY);
+
+    while (Math.min(nextX, nextY) <= 1 + GRID_EPSILON) {
+      if (Number.isFinite(nextX) && Number.isFinite(nextY) && Math.abs(nextX - nextY) <= GRID_EPSILON * Math.max(1, nextX, nextY)) {
+        const crossedX = cellX + stepX;
+        const crossedY = cellY + stepY;
+
+        this._visitCell(crossedX, cellY, id, visit);
+        this._visitCell(cellX, crossedY, id, visit);
+        this._visitCell(crossedX, crossedY, id, visit);
+        cellX = crossedX;
+        cellY = crossedY;
+        nextX += stepAtX;
+        nextY += stepAtY;
+      } else if (nextX < nextY) {
+        cellX += stepX;
+        this._visitCell(cellX, cellY, id, visit);
+        nextX += stepAtX;
+      } else {
+        cellY += stepY;
+        this._visitCell(cellX, cellY, id, visit);
+        nextY += stepAtY;
+      }
+    }
+  }
+
+  private _clipSegmentToGrid(ax: number, ay: number, bx: number, by: number): boolean {
+    const startX = (ax - this._originX) / this._cellSize;
+    const startY = (ay - this._originY) / this._cellSize;
+    const endX = (bx - this._originX) / this._cellSize;
+    const endY = (by - this._originY) / this._cellSize;
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    let enter = 0;
+    let leave = 1;
+
+    if (deltaX === 0) {
+      if (startX < 0 || startX > this._gridWidth) {
+        return false;
+      }
+    } else {
+      const first = (0 - startX) / deltaX;
+      const last = (this._gridWidth - startX) / deltaX;
+
+      enter = Math.max(enter, Math.min(first, last));
+      leave = Math.min(leave, Math.max(first, last));
+    }
+
+    if (deltaY === 0) {
+      if (startY < 0 || startY > this._gridHeight) {
+        return false;
+      }
+    } else {
+      const first = (0 - startY) / deltaY;
+      const last = (this._gridHeight - startY) / deltaY;
+
+      enter = Math.max(enter, Math.min(first, last));
+      leave = Math.min(leave, Math.max(first, last));
+    }
+
+    if (leave < enter) {
+      return false;
+    }
+
+    this._clippedSegment[0] = Math.min(this._gridWidth, Math.max(0, startX + deltaX * enter));
+    this._clippedSegment[1] = Math.min(this._gridHeight, Math.max(0, startY + deltaY * enter));
+    this._clippedSegment[2] = Math.min(this._gridWidth, Math.max(0, startX + deltaX * leave));
+    this._clippedSegment[3] = Math.min(this._gridHeight, Math.max(0, startY + deltaY * leave));
+
+    return true;
+  }
+
+  private _walkGridLine(
+    firstSide: number,
+    secondSide: number,
+    start: number,
+    delta: number,
+    vertical: boolean,
+    id: number,
+    visit: (cell: number, id: number) => void,
+  ): void {
+    const step = delta > 0 ? 1 : -1;
+    const startLine = gridLine(start);
+    let cell = startLine !== null && step < 0 ? startLine - 1 : Math.floor(start);
+    let next = (step > 0 ? cell + 1 - start : start - cell) / Math.abs(delta);
+    const interval = 1 / Math.abs(delta);
+
+    while (next <= 1 + GRID_EPSILON) {
+      cell += step;
+
+      if (vertical) {
+        this._visitCell(firstSide, cell, id, visit);
+        this._visitCell(secondSide, cell, id, visit);
+      } else {
+        this._visitCell(cell, firstSide, id, visit);
+        this._visitCell(cell, secondSide, id, visit);
+      }
+
+      next += interval;
+    }
+  }
+
+  private _visitPointCells(x: number, y: number, id: number, visit: (cell: number, id: number) => void): void {
+    const lineX = gridLine(x);
+    const lineY = gridLine(y);
+    let firstX = Math.floor(x);
+    let lastX = firstX;
+    let firstY = Math.floor(y);
+    let lastY = firstY;
+
+    if (lineX !== null) {
+      firstX = lineX - 1;
+      lastX = lineX;
+    }
+
+    if (lineY !== null) {
+      firstY = lineY - 1;
+      lastY = lineY;
+    }
+
+    for (let cellY = firstY; cellY <= lastY; cellY++) {
+      for (let cellX = firstX; cellX <= lastX; cellX++) {
+        this._visitCell(cellX, cellY, id, visit);
+      }
+    }
+  }
+
+  private _visitCell(x: number, y: number, id: number, visit: (cell: number, id: number) => void): void {
+    if (x >= 0 && y >= 0 && x < this._gridWidth && y < this._gridHeight) {
+      visit(y * this._gridWidth + x, id);
     }
   }
 
@@ -403,6 +583,12 @@ export class TransportGeometry {
     }
   }
 }
+
+const gridLine = (value: number): number | null => {
+  const nearest = Math.round(value);
+
+  return Math.abs(value - nearest) <= GRID_EPSILON * Math.max(1, Math.abs(value)) ? nearest : null;
+};
 
 /** Rows of {@link TABLE_WIDTH} texels a table of `texels` entries occupies. */
 const rowsFor = (texels: number): number => Math.max(1, Math.ceil(texels / TABLE_WIDTH));
