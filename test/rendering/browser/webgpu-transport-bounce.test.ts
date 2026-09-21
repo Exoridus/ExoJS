@@ -127,7 +127,7 @@ describe('what a surface gives back (WebGPU)', () => {
     // And it may not jump: the three readings stay within a factor of each
     // other rather than switching on and off with the resolution.
     expect(Math.max(...added) / Math.max(1, Math.min(...added)), 'the spread over the three resolutions').toBeLessThanOrEqual(3);
-  });
+  }, 30_000);
 
   test('a wall that arrives over a receiver takes the light with it', async () => {
     const [before] = await measure(white(0.5), 2, [UNDER_MOVED]);

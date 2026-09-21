@@ -16,7 +16,6 @@ import type { OccluderField } from '../occluders/OccluderField';
  * Users who want a renderer of their own do not need this: `app.framePasses`
  * hands a pass the finished frame and lets it write the canvas, with no
  * agreement with this package at all.
- * @internal
  */
 export interface LightingBackend {
   /** Which renderer this is. */
