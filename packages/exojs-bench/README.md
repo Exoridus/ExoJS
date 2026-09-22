@@ -51,18 +51,19 @@ Physics runs print the same shape with `step ms`, the bodies actually simulated 
 
 Every selection flag takes a comma-separated list.
 
-| Flag                          | What it selects                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------- |
-| `--domain=rendering\|physics` | Which matrix to run. Default `rendering`.                                        |
-| `--archetype=`                | Scenarios, by id.                                                                |
-| `--engine=` / `--config=`     | Arms - `exojs`, `pixi`, `phaser`, `excalibur`, and each one's configs.           |
-| `--backend=webgl2\|webgpu`    | Graphics backend.                                                                |
-| `--browser=chromium\|webkit`  | Browser the run is measured in. Default `chromium`.                              |
-| `--nodes=` / `--bodies=`      | **Replaces** the scenario's ladder, so an off-ladder probe needs no source edit. |
-| `--frames=`                   | Timed frames per cell. Thin sampling; for looking, not for publishing.           |
-| `--out=`                      | Output directory.                                                                |
-| `--capture=`                  | Write a PNG of each cell's last frame, to see what was measured.                 |
-| `--profile`                   | V8 CPU profile of one cell, by file and by function. Chromium only.              |
+| Flag                          | What it selects                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| `--domain=rendering\|physics` | Which matrix to run. Default `rendering`.                                                  |
+| `--archetype=`                | Scenarios, by id.                                                                          |
+| `--engine=` / `--config=`     | Arms - `exojs`, `pixi`, `phaser`, `excalibur`, and each one's configs.                     |
+| `--backend=webgl2\|webgpu`    | Graphics backend.                                                                          |
+| `--browser=chromium\|webkit`  | Browser the run is measured in. Default `chromium`.                                        |
+| `--nodes=`                    | **Replaces** the rendering scenario's ladder, so an off-ladder probe needs no source edit. |
+| `--bodies=`                   | Filters physics runs to existing body-count rungs.                                         |
+| `--frames=`                   | Timed frames per cell. Thin sampling; for looking, not for publishing.                     |
+| `--out=`                      | Output directory.                                                                          |
+| `--capture=`                  | Write a PNG of each cell's last frame, to see what was measured.                           |
+| `--profile`                   | V8 CPU profile of one cell, by file and by function. Chromium only.                        |
 
 A run that uses any of these prints `SUBSET RUN - not a reportable comparison` and means it: the published comparison is a whole matrix measured in one go.
 
