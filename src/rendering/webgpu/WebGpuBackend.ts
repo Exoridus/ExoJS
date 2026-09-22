@@ -174,6 +174,71 @@ const MANAGED_TEXTURE_BYTES_PER_PIXEL = 4;
 export const mipmapWgsl: string = mipmapWgslModule;
 
 /**
+ * The one `GPUAdapter` requested per `GPU` object, shared across every
+ * `WebGpuBackend` instance that initializes against that same `navigator.gpu`.
+ *
+ * `GPUDevice` has an explicit `destroy()` for exactly this reason - see the
+ * comment on {@link WebGpuBackend.destroy} - but the spec gives `GPUAdapter`
+ * no equivalent: an adapter is released only once every reference to it is
+ * garbage collected, and GC timing is not something a hot path can rely on.
+ * An application that creates one `Application` never notices, but a process
+ * that constructs many backends back to back (the rendering parity matrix
+ * does, once per scene per property) can request adapters faster than the
+ * browser reclaims the previous ones. Firefox in particular enforces a low
+ * ceiling on simultaneously live adapters/devices and fails the next
+ * `requestDevice()` with "not enough memory" well before anything has
+ * actually leaked. Mirroring a single adapter here removes the pile-up
+ * without changing behaviour: an adapter can mint any number of devices, so
+ * reuse costs nothing a fresh request would have bought.
+ *
+ * Keyed by the `GPU` object rather than held as one bare value so a real page
+ * - which keeps exactly one `navigator.gpu` for its whole life - shares one
+ * adapter, while a test that installs its own mock `GPU` object gets its own
+ * cache entry for free and cannot observe another test's adapter. A `WeakMap`
+ * also means a mock `GPU` object never outlives its test in this cache.
+ */
+const sharedAdapters = new WeakMap<GPU, GPUAdapter>();
+const pendingAdapterRequests = new WeakMap<GPU, Promise<GPUAdapter | null>>();
+
+/** The `GPU` object's shared adapter, requesting it once if nothing has yet. */
+const requestSharedAdapter = async (gpu: GPU): Promise<GPUAdapter | null> => {
+  const cached = sharedAdapters.get(gpu);
+
+  if (cached !== undefined) return cached;
+
+  let pending = pendingAdapterRequests.get(gpu);
+
+  if (pending === undefined) {
+    pending = gpu.requestAdapter();
+    pendingAdapterRequests.set(gpu, pending);
+  }
+
+  const adapter = await pending;
+
+  pendingAdapterRequests.delete(gpu);
+
+  if (adapter !== null) {
+    sharedAdapters.set(gpu, adapter);
+  }
+
+  return adapter;
+};
+
+/**
+ * Drops the `GPU` object's shared adapter so the next backend to initialize
+ * against it requests a new one.
+ *
+ * Called when there is a concrete reason to believe the cached adapter is no
+ * longer good: `requestDevice()` rejected on it, or a device it minted was
+ * lost for a reason other than an explicit `destroy()` - loss this backend
+ * did not cause is the strongest signal available that the adapter itself,
+ * not just one device, went away (a GPU reset invalidates both).
+ */
+const invalidateSharedAdapter = (gpu: GPU): void => {
+  sharedAdapters.delete(gpu);
+};
+
+/**
  * WebGPU implementation of {@link RenderBackend}. Manages the GPU device,
  * canvas context configuration, format selection, managed-texture cache
  * (sized + format-aware), pre-warmed render pipelines per (blend-mode ×
@@ -183,7 +248,8 @@ export const mipmapWgsl: string = mipmapWgslModule;
  *
  * Detects device loss via the platform's `device.lost` Promise and
  * automatically attempts recovery: drops dead GPU state, requests a
- * fresh adapter+device with exponential backoff (up to 5 tries), then
+ * device from the shared adapter (a fresh one if the loss was not an
+ * explicit `destroy()`) with exponential backoff (up to 5 tries), then
  * fires {@link WebGpuBackend.onDeviceRestored}. While recovering, draw
  * submissions silently no-op so user code survives transient outages
  * without explicit error handling. If every retry fails, a
@@ -2302,11 +2368,12 @@ export class WebGpuBackend implements RenderBackend {
 
     // Request the adapter AND the device before acquiring a WebGPU canvas
     // context - see the getContext('webgpu') call below for why the order
-    // matters.
+    // matters. The adapter is the process-wide shared one (see
+    // `requestSharedAdapter`), not a fresh request per backend.
     let adapter: GPUAdapter | null;
 
     try {
-      adapter = await gpuNavigator.gpu.requestAdapter();
+      adapter = await requestSharedAdapter(gpuNavigator.gpu);
     } catch (error) {
       throw this._createInitializationError('Failed to request a WebGPU adapter.', error);
     }
@@ -2315,63 +2382,33 @@ export class WebGpuBackend implements RenderBackend {
       throw new Error('Could not acquire a WebGPU adapter.');
     }
 
-    if (typeof adapter.requestDevice !== 'function') {
-      throw new Error('WebGPU adapter does not expose requestDevice().');
-    }
-
     let device: GPUDevice | null;
 
     try {
-      // rgba16float and rgba32float are both core color-renderable in WebGPU (no
-      // feature needed). Opt into the optional float features the adapter offers
-      // so float32 targets can additionally be linear-sampled / blended when used
-      // that way (float RenderTextures default to nearest, so this is a bonus).
-      const floatFeatures = (['float32-filterable', 'float32-blendable'] as const).filter(feature => adapter.features?.has(feature) ?? false);
-
-      // Compressed-format families are optional features, and a device only
-      // carries what the request asked for - so an adapter that supports BC
-      // still yields a device that rejects a BC texture unless it is requested
-      // here. Filtering against the adapter first keeps the request satisfiable:
-      // asking for a family the adapter lacks fails the whole `requestDevice`.
-      const compressedFeatures = webgpuCompressedTextureFeatures.filter(feature => adapter.features?.has(feature) ?? false);
-
-      // The sprite batcher sizes its multi-texture bind-group layout from the
-      // GRANTED device limits (resolveSpriteBatchTextureSlots): request up to
-      // the 32-slot ceiling when the adapter offers more than the spec base of
-      // 16 texture/sampler bindings per stage. Requesting min(adapterLimit,
-      // ceiling) is always satisfiable, so this can never fail the request.
-      const requiredLimits: Record<string, number> = {};
-      const adapterLimits = (adapter as { limits?: GPUSupportedLimits }).limits;
-
-      if (adapterLimits !== undefined) {
-        for (const limit of ['maxSampledTexturesPerShaderStage', 'maxSamplersPerShaderStage'] as const) {
-          const available = adapterLimits[limit];
-
-          if (typeof available === 'number' && available > baseSpriteBatchTextureSlots) {
-            requiredLimits[limit] = Math.min(maxSpriteBatchTextureSlots, available);
-          }
-        }
-      }
-
-      // A device's feature set is fixed at creation, so `timestamp-query` has to
-      // be requested here or `setGpuTimingEnabled` can never succeed on this
-      // device. Requesting a feature nothing uses changes no rendering behaviour
-      // and costs nothing until a timer actually allocates a query set.
-      const timestampFeatures = (['timestamp-query'] as const).filter(feature => adapter.features?.has(feature) ?? false);
-
-      const descriptor: GPUDeviceDescriptor = {};
-
-      if (floatFeatures.length > 0 || compressedFeatures.length > 0 || timestampFeatures.length > 0) {
-        descriptor.requiredFeatures = [...floatFeatures, ...compressedFeatures, ...timestampFeatures];
-      }
-
-      if (Object.keys(requiredLimits).length > 0) {
-        descriptor.requiredLimits = requiredLimits;
-      }
-
-      device = await adapter.requestDevice(Object.keys(descriptor).length > 0 ? descriptor : undefined);
+      device = await this._requestDeviceFrom(adapter);
     } catch (error) {
-      throw this._createInitializationError('Failed to request a WebGPU device.', error);
+      // The shared adapter may have gone stale since another backend last
+      // used it - released by the browser, or invalidated by a driver reset.
+      // One retry against a freshly requested adapter tells that apart from
+      // an ordinary request failure: a genuinely dead adapter fails again
+      // immediately, so the retry only ever costs one extra round trip.
+      invalidateSharedAdapter(gpuNavigator.gpu);
+
+      try {
+        adapter = await requestSharedAdapter(gpuNavigator.gpu);
+      } catch (retryError) {
+        throw this._createInitializationError('Failed to request a WebGPU adapter.', retryError);
+      }
+
+      if (adapter === null) {
+        throw new Error('Could not acquire a WebGPU adapter.', { cause: error });
+      }
+
+      try {
+        device = await this._requestDeviceFrom(adapter);
+      } catch (retryError) {
+        throw this._createInitializationError('Failed to request a WebGPU device.', retryError);
+      }
     }
 
     if (device === null) {
@@ -2478,6 +2515,16 @@ export class WebGpuBackend implements RenderBackend {
     // user code). Don't try to recover - the loss is intentional.
     if (info.reason === 'destroyed') {
       return;
+    }
+
+    // A loss we did not cause is the strongest signal available that the
+    // adapter itself may be gone too (a GPU reset invalidates both), so
+    // recovery requests a fresh one rather than risk retrying against a dead
+    // cached adapter for every one of its attempts.
+    const gpuNavigator = this._getGpuNavigator();
+
+    if (gpuNavigator !== null) {
+      invalidateSharedAdapter(gpuNavigator.gpu);
     }
 
     void this._attemptRecovery();
@@ -2704,6 +2751,62 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     await Promise.all(promises);
+  }
+
+  /** Requests a device from the given adapter with the feature/limit set this backend needs. */
+  private async _requestDeviceFrom(adapter: GPUAdapter): Promise<GPUDevice | null> {
+    if (typeof adapter.requestDevice !== 'function') {
+      throw new Error('WebGPU adapter does not expose requestDevice().');
+    }
+
+    // rgba16float and rgba32float are both core color-renderable in WebGPU (no
+    // feature needed). Opt into the optional float features the adapter offers
+    // so float32 targets can additionally be linear-sampled / blended when used
+    // that way (float RenderTextures default to nearest, so this is a bonus).
+    const floatFeatures = (['float32-filterable', 'float32-blendable'] as const).filter(feature => adapter.features?.has(feature) ?? false);
+
+    // Compressed-format families are optional features, and a device only
+    // carries what the request asked for - so an adapter that supports BC
+    // still yields a device that rejects a BC texture unless it is requested
+    // here. Filtering against the adapter first keeps the request satisfiable:
+    // asking for a family the adapter lacks fails the whole `requestDevice`.
+    const compressedFeatures = webgpuCompressedTextureFeatures.filter(feature => adapter.features?.has(feature) ?? false);
+
+    // The sprite batcher sizes its multi-texture bind-group layout from the
+    // GRANTED device limits (resolveSpriteBatchTextureSlots): request up to
+    // the 32-slot ceiling when the adapter offers more than the spec base of
+    // 16 texture/sampler bindings per stage. Requesting min(adapterLimit,
+    // ceiling) is always satisfiable, so this can never fail the request.
+    const requiredLimits: Record<string, number> = {};
+    const adapterLimits = (adapter as { limits?: GPUSupportedLimits }).limits;
+
+    if (adapterLimits !== undefined) {
+      for (const limit of ['maxSampledTexturesPerShaderStage', 'maxSamplersPerShaderStage'] as const) {
+        const available = adapterLimits[limit];
+
+        if (typeof available === 'number' && available > baseSpriteBatchTextureSlots) {
+          requiredLimits[limit] = Math.min(maxSpriteBatchTextureSlots, available);
+        }
+      }
+    }
+
+    // A device's feature set is fixed at creation, so `timestamp-query` has to
+    // be requested here or `setGpuTimingEnabled` can never succeed on this
+    // device. Requesting a feature nothing uses changes no rendering behaviour
+    // and costs nothing until a timer actually allocates a query set.
+    const timestampFeatures = (['timestamp-query'] as const).filter(feature => adapter.features?.has(feature) ?? false);
+
+    const descriptor: GPUDeviceDescriptor = {};
+
+    if (floatFeatures.length > 0 || compressedFeatures.length > 0 || timestampFeatures.length > 0) {
+      descriptor.requiredFeatures = [...floatFeatures, ...compressedFeatures, ...timestampFeatures];
+    }
+
+    if (Object.keys(requiredLimits).length > 0) {
+      descriptor.requiredLimits = requiredLimits;
+    }
+
+    return adapter.requestDevice(Object.keys(descriptor).length > 0 ? descriptor : undefined);
   }
 
   private _getGpuNavigator(): (Navigator & { gpu: GPU }) | null {

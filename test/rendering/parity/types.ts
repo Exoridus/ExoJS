@@ -11,6 +11,8 @@
 
 import type { Container } from '#rendering/Container';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
+import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import type { EvidenceClass, SupportState } from './evidenceSink';
 
@@ -133,6 +135,18 @@ export interface PropertyContext {
   readonly scene: Scene;
   /** Skips the run when the software adapter drops the device mid-test. */
   readonly skip: (reason: string) => void;
+  /**
+   * The scene's backends, opened once and shared by every property that runs
+   * against this scene - `null` where this browser has no such backend.
+   *
+   * Owned by the runner, not by the property: opening a fresh backend per
+   * property multiplied `WebGpuBackend` construction by the property count,
+   * and a driver does not always reclaim a destroyed one before the next
+   * construction (see `WebGpuBackend`'s shared-adapter comment for the same
+   * mechanism one level up). A property must not call `destroy()` on either.
+   */
+  readonly webgl2: WebGl2Backend | null;
+  readonly webgpu: WebGpuBackend | null;
 }
 
 export interface PerBackendProperty {
