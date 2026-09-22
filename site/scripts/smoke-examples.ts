@@ -980,11 +980,11 @@ const main = async (): Promise<void> => {
     entries = sampleByCategory(entries);
   }
 
-  // Half the cores, at most four: every page runs a main thread and, without a
-  // GPU, a software rasteriser beside it. Four pages on a four-core runner
-  // starved the heavy examples until the capture itself timed out.
+  // Half the cores, at most four: every page runs a main thread and a renderer
+  // beside it. The detected renderer below further limits the default where
+  // graphics work also competes for the CPU.
   const defaultConcurrency = Math.min(4, Math.max(1, Math.floor(availableParallelism() / 2)));
-  const concurrency = Math.max(1, Number.parseInt(values.concurrency ?? '', 10) || defaultConcurrency);
+  const requestedConcurrency = Math.max(1, Number.parseInt(values.concurrency ?? '', 10) || defaultConcurrency);
   const timeoutMs = Math.max(4000, Number.parseInt(values['timeout-ms'] ?? '15000', 10) || 15000);
   const shotDir = values.shots === undefined ? null : resolve(repoRoot, values.shots);
 
@@ -1023,6 +1023,11 @@ const main = async (): Promise<void> => {
   const browser = await launchBrowser();
   const graphics = await probeGraphics(browser, baseUrl, forceWebGl2);
   const webgpuAvailable = graphics.webgpu;
+  // Parallel heavy examples can starve both the playground shell and preview
+  // under llvmpipe/SwiftShader before either mounts its iframe. Serial is the
+  // honest default there: an explicit value remains available for diagnosing
+  // runner capacity, while a hardware renderer keeps the normal parallelism.
+  const concurrency = graphics.softwareRasteriser && values.concurrency === undefined ? 1 : requestedConcurrency;
   console.log(
     `[smoke] ${entries.length} example(s) · ${browserName} · ${headless ? 'headless' : 'headed'} · ` +
       `color-scheme: ${colorScheme} · WebGPU adapter: ${webgpuAvailable ? 'yes' : 'no'}` +
