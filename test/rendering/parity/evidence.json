@@ -6,10 +6,9 @@
       "platform": "win32"
     },
     "firefox": {
-      "measuredAt": "2026-09-05",
-      "commit": "f1d5fea24",
-      "platform": "win32",
-      "release": "0.17.0"
+      "measuredAt": "2026-09-22",
+      "commit": "7035b2f6b",
+      "platform": "win32"
     },
     "webkit": {
       "measuredAt": "2026-09-22",
@@ -2665,6 +2664,90 @@
       "delta": 0
     },
     {
+      "scene": "filter/bloom-halo",
+      "property": "cross-backend-parity",
+      "feature": "Filter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "oracle-agreement",
+      "feature": "Filter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "renders-something",
+      "feature": "Filter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "1316/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "repeat-render-determinism",
+      "feature": "Filter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "cross-backend-parity",
+      "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "oracle-agreement",
+      "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "1 computed pixel(s) within 2 of an identity colour matrix plus a per-channel bias, over an opaque (64, 128, 192) fill"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "renders-something",
+      "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "repeat-render-determinism",
+      "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "filter/color-matrix-channel-swap",
       "property": "cross-backend-parity",
       "feature": "ColorMatrixFilter",
@@ -2700,6 +2783,48 @@
       "scene": "filter/color-matrix-channel-swap",
       "property": "repeat-render-determinism",
       "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "cross-backend-parity",
+      "feature": "DropShadowFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "oracle-agreement",
+      "feature": "DropShadowFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "3 computed pixel(s) within 2 of an unblurred silhouette flattened to opaque red and shifted by (10, 10), with the source composited over it"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "renders-something",
+      "feature": "DropShadowFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "956/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "repeat-render-determinism",
+      "feature": "DropShadowFilter",
       "browser": "firefox",
       "backend": "webgl2",
       "support": "supported",
@@ -2826,6 +2951,48 @@
       "scene": "graphics/solid-rectangle",
       "property": "repeat-render-determinism",
       "feature": "Graphics",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "cross-backend-parity",
+      "feature": "Lighting",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "oracle-agreement",
+      "feature": "Lighting",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "renders-something",
+      "feature": "Lighting",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2109/4096 pixels drawn"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "repeat-render-determinism",
+      "feature": "Lighting",
       "browser": "firefox",
       "backend": "webgl2",
       "support": "supported",
@@ -3757,6 +3924,90 @@
       "delta": 0
     },
     {
+      "scene": "filter/bloom-halo",
+      "property": "cross-backend-parity",
+      "feature": "Filter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "oracle-agreement",
+      "feature": "Filter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "renders-something",
+      "feature": "Filter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "1316/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "repeat-render-determinism",
+      "feature": "Filter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "cross-backend-parity",
+      "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "oracle-agreement",
+      "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "1 computed pixel(s) within 2 of an identity colour matrix plus a per-channel bias, over an opaque (64, 128, 192) fill"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "renders-something",
+      "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "repeat-render-determinism",
+      "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "filter/color-matrix-channel-swap",
       "property": "cross-backend-parity",
       "feature": "ColorMatrixFilter",
@@ -3792,6 +4043,48 @@
       "scene": "filter/color-matrix-channel-swap",
       "property": "repeat-render-determinism",
       "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "cross-backend-parity",
+      "feature": "DropShadowFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "oracle-agreement",
+      "feature": "DropShadowFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "3 computed pixel(s) within 2 of an unblurred silhouette flattened to opaque red and shifted by (10, 10), with the source composited over it"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "renders-something",
+      "feature": "DropShadowFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "956/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "repeat-render-determinism",
+      "feature": "DropShadowFilter",
       "browser": "firefox",
       "backend": "webgpu",
       "support": "supported",
@@ -3918,6 +4211,48 @@
       "scene": "graphics/solid-rectangle",
       "property": "repeat-render-determinism",
       "feature": "Graphics",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "cross-backend-parity",
+      "feature": "Lighting",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "oracle-agreement",
+      "feature": "Lighting",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "renders-something",
+      "feature": "Lighting",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2109/4096 pixels drawn"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "repeat-render-determinism",
+      "feature": "Lighting",
       "browser": "firefox",
       "backend": "webgpu",
       "support": "supported",
