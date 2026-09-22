@@ -263,19 +263,24 @@ const attachProbes = (
  * bracket sits outside it so the restructuring does not change what CPU time
  * measures.
  */
-export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement): Promise<CellResult> => {
+export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement, hold = false): Promise<CellResult> => {
   const archetype = ARCHETYPES.find(candidate => candidate.id === spec.archetype);
 
   if (archetype === undefined) {
     throw new Error(`Unknown archetype '${spec.archetype}'.`);
   }
 
-  await adapter.init(canvas, spec.backend);
-
-  const { probe, gpuTimer, structuralNote } = attachProbes(adapter, spec, canvas);
-  const timer = createCpuTimer();
+  let probe: StructuralProbe | null = null;
+  let completed = false;
 
   try {
+    await adapter.init(canvas, spec.backend);
+
+    const attached = attachProbes(adapter, spec, canvas);
+    const { gpuTimer, structuralNote } = attached;
+    const timer = createCpuTimer();
+
+    probe = attached.probe;
     adapter.buildScene(archetype, spec.nodeCount, SEED);
 
     // Cross-arm mutation determinism. The comparison across arms is valid
@@ -471,7 +476,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     ].filter((value): value is string => value !== null);
     const note = notes.length > 0 ? notes.join('; ') : null;
 
-    return {
+    const result: CellResult = {
       spec,
       cpuMsMedian: median(timer.samples),
       cpuMsP95: percentile(timer.samples, 95),
@@ -484,15 +489,21 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       status: exceeded ? 'exceeded' : 'ok',
       ...(note !== null && { note }),
     };
+
+    completed = true;
+
+    return result;
   } finally {
-    probe.detach();
+    probe?.detach();
 
     // A held cell keeps its scene on the canvas so the driver can capture the
     // frame it just measured. Tearing down first leaves an arm-dependent canvas
     // - some engines keep the last frame, others release the context and blank
     // it - so a capture taken afterwards would compare teardown policies rather
     // than scenes.
-    if (heldAdapter === null) {
+    // Failed setup and measurement attempts are never retained: only a complete
+    // cell can provide a frame worth capturing.
+    if (!hold || !completed) {
       adapter.teardown();
     }
   }
@@ -585,12 +596,13 @@ const runBaselineCell = async (cell: CellSpec, hold = false): Promise<CellResult
 
   const canvas = freshStageCanvas();
   const adapter = await resolveAdapter(cell.engine, cell.config);
+  const result = await runCell(adapter, cell, canvas, hold);
 
   if (hold) {
     heldAdapter = adapter;
   }
 
-  return runCell(adapter, cell, canvas);
+  return result;
 };
 
 /**
