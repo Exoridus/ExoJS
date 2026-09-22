@@ -12,8 +12,7 @@
 
 import { Color } from '#core/Color';
 
-import { readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce, webGl2Available, webGpuAvailable } from '../../browser/_backendSetup';
-import { openWebGl2, openWebGpu } from '../backends';
+import { readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce } from '../../browser/_backendSetup';
 import { drawnPixelCount, maxChannelDelta, pixelsExceeding } from '../frames';
 import type { CrossBackendProperty, PropertyResult } from '../types';
 
@@ -33,99 +32,91 @@ export const crossBackendParity: CrossBackendProperty = {
   scope: 'cross-backend',
   appliesTo: () => true,
 
-  run: async ({ scene, skip }): Promise<PropertyResult> => {
+  run: async ({ scene, skip, webgl2, webgpu }): Promise<PropertyResult> => {
     // A browser missing a backend cannot be compared across backends - that is
     // an answer about the browser, not a failure of the engine.
-    if (!webGl2Available()) {
+    if (webgl2 === null) {
       return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGL2 context in this browser' };
     }
 
-    if (!(await webGpuAvailable())) {
+    if (webgpu === null) {
       return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGPU adapter in this browser' };
     }
 
-    const gl = await openWebGl2(scene);
-    const gpu = await openWebGpu(scene);
+    renderWebGl2Once(webgl2, scene.build(), Color.black);
 
-    try {
-      renderWebGl2Once(gl, scene.build(), Color.black);
+    // A dropped device is missing evidence, never satisfied evidence.
+    const rendered = await renderWebGpuOnce({ skip }, webgpu, scene.build(), Color.black);
 
-      // A dropped device is missing evidence, never satisfied evidence.
-      const rendered = await renderWebGpuOnce({ skip }, gpu, scene.build(), Color.black);
+    if (!rendered) {
+      return { support: 'unknown', evidence: 'none', delta: null, note: 'WebGPU device lost mid-run' };
+    }
 
-      if (!rendered) {
-        return { support: 'unknown', evidence: 'none', delta: null, note: 'WebGPU device lost mid-run' };
-      }
+    const glFrame = readWebGl2Frame(webgl2, scene.size);
+    const gpuFrame = readWebGpuFrame(webgpu, scene.size);
 
-      const glFrame = readWebGl2Frame(gl, scene.size);
-      const gpuFrame = readWebGpuFrame(gpu, scene.size);
+    // Two empty frames are byte-identical, so the comparison below would
+    // report a perfect match about nothing at all. `renders-something` covers
+    // the same ground as its own row, but a green parity row claiming
+    // `traced` is the misleading one, so emptiness is a precondition here
+    // rather than a neighbouring property's business.
+    if (drawnPixelCount(glFrame) === 0 && drawnPixelCount(gpuFrame) === 0) {
+      return { support: 'divergent', evidence: 'none', delta: null, note: 'both backends rendered an empty frame - nothing was compared' };
+    }
 
-      // Two empty frames are byte-identical, so the comparison below would
-      // report a perfect match about nothing at all. `renders-something` covers
-      // the same ground as its own row, but a green parity row claiming
-      // `traced` is the misleading one, so emptiness is a precondition here
-      // rather than a neighbouring property's business.
-      if (drawnPixelCount(glFrame) === 0 && drawnPixelCount(gpuFrame) === 0) {
-        return { support: 'divergent', evidence: 'none', delta: null, note: 'both backends rendered an empty frame - nothing was compared' };
-      }
+    const delta = maxChannelDelta(glFrame, gpuFrame);
 
-      const delta = maxChannelDelta(glFrame, gpuFrame);
-
-      if (delta === 0) {
-        return {
-          support: 'supported',
-          // Whole-frame comparison; the runner decides whether the scene lets it
-          // count as `traced` rather than merely `frame-equal`.
-          evidence: 'traced',
-          delta,
-        };
-      }
-
-      if (delta <= LAST_BIT) {
-        // Equal to the last bit rather than bit-identical. Recorded as its own
-        // class instead of quietly passing: a reader can tell an adapter's
-        // rounding from a genuine match, and `tolerant` rows are exactly what
-        // to look at when a real difference is suspected.
-        return {
-          support: 'supported',
-          evidence: 'tolerant',
-          delta,
-          note: `backends agree within ${delta} of one channel step`,
-        };
-      }
-
-      const tolerance = scene.crossBackendTolerance;
-
-      if (tolerance !== undefined) {
-        const differing = pixelsExceeding(glFrame, gpuFrame, LAST_BIT);
-        const fraction = differing / (scene.size * scene.size);
-        const within = delta <= tolerance.delta && fraction <= tolerance.maxPixelFraction;
-        const measured = `${delta} on ${differing} px (${(fraction * 100).toFixed(1)}% of the frame)`;
-
-        return within
-          ? {
-              support: 'supported',
-              evidence: 'tolerant',
-              delta,
-              note: `backends differ by ${measured}, within this scene's declared tolerance`,
-            }
-          : {
-              support: 'divergent',
-              evidence: 'traced',
-              delta,
-              note: `backends differ by ${measured}, beyond this scene's tolerance of ${tolerance.delta} on ${(tolerance.maxPixelFraction * 100).toFixed(0)}% of the frame`,
-            };
-      }
-
+    if (delta === 0) {
       return {
-        support: 'divergent',
+        support: 'supported',
+        // Whole-frame comparison; the runner decides whether the scene lets it
+        // count as `traced` rather than merely `frame-equal`.
         evidence: 'traced',
         delta,
-        note: `backends differ by ${delta} on at least one channel`,
       };
-    } finally {
-      gl.destroy();
-      gpu.destroy();
     }
+
+    if (delta <= LAST_BIT) {
+      // Equal to the last bit rather than bit-identical. Recorded as its own
+      // class instead of quietly passing: a reader can tell an adapter's
+      // rounding from a genuine match, and `tolerant` rows are exactly what
+      // to look at when a real difference is suspected.
+      return {
+        support: 'supported',
+        evidence: 'tolerant',
+        delta,
+        note: `backends agree within ${delta} of one channel step`,
+      };
+    }
+
+    const tolerance = scene.crossBackendTolerance;
+
+    if (tolerance !== undefined) {
+      const differing = pixelsExceeding(glFrame, gpuFrame, LAST_BIT);
+      const fraction = differing / (scene.size * scene.size);
+      const within = delta <= tolerance.delta && fraction <= tolerance.maxPixelFraction;
+      const measured = `${delta} on ${differing} px (${(fraction * 100).toFixed(1)}% of the frame)`;
+
+      return within
+        ? {
+            support: 'supported',
+            evidence: 'tolerant',
+            delta,
+            note: `backends differ by ${measured}, within this scene's declared tolerance`,
+          }
+        : {
+            support: 'divergent',
+            evidence: 'traced',
+            delta,
+            note: `backends differ by ${measured}, beyond this scene's tolerance of ${tolerance.delta} on ${(tolerance.maxPixelFraction * 100).toFixed(0)}% of the frame`,
+          };
+    }
+
+    return {
+      support: 'divergent',
+      evidence: 'traced',
+      delta,
+      note: `backends differ by ${delta} on at least one channel`,
+    };
   },
 };

@@ -13,8 +13,7 @@
 
 import { Color } from '#core/Color';
 
-import { readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce, webGl2Available, webGpuAvailable } from '../../browser/_backendSetup';
-import { openWebGl2, openWebGpu } from '../backends';
+import { readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce } from '../../browser/_backendSetup';
 import { drawnPixelCount } from '../frames';
 import type { PerBackendProperty, PropertyResult } from '../types';
 
@@ -32,39 +31,27 @@ export const rendersSomething: PerBackendProperty = {
   scope: 'per-backend',
   appliesTo: () => true,
 
-  run: async ({ scene, skip }, backend): Promise<PropertyResult> => {
+  run: async ({ scene, skip, webgl2, webgpu }, backend): Promise<PropertyResult> => {
     const total = scene.size * scene.size;
 
     if (backend === 'webgl2') {
-      if (!webGl2Available()) {
+      if (webgl2 === null) {
         return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGL2 context in this browser' };
       }
 
-      const gl = await openWebGl2(scene);
+      renderWebGl2Once(webgl2, scene.build(), Color.black);
 
-      try {
-        renderWebGl2Once(gl, scene.build(), Color.black);
-
-        return verdict(drawnPixelCount(readWebGl2Frame(gl, scene.size)), total);
-      } finally {
-        gl.destroy();
-      }
+      return verdict(drawnPixelCount(readWebGl2Frame(webgl2, scene.size)), total);
     }
 
-    if (!(await webGpuAvailable())) {
+    if (webgpu === null) {
       return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGPU adapter in this browser' };
     }
 
-    const gpu = await openWebGpu(scene);
-
-    try {
-      if (!(await renderWebGpuOnce({ skip }, gpu, scene.build(), Color.black))) {
-        return { support: 'unknown', evidence: 'none', delta: null, note: 'WebGPU device lost mid-run' };
-      }
-
-      return verdict(drawnPixelCount(readWebGpuFrame(gpu, scene.size)), total);
-    } finally {
-      gpu.destroy();
+    if (!(await renderWebGpuOnce({ skip }, webgpu, scene.build(), Color.black))) {
+      return { support: 'unknown', evidence: 'none', delta: null, note: 'WebGPU device lost mid-run' };
     }
+
+    return verdict(drawnPixelCount(readWebGpuFrame(webgpu, scene.size)), total);
   },
 };

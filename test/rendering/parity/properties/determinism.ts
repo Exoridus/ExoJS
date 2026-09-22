@@ -9,8 +9,7 @@
 
 import { Color } from '#core/Color';
 
-import { readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce, webGl2Available, webGpuAvailable } from '../../browser/_backendSetup';
-import { openWebGl2, openWebGpu } from '../backends';
+import { readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce } from '../../browser/_backendSetup';
 import { maxChannelDelta } from '../frames';
 import type { PerBackendProperty, PropertyResult } from '../types';
 
@@ -28,49 +27,37 @@ export const determinism: PerBackendProperty = {
   scope: 'per-backend',
   appliesTo: () => true,
 
-  run: async ({ scene, skip }, backend): Promise<PropertyResult> => {
+  run: async ({ scene, skip, webgl2, webgpu }, backend): Promise<PropertyResult> => {
     // A fresh graph per frame: reusing one would let retained state make the
     // second frame identical for the wrong reason.
     if (backend === 'webgl2') {
-      if (!webGl2Available()) {
+      if (webgl2 === null) {
         return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGL2 context in this browser' };
       }
 
-      const gl = await openWebGl2(scene);
+      renderWebGl2Once(webgl2, scene.build(), Color.black);
 
-      try {
-        renderWebGl2Once(gl, scene.build(), Color.black);
+      const first = readWebGl2Frame(webgl2, scene.size);
 
-        const first = readWebGl2Frame(gl, scene.size);
+      renderWebGl2Once(webgl2, scene.build(), Color.black);
 
-        renderWebGl2Once(gl, scene.build(), Color.black);
-
-        return verdict(maxChannelDelta(first, readWebGl2Frame(gl, scene.size)));
-      } finally {
-        gl.destroy();
-      }
+      return verdict(maxChannelDelta(first, readWebGl2Frame(webgl2, scene.size)));
     }
 
-    if (!(await webGpuAvailable())) {
+    if (webgpu === null) {
       return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGPU adapter in this browser' };
     }
 
-    const gpu = await openWebGpu(scene);
-
-    try {
-      if (!(await renderWebGpuOnce({ skip }, gpu, scene.build(), Color.black))) {
-        return { support: 'unknown', evidence: 'none', delta: null, note: 'WebGPU device lost mid-run' };
-      }
-
-      const first = readWebGpuFrame(gpu, scene.size);
-
-      if (!(await renderWebGpuOnce({ skip }, gpu, scene.build(), Color.black))) {
-        return { support: 'unknown', evidence: 'none', delta: null, note: 'WebGPU device lost mid-run' };
-      }
-
-      return verdict(maxChannelDelta(first, readWebGpuFrame(gpu, scene.size)));
-    } finally {
-      gpu.destroy();
+    if (!(await renderWebGpuOnce({ skip }, webgpu, scene.build(), Color.black))) {
+      return { support: 'unknown', evidence: 'none', delta: null, note: 'WebGPU device lost mid-run' };
     }
+
+    const first = readWebGpuFrame(webgpu, scene.size);
+
+    if (!(await renderWebGpuOnce({ skip }, webgpu, scene.build(), Color.black))) {
+      return { support: 'unknown', evidence: 'none', delta: null, note: 'WebGPU device lost mid-run' };
+    }
+
+    return verdict(maxChannelDelta(first, readWebGpuFrame(webgpu, scene.size)));
   },
 };
