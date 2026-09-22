@@ -149,7 +149,6 @@
     "test:browser:build": "vitest run --project=browser-build-chromium",
     "test:parity": "tsx ./scripts/run-parity.ts --project=browser-webgpu test/rendering/parity",
     "test:parity:firefox": "tsx ./scripts/run-parity.ts --project=browser-webgpu-firefox test/rendering/parity",
-    "test:parity:webkit": "tsx ./scripts/run-parity.ts --project=browser-parity-webkit",
     "test:parity:safari": "tsx ./scripts/run-parity.ts --project=browser-parity-safari",
     "test:examples:smoke": "pnpm --filter @codexo/exojs-examples examples:smoke",
     "gates": "tsx ./scripts/ci/gates.ts",

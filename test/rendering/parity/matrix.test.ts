@@ -5,7 +5,7 @@
  * check means adding a property, which then applies to every existing scene.
  * Neither requires touching this file beyond one import and one list entry.
  *
- * Run via:  pnpm test:parity  (or :firefox / :webkit)
+ * Run via:  pnpm test:parity  (or :firefox / :safari)
  */
 
 import { crossBackendParity } from './properties/crossBackendParity';

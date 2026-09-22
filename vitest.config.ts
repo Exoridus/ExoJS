@@ -629,37 +629,12 @@ export default defineConfig({
         },
       },
 
-      // ── browser-parity-webkit - matrix rows from WebKit ──────────────────
-      // Only the parity matrix, never the WebGPU spec suite: the Playwright
-      // WebKit build has no `navigator.gpu` at all, so those specs would fail
-      // on construction rather than report anything. The matrix instead records
-      // `unavailable`, which is the finding. Headed for the same reason Firefox
-      // is - if a WebGPU adapter appears on macOS, a window is the likeliest
-      // configuration to get one, and a wrong `unavailable` row would be worse
-      // than a visible browser during a manual run.
-      {
-        ...browserBase,
-        test: {
-          name: 'browser-parity-webkit',
-          globals: true,
-          setupFiles: renderingBrowserSetupFiles,
-          include: ['test/rendering/parity/**/*.test.ts'],
-          browser: {
-            enabled: true,
-            commands: parityCommands,
-            headless: false,
-            provider: playwright(),
-            instances: [{ browser: 'webkit' }],
-          },
-        },
-      },
-
       // ── browser-parity-safari - matrix rows from Safari itself ───────────
-      // macOS only, and the reason it exists: Playwright's WebKit build has no
-      // WebGPU, so its `unavailable` rows describe the test tool rather than
-      // the browser. safaridriver drives the real Safari, which does ship
-      // WebGPU - the rows land under the same `webkit` key and replace the
-      // Playwright ones, since Safari is the measurement that speaks for users.
+      // macOS only, optional diagnostic. Playwright has no WebKit build with
+      // WebGPU, so real Safari via safaridriver is the sole producer of
+      // `webkit` evidence rows; there is no Playwright WebKit lane to collide
+      // with it. Safari is not a guaranteed release browser, so this project
+      // never blocks `release:cut` or the guaranteed-browser matrix.
       //
       // Prerequisites on the Mac, once: `safaridriver --enable`, plus
       // Develop ▸ Allow Remote Automation in Safari's menu.
