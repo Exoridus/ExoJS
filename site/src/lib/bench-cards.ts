@@ -7,14 +7,19 @@
  * am about to do", and a table answers that only after they have learned how to
  * read it.
  *
- * Nothing here computes a timing or a verdict. The loads, their order and which
- * one opens a card are all decided by the harness before a run starts, and this
- * module only groups what the profile already carries - so no card can be
- * assembled to suit the numbers inside it.
+ * Nothing here computes a timing or a verdict. The loads and their order are
+ * decided by the harness before a run starts, and this module only groups
+ * what the profile already carries - so no card's set of loads or figures can
+ * be assembled to suit the numbers inside it.
+ *
+ * Which load a card OPENS on is the one exception: see `openingSelection`.
+ * That choice reads the published outcomes on purpose - a reader compares
+ * libraries at the load size they will actually run, and the harness cannot
+ * know in advance which load that will be competitive at.
  */
 
 import type { BenchProfileDocument, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
-import { armLabel, formatLoad, isQuantitative, orderArms, outcomeOf, publishedMs, withheldScenario } from './bench-profiles';
+import { armLabel, formatLoad, isQuantitative, isWasmReferenceArm, orderArms, OUTCOME_ORDER, outcomeOf, publishedMs, withheldScenario } from './bench-profiles';
 
 /** One arm's time on one load of one scenario. */
 export interface CardArm {
@@ -48,7 +53,9 @@ export interface CardLoad {
   readonly id: string;
   /** How the load reads beside the figures, e.g. `10,000 sprites`. */
   readonly label: string;
-  /** Whether this is the load the card opens on. */
+  /** The row's own load size, for ranking loads against each other; see `openingSelection`. */
+  readonly count: number;
+  /** Whether this is the load the harness marked as the scenario's headline. */
   readonly primary: boolean;
   /** ExoJS first, then the competitors in a fixed order; see `orderArms`. */
   readonly arms: readonly CardArm[];
@@ -214,6 +221,7 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
   return {
     id: row.loadId ?? String(row.count),
     label: formatLoad(row),
+    count: row.count,
     primary: row.primary ?? false,
     arms,
     maxMs: plotted.length > 0 ? Math.max(...plotted) : 0,
@@ -275,5 +283,95 @@ export const selectCards = (cards: readonly BenchCard[], preferred: readonly str
   return { headline, rest: cards.filter(card => !shown.has(card.id)) };
 };
 
-/** The load a card opens on: its headline, or the first one it carries. */
-export const openingLoad = (card: BenchCard): CardLoad | undefined => card.loads.find(load => load.primary) ?? card.loads[0];
+/** Why a card opened on the load it did; see `openingSelection`. */
+export type OpeningReason =
+  /** The largest load where ExoJS led every JavaScript peer. */
+  | 'leading'
+  /** No load led every peer; this is the one where ExoJS trailed the least. */
+  | 'least-behind'
+  /** No load carried a comparable JavaScript peer at all - the harness's headline load, or the first one. */
+  | 'harness-default';
+
+/** One card's opening load, and why it was chosen. */
+export interface OpeningSelection {
+  readonly load: CardLoad | undefined;
+  readonly reason: OpeningReason;
+}
+
+/**
+ * A load's arms against JavaScript peers: everything but ExoJS itself and the
+ * WASM reference arm.
+ *
+ * Rapier is excluded from this ranking for the same reason it is split out of
+ * the headline sentences - a gap against a Rust/WASM engine says nothing about
+ * how ExoJS compares to the JavaScript libraries a reader is actually choosing
+ * between.
+ */
+const jsPeerArms = (load: CardLoad): readonly CardArm[] => load.arms.filter(arm => !arm.reference && !isWasmReferenceArm(arm.id));
+
+/**
+ * How far this load's worst JavaScript-peer comparison sits on the outcome
+ * ladder, or `undefined` where the load carries no JavaScript peer to compare
+ * against at all (an empty card, or one measured against Rapier alone).
+ *
+ * The WORST peer decides the load's standing rather than the average one: a
+ * load where ExoJS leads three libraries and trails a fourth is not a load
+ * where ExoJS "leads", because the fourth library is still the one a reader
+ * choosing it would feel.
+ */
+const worstPeerOutcomeIndex = (load: CardLoad): number | undefined => {
+  const peers = jsPeerArms(load);
+
+  if (peers.length === 0) return undefined;
+
+  return Math.max(...peers.map(arm => OUTCOME_ORDER.indexOf(arm.outcome)));
+};
+
+/** The ladder index up to which every peer outcome counts as a lead; see `worstPeerOutcomeIndex`. */
+const LEADING_INDEX = OUTCOME_ORDER.indexOf('lead');
+
+/**
+ * The load a card opens on, and why.
+ *
+ * A reader arrives asking how ExoJS does at the size they are about to run,
+ * so the card opens on the load that puts its best real case forward: the
+ * largest one where ExoJS leads every JavaScript peer, so a smaller load never
+ * outranks a bigger one it also wins. Where no load leads every peer, it opens
+ * on the one where ExoJS trails the least badly instead, by the same rule -
+ * ties broken toward the larger load, never the smaller one, so the choice
+ * never reads as picking a small scene to avoid a hard one.
+ *
+ * A card with no comparable JavaScript peer at all - nothing published yet, or
+ * a scenario measured only against Rapier - falls back to the harness's own
+ * headline load, or its first one.
+ */
+export const openingSelection = (card: BenchCard): OpeningSelection => {
+  const ranked = card.loads
+    .map(load => ({ load, index: worstPeerOutcomeIndex(load) }))
+    .filter((entry): entry is { load: CardLoad; index: number } => entry.index !== undefined);
+
+  if (ranked.length === 0) {
+    return { load: card.loads.find(load => load.primary) ?? card.loads[0], reason: 'harness-default' };
+  }
+
+  const leading = ranked.filter(entry => entry.index <= LEADING_INDEX);
+  const pool = leading.length > 0 ? leading : ranked;
+
+  const best = pool.reduce(
+    (best, entry) => {
+      if (best === undefined) return entry;
+      // Within the leading tier every candidate already ties on the ladder, so
+      // only size breaks it. Outside it, a lower index is strictly better than a
+      // bigger load at a worse one - the ladder position is read before size.
+      if (leading.length === 0 && entry.index !== best.index) return entry.index < best.index ? entry : best;
+
+      return entry.load.count > best.load.count ? entry : best;
+    },
+    undefined as (typeof pool)[number] | undefined,
+  );
+
+  return { load: best?.load, reason: leading.length > 0 ? 'leading' : 'least-behind' };
+};
+
+/** The load a card opens on; see `openingSelection` for which one and why. */
+export const openingLoad = (card: BenchCard): CardLoad | undefined => openingSelection(card).load;

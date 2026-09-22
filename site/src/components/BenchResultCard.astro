@@ -36,8 +36,8 @@
  */
 
 import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NOTE, formatMs, OUTCOME_STATUS } from '../lib/bench-profiles';
-import type { BenchCard } from '../lib/bench-cards';
-import { openingLoad } from '../lib/bench-cards';
+import type { BenchCard, OpeningReason } from '../lib/bench-cards';
+import { openingSelection } from '../lib/bench-cards';
 
 /** A scenario description split into what the scene is and what it loads, at the full stop between the two. */
 const splitAtClause = (text: string): readonly [string, string | undefined] => {
@@ -55,7 +55,19 @@ interface Props {
 }
 
 const { card, domain } = Astro.props;
-const opening = openingLoad(card);
+const { load: opening, reason: openingReason } = openingSelection(card);
+
+/**
+ * One sentence on why the card opened where it did, printed only when the
+ * choice was actually made from the published numbers - a fixed fallback
+ * needs no defence, but a data-dependent one does, since a reader has no other
+ * way to tell the two apart.
+ */
+const OPENING_NOTE: Partial<Record<OpeningReason, string>> = {
+  leading: 'Opens on the largest load where ExoJS leads every JavaScript library measured here.',
+  'least-behind': 'ExoJS does not lead every JavaScript library at any load here; opens on the one it trails least.',
+};
+const openingNote = card.loads.length > 1 ? OPENING_NOTE[openingReason] : undefined;
 const description = archetypeDescription(card.id);
 const [descriptionLead, descriptionRest] = description === undefined ? [undefined, undefined] : splitAtClause(description);
 
@@ -148,6 +160,8 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
             <span class="load solo">{opening?.label}</span>
         )}
     </div>
+
+    {openingNote !== undefined && <p class="opening-note">{openingNote}</p>}
 
     {/*
       * `bench-load-panel` rather than `panel`: the global stylesheet gives
@@ -276,6 +290,13 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         background: color-mix(in srgb, var(--color-accent) 14%, transparent);
         color: var(--color-text);
         font-weight: 650;
+    }
+
+    .opening-note {
+        margin: 0.3rem 0 0;
+        font-size: 0.76rem;
+        line-height: 1.4;
+        color: var(--color-text-muted);
     }
 
     .meta {
