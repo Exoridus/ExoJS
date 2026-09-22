@@ -55,6 +55,23 @@ interface MutableLeaf {
 }
 
 /**
+ * Replaces a child through Excalibur's parent lifecycle.
+ *
+ * `removeChild` also unregisters a live descendant from the scene's entity
+ * manager. Calling `kill` afterwards would target an actor whose scene has
+ * already been cleared and makes Excalibur report a spurious lifecycle warning.
+ */
+export const replaceExcaliburChild = <T extends { readonly actor: ex.Actor }>(parent: ex.Actor, current: ex.Actor, create: () => T): T => {
+  parent.removeChild(current);
+
+  const replacement = create();
+
+  parent.addChild(replacement.actor);
+
+  return replacement;
+};
+
+/**
  * Glyph-atlas font for the text archetypes.
  *
  * {@link ex.SpriteFont}, not `ex.Font`: `ex.Font` rasterizes through the browser's
@@ -285,17 +302,14 @@ export const createExcaliburAdapter = (): EngineAdapter => {
 
     mutate(frame: number): void {
       // Structural churn: detach each selected actor from its parent and build a
-      // replacement in the same place. `removeChild` takes the actor and its
-      // descendants out of the world; `kill()` then releases it, in that order, so
-      // the parent never holds a dead child.
-      if (churning && rebuildLeaf !== null) {
+      // replacement in the same place. The parent lifecycle performs the world
+      // removal before the replacement is attached.
+      const buildReplacement = rebuildLeaf;
+
+      if (churning && buildReplacement !== null) {
         for (const leaf of mutableLeaves) {
-          leaf.parent.removeChild(leaf.actor);
-          leaf.actor.kill();
+          const replacement = replaceExcaliburChild(leaf.parent, leaf.actor, () => buildReplacement(leaf.index));
 
-          const replacement = rebuildLeaf(leaf.index);
-
-          leaf.parent.addChild(replacement.actor);
           leaf.actor = replacement.actor;
           leaf.text = replacement.text;
         }

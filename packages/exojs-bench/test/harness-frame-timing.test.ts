@@ -138,6 +138,28 @@ const cell = (backend: Backend, warmupFrames: number, timedFrames: number): Cell
 
 const stageCanvas = (): HTMLCanvasElement => document.createElement('canvas');
 
+describe('cell lifecycle', () => {
+  test('tears the adapter down when initialization fails', async () => {
+    const arm = createFakeArm();
+    const failure = new Error('init failed');
+
+    arm.adapter.init = async () => {
+      throw failure;
+    };
+
+    await expect(runCell(arm.adapter, cell('webgpu', 1, 1), stageCanvas())).rejects.toBe(failure);
+    expect(arm.events).toEqual(['teardown']);
+  });
+
+  test('tears the adapter down when probe attachment fails', async () => {
+    const arm = createFakeWebGl2Arm();
+    const canvas = { getContext: () => null } as unknown as HTMLCanvasElement;
+
+    await expect(runCell(arm.adapter, cell('webgl2', 1, 1), canvas)).rejects.toThrow('A WebGL2 context is required');
+    expect(arm.events).toEqual(['teardown']);
+  });
+});
+
 describe('WebGPU warmup/timing measurement boundary', () => {
   test('drains the queue exactly once, after the last warmup submit and before the first timed submit', async () => {
     const arm = createFakeArm();

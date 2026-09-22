@@ -329,7 +329,7 @@ export const resolveSampleResolution = (
  * a sample of them to clear the clock; then `resolveTimingPlan` lengthens the
  * window, and the result records how many steps were timed.
  */
-const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionMs: number | null): PhysicsCellOutcome => {
+const executeCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionMs: number | null): PhysicsCellOutcome => {
   const archetype = archetypeFor(spec.archetype);
   const seed = seedFor(archetype.scene, spec.bodyCount);
 
@@ -345,8 +345,6 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
     const canonical = mutationSignature(selectMutationIndices(spec.bodyCount, archetype.perturbFraction, seed));
 
     if (armSignature !== canonical) {
-      adapter.teardown();
-
       return {
         kind: 'divergence',
         message: `Determinism divergence for ${spec.engine}/${spec.archetype}/${String(spec.bodyCount)}: arm=${armSignature} canonical=${canonical}.`,
@@ -392,8 +390,6 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
   }
 
   const structural = adapter.sampleStructural();
-
-  adapter.teardown();
 
   /*
    * Grid coverage the median's sample achieved.
@@ -455,6 +451,15 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
       ...(notes.length > 0 && { note: notes.join('; ') }),
     },
   };
+};
+
+/** Measures one cell and releases its world after every success or failure path. */
+export const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionMs: number | null): PhysicsCellOutcome => {
+  try {
+    return executeCell(adapter, spec, resolutionMs);
+  } finally {
+    adapter.teardown();
+  }
 };
 
 /** Drive one matrix cell, or report why its arm could not run it. */

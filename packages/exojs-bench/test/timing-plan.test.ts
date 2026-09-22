@@ -1,4 +1,33 @@
-import { resolveSampleResolution, resolveTimingPlan } from '../src/physics/page/harness';
+import { measureCell, resolveSampleResolution, resolveTimingPlan } from '../src/physics/page/harness';
+import type { PhysicsAdapter, PhysicsCellSpec } from '../src/physics/PhysicsAdapter';
+
+describe('physics cell lifecycle', () => {
+  test('tears the adapter down when a step fails', () => {
+    const failure = new Error('step failed');
+    const teardown = vi.fn();
+    const adapter: PhysicsAdapter = {
+      engine: 'fake',
+      config: 'current',
+      setup: () => undefined,
+      step: () => {
+        throw failure;
+      },
+      sampleStructural: () => ({ bodyCount: 1, contactCount: 0, jointCount: 0, rayHits: 0 }),
+      teardown,
+    };
+    const spec: PhysicsCellSpec = {
+      engine: 'fake',
+      config: 'current',
+      archetype: 'box-stack',
+      bodyCount: 1,
+      warmupSteps: 1,
+      timedSteps: 1,
+    };
+
+    expect(() => measureCell(adapter, spec, null)).toThrow(failure);
+    expect(teardown).toHaveBeenCalledOnce();
+  });
+});
 
 describe('resolveTimingPlan', () => {
   test('keeps the planned window when the clock is already cleared inside it', () => {
