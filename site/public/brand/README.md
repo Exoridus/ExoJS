@@ -16,8 +16,7 @@ Optimised SVG brand assets, served from `/ExoJS/brand/`. Masters are kept outsid
 | File                                      | Use                         |
 | ----------------------------------------- | --------------------------- |
 | `wordmark-exo-dot-js.svg` / `-mono.svg`   | `exo.js` lockup.            |
-| `wordmark-ExoJS.svg` / `-mono.svg`        | `ExoJS` lockup.             |
-| `wordmark-ExoJS-limeJS.svg`               | `ExoJS` with lime-colour JS. |
+| `wordmark-ExoJS.svg` / `-mono.svg`        | `ExoJS` lockup; the default uses lime-colour `JS`. |
 
 ## Favicons
 
