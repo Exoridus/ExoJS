@@ -79,7 +79,7 @@ From then on every publish (including the new package's first real release) flow
 
 ## Packages off the lockstep line
 
-`@codexo/exojs-build` and `create-exo-app` are published on their own version lines (`INDEPENDENT_PACKAGES` in `scripts/release/lockstep-packages.ts`): the first is build tooling a consumer keeps across engine upgrades, the second is a scaffolder run once via `npx`. Neither is in `PUBLISH_ORDER`, so **no coordinated release ever publishes them** - they are released one at a time, whenever their own version is bumped:
+Packages listed in `INDEPENDENT_PACKAGES` in `scripts/release/lockstep-packages.ts` are published on their own version lines. They are build, lint, CLI, or scaffolding tools whose versions do not describe compatibility with one engine release. None is in `PUBLISH_ORDER`, so **the coordinated release never publishes them** - release one explicitly whenever its own version is bumped:
 
 ```bash
 pnpm release:publish-independent create-exo-app              # dry-run
@@ -87,11 +87,3 @@ pnpm release:publish-independent create-exo-app --execute    # publishes with --
 ```
 
 The command refuses a lockstep package (the coordinated release owns those), is a no-op for a version already on the registry, and points at `release:bootstrap` when the name does not exist yet. The very first publish of one of these names goes through `release:bootstrap` like any other new package, followed by its Trusted Publisher config on npmjs.com.
-
-### Open at the time of writing (checked against the registry 2026-08-29)
-
-- `@codexo/exojs-tilemap-physics`, `@codexo/exojs-lighting` and `@codexo/exojs-pathfinding` are in `LOCKSTEP_PACKAGES` and therefore in `PUBLISH_ORDER`, but none of them has ever been published (npm answers E404). The next coordinated release would reach them and abort the chain there.
-
-  **Bootstrap each as part of that release, not before it:** run `release:cut` first so the package carries the release version, then `pnpm release:bootstrap <name> --execute`, then register its trusted publisher, and only then run the coordinated publish - which skips it as already-published and publishes everything else with provenance. Bootstrapping earlier publishes a version that no release will ever correspond to.
-
-- `create-exo-app` and `@codexo/exojs-build` **are** published, both at `0.1.0`, which is what their `package.json` says. They need no bootstrap; their next versions go out with `release:publish-independent`.

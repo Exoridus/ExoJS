@@ -1,6 +1,6 @@
 # @codexo/exojs-lighting
 
-Official ExoJS extension for 2D lighting. Lights are scene nodes, so a torch parents to the player and follows it; materials shade against them inside the sprite fragment stage, so a lit scene costs no extra render pass and no extra draw call and sprites sharing one lit material stay in one batch.
+Official ExoJS extension for 2D lighting. Lights are scene nodes, so a torch can be parented to the player and follow it without manual synchronization. Choose forward lighting inside the sprite shader, a shadowed screen-space lightmap, or radiance cascades that transport light through the scene.
 
 ## Installation
 
@@ -12,7 +12,7 @@ npm install @codexo/exojs @codexo/exojs-lighting
 
 ## What this package provides
 
-- `PointLight`, `SpotLight` - scene nodes that emit rather than draw. Position comes from the node's transform, a spot's cone points along its rotation, and every field is an ordinary property, so the engine's tweens animate a light with no lighting-specific animation concept.
+- `PointLight`, `SpotLight`, `LineLight`, `SunLight` - scene nodes that emit rather than draw. Position and direction come from the node's transform, and every field is an ordinary property, so the engine's tweens animate a light with no lighting-specific animation concept.
 - `ForwardLighting`, `LightmapLighting`, `RadianceLighting` - the three systems: each collects the registered lights, carries the ambient term, and shades the frame its own way. They are alternatives rather than layers, they register on a `SystemRegistry` like any other system, and `Lighting` is the base they share, for a type that takes any of them.
 - `LitMaterial` - a `SpriteMaterial` (GLSL + WGSL) that shades a sprite against those lights. Normals are optional: without them the surface is lit as a plane rather than left black.
 - `NormalMap`, `AlphaNormals` - where a material's surface normals come from. `new NormalMap(texture)` binds an authored tangent-space map, `new AlphaNormals(texture)` derives one from the texture's own silhouette; `NormalSource` is an interface, so a source of your own is a valid argument without this package knowing about it.
@@ -98,9 +98,9 @@ What else the transport carries:
 
 One limit is worth knowing before a bright lamp goes in the middle of the picture. Close to a source - within roughly five times its own size - the chain is resolving that source with the few directions the coarsest levels have, and the source's own disc is rasterised at the light field's resolution. Moving the lamp by less than a texel therefore redistributes light there in a way the merge does not smooth over: around a tenth of the arriving brightness per quarter texel, which reads as a shimmer on the lamp's own halo rather than anywhere it lights. Past that radius it settles to within what eight bits can even express. It is a property of the transport rather than of a particular scene.
 
-`lightmap` needs the application, because it works on the frame the application drew: it installs its passes in `app.framePasses` and removes them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
+The two frame-lighting renderers need the application because they work on the frame it drew: they install their passes in `app.framePasses` and remove them on `destroy()`. `lightResolution` (default `0.5`) sets the light target's density - light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill.
 
-`lighting.debug = 'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's colours in the way; `lighting.debug = 'normals'` shows the prepass normals; `lighting.debug = 'occluders'` draws the silhouettes the sources collected, over the shaded scene; and `lighting.debug = 'mask'` shows those same edges rasterised into a target of their own at the light field's resolution, widened so none can fall between two texels. The mask costs nothing unless you ask for it - it is the input a GPU-resident occluder field would march, and today the debug view is its only reader.
+`lighting.debug = 'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's colours in the way; `lighting.debug = 'normals'` shows the prepass normals; `lighting.debug = 'occluders'` draws the silhouettes the sources collected over the shaded scene; and `lighting.debug = 'mask'` shows those same edges rasterised into a target of their own at the light field's resolution, widened so none can fall between two texels. `RadianceLighting` reads that mask while tracing raster occluders, and the optional GPU shadow-row filler reads it under lightmap lighting. Vector-only radiance and the default CPU shadow-row builder skip the mask unless its debug view is active.
 
 The `lightmap` light target is `rgba16f`, so two lights overlapping add up past `1.0` instead of saturating to white, and a filter over the composite has something above the clipping point to work with. A WebGL2 context without `EXT_color_buffer_float` cannot render into one; there the target is `rgba8` and `lighting.hdr` reports `false`. The picture is still correct - it clips earlier, and a bloom keyed on a threshold near `1.0` finds little to bloom.
 
@@ -159,7 +159,7 @@ There is no `castsShadow` flag, in this package or in the core. A flag on a draw
 
 Every occluder source and every normal source is a class of its own, exported by name, and nothing gathers them into a namespace object. That is the reason: reaching one property of such an object keeps the whole of it, so a physics-only project would carry the marching-squares tracer, the alpha readback and the tile boundary walker it never runs.
 
-Every renderer splits this way, because each is a class a project imports or does not. The package as a whole is 30.3 KB gzip; a project on `LightmapLighting` alone uses 12.1 KB, and one on `ForwardLighting` alone 4.0 KB. All three figures are budgeted in CI.
+Every renderer splits this way, because each is a class a project imports or does not. CI keeps the complete package below 34 KB gzip, a lightmap-only import below 14 KB, and a forward-only import below 5 KB.
 
 ### Light shapes
 
@@ -272,23 +272,23 @@ It is a live property (`material.emissive = 0.5`), so a pulsing forge is a tween
 | ------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Point and cone lights on sprites            | yes, WebGL2 and WebGPU                                                              |
 | Lights as scene nodes (parenting, tweens)   | yes                                                                                 |
-| Lights per material                         | `forward`: `maxLights` (default 64); `lightmap`: uncapped                           |
-| Ambient term                                | yes, carried in the light texture                                                   |
+| Light count                                 | `forward`: `maxLights` (default 64); `lightmap` and `radiance`: uncapped            |
+| Ambient term                                | yes                                                                                 |
 | Emissive surfaces                           | `forward`, on `LitMaterial`; `radiance` re-emits from lit occluders (`bounce`)      |
 | Normal maps                                 | `forward`: one per material; `lightmap`: per registered drawable                    |
 | Rotation / flip aware normals               | yes, via the instance's local-to-world basis                                        |
 | Extra render passes or draw calls           | `forward`: none; `lightmap`: two; `radiance`: four to nine; a `post` chain adds one |
-| Soft shadows from occluder sources          | `lightmap` only, WebGL2 and WebGPU                                                  |
+| Soft shadows from occluder sources          | `lightmap` and `radiance`, WebGL2 and WebGPU                                        |
 | Overbright light accumulation               | `lightmap`: `rgba16f`, `rgba8` where floats are not renderable                      |
 | Shadows from physics, tilemaps, alpha, mesh | yes, one occluder class per source                                                  |
-| Filters over the shaded frame (`post`)      | yes, in either renderer, with `app`                                                 |
+| Filters over the shaded frame (`post`)      | yes, in any renderer constructed with `app`                                         |
 | Light cookies                               | `lightmap`, one draw per distinct cookie                                            |
 | Line lights (capsule falloff)               | yes; `forward` approximates one as a point light                                    |
 | Sun lights (parallel shadows)               | `lightmap`; `radiance` as the sky every open ray ends in                            |
 | Radiance cascades (propagating light)       | `radiance`, WebGL2 and WebGPU, opt-in                                               |
 | Bounced light off lit surfaces              | `radiance`, one frame late, from lit occluders                                      |
 | Deferred (G-buffer) path                    | no                                                                                  |
-| Lit meshes, text, particles, tilemap layers | no - `SpriteMaterial` targets sprites                                               |
+| Lit meshes, text, particles, tilemap layers | `forward`: no; `lightmap` and `radiance`: yes, as part of the composed frame        |
 
 ## Cost
 
@@ -296,13 +296,12 @@ Forward lighting costs `fragments x active lights`. With everything on screen li
 
 ## Core compatibility
 
-| `@codexo/exojs-lighting` | `@codexo/exojs` |
-| ------------------------ | --------------- |
-| 0.16.x                   | 0.16.x          |
+This package follows the Core lockstep release line and declares the compatible `@codexo/exojs` minor as a peer dependency. Install matching package versions.
 
 ## Links
 
-- [API reference](https://exojs.dev/api/exojs-lighting)
+- [Lighting guide](https://exoridus.github.io/ExoJS/en/guide/)
+- [API reference](https://exoridus.github.io/ExoJS/en/api/)
 
 ## License
 

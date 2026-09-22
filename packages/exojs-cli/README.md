@@ -1,9 +1,9 @@
 # @codexo/exojs-cli
 
-Command line tools for ExoJS projects. Run it with `npx`; there is nothing to install and nothing pinned to an engine version.
+Command line tools for ExoJS projects. Run the package with `npx`; there is nothing to install permanently and nothing pinned to an engine version.
 
 ```sh
-npx exo --help
+npx --package @codexo/exojs-cli exo --help
 ```
 
 ## `exo serve [dir]`
@@ -15,9 +15,9 @@ Serves an already-built app over HTTP. It is a file server, not a toolchain: not
 - A fallback to `index.html` for a path that matches no file, so client-side routes resolve.
 
 ```sh
-npx exo serve dist --port 8080
-npx exo serve dist --no-spa
-npx exo serve dist --no-cross-origin-isolation   # for embedded third-party content
+npx --package @codexo/exojs-cli exo serve dist --port 8080
+npx --package @codexo/exojs-cli exo serve dist --no-spa
+npx --package @codexo/exojs-cli exo serve dist --no-cross-origin-isolation   # for embedded third-party content
 ```
 
 ## `exo create [name]`
@@ -25,7 +25,7 @@ npx exo serve dist --no-cross-origin-isolation   # for embedded third-party cont
 Scaffolds a new app. Identical to `npm create exo-app`: both run the same scaffolder over the same templates.
 
 ```sh
-npx exo create my-game --template game-starter
+npx --package @codexo/exojs-cli exo create my-game --template game-starter
 ```
 
 ## `exo doctor [dir]`
@@ -33,7 +33,7 @@ npx exo create my-game --template game-starter
 Checks whether an installed project can run what it asks for: the Node version `@codexo/exojs` declares, a single package manager, one version line across the engine and its extensions, and browser targets that can reach WebGL2 and WebGPU. One line per check, with a command for each failure.
 
 ```sh
-npx exo doctor
+npx --package @codexo/exojs-cli exo doctor
 ```
 
 ## `exo assets pack <pack-description> [--manifest <path>]`
@@ -52,7 +52,7 @@ Packs the assets a JSON pack description lists into one `.exoa` container, which
 ```
 
 ```sh
-npx exo assets pack assets/level1.json
+npx --package @codexo/exojs-cli exo assets pack assets/level1.json
 ```
 
 `source` is the logical path the entry stands in for - the same string a network load would use, so a packed asset and a loose one are one identity. `file` is where the bytes are read from at pack time. Every path inside the description - `output` included - resolves against the description's own directory, which is why the example above writes into `dist/` from a description that lives in `assets/`.
@@ -62,7 +62,7 @@ The container is compressed in blocks that span several assets, so compression s
 With `--manifest <path>`, the pack is written next to `output` under a content-addressed name (`level1.<hash>.exoa`) and the asset manifest at `<path>` is created or updated to point at it. Unlike the paths inside the description, `--manifest` resolves against the current directory, and the pack has to land inside the manifest's own directory - here both are `dist/`:
 
 ```sh
-npx exo assets pack assets/level1.json --manifest dist/assets.json
+npx --package @codexo/exojs-cli exo assets pack assets/level1.json --manifest dist/assets.json
 ```
 
 A pack file named after its own hash changes its URL exactly when its bytes change, so it can be served with an immutable cache lifetime, and the manifest is the one URL a client has to re-read. Packing each pack in its own invocation builds one manifest holding all of them; the pack is named after the description's optional `"name"`, or after the `output` file's stem. A pack file that a re-pack replaces is left on disk, because a deployment still serving the previous manifest is still handing out that name. The engine reads the manifest with `loader.loadManifest(url)` and loads a pack with `loader.loadContainer(manifest.pack('level1'))`.

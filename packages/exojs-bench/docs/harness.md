@@ -199,30 +199,6 @@ Any run that narrows the matrix prints `SUBSET RUN — not a reportable comparis
 - **Never quote a median from a `hitching` row on its own**, and never quote a timing from an `exceeded` or `unavailable` cell: those statuses exist to record that the cell produced no trustworthy distribution.
 - **Structural counters travel better than timings.** `drawCalls` and `bufferUploads` are deterministic; a claim meant to survive a hardware change should be made about those.
 
-## Reference result: `scrolling-world` at 1M sprites
-
-A dated reference point, measured on **one** machine. It is not a hardware minimum, not a maximum capability, and not an FPS guarantee — it is a reproduction target: the same command on the same class of machine should land in the same neighbourhood, and a large deviation is worth investigating.
-
-- Date: 2026-08-15 · ExoJS 0.15.2
-- GPU: NVIDIA GeForce RTX 5070 Ti · headless Chromium via Playwright
-- Cell: `engine=exojs config=current archetype=scrolling-world nodes=1000000` — 1 000 000 static sprites laid out over 4x the viewport's area with a moving camera, 40 warmup frames, 30 timed frames
-
-| backend | CPU median |  CPU p95 | frame median | frame p95 | draw calls / frame |
-| ------- | ---------: | -------: | -----------: | --------: | -----------------: |
-| WebGL2  |   0.402 ms | 10.08 ms |     0.330 ms |   1.17 ms |                  1 |
-| WebGPU  |   0.380 ms | 10.45 ms |      2.98 ms |   4.66 ms |                  1 |
-
-Reading notes, in the order they matter:
-
-- **CPU p95 is the headline, and it is a CPU number.** 10.08 ms is the 95th-percentile time the engine spent in the render path on the CPU, i.e. the second-worst of 30 timed frames. It is neither GPU frame time nor a whole game frame.
-- **The two frame-time columns come from different instruments** — a hardware timer query on WebGL2, a queue-completion wall clock on WebGPU (see [Metrics](#metrics)) — and are not comparable 1:1 across the two rows.
-- **One draw call on both backends** is the structural fact behind the timings: the visible world is drawn as a single batched submission even while the camera moves. The table's per-frame `1` is derived. The report itself prints the window's raw total in that column — `drawCalls = 30` over 30 timed frames — with the note `structural counters did not divide evenly over 30 frame(s); raw totals reported`, which trips on this cell because a sibling counter (`bufferUploads`) has no whole-frame quotient. Divide the column by `timedFrames` when a cell carries that note.
-- **This is one workload.** `scrolling-world` is a deliberately extreme static world. Nothing here generalises to a million _animated_ sprites, to other archetypes, or to other hardware.
-
-For context on where those numbers came from: before the engine kept its renderable state persistent across camera movement, the same cell measured a CPU p95 of 203.14 ms on WebGL2 and 234.19 ms on WebGPU, and the WebGPU cell aborted at the harness watchdog after 26 frames instead of completing its timed window. The medians were already low then — only p95 showed the per-frame rebuild. That is the concrete reason this archetype is quoted on p95.
-
-Numbers produced by the engine's internal Node-side CPU stubs — isolated CPU-path measurements with no browser and no GPU, used while iterating on a change — are a different measurement entirely. They are not comparable with the table above and are never published as ExoJS performance figures.
-
 ## The two regression gates
 
 They guard different defect classes and are deliberately unlike each other.
@@ -246,11 +222,17 @@ Correctness assertions stay in the test suite, which is fast, CI-resident and ne
 A published claim is a ratio between two arms, and one run does not support one: the same code measured twice on this machine moved a physics cell's median by 2.5x with byte-identical contact counts behind both runs, which was enough to reverse seven verdicts. That spread was observed while physics still ran in the driver's Node process; it has not been re-derived since the matrix moved into the browser, so read it as the reason for pooling rather than as this harness's current noise figure. So `--rendering` and `--physics` are **repeatable, once per run**, and the runs are pooled:
 
 ```sh
-pnpm --filter @codexo/exojs-bench bench --out run-1
-pnpm --filter @codexo/exojs-bench bench --out run-2
-pnpm --filter @codexo/exojs-bench bench --out run-3
-pnpm --filter @codexo/exojs-bench bench:compare \
-  --rendering run-1/results.json --rendering run-2/results.json --rendering run-3/results.json
+pnpm --filter @codexo/exojs-bench bench:reference --out run-1
+pnpm --filter @codexo/exojs-bench bench:reference --out run-2
+pnpm --filter @codexo/exojs-bench bench:reference --out run-3
+
+pnpm --filter @codexo/exojs-bench bench:compare --profile \
+  --rendering run-1/rendering/results.json \
+  --rendering run-2/rendering/results.json \
+  --rendering run-3/rendering/results.json \
+  --physics run-1/physics/results.json \
+  --physics run-2/physics/results.json \
+  --physics run-3/physics/results.json
 ```
 
 A single path still behaves exactly as it always did. The runs must come from **separate invocations**, each with its own `--out` directory: repeating a matrix inside one process shares JIT and heap state across the repetitions and measures the same warm state several times, which is the effect the repetition exists to expose.
@@ -277,11 +259,11 @@ Rules the generator enforces rather than merely intends:
 
 ### Machine profiles
 
-`bench:compare --profile` additionally writes the comparison as JSON into `results/`, one file per machine, named `<machine>-<os>-<major>[-beta]-<browser>.json` after the provenance — the GPU or, where the browser reports a constant instead of one, the CPU model; the operating system with its major version and pre-release marker; and the browser. The name is derived from the stamps, so re-measuring a machine overwrites its file and a different machine can only arrive as a new one. Each file carries every pooled run's provenance and a signature over its own contents, and `verify:bench-results` (in the `lint` gate group) rejects a file that pools fewer than three runs, or whose signature does not recompute - which is what keeps a typed number and a one-run claim out. See [`results/README.md`](./results/README.md).
+`bench:compare --profile` additionally writes the comparison as JSON into `results/`, one file per machine, named `<machine>-<os>-<major>[-beta]-<browser>.json` after the provenance — the GPU or, where the browser reports a constant instead of one, the CPU model; the operating system with its major version and pre-release marker; and the browser. The name is derived from the stamps, so re-measuring a machine overwrites its file and a different machine can only arrive as a new one. Each file carries every pooled run's provenance and a signature over its own contents, and `verify:bench-results` (in the `lint` gate group) rejects a file that pools fewer than three runs, or whose signature does not recompute - which is what keeps a typed number and a one-run claim out. See [`results/README.md`](../results/README.md).
 
 ## Cross-library numbers
 
-The harness runs competitor arms, and no cross-library figure is published in the ExoJS documentation. Publishing one requires all of: a frozen version of every library involved, an identical scenario across arms, identical browser and hardware conditions, the harness for each arm published alongside the numbers, the caveats stated with the result, and a defined process for re-measuring when any of those move. Until that exists, a cross-library number measured here is an engineering signal for the maintainers, not a claim.
+Cross-library figures are published only from the signed machine profiles in `results/`. Those profiles pin every library involved, run identical scenarios on one browser and machine, preserve the harness and caveats beside the values, and can be regenerated when any input changes. A number from an ad hoc or narrowed run is an engineering signal for the maintainers, not a published claim.
 
 ## What runs in CI, and what does not
 

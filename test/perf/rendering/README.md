@@ -39,7 +39,7 @@ pnpm perf renderers:browser
 
 ## Metric tiers
 
-- **Tier A — structural (deterministic, asserted in CI):** draw calls, batches, instances, visible/culled nodes, texture binds, buffer uploads, uploaded bytes, transform rows/uploads, geometry rebuilds. Identical across machines and across WebGL2/WebGPU (same plan grouping, instance formats, flush rules). Includes upload-coalescing gates: after RenderPlanPlayer's Phase 1 pre-pass, N cyclic-texture flushes produce at most 1 `texSubImage2D` instead of O(N).
+- **Tier A — structural (deterministic, asserted in CI):** draw calls, batches, instances, visible/culled nodes, texture binds, buffer uploads, uploaded bytes, transform rows/uploads, and geometry rebuilds from the exercised WebGL2 path. Identical across machines because the driver is fake, not because backend-specific commands are assumed to match. Includes upload-coalescing gates: after RenderPlanPlayer's Phase 1 pre-pass, N cyclic-texture flushes produce at most 1 `texSubImage2D` instead of O(N).
 - **Tier B — CPU submission timing (informational, never a CI gate):** median / p95 wall-clock of `render → flush` over many frames against the fake context. This is **CPU submission only** — it excludes GPU execution and real-driver upload cost. Absolute values are machine-specific; use deltas between commits.
 - **Tier C — browser/GPU timing (opt-in):** real `requestAnimationFrame` / timer-query timing in the browser lanes. Not part of normal CI.
 

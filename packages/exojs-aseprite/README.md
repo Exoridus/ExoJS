@@ -26,7 +26,7 @@ Register the extension, load an Aseprite JSON export, and create an animated spr
 
 ```ts
 import { Application, Asset } from '@codexo/exojs';
-import { AsepriteSheet, asepriteExtension } from '@codexo/exojs-aseprite';
+import { asepriteExtension } from '@codexo/exojs-aseprite';
 
 const app = new Application({ extensions: [asepriteExtension] });
 
@@ -45,13 +45,12 @@ The packed texture is loaded via the Loader and stays in the Loader cache. `Asep
 
 ## Core compatibility
 
-| `@codexo/exojs-aseprite` | `@codexo/exojs` |
-| ------------------------ | --------------- |
-| 0.14.x                   | 0.14.x          |
+This package follows the Core lockstep release line and declares the compatible `@codexo/exojs` minor as a peer dependency. Install matching package versions.
 
 ## Links
 
-- [API reference](https://exojs.dev/api/exojs-aseprite)
+- [Aseprite guide](https://exoridus.github.io/ExoJS/en/guide/assets/aseprite/)
+- [API reference](https://exoridus.github.io/ExoJS/en/api/)
 - [Aseprite](https://www.aseprite.org)
 
 ## License

@@ -29,7 +29,7 @@ Register the extension and load a `.ldtk` world. One extension enables **both** 
 
 ```ts
 import { Application } from '@codexo/exojs';
-import { LdtkMap, TileMapNode, ldtkExtension } from '@codexo/exojs-ldtk';
+import { TileMapNode, ldtkExtension } from '@codexo/exojs-ldtk';
 
 const app = new Application({ extensions: [ldtkExtension] });
 
@@ -69,13 +69,12 @@ Tileset textures are loaded via the Loader and stay in the Loader cache. `LdtkMa
 
 ## Core compatibility
 
-| `@codexo/exojs-ldtk` | `@codexo/exojs` |
-| -------------------- | --------------- |
-| 0.14.x               | 0.14.x          |
+This package follows the Core lockstep release line. Its `@codexo/exojs` and `@codexo/exojs-tilemap` peer dependencies require the matching minor release.
 
 ## Links
 
-- [API reference](https://exojs.dev/api/exojs-ldtk)
+- [LDtk guide](https://exoridus.github.io/ExoJS/en/guide/assets/ldtk/)
+- [API reference](https://exoridus.github.io/ExoJS/en/api/)
 - [LDtk level editor](https://ldtk.io)
 
 ## License

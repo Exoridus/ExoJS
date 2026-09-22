@@ -33,7 +33,7 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 Register the extension, load a `.tmj` map into a generic runtime `TileMap`, and render it. One extension enables **both** loading and rendering — `tiledExtension` depends on `tilemapExtension`, so the tile chunk renderer bindings are materialised automatically (no manual `tilemapExtension` registration):
 
 ```ts
-import { Application } from '@codexo/exojs';
+import { Application, Asset } from '@codexo/exojs';
 import { TileMap, TileMapNode, tiledExtension } from '@codexo/exojs-tiled';
 
 const app = new Application({ extensions: [tiledExtension] });
@@ -51,7 +51,7 @@ app.scenes.root.addChild(new TileMapNode(map));
 Load the fully resolved Tiled source model and convert it manually:
 
 ```ts
-import { TiledMap } from '@codexo/exojs-tiled';
+import { Asset } from '@codexo/exojs';
 
 const source = await app.loader.load(Asset.type('tiledSource', 'maps/world.tmj'));
 const map = source.toTileMap();
@@ -151,13 +151,12 @@ Textures for tileset images are loaded via the Loader and remain in the Loader c
 
 ## Core compatibility
 
-| `@codexo/exojs-tiled` | `@codexo/exojs` |
-| --------------------- | --------------- |
-| 0.13.x                | 0.13.x          |
+This package follows the Core lockstep release line. Its `@codexo/exojs` and `@codexo/exojs-tilemap` peer dependencies require the matching minor release.
 
 ## Links
 
-- [API reference](https://exojs.dev/api/exojs-tiled)
+- [Tiled maps guide](https://exoridus.github.io/ExoJS/en/guide/assets/tiled-maps/)
+- [API reference](https://exoridus.github.io/ExoJS/en/api/)
 - [Tiled map editor](https://mapeditor.org)
 
 ## License

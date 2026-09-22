@@ -11,239 +11,202 @@
 [![Coverage](https://img.shields.io/codecov/c/github/Exoridus/ExoJS?style=for-the-badge&logo=codecov&logoColor=fff&label=Coverage)](https://app.codecov.io/gh/Exoridus/ExoJS)
 [![License](https://img.shields.io/github/license/Exoridus/ExoJS?style=for-the-badge&color=44cc11)](https://github.com/Exoridus/ExoJS/blob/main/LICENSE)
 
-A TypeScript-first 2D engine for games and interactive apps. Explicit scene graph, WebGPU/WebGL2 rendering, native physics, spatial audio, and a strict type system — measured and verified, not just claimed.
+A TypeScript-first browser 2D engine for games and interactive apps.
 
-**[Guide](https://exoridus.github.io/ExoJS/en/guide/)** · **[API Reference](https://exoridus.github.io/ExoJS/en/api/)** · **[Playground](https://exoridus.github.io/ExoJS/en/playground/)** · **[Benchmarks](https://exoridus.github.io/ExoJS/en/benchmarks/)**
+**[Try the playground](https://exoridus.github.io/ExoJS/en/playground/)** · **[Read the guide](https://exoridus.github.io/ExoJS/en/guide/)** · **[Browse the API](https://exoridus.github.io/ExoJS/en/api/)**
 
 </div>
 
 <img src="https://raw.githubusercontent.com/Exoridus/ExoJS/main/site/public/brand/companion-hero.webp" alt="The ExoJS companion, a small waving robot" width="150" align="right">
 
-> **Pre-1.0.** The public API is under active design — minor versions may include breaking changes. Pin exact versions in downstream projects. `1.0.0` marks the first stable API contract.
+ExoJS combines an explicit scene graph with WebGPU/WebGL2 rendering, physics, audio, UI, assets, serialization, and focused extension packages. It is built as one coherent runtime rather than a renderer surrounded by unrelated integrations.
 
-## Packages
+> **Pre-1.0:** the public API is still being refined, and minor releases may contain breaking changes. Pin exact versions in downstream projects. `1.0.0` will mark the first stable API contract.
 
-| Package                                                                                                       | Description                                                            |
-| ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [`@codexo/exojs`](https://www.npmjs.com/package/@codexo/exojs)                                                | Core runtime — scene graph, rendering, audio, UI, serialization        |
-| [`@codexo/exojs-physics`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-physics)                 | Native 2D physics — shapes, constraints, TGS-Soft solver               |
-| [`@codexo/exojs-particles`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-particles)             | GPU-driven particles (WebGPU compute) with CPU fallback                |
-| [`@codexo/exojs-tilemap`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-tilemap)                 | Format-independent tilemap runtime and object layers                   |
-| [`@codexo/exojs-tiled`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-tiled)                     | Tiled JSON adapter and scene-graph conversion                          |
-| [`@codexo/exojs-tilemap-physics`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-tilemap-physics) | Static physics colliders from tilemap collision geometry               |
-| [`@codexo/exojs-aseprite`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-aseprite)               | Aseprite adapter — sprite sheets, tags, frame direction/repeat, slices |
-| [`@codexo/exojs-ldtk`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-ldtk)                       | LDtk adapter — multi-world levels, entities, structured field values   |
-| [`@codexo/exojs-lighting`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-lighting)               | Forward, normal-mapped 2D point lighting inside the sprite batch       |
-| [`@codexo/exojs-pathfinding`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-pathfinding)         | A\* with jump-point search over weighted grids and waypoint graphs     |
-| [`@codexo/exojs-audio-fx`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-audio-fx)               | Audio effects — biquad filters, analyser, beat detection, worklets     |
-| [`@codexo/exojs-react`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-react)                     | React bindings — run an ExoJS `Application` inside React components    |
+## Why ExoJS
 
-## Features
+|                                    |                                                                                                                                                     |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TypeScript is the design input** | Strict types, discoverable APIs, typed assets and extension contracts, with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` throughout. |
+| **Two real graphics backends**     | WebGPU-first rendering with automatic WebGL2 fallback, backend parity tests, custom GLSL/WGSL materials, render targets, filters, and readback.     |
+| **A complete 2D runtime**          | Scenes, cameras, input, UI, text, audio, persistence, serialization, coroutines, and deterministic lifetime management ship together.               |
+| **Serious optional systems**       | Native rigid-body physics, GPU particles, tilemaps, lighting, pathfinding, React bindings, and format adapters stay opt-in and tree-shakeable.      |
+| **Explicit ownership**             | Application-scoped managers, local extension descriptors, and `Destroyable`/`DisposalScope` lifetimes avoid hidden global state.                    |
+| **Performance is reproducible**    | Structural CI gates and browser/GPU benchmark profiles record the workload, hardware, browser, versions, medians, p95s, and measurement spread.     |
 
-**Rendering**
+## Start in 30 seconds
 
-- WebGPU-first with automatic WebGL2 fallback; force either backend with one option
-- Drawables: `Sprite`, `AnimatedSprite`, `NineSliceSprite`, `RepeatingSprite`, `Graphics`, `Text` (SDF), `BitmapText`, `Video`
-- Rendering composition: `RenderTexture`, `RenderPipeline`, filter chains, visual masks, cache-as-bitmap
-- Immediate-mode rendering: one-off `drawGeometry` and instanced `RenderBatch` collapsing to a single draw call
-- Linear and radial gradients, pixel snapping, view/camera helpers (`follow`, shake, zoom, bounds clamp)
-- Custom sprite materials (`SpriteMaterial`) with your own GLSL/WGSL fragment stage, plus built-in `DropShadowFilter`, `DisplacementFilter`, colour matrix and blur filters
-- `@codexo/exojs-lighting`: normal-mapped point lights shaded in the sprite fragment stage — no extra pass, no extra draw call
-- Render stats with GPU memory accounting (`gpuMemoryBytes`, texture/buffer upload bytes)
-
-**Text**
-
-- SDF text with Unicode-safe layout (`Intl.Segmenter` graphemes, bidi runs, soft wrapping) and browser-native shaping for complex scripts
-- Multi-stop gradients with an angle, `oblique`/`small-caps` variants, underline and strikethrough, `maxLines` with a configurable ellipsis, `textTransform`, `tabSize`
-- `BitmapText` for prebuilt atlases; both text kinds batch with sprites
-
-**Scene & UI**
-
-- `Application`, `Scene`, `SceneDirector` — one active scene with `change`/`restore`/`preload`/`unload` navigation, `pause`/`resume`, and fade, slide, or cross-fade transitions (or your own `SceneTransition`)
-- `scene.ui` — screen-fixed widget layer with `Label`, `Panel`, `Button`, `ProgressBar`, `Stack`, `ScrollContainer`, `Tooltip`, and anchoring
-- Keyboard focus through `app.interaction` — `focus`, `blur`, `focusNext`/`focusPrevious` Tab traversal, and scoped focus traps for modals
-- Exact picking: rotated nodes hit-test as oriented boxes, or set a local `hitArea` (`Circle`, `Ellipse`, `Polygon`, `Rectangle`) for round buttons and irregular shapes
-- `scene.coroutines` — a `CoroutineSystem` that hands a generator whatever the frame has left after the flush, so world generation or batch pathfinding spreads over frames with progress and cancellation instead of blocking one or needing an `async` update
-- Write your own `SceneTransition` against the same conformance harness the built-in fade, slide and cross-fade use
-
-**Physics** (`@codexo/exojs-physics`)
-
-- Circles, boxes, capsules, and convex polygons; static, kinematic, and dynamic bodies
-- SAP broadphase, manifold narrow-phase, warm-started TGS-Soft solver (sub-stepped, stable to 20+ box stacks)
-- Contact graph, collision events, spatial queries; allocation-free per step (V8-sampler verified)
-- Sleeping islands, contact modifiers, joints; measured against matter.js, planck.js and Rapier in `packages/exojs-bench`
-- Scene-graph binding and a `/debug` draw subpath
-
-**Pathfinding** (`@codexo/exojs-pathfinding`)
-
-- One search core — A\* with jump-point pruning — over weighted grids (top-down worlds) and waypoint graphs (platformers, abstract graphs)
-- Deterministic and allocation-free per query; plain logic with no scene node, renderer or registration step
-
-**Audio**
-
-- Voice capability matrix across `Sound`, `AudioStream`, and `AudioGenerator`
-- Spatial panning, audio sprites, frequency and waveform analysis, `BiquadEffect` filters
-- `@codexo/exojs-audio-fx`: `AudioAnalyser`, `BeatDetector`, worklets, and DSP helpers
-
-**Assets & Storage**
-
-- Typed `Loader` with a declarative asset catalog (`Assets.from`, `Asset.type`, `defineAsset`) and a de-duplicating `LoadingQueue`
-- Binary asset containers (`loader.loadContainer`) for bundled distribution
-- Key-value persistence: `WebStorageStore` (localStorage/sessionStorage), `IndexedDbKeyValueStore` (structured-clone, binary-safe), `MemoryStore` (tests/ephemeral)
-
-**Serialization**
-
-- `Scene.serialize` / `deserialize` captures scene structure — nodes, drawables, UI, tilemap
-- `SerializationRegistry` and `Prefab` for templates; pairs with any `KeyValueStore` for save-slot persistence
-
-**Architecture**
-
-- `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` across the full codebase — zero `as any`, zero `ts-ignore`
-- Ordered `SystemRegistry` (`app.systems`, `scene.systems`) with deterministic tick bands
-- Deterministic disposal via `Destroyable` / `DisposalScope`; all managers are app-owned, not process singletons
-
-## Getting Started
-
-Scaffold a new project with one command:
+Create a project and choose a starter interactively:
 
 ```bash
 npm create exo-app@latest my-game
-```
-
-Or pick a template explicitly:
-
-```bash
-npm create exo-app@latest my-game -- --template minimal
-npm create exo-app@latest my-game -- --template game-starter
-npm create exo-app@latest my-game -- --template audio-reactive
-```
-
-Then:
-
-```bash
 cd my-game
 npm install
 npm run dev
 ```
 
-## Installation
+Or select a template directly:
 
 ```bash
-npm install @codexo/exojs
+npm create exo-app@latest my-game -- --template minimal
+npm create exo-app@latest my-game -- --template platformer
+npm create exo-app@latest my-game -- --template top-down
 ```
 
-ExoJS ships as ESM — use `import` syntax with a modern bundler or runtime. Prebuilt IIFE bundles are included for CDN and script-tag usage: `dist/exo.iife.js` (the core) and `dist/exo.full.iife.js` (core plus every extension except React), both on the global `Exo`. Optional packages install independently — add only what your project needs:
-
-```bash
-npm install @codexo/exojs-physics
-npm install @codexo/exojs-particles
-npm install @codexo/exojs-tilemap @codexo/exojs-tiled @codexo/exojs-tilemap-physics
-npm install @codexo/exojs-aseprite @codexo/exojs-ldtk
-npm install @codexo/exojs-lighting @codexo/exojs-pathfinding
-npm install @codexo/exojs-audio-fx
-npm install @codexo/exojs-react
-```
-
-## Quickstart
+The smallest application is still ordinary TypeScript:
 
 ```ts
 import { Application, Color, Graphics, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 
-class HelloScene extends Scene {
+class MainScene extends Scene {
   private readonly box = new Graphics();
 
-  override init(): void {
+  public constructor() {
+    super();
+
     this.box.fillColor = Color.white;
-    this.box.drawRectangle(-32, -32, 64, 64);
-    this.box.setPosition(this.app.width / 2, this.app.height / 2);
+    this.box.drawRectangle(-40, -40, 80, 80);
+    this.box.setPosition(400, 300);
     this.addChild(this.box);
   }
 
-  override update(delta: Seconds): void {
-    this.box.rotate(delta * 45);
+  public override update(delta: Seconds): void {
+    this.box.rotate(delta * 90);
   }
 
-  override draw(context: RenderingContext): void {
+  public override draw(context: RenderingContext): void {
     context.render(this.root);
   }
 }
 
 const app = new Application({
-  scenes: { HelloScene },
-  canvas: { width: 800, height: 600, mount: document.body },
-  clearColor: Color.black,
+  scenes: { MainScene },
+  canvas: { width: 800, height: 600, mount: 'body' },
+  clearColor: new Color(0x6495ed),
 });
 
-await app.start(HelloScene);
+await app.start(MainScene);
 ```
 
-See the [Guide](https://exoridus.github.io/ExoJS/en/guide/) for physics, audio, UI, and more, or browse the [live examples](https://exoridus.github.io/ExoJS/).
+Continue with the [guide](https://exoridus.github.io/ExoJS/en/guide/), inspect runnable code in the [playground](https://exoridus.github.io/ExoJS/en/playground/), or look up a symbol in the [API reference](https://exoridus.github.io/ExoJS/en/api/).
+
+## What you can build
+
+### Rendering and presentation
+
+- Sprites, animated sprites, nine-slice and repeating sprites, immediate geometry, instanced batches, SDF text, bitmap text, and video.
+- WebGPU and WebGL2 backends selected automatically or explicitly through `ApplicationOptions.backend`.
+- Render textures, retained render plans, filter chains, visual masks, cache-as-bitmap, custom sprite materials, and custom renderers through the public renderer SDK.
+- Linear and radial gradients, pixel snapping, blend modes, frame passes, asynchronous pixel readback, and render statistics including GPU memory and upload accounting.
+- Forward, shadowed lightmap, and radiance-cascade lighting through `@codexo/exojs-lighting`, with normal maps, multiple light shapes, cookies, and reusable occluder sources.
+
+### Worlds and gameplay
+
+- Scene navigation with preload/unload, pause/resume, and built-in or custom transitions.
+- Cameras with follow, shake, zoom, bounds clamping, and multiple views.
+- Keyboard, pointer, touch, and gamepad input with action bindings, focus traversal, hit areas, and modal focus scopes.
+- Native 2D rigid-body physics with continuous collision, joints, sensors, sleeping islands, contact modification, queries, and a debug overlay.
+- Weighted-grid and waypoint-graph pathfinding, streamed tilemap worlds, Tiled and LDtk adapters, and Aseprite animation import.
+
+### Player experience and application state
+
+- Screen-fixed UI widgets, themes, anchoring, scrolling, tooltips, progress bars, and labels.
+- Spatial audio, audio sprites, generated and streamed sources, buses, effects, analysis, worklets, and beat detection.
+- Typed asset catalogs, deduplicated loading, scoped asset lifetimes, binary containers, and persistent key-value stores.
+- Scene serialization, prefabs, deterministic systems, tweens, signals, and frame-budgeted coroutines for long-running work.
+
+## Packages
+
+Install only the systems your project uses. Official runtime packages share the Core release line and declare compatible peer ranges.
+
+| Package                                                                                        | Purpose                                                                   |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [`@codexo/exojs`](https://www.npmjs.com/package/@codexo/exojs)                                 | Core scene, rendering, audio, UI, asset, and serialization runtime        |
+| [`@codexo/exojs-physics`](https://www.npmjs.com/package/@codexo/exojs-physics)                 | Native 2D rigid-body physics with a TGS-Soft solver                       |
+| [`@codexo/exojs-particles`](https://www.npmjs.com/package/@codexo/exojs-particles)             | GPU-compute particle simulation with a CPU fallback                       |
+| [`@codexo/exojs-tilemap`](https://www.npmjs.com/package/@codexo/exojs-tilemap)                 | Format-neutral tilemap runtime, streaming, object spawning, and rendering |
+| [`@codexo/exojs-tiled`](https://www.npmjs.com/package/@codexo/exojs-tiled)                     | Tiled JSON adapter                                                        |
+| [`@codexo/exojs-ldtk`](https://www.npmjs.com/package/@codexo/exojs-ldtk)                       | LDtk world and level adapter                                              |
+| [`@codexo/exojs-aseprite`](https://www.npmjs.com/package/@codexo/exojs-aseprite)               | Aseprite sprite-sheet and animation adapter                               |
+| [`@codexo/exojs-tilemap-physics`](https://www.npmjs.com/package/@codexo/exojs-tilemap-physics) | Static physics colliders generated from tilemap collision geometry        |
+| [`@codexo/exojs-lighting`](https://www.npmjs.com/package/@codexo/exojs-lighting)               | Forward, shadowed lightmap, and radiance-cascade 2D lighting              |
+| [`@codexo/exojs-pathfinding`](https://www.npmjs.com/package/@codexo/exojs-pathfinding)         | A* pathfinding over weighted grids and waypoint graphs                    |
+| [`@codexo/exojs-audio-fx`](https://www.npmjs.com/package/@codexo/exojs-audio-fx)               | Audio effects, worklets, analysis, and beat detection                     |
+| [`@codexo/exojs-react`](https://www.npmjs.com/package/@codexo/exojs-react)                     | React canvas hosting, scene composition, and hooks                        |
+
+Project tooling is available separately:
+
+| Package                                                                    | Purpose                                                        |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [`create-exo-app`](https://www.npmjs.com/package/create-exo-app)           | Interactive project scaffolding and maintained starters        |
+| [`@codexo/exojs-cli`](./packages/exojs-cli)                                | Static serving, project checks, scaffolding, and asset packs   |
+| [`@codexo/exojs-build`](https://www.npmjs.com/package/@codexo/exojs-build) | Vite/Rollup transforms for shaders, workers, and AudioWorklets |
+| [`@codexo/eslint-plugin-exojs`](./packages/eslint-plugin-exojs)            | Lifecycle and hot-path correctness rules for ExoJS projects    |
+
+## Installation and distribution
+
+```bash
+npm install @codexo/exojs
+```
+
+ExoJS is ESM-first and works with modern bundlers. Optional packages install independently, for example:
+
+```bash
+npm install @codexo/exojs @codexo/exojs-physics @codexo/exojs-lighting
+```
+
+Prebuilt script-tag bundles are also included: `dist/exo.iife.js` contains Core, while `dist/exo.full.iife.js` contains Core and the official runtime extensions except React. Both expose the `Exo` global. Minified variants are provided alongside them.
+
+## Measured performance
+
+ExoJS maintains two complementary kinds of performance evidence:
+
+- deterministic structural gates for draw calls, batches, binds, uploads, and other exact work counters;
+- real-browser comparison profiles for rendering and physics, with pinned competitors and stamped hardware, browser, workload, warmup, sample count, median, p95, and run-to-run spread.
+
+The numbers are deliberately not copied into this README because they change with the engine, competitor versions, browser, and reference machine. Read the [current published profiles](./packages/exojs-bench/results) and the [benchmark methodology](./packages/exojs-bench/docs/harness.md) together.
 
 ## Roadmap
 
-Directional work toward the `1.0.0` API freeze. Priorities may shift — nothing here is a release commitment.
+Work toward the `1.0.0` API freeze is directional, not a release commitment. Current longer-term areas include:
 
-- Backend selection by class (`backends: [WebGl2Backend]`) and compile-time defines for single-backend builds
-- Typed shader uniform blocks shared between GLSL and WGSL
-- `@codexo/exojs-cli` — `exo serve`, `exo create`, `exo doctor`, asset packing
-- Rich text with style spans and inline icons
-- Worker-backed work on the same `Coroutine` handle as `app.coroutines`
-- Post-processing passes (bloom, tone mapping, grading) on `RenderPipeline`
-- Platform adapters for Worker and headless runtimes
-- Final pre-1.0 API audit and stabilization pass
+- rich text with style spans and inline content;
+- worker-backed execution through the same coroutine ownership model;
+- platform adapters for Worker and headless runtimes;
+- the final public API audit and stabilization pass.
 
-## Benchmarks
+## Contributing
 
-ExoJS is measured against Pixi, Phaser and Excalibur for rendering, and against matter.js, planck and Rapier for physics, on one reference machine per release. On the current reference run:
-
-- Level with Pixi on plain sprite scaling, and 2x or better ahead of it on WebGPU filter chains.
-- About 7x behind Pixi on masked clipping — the widest rendering loss on that machine.
-- In physics, ahead of the pure-JS peers on a 1000-body box stack (roughly 3x over matter.js, 17x over planck) and behind Rapier's Rust/WASM solver on five of six scenes.
-
-The full matrix, the mechanism behind each row, the rows that were left out and the steps to reproduce all of it are on the [benchmarks page](https://exoridus.github.io/ExoJS/en/benchmarks/).
-
-## WebGPU and WebGL2
-
-`Application` auto-selects the best available backend. Force one when needed:
-
-```ts
-new Application({ backend: { type: 'webgpu' } });
-new Application({ backend: { type: 'webgl2' } });
-new Application({ backend: { type: 'auto' } }); // default
-```
-
-## Development
-
-Prerequisites: Node 24 (`.nvmrc`; `devEngines` in `package.json` refuses any other major) and pnpm (`packageManager` pins the version; with Corepack enabled, or any installed pnpm 10+, it switches itself).
+Development requires Node 24 and the pnpm version pinned in `package.json`.
 
 ```bash
-pnpm bootstrap:dev   # dependencies, git hooks, every build, the bench competitors, a Chromium
-pnpm doctor          # what is missing, and the command that fixes it
+pnpm bootstrap:dev
+pnpm doctor
 ```
 
-`pnpm bootstrap` alone is what CI runs: dependencies and the build tooling, nothing else. It installs with scripts disabled, so whether a clone ends up with git hooks depends on whether pnpm ran an install of its own first - and it builds nothing. `pnpm doctor` reports the actual state either way.
+`bootstrap:dev` installs dependencies and hooks, builds Core and every package, links benchmark competitors, installs Chromium, and reports anything still missing. During development, use the narrow command for the area you changed:
 
 ```bash
 pnpm typecheck
 pnpm lint
 pnpm test
-pnpm build:all       # core plus every extension package
-pnpm verify:package
-pnpm clean:artifacts # what a local test, benchmark or release run left behind
+pnpm build:all
+pnpm lanes
 ```
 
-Package-internal imports use Node `package.json#imports` subpath imports: `./X` for the same directory, `#dir/X` for any other path in the same package, and the public bare specifier (`@codexo/exojs`) across packages. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full import policy, per-package commands, and the shared `@codexo/exojs-config` tooling. Building the library requires TypeScript 6.
-
-This repository uses pnpm workspaces (`site/` is a workspace package). Use root-level commands as the source of truth — avoid running `pnpm install` inside `site/` directly:
-
-```bash
-pnpm bootstrap
-pnpm site:build
-pnpm site:build:api
-```
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for branch policy, imports, package boundaries, public API conventions, validation, and distribution rules.
 
 ## Links
 
+- GitHub Pages: <https://exoridus.github.io/ExoJS/>
+- Guide: <https://exoridus.github.io/ExoJS/en/guide/>
+- API reference: <https://exoridus.github.io/ExoJS/en/api/>
+- Playground: <https://exoridus.github.io/ExoJS/en/playground/>
 - Repository: <https://github.com/Exoridus/ExoJS>
+- Releases: <https://github.com/Exoridus/ExoJS/releases>
 - Issues: <https://github.com/Exoridus/ExoJS/issues>
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
+
+## License
+
+[MIT](LICENSE) © Codexo

@@ -12,25 +12,21 @@ This keeps source ownership outside the site framework while preserving the exis
 
 ## Local development
 
-```bash
-cd site
-pnpm install
-pnpm dev
-```
-
-Prerequisite for `vendor:sync:exo`: build the library once from repo root so `../dist` exists.
+Install the workspace and build the library once from the repository root so the site can sync `../dist` into its private vendor directory:
 
 ```bash
-cd ..
+pnpm bootstrap
 pnpm build
+pnpm --filter @codexo/exojs-examples dev
 ```
+
+Do not run a separate install inside `site/`; it is already a workspace package and uses the root lockfile.
 
 ## Build
 
 ```bash
-cd site
-pnpm build
-pnpm preview
+pnpm site:build
+pnpm --filter @codexo/exojs-examples preview
 ```
 
 ## Structure
