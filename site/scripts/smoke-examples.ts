@@ -83,6 +83,7 @@ const BLANK_FAILURE = 'canvas rendered but appears blank - one uniform color, no
  * WebGPU-adapter skip: the environment's limit, not the example's.
  */
 const SOFTWARE_RASTERISER_LIMITED: Readonly<Record<string, string>> = {
+  'lighting/radiance-rooms.js': 'moving full-resolution radiance cascades saturate a software-rasterised renderer; the harness cannot sample the page',
   'performance/backend-comparison.js':
     '2200 moving sprites plus the debug overlay saturate a software-rasterised main thread; the harness cannot reach the page',
 };
