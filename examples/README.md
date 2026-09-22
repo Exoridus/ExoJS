@@ -6,7 +6,7 @@ Framework-agnostic ExoJS example sources and shared assets.
 
 - `examples.json` — authoritative examples catalog used by the playground and guide pages
 - `assets/` — shared runtime assets (`audio/`, `font/`, `image/`, `json/`, `svg/`, `video/`)
-- `<chapter>/` — chapter-scoped example `.js` files
+- `<chapter>/` - chapter-scoped TypeScript sources and their generated `.js` runtime files
 - `shared/` — shared runtime helper and editor typings for playground preview execution
 
 ## Contract

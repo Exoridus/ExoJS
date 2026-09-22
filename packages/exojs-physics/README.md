@@ -15,7 +15,7 @@ npm install @codexo/exojs @codexo/exojs-physics
 ## Quick start
 
 ```ts
-import { Scene, Sprite, Vector, type Time } from '@codexo/exojs';
+import { Scene, type Seconds, Vector } from '@codexo/exojs';
 import { BoxShape, CircleShape, Collider, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 
 class GameScene extends Scene {
@@ -42,8 +42,8 @@ class GameScene extends Scene {
     });
   }
 
-  public override update(delta: Time): void {
-    this.world.step(delta.seconds); // fixed-step detection + events + binding
+  public override update(delta: Seconds): void {
+    this.world.step(delta); // fixed-step detection + events + binding
   }
 }
 ```

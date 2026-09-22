@@ -26,7 +26,7 @@ const colliders = new TileColliderStreamer(world, groundLayer);
 scene.systems.add({
   update: delta => {
     colliders.sync();
-    world.step(delta.seconds);
+    world.step(delta);
   },
 });
 ```
@@ -112,9 +112,7 @@ In `outline` mode the resolved material also decides what may share a boundary: 
 
 ## Core compatibility
 
-| `@codexo/exojs-tilemap-physics` | `@codexo/exojs` |
-| ------------------------------- | --------------- |
-| 0.15.x                          | 0.15.x          |
+This package follows the Core lockstep release line. Its Core, tilemap, and physics peer dependencies require the matching minor release.
 
 ## License
 

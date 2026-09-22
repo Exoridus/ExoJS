@@ -12,9 +12,7 @@ This package requires `@codexo/exojs` as a peer dependency. Both must be the sam
 
 ## Core compatibility
 
-| `@codexo/exojs-particles` | `@codexo/exojs` |
-| ------------------------- | --------------- |
-| 0.12.x                    | 0.12.x          |
+This package follows the Core lockstep release line and declares the compatible `@codexo/exojs` minor as a peer dependency. Install matching package versions.
 
 ## Usage — side-effect-free root entry
 
@@ -99,8 +97,8 @@ app.start(DemoScene);
 
 ## Links
 
-- [Official ExoJS Particles guide](https://exojs.dev/guides/extensions/particles)
-- [API reference](https://exojs.dev/api/exojs-particles)
+- [Particles guide](https://exoridus.github.io/ExoJS/en/guide/effects/particles/)
+- [API reference](https://exoridus.github.io/ExoJS/en/api/)
 
 ## License
 

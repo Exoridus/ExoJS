@@ -1,6 +1,6 @@
 # @codexo/exojs-react
 
-React 18 / 19 bindings for [ExoJS](https://exojs.dev) — mount an ExoJS `Application` into your React tree, drive scenes declaratively, and overlay React HUD on the canvas.
+React 18 / 19 bindings for [ExoJS](https://exoridus.github.io/ExoJS/) - mount an ExoJS `Application` into your React tree, drive scenes declaratively, and overlay React HUD on the canvas.
 
 ## Installation
 
@@ -20,12 +20,13 @@ This package is intentionally layered:
 ## Quick start — `<ExoCanvas>`
 
 ```tsx
+import { Color } from '@codexo/exojs';
 import { ExoCanvas, Scenes, Scene, useExoApp } from '@codexo/exojs-react';
 import { TitleScene, GameScene } from './scenes';
 
 function Game() {
   return (
-    <ExoCanvas options={{ canvas: { width: 1280, height: 720 }, clearColor: someColor }} style={{ width: 1280, height: 720 }}>
+    <ExoCanvas options={{ canvas: { width: 1280, height: 720 }, clearColor: Color.black }} style={{ width: 1280, height: 720 }}>
       <Scenes active="game" transition={{ type: 'fade', duration: 300 }}>
         <Scene name="title" component={TitleScene} />
         <Scene name="game" component={GameScene}>

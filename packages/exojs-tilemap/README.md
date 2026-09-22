@@ -1,6 +1,6 @@
 # @codexo/exojs-tilemap
 
-Generic, format-independent tilemap runtime **and** WebGL2/WebGPU chunk renderer for [ExoJS](https://exojs.dev). No Tiled (or any other on-disk format) vocabulary leaks into this package — adapters such as [`@codexo/exojs-tiled`](https://www.npmjs.com/package/@codexo/exojs-tiled) parse their format and hand this runtime fully-resolved tiles.
+Generic, format-independent tilemap runtime **and** WebGL2/WebGPU chunk renderer for [ExoJS](https://exoridus.github.io/ExoJS/). No Tiled (or any other on-disk format) vocabulary leaks into this package - adapters such as [`@codexo/exojs-tiled`](https://www.npmjs.com/package/@codexo/exojs-tiled) parse their format and hand this runtime fully resolved tiles.
 
 ## Installation
 
@@ -124,7 +124,7 @@ Actors are application-owned siblings. `TileMapView` never adopts or destroys ac
 - **Orientation.** `flipX` / `flipY` / `diagonal` are baked into the chunk geometry / resolved in the shader (all 8 combinations), with no per-tile matrix or per-frame cost.
 - **Multiple tilesets** with differing tile sizes are first-class; tiles taller than the map grid are bottom-left aligned (Tiled orthogonal convention).
 - **WebGL2 and WebGPU** share one CPU geometry builder and produce identical output (golden parity tested on both backends).
-- **Sampling.** Tile UVs are exact (no half-texel inset), which assumes **nearest** atlas filtering — the typical pixel-art case. Under linear or mipmap filtering, author tilesets with extruded tile margins to avoid neighbour bleed at tile edges (extrusion-aware tilemap UV insetting is a planned follow-up; the `NineSlice` / `RepeatingSprite` geometry paths already inset).
+- **Sampling.** Tile UVs are exact (no half-texel inset), which assumes **nearest** atlas filtering - the typical pixel-art case. Under linear or mipmap filtering, author tilesets with extruded tile margins to avoid neighbour bleed at tile edges; the tilemap renderer does not apply an extrusion-aware inset.
 
 ## Ownership & lifecycle
 
@@ -135,13 +135,11 @@ Actors are application-owned siblings. `TileMapView` never adopts or destroys ac
 
 ## Core compatibility
 
-| `@codexo/exojs-tilemap` | `@codexo/exojs` |
-| ----------------------- | --------------- |
-| 0.x                     | matching `0.x`  |
+This package follows the Core lockstep release line and declares the compatible `@codexo/exojs` minor as a peer dependency. Install matching package versions.
 
 ## Links
 
-- [API reference](https://exojs.dev/api/exojs-tilemap)
+- [API reference](https://exoridus.github.io/ExoJS/en/api/)
 - [`@codexo/exojs-tiled`](https://www.npmjs.com/package/@codexo/exojs-tiled) — load Tiled `.tmj` maps into this runtime
 
 ## License
