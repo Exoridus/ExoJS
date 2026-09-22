@@ -247,7 +247,7 @@ fn coneWeight(axis: vec2<f32>, direction: vec2<f32>, cosOuter: f32, cosInner: f3
  * two segments meeting at a corner cannot leak light between them, rather than
  * an epsilon wide enough to swallow a thin wall.
  */
-fn segmentHit(origin: vec2<f32>, direction: vec2<f32>, limit: f32, edgeA: vec2<f32>, edgeB: vec2<f32>) -> f32 {
+fn segmentHit(origin: vec2<f32>, direction: vec2<f32>, delta: vec2<f32>, span: f32, limit: f32, edgeA: vec2<f32>, edgeB: vec2<f32>) -> f32 {
     let edge = edgeB - edgeA;
     let offset = edgeA - origin;
     let denominator = direction.x * edge.y - direction.y * edge.x;
@@ -269,9 +269,20 @@ fn segmentHit(origin: vec2<f32>, direction: vec2<f32>, limit: f32, edgeA: vec2<f
         return select(limit, entry, entry < min(limit, max(first, last)));
     }
 
-    let travel = (offset.x * edge.y - offset.y * edge.x) / denominator;
+    let travelNumerator = offset.x * edge.y - offset.y * edge.x;
+    let travel = travelNumerator / denominator;
     let across = (offset.x * direction.y - offset.y * direction.x) / denominator;
-    let inside = travel >= 0.0 && travel < limit && across >= -TRANSPORT_EPSILON && across <= 1.0 + TRANSPORT_EPSILON;
+    var beforeLimit = travel < limit;
+
+    if (limit >= span) {
+        let endpointDenominator = delta.x * edge.y - delta.y * edge.x;
+        // Normalising `delta` can move a hit at the half-open endpoint one ULP
+        // inside. Only that endpoint is classified against the original span;
+        // ordinary hit distances retain the established path above.
+        beforeLimit = select((travelNumerator > endpointDenominator), (travelNumerator < endpointDenominator), (endpointDenominator > 0.0));
+    }
+
+    let inside = travel >= 0.0 && beforeLimit && across >= -TRANSPORT_EPSILON && across <= 1.0 + TRANSPORT_EPSILON;
 
     return select(limit, travel, inside);
 }
@@ -705,7 +716,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
             for (var index = 0; index < segmentCount; index = index + 1) {
                 let id = i32(transportTexel(uIndices, segmentOffset + index).x);
                 let ends = transportTexel(uSegments, id);
-                let hit = segmentHit(a, direction, blocked, ends.xy, ends.zw);
+                let hit = segmentHit(a, direction, delta, span, blocked, ends.xy, ends.zw);
 
                 if (hit >= travelled && hit < blocked) {
                     blocked = hit;
