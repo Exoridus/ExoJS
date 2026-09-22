@@ -1,13 +1,13 @@
 {
   "stamps": {
     "chromium": {
-      "measuredAt": "2026-09-17",
-      "commit": "edae5d72a",
+      "measuredAt": "2026-09-22",
+      "commit": "dc50cf10c",
       "platform": "win32"
     },
     "firefox": {
       "measuredAt": "2026-09-22",
-      "commit": "7035b2f6b",
+      "commit": "dc50cf10c",
       "platform": "win32"
     },
     "webkit": {
@@ -467,7 +467,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "2175/4096 pixels drawn"
+      "note": "2109/4096 pixels drawn"
     },
     {
       "scene": "lighting/lit-sprite",
@@ -1727,7 +1727,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "2175/4096 pixels drawn"
+      "note": "2109/4096 pixels drawn"
     },
     {
       "scene": "lighting/lit-sprite",
