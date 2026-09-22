@@ -12,8 +12,8 @@
       "release": "0.17.0"
     },
     "webkit": {
-      "measuredAt": "2026-09-06",
-      "commit": "c8ef545d",
+      "measuredAt": "2026-09-22",
+      "commit": "4624f1f2",
       "platform": "darwin"
     }
   },
@@ -4728,10 +4728,9 @@
       "feature": "BlendMode",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 46,
-      "note": "backends differ by 46 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "blend/additive-overlap",
@@ -4850,15 +4849,99 @@
       "delta": 0
     },
     {
+      "scene": "filter/bloom-halo",
+      "property": "cross-backend-parity",
+      "feature": "Filter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "divergent",
+      "evidence": "frame-equal",
+      "delta": 255,
+      "note": "backends differ by 255 on 1160 px (28.3% of the frame), beyond this scene's tolerance of 4 on 60% of the frame"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "oracle-agreement",
+      "feature": "Filter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "renders-something",
+      "feature": "Filter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "1360/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "repeat-render-determinism",
+      "feature": "Filter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "cross-backend-parity",
+      "feature": "ColorMatrixFilter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "oracle-agreement",
+      "feature": "ColorMatrixFilter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "1 computed pixel(s) within 2 of an identity colour matrix plus a per-channel bias, over an opaque (64, 128, 192) fill"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "renders-something",
+      "feature": "ColorMatrixFilter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "repeat-render-determinism",
+      "feature": "ColorMatrixFilter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "filter/color-matrix-channel-swap",
       "property": "cross-backend-parity",
       "feature": "ColorMatrixFilter",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 192,
-      "note": "backends differ by 192 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "filter/color-matrix-channel-swap",
@@ -4886,6 +4969,48 @@
       "scene": "filter/color-matrix-channel-swap",
       "property": "repeat-render-determinism",
       "feature": "ColorMatrixFilter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "cross-backend-parity",
+      "feature": "DropShadowFilter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "oracle-agreement",
+      "feature": "DropShadowFilter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "3 computed pixel(s) within 2 of an unblurred silhouette flattened to opaque red and shifted by (10, 10), with the source composited over it"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "renders-something",
+      "feature": "DropShadowFilter",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "956/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "repeat-render-determinism",
+      "feature": "DropShadowFilter",
       "browser": "webkit",
       "backend": "webgl2",
       "support": "supported",
@@ -5020,15 +5145,56 @@
       "delta": 0
     },
     {
+      "scene": "lighting/lit-sprite",
+      "property": "cross-backend-parity",
+      "feature": "Lighting",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "oracle-agreement",
+      "feature": "Lighting",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "renders-something",
+      "feature": "Lighting",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2132/4096 pixels drawn"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "repeat-render-determinism",
+      "feature": "Lighting",
+      "browser": "webkit",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "mask/triangle-clip",
       "property": "cross-backend-parity",
       "feature": "Mask",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 14,
-      "note": "backends differ by 14 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "mask/triangle-clip",
@@ -5110,10 +5276,9 @@
       "feature": "Mesh",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 31,
-      "note": "backends differ by 31 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "mesh/textured-quad",
@@ -5195,10 +5360,9 @@
       "feature": "NineSlice",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 31,
-      "note": "backends differ by 31 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "nine-slice/unstretched",
@@ -5238,10 +5402,9 @@
       "feature": "Particles",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 15,
-      "note": "backends differ by 15 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "particles/static-quad",
@@ -5281,10 +5444,9 @@
       "feature": "RenderBatch",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 255,
-      "note": "backends differ by 255 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "render-batch/custom-material-instance-attributes",
@@ -5324,10 +5486,9 @@
       "feature": "RenderBatch",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 255,
-      "note": "backends differ by 255 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "render-batch/default-material",
@@ -5410,9 +5571,10 @@
       "feature": "Sprite",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "frame-equal",
-      "delta": 0
+      "delta": 255,
+      "note": "backends differ by 255 on at least one channel"
     },
     {
       "scene": "sprite/canvas-texture",
@@ -5495,10 +5657,9 @@
       "feature": "Sprite",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 31,
-      "note": "backends differ by 31 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "sprite/translated",
@@ -5538,10 +5699,9 @@
       "feature": "Text",
       "browser": "webkit",
       "backend": "webgl2",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 255,
-      "note": "backends differ by 255 on 446 px (10.9% of the frame), beyond this scene's tolerance of 16 on 5% of the frame"
+      "delta": 0
     },
     {
       "scene": "text/sdf-glyphs",
@@ -5834,10 +5994,9 @@
       "feature": "BlendMode",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 46,
-      "note": "backends differ by 46 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "blend/additive-overlap",
@@ -5909,10 +6068,9 @@
       "feature": "BlendMode",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 255,
-      "note": "frame 2 differs from frame 1 by 255"
+      "delta": 0
     },
     {
       "scene": "blend/alpha-over-solid",
@@ -5957,15 +6115,100 @@
       "delta": 0
     },
     {
+      "scene": "filter/bloom-halo",
+      "property": "cross-backend-parity",
+      "feature": "Filter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "divergent",
+      "evidence": "frame-equal",
+      "delta": 255,
+      "note": "backends differ by 255 on 1160 px (28.3% of the frame), beyond this scene's tolerance of 4 on 60% of the frame"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "oracle-agreement",
+      "feature": "Filter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "renders-something",
+      "feature": "Filter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "1360/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/bloom-halo",
+      "property": "repeat-render-determinism",
+      "feature": "Filter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "divergent",
+      "evidence": "frame-equal",
+      "delta": 255,
+      "note": "frame 2 differs from frame 1 by 255"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "cross-backend-parity",
+      "feature": "ColorMatrixFilter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "oracle-agreement",
+      "feature": "ColorMatrixFilter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "1 computed pixel(s) within 2 of an identity colour matrix plus a per-channel bias, over an opaque (64, 128, 192) fill"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "renders-something",
+      "feature": "ColorMatrixFilter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "repeat-render-determinism",
+      "feature": "ColorMatrixFilter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "filter/color-matrix-channel-swap",
       "property": "cross-backend-parity",
       "feature": "ColorMatrixFilter",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 192,
-      "note": "backends differ by 192 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "filter/color-matrix-channel-swap",
@@ -5973,10 +6216,10 @@
       "feature": "ColorMatrixFilter",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "oracle",
-      "delta": 192,
-      "note": "swapped fill at (32, 32): R is 0, expected 192 (tolerance 2; RGBA = M*RGBA with R and B swapped, over an opaque (64, 128, 192) fill)"
+      "delta": 0,
+      "note": "1 computed pixel(s) within 2 of RGBA = M*RGBA with R and B swapped, over an opaque (64, 128, 192) fill"
     },
     {
       "scene": "filter/color-matrix-channel-swap",
@@ -5995,9 +6238,53 @@
       "feature": "ColorMatrixFilter",
       "browser": "webkit",
       "backend": "webgpu",
+      "support": "divergent",
+      "evidence": "frame-equal",
+      "delta": 192,
+      "note": "frame 2 differs from frame 1 by 192"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "cross-backend-parity",
+      "feature": "DropShadowFilter",
+      "browser": "webkit",
+      "backend": "webgpu",
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "oracle-agreement",
+      "feature": "DropShadowFilter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "3 computed pixel(s) within 2 of an unblurred silhouette flattened to opaque red and shifted by (10, 10), with the source composited over it"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "renders-something",
+      "feature": "DropShadowFilter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "956/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "repeat-render-determinism",
+      "feature": "DropShadowFilter",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "divergent",
+      "evidence": "frame-equal",
+      "delta": 255,
+      "note": "frame 2 differs from frame 1 by 255"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -6016,10 +6303,10 @@
       "feature": "Gradient",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "oracle",
-      "delta": 193,
-      "note": "ramp at x=48 at (48, 32): R is 0, expected 193 (tolerance 4; a two-stop black-to-white ramp across the shape bounds: channel = 255 * (x + 0.5) / 64)"
+      "delta": 0,
+      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds: channel = 255 * (x + 0.5) / 64"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -6038,10 +6325,9 @@
       "feature": "Gradient",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 253,
-      "note": "frame 2 differs from frame 1 by 253"
+      "delta": 0
     },
     {
       "scene": "graphics/overlapping-fills",
@@ -6123,6 +6409,49 @@
       "feature": "Graphics",
       "browser": "webkit",
       "backend": "webgpu",
+      "support": "divergent",
+      "evidence": "frame-equal",
+      "delta": 255,
+      "note": "frame 2 differs from frame 1 by 255"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "cross-backend-parity",
+      "feature": "Lighting",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "oracle-agreement",
+      "feature": "Lighting",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "renders-something",
+      "feature": "Lighting",
+      "browser": "webkit",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2132/4096 pixels drawn"
+    },
+    {
+      "scene": "lighting/lit-sprite",
+      "property": "repeat-render-determinism",
+      "feature": "Lighting",
+      "browser": "webkit",
+      "backend": "webgpu",
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
@@ -6133,10 +6462,9 @@
       "feature": "Mask",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 14,
-      "note": "backends differ by 14 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "mask/triangle-clip",
@@ -6218,10 +6546,9 @@
       "feature": "Mesh",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 31,
-      "note": "backends differ by 31 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "mesh/textured-quad",
@@ -6293,9 +6620,10 @@
       "feature": "NineSlice",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "traced",
-      "delta": 0
+      "delta": 31,
+      "note": "frame 2 differs from frame 1 by 31"
     },
     {
       "scene": "nine-slice/unstretched",
@@ -6303,10 +6631,9 @@
       "feature": "NineSlice",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 31,
-      "note": "backends differ by 31 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "nine-slice/unstretched",
@@ -6325,10 +6652,10 @@
       "feature": "NineSlice",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "sampled",
       "delta": null,
-      "note": "1023/4096 pixels drawn"
+      "note": "scene rendered an empty frame"
     },
     {
       "scene": "nine-slice/unstretched",
@@ -6346,10 +6673,9 @@
       "feature": "Particles",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 15,
-      "note": "backends differ by 15 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "particles/static-quad",
@@ -6389,10 +6715,9 @@
       "feature": "RenderBatch",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 255,
-      "note": "backends differ by 255 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "render-batch/custom-material-instance-attributes",
@@ -6411,10 +6736,10 @@
       "feature": "RenderBatch",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "sampled",
       "delta": null,
-      "note": "768/4096 pixels drawn"
+      "note": "scene rendered an empty frame"
     },
     {
       "scene": "render-batch/custom-material-instance-attributes",
@@ -6433,10 +6758,9 @@
       "feature": "RenderBatch",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 255,
-      "note": "backends differ by 255 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "render-batch/default-material",
@@ -6455,10 +6779,10 @@
       "feature": "RenderBatch",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "scene rendered an empty frame"
+      "note": "960/4096 pixels drawn"
     },
     {
       "scene": "render-batch/default-material",
@@ -6466,10 +6790,9 @@
       "feature": "RenderBatch",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 255,
-      "note": "frame 2 differs from frame 1 by 255"
+      "delta": 0
     },
     {
       "scene": "repeating/tiled",
@@ -6510,9 +6833,10 @@
       "feature": "RepeatingSprite",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "traced",
-      "delta": 0
+      "delta": 15,
+      "note": "frame 2 differs from frame 1 by 15"
     },
     {
       "scene": "sprite/canvas-texture",
@@ -6520,9 +6844,10 @@
       "feature": "Sprite",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "frame-equal",
-      "delta": 0
+      "delta": 255,
+      "note": "backends differ by 255 on at least one channel"
     },
     {
       "scene": "sprite/canvas-texture",
@@ -6596,10 +6921,9 @@
       "feature": "Sprite",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 31,
-      "note": "frame 2 differs from frame 1 by 31"
+      "delta": 0
     },
     {
       "scene": "sprite/translated",
@@ -6607,10 +6931,9 @@
       "feature": "Sprite",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "traced",
-      "delta": 31,
-      "note": "backends differ by 31 on at least one channel"
+      "delta": 0
     },
     {
       "scene": "sprite/translated",
@@ -6640,9 +6963,10 @@
       "feature": "Sprite",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "traced",
-      "delta": 0
+      "delta": 31,
+      "note": "frame 2 differs from frame 1 by 31"
     },
     {
       "scene": "text/sdf-glyphs",
@@ -6650,10 +6974,9 @@
       "feature": "Text",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "divergent",
+      "support": "supported",
       "evidence": "frame-equal",
-      "delta": 255,
-      "note": "backends differ by 255 on 446 px (10.9% of the frame), beyond this scene's tolerance of 16 on 5% of the frame"
+      "delta": 0
     },
     {
       "scene": "text/sdf-glyphs",
@@ -6726,9 +7049,10 @@
       "feature": "Tilemap",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "traced",
-      "delta": 0
+      "delta": 15,
+      "note": "frame 2 differs from frame 1 by 15"
     },
     {
       "scene": "tint/half-intensity",
@@ -6799,10 +7123,10 @@
       "feature": "Transform",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "sampled",
       "delta": null,
-      "note": "255/4096 pixels drawn"
+      "note": "scene rendered an empty frame"
     },
     {
       "scene": "transform/flipped-x",
@@ -6925,10 +7249,10 @@
       "feature": "Transform",
       "browser": "webkit",
       "backend": "webgpu",
-      "support": "supported",
+      "support": "divergent",
       "evidence": "sampled",
       "delta": null,
-      "note": "1020/4096 pixels drawn"
+      "note": "scene rendered an empty frame"
     },
     {
       "scene": "transform/scaled-2x",
