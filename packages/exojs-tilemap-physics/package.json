@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-tilemap-physics",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "description": "Static physics colliders from ExoJS tilemap collision geometry.",
   "repository": {
     "type": "git",
@@ -33,9 +33,9 @@
     "test": "vitest run --root ../.. --project=exojs-tilemap-physics"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.17.x",
-    "@codexo/exojs-physics": "0.17.x",
-    "@codexo/exojs-tilemap": "0.17.x"
+    "@codexo/exojs": "0.18.x",
+    "@codexo/exojs-physics": "0.18.x",
+    "@codexo/exojs-tilemap": "0.18.x"
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",

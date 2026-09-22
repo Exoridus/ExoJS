@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-09-22
+
 ### Changed
 
 - **BREAKING: Replace the job scheduler with frame-budgeted coroutines and add a postFrame phase.** ([#757](https://github.com/Exoridus/ExoJS/pull/757))
