@@ -1,13 +1,30 @@
-import * as ex from 'excalibur';
+import { replaceExcaliburChild } from '../src/rendering/adapters/excaliburLifecycle';
 
-import { replaceExcaliburChild } from '../src/rendering/adapters/excalibur';
+interface Actor {
+  readonly kill: () => void;
+}
+
+class Parent {
+  readonly children = new Set<Actor>();
+
+  addChild(child: Actor): void {
+    this.children.add(child);
+  }
+
+  removeChild(child: Actor): void {
+    this.children.delete(child);
+  }
+
+  hasChild(child: Actor): boolean {
+    return this.children.has(child);
+  }
+}
 
 describe('Excalibur lifecycle churn', () => {
   test('does not kill an actor after removing it from its parent', () => {
-    const parent = new ex.Actor();
-    const current = new ex.Actor();
-    const replacement = { actor: new ex.Actor(), text: null };
-    const kill = vi.spyOn(current, 'kill');
+    const parent = new Parent();
+    const current = { kill: vi.fn() };
+    const replacement = { actor: { kill: vi.fn() }, text: null };
 
     parent.addChild(current);
 
@@ -15,6 +32,6 @@ describe('Excalibur lifecycle churn', () => {
 
     expect(parent.hasChild(current)).toBe(false);
     expect(parent.hasChild(replacement.actor)).toBe(true);
-    expect(kill).not.toHaveBeenCalled();
+    expect(current.kill).not.toHaveBeenCalled();
   });
 });

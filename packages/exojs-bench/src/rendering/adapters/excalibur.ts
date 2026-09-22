@@ -6,6 +6,7 @@ import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { createDigitAtlasCanvas, createDistinctTextureCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH, TEXT_FONT_SIZE } from '../sceneAssets';
 import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, textForLeaf } from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
+import { replaceExcaliburChild } from './excaliburLifecycle';
 
 /**
  * Excalibur 0.32 arm of the rendering benchmark.
@@ -53,23 +54,6 @@ interface MutableLeaf {
   readonly baseX: number;
   readonly baseY: number;
 }
-
-/**
- * Replaces a child through Excalibur's parent lifecycle.
- *
- * `removeChild` also unregisters a live descendant from the scene's entity
- * manager. Calling `kill` afterwards would target an actor whose scene has
- * already been cleared and makes Excalibur report a spurious lifecycle warning.
- */
-export const replaceExcaliburChild = <T extends { readonly actor: ex.Actor }>(parent: ex.Actor, current: ex.Actor, create: () => T): T => {
-  parent.removeChild(current);
-
-  const replacement = create();
-
-  parent.addChild(replacement.actor);
-
-  return replacement;
-};
 
 /**
  * Glyph-atlas font for the text archetypes.
