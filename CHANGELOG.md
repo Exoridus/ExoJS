@@ -6,6 +6,78 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Replace the job scheduler with frame-budgeted coroutines and add a postFrame phase.** ([#757](https://github.com/Exoridus/ExoJS/pull/757))
+- **BREAKING: Blend each attachment of a multi-target draw on its own terms.** ([#755](https://github.com/Exoridus/ExoJS/pull/755))
+- **BREAKING: Expose a render target's depth as a sampleable texture.** ([#749](https://github.com/Exoridus/ExoJS/pull/749))
+- **BREAKING: Name the renderer SDK seam members and state their contract.** ([#743](https://github.com/Exoridus/ExoJS/pull/743))
+- **BREAKING: Blur by Gaussian strength, one draw per sweep.** ([#730](https://github.com/Exoridus/ExoJS/pull/730))
+- **BREAKING: Make .exoa a block container.** ([#705](https://github.com/Exoridus/ExoJS/pull/705))
+- **BREAKING: Refuse a material that under-declares fragment outputs.** ([#704](https://github.com/Exoridus/ExoJS/pull/704))
+- **BREAKING: Give the WebGL2 shader types their prefix and the neutral name to the source.** ([#695](https://github.com/Exoridus/ExoJS/pull/695))
+- **Give every application its own changed-record index.** ([#741](https://github.com/Exoridus/ExoJS/pull/741))
+- **Run the sampled chunk worker through InlineWorker.** ([#738](https://github.com/Exoridus/ExoJS/pull/738))
+- **Split Application into focused collaborators.** ([#734](https://github.com/Exoridus/ExoJS/pull/734))
+
+### Added
+
+- **Preselect the largest load where ExoJS leads.** ([#773](https://github.com/Exoridus/ExoJS/pull/773))
+- **Add a standing non-blocking pixel reader on both backends.** ([#760](https://github.com/Exoridus/ExoJS/pull/760))
+- **Add a frame pass slot and run filter chains as a pass.** ([#758](https://github.com/Exoridus/ExoJS/pull/758))
+- **Address packs by content and resolve them through a manifest.** ([#750](https://github.com/Exoridus/ExoJS/pull/750))
+- **Add BloomFilter with a soft-knee threshold, a downsample chain and an additive glow.** ([#751](https://github.com/Exoridus/ExoJS/pull/751))
+- **Cut the benchmarks page to the comparison, drive the joint scene and refuse an unresolved median.** ([#753](https://github.com/Exoridus/ExoJS/pull/753))
+- **Read a container block by block over byte ranges.** ([#744](https://github.com/Exoridus/ExoJS/pull/744))
+- **Add GraphicsPath for reusable, resolution-independent shapes.** ([#740](https://github.com/Exoridus/ExoJS/pull/740))
+- **Correlate audio time with the frame clock and timestamp beat analysis.** ([#739](https://github.com/Exoridus/ExoJS/pull/739))
+- **Own the lifetime of a worker built from a bundled source string.** ([#737](https://github.com/Exoridus/ExoJS/pull/737))
+- **Announce every started application to dev tooling.** ([#735](https://github.com/Exoridus/ExoJS/pull/735))
+- **Finalize reference benchmarks and connected-body collision control.** ([#732](https://github.com/Exoridus/ExoJS/pull/732))
+- **Add a public point hit test, and the benchmark arm that measures it.** ([#729](https://github.com/Exoridus/ExoJS/pull/729))
+- **Resolve runs against a workload catalog and qualify every comparison against its clock.** ([#728](https://github.com/Exoridus/ExoJS/pull/728))
+- **Lead the benchmarks page with a scoreboard and drawn ratios.** ([#727](https://github.com/Exoridus/ExoJS/pull/727))
+- **Put the benchmark numbers first and fold the practice text.** ([#725](https://github.com/Exoridus/ExoJS/pull/725))
+- **Tighten the landing page hero and repair the install block.** ([#724](https://github.com/Exoridus/ExoJS/pull/724))
+- **@codexo/eslint-plugin-exojs - four rules, an engine namespace and a published home.** ([#706](https://github.com/Exoridus/ExoJS/pull/706))
+- **@codexo/exojs-cli - serve, create, doctor and assets pack.** ([#700](https://github.com/Exoridus/ExoJS/pull/700))
+- **ExoJS ESLint rules for the mistakes types cannot reach.** ([#697](https://github.com/Exoridus/ExoJS/pull/697))
+- **Typed shader uniforms with a canonical std140 layout.** ([#693](https://github.com/Exoridus/ExoJS/pull/693))
+
+### Fixed
+
+- **Share one WebGPU adapter per GPU object.** ([#774](https://github.com/Exoridus/ExoJS/pull/774))
+- **Replace malformed wordmark.** ([#770](https://github.com/Exoridus/ExoJS/pull/770))
+- **Skip radiance smoke on software.** ([#768](https://github.com/Exoridus/ExoJS/pull/768))
+- **Serialize software-rendered smokes.** ([#767](https://github.com/Exoridus/ExoJS/pull/767))
+- **Preserve WebGPU transport split boundaries.** ([#766](https://github.com/Exoridus/ExoJS/pull/766))
+- **Clean up benchmark lifecycles.** ([#764](https://github.com/Exoridus/ExoJS/pull/764))
+- **Rebuild radiance transport and harden lighting v2.** ([#762](https://github.com/Exoridus/ExoJS/pull/762))
+- **Warm-start revolute joints on the live arms.** ([#761](https://github.com/Exoridus/ExoJS/pull/761))
+- **Keep the renderer SDK seam interfaces in the shipped declarations.** ([#754](https://github.com/Exoridus/ExoJS/pull/754))
+- **Keep a sleeping world out of the joint, body and broad-phase loops.** ([#748](https://github.com/Exoridus/ExoJS/pull/748))
+- **Keep the changed-record window bounded without a frame loop.** ([#745](https://github.com/Exoridus/ExoJS/pull/745))
+- **Keep the dev server's watcher off sync and build output.** ([#726](https://github.com/Exoridus/ExoJS/pull/726))
+- **Draw the theme toggle as moon and sun icons again.** ([#723](https://github.com/Exoridus/ExoJS/pull/723))
+- **Playground preview scaling, single spinner, Many Lights landing page.** ([#721](https://github.com/Exoridus/ExoJS/pull/721))
+- **Keep a sprite's scale when its deferred texture arrives.** ([#720](https://github.com/Exoridus/ExoJS/pull/720))
+- **Keep retained products through a live entry's effect change; bench: mask-clip-animated.** ([#719](https://github.com/Exoridus/ExoJS/pull/719))
+- **Keep a WebGL2 buffer store's size across prefix uploads.** ([#718](https://github.com/Exoridus/ExoJS/pull/718))
+- **Keep slot marks in stream order, gate the clean-frame discovery, drain the active renderer before a slot draw.** ([#717](https://github.com/Exoridus/ExoJS/pull/717))
+- **Cut the persistent slot stream around live entries.** ([#714](https://github.com/Exoridus/ExoJS/pull/714))
+- **Diagnose a blank example in the smoke and retry it in a fresh browser.** ([#713](https://github.com/Exoridus/ExoJS/pull/713))
+- **Carry untouched items and groups through a structure delta; bench: merge runs into results.json.** ([#712](https://github.com/Exoridus/ExoJS/pull/712))
+- **Refuse a selection value the shell split into words.** ([#711](https://github.com/Exoridus/ExoJS/pull/711))
+- **Re-discover only the scopes a structural change touched.** ([#707](https://github.com/Exoridus/ExoJS/pull/707))
+- **Compile the templates against the engine, and gate it.** ([#708](https://github.com/Exoridus/ExoJS/pull/708))
+- **Keep UniformBlockData in the shipped declarations.** ([#699](https://github.com/Exoridus/ExoJS/pull/699))
+
+### Documentation
+
+- **Refresh project documentation.** ([#765](https://github.com/Exoridus/ExoJS/pull/765))
+- **Write prose in long lines, and keep it out of the code lanes.** ([#736](https://github.com/Exoridus/ExoJS/pull/736))
+- **Show the wordmark instead of the icon mark.** ([#722](https://github.com/Exoridus/ExoJS/pull/722))
+
 ## [0.17.0] - 2026-09-05
 
 ### Changed
