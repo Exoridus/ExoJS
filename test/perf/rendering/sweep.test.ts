@@ -1,6 +1,6 @@
 /**
  * Opt-in renderer benchmark sweep. Skipped by default; runs only when
- * `EXOJS_PERF_PROFILE` is set (`quick` or `full`) via `pnpm perf:renderers`.
+ * `EXOJS_PERF_PROFILE` is set (`quick` or `full`) via `pnpm perf renderers`.
  *
  * For each scenario it captures deterministic structural metrics (one steady
  * frame) and Tier-B CPU submission timing (median/p95 over many frames against

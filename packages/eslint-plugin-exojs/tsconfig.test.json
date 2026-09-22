@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // The package's own tests: `RuleTester` runs every rule against fixture
+  // sources, so the test program needs the same Node-only environment as the
+  // rules themselves.
+  "extends": ["./tsconfig.json", "@codexo/exojs-config/typescript/package-test.json"],
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

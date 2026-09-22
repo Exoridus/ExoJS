@@ -448,9 +448,36 @@ export class PhysicsBody {
       this.linearVelocityX = 0;
       this.linearVelocityY = 0;
       this.angularVelocity = 0;
+
+      // The step that puts a body to sleep drops it from the finalize pass, so
+      // this is where the two things that pass owes it have to happen instead.
+      //
+      // Forces this step never integrated (the body was already flagged asleep
+      // when the sub-steps ran) would otherwise sit on the accumulator and fire
+      // whenever the body next wakes, as a single impulse out of nowhere.
+      this._clearStepInputs();
+
+      // And an interpolating binding reading a stale previous transform sweeps
+      // the node across the last step the body moved in, for as long as it sleeps.
+      this._previousX = this._transform.x;
+      this._previousY = this._transform.y;
+      this._previousAngle = this._transform.angle;
     } else {
       this._sleepTime = 0;
     }
+  }
+
+  /**
+   * @internal - drop what the step consumed from this body: the force/torque
+   * accumulators, and the teleport flag, which must not outlive the one step it
+   * was raised for (a stale flag makes a static body read as a moving boundary
+   * for ever, and nothing resting on it could sleep again).
+   */
+  public _clearStepInputs(): void {
+    this._forceX = 0;
+    this._forceY = 0;
+    this._torque = 0;
+    this._teleported = false;
   }
 
   /**
@@ -469,14 +496,12 @@ export class PhysicsBody {
    * @internal - apply the frame's accumulated delta position/rotation to the
    * transform (rotating about the centre of mass), re-sync collider geometry and
    * clear the force/torque accumulators. Called once per frame after the
-   * sub-step loop. Static bodies never move; the force clear still runs (forces
-   * are a no-op on infinite mass but the accumulator is reset for consistency).
+   * sub-step loop, for the bodies that step (see
+   * `PhysicsWorld._collectSteppedBodies`); a static or sleeping body has the
+   * clear done for it elsewhere, since it can accumulate nothing to integrate.
    */
   public _finalizePosition(): void {
-    this._forceX = 0;
-    this._forceY = 0;
-    this._torque = 0;
-    this._teleported = false;
+    this._clearStepInputs();
 
     // Captured before the step's delta is applied, and before the no-motion
     // early return below - a body that did not move must report previous ===
@@ -572,6 +597,22 @@ export class PhysicsBody {
   /** @internal - mark destroyed (called by the world). */
   public _markDestroyed(): void {
     this._destroyed = true;
+  }
+
+  /**
+   * @internal - whether this body belongs to a world OTHER than `owner`.
+   *
+   * Body ids are scoped to the world that handed them out, so anything keyed on
+   * a pair of them has to know that both came from the same world: two worlds
+   * count from the same start, so their bodies carry the same ids, and a pair
+   * key built from one of each names a pair that exists in neither.
+   *
+   * A body attached to no world at all is not foreign - a single-body joint
+   * stands its own private anchor in for the second body, and that anchor is
+   * deliberately never added anywhere.
+   */
+  public _isForeignTo(owner: BodyOwner): boolean {
+    return this._owner !== null && this._owner !== owner;
   }
 
   /**

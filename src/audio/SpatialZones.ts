@@ -104,7 +104,7 @@ export class SpatialZones {
    * `voices` is the live set of spatial voices; a voice that has ended is skipped
    * and its sends released - the voice tears them down itself, so this only drops
    * the bookkeeping.
-   * @internal - driven once per frame by {@link AudioSystem.preUpdate}.
+   * @internal - driven once per frame by {@link AudioSystem.preFrame}.
    */
   public _tick(listener: AudioListener, voices: Iterable<Voice>): void {
     if (this._zones.length === 0) {

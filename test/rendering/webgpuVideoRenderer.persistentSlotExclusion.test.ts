@@ -14,7 +14,7 @@
  * `WebGpuSpriteRenderer` without noticing the consequence.
  *
  * A second, distinct WebGPU tier - retained-batch recording, gated by
- * `_supportsRetainedBatches` rather than `_supportsPersistentSlots` - is
+ * `supportsRetainedBatches` rather than `_supportsPersistentSlots` - is
  * covered further down by its own describe block; see that block's doc
  * comment for why it needs a real plan build instead of the `RenderRootSource`
  * fixture used above.
@@ -23,6 +23,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { Application } from '#core/Application';
 import { materializeRendererBindings } from '#extensions/materialize';
+import { Container } from '#rendering/Container';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderRootSource } from '#rendering/plan/RenderRootSource';
@@ -64,19 +65,21 @@ describe('WebGPU persistent slots: a root containing Video', () => {
     const sprite = new Sprite(Texture.empty);
     const video = new Video(document.createElement('video'));
 
+    const root = new Container();
     const rootScope = createSourceScope();
 
     rootScope.items.push(sprite, 0, 0, 0, 0, 16, 16);
     rootScope.items.push(video, 1, 0, 32, 0, 48, 16);
 
-    const source = new RenderRootSource();
+    const source = new RenderRootSource(root);
 
-    source.adopt(rootScope, 0, 0, 0, 0);
+    source.adopt(root, rootScope, 0, 0, 0, 0);
 
     expect(backend._acquirePersistentSlots(source)).toBeNull();
 
     video.destroy();
     sprite.destroy();
+    root.destroy();
     backend.destroy();
   });
 
@@ -94,17 +97,19 @@ describe('WebGPU persistent slots: a root containing Video', () => {
     const backend = createConnectedBackend();
     const video = new Video(document.createElement('video'));
 
+    const root = new Container();
     const rootScope = createSourceScope();
 
     rootScope.items.push(video, 0, 0, 0, 0, 16, 16);
 
-    const source = new RenderRootSource();
+    const source = new RenderRootSource(root);
 
-    source.adopt(rootScope, 0, 0, 0, 0);
+    source.adopt(root, rootScope, 0, 0, 0, 0);
 
     expect(backend._acquirePersistentSlots(source)).toBeNull();
 
     video.destroy();
+    root.destroy();
     backend.destroy();
   });
 });
@@ -119,13 +124,13 @@ const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group a
  * A distinct WebGPU tier from the persistent-slot one above: whether a
  * `RetainedContainer`'s captured fragment can be recorded into the WebGPU
  * retained-batch instruction set at all, gated by
- * `RetainedBatchCapableRenderer._supportsRetainedBatches` in
+ * `RetainedBatchCapableRenderer.supportsRetainedBatches` in
  * `RetainedInstructionSet.ts`. `WebGpuVideoRenderer` never declares that flag
  * either (see its class doc), so a fragment containing a `Video` must never be
  * admitted - the mechanism that keeps a retained video from freezing is that
  * it is never recorded into a retained batch in the first place. This pins
  * that mechanism against a future refactor that copies
- * `_supportsRetainedBatches = true` over from `WebGpuSpriteRenderer`.
+ * `supportsRetainedBatches = true` over from `WebGpuSpriteRenderer`.
  */
 describe('WebGPU retained-batch recording: a fragment containing Video', () => {
   test('is never recordable into the retained instruction-set tier', () => {

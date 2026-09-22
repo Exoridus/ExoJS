@@ -1,5 +1,10 @@
+import { type Lighting, LightmapLighting, PointLight, PolygonOccluder } from '@codexo/exojs-lighting';
+import { AlphaFadeOverLifetime, Curve, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import type { Seconds } from '#core/units';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
@@ -8,7 +13,6 @@ import { BlurFilter } from '#rendering/filters/BlurFilter';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
 import { Geometry } from '#rendering/geometry/Geometry';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
@@ -17,19 +21,78 @@ import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderNodePass } from '#rendering/RenderNodePass';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Shader } from '#rendering/shader/Shader';
 import { spriteVertexGlsl } from '#rendering/sprite/materialSources';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Text } from '#rendering/text/Text';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { BlendModes } from '#rendering/types';
 import { View } from '#rendering/View';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
+import { Stack } from '#ui/Stack';
+import { Widget } from '#ui/Widget';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
-import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { createDistinctTextureCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
-import { compositeBlurRadius, filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
+import { BLUR_TAPS_PER_SIDE } from '../archetypes';
+import type { ArchetypeSpec, Backend, EngineAdapter, LayoutDigestReport } from '../EngineAdapter';
+import { isLit, LIT_LIGHT_RADIUS, LIT_OCCLUDER_BOXES, LIT_SPRITE_COUNT, LIT_SPRITE_SIZE, litLightAt, litOccluderBox, litSpriteAt } from '../lighting';
+import {
+  isParticleLifecycle,
+  isParticles,
+  PARTICLE_ALPHA,
+  PARTICLE_LIFETIME,
+  PARTICLE_PREROLL_STEPS,
+  PARTICLE_STEP,
+  PARTICLE_TINT,
+  particleSeedAt,
+} from '../particles';
+import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
+import { createBlurSourceCanvas, createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import type { TilemapExtent } from '../tilemap';
+import {
+  isTilemap,
+  isTilemapEditing,
+  TILE_SIZE,
+  TILE_VARIANTS,
+  tileIdAt,
+  tilemapCameraAt,
+  tilemapCameraFrameFor,
+  tilemapEditsAt,
+  tilemapExtent,
+} from '../tilemap';
+import {
+  blurStrength,
+  compositeBlurStrength,
+  filterChainDepth,
+  hasFullViewportLeaves,
+  hasMaskMotion,
+  isBlurEffect,
+  isChurning,
+  isTextArchetype,
+  isTextUpdating,
+  leafAlpha,
+  maskDepth,
+  pointerQueriesPerFrame,
+  textForLeaf,
+} from '../traits';
+import type { LayoutRect } from '../uiLayout';
+import {
+  BOX_GAP,
+  BOX_PADDING,
+  forEachMutatedWidget,
+  isUiLayoutScene,
+  LAYOUT_PASSES_PER_FRAME,
+  layoutDigest,
+  layoutTreeShape,
+  layoutViewportAt,
+  ROWS_PER_COLUMN,
+  WIDGET_HEIGHT,
+  WIDGET_WIDE,
+  WIDGET_WIDTH,
+  widgetsInRow,
+} from '../uiLayout';
 import {
   BLOOM_DOWNSCALE,
   cameraCenterAt,
@@ -42,6 +105,7 @@ import {
   VIEWPORT_HEIGHT,
   VIEWPORT_WIDTH,
   worldExtent,
+  type WorldRect,
 } from '../world';
 
 /**
@@ -143,7 +207,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 /** Build one of `total` distinct custom sprite materials (distinct instances - the batcher keys on identity). */
 const createDistinctMaterial = (index: number, total: number): SpriteMaterial =>
   new SpriteMaterial({
-    shader: new ShaderSource({ glsl: { vertex: spriteVertexGlsl, fragment: materialFragmentGlsl }, wgsl: materialFragmentWgsl }),
+    shader: new Shader({ glsl: { vertex: spriteVertexGlsl, fragment: materialFragmentGlsl }, wgsl: materialFragmentWgsl }),
     uniforms: { u_userColor: [1, 1 - index / Math.max(1, total), 1, 1] },
   });
 
@@ -172,6 +236,18 @@ interface MutableLeaf {
  * the glyph raster - and therefore the atlas pressure a text scene puts on the
  * engine - is a property of the archetype instead of a property of the cell.
  */
+/**
+ * A leaf of the UI-layout tree: a widget with a layout box and nothing painted
+ * in it.
+ *
+ * Painting is left out deliberately. A widget that redrew a background on every
+ * resize would put its own repaint into a number about box-tree layout, and the
+ * Pixi arm's leaf - a plain layout container - draws nothing either. What the
+ * archetype compares is the container that resolves the boxes, so the leaves on
+ * both sides are the same thing: a size the layout engine reads and writes.
+ */
+class LayoutLeaf extends Widget {}
+
 const createTextLeaf = (index: number, glyphs: number): Text => new Text(textForLeaf(index, glyphs), { fontSize: TEXT_FONT_SIZE });
 
 /**
@@ -320,7 +396,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   /** Shared by every mesh leaf in `mixed-sprite-mesh-static`; absent for the array case. */
   let sharedMeshGeometry: Geometry | null = null;
   /**
-   * The `composite` archetype's bloom stack (`spec.compositeBlurRadius`, see
+   * The `composite` archetype's bloom stack (`spec.compositeBlurStrength`, see
    * `EngineAdapter.ts`); `null` for every single-pass archetype, in which case
    * `renderFrame` takes the ordinary scene-render path. The pipeline owns its
    * passes, but the textures, the filter and the overlay sprite are the arm's -
@@ -350,6 +426,9 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   /** Per-frame mutation mode of the built archetype; see `traits.ts`. */
   let churning = false;
   let textUpdating = false;
+  /** Masked spine containers with their rest rects, moved per frame when the archetype animates its masks. */
+  let maskedLevels: Array<{ container: Container; base: WorldRect }> = [];
+  let maskMotion = false;
   /** Characters per text leaf of the built archetype; `0` when it has no text. */
   let textGlyphs = 0;
 
@@ -377,13 +456,13 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
    * ExoJS app writes a post-processing stack with - and it is what the Pixi arm's
    * hand-rolled `render({ target })` sequence is being compared against.
    */
-  const buildComposite = (sceneRoot: Container, radius: number): void => {
+  const buildComposite = (sceneRoot: Container, strength: number): void => {
     const capture = new RenderTexture(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
     const bloom = new RenderTexture(Math.round(VIEWPORT_WIDTH * BLOOM_DOWNSCALE), Math.round(VIEWPORT_HEIGHT * BLOOM_DOWNSCALE));
     // A single blur from the full-size capture into the half-size target is both
     // the downsample and the blur: the filter sizes its sweep to the OUTPUT, so
     // the wide kernel runs over a quarter of the fragments.
-    const filter = new BlurFilter({ radius, quality: 2 });
+    const filter = new BlurFilter({ strength, quality: 2 });
     const overlay = new Sprite(bloom).setBlendMode(BlendModes.Additive);
 
     overlay.width = VIEWPORT_WIDTH;
@@ -452,6 +531,455 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     views = [];
   };
 
+  /** The tile layer the tilemap scenes paint into, or `null` for every other archetype. */
+  let tileLayer: TileLayer | null = null;
+
+  /** The tileset the tile layer draws from, kept so teardown releases its texture. */
+  let tileTexture: Texture | null = null;
+
+  /** The tilemap scene's root node, and the map extent its camera is bounded by. */
+  let tilemapNode: TileMapNode | null = null;
+  let tilemapSpec: ArchetypeSpec | null = null;
+  let tilemapMapExtent: TilemapExtent = { width: 0, height: 0 };
+
+  /**
+   * Build the tilemap scene: one fully-populated layer over a single-page
+   * tileset, rendered through the package's own chunk renderer.
+   *
+   * Every tile is written at build time, outside the timed window - the scenes
+   * compare drawing and editing a populated map, not populating one. The camera
+   * is the View's, as it is for `scrolling-world`: the engine has a real camera,
+   * and its rect is what the chunk culling and the retained products are keyed
+   * on.
+   */
+  const buildTilemapScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const extent = tilemapExtent(nodeCount);
+    const texture = new Texture(createTileAtlasCanvas());
+    const tileset = new TileSet({
+      name: 'tiles',
+      texture: new TextureRegion(texture, { x: 0, y: 0, width: TILE_SIZE * TILE_VARIANTS, height: TILE_SIZE }),
+      tileWidth: TILE_SIZE,
+      tileHeight: TILE_SIZE,
+      tileCount: TILE_VARIANTS,
+    });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'ground',
+      width: extent.width,
+      height: extent.height,
+      tileWidth: TILE_SIZE,
+      tileHeight: TILE_SIZE,
+      tilesets: [tileset],
+    });
+
+    for (let y = 0; y < extent.height; y += 1) {
+      for (let x = 0; x < extent.width; x += 1) {
+        layer.setTileAt(x, y, { tileset, localTileId: tileIdAt(x, y), transform: TILE_TRANSFORM_IDENTITY });
+      }
+    }
+
+    const map = new TileMap({
+      name: 'benchmark',
+      width: extent.width,
+      height: extent.height,
+      tileWidth: TILE_SIZE,
+      tileHeight: TILE_SIZE,
+      tilesets: [tileset],
+      layers: [layer],
+    });
+
+    root = new Container();
+    tilemapNode = new TileMapNode(map);
+    root.addChild(tilemapNode);
+
+    tileLayer = layer;
+    tileTexture = texture;
+    tilemapSpec = spec;
+    tilemapMapExtent = extent;
+
+    const start = tilemapCameraAt(0, extent);
+
+    app!.rendering.view.setCenter(start.x + VIEWPORT_WIDTH / 2, start.y + VIEWPORT_HEIGHT / 2);
+  };
+
+  /** Drop the tilemap scene so a rebuild (or teardown) leaks no GPU resources. */
+  const releaseTilemap = (): void => {
+    tilemapNode?.destroy();
+    tilemapNode = null;
+    tileTexture?.destroy();
+    tileTexture = null;
+    tileLayer = null;
+    tilemapSpec = null;
+  };
+
+  /** The particle system the particle scenes draw, or `null` for every other archetype. */
+  let particleSystem: ParticleSystem | null = null;
+  let particleTexture: Texture | null = null;
+  let particleSpec: ArchetypeSpec | null = null;
+
+  /**
+   * Fill the system up to its capacity, giving each particle the shared scene's
+   * deterministic state.
+   *
+   * `emit()` returns `null` once the pool is full, which is what holds the live
+   * count at the node count: the scene tops the pool up every frame rather than
+   * spawning at a rate and hoping the two balance out.
+   */
+  const fillParticles = (count: number, initial: boolean): void => {
+    for (let filled = 0; filled < count; filled += 1) {
+      const particle = particleSystem!.emit();
+
+      if (particle === null) {
+        return;
+      }
+
+      // The cursor walks the whole seed set rather than restarting at zero, so a
+      // respawn lands on the next unused layout instead of piling every
+      // replacement onto the same handful of positions - which is what turned
+      // the pool into a few dense clusters while the arms beside it stayed
+      // evenly spread.
+      const index = particleCursor % count;
+
+      particleCursor += 1;
+
+      const seed = particleSeedAt(index, count);
+
+      particle.position.set(seed.x, seed.y);
+      particle.velocity.set(seed.velocityX, seed.velocityY);
+      // The sprite is already PARTICLE_SIZE square, and `scale` is a factor:
+      // setting it to the size would draw a quad four times too large.
+      particle.scale.set(1, 1);
+      particle.color = PARTICLE_TINT;
+      if (particleLifetime === null) {
+        // The draw-only scene never advances, so its particles must not expire:
+        // a finite life would shrink the pool over a long cell for no reason the
+        // scene is measuring.
+        particle.lifetime = Number.MAX_SAFE_INTEGER;
+      } else {
+        // On the first fill each particle gets what is LEFT of one lifetime, so
+        // the pool starts evenly aged and its respawns land on different frames
+        // instead of arriving as one burst.
+        particle.lifetime = initial ? Math.max(PARTICLE_STEP, particleLifetime - seed.age) : particleLifetime;
+      }
+    }
+  };
+
+  /** Next seed index a spawn takes; see {@link fillParticles}. */
+  let particleCursor = 0;
+
+  /** Seconds a particle lives, or `null` in the draw-only scene, which never ages one. */
+  let particleLifetime: number | null = null;
+
+  /**
+   * Build the particle scene: a system at the node count's capacity, filled
+   * once, and - for the lifecycle scene - advanced through one full lifetime so
+   * the timed window sees a steady pool rather than a settling one.
+   */
+  const buildParticleScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = new Texture(createParticleCanvas());
+    const system = new ParticleSystem(texture, { capacity: nodeCount });
+
+    particleSystem = system;
+    particleTexture = texture;
+    particleSpec = spec;
+    particleLifetime = isParticleLifecycle(spec) ? PARTICLE_LIFETIME : null;
+    particleCursor = 0;
+
+    system.setBlendMode(BlendModes.Normal);
+
+    if (particleLifetime !== null) {
+      // Linear fade over the life, the shared scene's one update rule. Every arm
+      // applies the same one, so no arm is paying for an effect the others skip.
+      // From the scene's alpha to zero. The module's default curve starts at 1,
+      // which would make this arm's particles twice as bright as every other
+      // arm's for the whole of their lives.
+      system.addUpdateModule(
+        new AlphaFadeOverLifetime(
+          new Curve([
+            { t: 0, v: PARTICLE_ALPHA },
+            { t: 1, v: 0 },
+          ]),
+        ),
+      );
+    }
+
+    root = new Container();
+    root.addChild(system);
+
+    fillParticles(nodeCount, true);
+
+    for (let step = 0; step < (particleLifetime === null ? 0 : PARTICLE_PREROLL_STEPS); step += 1) {
+      system.update(PARTICLE_STEP as Seconds);
+      fillParticles(nodeCount, false);
+    }
+  };
+
+  /** Drop the particle scene so a rebuild (or teardown) leaks no GPU resources. */
+  const releaseParticles = (): void => {
+    particleSystem?.destroy();
+    particleSystem = null;
+    particleTexture?.destroy();
+    particleTexture = null;
+    particleSpec = null;
+    particleLifetime = null;
+  };
+
+  /** The lighting system of the lit scenes, and the pass that draws the field it lights. */
+  let litLighting: Lighting | null = null;
+  let litScenePass: RenderNodePass | null = null;
+
+  /**
+   * Build the lit scene: a fixed sprite field, `nodeCount` lights over it, and -
+   * for the shadowed variant - a fixed set of occluding boxes.
+   *
+   * The field and the occluders are the same at every rung, so what the ladder
+   * sweeps is the light count alone.
+   *
+   * The scene draws through the application's own frame slot rather than through
+   * `rendering.render`, because that is where the renderer lives: it accumulates
+   * the lights into a target of their own and multiplies the drawn frame by
+   * them, which only means anything if the frame was drawn into a texture
+   * first. The pass that does that is inserted AHEAD of the renderer's own, the
+   * same order the application composes for a scene with frame passes.
+   */
+  const buildLitScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const field = new Container();
+    const texture = textures[0]!;
+
+    for (let index = 0; index < LIT_SPRITE_COUNT; index++) {
+      const placement = litSpriteAt(index, LIT_SPRITE_COUNT);
+      const sprite = new Sprite(texture);
+
+      sprite.width = LIT_SPRITE_SIZE;
+      sprite.height = LIT_SPRITE_SIZE;
+      sprite.setPosition(placement.x, placement.y);
+      field.addChild(sprite);
+    }
+
+    const lighting = new LightmapLighting(app!, { ambient: new Color(18, 18, 26), lightResolution: 0.5 });
+
+    for (let index = 0; index < nodeCount; index++) {
+      const light = litLightAt(index);
+
+      lighting.add(new PointLight({ radius: LIT_LIGHT_RADIUS, intensity: light.intensity })).setPosition(light.x, light.y);
+    }
+
+    if (spec.lights === 'shadowed') {
+      for (let index = 0; index < LIT_OCCLUDER_BOXES; index++) {
+        lighting.occludeFrom(new PolygonOccluder(litOccluderBox(index)));
+      }
+    }
+
+    root = field;
+    litLighting = lighting;
+    litScenePass = new RenderNodePass(field, { target: app!.frameTexture, clear: Color.black, label: 'bench:lit-field' });
+    app!.framePasses.insertPass(litScenePass, 0);
+  };
+
+  const releaseLit = (): void => {
+    if (litScenePass !== null) {
+      app?.framePasses.removePass(litScenePass);
+      litScenePass.destroy();
+      litScenePass = null;
+    }
+
+    litLighting?.destroy();
+    litLighting = null;
+  };
+
+  /** The blur scene's texture, kept so teardown releases it. */
+  let blurTexture: Texture | null = null;
+
+  /**
+   * Build the blur scene: one textured quad under a separable two-pass Gaussian.
+   *
+   * A single quad on purpose - the archetype measures the filter's own target
+   * passes, and a scene of nodes would mix traversal cost into a figure about an
+   * effect. The node count is the filtered HEIGHT; the quad keeps a 16:9 shape,
+   * so the count scales the area the blur has to cover.
+   */
+  const buildBlurScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = new Texture(createBlurSourceCanvas());
+    const sprite = new Sprite(texture);
+    const height = nodeCount;
+    const width = Math.round((height * 16) / 9);
+
+    sprite.width = width;
+    sprite.height = height;
+    sprite.setPosition((VIEWPORT_WIDTH - width) / 2, (VIEWPORT_HEIGHT - height) / 2);
+
+    root = new Container();
+    root.addChild(sprite);
+    // `quality` caps the taps per side, so 4 gives the 4 + 1 + 4 the shared
+    // contract asks for instead of the count the strength would derive.
+    root.filters = [new BlurFilter({ strength: blurStrength(spec), quality: BLUR_TAPS_PER_SIDE })];
+
+    blurTexture = texture;
+  };
+
+  /** Drop the blur scene's texture so a rebuild (or teardown) leaks nothing. */
+  const releaseBlur = (): void => {
+    blurTexture?.destroy();
+    blurTexture = null;
+  };
+
+  /** Hit-test scene state, or nulls for every archetype that resolves no queries. */
+  let pickingSpec: ArchetypeSpec | null = null;
+  let pickTexture: Texture | null = null;
+  /**
+   * Hits the last block resolved.
+   *
+   * Published on the adapter so a smoke run can check that every arm resolved
+   * the identical points to the identical answers - a picking row where one arm
+   * silently searched a smaller scene would otherwise read as a faster index.
+   */
+  let pickHits = 0;
+
+  /**
+   * Build the picking scene: interactive rectangles on the shared layout, with
+   * the engine's interaction index attached to them.
+   *
+   * `attachRoot` is what puts the nodes into that index, which is the structure
+   * the comparison is actually about - without it the engine would walk the tree
+   * per query and the row would measure a fallback rather than the feature.
+   */
+  const buildPickingScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = new Texture(createParticleCanvas());
+    const scene = new Container();
+
+    for (let index = 0; index < nodeCount; index += 1) {
+      const rect = new Sprite(texture);
+      const at = pickRectAt(index);
+
+      rect.width = PICK_RECT_SIZE;
+      rect.height = PICK_RECT_SIZE;
+      rect.setPosition(at.x, at.y);
+      rect.interactive = true;
+      scene.addChild(rect);
+    }
+
+    root = scene;
+    pickTexture = texture;
+    pickingSpec = spec;
+
+    app!.interaction.attachRoot(scene);
+  };
+
+  /** Box-tree layout state, or nulls for every archetype that resolves no layout passes. */
+  let layoutSpec: ArchetypeSpec | null = null;
+  let layoutStack: Stack | null = null;
+  let layoutLeaves: LayoutLeaf[] = [];
+  let layoutWidgets = 0;
+  /**
+   * Passes resolved since the scene was built, warmup included.
+   *
+   * Counted here rather than derived from `mutate`'s frame index: the harness
+   * restarts that index at zero between warmup and the timed window, and a pass
+   * only puts back what the PREVIOUS pass widened - so a restarted index would
+   * leave the last warmup pass's leaves wide for the rest of the cell and the
+   * tree would stop matching the shared definition.
+   */
+  let layoutPass = 0;
+
+  /**
+   * Build the layout scene: a root row of column boxes, each holding rows of
+   * fixed-size leaf widgets, sized to the first viewport before the measurement
+   * window opens.
+   *
+   * `Stack` re-flows on its own whenever a child widget resizes, so a pass here
+   * is a leaf `setSize` and a root `setSize` - there is no separate "solve now"
+   * call to make. That is a different algorithm from the Pixi arm's dirty flag
+   * plus one Yoga solve, and deliberately so: the shared scope is the tree and
+   * the mutation, not how an engine chooses to propagate them.
+   */
+  const buildLayoutScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const shape = layoutTreeShape(nodeCount);
+    const stack = new Stack({ direction: 'row', spacing: BOX_GAP, padding: BOX_PADDING, align: 'start' });
+    const columns: Stack[] = [];
+    const leaves: LayoutLeaf[] = [];
+
+    for (let column = 0; column < shape.columns; column += 1) {
+      const box = new Stack({ direction: 'column', spacing: BOX_GAP, padding: BOX_PADDING, align: 'start' });
+
+      columns.push(box);
+      stack.addItem(box);
+    }
+
+    for (let row = 0; row < shape.rows; row += 1) {
+      const box = new Stack({ direction: 'row', spacing: BOX_GAP, padding: BOX_PADDING, align: 'start' });
+
+      columns[Math.floor(row / ROWS_PER_COLUMN)]!.addItem(box);
+
+      for (let slot = 0; slot < widgetsInRow(shape, row); slot += 1) {
+        const leaf = new LayoutLeaf();
+
+        leaf.setSize(WIDGET_WIDTH, WIDGET_HEIGHT);
+        leaves.push(leaf);
+        box.addItem(leaf);
+      }
+    }
+
+    const viewport = layoutViewportAt(0);
+
+    stack.setSize(viewport.width, viewport.height);
+
+    root = stack;
+    layoutStack = stack;
+    layoutLeaves = leaves;
+    layoutWidgets = shape.widgets;
+    layoutPass = 0;
+    layoutSpec = spec;
+  };
+
+  /** Drop the layout scene so a rebuild (or teardown) leaks nothing. */
+  const releaseLayout = (): void => {
+    layoutSpec = null;
+    layoutStack = null;
+    layoutLeaves = [];
+    layoutWidgets = 0;
+    layoutPass = 0;
+  };
+
+  /**
+   * The resolved leaf rectangles, in leaf-index order and in the root box's
+   * coordinates.
+   *
+   * Read back from the widgets rather than recorded while the pass ran: the
+   * point of the check is that the tree ENDED where the shared definition says,
+   * and a value captured on the way through would be the arm reporting its own
+   * intermediate state. Called outside the timed bracket only.
+   */
+  const layoutRects = (): readonly LayoutRect[] => {
+    const rects: LayoutRect[] = [];
+
+    if (layoutStack === null) {
+      return rects;
+    }
+
+    for (const column of layoutStack.children) {
+      for (const row of (column as Container).children) {
+        for (const leaf of (row as Container).children) {
+          const widget = leaf as LayoutLeaf;
+
+          rects.push({ x: column.x + row.x + widget.x, y: column.y + row.y + widget.y, width: widget.uiWidth, height: widget.uiHeight });
+        }
+      }
+    }
+
+    return rects;
+  };
+
+  /** Drop the picking scene so a rebuild (or teardown) leaks nothing. */
+  const releasePicking = (): void => {
+    if (pickingSpec !== null && root !== null) {
+      app?.interaction.detachRoot(root);
+    }
+
+    pickTexture?.destroy();
+    pickTexture = null;
+    pickingSpec = null;
+  };
+
   return {
     engine: 'exojs',
     config,
@@ -476,6 +1004,11 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         backend: { type: backend },
         clearColor: Color.black,
         hello: false,
+        // Registered for every cell, not only the tilemap ones: the extension
+        // contributes renderer bindings rather than scene work, and an engine
+        // configured differently per archetype would make two archetypes'
+        // numbers describe two engines.
+        extensions: [tilemapExtension, particlesExtension],
       });
 
       // Boot the full production init path (awaits the backend's async
@@ -502,8 +1035,57 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       releaseBatchScene();
       releaseComposite();
+      releaseTilemap();
+      releaseParticles();
+      releaseLit();
+      releaseBlur();
+      releasePicking();
+      releaseLayout();
       sharedMeshGeometry?.destroy();
       sharedMeshGeometry = null;
+
+      // The tilemap scenes leave the sprite path behind: the leaves are tiles in
+      // a packed layer rather than nodes, so nothing below applies to them.
+      if (isTilemap(spec)) {
+        buildTilemapScene(spec, nodeCount);
+
+        return;
+      }
+
+      // The particle scenes leave the sprite path behind too: their leaves live
+      // in the system's own storage rather than in the scene graph.
+      if (isParticles(spec)) {
+        buildParticleScene(spec, nodeCount);
+
+        return;
+      }
+
+      // The lit scenes keep the sprite path but leave the render path: the
+      // renderer works on the frame the application drew, so the scene has to
+      // be drawn into one.
+      if (isLit(spec)) {
+        buildLitScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isBlurEffect(spec)) {
+        buildBlurScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isPickingScene(spec)) {
+        buildPickingScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isUiLayoutScene(spec)) {
+        buildLayoutScene(spec, nodeCount);
+
+        return;
+      }
 
       // `instanced-batch` leaves the scene graph behind entirely: nodeCount
       // instances are laid out on the same grid every other archetype uses, but
@@ -566,7 +1148,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // the size of the viewport, i.e. the pre-existing layout unchanged.
       const world = worldExtent(spec, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
       const layout = gridLayout(nodeCount, world.width, world.height, GRID_MARGIN);
-      const overdraw = spec.id === 'overdraw';
+      const overdraw = hasFullViewportLeaves(spec);
+      const alpha = leafAlpha(spec);
 
       // Canonical, shared mutation selection: draw one RNG value per leaf in
       // index order and select when below `mutationFraction`. Using the shared
@@ -666,6 +1249,12 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
           leaf.height = VIEWPORT_HEIGHT;
         }
 
+        // A fixed leaf alpha is what makes a stack of full-viewport quads a
+        // blend workload: every layer has to be composited rather than skipped.
+        if (alpha < 1) {
+          leaf.tint.a = alpha;
+        }
+
         const { x, y } = leafPosition(i);
 
         leaf.setPosition(x, y);
@@ -717,16 +1306,21 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // of containers with the identical rects.
       const masks = Math.min(maskDepth(spec), spine.length - 1);
 
+      maskedLevels = [];
+      maskMotion = hasMaskMotion(spec);
+
       for (let level = 0; level < masks; level++) {
         const rect = maskRect(level, masks, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        const container = spine[level + 1]!;
 
-        spine[level + 1]!.mask = new Rectangle(rect.x, rect.y, rect.width, rect.height);
+        container.mask = new Rectangle(rect.x, rect.y, rect.width, rect.height);
+        maskedLevels.push({ container, base: rect });
       }
 
-      const bloomRadius = compositeBlurRadius(spec);
+      const bloomStrength = compositeBlurStrength(spec);
 
-      if (bloomRadius > 0) {
-        buildComposite(sceneRoot, bloomRadius);
+      if (bloomStrength > 0) {
+        buildComposite(sceneRoot, bloomStrength);
       }
 
       root = sceneRoot;
@@ -753,11 +1347,101 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       app.rendering.view.setCenter(start.x, start.y);
     },
 
+    pickHits(): number {
+      return pickHits;
+    },
+
+    layoutDigest(): LayoutDigestReport {
+      return { pass: layoutPass - 1, digest: layoutDigest(layoutRects()) };
+    },
+
     mutationSignature(): string {
       return mutationSignature(mutableIndices);
     },
 
     mutate(frame: number): void {
+      // Layout scene: one block of layout passes, inside the bracket because
+      // resolving the tree IS the frame's work here. Each pass puts the previous
+      // pass's widened leaves back and widens this pass's, then re-sizes the root
+      // to the viewport this pass resolves against. `Stack` re-flows from the
+      // resize itself, so the widths and the root box ARE the pass.
+      if (layoutSpec !== null && layoutStack !== null) {
+        for (let step = 0; step < LAYOUT_PASSES_PER_FRAME; step += 1) {
+          const pass = layoutPass;
+
+          if (pass > 0) {
+            forEachMutatedWidget(pass - 1, layoutWidgets, index => {
+              layoutLeaves[index]?.setSize(WIDGET_WIDTH, WIDGET_HEIGHT);
+            });
+          }
+
+          forEachMutatedWidget(pass, layoutWidgets, index => {
+            layoutLeaves[index]?.setSize(WIDGET_WIDE, WIDGET_HEIGHT);
+          });
+
+          const viewport = layoutViewportAt(pass);
+
+          layoutStack.setSize(viewport.width, viewport.height);
+          layoutPass = pass + 1;
+        }
+
+        return;
+      }
+
+      // Picking scene: one block of point queries through the engine's own
+      // public query, inside the bracket because resolving them IS the frame's
+      // work here. The hit count is kept so a smoke run can check that every arm
+      // resolved the same points to the same answers.
+      if (pickingSpec !== null && app !== null) {
+        const queries = pointerQueriesPerFrame(pickingSpec);
+        let hits = 0;
+
+        for (let index = 0; index < queries; index += 1) {
+          const point = pickPointAt(index, queries);
+
+          if (app.interaction.nodeAt(point.x, point.y) !== null) {
+            hits += 1;
+          }
+        }
+
+        pickHits = hits;
+
+        return;
+      }
+
+      // Particle scenes: the lifecycle one advances the simulation and tops the
+      // pool back up, both inside the bracket, because ageing, moving, fading and
+      // respawning ARE the per-frame work it measures. The draw-only scene
+      // advances nothing - it submits the same quads every frame by design.
+      if (particleSpec !== null && particleSystem !== null) {
+        if (particleLifetime !== null) {
+          particleSystem.update(PARTICLE_STEP as Seconds);
+          fillParticles(particleSystem.capacity, false);
+        }
+
+        return;
+      }
+
+      // Tilemap scenes: move the window, then submit this frame's tile changes.
+      // Both belong in the bracket - scrolling and editing ARE the per-frame work
+      // these scenes do, and an edit an arm defers past the draw would not be an
+      // edit the frame paid for.
+      if (tilemapSpec !== null && app !== null && tileLayer !== null) {
+        const camera = tilemapCameraAt(tilemapCameraFrameFor(tilemapSpec, frame), tilemapMapExtent);
+
+        app.rendering.view.setCenter(camera.x + VIEWPORT_WIDTH / 2, camera.y + VIEWPORT_HEIGHT / 2);
+
+        if (isTilemapEditing(tilemapSpec)) {
+          const tileset = tileLayer.tilesets[0]!;
+
+          for (const edit of tilemapEditsAt(frame, tilemapMapExtent)) {
+            tileLayer.setTileAt(edit.x, edit.y, { tileset, localTileId: edit.tileId, transform: TILE_TRANSFORM_IDENTITY });
+          }
+        }
+
+        return;
+      }
+
       // Camera step for a scrolling archetype. Both this and the wobble below
       // run inside the harness's CPU bracket, which is correct: moving the
       // camera IS the per-frame work such a scene does.
@@ -765,6 +1449,17 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         const centre = cameraCenterAt(scrollingSpec, frame, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
         app.rendering.view.setCenter(centre.x, centre.y);
+      }
+
+      // Mask motion: every rect is re-assigned at a wobbled offset. A fresh
+      // rectangle each time, because a mask is keyed by identity - mutating the
+      // one already assigned would change nothing the engine can see.
+      if (maskMotion) {
+        const { dx, dy } = wobbleOffsetAt(frame);
+
+        for (const { container, base } of maskedLevels) {
+          container.mask = new Rectangle(base.x + dx, base.y + dy, base.width, base.height);
+        }
       }
 
       // Structural churn: destroy each selected leaf and build its replacement in
@@ -851,6 +1546,17 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         throw new Error('renderFrame was called before buildScene.');
       }
 
+      // The lit scenes publish this frame's lights and then play the frame slot,
+      // which draws the field into the frame texture and lights it - the
+      // application's own order, assembled from the same passes.
+      if (litLighting !== null) {
+        litLighting.update();
+        app.framePasses.execute(app.rendering);
+        backend.flush();
+
+        return;
+      }
+
       // `composite`: the bloom stack renders the frame itself (capture, blur,
       // direct draw, additive overlay), so the ordinary single render below
       // would be a fifth, redundant scene walk.
@@ -879,6 +1585,10 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     teardown(): void {
       releaseBatchScene();
       releaseComposite();
+      releaseTilemap();
+      releaseParticles();
+      releaseLit();
+      releaseLayout();
 
       if (root !== null) {
         root.destroy();
@@ -906,6 +1616,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       mutableIndices = [];
       views = [];
       scrollingSpec = null;
+      maskedLevels = [];
+      maskMotion = false;
       rebuildLeaf = null;
       churning = false;
       textUpdating = false;

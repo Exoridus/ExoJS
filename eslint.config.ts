@@ -1,3 +1,7 @@
+import { globSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { collectDeprecatedExports, exoEngineRulesConfig, exoRulesConfig } from '@codexo/eslint-plugin-exojs';
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
 import { typeAwareCorrectnessRules } from '@codexo/exojs-config/eslint/correctness';
@@ -9,6 +13,14 @@ import prettier from 'eslint-config-prettier';
 import security from 'eslint-plugin-security';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+
+// `no-deprecated-api`'s table, read from the engine's own JSDoc rather than
+// hand-maintained: every exported symbol under `src/` whose doc comment
+// carries `@deprecated`. Computed once, from this repository's own sources -
+// a consumer package generating the same table for its installed dependency
+// would point `collectDeprecatedExports` at that dependency's shipped
+// `.d.ts` files instead (see `deprecatedApi.ts`'s doc comment).
+const deprecatedApi = collectDeprecatedExports(globSync('src/**/*.ts', { cwd: import.meta.dirname }).map(file => resolve(import.meta.dirname, file)));
 
 export default defineConfig([
   {
@@ -370,6 +382,28 @@ export default defineConfig([
   // `packages/exojs-react` lints its own tree with the same shared policy.
   ...extensionSourceConfig({ files: ['packages/exojs-*/src/**/*.ts'], tsconfigRootDir: import.meta.dirname }),
 
+  // ExoJS's own rules (`@codexo/eslint-plugin-exojs`), over the engine and every
+  // extension package's source. One call covering both globs: `exoRulesConfig`
+  // registers the plugin as well as the rules.
+  //
+  // `strict` rather than `recommended` because this repository is where the
+  // deprecation table is generated - a symbol marked `@deprecated` in `src/`
+  // must not still be imported from `src/` or from a package that ships beside
+  // it. Consumers choose the tier that fits their own migration.
+  ...exoRulesConfig({ files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts'], deprecatedApi, tier: 'strict' }),
+
+  // The engine-internal rules (`exojs-engine/*`), over the engine only. They
+  // enforce promises this repository's own doc comments make and reach no
+  // consumer: they live in a second plugin object under their own key, which
+  // only this call registers.
+  //
+  // The hook list is the set of methods whose JSDoc states the prohibition:
+  // `Filter.getOutputBounds` runs once per frame for every filtered node, and
+  // `SceneNode._notifyEnclosingRetainedGroup` runs on every own-transform
+  // mutation. A hook joins this list when its documentation makes the promise,
+  // not the other way round.
+  ...exoEngineRulesConfig({ files: ['src/**/*.ts'], allocationFreeHooks: ['getOutputBounds', '_notifyEnclosingRetainedGroup'] }),
+
   // The published build tooling runs in Node: it drives esbuild and reads the
   // filesystem. The generic `packages/exojs-*/src` block grants browser
   // globals, which is the wrong environment here, so the Node ones are added on
@@ -379,6 +413,18 @@ export default defineConfig([
     files: ['packages/exojs-build/src/**/*.ts'],
     languageOptions: {
       globals: { ...globals.node, ...globals.es2024 },
+    },
+  },
+
+  // The published command line tool runs in Node for the same reason, and its
+  // console output is the product rather than a debug leftover.
+  {
+    files: ['packages/exojs-cli/src/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.es2024 },
+    },
+    rules: {
+      'no-console': 'off',
     },
   },
 
@@ -436,7 +482,7 @@ export default defineConfig([
   },
 
   // Extension package tests. `packages/exojs-react` lints its own tree.
-  ...packageTestConfig({ files: ['packages/exojs-*/test/**/*.{ts,tsx}'] }),
+  ...packageTestConfig({ files: ['packages/exojs-*/test/**/*.{ts,tsx}', 'packages/eslint-plugin-exojs/test/**/*.ts'] }),
 
   // Site sources are deliberately absent here. ESLint resolves the config
   // nearest to each linted file, so `site/eslint.config.ts` governs them even
@@ -528,15 +574,11 @@ export default defineConfig([
   },
 
   // Build-time constants intentionally follow ecosystem-style ALL_CAPS names.
+  // Matched by filename rather than listed per package: every package that
+  // declares them does it in the same file, and a list would fall behind the
+  // next one that does.
   {
-    files: [
-      'src/build-constants.d.ts',
-      'src/typings.d.ts',
-      'packages/exojs-particles/src/typings.d.ts',
-      'packages/exojs-tilemap/src/typings.d.ts',
-      'packages/exojs-tiled/src/typings.d.ts',
-      'packages/exojs-physics/src/typings.d.ts',
-    ],
+    files: ['src/build-constants.d.ts', 'src/typings.d.ts', 'packages/*/src/typings.d.ts'],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },
@@ -750,12 +792,20 @@ export default defineConfig([
     },
   },
 
-  // The light packer walks the registered lights by computed index inside a
-  // loop bounded by the count it just derived from their length, so `arr[i]!`
-  // says what the reader already knows and a per-frame `for...of` iterator is
-  // exactly the allocation this path exists to avoid.
+  // The lighting package's geometry paths walk their own typed arrays by an
+  // index they just built from the loop bounds - an alpha texel, a segment
+  // quadruple, a contour point, a shadow bin. Every read is in range by
+  // construction, and `noUncheckedIndexedAccess` would only add a branch per
+  // element to a load-time pass over a whole texture or to a per-frame pass
+  // over every occluding edge on screen.
   {
-    files: ['packages/exojs-lighting/src/LightingSystem.ts'],
+    files: [
+      'packages/exojs-lighting/src/normals/deriveNormals.ts',
+      'packages/exojs-lighting/src/readAlphaField.ts',
+      'packages/exojs-lighting/src/occluders/*.ts',
+      'packages/exojs-lighting/src/backends/FrameLightingBackend.ts',
+      'packages/exojs-lighting/src/backends/transportGeometry.ts',
+    ],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
@@ -793,7 +843,11 @@ export default defineConfig([
   // declare in snake_case with the engine's `u_` prefix. The object literal has
   // to spell them exactly as the shader does.
   {
-    files: ['packages/exojs-lighting/src/LitSpriteMaterial.ts'],
+    files: [
+      'packages/exojs-lighting/src/LitMaterial.ts',
+      'packages/exojs-lighting/src/backends/FrameLightingBackend.ts',
+      'packages/exojs-lighting/src/backends/radianceField.ts',
+    ],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },
@@ -950,7 +1004,7 @@ export default defineConfig([
     },
   },
   // Vitest test-quality rules, over both the root suite and every package's.
-  ...vitestConfig({ files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}'] }),
+  ...vitestConfig({ files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}', 'packages/eslint-plugin-exojs/test/**/*.ts'] }),
   // Node / config files / scripts - not part of any tsconfig `include`, so
   // type-aware rules (from the global `recommendedTypeChecked`/
   // `stylisticTypeChecked` configs applied unscoped above) have no type
@@ -983,6 +1037,32 @@ export default defineConfig([
     },
   },
 
+  // The published lint rules: a Node package with its own tsconfig, outside the
+  // `packages/exojs-*` globs above because its npm name follows ESLint's plugin
+  // convention rather than the engine's. It is never linted by its own rules -
+  // it is not engine code, and a rule reporting on the file that defines it
+  // would be reporting on the fixture, not on a mistake.
+  {
+    files: ['packages/eslint-plugin-exojs/src/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        ...globals.node,
+        ...globals.es2024,
+      },
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
+    },
+  },
+
   // create-exo-app: a Node CLI scaffolder with its own tsconfig. Console output is
   // the tool's primary interface, so no-console is allowed here.
   {
@@ -1004,6 +1084,78 @@ export default defineConfig([
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
       'no-console': 'off',
+    },
+  },
+
+  // Scaffold templates. Consumer code like the example catalog, and treated the
+  // same way: the engine's type-aware policy is the wrong bar for material whose
+  // job is to be copied, but the templates still have to sort their imports and
+  // not drop a promise.
+  {
+    files: ['packages/create-exo-app/templates/*/src/**/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['packages/create-exo-app/templates/*/src/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      // Named project rather than the project service: the service would resolve
+      // each template's own `tsconfig.json`, which is the scaffolded project's
+      // and resolves `@codexo/exojs` from npm. `tsconfig.templates.json` is the
+      // program that resolves the workspace sources instead.
+      parserOptions: {
+        projectService: false,
+        project: './tsconfig.templates.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.es2024,
+      },
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'unused-imports/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+      curly: 'error',
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+      'no-console': 'error',
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'object-shorthand': 'error',
+      'prefer-template': 'error',
+      'unicorn/prefer-node-protocol': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+    },
+  },
+
+  // A template's own `vite.config.ts` is the scaffolded project's build config,
+  // not part of `tsconfig.templates.json` - that program is the template SOURCE
+  // compiled against the workspace engine. No named project reaches these files,
+  // so they keep the service-free setup and give up the type-aware rule with it.
+  {
+    files: ['packages/create-exo-app/templates/*/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['packages/create-exo-app/templates/*/*.ts'],
+    languageOptions: {
+      parserOptions: { projectService: false, project: null },
+    },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'off',
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
     },
   },
 

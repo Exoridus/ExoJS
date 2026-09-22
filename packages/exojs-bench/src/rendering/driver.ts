@@ -1,18 +1,28 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { chromium } from 'playwright';
+import type { Browser } from 'playwright';
+import { chromium, webkit } from 'playwright';
 
-import type { BaseProvenance, LibraryProvenance } from '../shared/provenance';
-import { readLibraryProvenance } from '../shared/provenance';
+import type { ClockReport } from '../shared/clock';
+import type { BaseProvenance, LibraryProvenance, PlatformDeclaration, PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
+import {
+  classifyPrerelease,
+  declaredPrereleaseOf,
+  DEFAULT_RENDERING_BROWSER,
+  readLibraryProvenance,
+  readOsRelease,
+  readPlatformVersion,
+} from '../shared/provenance';
 import type { ViteDevServer } from '../shared/viteServer';
-import { LIBRARY_ARMS, readEngineVersion, startViteServer as startPageServer } from '../shared/viteServer';
+import { readEngineVersion, RENDERING_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
+import type { RunPlan } from '../suite/plan';
 import { buildMatrix } from './archetypes';
+import { excaliburCovers, phaserCovers, pixiCulledCovers } from './coverage';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
 import type { MatrixSelection } from './selection';
-import { applySelection } from './selection';
-import { usesRenderTargets } from './traits';
-import { isScrolling } from './world';
+import { applyPlan, applySelection } from './selection';
+import { isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './world';
 
 // Re-exported so the rendering barrel and the CLI keep importing the selection
 // surface from `driver` unchanged. It lives in its own module because the tests
@@ -28,6 +38,10 @@ export type { LibraryProvenance } from '../shared/provenance';
 // factory it is passed to.
 export { readEngineVersion } from '../shared/viteServer';
 
+// Re-exported so the rendering barrel and the CLI reach the browser selector
+// through `driver`, where the launch that consumes it lives.
+export { DEFAULT_RENDERING_BROWSER, parseRenderingBrowser, RENDERING_BROWSERS, type RenderingBrowser } from '../shared/provenance';
+
 /**
  * Provenance stamped onto every baseline run. Without it a wall-clock number is
  * meaningless: the same matrix on a real GPU and on a software rasterizer
@@ -41,12 +55,35 @@ export interface Provenance extends BaseProvenance {
   readonly adapter: string;
   /** Rendering backend this provenance describes. */
   readonly backend: Backend;
-  /** Chromium launch flags used for the run. */
+  /** Browser engine the run was measured in. */
+  readonly browser: RenderingBrowser;
+  /** Browser build the run was measured in, as the browser reported it. */
+  readonly browserVersion: string;
+  /** Operating system of the host that drove the browser (`os.platform()` + `os.release()`). */
+  readonly os: string;
+  /** The operating system's major version, and what established it. */
+  readonly platformVersion: PlatformVersionStamp;
+  /** Whether the platform is a pre-release build, and what that rests on. */
+  readonly prerelease: PrereleaseStamp;
+  /**
+   * Browser launch flags used for the run. Empty under WebKit, which takes none
+   * of the Chromium arguments and needs none: the harness page sizes its own
+   * canvas backing store, so nothing depends on a pinned device scale factor.
+   */
   readonly flags: readonly string[];
-  /** Whether Chromium ran headless. */
+  /** Whether the browser ran headless. */
   readonly headless: boolean;
   /** True when the adapter is a software rasterizer - timings are then untrusted. */
   readonly software: boolean;
+  /**
+   * The clock grid the run's FIRST session observed, or `null` where no session
+   * opened.
+   *
+   * Provenance only. A run opens one session per arm, so this describes the
+   * conditions rather than qualifying any particular measurement; each cell
+   * carries the grid of the session that actually timed it.
+   */
+  readonly clock: ClockReport | null;
   /**
    * Resolved WebGPU sprite-batch texture-slot tier for this run's adapter (8 /
    * 16 / 32), or `undefined` for the WebGL2 backend (whose batcher uses a fixed
@@ -118,6 +155,32 @@ export const WEBGPU_LAUNCH_FLAGS: readonly string[] = [...LAUNCH_FLAGS, '--enabl
  */
 export const SOFTWARE_LAUNCH_FLAGS: readonly string[] = [...LAUNCH_FLAGS, '--use-angle=swiftshader'];
 
+/**
+ * The launch flags one run actually uses.
+ *
+ * Every flag the harness defines is a Chromium argument, so a WebKit run gets
+ * none of them and stamps an empty set. Recording Chromium's flags against a
+ * WebKit run would claim a launch configuration that never happened, and the
+ * `--enable-unsafe-webgpu` entry in particular would suggest a WebGPU opt-in
+ * WebKit has no notion of.
+ */
+export const resolveLaunchFlags = (browser: RenderingBrowser, backend: Backend, override?: readonly string[]): readonly string[] => {
+  if (browser === 'webkit') {
+    return [];
+  }
+
+  return override ?? (backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS);
+};
+
+/**
+ * Launch the selected browser headless.
+ *
+ * Chromium is launched on the `chromium` channel with the harness flags;
+ * WebKit is launched from Playwright's own build with no arguments at all.
+ */
+const launchBrowser = async (browser: RenderingBrowser, flags: readonly string[]): Promise<Browser> =>
+  browser === 'webkit' ? webkit.launch({ headless: true }) : chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
+
 /** Adapter identity substrings that name a software WebGPU implementation rather than a real GPU. */
 const SOFTWARE_WEBGPU_PATTERN = /swiftshader|lavapipe|llvmpipe|warp|software|basic render/i;
 
@@ -152,42 +215,28 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   capabilityDescriptor('exojs', 'current', ['webgl2', 'webgpu']),
   capabilityDescriptor('exojs', 'retained', ['webgl2', 'webgpu']),
   // Pixi.js v8 is the direct renderer benchmark and the only other 2D library
-  // that ships WebGPU, so it runs on both backends. It is now a first-class,
-  // committed arm (pinned exact devDependency) rather than the old gitignored
-  // local-only reference; its version + provenance are stamped into the report
-  // header via `readLibraryProvenance`.
+  // that ships WebGPU, so it runs on both backends. It is a first-class,
+  // committed arm (pinned exact devDependency); its version + provenance are
+  // stamped into the report header via `readLibraryProvenance`.
   capabilityDescriptor('pixi', 'default', ['webgl2', 'webgpu']),
-  // Second Pixi arm: stock Pixi PLUS the explicit per-frame `Culler.shared.cull`
-  // a Pixi app that wants culling has to write itself. It runs only on
-  // archetypes with genuine off-screen content (`cullingEnabled`), where the
-  // difference between the two arms is the measurement; on a fully-visible
-  // archetype the cull call could only ever add cost over an identical visible
-  // set, so the variant would just duplicate `pixi default` across the matrix.
-  capabilityDescriptor('pixi', 'culled', ['webgl2', 'webgpu'], spec => spec.cullingEnabled),
+  capabilityDescriptor('pixi', 'culled', ['webgl2', 'webgpu'], pixiCulledCovers),
   // Phaser 4 and Excalibur are committed competitor arms (pinned exact
   // devDependencies). Both are WebGL2-only in this harness and never run WebGPU
-  // (Phaser 4 ships no WebGPU renderer; Excalibur 0.32 has none). Phaser 4 is
-  // measured as a stock app: its WebGLRenderer creates a WebGL1 context by
-  // default (`getContext('webgl')`), so it runs under the 'webgl2' REQUEST while
-  // rendering WebGL1 (disclosed by the harness's structural-probe degrade path
-  // and the report Methodology); Excalibur 0.32 renders a real WebGL2 context.
+  // (Phaser 4 ships no WebGPU renderer; Excalibur 0.32 has none). Phaser's
+  // default renderer asks for WebGL1, so the adapter explicitly supplies and
+  // verifies a WebGL2 context through Phaser's public context path; Excalibur
+  // creates its own real WebGL2 context.
+  //
   // A missing (unlinked) competitor degrades gracefully: its per-cell dynamic
   // import fails in isolation (`runCellInPage` records that cell `unavailable`
   // and the run continues), and it is left out of Vite's pre-bundle set below.
-  // Both sit out the scrolling archetypes: neither arm implements a moving
-  // camera, so they would render a fixed, fully-visible scene under an id that
-  // promises off-screen content - a row that looks comparable and is not.
   //
-  // Both also sit out the render-target archetypes (`filter-chain-*`,
-  // `mask-clip`), for two different reasons that land on the same exclusion.
-  // Phaser 4 renders a WebGL1 context, so a target-heavy row's gap would be
-  // attributable to the backend generation rather than to the engine, and a
-  // WebGL1-vs-WebGL2 factor is not a claim this matrix makes. Excalibur 0.32 has
-  // no per-node filter or clipping API at all: its `PostProcessor` chain is a
-  // full-SCREEN pass, not a filtered subtree, and it ships no mask source, so
-  // the cell would have to be approximated - which the fairness rule forbids.
-  capabilityDescriptor('phaser', 'default', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec)),
-  capabilityDescriptor('excalibur', 'default', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec)),
+  // Which archetypes each arm covers is `coverage.ts`, shared with the adapters
+  // rather than restated here - this list decides which cells EXIST, so a copy
+  // that drifted from an adapter's own answer would publish a row the adapter
+  // never implemented.
+  capabilityDescriptor('phaser', 'webgl2', ['webgl2'], phaserCovers),
+  capabilityDescriptor('excalibur', 'default', ['webgl2'], excaliburCovers),
 ];
 
 /**
@@ -218,7 +267,8 @@ const requestedCalibrationArms = (selection: MatrixSelection | undefined): reado
  * COEP isolation headers) is identical for every page this package serves, so it
  * lives in one place; only the page root differs.
  */
-export const startViteServer = async (version: string): Promise<ViteDevServer> => startPageServer({ pageDir: PAGE_DIR, version });
+export const startViteServer = async (version: string): Promise<ViteDevServer> =>
+  startPageServer({ pageDir: PAGE_DIR, version, libraryArms: RENDERING_LIBRARY_ARMS });
 
 /**
  * In-page snippet: read the unmasked WebGL2 renderer string for provenance
@@ -279,7 +329,7 @@ export interface WebGpuIdentity {
  * caller can emit `unavailable` cells instead of measuring a software rasterizer
  * and passing it off as a GPU number.
  */
-export const readWebGpuAdapter = async (page: import('playwright').Page): Promise<WebGpuIdentity> => {
+export const readWebGpuAdapter = async (page: import('playwright').Page, browser: RenderingBrowser = DEFAULT_RENDERING_BROWSER): Promise<WebGpuIdentity> => {
   const probe = await page.evaluate(async () => {
     const gpu = (navigator as Navigator & { gpu?: GPU }).gpu;
 
@@ -318,7 +368,12 @@ export const readWebGpuAdapter = async (page: import('playwright').Page): Promis
   });
 
   if (!probe.present) {
-    return { adapter: 'navigator.gpu is undefined', usable: false, note: 'WebGPU unavailable: navigator.gpu is undefined', slotTier: null };
+    return {
+      adapter: 'navigator.gpu is undefined',
+      usable: false,
+      note: `WebGPU unavailable: navigator.gpu is undefined in ${browser} on this platform`,
+      slotTier: null,
+    };
   }
 
   if (!probe.acquired) {
@@ -341,8 +396,15 @@ export const readWebGpuAdapter = async (page: import('playwright').Page): Promis
   return { adapter, usable: true, note: '', slotTier };
 };
 
-/** A cell that could not be measured: zeroed timings/structure, `unavailable` status, and an explanatory note. */
-const unavailableCell = (spec: CellSpec, note: string): CellResult => ({
+/**
+ * A cell that could not be measured: zeroed timings/structure, `unavailable`
+ * status, and an explanatory note.
+ *
+ * `clock` carries the session's grid where a session existed, so a cell that
+ * failed inside a live page is still attributed to the page it failed in. It is
+ * `null` only where no page produced the cell at all.
+ */
+const unavailableCell = (spec: CellSpec, note: string, clock: ClockReport | null = null): CellResult => ({
   spec,
   cpuMsMedian: 0,
   cpuMsP95: 0,
@@ -351,6 +413,7 @@ const unavailableCell = (spec: CellSpec, note: string): CellResult => ({
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: 0, textureBinds: 0, bufferUploads: 0 },
+  clock,
   status: 'unavailable',
   note,
 });
@@ -381,9 +444,9 @@ export type CellResultSink = (result: CellResult) => void;
  * discipline is untouched - means a failing cell costs only itself: it becomes
  * an `unavailable` datapoint carrying the error, and the run continues.
  */
-const runCellInPage = async (page: import('playwright').Page, spec: CellSpec): Promise<CellResult> => {
+const runCellInPage = async (page: import('playwright').Page, spec: CellSpec, hold: boolean): Promise<CellResult> => {
   try {
-    return await page.evaluate(cell => globalThis.__runBaselineCell!(cell), spec);
+    return await page.evaluate(args => globalThis.__runBaselineCell!(args.cell, args.hold), { cell: spec, hold });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -415,13 +478,13 @@ const CELL_WEDGED = Symbol('cell-wedged');
  * closes; its rejection is swallowed so it never surfaces as an unhandled
  * rejection (`runCellInPage` already never rejects on a normal cell error).
  */
-const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec): Promise<CellResult | typeof CELL_WEDGED> => {
+const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, hold = false): Promise<CellResult | typeof CELL_WEDGED> => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
     timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
   });
 
-  const run = runCellInPage(page, spec).then(result => {
+  const run = runCellInPage(page, spec, hold).then(result => {
     if (timer !== undefined) {
       clearTimeout(timer);
     }
@@ -455,17 +518,25 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec): 
  * For WebGPU the adapter identity is read once; a null or software adapter emits
  * every cell as `unavailable` rather than measuring a software rasterizer.
  */
+/** File stem of one cell's captured frame - the cell's identity, safe for a file name. */
+const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetype}-${String(cell.nodeCount)}-${cell.engine}-${cell.config}`;
+
 const runBackend = async (options: {
   baseUrl: string;
   backend: Backend;
+  browser: RenderingBrowser;
   cells: CellSpec[];
   engineVersion: string;
   onCellResult: CellResultSink;
+  /** Platform declaration from the command line; see {@link runMatrix}. */
+  platform?: PlatformDeclaration;
   /** Replaces the per-backend launch flags; see {@link runMatrix}. */
   launchFlags?: readonly string[];
+  /** Directory to capture each measured cell's last frame into; see {@link runMatrix}. */
+  captureDir?: string;
 }): Promise<{ provenance: Provenance; results: CellResult[] }> => {
-  const { baseUrl, backend, cells, engineVersion, onCellResult } = options;
-  const flags = options.launchFlags ?? (backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS);
+  const { baseUrl, backend, browser: browserName, cells, engineVersion, onCellResult, captureDir } = options;
+  const flags = resolveLaunchFlags(browserName, backend, options.launchFlags);
 
   // Group cells by arm (engine|config) in first-seen order so each arm runs in its
   // own browser session, isolated from every other arm's accumulated state.
@@ -497,6 +568,14 @@ const runBackend = async (options: {
   // read once and reused across every arm's session (same GPU, same flags).
   let renderer: string | null = null;
   let webgpuIdentity: WebGpuIdentity | null = null;
+  // The first session's grid, kept for the backend's provenance line. It
+  // describes the run's conditions and is NOT what qualifies a cell: each cell
+  // carries the grid of the session that produced it.
+  let clock: ClockReport | null = null;
+  // Read off the first session and reused: every session in a run launches the
+  // same build, and a run with no session at all reports the absence rather than
+  // an invented version.
+  let browserVersion = 'not-launched';
 
   for (const key of armOrder) {
     let remaining = armGroups.get(key)!;
@@ -504,7 +583,10 @@ const runBackend = async (options: {
     // One browser per pass; a mid-arm wedge breaks out, closes it, and the outer
     // loop relaunches a fresh one for whatever cells are left.
     while (remaining.length > 0) {
-      const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
+      const browser = await launchBrowser(browserName, flags);
+
+      browserVersion = browser.version();
+
       let relaunch = false;
 
       try {
@@ -513,12 +595,19 @@ const runBackend = async (options: {
         await page.goto(baseUrl, { waitUntil: 'load' });
         await page.waitForFunction(() => typeof globalThis.__runBaselineCell === 'function');
 
+        // Probed in THIS page, before its cells run: the grid belongs to the
+        // browsing context, and this run opens one session per arm, so a value
+        // read from another session would qualify cells it never timed.
+        const sessionClock = await page.evaluate(() => globalThis.__probeClock!());
+
+        clock ??= sessionClock;
+
         if (backend === 'webgpu') {
-          webgpuIdentity ??= await readWebGpuAdapter(page);
+          webgpuIdentity ??= await readWebGpuAdapter(page, browserName);
 
           if (!webgpuIdentity.usable) {
             for (const cell of remaining) {
-              collect(unavailableCell(cell, webgpuIdentity.note));
+              collect(unavailableCell(cell, webgpuIdentity.note, sessionClock));
             }
 
             remaining = [];
@@ -527,13 +616,14 @@ const runBackend = async (options: {
 
         while (remaining.length > 0) {
           const cell = remaining[0]!;
-          const outcome = await runCellOrWedge(page, cell);
+          const outcome = await runCellOrWedge(page, cell, captureDir !== undefined);
 
           if (outcome === CELL_WEDGED) {
             collect(
               unavailableCell(
                 cell,
                 `cell wedged the browser (no result after ${CELL_TIMEOUT_MS}ms — a mid-frame GPU-driver stall the in-page guards cannot interrupt); isolated as unavailable, browser relaunched for the arm's remaining cells`,
+                sessionClock,
               ),
             );
             remaining = remaining.slice(1);
@@ -542,6 +632,20 @@ const runBackend = async (options: {
           }
 
           collect(outcome);
+
+          // Frame capture: the canvas as the measured cell left it. The cell was
+          // asked to HOLD its scene for exactly this, because some arms blank the
+          // canvas when they release their context and a capture taken after
+          // teardown would compare teardown policies rather than scenes.
+          // `page.screenshot` rather than a canvas readback: a WebGPU canvas
+          // never yields its contents to `drawImage`.
+          if (captureDir !== undefined && outcome.status === 'ok') {
+            await page.screenshot({
+              path: resolve(captureDir, `${captureName(cell)}.png`),
+              clip: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+            });
+            await page.evaluate(() => globalThis.__disposeHeldCell!());
+          }
 
           if (backend === 'webgl2' && renderer === null && outcome.status === 'ok') {
             renderer = await readRendererInPage(page);
@@ -559,11 +663,21 @@ const runBackend = async (options: {
     }
   }
 
+  const platform = {
+    browser: browserName,
+    browserVersion,
+    clock,
+    os: readOsRelease(),
+    platformVersion: readPlatformVersion(options.platform),
+    prerelease: classifyPrerelease({ browserVersion, declared: declaredPrereleaseOf(options.platform) }),
+  } as const;
+
   const provenance: Provenance =
     backend === 'webgpu'
       ? {
           adapter: webgpuIdentity?.adapter ?? 'no-webgpu-adapter',
           backend,
+          ...platform,
           flags,
           headless: true,
           engineVersion,
@@ -581,6 +695,7 @@ const runBackend = async (options: {
       : {
           adapter: renderer ?? 'no-webgl2-context',
           backend,
+          ...platform,
           flags,
           headless: true,
           engineVersion,
@@ -674,6 +789,11 @@ const shortenProfileUrl = (url: string): string => {
  * profile's wall span across `hitCount` otherwise. Sampling at 50µs rather than
  * the 1000µs default is what makes a 0.1ms/frame retained cell resolvable at
  * all; it costs profile size, not accuracy.
+ *
+ * Chromium only: the sampler is driven over a CDP session, which no other
+ * engine speaks. Asking for a profile in another browser throws rather than
+ * quietly falling back to Chromium, which would attribute one engine's frame
+ * cost to another engine's name.
  */
 export const profileCell = async (options: {
   spec: CellSpec;
@@ -683,8 +803,18 @@ export const profileCell = async (options: {
   warmupFrames?: number;
   /** Sampling interval in microseconds. */
   intervalUs?: number;
+  /** Browser to profile in; only Chromium can be profiled. */
+  browser?: RenderingBrowser;
+  /** Platform declaration from the command line; see {@link runMatrix}. */
+  platform?: PlatformDeclaration;
 }): Promise<ProfileOutcome> => {
   const { spec } = options;
+  const browserName = options.browser ?? DEFAULT_RENDERING_BROWSER;
+
+  if (browserName !== 'chromium') {
+    throw new Error(`CPU profiling needs the V8 sampler, which only Chromium exposes; '${browserName}' cannot be profiled. Drop --browser to profile.`);
+  }
+
   const frames = options.frames ?? 200;
   const warmupFrames = options.warmupFrames ?? 30;
   const engineVersion = readEngineVersion();
@@ -697,8 +827,9 @@ export const profileCell = async (options: {
       throw new Error('The Vite dev server did not report a local URL.');
     }
 
-    const flags = spec.backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS;
-    const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
+    const flags = resolveLaunchFlags(browserName, spec.backend);
+    const browser = await launchBrowser(browserName, flags);
+    const browserVersion = browser.version();
 
     try {
       const page = await browser.newPage();
@@ -785,8 +916,16 @@ export const profileCell = async (options: {
         provenance: {
           adapter,
           backend: spec.backend,
+          browser: browserName,
+          browserVersion,
+          os: readOsRelease(),
+          platformVersion: readPlatformVersion(options.platform),
+          prerelease: classifyPrerelease({ browserVersion, declared: declaredPrereleaseOf(options.platform) }),
           flags,
           headless: true,
+          // A CPU profile reports attributed self time, never a wall-clock
+          // figure anyone compares, so no grid is probed for it.
+          clock: null,
           engineVersion,
           timestamp: new Date().toISOString(),
           software: isSoftwareRenderer(adapter),
@@ -829,8 +968,59 @@ export interface MatrixOutcome {
  * `onCellResult` (optional) fires after every cell so the caller can persist it
  * immediately; the returned {@link MatrixOutcome} is the same set aggregated.
  */
+/** The cell selection one matrix invocation would measure, resolved without touching a browser. */
+export interface MatrixCellSelection {
+  readonly backends: readonly Backend[];
+  readonly plan?: RunPlan;
+  readonly filter?: Partial<CellSpec>;
+  readonly selection?: MatrixSelection;
+  readonly timedFramesOverride?: number;
+}
+
+/**
+ * Resolve the cells a run would measure: the capability-gated matrix narrowed by
+ * the suite plan, then by the free filter, then by the multi-value selection.
+ *
+ * Exported so `--dry-run` can report the real planned workload - cell count,
+ * frame budgets, arms - from the same code path the run itself uses. A dry run
+ * derived from a second, parallel enumeration would be a description of a run
+ * nobody performs.
+ */
+export const resolveMatrixCells = (options: MatrixCellSelection): CellSpec[] => {
+  const allCells = buildMatrix([...ADAPTER_CAPABILITIES, ...requestedCalibrationArms(options.selection)], options.backends);
+  const planned = options.plan ? applyPlan(allCells, options.plan) : allCells;
+  const filtered = options.filter ? applyFilter(planned, options.filter) : planned;
+  const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
+
+  return options.timedFramesOverride === undefined ? selected : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
+};
+
 export const runMatrix = async (options: {
   backends: readonly Backend[];
+  /**
+   * Browser engine to measure in; defaults to {@link DEFAULT_RENDERING_BROWSER}.
+   *
+   * A backend the selected browser does not expose is emitted as `unavailable`
+   * cells carrying the reason, never as a number: WebKit reaches WebGPU on
+   * macOS alone, so the same matrix run elsewhere in WebKit publishes an empty
+   * WebGPU block rather than a WebGL2 number under a WebGPU heading.
+   */
+  browser?: RenderingBrowser;
+  /**
+   * The runner's statement about the operating system: its major version and
+   * whether that build is a pre-release one. Needed because neither is readable
+   * at runtime on every platform - see
+   * {@link '../shared/provenance'.readPlatformVersion}. A preview BROWSER build
+   * is detected from its own version string and needs no declaration.
+   */
+  platform?: PlatformDeclaration;
+  /**
+   * Resolved suite plan restricting the matrix to the loads that plan selects,
+   * applied BEFORE `filter` and `selection` so a free filter narrows within the
+   * plan. Omitted, the run covers each archetype's own full ladder, which is
+   * what an unqualified `bench` invocation has always meant.
+   */
+  plan?: RunPlan;
   filter?: Partial<CellSpec>;
   /** Multi-value selection applied after `filter`; see {@link MatrixSelection}. */
   selection?: MatrixSelection;
@@ -844,7 +1034,8 @@ export const runMatrix = async (options: {
   /** Invoked once per completed cell, in order, for incremental checkpointing. */
   onCellResult?: CellResultSink;
   /**
-   * Replaces the Chromium launch flags for every backend in this run.
+   * Replaces the Chromium launch flags for every backend in this run. Ignored
+   * under WebKit, which takes no such arguments.
    *
    * Exists for the structural gate, which passes {@link SOFTWARE_LAUNCH_FLAGS}:
    * it reads integer counters decided CPU-side, so it wants a rasterizer it can
@@ -854,13 +1045,20 @@ export const runMatrix = async (options: {
    * GPU number.
    */
   launchFlags?: readonly string[];
+  /**
+   * Directory each measured cell's final frame is captured into, as
+   * `<backend>-<archetype>-<count>-<engine>-<config>.png`.
+   *
+   * For checking that two arms asked to render one scene actually rendered it -
+   * a cell that draws nothing measures a frame nobody would ship, and its number
+   * looks like a win. Off unless asked for: a capture costs a full readback per
+   * cell, which has no place in a reportable run.
+   */
+  captureDir?: string;
 }): Promise<MatrixOutcome> => {
   const engineVersion = readEngineVersion();
-  const libraries = readLibraryProvenance(LIBRARY_ARMS);
-  const allCells = buildMatrix([...ADAPTER_CAPABILITIES, ...requestedCalibrationArms(options.selection)], options.backends);
-  const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
-  const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
-  const cells = options.timedFramesOverride === undefined ? selected : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
+  const libraries = readLibraryProvenance(RENDERING_LIBRARY_ARMS);
+  const cells = resolveMatrixCells(options);
 
   if (cells.length === 0) {
     throw new Error('The baseline matrix is empty: no adapter supports the requested backends/filter.');
@@ -889,10 +1087,13 @@ export const runMatrix = async (options: {
       const outcome = await runBackend({
         baseUrl,
         backend,
+        browser: options.browser ?? DEFAULT_RENDERING_BROWSER,
         cells: backendCells,
         engineVersion,
         onCellResult,
+        ...(options.platform !== undefined && { platform: options.platform }),
         ...(options.launchFlags !== undefined && { launchFlags: options.launchFlags }),
+        ...(options.captureDir !== undefined && { captureDir: options.captureDir }),
       });
 
       provenance.push(outcome.provenance);

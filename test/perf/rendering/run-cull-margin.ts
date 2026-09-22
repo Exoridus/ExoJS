@@ -6,7 +6,7 @@
  * process - collects the JSON each prints, and writes a Markdown table plus the
  * raw JSONL.
  *
- *   pnpm perf:renderers:cull-margin [--margins 0,0.0625,0.125] [--nodes 25000,100000]
+ *   pnpm perf renderers:cull-margin [--margins 0,0.0625,0.125] [--nodes 25000,100000]
  *                                   [--speeds 8] [--frames 300] [--warmup 60] [--repeats 3] [--out <dir>]
  *
  * @internal Test/perf-only.

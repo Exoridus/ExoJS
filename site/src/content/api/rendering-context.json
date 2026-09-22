@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 16,
+  "memberCount": 18,
   "counts": {
     "constructors": 1,
-    "methods": 11,
+    "methods": 13,
     "properties": 4,
     "events": 0
   },
@@ -201,6 +201,74 @@
           "description": "Clear the active render target to color. Routes through the pass coordinator so it respects the clear-vs-load policy and never leaks the clear onto another target. Falls back to a raw backend clear when no coordinator is present (test stubs). clear here is the graphics-API verb (as in gl.clear) - it overwrites the target's pixels. It is deliberately **not** the collection clear() used elsewhere in the engine, which empties a container; nothing is released or reset by this call."
         },
         {
+          "name": "createPixelReader",
+          "signature": "createPixelReader(source: RenderTexture, options: PixelReaderOptions): PixelReader",
+          "signatureTokens": [
+            {
+              "text": "createPixelReader",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PixelReaderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PixelReader",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "PixelReaderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PixelReader",
+          "description": "Open a standing readback over source for a caller that reads it repeatedly. Where readPixels answers once and, on WebGL2, waits for the GPU to do it, a PixelReader never blocks and never allocates per read: each request copies into one of the reader's own slots and is polled from the frame loop until the pixels land, a frame or more later. ts const probe = app.rendering.createPixelReader(app.frameTexture, { region: cursorRect });  The reader is yours: destroy it when the reads stop. Its slots cost slots * width * height * 4 bytes for as long as it lives, which is why a reader is created for a purpose rather than kept around just in case. Formats and regions are checked as for readPixels."
+        },
+        {
           "name": "drawBatch",
           "signature": "drawBatch(batch: RenderBatch, options: DrawBatchOptions): void",
           "signatureTokens": [
@@ -358,11 +426,11 @@
           "description": "Immediately draw a single Geometry with transform as its world matrix - no retained RenderNode required. Useful for procedural or data-driven shapes that would be wasteful to wrap in a node. The draw is submitted through the mesh renderer and flushed at once, so it lands in call order relative to the surrounding render calls: a drawGeometry issued after a layer's render draws on top of it. All output is presented at the frame-end backend flush, as usual. transform is taken as the raw world matrix (a, b, c, d, tx, ty), bypassing the position / rotation / scale / origin composition a node would apply - build it with Matrix directly. The geometry must use the triangle-list topology and the standard mesh attribute layout (position, optional texcoord and color); custom per-vertex attributes are dropped. This is the single-draw convenience of the immediate API: each call is its own flush and draw call, and the geometry is repacked every call, so it is best for a handful of draws. An instanced batch path for drawing many like items as one upload + one draw follows in a later release."
         },
         {
-          "name": "preUpdate",
-          "signature": "preUpdate(delta: Seconds): void",
+          "name": "preFrame",
+          "signature": "preFrame(delta: Seconds): void",
           "signatureTokens": [
             {
-              "text": "preUpdate",
+              "text": "preFrame",
               "kind": "name"
             },
             {
@@ -402,7 +470,87 @@
             }
           ],
           "returnType": "void",
-          "description": "Advance follow, shake, and bounds-constraint animations on the active view, every view rendered last frame (automatic), and any trackView-ed view. The SystemMethods.preUpdate phase, at SystemOrder.CoreRendering - last of the engine's core systems."
+          "description": "Advance follow, shake, and bounds-constraint animations on the active view, every view rendered last frame (automatic), and any trackView-ed view. The SystemMethods.preFrame phase, at SystemOrder.CoreRendering - last of the engine's core systems."
+        },
+        {
+          "name": "readPixels",
+          "signature": "readPixels(source: RenderTexture, options: ReadPixelsOptions): Promise<PixelData>",
+          "signatureTokens": [
+            {
+              "text": "readPixels",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadPixelsOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PixelData",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ReadPixelsOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<PixelData>",
+          "description": "Read a render texture's pixels back to the CPU. ts const frame = await app.rendering.readPixels(app.frameTexture); const image = new ImageData(frame.data, frame.width, frame.height);  The payload is laid out exactly as ImageData wants it - RGBA bytes, four per pixel, top row first - so a screenshot, an export or a colour picked off the frame is the two lines above and nothing more. Both backends agree on that layout even though only one of them produces it natively. region reads part of the texture instead of all of it, in pixels from its top-left corner; a picker wants a 1x1 rectangle rather than a frame. Everything drawn into source before this call is included: pending work is submitted first. The result is the state at that moment and does not track the texture afterwards. # Cost A readback waits for the GPU to reach this point and hands the pixels back over the bus, which is why it is asynchronous and why it does not belong in a per-frame path - a full 1080p frame is ~8 MB per call. Await it in the postFrame phase, or from a coroutine, so the frame it reads is already finished. RenderStats.downloadBytes counts what this moved. # Formats 'rgba8' only. A float target holds values a byte per channel cannot carry, and no lossless byte answer exists for one; reading those needs a typed payload this does not have."
         },
         {
           "name": "render",

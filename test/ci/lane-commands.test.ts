@@ -27,12 +27,12 @@ const allLaneKeys = Object.keys(
     benchStructural: true,
     release: true,
     guides: true,
+    siteData: true,
     createExoApp: true,
   }),
 );
 
-const scriptsIn = (command: string): string[] =>
-  [...command.matchAll(/\bpnpm (?:--filter "[^"]+" )*([\w:-]+)/g)].map(match => match[1]!).filter(script => script !== 'pack');
+const scriptsIn = (command: string): string[] => [...command.matchAll(/\bpnpm ([\w:-]+)/g)].map(match => match[1]!);
 
 const packageScripts = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { scripts: Record<string, string> };
 

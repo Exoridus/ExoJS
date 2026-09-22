@@ -6,6 +6,7 @@ import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 import type { Gradient } from '#rendering/gradient/Gradient';
 import { Mesh } from '#rendering/mesh/Mesh';
+import type { GraphicsPath } from '#rendering/primitives/GraphicsPath';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { DataTexture } from '#rendering/texture/DataTexture';
 import { ScaleModes, type TextureFormat } from '#rendering/types';
@@ -329,6 +330,44 @@ export class Graphics extends Container {
 
     if (this._lineWidth > 0) {
       this._strokeClosedOutline(data.points);
+    }
+
+    return this;
+  }
+
+  /**
+   * Fill a {@link GraphicsPath} and optionally stroke it if `lineWidth > 0`,
+   * the retained counterpart to this class's immediate `moveTo`/`lineTo`
+   * cursor. Every subpath becomes one mesh, so segments join instead of
+   * overlapping as separate quads.
+   *
+   * Filling closes each subpath implicitly, the way a canvas fill does, so an
+   * unclosed subpath is still filled against the straight line back to its
+   * start; stroking follows what the subpath actually declares, and only a
+   * subpath closed with `closePath` is stroked all the way round. Subpaths of
+   * fewer than three points are stroked but not filled.
+   *
+   * `tolerance` is forwarded to {@link GraphicsPath.contours}: pass the size of
+   * one path unit in device pixels when the node is scaled, so curves stay
+   * smooth when magnified and stay cheap when shrunk.
+   */
+  public drawShape(path: GraphicsPath, tolerance?: number): this {
+    for (const contour of path.contours(tolerance)) {
+      // Copied rather than handed over: the builders keep the array they are
+      // given as the mesh's outline, which would alias the path's own vertices.
+      const points = [...contour.points];
+
+      if (points.length >= 6) {
+        this._appendFill(buildPolygon(points));
+      }
+
+      if (this._lineWidth > 0) {
+        if (contour.closed) {
+          this._strokeClosedOutline(points);
+        } else {
+          this.drawPath(points);
+        }
+      }
     }
 
     return this;

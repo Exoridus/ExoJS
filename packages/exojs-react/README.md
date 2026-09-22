@@ -1,8 +1,6 @@
 # @codexo/exojs-react
 
-React 18 / 19 bindings for [ExoJS](https://exojs.dev) — mount an ExoJS
-`Application` into your React tree, drive scenes declaratively, and overlay React
-HUD on the canvas.
+React 18 / 19 bindings for [ExoJS](https://exoridus.github.io/ExoJS/) - mount an ExoJS `Application` into your React tree, drive scenes declaratively, and overlay React HUD on the canvas.
 
 ## Installation
 
@@ -10,30 +8,25 @@ HUD on the canvas.
 npm install @codexo/exojs @codexo/exojs-react react
 ```
 
-`@codexo/exojs` and `react` (>= 18) are peer dependencies; `react-dom` is an
-optional peer. The package ships pre-built ESM (`dist/esm`) with type
-declarations and works on both `@types/react` 18 and 19.
+`@codexo/exojs` and `react` (>= 18) are peer dependencies; `react-dom` is an optional peer. The package ships pre-built ESM (`dist/esm`) with type declarations and works on both `@types/react` 18 and 19.
 
 ## Two layers, pick what you need
 
 This package is intentionally layered:
 
-- **`useExoApplication` — headless.** Creates and owns the `Application`, binds
-  it to a `<canvas>` you render yourself. No DOM, no wrapper, no styling
-  opinions — full control.
-- **`<ExoCanvas>` — batteries-included.** Renders a positioned wrapper `<div>` +
-  a React-managed `<canvas>` and provides the app via context, so HUD overlays
-  work out of the box.
+- **`useExoApplication` — headless.** Creates and owns the `Application`, binds it to a `<canvas>` you render yourself. No DOM, no wrapper, no styling opinions — full control.
+- **`<ExoCanvas>` — batteries-included.** Renders a positioned wrapper `<div>` + a React-managed `<canvas>` and provides the app via context, so HUD overlays work out of the box.
 
 ## Quick start — `<ExoCanvas>`
 
 ```tsx
+import { Color } from '@codexo/exojs';
 import { ExoCanvas, Scenes, Scene, useExoApp } from '@codexo/exojs-react';
 import { TitleScene, GameScene } from './scenes';
 
 function Game() {
   return (
-    <ExoCanvas options={{ canvas: { width: 1280, height: 720 }, clearColor: someColor }} style={{ width: 1280, height: 720 }}>
+    <ExoCanvas options={{ canvas: { width: 1280, height: 720 }, clearColor: Color.black }} style={{ width: 1280, height: 720 }}>
       <Scenes active="game" transition={{ type: 'fade', duration: 300 }}>
         <Scene name="title" component={TitleScene} />
         <Scene name="game" component={GameScene}>
@@ -50,8 +43,7 @@ function Hud() {
 }
 ```
 
-Layout props (`style`, `className`, …) apply to the **wrapper**; size it to
-drive `'fill'`/`'letterbox'` sizing. Style the canvas itself via `canvasProps`.
+Layout props (`style`, `className`, …) apply to the **wrapper**; size it to drive `'fill'`/`'letterbox'` sizing. Style the canvas itself via `canvasProps`.
 
 ## Quick start — headless hook (full control)
 
@@ -81,19 +73,14 @@ function Game() {
 
 ### Reactivity model
 
-The `Application` is recreated only when an **identity** option changes — the
-render `backend` (WebGL2 ↔ WebGPU cannot be hot-swapped). Other supported options
-are applied **live**:
+The `Application` is recreated only when an **identity** option changes — the render `backend` (WebGL2 ↔ WebGPU cannot be hot-swapped). Other supported options are applied **live**:
 
 - `canvas.width` / `canvas.height` → `app.resize(...)`
 - `clearColor` → `app.clearColor`
 
-Options without a live setter (`canvas.pixelRatio`, `seed`, `extensions`, …) are
-captured at creation; change the `backend` or remount to apply them.
+Options without a live setter (`canvas.pixelRatio`, `seed`, `extensions`, …) are captured at creation; change the `backend` or remount to apply them.
 
-`canvas.sizing` is captured at creation as well: a sizing policy is an object, so
-a fresh instance on every render would detach and re-attach the previous one each
-time. Assign `app.sizing` yourself to switch strategies at runtime.
+`canvas.sizing` is captured at creation as well: a sizing policy is an object, so a fresh instance on every render would detach and re-attach the previous one each time. Assign `app.sizing` yourself to switch strategies at runtime.
 
 ## License
 

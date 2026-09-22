@@ -1,11 +1,13 @@
 import type { TypedArray } from '#core/types';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { formatShaderError, RenderError } from '#rendering/RenderError';
-import type { Shader, ShaderProgram } from '#rendering/shader/Shader';
-import { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
-import { ShaderUniform } from '#rendering/shader/ShaderUniform';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { ShaderPrimitives } from '#rendering/types';
+import type { UniformBlockData } from '#rendering/uniforms/UniformBlockData';
+import { generatedUniformBlockPrefix } from '#rendering/uniforms/uniformLayout';
+import type { WebGl2Shader, WebGl2ShaderProgram } from '#rendering/webgl2/WebGl2Shader';
+import { WebGl2ShaderAttribute } from '#rendering/webgl2/WebGl2ShaderAttribute';
+import { WebGl2ShaderUniform } from '#rendering/webgl2/WebGl2ShaderUniform';
 
 import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
@@ -15,7 +17,7 @@ type UniformUploadFunction = (gl: WebGL2RenderingContext, location: WebGLUniform
 interface ManagedUniform {
   readonly location: WebGLUniformLocation;
   readonly uploadFn: UniformUploadFunction;
-  readonly uniform: ShaderUniform;
+  readonly uniform: WebGl2ShaderUniform;
 }
 
 interface ParallelCompileExtension {
@@ -86,24 +88,25 @@ const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
 };
 
 /**
- * Create the WebGL2 {@link ShaderProgram} runtime for a {@link Shader}.
+ * Create the WebGL2 {@link WebGl2ShaderProgram} runtime for a {@link WebGl2Shader}.
  * Compilation/link status checks are deferred to first bind (see the
  * `KHR_parallel_shader_compile` note below); a compile or link failure at that
  * point throws a structured {@link RenderError} (`shader-compile` /
  * `shader-link`). `label` names the program in those errors (renderer name,
  * material label) - omit it when no cheap label is available.
  */
-export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: string): ShaderProgram => {
+export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: string): WebGl2ShaderProgram => {
   let program: WebGLProgram | null = null;
   let vertexShader: WebGLShader | null = null;
   let fragmentShader: WebGLShader | null = null;
-  let pendingShader: Shader | null = null;
+  let pendingShader: WebGl2Shader | null = null;
   // Sources after include expansion - what the driver actually compiled, so a
   // compile error's numbered excerpt lines up with the log's line numbers.
   let compiledVertexSource = '';
   let compiledFragmentSource = '';
   const managedUniforms: ManagedUniform[] = [];
   const uniformBlocks: WebGl2ShaderBlock[] = [];
+  const schemaBlocks: SchemaBlockBinding[] = [];
 
   // Detect KHR_parallel_shader_compile. When present, the GL driver may
   // compile shaders on a worker thread; we can poll completion via
@@ -121,7 +124,7 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
   const parallelExt = gl.getExtension('KHR_parallel_shader_compile') as ParallelCompileExtension | null;
   const completionStatus = parallelExt?.COMPLETION_STATUS_KHR ?? completionStatusEnumKhr;
 
-  const initialize = (shader: Shader): void => {
+  const initialize = (shader: WebGl2Shader): void => {
     if (program) {
       return;
     }
@@ -182,6 +185,7 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
     extractAttributes(gl, program, pendingShader);
     extractUniforms(gl, program, pendingShader, managedUniforms);
     extractUniformBlocks(gl, program, uniformBlocks);
+    bindSchemaBlocks(gl, program, pendingShader.uniformBlockData, schemaBlocks);
 
     pendingShader = null;
   };
@@ -202,11 +206,25 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
     for (let i = 0; i < uniformBlocks.length; i++) {
       uniformBlocks[i]!.upload();
     }
+
+    // Binding points are re-established on every sync: they are context state
+    // shared by every program, so the block another material bound to the same
+    // point last draw would otherwise still be the one this draw reads.
+    for (let i = 0; i < schemaBlocks.length; i++) {
+      const binding = schemaBlocks[i]!;
+
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, binding.point, binding.buffer);
+
+      if (binding.revision !== binding.data.revision) {
+        gl.bufferSubData(gl.UNIFORM_BUFFER, 0, binding.data.float32);
+        binding.revision = binding.data.revision;
+      }
+    }
   };
 
   return {
     initialize,
-    bind: (shader: Shader): void => {
+    bind: (shader: WebGl2Shader): void => {
       initialize(shader);
       finalize();
 
@@ -230,7 +248,7 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
       syncUniforms();
     },
 
-    destroy: (shader: Shader): void => {
+    destroy: (shader: WebGl2Shader): void => {
       gl.deleteShader(vertexShader);
       gl.deleteShader(fragmentShader);
       gl.deleteProgram(program);
@@ -239,12 +257,17 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
         block.destroy();
       }
 
+      for (const binding of schemaBlocks) {
+        gl.deleteBuffer(binding.buffer);
+      }
+
       vertexShader = null;
       fragmentShader = null;
       program = null;
       pendingShader = null;
       managedUniforms.length = 0;
       uniformBlocks.length = 0;
+      schemaBlocks.length = 0;
 
       shader.disconnect();
     },
@@ -293,7 +316,7 @@ const linkProgram = (gl: WebGL2RenderingContext, vertexShader: WebGLShader, frag
   return program;
 };
 
-const extractAttributes = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: Shader): void => {
+const extractAttributes = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: WebGl2Shader): void => {
   const activeAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
 
   for (let i = 0; i < activeAttributes; i++) {
@@ -303,13 +326,13 @@ const extractAttributes = (gl: WebGL2RenderingContext, program: WebGLProgram, sh
       continue;
     }
 
-    const attribute = new ShaderAttribute(i, info.name, info.type);
+    const attribute = new WebGl2ShaderAttribute(i, info.name, info.type);
     attribute.location = gl.getAttribLocation(program, info.name);
     shader.attributes.set(info.name, attribute);
   }
 };
 
-const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: Shader, managedUniforms: ManagedUniform[]): void => {
+const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: WebGl2Shader, managedUniforms: ManagedUniform[]): void => {
   const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
   const activeIndices = new Uint8Array(activeCount).map((_, index) => index);
   const blocks = gl.getActiveUniforms(program, activeIndices, gl.UNIFORM_BLOCK_INDEX) as number[];
@@ -331,7 +354,7 @@ const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shad
     }
 
     const data = new arrayConstructor(byteSize * info.size);
-    const uniform = new ShaderUniform(index, info.type, info.size, info.name, data);
+    const uniform = new WebGl2ShaderUniform(index, info.type, info.size, info.name, data);
     const location = gl.getUniformLocation(program, uniform.name);
 
     shader.uniforms.set(uniform.name, uniform);
@@ -346,7 +369,52 @@ const extractUniformBlocks = (gl: WebGL2RenderingContext, program: WebGLProgram,
   const activeBlocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
 
   for (let index = 0; index < activeBlocks; index++) {
+    // A block generated from a typed uniform schema is uploaded from the
+    // schema's own std140 buffer, so reflecting it here would allocate a second
+    // buffer and re-upload it on every sync for bytes nothing reads.
+    if ((gl.getActiveUniformBlockName(program, index) ?? '').startsWith(generatedUniformBlockPrefix)) {
+      continue;
+    }
+
     const block = new WebGl2ShaderBlock(gl, program, index);
     uniformBlocks.push(block);
+  }
+};
+
+/** One typed uniform block's GPU buffer and the revision it last received. */
+interface SchemaBlockBinding {
+  readonly data: UniformBlockData;
+  readonly buffer: WebGLBuffer;
+  /** Uniform-buffer binding point, which is the block's declaration index. */
+  readonly point: number;
+  revision: number;
+}
+
+/**
+ * Give each declared block a buffer and a binding point on this program.
+ *
+ * A block the linker dropped - declared but never read by either stage - has no
+ * index and is skipped: allocating for it would cost a buffer per material for
+ * bytes the program cannot address.
+ */
+const bindSchemaBlocks = (gl: WebGL2RenderingContext, program: WebGLProgram, blocks: readonly UniformBlockData[], bindings: SchemaBlockBinding[]): void => {
+  for (const [point, data] of blocks.entries()) {
+    const index = gl.getUniformBlockIndex(program, data.layout.typeName);
+
+    if (index === gl.INVALID_INDEX) {
+      continue;
+    }
+
+    const buffer = gl.createBuffer();
+
+    if (buffer === null) {
+      throw new Error(`[ExoJS] could not create the uniform buffer for block ${data.layout.typeName}.`);
+    }
+
+    gl.uniformBlockBinding(program, index, point);
+    gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
+    gl.bufferData(gl.UNIFORM_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
+
+    bindings.push({ data, buffer, point, revision: -1 });
   }
 };

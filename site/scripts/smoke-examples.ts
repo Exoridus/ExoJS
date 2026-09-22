@@ -26,6 +26,7 @@
  *   ... --browser firefox          # run under Firefox headed (cross-browser)
  *   ... --headed                   # force headed mode for any browser
  *   ... --color-scheme dark        # emulate dark-mode OS preference
+ *   ... --shots <dir>              # write one PNG per example, pass or fail
  *
  * Chromium (default): new headless, WebGPU via Dawn (SwiftShader backend).
  *   WebGPU adapter is available without --use-angle=swiftshader, which would
@@ -82,6 +83,7 @@ const BLANK_FAILURE = 'canvas rendered but appears blank - one uniform color, no
  * WebGPU-adapter skip: the environment's limit, not the example's.
  */
 const SOFTWARE_RASTERISER_LIMITED: Readonly<Record<string, string>> = {
+  'lighting/radiance-rooms.js': 'moving full-resolution radiance cascades saturate a software-rasterised renderer; the harness cannot sample the page',
   'performance/backend-comparison.js':
     '2200 moving sprites plus the debug overlay saturate a software-rasterised main thread; the harness cannot reach the page',
 };
@@ -223,7 +225,34 @@ interface Result {
    * shell would otherwise fail every entry in the catalog identically.
    */
   shellErrors?: string[];
+  /** The canvas stayed one uniform colour with nothing thrown - the verdict the serial retry re-checks. */
+  blank?: boolean;
 }
+
+/**
+ * Everything gathered about a blank run, written beside the capture so the
+ * verdict can be read against what the page actually did.
+ */
+interface BlankDiagnostics {
+  frame: FrameDiagnostics;
+  /** `console.warn` / `console.error` output from every realm of the page. */
+  console: string[];
+  /** Requests that failed or answered with an error status. */
+  requests: string[];
+}
+
+/** One line that separates the blank causes: no frames, a lost context, failed loads, or none of those. */
+const summariseBlank = (diagnostics: BlankDiagnostics): string => {
+  const { frame } = diagnostics;
+  const lost = frame.contextEvents.filter(event => event.type === 'webglcontextlost').length;
+  const restored = frame.contextEvents.filter(event => event.type === 'webglcontextrestored').length;
+
+  return (
+    `${frame.animationFrames} animation frame(s) ran, ` +
+    `context lost ${lost}x / restored ${restored}x${frame.contextLost === null ? '' : frame.contextLost ? ' (lost at capture)' : ' (live at capture)'}, ` +
+    `${diagnostics.requests.length} failed request(s), ${diagnostics.console.length} console warning(s)/error(s)`
+  );
+};
 
 interface ServedFile {
   body: Buffer;
@@ -312,12 +341,33 @@ const withholdWebGpu = (): void => {
   Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, value: undefined });
 };
 
-const captureErrors = (): void => {
+/**
+ * What the preview realm recorded about its own run, read back when a canvas
+ * stays blank. A blank verdict on its own cannot say whether the example's
+ * frame loop never ran, ran against a lost GL context, or ran and drew nothing;
+ * these three counters separate those cases.
+ */
+interface FrameDiagnostics {
+  /** `requestAnimationFrame` callbacks that actually executed. */
+  animationFrames: number;
+  /** `webglcontextlost` / `webglcontextrestored` events, with the time since navigation. */
+  contextEvents: { type: string; atMs: number }[];
+  /** Whether the first canvas's WebGL2 context reports itself lost at read time. */
+  contextLost: boolean | null;
+}
+
+// Installed per frame before any page script: records uncaught errors, counts
+// executed animation frames and watches the GL context. Capture-phase listeners
+// on `window` see `webglcontextlost` even though it does not bubble, so the
+// engine's own canvas listener stays untouched.
+const captureDiagnostics = (): void => {
   interface SmokeWindow {
     __SMOKE_ERRORS__?: { message: string }[];
+    __SMOKE_FRAMES__?: { animationFrames: number; contextEvents: { type: string; atMs: number }[] };
   }
   const w = window as unknown as SmokeWindow;
   w.__SMOKE_ERRORS__ = [];
+  w.__SMOKE_FRAMES__ = { animationFrames: 0, contextEvents: [] };
   window.addEventListener('error', event => {
     const message = event.error?.message ?? event.message ?? String(event);
     w.__SMOKE_ERRORS__!.push({ message });
@@ -326,7 +376,42 @@ const captureErrors = (): void => {
     const reason = event.reason as { message?: string } | undefined;
     w.__SMOKE_ERRORS__!.push({ message: reason?.message ?? String(event.reason) });
   });
+
+  const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = function (callback: FrameRequestCallback): number {
+    return nativeRequestAnimationFrame(function (time: number): void {
+      w.__SMOKE_FRAMES__!.animationFrames += 1;
+      callback(time);
+    });
+  };
+
+  for (const type of ['webglcontextlost', 'webglcontextrestored']) {
+    window.addEventListener(type, () => w.__SMOKE_FRAMES__!.contextEvents.push({ type, atMs: Math.round(performance.now()) }), true);
+  }
 };
+
+/** The preview frame's {@link FrameDiagnostics}, or nulls when the realm is unreachable. */
+const readFrameDiagnostics = async (frame: Frame): Promise<FrameDiagnostics> =>
+  frame
+    .evaluate(() => {
+      const w = window as unknown as { __SMOKE_FRAMES__?: { animationFrames: number; contextEvents: { type: string; atMs: number }[] } };
+      const recorded = w.__SMOKE_FRAMES__ ?? { animationFrames: 0, contextEvents: [] };
+      const canvas = document.querySelector('canvas');
+      // `getContext` on a canvas that already holds a context returns that
+      // same context, so this reads the engine's context rather than creating
+      // a second one; a canvas bound to another context type throws and reads
+      // as unknown.
+      const contextLost = ((): boolean | null => {
+        try {
+          return canvas?.getContext('webgl2')?.isContextLost() ?? null;
+        } catch {
+          return null;
+        }
+      })();
+
+      return { animationFrames: recorded.animationFrames, contextEvents: recorded.contextEvents, contextLost };
+    })
+    .catch(() => ({ animationFrames: 0, contextEvents: [], contextLost: null }));
 
 // Whether the example's canvas is a single uniform color - one uniform-color
 // read is the same signature a hard crash produces (a backend that claims a
@@ -621,7 +706,7 @@ const createContextPool = (browser: Browser, colorScheme: 'light' | 'dark', forc
           if (forceWebGl2) {
             await context.addInitScript(withholdWebGpu);
           }
-          await context.addInitScript(captureErrors);
+          await context.addInitScript(captureDiagnostics);
           return context;
         });
         contexts.set(hasTouch, pending);
@@ -644,6 +729,8 @@ const runExample = async (
   index: number,
   graphics: Graphics,
   timeoutMs: number,
+  attempt: 'first' | 'retry' = 'first',
+  shotDir: string | null = null,
 ): Promise<Result> => {
   const capabilities = entry.capabilities ?? [];
   const result: Result = {
@@ -678,7 +765,31 @@ const runExample = async (
   const context = await pool.acquire(entry.capabilities?.includes('touch') ?? false);
   const page = await context.newPage();
   const pageErrors: string[] = [];
+  const consoleMessages: string[] = [];
+  const failedRequests: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
+  // Warnings and errors from every realm, including the iframe: the engine
+  // reports a silent asset failure through the console, never as a throw.
+  page.on('console', message => {
+    if (message.type() === 'warning' || message.type() === 'error') {
+      consoleMessages.push(oneLine(`${message.type()}: ${message.text()}`));
+    }
+  });
+  page.on('requestfailed', request => {
+    const errorText = request.failure()?.errorText ?? 'failed';
+
+    // An aborted request was cancelled by the page itself - the playground
+    // re-navigates the preview iframe once the source is compiled - and says
+    // nothing about the network or the build.
+    if (errorText !== 'net::ERR_ABORTED') {
+      failedRequests.push(oneLine(`${errorText} ${request.url()}`));
+    }
+  });
+  page.on('response', response => {
+    if (response.status() >= 400) {
+      failedRequests.push(`${String(response.status())} ${response.url()}`);
+    }
+  });
 
   try {
     // The real playground route, not preview.html on its own: this exercises
@@ -734,15 +845,28 @@ const runExample = async (
         result.status = 'passed';
         result.note = `blank by design: ${reason}`;
       } else {
+        // Read before the capture below: the screenshot forces a frame, and the
+        // counters should describe the run the verdict was drawn from.
+        const diagnostics: BlankDiagnostics = {
+          frame: await readFrameDiagnostics(previewFrame),
+          console: consoleMessages,
+          requests: failedRequests,
+        };
+
         result.status = 'failed';
-        result.note = BLANK_FAILURE;
+        result.blank = true;
+        result.note = `${BLANK_FAILURE}; ${summariseBlank(diagnostics)}`;
+
+        const artifactBase = join(artifactDir, `${entry.path.replaceAll('/', '__')}${attempt === 'retry' ? '.retry' : ''}`);
+
+        await mkdir(artifactDir, { recursive: true });
+        await writeFile(`${artifactBase}.diagnostics.json`, `${JSON.stringify(diagnostics, null, 2)}\n`, 'utf8');
 
         const injectedSource = await previewFrame
           .evaluate(() => document.querySelector<HTMLScriptElement>('script[type="module"]')?.textContent ?? '')
           .catch(() => '');
         if (injectedSource) {
-          await mkdir(artifactDir, { recursive: true });
-          await writeFile(join(artifactDir, entry.path.replaceAll('/', '__')), injectedSource, 'utf8');
+          await writeFile(artifactBase, injectedSource, 'utf8');
         }
 
         // The capture the verdict was read from, not a fresh view of the page:
@@ -757,9 +881,25 @@ const runExample = async (
         const capture = box ? await page.screenshot({ clip: box }).catch(() => null) : null;
 
         if (capture) {
-          await mkdir(artifactDir, { recursive: true });
-          await writeFile(join(artifactDir, `${entry.path.replaceAll('/', '__')}.png`), capture);
+          await writeFile(`${artifactBase}.png`, capture);
         }
+      }
+    }
+
+    // A capture of every run, verdict aside: reviewing a change to a renderer
+    // means looking at what it drew, and the artifacts above only exist for
+    // the one failure mode that needs them to be believed.
+    if (shotDir !== null) {
+      const box = await page
+        .locator('iframe')
+        .first()
+        .boundingBox()
+        .catch(() => null);
+      const shot = box ? await page.screenshot({ clip: box }).catch(() => null) : null;
+
+      if (shot) {
+        await mkdir(shotDir, { recursive: true });
+        await writeFile(join(shotDir, `${entry.path.replaceAll('/', '__').replace(/\.js$/, '')}.png`), shot);
       }
     }
   } catch (error) {
@@ -809,6 +949,7 @@ const main = async (): Promise<void> => {
       browser: { type: 'string' }, // 'chromium' (default) | 'firefox'
       headed: { type: 'boolean' }, // force headed (any browser)
       'color-scheme': { type: 'string' }, // 'light' (default) | 'dark'
+      shots: { type: 'string' }, // directory to write one capture per example into
     },
     allowPositionals: false,
   });
@@ -840,29 +981,31 @@ const main = async (): Promise<void> => {
     entries = sampleByCategory(entries);
   }
 
-  // Half the cores, at most four: every page runs a main thread and, without a
-  // GPU, a software rasteriser beside it. Four pages on a four-core runner
-  // starved the heavy examples until the capture itself timed out.
+  // Half the cores, at most four: every page runs a main thread and a renderer
+  // beside it. The detected renderer below further limits the default where
+  // graphics work also competes for the CPU.
   const defaultConcurrency = Math.min(4, Math.max(1, Math.floor(availableParallelism() / 2)));
-  const concurrency = Math.max(1, Number.parseInt(values.concurrency ?? '', 10) || defaultConcurrency);
+  const requestedConcurrency = Math.max(1, Number.parseInt(values.concurrency ?? '', 10) || defaultConcurrency);
   const timeoutMs = Math.max(4000, Number.parseInt(values['timeout-ms'] ?? '15000', 10) || 15000);
+  const shotDir = values.shots === undefined ? null : resolve(repoRoot, values.shots);
 
   const { port, server } = await startServer(distDir);
   const baseUrl = `http://127.0.0.1:${port}`;
 
-  let browser: Browser;
-  if (browserName === 'firefox') {
-    browser = await firefox.launch({
-      headless,
-      firefoxUserPrefs: {
-        // Enable WebGPU (off by default in most Firefox builds).
-        'dom.webgpu.enabled': true,
-        'dom.webgpu.workers-enabled': true,
-        // Ensure WebGL is available.
-        'webgl.disabled': false,
-      },
-    });
-  } else {
+  const launchBrowser = (): Promise<Browser> => {
+    if (browserName === 'firefox') {
+      return firefox.launch({
+        headless,
+        firefoxUserPrefs: {
+          // Enable WebGPU (off by default in most Firefox builds).
+          'dom.webgpu.enabled': true,
+          'dom.webgpu.workers-enabled': true,
+          // Ensure WebGL is available.
+          'webgl.disabled': false,
+        },
+      });
+    }
+
     // channel:'chromium' is required for the WebGPU adapter to be
     // available in headless mode - without it Chromium's GPU process
     // does not initialize properly and requestAdapter() returns null.
@@ -871,15 +1014,21 @@ const main = async (): Promise<void> => {
     // --use-angle=swiftshader is deliberately omitted: it forces ANGLE's
     // WebGL backend to SwiftShader, which conflicts with Dawn's own
     // SwiftShader path for WebGPU and prevents adapter acquisition.
-    browser = await chromium.launch({
+    return chromium.launch({
       channel: 'chromium',
       headless,
       args: ['--enable-webgl', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
     });
-  }
+  };
 
+  const browser = await launchBrowser();
   const graphics = await probeGraphics(browser, baseUrl, forceWebGl2);
   const webgpuAvailable = graphics.webgpu;
+  // Parallel heavy examples can starve both the playground shell and preview
+  // under llvmpipe/SwiftShader before either mounts its iframe. Serial is the
+  // honest default there: an explicit value remains available for diagnosing
+  // runner capacity, while a hardware renderer keeps the normal parallelism.
+  const concurrency = graphics.softwareRasteriser && values.concurrency === undefined ? 1 : requestedConcurrency;
   console.log(
     `[smoke] ${entries.length} example(s) · ${browserName} · ${headless ? 'headless' : 'headed'} · ` +
       `color-scheme: ${colorScheme} · WebGPU adapter: ${webgpuAvailable ? 'yes' : 'no'}` +
@@ -900,7 +1049,7 @@ const main = async (): Promise<void> => {
         if (index >= entries.length) return;
 
         const entry = entries[index];
-        const result = await runExample(pool, baseUrl, entry, index, graphics, timeoutMs);
+        const result = await runExample(pool, baseUrl, entry, index, graphics, timeoutMs, 'first', shotDir);
         results[index] = result;
 
         const tag = result.status.toUpperCase().padEnd(7);
@@ -915,33 +1064,50 @@ const main = async (): Promise<void> => {
 
   await Promise.all(Array.from({ length: Math.min(concurrency, entries.length) }, () => worker()));
 
-  // Chromium's compositor can occasionally return only the clear colour when
-  // several independent WebGPU pages are being captured concurrently. Retry
-  // only that silent visual signature, serially and in a fresh context. A real
-  // blank remains a failure; thrown errors and missing canvases are never
-  // softened by this retry.
-  const blankFailureIndexes = results.flatMap((result, index) => (result.status === 'failed' && result.note === BLANK_FAILURE ? [index] : []));
-  const retryPool = createContextPool(browser, colorScheme, forceWebGl2);
+  // A blank canvas with nothing thrown is the one verdict the environment can
+  // produce on its own: the compositor has returned only the clear colour while
+  // several pages were captured at once, and a blank that repeated in a fresh
+  // context of the same browser has passed on the next runner. Retry that
+  // signature alone, serially, in a fresh browser process - a state the GPU
+  // process has got into does not follow the example there. A blank that
+  // repeats is a failure; one that clears is reported as a warning with the
+  // first attempt's diagnostics, never silently promoted to a pass. Thrown
+  // errors and missing canvases are never softened by this retry.
+  const blankFailureIndexes = results.flatMap((result, index) => (result.status === 'failed' && result.blank === true ? [index] : []));
 
-  for (const index of blankFailureIndexes) {
-    const entry = entries[index]!;
-    const firstResult = results[index]!;
+  await browser.close();
 
-    console.log(`[smoke] RETRY  ${entry.path} - serial blank verification`);
+  if (blankFailureIndexes.length > 0) {
+    const retryBrowser = await launchBrowser();
+    const retryPool = createContextPool(retryBrowser, colorScheme, forceWebGl2);
 
-    const retryResult = await runExample(retryPool, baseUrl, entry, index + entries.length, graphics, timeoutMs);
+    for (const index of blankFailureIndexes) {
+      const entry = entries[index]!;
+      const firstResult = results[index]!;
 
-    retryResult.shellErrors = [...new Set([...(firstResult.shellErrors ?? []), ...(retryResult.shellErrors ?? [])])];
-    results[index] = retryResult;
+      console.log(`[smoke] RETRY  ${entry.path} - serial blank verification in a fresh browser`);
 
-    const tag = retryResult.status.toUpperCase().padEnd(7);
-    const line = `[smoke] ${tag} ${entry.path}${retryResult.note ? ` - ${retryResult.note}` : ''}`;
-    if (retryResult.status === 'failed') console.error(line);
-    else console.log(line);
+      const retryResult = await runExample(retryPool, baseUrl, entry, index + entries.length, graphics, timeoutMs, 'retry');
+
+      retryResult.shellErrors = [...new Set([...(firstResult.shellErrors ?? []), ...(retryResult.shellErrors ?? [])])];
+
+      if (retryResult.status === 'passed') {
+        retryResult.status = 'warned';
+        retryResult.note = `blank in the first attempt (${firstResult.note}); rendered on the serial retry in a fresh browser`;
+      }
+
+      results[index] = retryResult;
+
+      const tag = retryResult.status.toUpperCase().padEnd(7);
+      const line = `[smoke] ${tag} ${entry.path}${retryResult.note ? ` - ${retryResult.note}` : ''}`;
+      if (retryResult.status === 'failed') console.error(line);
+      else console.log(line);
+    }
+
+    await retryPool.close();
+    await retryBrowser.close();
   }
 
-  await retryPool.close();
-  await browser.close();
   await new Promise<void>(resolveClose => server.close(() => resolveClose()));
 
   const counts = {

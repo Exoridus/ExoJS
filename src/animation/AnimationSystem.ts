@@ -4,7 +4,7 @@ import type { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 /**
  * Owns and advances the {@link AnimatedSprite}s whose frame playback is
  * currently running, driving them once per frame from {@link Application.update}
- * - the {@link SystemMethods.preUpdate} phase, at
+ * - the {@link SystemMethods.preFrame} phase, at
  * {@link SystemOrder.CoreAnimation}.
  *
  * Registration is automatic and requires no user wiring: an
@@ -64,7 +64,7 @@ export class AnimationSystem {
    * teardown. Iterates a snapshot so playback callbacks that register or
    * deregister sprites do not corrupt the loop.
    */
-  public preUpdate(delta: Seconds): void {
+  public preFrame(delta: Seconds): void {
     if (this._destroyed || this._sprites.size === 0) {
       return;
     }

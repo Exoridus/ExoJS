@@ -17,7 +17,7 @@
  *    propagates it through the `RetainedContainer` boundary, forcing a
  *    recapture before the next replay,
  * 3. a SHADER-path (bare Texture) RepeatingSprite inside a capture window
- *    poisons it (`_supportsRetainedBatches` only covers the geometry path) -
+ *    poisons it (`supportsRetainedBatches` only covers the geometry path) -
  *    the group must never reach the replay tier, staying pixel-correct on
  *    the live entry-replay tier across mutations instead.
  *
@@ -257,7 +257,7 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
 
     try {
       // Render many frames, including a scroll mutation - the shader path
-      // never records/replays a batch (_supportsRetainedBatches only covers
+      // never records/replays a batch (supportsRetainedBatches only covers
       // the geometry path here), so the group must stay correct via
       // the (poisoned, permanently-entry-replay) live path the whole time.
       for (let i = 0; i < 4; i++) {

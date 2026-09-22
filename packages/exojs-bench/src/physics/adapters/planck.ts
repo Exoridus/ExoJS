@@ -61,9 +61,9 @@ import { describePhysicsScene } from './scene';
  *   solid behaviour. The sweep the archetype casts starts outside the geometry,
  *   so the two agree on it.
  *
- * `planck` is loaded lazily via dynamic `import()`, so a checkout that never ran
- * `bench:setup` (the competitor library is not linked) degrades to a skipped arm
- * instead of crashing the run.
+ * `planck` is loaded lazily via dynamic `import()`. A checkout that never ran
+ * `bench:setup` has the library unlinked and the import rejects; the harness
+ * records the arm as unavailable with that reason rather than omitting it.
  */
 
 /**
@@ -75,19 +75,14 @@ import { describePhysicsScene } from './scene';
 const PX_PER_METRE = 30;
 
 /**
- * Resolve the planck.js arm, or `null` if the library is not linked into the
- * bench (graceful degradation for a checkout that skipped `bench:setup`).
+ * Resolve the planck.js arm.
+ *
+ * Rejects when `planck` cannot be imported, carrying the loader's own message:
+ * the caller records that reason against the arm rather than guessing why it is
+ * missing.
  */
-export const createPlanckAdapter = async (): Promise<PhysicsAdapter | null> => {
-  let P: typeof Planck;
-
-  try {
-    P = (await import('planck')) as typeof Planck;
-  } catch {
-    console.warn("[physics] planck.js arm unavailable — 'planck' is not linked (run bench:setup). Skipping the planck arm.");
-
-    return null;
-  }
+export const createPlanckAdapter = async (): Promise<PhysicsAdapter> => {
+  const P = (await import('planck')) as typeof Planck;
 
   // Static on the library, so it has to be set before the first world is built
   // and applies to every world this arm creates. See UNIT MAPPING above.
@@ -149,7 +144,10 @@ export const createPlanckAdapter = async (): Promise<PhysicsAdapter | null> => {
       // converts it per body itself, so the shared pivot goes in unchanged - the
       // same pivot the other three arms are given.
       for (const joint of scene.joints) {
-        created.createJoint(new P.RevoluteJoint({}, table[joint.bodyA]!, table[joint.bodyB]!, { x: joint.x, y: joint.y }));
+        // Box2D's own default, written out for the same reason the other arms
+        // write it out: the scene requires it, so no arm is left resting on a
+        // default that a library release could change.
+        created.createJoint(new P.RevoluteJoint({ collideConnected: false }, table[joint.bodyA]!, table[joint.bodyB]!, { x: joint.x, y: joint.y }));
       }
 
       stepIndex = 0;
@@ -157,6 +155,10 @@ export const createPlanckAdapter = async (): Promise<PhysicsAdapter | null> => {
         createBody,
         removeBody: body => {
           created.destroyBody(body);
+        },
+        setVelocity: (body, vx, vy) => {
+          body.setLinearVelocity({ x: vx, y: vy });
+          body.setAwake(true);
         },
         // `World.rayCast` is a segment query driven by a callback, so the unit
         // direction and distance are converted back to an end point. Returning 0

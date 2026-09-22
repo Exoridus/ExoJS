@@ -1,0 +1,592 @@
+{
+  "title": "ContainerReader",
+  "description": "Reads assets out of a `.exoa` container, fetching only the blocks it needs. A container's data section is tiled by independently compressed blocks, and a block boundary always falls on an entry boundary. Reading an entry is therefore: find the blocks covering it, obtain each one, decode, slice. Where a block comes from - a byte range, a block store, or a buffer already held - changes the cost but not the result. Decoded blocks are held for the reader's lifetime, so entries sharing a block decode it once. That is the whole reason readEntries exists: reading entries one at a time through separate readers would decompress a shared block once per entry. A reader is not thread-safe across `await` boundaries in the sense of cancellation: pass a `signal` through `init` to abandon in-flight requests.",
+  "symbol": "ContainerReader",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 0,
+    "methods": 7,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Reads assets out of a `.exoa` container, fetching only the blocks it needs.",
+        "A container's data section is tiled by independently compressed blocks, and a block boundary always falls on an entry boundary. Reading an entry is therefore: find the blocks covering it, obtain each one, decode, slice. Where a block comes from - a byte range, a block store, or a buffer already held - changes the cost but not the result.",
+        "Decoded blocks are held for the reader's lifetime, so entries sharing a block decode it once. That is the whole reason readEntries exists: reading entries one at a time through separate readers would decompress a shared block once per entry.",
+        "A reader is not thread-safe across `await` boundaries in the sense of cancellation: pass a `signal` through `init` to abandon in-flight requests."
+      ],
+      "importLine": "import { ContainerReader } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "entry",
+          "signature": "entry(source: string): ContainerEntry | undefined",
+          "signatureTokens": [
+            {
+              "text": "entry",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerEntry",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "ContainerEntry | undefined",
+          "description": "The entry for source, or undefined when the container does not hold it."
+        },
+        {
+          "name": "readEntries",
+          "signature": "readEntries(entries: readonly ContainerEntry[]): Promise<ArrayBuffer[]>",
+          "signatureTokens": [
+            {
+              "text": "readEntries",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "entries",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerEntry",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "entries",
+              "type": "readonly ContainerEntry[]",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer[]>",
+          "description": "Read several entries, in the order given. Every block the entries touch is obtained once, concurrently, and each entry is then sliced out of the decoded regions. An entry spanning two blocks is joined across them."
+        },
+        {
+          "name": "readEntry",
+          "signature": "readEntry(entry: ContainerEntry): Promise<ArrayBuffer>",
+          "signatureTokens": [
+            {
+              "text": "readEntry",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "entry",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerEntry",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "entry",
+              "type": "ContainerEntry",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer>",
+          "description": "Read one entry's asset bytes. Prefer readEntries for several: entries commonly share a block, and reading them together is what keeps a shared block fetched and decoded once."
+        },
+        {
+          "name": "readEntryRange",
+          "signature": "readEntryRange(entry: ContainerEntry, offset: number, length: number): Promise<ArrayBuffer>",
+          "signatureTokens": [
+            {
+              "text": "readEntryRange",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "entry",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerEntry",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "offset",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "length",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "entry",
+              "type": "ContainerEntry",
+              "optional": false
+            },
+            {
+              "name": "offset",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "length",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer>",
+          "description": "Read part of one entry - a video segment, a region of a large buffer - without the rest of it. This only avoids work for an entry stored uncompressed, which is what the writer's \"keep the compression only if it shrinks\" rule already decides for H.264, AAC, Opus and KTX2. A compressed entry still has its covering blocks decoded whole, because that is the unit the codec framing allows."
+        },
+        {
+          "name": "release",
+          "signature": "release(): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Drop every decoded block. The reader stays usable and will decode again on the next read."
+        },
+        {
+          "name": "fromBuffer",
+          "signature": "fromBuffer(buffer: ArrayBuffer, options: ContainerReaderOptions): ContainerReader",
+          "signatureTokens": [
+            {
+              "text": "fromBuffer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "buffer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerReaderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerReader",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "buffer",
+              "type": "ArrayBuffer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ContainerReaderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ContainerReader",
+          "description": "Open a container already held whole in memory - the single-request path."
+        },
+        {
+          "name": "open",
+          "signature": "open(url: string, options: ContainerReaderOptions): Promise<ContainerReader>",
+          "signatureTokens": [
+            {
+              "text": "open",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "url",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerReaderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerReader",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "url",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ContainerReaderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ContainerReader>",
+          "description": "Open the container at url, reading its head and nothing else where the server allows it. Costs one request. A server that honours byte ranges leaves the reader able to fetch blocks individually; one that does not - or one that content-encodes its responses, where offsets could not be trusted - hands over the whole file, and the reader serves every later read from memory. Throws when the file cannot be fetched, or is not a container this build reads."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "container",
+          "signature": "container: ParsedContainer",
+          "signatureTokens": [
+            {
+              "text": "container",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParsedContainer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The validated head: entries, blocks and where the data section begins."
+        },
+        {
+          "name": "byteLength",
+          "signature": "byteLength: number",
+          "signatureTokens": [
+            {
+              "text": "byteLength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Byte length of the whole container file, however much of it this reader has actually read."
+        },
+        {
+          "name": "ranged",
+          "signature": "ranged: boolean",
+          "signatureTokens": [
+            {
+              "text": "ranged",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether reads cost only the bytes they need, rather than being served from a buffer already fetched whole."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/container/ContainerReader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/ContainerReader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/container/ContainerReader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/ContainerReader.ts"
+}

@@ -38,7 +38,12 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
+import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
+import { blurShader } from '#rendering/filters/BlurFilter';
+import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
+import { filterUniformGroup } from '#rendering/uniforms/uniformLayout';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
 import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
 import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/WebGpuMaskCompositor';
@@ -49,10 +54,20 @@ import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatch
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
+import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
+import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
+import { transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
+
 interface ShaderEntry {
   readonly name: string;
   readonly source: string;
 }
+
+// Composed rather than rebuilt here: the walk over the transport tables is a
+// chunk, placed between the textures it reads and the body that calls it, so
+// the composition is the only whole program there is to compile.
+const composedCascade = transportCascadeShader(cascadeUniforms);
+const composedGather = transportGatherShader(gatherUniforms);
 
 const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuBackend mipmap pipeline', source: mipmapWgsl },
@@ -76,6 +91,18 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuStencilClipper', source: stencilWriteShaderSource },
   { name: 'WebGpuTextRenderer', source: textShaderSource },
   { name: 'spriteMaterialSources spriteMaterialPrologueWgsl (custom-material prelude)', source: spriteMaterialPrologueWgsl },
+  // The stock filters that declare a typed uniform schema: what a backend
+  // compiles is the author's body plus the generated block, so that is what has
+  // to compile.
+  { name: 'BloomFilter (generated uniform block)', source: bloomThresholdShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'BlurFilter (generated uniform block)', source: blurShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShader._resolveWgsl(filterUniformGroup)! },
+  // The lighting package's shadow march is a filter of the same shape, and the
+  // only WGSL in that package this suite can reach as a fixed string.
+  { name: 'lighting shadow march (generated uniform block)', source: shadowMarchShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting radiance cascade (composed, generated uniform block)', source: composedCascade._resolveWgsl(filterUniformGroup)! },
+  { name: 'lighting radiance gather (composed, generated uniform block)', source: composedGather._resolveWgsl(filterUniformGroup)! },
 ];
 
 // On the software (swiftshader / lavapipe) adapter the WebGPU device can drop

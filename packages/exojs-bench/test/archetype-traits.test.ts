@@ -1,8 +1,9 @@
 import { ARCHETYPES } from '../src/rendering/archetypes';
 import type { ArchetypeId, ArchetypeSpec } from '../src/rendering/EngineAdapter';
 import {
-  compositeBlurRadius,
+  compositeBlurStrength,
   filterChainDepth,
+  hasMaskMotion,
   isChurning,
   isTextArchetype,
   isTextUpdating,
@@ -107,23 +108,36 @@ describe('render-target archetypes', () => {
     expect(maskDepth(mask)).toBe(mask.nestingDepth - 1);
   });
 
+  test('mask-clip-animated is a mask-clip row plus mask motion, so the two are readable as a delta', () => {
+    const animated = byId['mask-clip-animated'];
+    const still = byId['mask-clip'];
+
+    expect(hasMaskMotion(animated)).toBe(true);
+    expect(hasMaskMotion(still)).toBe(false);
+    expect(maskDepth(animated)).toBe(maskDepth(still));
+    expect(animated.nestingDepth).toBe(still.nestingDepth);
+    expect(animated.textureCount).toBe(still.textureCount);
+    expect(animated.mutationFraction).toBe(still.mutationFraction);
+    expect(animated.nodeCounts).toEqual(still.nodeCounts);
+  });
+
   test('composite is a filter-chain-1 row plus its multipass, so the two are readable as a delta', () => {
     const composite = byId.composite;
     const filtered = byId['filter-chain-1'];
 
-    expect(compositeBlurRadius(composite)).toBeGreaterThan(0);
+    expect(compositeBlurStrength(composite)).toBeGreaterThan(0);
     expect(composite.nestingDepth).toBe(filtered.nestingDepth);
     expect(composite.textureCount).toBe(filtered.textureCount);
     expect(composite.mutationFraction).toBe(filtered.mutationFraction);
     expect(composite.nodeCounts).toEqual(filtered.nodeCounts);
   });
 
-  test('exactly the filter, mask and composite rows use render targets', () => {
+  test('exactly the filter, mask, composite and blur rows use render targets', () => {
     expect(
       ARCHETYPES.filter(usesRenderTargets)
         .map(archetype => archetype.id)
         .sort(),
-    ).toEqual(['composite', 'filter-chain-1', 'filter-chain-2', 'filter-chain-4', 'mask-clip']);
+    ).toEqual(['composite', 'filter-chain-1', 'filter-chain-2', 'filter-chain-4', 'fx-blur', 'mask-clip', 'mask-clip-animated']);
   });
 });
 

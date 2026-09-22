@@ -7,6 +7,9 @@
     "types": ["node"],
     "outDir": "dist",
     "rootDir": "src",
+    // `@codexo/exojs-cli` consumes the scaffolder as a library rather than
+    // copying the templates, so this package publishes declarations too.
+    "declaration": true,
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,

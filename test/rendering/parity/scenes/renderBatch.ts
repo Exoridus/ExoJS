@@ -20,11 +20,11 @@ import { Matrix } from '#math/Matrix';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { INSTANCE_TRANSFORM_GLSL, INSTANCE_TRANSFORM_WGSL } from '#rendering/shader/instanceContract';
+import { Shader } from '#rendering/shader/Shader';
 
 import type { Scene } from '../types';
 
@@ -95,7 +95,7 @@ const quadGeometry = (): Geometry => {
 
 const contractMaterial = (): MeshMaterial =>
   new MeshMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
       glsl: {
         vertex: `#version 300 es
 ${INSTANCE_TRANSFORM_GLSL}

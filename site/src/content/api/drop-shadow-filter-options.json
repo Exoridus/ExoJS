@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Softness: the blur radius applied to the silhouette, in logical units. Default 4."
+          "description": "Softness: the Gaussian standard deviation the silhouette is blurred by, in logical units - the same quantity BlurFilterOptions.strength takes. Default 2."
         },
         {
           "name": "color",
@@ -151,7 +151,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Blur smoothness, see BlurFilterOptions.quality. Default 1."
+          "description": "Tap cap for that blur, see BlurFilterOptions.quality. Derived when omitted."
         },
         {
           "name": "shadowOnly",

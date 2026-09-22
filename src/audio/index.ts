@@ -7,6 +7,7 @@ export { AudioGenerator } from './AudioGenerator';
 export type { AudioInputOptions } from './AudioInput';
 export { AudioInput } from './AudioInput';
 export { AudioListener, type AudioListenerTarget } from './AudioListener';
+export { AudioOutputClock, type AudioOutputClockSnapshot } from './AudioOutputClock';
 export { AudioSend } from './AudioSend';
 export { AudioStream } from './AudioStream';
 export { AudioSystem, onAudioPlaybackBlocked } from './AudioSystem';

@@ -32,7 +32,8 @@
   gap: 10px;
   border: 1px solid var(--accent-line);
   background: var(--accent-soft);
-  color: var(--fg);
+  /* The paused stage is dark in both themes, so the label cannot follow --fg. */
+  color: oklch(95% 0.005 245);
   border-radius: var(--r-pill);
   font: inherit;
   font-weight: 600;
@@ -61,7 +62,7 @@
 .preview-hint {
   margin: 0;
   text-align: center;
-  color: var(--fg-muted);
+  color: oklch(75% 0.012 245);
   font-size: 12px;
   line-height: 1.5;
 }

@@ -1,5 +1,5 @@
-import type { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
 import { IndexElementTypes, RenderingPrimitives, ShaderPrimitives } from '#rendering/types';
+import type { WebGl2ShaderAttribute } from '#rendering/webgl2/WebGl2ShaderAttribute';
 
 import type { WebGl2RenderBuffer } from './WebGl2RenderBuffer';
 
@@ -101,7 +101,7 @@ export class WebGl2VertexArrayObject {
 
   public addAttribute(
     buffer: WebGl2RenderBuffer,
-    attribute: ShaderAttribute,
+    attribute: WebGl2ShaderAttribute,
     type: number = ShaderPrimitives.Float,
     normalized = false,
     stride = 0,

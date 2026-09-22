@@ -1,15 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import {
-  getAvailableTags,
-  getExampleByPath,
-  getExamplesList,
-  getLoadErrorFor,
-  getNestedExamples,
-  hasExamplesFor,
-  loadExamples,
-  onExamplesLoaded,
-} from '../lib/example-store';
+import { getExampleByPath, getExamplesList, getLoadErrorFor, getNestedExamples, hasExamplesFor, loadExamples, onExamplesLoaded } from '../lib/example-store';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
 import { showToast } from '../lib/toast-store';
 import type { Example, ExamplesMap } from '../lib/types';
@@ -40,7 +31,6 @@ export interface ExampleBrowserProps {
 export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element => {
   const [examples, setExamples] = useState<ExamplesMap>(() => new Map());
   const [activeExample, setActiveExample] = useState<Example | null>(null);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<VersionInfo | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -150,7 +140,6 @@ export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element =>
     setLoaded(hasExamplesFor(selected.id));
     setLoadError(getLoadErrorFor(selected.id));
     setExamples(getNestedExamples(selected.id));
-    setAvailableTags(getAvailableTags(selected.id));
     resolveActiveExample({ canonicaliseUrl: true });
   }, [resolveActiveExample]);
 
@@ -245,7 +234,6 @@ export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element =>
           setLoaded(true);
           setLoadError(getLoadErrorFor(next.id));
           setExamples(getNestedExamples(next.id));
-          setAvailableTags(getAvailableTags(next.id));
           resolveActiveExample({ canonicaliseUrl: false });
         } else {
           void loadExamples(next.id);
@@ -291,13 +279,15 @@ export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element =>
   };
 
   return (
-    <section className={css(styles, 'root')}>
+    // The grid has a column for the navigation only while the navigation is
+    // actually rendered: a `display: none` sidebar leaves its track behind, and
+    // the preview then folds itself into the 280px meant for the list.
+    <section className={css(styles, 'root')} data-sidebar={!isCompactMobile && sidebarOpen ? 'open' : 'closed'}>
       {!isCompactMobile && (
         <aside id="playground-navigation" className={css(styles, 'side-content')} data-open={sidebarOpen ? 'true' : undefined} aria-hidden={!sidebarOpen}>
           <Navigation
             examples={examples}
             activeExample={activeExample}
-            availableTags={availableTags}
             selectedVersion={selectedVersion}
             loadError={loadError}
             loaded={loaded}
@@ -351,7 +341,6 @@ export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element =>
             <Navigation
               examples={examples}
               activeExample={activeExample}
-              availableTags={availableTags}
               selectedVersion={selectedVersion}
               loadError={loadError}
               loaded={loaded}

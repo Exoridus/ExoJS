@@ -71,7 +71,7 @@ export interface WebGl2RetainedGeometryRef {
 
 /**
  * Auxiliary, renderer-owned replay state parked on a bundle for a renderer
- * that opts out of the shared `TransformBuffer` (`_consumesSharedTransform ===
+ * that opts out of the shared `TransformBuffer` (`consumesSharedTransform ===
  * false`, e.g. Text): its per-node style data lives in a private, group-owned
  * store the generic bundle machinery never touches, so the renderer attaches
  * it here and the bundle only has to release it on destroy. Mirrors the WebGPU

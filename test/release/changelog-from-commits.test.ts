@@ -59,7 +59,15 @@ describe('renderUnreleasedEntries', () => {
     expect(rendered.indexOf('### Changed')).toBeLessThan(rendered.indexOf('### Added'));
     expect(rendered.indexOf('BREAKING: Change a contract')).toBeLessThan(rendered.indexOf('Rename a thing'));
     expect(rendered).toContain(`([#1](${REPO}/pull/1))`);
-    expect(rendered).toContain('  It does things.');
+  });
+
+  test('renders the headline and the link, never the body', () => {
+    const body = ['It does things.', 'And here is the long reasoning.'].join('\n\n');
+    const rendered = renderUnreleasedEntries([classifyCommit(commit('feat: add a thing (#1)', body))!], '', REPO);
+
+    expect(rendered).toContain(`- **Add a thing.** ([#1](${REPO}/pull/1))`);
+    expect(rendered).not.toContain('It does things.');
+    expect(rendered).not.toContain('long reasoning');
   });
 
   test('skips entries whose pull request the section already names', () => {

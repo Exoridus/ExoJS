@@ -1,13 +1,14 @@
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createShaderPlugin } from '@codexo/exojs-build';
 import { createJsdomTestProject, srcConditions, workerTransformPlugin, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
 
-import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands';
-import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink';
+import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands.ts';
+import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink.ts';
 
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
 // before the root alias so '@codexo/exojs/renderer-sdk' resolves before '@codexo/exojs'.
@@ -24,6 +25,10 @@ const aliasConfig = [
   // exports a `@codexo/exojs-source` condition, so alias to source for in-repo tests.
   // @codexo/exojs-physics is aliased too so the example physics↔tilemap bridge
   // recipe (examples/shared/physics-tilemap.ts) can be unit-tested in-repo.
+  // @codexo/exojs-particles and @codexo/exojs-tilemap are aliased for the same
+  // reason: the benchmark's extension arms import them, and this lane runs
+  // without building the packages, so their `dist` entries resolve to nothing.
+  { find: '@codexo/exojs-particles', replacement: fileURLToPath(new URL('./packages/exojs-particles/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-tilemap', replacement: fileURLToPath(new URL('./packages/exojs-tilemap/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-tiled', replacement: fileURLToPath(new URL('./packages/exojs-tiled/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-aseprite', replacement: fileURLToPath(new URL('./packages/exojs-aseprite/src/index.ts', import.meta.url)) },
@@ -32,13 +37,55 @@ const aliasConfig = [
   { find: '@codexo/exojs-tilemap-physics', replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-lighting', replacement: fileURLToPath(new URL('./packages/exojs-lighting/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-pathfinding', replacement: fileURLToPath(new URL('./packages/exojs-pathfinding/src/index.ts', import.meta.url)) },
+  // The CLI's `exo create` calls the scaffolder's library entry, whose package
+  // resolves to built output. The unit lane runs without building the packages,
+  // so an in-repo test would resolve nothing at all without this.
+  { find: 'create-exo-app', replacement: fileURLToPath(new URL('./packages/create-exo-app/src/scaffold.ts', import.meta.url)) },
 ] as const;
+
+/**
+ * Source roots whose `#*` specifiers address the package they sit in rather than
+ * the engine. The benchmark package is deliberately absent: its adapters use
+ * `#*` to reach engine modules.
+ */
+const EXTENSION_SOURCE_ROOTS = [
+  fileURLToPath(new URL('./packages/exojs-particles', import.meta.url)),
+  fileURLToPath(new URL('./packages/exojs-tilemap', import.meta.url)),
+] as const;
+
+/**
+ * Resolves the benchmark adapters' `#*` specifiers to the engine source.
+ *
+ * A blanket alias cannot do this: each extension package carries its own `#*`
+ * map pointing at its own `src`, so `#distributions/Curve` imported from inside
+ * `@codexo/exojs-particles` would be sent into the engine tree, where no such
+ * module exists. Declining for those importers leaves the specifier to Vite's
+ * normal `imports` resolution, which `srcConditions` already steers to the
+ * package's own sources.
+ */
+const benchEngineHashImports = (): Plugin => {
+  const engineSrc = fileURLToPath(new URL('./src', import.meta.url));
+
+  return {
+    name: 'exojs-bench-engine-hash-imports',
+    enforce: 'pre',
+    async resolveId(source: string, importer: string | undefined, options) {
+      if (!source.startsWith('#')) return null;
+      if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) return null;
+
+      // Re-enter resolution rather than returning the path: the engine's `#*`
+      // specifiers carry no extension, and shader imports need `.frag`/`.wgsl`
+      // rather than the `.ts` a hand-built path would have to assume.
+      return this.resolve(`${engineSrc}/${source.slice(1)}`, importer, options);
+    },
+  };
+};
 
 // Loads every shader source (`.vert`/`.frag`/`.wgsl`) as its REAL text, exactly
 // as the production build does. Tests read what ships: the renderer performance
 // harness reflects attribute names out of the actual GLSL, the parity specs
 // compare the two languages' declarations against each other, and
-// `ShaderSource` rejects an empty source outright.
+// `Shader` rejects an empty source outright.
 const realShaderPlugin = createShaderPlugin();
 
 // Shared resolution/plugin wiring for the repository-local browser projects.
@@ -93,8 +140,21 @@ const parityCommands = { writeParityEvidence, resetParityEvidence };
 // reachable only over CDP, which lives on the node side. See the command module.
 const allocationCommands = { startHeapSampling, stopHeapSampling, emitAllocationRecord };
 
+/**
+ * Worker cap for the jsdom lane.
+ *
+ * Vitest otherwise sizes its fork pool at one worker per core, which saturates a
+ * developer machine for the several minutes the unit lane runs - and the pre-push
+ * hook runs it on every push. Half the cores keeps the machine usable and costs
+ * little wall time, since the lane is not purely CPU-bound. CI keeps the default:
+ * its runners have few cores and nothing else to serve. `EXOJS_TEST_MAX_WORKERS`
+ * overrides both (a plain count or a `"50%"`-style share).
+ */
+const maxWorkers = process.env['EXOJS_TEST_MAX_WORKERS'] ?? (process.env['CI'] ? undefined : '50%');
+
 export default defineConfig({
   test: {
+    ...(maxWorkers === undefined ? {} : { maxWorkers }),
     coverage: {
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
@@ -145,7 +205,7 @@ export default defineConfig({
       // `""`, which ran the biggest test project (`test:core`) against blank
       // shaders and made GLSL regressions invisible outside the 3 browser lanes
       // and `rendering-perf`; it also forced per-path `vi.mock` workarounds
-      // wherever `ShaderSource`'s non-empty-string validation ran at module
+      // wherever `Shader`'s non-empty-string validation ran at module
       // scope. jsdom has no WebGL2 context to actually compile against (that is
       // what the browser lanes are for), so
       // `test/rendering/shader-source-structure.test.ts` adds a GPU-free
@@ -167,6 +227,9 @@ export default defineConfig({
             // The asset browser suite needs a real IndexedDB and runs in the
             // browser-assets-chromium project; jsdom implements none of it.
             'test/assets/browser/**/*.test.ts',
+            // `InlineWorker` needs a real Worker and a real object URL, neither
+            // of which jsdom has; browser-core-chromium runs this suite.
+            'test/core/browser/**/*.test.ts',
           ],
         }),
         plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
@@ -206,6 +269,22 @@ export default defineConfig({
         name: 'exojs-physics',
         alias: aliasConfig,
         include: ['packages/exojs-physics/test/**/*.test.ts'],
+        // The sleeping gate is its own project - see `physics-perf`.
+        exclude: ['packages/exojs-physics/test/sleeping-perf.test.ts'],
+      }),
+
+      // -- physics-perf - the sleeping-vs-awake step-time gate ---------------
+      // Separate project for exactly one reason: this is the only physics
+      // assertion that reads wall-clock time, and wall-clock is load-dependent.
+      // Run inside the parallel suite, the light sleeping arm loses more to
+      // scheduling gaps than the heavy awake arm and the ratio collapses (3.4x
+      // measured alone, 1.8x under the suite) - a failing push with nothing
+      // regressed. Kept out of `test` and run by `test:physics-perf` after it,
+      // so the measurement has the machine to itself.
+      createJsdomTestProject({
+        name: 'physics-perf',
+        alias: aliasConfig,
+        include: ['packages/exojs-physics/test/sleeping-perf.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-tilemap-physics',
@@ -261,7 +340,8 @@ export default defineConfig({
       // PR - run it on demand via `pnpm --filter @codexo/exojs-bench test`.
       createJsdomTestProject({
         name: 'exojs-bench',
-        alias: [...aliasConfig, { find: /^#(.*)$/, replacement: `${fileURLToPath(new URL('./src', import.meta.url))}/$1` }],
+        alias: aliasConfig,
+        plugins: [benchEngineHashImports()],
         include: ['packages/exojs-bench/test/**/*.test.ts'],
       }),
 
@@ -282,6 +362,40 @@ export default defineConfig({
           exclude: ['packages/exojs-build/test/browser/**'],
           testTimeout: 300_000,
           hookTimeout: 300_000,
+        },
+      },
+
+      // ── eslint-plugin-exojs: the published lint rules ─────────────────
+      // Plain Node, no jsdom and no engine aliases: every spec runs a rule
+      // through ESLint's own `RuleTester` against fixture source strings, so
+      // the only thing under test is the rule's view of a parsed file.
+      {
+        test: {
+          name: 'exojs-eslint-plugin',
+          environment: 'node',
+          globals: true,
+          include: ['packages/eslint-plugin-exojs/test/**/*.test.ts'],
+        },
+      },
+
+      // ── exojs-cli: the published command line package ──────────────────
+      // Plain Node, because the subject under test is a Node CLI: an HTTP
+      // server, a scaffolder and a file packer, none of which want a jsdom
+      // window. The engine aliases and the real-shader loader are wired in for
+      // one spec - the `assets pack` round trip reads a packed container back
+      // through Core's own `Loader.loadContainer`, which is what proves the
+      // writer in `@codexo/exojs-build` and the reader in Core cannot drift.
+      {
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
+        plugins: [realShaderPlugin],
+        define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
+        test: {
+          name: 'exojs-cli',
+          environment: 'node',
+          globals: true,
+          include: ['packages/exojs-cli/test/**/*.test.ts'],
+          testTimeout: 30_000,
         },
       },
 
@@ -330,6 +444,16 @@ export default defineConfig({
           browser: {
             enabled: true,
             headless: webgl2Headless,
+            // `--use-angle=swiftshader` renders on the CPU, so several Chromium
+            // instances racing for the same cores contend rather than gain
+            // anything: 78 files at default (parallel) concurrency measured no
+            // faster than sequential on an otherwise-loaded machine (~72s vs
+            // ~80s), and under that same load one file's timing-sensitive test
+            // missed its 15s timeout at 4x its isolated run time - reproduced
+            // twice, and the file passed clean every time run alone or as part
+            // of the sequential suite. `fileParallelism: false` trades the
+            // (near-zero) parallel speedup for not flaking under load.
+            fileParallelism: false,
             provider: playwright({
               launchOptions: { channel: 'chromium', args: ['--enable-webgl', '--use-angle=swiftshader'] },
             }),
@@ -505,37 +629,12 @@ export default defineConfig({
         },
       },
 
-      // ── browser-parity-webkit - matrix rows from WebKit ──────────────────
-      // Only the parity matrix, never the WebGPU spec suite: the Playwright
-      // WebKit build has no `navigator.gpu` at all, so those specs would fail
-      // on construction rather than report anything. The matrix instead records
-      // `unavailable`, which is the finding. Headed for the same reason Firefox
-      // is - if a WebGPU adapter appears on macOS, a window is the likeliest
-      // configuration to get one, and a wrong `unavailable` row would be worse
-      // than a visible browser during a manual run.
-      {
-        ...browserBase,
-        test: {
-          name: 'browser-parity-webkit',
-          globals: true,
-          setupFiles: renderingBrowserSetupFiles,
-          include: ['test/rendering/parity/**/*.test.ts'],
-          browser: {
-            enabled: true,
-            commands: parityCommands,
-            headless: false,
-            provider: playwright(),
-            instances: [{ browser: 'webkit' }],
-          },
-        },
-      },
-
       // ── browser-parity-safari - matrix rows from Safari itself ───────────
-      // macOS only, and the reason it exists: Playwright's WebKit build has no
-      // WebGPU, so its `unavailable` rows describe the test tool rather than
-      // the browser. safaridriver drives the real Safari, which does ship
-      // WebGPU - the rows land under the same `webkit` key and replace the
-      // Playwright ones, since Safari is the measurement that speaks for users.
+      // macOS only, optional diagnostic. Playwright has no WebKit build with
+      // WebGPU, so real Safari via safaridriver is the sole producer of
+      // `webkit` evidence rows; there is no Playwright WebKit lane to collide
+      // with it. Safari is not a guaranteed release browser, so this project
+      // never blocks `release:cut` or the guaranteed-browser matrix.
       //
       // Prerequisites on the Mac, once: `safaridriver --enable`, plus
       // Develop ▸ Allow Remote Automation in Safari's menu.
@@ -634,6 +733,27 @@ export default defineConfig({
           // The offline round trip drives a real `Loader`, which reaches engine
           // modules that read the bare build-flag globals - see the setup file.
           setupFiles: browserSetupFiles,
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({ launchOptions: { channel: 'chromium' } }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-core-chromium - core surfaces jsdom cannot host ──────────
+      // `InlineWorker` owns a Blob URL and a real `Worker`, and jsdom provides
+      // neither. The node lane stubs both to pin the lifetime and error
+      // contract; only a browser can show that a `?worker` source string
+      // actually runs, imports and all.
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-core-chromium',
+          globals: true,
+          setupFiles: browserSetupFiles,
+          include: ['test/core/browser/**/*.test.ts'],
           browser: {
             enabled: true,
             headless: true,

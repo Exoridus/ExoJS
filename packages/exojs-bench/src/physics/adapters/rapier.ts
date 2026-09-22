@@ -47,22 +47,16 @@ import { describePhysicsScene } from './scene';
  *
  * The library bundles its WASM and requires an async `RAPIER.init()` before any
  * world is built; both the dynamic `import()` and `init()` happen once in
- * {@link createRapierAdapter}. A checkout that never ran `bench:setup` (the
- * library is not linked) degrades to a skipped arm instead of crashing.
+ * {@link createRapierAdapter}. Either can reject - an unlinked library, or a
+ * browser that refuses the WASM compilation - and the rejection carries the
+ * reason the harness records against the arm.
  */
-export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
-  let R: typeof RAPIER;
+export const createRapierAdapter = async (): Promise<PhysicsAdapter> => {
+  const R = (await import('@dimforge/rapier2d-compat')) as typeof RAPIER;
 
-  try {
-    R = (await import('@dimforge/rapier2d-compat')) as typeof RAPIER;
-    // One-time WASM initialisation, before any world is constructed. The bundled
-    // glue prints a harmless upstream deprecation notice here - it is not an error.
-    await R.init();
-  } catch {
-    console.warn("[physics] rapier arm unavailable — '@dimforge/rapier2d-compat' is not linked or failed to init (run bench:setup). Skipping the rapier arm.");
-
-    return null;
-  }
+  // One-time WASM initialisation, before any world is constructed. The bundled
+  // glue prints a harmless upstream deprecation notice here - it is not an error.
+  await R.init();
 
   let world: RAPIER.World | null = null;
   let perturbedSignature = '';
@@ -151,13 +145,23 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
         const a = bodyA.translation();
         const b = bodyB.translation();
 
-        created.createImpulseJoint(R.JointData.revolute({ x: joint.x - a.x, y: joint.y - a.y }, { x: joint.x - b.x, y: joint.y - b.y }), bodyA, bodyB, true);
+        const constraint = created.createImpulseJoint(
+          R.JointData.revolute({ x: joint.x - a.x, y: joint.y - a.y }, { x: joint.x - b.x, y: joint.y - b.y }),
+          bodyA,
+          bodyB,
+          true,
+        );
+
+        // Rapier computes contacts between jointed bodies by default, which is
+        // the opposite of what the neutral scene asks for.
+        constraint.setContactsEnabled(false);
       }
 
       stepIndex = 0;
       perStep = createPerStepWork(spec, scene, table, {
         createBody,
         removeBody: body => created.removeRigidBody(body),
+        setVelocity: (body, vx, vy) => body.setLinvel({ x: vx, y: vy }, true),
         // `maxToi` is measured in multiples of the ray direction, and the shared
         // descriptor's direction is a unit vector, so it is the distance in px.
         // `solid: true` counts a ray starting inside a shape as a hit, matching the

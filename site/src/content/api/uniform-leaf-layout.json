@@ -1,0 +1,134 @@
+{
+  "title": "UniformLeafLayout",
+  "description": "A scalar, vector or matrix field.",
+  "symbol": "UniformLeafLayout",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A scalar, vector or matrix field."
+      ],
+      "importLine": "import { UniformLeafLayout } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "kind",
+          "signature": "kind: \"leaf\"",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"leaf\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "offset",
+          "signature": "offset: number",
+          "signatureTokens": [
+            {
+              "text": "offset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Byte offset from the start of the owning block."
+        },
+        {
+          "name": "size",
+          "signature": "size: number",
+          "signatureTokens": [
+            {
+              "text": "size",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: UniformType",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/uniforms/uniformLayout.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformLayout.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/uniforms/uniformLayout.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformLayout.ts"
+}

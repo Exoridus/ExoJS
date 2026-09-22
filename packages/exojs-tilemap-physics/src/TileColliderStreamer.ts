@@ -69,15 +69,15 @@ const blockExtent = (chunkExtent: number, layerExtent: number | undefined, start
  * {@link import('@codexo/exojs-tilemap').ChunkStreamer}, a hand-rolled loader,
  * or a fully resident bounded layer.
  *
- * Tick it from `preUpdate`, before the frame's fixed steps run - not from
+ * Tick it from `preFrame`, before the frame's fixed steps run - not from
  * `update`, which runs after them:
  *
  * ```ts
  * const colliders = new TileColliderStreamer(world, layer);
- * scene.systems.add({ preUpdate: () => colliders.sync() });
+ * scene.systems.add({ preFrame: () => colliders.sync() });
  * ```
  *
- * `SceneScope` runs `preUpdate` once per frame, before any of that frame's
+ * `SceneScope` runs `preFrame` once per frame, before any of that frame's
  * fixed steps, and `update` after all of them. A chunk that becomes resident
  * this frame needs its collider body built before the world steps over the
  * hole, and a chunk evicted this frame must not keep its body for a whole

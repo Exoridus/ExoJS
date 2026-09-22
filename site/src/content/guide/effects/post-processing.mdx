@@ -32,6 +32,10 @@ That pipeline is already three passes — scene render, blur, composite. Post-pr
 
 ## Bloom (lite)
 
+<Callout type="info" title="For a real bloom, reach for the filter">
+The pipeline below is the teaching version: it shows how a multi-pass effect is assembled from parts you already have. For bloom in a project, use [`BloomFilter`](/ExoJS/en/api/bloom-filter/) — it extracts through a soft luminance knee, blurs on a downsampled chain and adds the result as light, none of which the two-tint approximation below does.
+</Callout>
+
 Bloom requires two renderings of the same scene: one at normal brightness (the base), one with only the bright parts tinted and blurred (the glow). The glow is composited additively over the base. Because the same sprite is drawn twice with different tints, each off-screen step is a `CallbackRenderPass` that sets the tint before rendering:
 
 <SourceSnippet
@@ -42,6 +46,39 @@ Bloom requires two renderings of the same scene: one at normal brightness (the b
 />
 
 The two glow/base passes each set a tint on the shared `bunny` sprite, then render it — using `CallbackRenderPass` rather than `RenderNodePass` precisely because they need to mutate the node before drawing. The key insight: the glow pass renders the same geometry with a bright tint. Only the bright regions survive into the blurred glow — the dark regions have near-zero contribution. The additive blend mode prevents the glow from over-brightening the base.
+
+## A filter chain as one pass
+
+A `FilterPass` runs a filter, or a chain of them, from one texture into another - the pipeline form of the `filter.apply` call above. It borrows the intermediates between chain stages from the backend's texture pool and returns them when the pass ends, so a chain of any length needs no targets of your own:
+
+```ts
+import { BloomFilter, Color, Container, FilterPass, LutFilter, RenderNodePass, RenderPipeline, RenderTexture } from '@codexo/exojs';
+
+declare const world: Container;
+declare const grade: LutFilter;
+
+const sceneRt = new RenderTexture(800, 600);
+const bloom = new BloomFilter({ threshold: 0.7 });
+
+const pipeline = new RenderPipeline()
+  .addPass(new RenderNodePass(world, { target: sceneRt, clear: Color.black }))
+  .addPass(new FilterPass(sceneRt, [bloom, grade]));
+```
+
+Its intermediates take the size of the destination, so an effect that reaches outside its input is clipped at that edge - the opposite of a filter at a node, where the capture domain grows to the reach the effect declares. A frame has no room around it to grow into. An empty chain is a blit, which is how a pipeline puts an off-screen target on the canvas.
+
+## A screen-wide effect without a pipeline of your own
+
+Everything above builds the frame by hand, which is the right shape when the frame *is* the effect - a mirror, a split screen, a scene drawn twice. When you only want an effect over the finished frame, `app.framePasses` is the shorter path: while it holds passes, the scene, the systems' draw hooks and any transition render into [`app.frameTexture`](/ExoJS/en/api/application/) instead of the canvas, and the pipeline is played afterwards.
+
+<SourceSnippet
+  source="examples/guides/post-processing/frame-passes.ts"
+  region="frame-passes"
+  language="ts"
+  title="examples/guides/post-processing/frame-passes.ts"
+/>
+
+An empty `framePasses` is the frame as it is drawn without the feature, at the cost of one branch, and `frameTexture` is only allocated once something reads it. The pipeline is owned by the application and destroyed with it; a pass owned by something shorter-lived - a scene, an extension - is removed by its owner, as above.
 
 ## Filter chains on a render target
 
@@ -81,6 +118,8 @@ Two ways to write into a `RenderTexture`:
 |---|---|
 | `RenderNodePass` / `CallbackRenderPass` with `{ target }` | Renders a scene subtree (`RenderNodePass`) or runs a draw callback (`CallbackRenderPass`) with the target set as active render target. Used for *scene rendering*. |
 | `filter.apply(context.backend, inputRt, outputRt)` | Runs the filter shader/program on an input texture, producing filtered output. Wrap it in a `CallbackRenderPass` to place it in the pipeline. Used for *post-render passes*. |
+| `FilterPass(source, filters, { target })` | Runs a filter or a chain from one texture into another as one pass, borrowing the intermediates. The stock form of the row above. |
+| `app.framePasses` | Passes that run after the frame is drawn, with the frame itself as their input. Used for *screen-wide effects* over everything the application rendered. |
 
 You compose them inside a `RenderPipeline`: render scenes with a targeted `RenderNodePass`/`CallbackRenderPass`, apply filters with `filter.apply` (from a `CallbackRenderPass`), display the final result with a `RenderNodePass` that draws the result sprite onto the active target.
 
@@ -88,6 +127,7 @@ You compose them inside a `RenderPipeline`: render scenes with a targeted `Rende
 
 - Per-node filter (`sprite.filters = [blur]`): Filter affects one drawable's rendered output. Good for that one glowing character in an otherwise sharp scene.
 - Post-processing: Filter affects the entire scene rendered into a target. Good for screen-wide effects — bloom, color grading, CRT simulation.
+- Frame passes (`app.framePasses`): Filter affects the finished frame, without your code composing it. Good for an effect over everything - bloom, grading, a CRT pass - when the frame is drawn the ordinary way.
 - Both together: Per-node filters for individual effects, post-processing chain for scene-wide compositing.
 
 The cost is in passes. A post-processing chain with 3 RTS and 2 filters costs at least 4 passes (scene render + filter A + filter B + final composite). Per-node filters cost 1 pass per filtered node per frame. The render pipeline debugger ([Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspection/)) helps you count these.

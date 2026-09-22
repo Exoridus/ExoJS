@@ -1,9 +1,23 @@
-import { buildPhysicsComparison, buildRenderingComparison, chooseHeadlineCount } from '../src/comparison/build';
+import { aggregatePhysicsRuns, aggregateRenderingRuns, IncomparableRunsError } from '../src/comparison/aggregate';
+import { buildPhysicsComparison, buildRenderingComparison, chooseHeadlineCount, chooseRowCount } from '../src/comparison/build';
 import { physicsMechanism, renderingMechanism } from '../src/comparison/mechanism';
 import { renderComparison } from '../src/comparison/render';
 import { compareMedians, NOISE_HIGH, NOISE_LOW, STRUCTURAL_FACTOR } from '../src/comparison/verdict';
+import { PHYSICS_ARCHETYPES } from '../src/physics/archetypes';
+import type { PhysicsProvenance } from '../src/physics/driver';
 import type { PhysicsCellResult } from '../src/physics/PhysicsAdapter';
+import type { PhysicsReportData } from '../src/physics/report';
+import type { Provenance } from '../src/rendering/driver';
 import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAdapter';
+import type { ReportData } from '../src/rendering/report';
+import type { ClockReport } from '../src/shared/clock';
+import type { TimerCheck } from '../src/shared/timerCheck';
+
+/**
+ * A clock fine enough that no fixture duration trips the timer check, so a test
+ * asserts on the comparison it is about rather than on the grid it was read on.
+ */
+const FINE_CLOCK: ClockReport = { resolutionMs: 0.001, crossOriginIsolated: true };
 
 /** A measured rendering cell, with everything the comparison does not read left at a neutral value. */
 const cell = (options: {
@@ -34,6 +48,7 @@ const cell = (options: {
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: options.drawCalls ?? 1, textureBinds: options.textureBinds ?? 1, bufferUploads: options.bufferUploads ?? 1 },
+  clock: FINE_CLOCK,
   status: options.status ?? 'ok',
 });
 
@@ -49,8 +64,62 @@ const physicsCell = (options: {
   spec: { engine: options.engine, config: 'default', archetype: options.archetype, bodyCount: options.bodyCount, warmupSteps: 10, timedSteps: 60 },
   stepMsMedian: options.stepMsMedian,
   stepMsP95: options.stepMsMedian * 1.2,
+  stepsPerSample: 1,
   structural: { bodyCount: 100, contactCount: options.contactCount ?? 50, jointCount: 0, rayHits: options.rayHits ?? 0 },
   status: 'ok',
+});
+
+const stamp = (engineVersion = '0.17.0', overrides: Partial<Provenance> = {}): Provenance => ({
+  adapter: 'Test GPU',
+  backend: 'webgl2',
+  browser: 'chromium',
+  browserVersion: '151.0.7922.34',
+  os: 'win32 10.0.26200',
+  clock: FINE_CLOCK,
+  platformVersion: { major: 11, source: 'detected', evidence: "os.release() reported '10.0.26200'" },
+  prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
+  flags: ['--force-device-scale-factor=1'],
+  headless: true,
+  software: false,
+  engineVersion,
+  timestamp: '2026-01-01T00:00:00.000Z',
+  ...overrides,
+});
+
+const physicsStamp = (engineVersion = '0.17.0', host: Partial<PhysicsProvenance['host']> = {}): PhysicsProvenance => ({
+  browser: 'chromium',
+  browserVersion: '151.0.7922.34',
+  host: {
+    cpu: 'Test CPU',
+    cpuCount: 16,
+    os: 'linux 6.1.0',
+    platformVersion: { major: 26, source: 'declared', evidence: "the runner declared '26'" },
+    arch: 'x64',
+    ...host,
+  },
+  prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
+  fixedDelta: 1 / 60,
+  clock: { resolutionMs: 0.005, crossOriginIsolated: true },
+  caveats: [],
+  engineVersion,
+  timestamp: '2026-01-01T00:00:00.000Z',
+});
+
+/** One rendering run's artifact, as `bench:compare` reads it off disk. */
+const renderingRun = (
+  results: readonly CellResult[],
+  options: { engineVersion?: string; libraries?: ReportData['libraries']; stamp?: Partial<Provenance> } = {},
+): ReportData => ({
+  provenance: [stamp(options.engineVersion, options.stamp ?? {})],
+  libraries: options.libraries ?? [{ name: 'pixi.js', version: '8.19.0', resolvedFrom: '' }],
+  results,
+});
+
+/** One physics run's artifact. */
+const physicsRun = (results: readonly PhysicsCellResult[], host: Partial<PhysicsProvenance['host']> = {}): PhysicsReportData => ({
+  provenance: physicsStamp('0.17.0', host),
+  libraries: [{ name: 'matter-js', version: '0.20.0', resolvedFrom: '' }],
+  results,
 });
 
 describe('compareMedians', () => {
@@ -86,6 +155,21 @@ describe('compareMedians', () => {
     expect(compareMedians(0, 1).side).toBe('neither');
     expect(compareMedians(1, 0).label).toBe('not comparable');
     expect(compareMedians(Number.NaN, 1).label).toBe('not comparable');
+  });
+});
+
+describe('chooseRowCount', () => {
+  test('takes the largest rung of the ladder it is given', () => {
+    expect(chooseRowCount([200, 1_000, 5_000], () => true)).toBe(5_000);
+  });
+
+  test('lowers the choice when the larger rung has no valid cell', () => {
+    expect(chooseRowCount([200, 1_000, 5_000], count => count <= 1_000)).toBe(1_000);
+  });
+
+  test('returns null when no rung has a valid cell, rather than publishing one that was not measured', () => {
+    expect(chooseRowCount([200, 1_000], () => false)).toBeNull();
+    expect(chooseRowCount([], () => true)).toBeNull();
   });
 });
 
@@ -197,23 +281,53 @@ describe('buildRenderingComparison', () => {
     expect(blocks.map(block => block.backend)).toEqual(['webgl2']);
   });
 
-  test('picks one count for the whole table and applies it to every row', () => {
+  test('publishes a row per measured load rather than collapsing onto one count', () => {
     const [block] = buildRenderingComparison(fixture());
-    const counts = new Set(block!.sections.flatMap(section => section.rows.map(row => row.count)));
+    const rows = block!.sections.flatMap(section => section.rows);
 
-    expect(block!.headlineCount).toBe(5_000);
-    expect([...counts]).toEqual([5_000]);
+    expect(rows.filter(row => row.archetype === 'static-heavy').map(row => row.count)).toEqual([1_000, 5_000]);
+    expect(rows.filter(row => row.archetype === 'static-heavy').map(row => row.loadId)).toEqual(['1k', '5k']);
+  });
+
+  test('states the unit each load is counted in and marks the catalog headline', () => {
+    const [block] = buildRenderingComparison(fixture());
+    const rows = block!.sections.flatMap(section => section.rows);
+
+    expect(rows.find(row => row.archetype === 'static-heavy')!.unit).toBe('sprites');
+    expect(rows.find(row => row.archetype === 'text-static')!.unit).toBe('labels');
+    expect(rows.find(row => row.archetype === 'text-static' && row.count === 1_000)!.primary).toBe(true);
+    expect(rows.find(row => row.archetype === 'text-static' && row.count === 5_000)!.primary).toBe(false);
   });
 
   test('computes each verdict from the two medians', () => {
     const [block] = buildRenderingComparison(fixture());
     const rows = block!.sections.flatMap(section => section.rows);
-    const scaling = rows.find(row => row.archetype === 'static-heavy')!;
-    const text = rows.find(row => row.archetype === 'text-static')!;
+    const scaling = rows.find(row => row.archetype === 'static-heavy' && row.count === 5_000)!;
+    const text = rows.find(row => row.archetype === 'text-static' && row.count === 5_000)!;
 
     expect(scaling.cells[0]!.verdict.side).toBe('exojs');
     expect(scaling.cells[0]!.verdict.structural).toBe(true);
     expect(text.cells[0]!.verdict.side).toBe('neither');
+  });
+
+  test('qualifies each cell against the grid its own session read it on', () => {
+    const coarse: ClockReport = { resolutionMs: 0.5, crossOriginIsolated: false };
+    const [block] = buildRenderingComparison([
+      cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 1 }),
+      { ...cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 40, drawCalls: 50 }), clock: coarse },
+    ]);
+    const row = block!.sections.flatMap(section => section.rows).find(entry => entry.archetype === 'static-heavy')!;
+
+    // 40 ms clears a 0.5 ms grid, but the ExoJS arm's 1 ms does not stand ten
+    // steps above it, so the pair publishes no factor.
+    expect(row.cells[0]!.timer).toBe<TimerCheck>('resolved');
+
+    const [limited] = buildRenderingComparison([
+      { ...cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 1 }), clock: coarse },
+      cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 40, drawCalls: 50 }),
+    ]);
+
+    expect(limited!.sections.flatMap(section => section.rows)[0]!.cells[0]!.timer).toBe<TimerCheck>('limited');
   });
 
   test('files rows under category sections and never emits a category row', () => {
@@ -277,41 +391,281 @@ describe('buildRenderingComparison', () => {
 });
 
 describe('buildPhysicsComparison', () => {
-  test('publishes a row per archetype at one shared body count', () => {
-    const results = [200, 1_000, 4_000].flatMap(bodyCount => [
-      physicsCell({ engine: 'exojs-physics', archetype: 'box-stack', bodyCount, stepMsMedian: 1 }),
-      physicsCell({ engine: 'matter-js', archetype: 'box-stack', bodyCount, stepMsMedian: 3, contactCount: 50 }),
-    ]);
-    const section = buildPhysicsComparison(results);
+  /** Every cell of one archetype's own ladder, on both arms. */
+  const ladderOf = (archetype: PhysicsCellResult['spec']['archetype']): readonly number[] =>
+    PHYSICS_ARCHETYPES.find(candidate => candidate.id === archetype)!.bodyCounts;
 
-    expect(section.rows).toHaveLength(1);
-    expect(section.rows[0]!.count).toBe(4_000);
-    expect(section.rows[0]!.cells[0]!.verdict.side).toBe('exojs');
+  const sweep = (archetype: PhysicsCellResult['spec']['archetype'], stepMsMedian: number, competitorMs: number): PhysicsCellResult[] =>
+    ladderOf(archetype).flatMap(bodyCount => [
+      physicsCell({ engine: 'exojs-physics', archetype, bodyCount, stepMsMedian }),
+      physicsCell({ engine: 'matter-js', archetype, bodyCount, stepMsMedian: competitorMs, contactCount: 50 }),
+    ]);
+
+  test('publishes a row per measured rung of the archetype own ladder', () => {
+    const section = buildPhysicsComparison(sweep('box-stack', 1, 3));
+
+    expect(section.rows.map(row => row.count)).toEqual([...ladderOf('box-stack')]);
+    expect(section.rows.every(row => row.cells[0]!.verdict.side === 'exojs')).toBe(true);
+  });
+
+  test('gives each archetype the counts from its OWN ladder, never one archetype the counts of another', () => {
+    const section = buildPhysicsComparison([...sweep('box-stack', 1, 3), ...sweep('joints', 1, 3)]);
+    const counts = (archetype: string): number[] => section.rows.filter(row => row.archetype === archetype).map(row => row.count);
+
+    expect(counts('box-stack')).toEqual([...ladderOf('box-stack')]);
+    expect(counts('joints')).toEqual([...ladderOf('joints')]);
+    // The two ladders share no rung, so a single table-wide count would have had
+    // to publish one of these rows at the other's size, or publish neither.
+    expect(counts('box-stack').some(count => counts('joints').includes(count))).toBe(false);
+  });
+
+  test('drops only the rung an arm failed at, leaving every other rung of every archetype', () => {
+    const ladder = ladderOf('box-stack');
+    const results = [...sweep('box-stack', 1, 3), ...sweep('joints', 1, 3)].map(result =>
+      result.spec.archetype === 'box-stack' && result.spec.bodyCount === ladder.at(-1) ? { ...result, status: 'exceeded' as const } : result,
+    );
+    const section = buildPhysicsComparison(results);
+    const counts = (archetype: string): number[] => section.rows.filter(row => row.archetype === archetype).map(row => row.count);
+
+    expect(counts('box-stack')).toEqual(ladder.slice(0, -1));
+    expect(counts('joints')).toEqual([...ladderOf('joints')]);
+  });
+
+  test('checks the timer against the batch the clock bracketed, not the per-step quotient', () => {
+    const coarse: ClockReport = { resolutionMs: 0.001, crossOriginIsolated: false };
+    // 0.002 ms per step is two steps of the grid and would read as limited on its
+    // own; the harness timed 20 of them at once, so the bracket was 0.040 ms.
+    const batched = sweep('box-stack', 0.002, 0.002).map(result => ({ ...result, stepsPerSample: 20 }));
+
+    expect(buildPhysicsComparison(batched, coarse).rows[0]!.cells[0]!.timer).toBe<TimerCheck>('resolved');
+    expect(buildPhysicsComparison(sweep('box-stack', 0.002, 0.002), coarse).rows[0]!.cells[0]!.timer).toBe<TimerCheck>('limited');
+  });
+
+  test('reports an unrecorded clock as unknown rather than as a pass', () => {
+    expect(buildPhysicsComparison(sweep('box-stack', 1, 3)).rows[0]!.cells[0]!.timer).toBe<TimerCheck>('unknown');
+  });
+
+  test('publishes each arm p95 beside its median, and computes the verdict from the medians alone', () => {
+    const section = buildPhysicsComparison(sweep('box-stack', 1, 3));
+    const cell = section.rows[0]!.cells[0]!;
+
+    // The fixture puts every p95 at 1.2x its median, so a verdict drawn from the
+    // p95 pair would be the same ratio - which is why the assertion is that the
+    // p95 values are published, and that the ratio is the medians'.
+    expect(cell.referenceP95Ms).toBe(1.2);
+    expect(cell.competitorP95Ms).toBeCloseTo(3.6, 10);
+    expect(cell.verdict.ratio).toBeCloseTo(1 / 3, 10);
+  });
+
+  test('marks a median past a whole 60 fps frame, on either arm, and leaves one under it unmarked', () => {
+    const section = buildPhysicsComparison(sweep('box-stack', 16.6, 16.8));
+    const cell = section.rows[0]!.cells[0]!;
+
+    expect(cell.referenceOverFrameBudget).toBe(false);
+    expect(cell.competitorOverFrameBudget).toBe(true);
+  });
+
+  test('does not mark a median that only its p95 pushes past the frame', () => {
+    // 14 ms median, 16.8 ms p95: the mark states what the published median is,
+    // and reading it off the p95 instead would mark a scene that holds 60 fps in
+    // the typical step.
+    const cell = buildPhysicsComparison(sweep('box-stack', 14, 14))!.rows[0]!.cells[0]!;
+
+    expect(cell.referenceP95Ms).toBeCloseTo(16.8, 10);
+    expect(cell.referenceOverFrameBudget).toBe(false);
+  });
+});
+
+/**
+ * The aggregation stage is what makes a published ratio survive being
+ * re-measured: it pools separate runs of one matrix, publishes the median of
+ * their per-run medians, carries the range they observed, and refuses to print
+ * a verdict the runs did not all reach.
+ */
+describe('aggregateRenderingRuns', () => {
+  /** One run of a two-arm matrix where only the competitor's median moves. */
+  const run = (competitorMs: number): ReportData =>
+    renderingRun([
+      cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+      cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+    ]);
+
+  const onlyCell = (runs: readonly ReportData[]) => aggregateRenderingRuns(runs).backends[0]!.sections[0]!.rows[0]!.cells[0]!;
+
+  test('publishes the median of the per-run medians, not the first or the worst run', () => {
+    const pooled = onlyCell([run(2), run(3), run(10)]);
+
+    expect(pooled.competitorMs).toBe(3);
+    expect(pooled.referenceMs).toBe(1);
+  });
+
+  test('carries the range the runs observed and its ratio', () => {
+    const pooled = onlyCell([run(2), run(3), run(10)]);
+
+    expect(pooled.aggregate.competitor).toEqual({ minMs: 2, maxMs: 10, ratio: 5 });
+    expect(pooled.aggregate.reference).toEqual({ minMs: 1, maxMs: 1, ratio: 1 });
+    expect(pooled.aggregate.runs).toBe(3);
+  });
+
+  test('calls a cell stable when every run reached the same verdict, and publishes that verdict', () => {
+    const pooled = onlyCell([run(2), run(2.1), run(1.9)]);
+
+    expect(pooled.aggregate.stable).toBe(true);
+    expect(pooled.aggregate.rungs).toEqual(['exojs-leads', 'exojs-leads', 'exojs-leads']);
+    expect(pooled.verdict.side).toBe('exojs');
+  });
+
+  test('publishes no verdict for a cell the runs disagreed on, and keeps the row', () => {
+    // 1.0 vs 1.05 is level; 1.0 vs 2.0 is an ExoJS lead. One published ratio
+    // cannot be drawn from runs that disagree about which arm the cell favours.
+    const pooled = onlyCell([run(1.05), run(2), run(2)]);
+
+    expect(pooled.aggregate.stable).toBe(false);
+    expect(pooled.aggregate.rungs).toEqual(['level', 'exojs-leads', 'exojs-leads']);
+    expect(pooled.verdict.label).toBe('unstable across runs');
+    expect(pooled.verdict.side).toBe('neither');
+    expect(Number.isNaN(pooled.verdict.ratio)).toBe(true);
+    expect(pooled.competitorMs).toBe(2);
+  });
+
+  test('rejects runs measured at different engine versions', () => {
+    expect(() => aggregateRenderingRuns([run(2), renderingRun(run(2).results, { engineVersion: '0.16.0' })])).toThrow(IncomparableRunsError);
+  });
+
+  test('rejects runs measured against different library versions', () => {
+    expect(() =>
+      aggregateRenderingRuns([run(2), renderingRun(run(2).results, { libraries: [{ name: 'pixi.js', version: '8.20.0', resolvedFrom: '' }] })]),
+    ).toThrow(/library arms/);
+  });
+
+  test('rejects runs that measured different cells', () => {
+    const wider = renderingRun([...run(2).results, cell({ engine: 'exojs', archetype: 'text-static', nodeCount: 1_000, cpuMsMedian: 3 })]);
+
+    expect(() => aggregateRenderingRuns([run(2), wider])).toThrow(/does not measure the same cells/);
+  });
+
+  test('rejects runs measured on different GPUs', () => {
+    const elsewhere = renderingRun(run(2).results, { stamp: { adapter: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)' } });
+
+    expect(() => aggregateRenderingRuns([run(2), run(2), elsewhere])).toThrow(/different machine or browser/);
+  });
+
+  test('rejects runs measured in different browsers, whose numbers are not repetitions of one another', () => {
+    const inWebkit = renderingRun(run(2).results, { stamp: { browser: 'webkit', browserVersion: '26.5' } });
+
+    expect(() => aggregateRenderingRuns([run(2), inWebkit])).toThrow(IncomparableRunsError);
+  });
+
+  test('rejects a pre-release run pooled with a shipping one, so half a number cannot pass as stable', () => {
+    const onBeta = renderingRun(run(2).results, { stamp: { prerelease: { value: true, source: 'declared', evidence: 'macOS 26.0 beta' } } });
+
+    expect(() => aggregateRenderingRuns([run(2), onBeta])).toThrow(/different machine or browser/);
+  });
+
+  test('rejects runs measured on different operating-system versions, which would write different files', () => {
+    const onWindows10 = renderingRun(run(2).results, {
+      stamp: { os: 'win32 10.0.19045', platformVersion: { major: 10, source: 'detected', evidence: `os.release() reported '10.0.19045'` } },
+    });
+
+    expect(() => aggregateRenderingRuns([run(2), run(2), onWindows10])).toThrow(/different machine or browser/);
+  });
+
+  test('rejects a run whose platform version nothing established alongside one where it was, rather than letting it borrow the version', () => {
+    const unstated = renderingRun(run(2).results, {
+      stamp: { platformVersion: { major: 0, source: 'undetermined', evidence: 'the kernel version does not name the product version' } },
+    });
+
+    expect(() => aggregateRenderingRuns([run(2), unstated])).toThrow(/different machine or browser/);
+  });
+
+  test('tolerates the driver detail of an adapter string and the operating system patch level', () => {
+    // A driver update rewrites the device-id and shader-model tail, and a
+    // Windows build number moves under a machine between runs. Neither is a
+    // different computer, and rejecting them would make a repetition
+    // unrepeatable for reasons that have nothing to do with what was measured.
+    const before = renderingRun(run(2).results, {
+      stamp: { adapter: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002C05) Direct3D11 vs_5_0 ps_5_0, D3D11)', os: 'win32 10.0.26200' },
+    });
+    const after = renderingRun(run(2).results, {
+      stamp: { adapter: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002D11) Direct3D11 vs_5_1 ps_5_1, D3D11)', os: 'win32 10.0.26220' },
+    });
+
+    expect(() => aggregateRenderingRuns([before, after, before])).not.toThrow();
+  });
+});
+
+describe('aggregatePhysicsRuns', () => {
+  const boxStackLadder = PHYSICS_ARCHETYPES.find(archetype => archetype.id === 'box-stack')!.bodyCounts;
+  /** One run of a two-arm `box-stack` sweep at both arms' given medians. */
+  const runAt = (referenceMs: number, competitorMs = referenceMs * 3): PhysicsReportData =>
+    physicsRun(
+      boxStackLadder.flatMap(bodyCount => [
+        physicsCell({ engine: 'exojs-physics', archetype: 'box-stack', bodyCount, stepMsMedian: referenceMs }),
+        physicsCell({ engine: 'matter-js', archetype: 'box-stack', bodyCount, stepMsMedian: competitorMs, contactCount: 50 }),
+      ]),
+    );
+  const run = (competitorMs: number): PhysicsReportData => runAt(1, competitorMs);
+
+  test('pools the section the same way the rendering blocks are pooled', () => {
+    const pooled = aggregatePhysicsRuns([run(1.1), run(3), run(3)]).section.rows[0]!.cells[0]!;
+
+    expect(pooled.competitorMs).toBe(3);
+    expect(pooled.aggregate.competitor).toEqual({ minMs: 1.1, maxMs: 3, ratio: 3 / 1.1 });
+    expect(pooled.aggregate.stable).toBe(false);
+    expect(pooled.verdict.label).toBe('unstable across runs');
+  });
+
+  test('rejects runs measured on different CPUs, which is the physics domain of a different machine', () => {
+    expect(() => aggregatePhysicsRuns([run(2), physicsRun(run(2).results, { cpu: 'Apple M3 Max' })])).toThrow(/different machine/);
+  });
+
+  test('rejects runs measured on different operating-system versions of one machine', () => {
+    const older = physicsRun(run(2).results, { platformVersion: { major: 25, source: 'declared', evidence: `the runner declared '25'` } });
+
+    expect(() => aggregatePhysicsRuns([run(2), older])).toThrow(/different machine/);
+  });
+
+  test('pools every rung the ladder produced, keeping each load apart, and publishes its p95', () => {
+    const section = aggregatePhysicsRuns([run(3), run(3), run(3)]).section;
+
+    expect(section.rows.map(row => row.count)).toEqual([...boxStackLadder]);
+    expect(section.rows[0]!.cells[0]!.referenceP95Ms).toBe(1.2);
+    expect(section.rows[0]!.cells[0]!.competitorP95Ms).toBeCloseTo(3.6, 10);
+  });
+
+  test('drops a rung one run could not measure instead of pooling it with the rungs that stayed', () => {
+    const lowered = physicsRun(
+      run(3).results.map(result => (result.spec.bodyCount === boxStackLadder.at(-1) ? { ...result, status: 'exceeded' as const } : result)),
+    );
+    const section = aggregatePhysicsRuns([run(3), run(3), lowered]).section;
+    const top = section.rows.find(row => row.count === boxStackLadder.at(-1))!;
+
+    // The rung is still published - two runs measured it - but it can no longer
+    // claim a verdict, because one run placed the pair on no rung at all.
+    expect(top.cells[0]!.aggregate.runs).toBe(2);
+    expect(top.cells[0]!.aggregate.stable).toBe(false);
+  });
+
+  test('recomputes the frame-budget mark from the pooled median, not from any one run', () => {
+    // 16.0, 16.6 and 20.0 pool to 16.6, which is inside the frame even though a
+    // run that measured 20.0 was over it. Carrying a run mark over would publish
+    // an unplayable label on a number that is not.
+    const pooled = aggregatePhysicsRuns([16, 16.6, 20].map(stepMs => runAt(stepMs))).section.rows[0]!.cells[0]!;
+
+    expect(pooled.referenceMs).toBe(16.6);
+    expect(pooled.referenceOverFrameBudget).toBe(false);
   });
 });
 
 describe('renderComparison', () => {
   test('states the ladder, the count and the omissions in the document itself', () => {
-    const blocks = buildRenderingComparison([
-      cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
-      cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
-    ]);
     const document = renderComparison({
-      rendering: {
-        provenance: [
-          {
-            adapter: 'Test GPU',
-            backend: 'webgl2',
-            flags: ['--force-device-scale-factor=1'],
-            headless: true,
-            software: false,
-            engineVersion: '0.15.2',
-            timestamp: '2026-08-29T00:00:00.000Z',
-          },
-        ],
-        libraries: [{ name: 'pixi.js', version: '8.19.0', resolvedFrom: '' }],
-        backends: blocks,
-      },
+      rendering: aggregateRenderingRuns([
+        renderingRun([
+          cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+          cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
+        ]),
+      ]),
     });
 
     expect(document).toContain('Test GPU');
@@ -321,20 +675,88 @@ describe('renderComparison', () => {
     expect(document).toContain('Omissions');
   });
 
+  test('prints the observed range beside every pooled median', () => {
+    const document = renderComparison({
+      rendering: aggregateRenderingRuns(
+        [2, 3, 10].map(competitorMs =>
+          renderingRun([
+            cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+            cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+          ]),
+        ),
+      ),
+    });
+
+    expect(document).toContain('3 separate rendering runs');
+    expect(document).toContain('3.000 ms [2.000-10.000]');
+  });
+
+  test('prints no verdict for an unstable cell, but keeps its row and its range', () => {
+    const document = renderComparison({
+      rendering: aggregateRenderingRuns(
+        [1.05, 2, 2].map(competitorMs =>
+          renderingRun([
+            cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+            cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+          ]),
+        ),
+      ),
+    });
+    const row = document.split('\n').find(line => line.startsWith('| `static-heavy`'))!;
+
+    expect(row).toContain('2.000 ms [1.050-2.000]');
+    expect(row).toContain('unstable across runs: level, exojs-leads, exojs-leads');
+    expect(row).not.toContain('ExoJS leads');
+  });
+
+  test('prints the p95 beside every median', () => {
+    const document = renderComparison({
+      rendering: aggregateRenderingRuns([
+        renderingRun([
+          cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+          cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
+        ]),
+      ]),
+    });
+
+    expect(document).toContain('p95 1.200 ms');
+    expect(document).toContain('p95 2.400 ms');
+    expect(document).toContain('median / p95 CPU');
+  });
+
+  test('gives each physics row its own body count and marks a median past a whole frame', () => {
+    const ladder = PHYSICS_ARCHETYPES.find(archetype => archetype.id === 'box-stack')!.bodyCounts;
+    const document = renderComparison({
+      physics: aggregatePhysicsRuns(
+        Array.from({ length: 3 }, () =>
+          physicsRun(
+            ladder.flatMap(bodyCount => [
+              physicsCell({ engine: 'exojs-physics', archetype: 'box-stack', bodyCount, stepMsMedian: 4 }),
+              physicsCell({ engine: 'matter-js', archetype: 'box-stack', bodyCount, stepMsMedian: 20, contactCount: 50 }),
+            ]),
+          ),
+        ),
+      ),
+    });
+    const rows = document.split('\n').filter(line => line.startsWith('| `box-stack`'));
+    const row = rows.at(-1)!;
+
+    expect(document).toContain('own body-count ladder');
+    expect(document).toContain('rows are not comparable with one another');
+    expect(rows).toHaveLength(ladder.length);
+    expect(row).toContain(`| ${String(ladder.at(-1))} |`);
+    expect(row).toContain('20.000 ms');
+    expect(row).toContain('over the 16.7 ms frame');
+    // The ExoJS arm is inside the frame in the same row, so the mark is per
+    // value and not a property of the row.
+    expect(row).toContain('4.000 ms');
+    expect(row.indexOf('over the 16.7 ms frame')).toBeGreaterThan(row.indexOf('20.000 ms'));
+  });
+
   test('marks a software-rasterizer run as not reportable', () => {
     const document = renderComparison({
       rendering: {
-        provenance: [
-          {
-            adapter: 'SwiftShader',
-            backend: 'webgl2',
-            flags: [],
-            headless: true,
-            software: true,
-            engineVersion: '0.15.2',
-            timestamp: '2026-08-29T00:00:00.000Z',
-          },
-        ],
+        runs: [[stamp('0.15.2', { adapter: 'SwiftShader', flags: [], software: true, timestamp: '2026-08-29T00:00:00.000Z' })]],
         libraries: [],
         backends: [],
       },

@@ -2,7 +2,7 @@
  * WebGL2 RepeatingSprite browser tests.
  *
  * Validates both rendering paths:
- *  - Shader path: bare {@link Texture} source, UV tiling computed in the vertex
+ *  - WebGl2Shader path: bare {@link Texture} source, UV tiling computed in the vertex
  *    shader, GPU sampler handles wrapping.
  *  - Geometry path: {@link TextureRegion} source, Cartesian-product quads built
  *    on the CPU, clamped UVs.
@@ -89,7 +89,7 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 };
 
 // ---------------------------------------------------------------------------
-// Shader path tests (bare Texture source)
+// WebGl2Shader path tests (bare Texture source)
 // ---------------------------------------------------------------------------
 
 describe('WebGL2 RepeatingSprite — shader path', () => {
@@ -224,7 +224,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
     const texture = createSolidTexture('#ff0000', 16, 16);
     const root = new Container();
 
-    // Shader-path repeating sprite at (4, 4), size 20×20
+    // WebGl2Shader-path repeating sprite at (4, 4), size 20×20
     const repeating = new RepeatingSprite(texture, { width: 20, height: 20 });
     // Regular sprite at (36, 4), size 16×16
     const regular = new Sprite(texture);

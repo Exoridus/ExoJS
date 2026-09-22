@@ -1,4 +1,4 @@
-import type { Material, MaterialBindingSchema } from './Material';
+import type { AnyMaterial, MaterialBindingSchema } from './Material';
 
 /** Renderer-private discriminator carried through retained batch payloads. */
 const retainedMaterialStateKind = 'exojs:retained-material-state';
@@ -9,7 +9,7 @@ const retainedMaterialStateKind = 'exojs:retained-material-state';
  * state that can change batching or the GPU layout.
  * @internal
  */
-export interface RetainedMaterialState<M extends Material = Material> {
+export interface RetainedMaterialState<M extends AnyMaterial = AnyMaterial> {
   readonly kind: typeof retainedMaterialStateKind;
   readonly material: M;
   readonly bindingSchema: MaterialBindingSchema;
@@ -17,7 +17,7 @@ export interface RetainedMaterialState<M extends Material = Material> {
 }
 
 /** Capture the structural stamps for one material batch. @internal */
-export const createRetainedMaterialState = <M extends Material>(material: M): RetainedMaterialState<M> => ({
+export const createRetainedMaterialState = <M extends AnyMaterial>(material: M): RetainedMaterialState<M> => ({
   kind: retainedMaterialStateKind,
   material,
   bindingSchema: material._bindingSchema,

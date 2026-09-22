@@ -511,7 +511,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shader pair plus uniforms/textures for this mode."
+          "description": "WebGl2Shader pair plus uniforms/textures for this mode."
         }
       ],
       "paragraphs": [],

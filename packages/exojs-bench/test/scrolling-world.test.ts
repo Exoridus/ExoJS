@@ -1,5 +1,6 @@
 import { ARCHETYPES, buildMatrix } from '../src/rendering/archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../src/rendering/EngineAdapter';
+import { isTilemap } from '../src/rendering/tilemap';
 import { cameraCenterAt, GRID_MARGIN, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, visibleLeafCount, worldExtent } from '../src/rendering/world';
 
 const scrollingWorld = ARCHETYPES.find(archetype => archetype.id === 'scrolling-world')!;
@@ -8,9 +9,12 @@ const scrollingWorld = ARCHETYPES.find(archetype => archetype.id === 'scrolling-
 const SAMPLE_FRAMES = [0, 1, 7, 60, 120, 199, 331, 512, 900, 1_337];
 
 describe('scrolling-world archetype', () => {
-  test('is the only archetype with off-screen content and a moving camera', () => {
+  test('is the only SPRITE archetype with off-screen content and a moving camera', () => {
     const scrolling = ARCHETYPES.filter(isScrolling);
-    const culling = ARCHETYPES.filter(archetype => archetype.cullingEnabled);
+    // The tilemap scenes also hold more world than they show, but they express
+    // their camera through the tile path rather than through `cameraSpeed`, so
+    // only their culling flag overlaps with this one.
+    const culling = ARCHETYPES.filter(archetype => archetype.cullingEnabled && !isTilemap(archetype));
 
     expect(scrolling.map(archetype => archetype.id)).toEqual(['scrolling-world']);
     expect(culling.map(archetype => archetype.id)).toEqual(['scrolling-world']);
@@ -135,7 +139,7 @@ describe('arm coverage', () => {
   });
 
   test('the culled Pixi variant is measured only where culling can remove something', () => {
-    const cells = buildMatrix([fakeAdapter('pixi', 'culled', spec => spec.cullingEnabled)], ['webgl2']);
+    const cells = buildMatrix([fakeAdapter('pixi', 'culled', spec => spec.cullingEnabled && !isTilemap(spec))], ['webgl2']);
 
     expect(new Set(cells.map(cell => cell.archetype))).toEqual(new Set(['scrolling-world']));
     expect(cells.map(cell => cell.nodeCount)).toEqual([...scrollingWorld.nodeCounts]);

@@ -4,7 +4,7 @@ import { invariant } from '#core/dev';
  * Substitutes `{{NAME}}` placeholders in a shader source loaded from a
  * `.vert`/`.frag`/`.wgsl` file.
  *
- * Shader files are static text, so the few values a shader cannot state for
+ * WebGl2Shader files are static text, so the few values a shader cannot state for
  * itself - a slot count fixed by device limits, a bit mask shared with the CPU
  * packer - arrive here instead of being interpolated into a template literal.
  *

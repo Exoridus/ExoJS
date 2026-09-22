@@ -1,14 +1,16 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
+import { DirtyChannel, type NodeDirtyIndex } from '#core/nodeDirtyIndex';
 import type { Drawable } from '#rendering/Drawable';
 import { createEmptyMaterialKey } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import { CaptureThrashSuppressor, CaptureVerdict } from './CaptureThrashSuppressor';
+import { changeBelongsToLiveEntry } from './liveEntryChange';
 import { RenderEntryKind } from './renderCommand';
 import type { ScopeEntry } from './RenderScope';
 import { isRetainedFragmentRecordable, RetainedInstructionSet } from './RetainedInstructionSet';
 import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawables, RetainedRecordPool } from './RetainedRecordPool';
+import { isUnder } from './retainedTransformRowPatch';
 
 /**
  * A captured draw: replayed verbatim with a fresh frame-local nodeIndex.
@@ -93,6 +95,13 @@ export type RetainedFragmentEntry = RetainedFragmentDraw | RetainedFragmentGroup
  */
 export class RetainedGroupFragment {
   /**
+   * The node this fragment answers for - the transform-group boundary, or the
+   * render root whose capture slot holds it. Kept to resolve
+   * {@link dirtyIndex}: the fragment has to read the index its own subtree
+   * marks into, and that follows the owner between trees.
+   */
+  private readonly _owner: RenderNode;
+  /**
    * Snapshotted entries, valid up to {@link _entryCount}. Like every other
    * per-capture store here the array is rewritten rather than emptied: the
    * records in it are pooled and immortal either way, and emptying would hand
@@ -164,8 +173,44 @@ export class RetainedGroupFragment {
   /** Snapshot policy for nested transform groups - see {@link _snapshotInto}. */
   private _deferTransformGroups = false;
 
+  public constructor(owner: RenderNode) {
+    this._owner = owner;
+  }
+
+  /**
+   * The index this fragment's cursors are expressed in. Resolved through the
+   * owner on every use, never cached: the same subtree marks through the same
+   * resolution, so the two halves stay in step across an attach or a move
+   * between applications.
+   */
+  public get dirtyIndex(): NodeDirtyIndex {
+    return this._owner._dirtyIndex();
+  }
+
   public get hasCapture(): boolean {
     return this._hasCapture;
+  }
+
+  /**
+   * Whether the capture holds a record that is re-dispatched live on every
+   * replay - a barrier effect, or a deferred transform group. Such a capture can
+   * never be recorded as an instruction set, however capable the backend.
+   */
+  public get hasLiveEntries(): boolean {
+    return this._hasCapture && this._barrierPool.used > 0;
+  }
+
+  /** Whether the capture holds `node` as a live re-dispatch record. */
+  public hasLiveRecordFor(node: RenderNode): boolean {
+    const pool = this._barrierPool;
+
+    for (let i = 0; i < pool.used; i++) {
+      if (pool.at(i).node === node) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -264,7 +309,7 @@ export class RetainedGroupFragment {
    * a capture read them live, or after a re-collect subsumed them.
    */
   public markTransformsSeen(): void {
-    this._transformCursor = nodeDirtyIndex.sequence;
+    this._transformCursor = this.dirtyIndex.sequence;
   }
 
   /** The mark sequence this fragment's baked tint rows are current as of. */
@@ -274,7 +319,7 @@ export class RetainedGroupFragment {
 
   /** Every content-channel mark so far is accounted for - patched in, or read live. */
   public markContentSeen(): void {
-    this._contentCursor = nodeDirtyIndex.sequence;
+    this._contentCursor = this.dirtyIndex.sequence;
   }
 
   /**
@@ -283,12 +328,12 @@ export class RetainedGroupFragment {
    * caller must treat the channel as unproven rather than as quiet.
    */
   public hasUnseenTransformMarks(): boolean {
-    return nodeDirtyIndex.hasMarksSince(this._transformCursor, DirtyChannel.Transform);
+    return this.dirtyIndex.hasMarksSince(this._transformCursor, DirtyChannel.Transform);
   }
 
   /** Whether the index still covers everything since this fragment's cursor. */
   public get transformMarksProvable(): boolean {
-    return nodeDirtyIndex.covers(this._transformCursor);
+    return this.dirtyIndex.covers(this._transformCursor);
   }
 
   /** The group's instruction set, or `null` if recording was never armed. */
@@ -369,6 +414,44 @@ export class RetainedGroupFragment {
 
   public isClean(contentRevision: number, structureRevision: number, backend: RenderBackend): boolean {
     return this._hasCapture && this._contentRevision === contentRevision && this._structureRevision === structureRevision && this._backend === backend;
+  }
+
+  /**
+   * Adopt `contentRevision` when every content change since the capture lies
+   * on or below a node the capture re-dispatches live - a mask whose rect
+   * moved, a nested boundary whose own content changed - and nothing else
+   * moved. The records hold nothing about such a change, so the capture
+   * stays valid; a change to anything the capture recorded answers `false`.
+   * Structure and backend must already match: this settles the content key
+   * only.
+   */
+  public reconcileLiveEntryChanges(contentRevision: number, structureRevision: number, backend: RenderBackend, root: RenderNode): boolean {
+    if (!this._hasCapture || this._structureRevision !== structureRevision || this._backend !== backend) {
+      return false;
+    }
+
+    if (this._contentRevision === contentRevision) {
+      return true;
+    }
+
+    const tolerable = this.dirtyIndex.readSince(this._contentCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
+      const changed = node as unknown as RenderNode;
+
+      if (changed !== root && !isUnder(changed, root)) {
+        return true;
+      }
+
+      return changeBelongsToLiveEntry(changed, root, marked, candidate => this.hasLiveRecordFor(candidate));
+    });
+
+    if (!tolerable) {
+      return false;
+    }
+
+    this._contentRevision = contentRevision;
+    this.markContentSeen();
+
+    return true;
   }
 
   /**

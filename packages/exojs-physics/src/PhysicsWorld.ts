@@ -9,10 +9,10 @@ import type { PhysicsBinding } from './binding/PhysicsBinding';
 import { authoredCollider, Collider } from './Collider';
 import type { SweepHit } from './collision/sweep';
 import { canSweep, sweepProxies } from './collision/sweep';
-import type { ContactRecord } from './ContactGraph';
+import { bodyPairKey, type ContactRecord } from './ContactGraph';
 import type { ContactModifier } from './ContactModifier';
 import type { CollisionEvent, SensorEvent } from './events';
-import type { Joint } from './joints/Joint';
+import { type Joint, softConstraint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
 import { PhysicsBody } from './PhysicsBody';
 import type { QueryFilter, RayHit } from './query/QueryEngine';
@@ -422,6 +422,29 @@ export class PhysicsWorld implements BodyOwner {
   /** Pooled scratch for re-syncing a single body's broad-phase leaves. */
   private readonly _leafScratch: Collider[] = [];
   private readonly _joints: Joint[] = [];
+  /**
+   * The joints `_prepare` left active this fixed step, in `_joints` order -
+   * what the sub-step warm-start and solve passes iterate instead of the full
+   * list. Reused across steps; a scene whose joints are all asleep leaves it
+   * empty and the sub-steps touch no joint at all.
+   */
+  private readonly _activeJoints: Joint[] = [];
+  /**
+   * The bodies this fixed step's sub-steps integrate (non-static and awake),
+   * collected once per step. Reused across steps; sleep state cannot change
+   * between the sub-steps, so the snapshot stays valid for all of them.
+   */
+  private readonly _steppedBodies: PhysicsBody[] = [];
+  /**
+   * Body pairs the live joints have taken out of collision, reference-counted:
+   * several joints may connect one pair, and the pair collides again only once
+   * the last of them is gone.
+   *
+   * Keyed on the pair rather than expressed through collision filters, because
+   * a ragdoll limb has to keep colliding with everything except the limb it is
+   * jointed to - which a category/mask pair cannot say.
+   */
+  private readonly _uncollidableJointPairs = new Map<number, number>();
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
@@ -491,6 +514,7 @@ export class PhysicsWorld implements BodyOwner {
     this.interpolation = options.interpolation ?? false;
     this.frameAlphaSource = options.frameAlphaSource ?? (() => this.timeStepper.alpha);
     this._query = new QueryEngine(this._detectionColliders, this._backend.spatialIndex);
+    this._backend.contactGraph._useUncollidablePairs(this._uncollidableJointPairs);
   }
 
   /** Live bodies (read-only view). */
@@ -621,12 +645,38 @@ export class PhysicsWorld implements BodyOwner {
    */
   public addJoint<T extends Joint>(joint: T): T {
     this._assertAlive();
+
+    if (joint.bodyA === joint.bodyB) {
+      throw new Error('PhysicsWorld.addJoint: a joint needs two different bodies.');
+    }
+
+    if (joint.bodyA.destroyed || joint.bodyB.destroyed) {
+      throw new Error('PhysicsWorld.addJoint: a joint cannot constrain a destroyed body.');
+    }
+
     joint.bodyA.wake();
     joint.bodyB.wake();
 
     this._defer(() => {
+      // Checked here rather than above: the bodies may legitimately be added in
+      // the same dispatch as the joint, and the command queue is FIFO, so this
+      // is the first point at which their membership is settled. A joint whose
+      // bodies belong to another world would key its pair on ids that world
+      // handed out, which name a different pair here.
+      if (joint.bodyA._isForeignTo(this) || joint.bodyB._isForeignTo(this)) {
+        throw new Error('PhysicsWorld.addJoint: a joint cannot constrain a body of another world.');
+      }
+
+      // Destroying a body in the same dispatch that added the joint is
+      // legitimate, and the joint is then simply never registered - dropped
+      // rather than refused, because the caller did nothing wrong.
+      if (joint.bodyA.destroyed || joint.bodyB.destroyed) {
+        return;
+      }
+
       if (!this._joints.includes(joint)) {
         this._joints.push(joint);
+        this._holdPairApart(joint, 1);
       }
     });
 
@@ -643,8 +693,32 @@ export class PhysicsWorld implements BodyOwner {
 
       if (index !== -1) {
         this._joints.splice(index, 1);
+        this._holdPairApart(joint, -1);
       }
     });
+  }
+
+  /**
+   * Reference-count one joint's claim that its two bodies do not collide.
+   *
+   * Driven from the deferred add and remove rather than from the constructor,
+   * so the set describes the joints the world is actually stepping.
+   */
+  private _holdPairApart(joint: Joint, delta: 1 | -1): void {
+    // An unattached body carries no id, so it can be in no pair. A single-body
+    // joint's private anchor is the case that reaches this.
+    if (joint.collideConnected || joint.bodyA.id < 0 || joint.bodyB.id < 0) {
+      return;
+    }
+
+    const key = bodyPairKey(joint.bodyA.id, joint.bodyB.id);
+    const held = (this._uncollidableJointPairs.get(key) ?? 0) + delta;
+
+    if (held > 0) {
+      this._uncollidableJointPairs.set(key, held);
+    } else {
+      this._uncollidableJointPairs.delete(key);
+    }
   }
 
   // ── stepping ───────────────────────────────────────────────────────────
@@ -789,17 +863,19 @@ export class PhysicsWorld implements BodyOwner {
     this._backend.prepareSolve(h, contactHertz, dampingRatio);
 
     if (hasJoints) {
-      this._prepareJoints(h);
+      this._prepareJoints(h, contactHertz, dampingRatio);
     }
 
     if (hasBullets) {
       this._recordBulletPositions();
     }
 
+    const stepped = this._collectSteppedBodies();
+
     for (let subStep = 0; subStep < subStepCount; subStep++) {
       // Integrate gravity/forces over the sub-step (forces persist across
       // sub-steps; cleared once per frame by `_finalizePosition`).
-      for (const body of this._bodies) {
+      for (const body of stepped) {
         body._integrateVelocity(h, gravityX, gravityY);
       }
 
@@ -823,7 +899,7 @@ export class PhysicsWorld implements BodyOwner {
         this._solveJoints(true);
       }
 
-      for (const body of this._bodies) {
+      for (const body of stepped) {
         body._integratePosition(h);
       }
 
@@ -838,13 +914,45 @@ export class PhysicsWorld implements BodyOwner {
     // body's transform and re-sync collider geometry.
     this._backend.applyRestitution();
 
-    for (const body of this._bodies) {
+    for (const body of stepped) {
       body._finalizePosition();
     }
 
     if (hasBullets) {
       this._advanceBullets();
     }
+  }
+
+  /**
+   * Collect the bodies this step touches: non-static and awake. The sub-step
+   * integrators and the finalize pass all reject a static or sleeping body
+   * anyway, so filtering here changes nothing but how often the rejection is
+   * paid - once per step instead of once per body per sub-step.
+   *
+   * Nothing between this call and the end of the step changes a body's sleep
+   * state, so one snapshot serves every pass.
+   *
+   * A sleeping body needs nothing from the finalize pass: every API that puts a
+   * force on a body or teleports it wakes the body first, so it cannot reach
+   * this set carrying either, and `_setSleeping` does the rest as it goes to
+   * sleep. A static body can, because nothing ever takes it out of this set, so
+   * its per-step inputs are dropped here instead - at the same point in the step
+   * the finalize pass used to, after the island pass has read the teleport flag.
+   */
+  private _collectSteppedBodies(): readonly PhysicsBody[] {
+    const stepped = this._steppedBodies;
+
+    stepped.length = 0;
+
+    for (const body of this._bodies) {
+      if (body.type === 'static') {
+        body._clearStepInputs();
+      } else if (!body.isSleeping) {
+        stepped.push(body);
+      }
+    }
+
+    return stepped;
   }
 
   // ── binding ────────────────────────────────────────────────────────────
@@ -930,6 +1038,7 @@ export class PhysicsWorld implements BodyOwner {
     this._colliders.length = 0;
     this._detectionColliders.length = 0;
     this._joints.length = 0;
+    this._uncollidableJointPairs.clear();
     this._commands.length = 0;
     this._bindings.clear();
     this._backend.destroy();
@@ -1019,6 +1128,15 @@ export class PhysicsWorld implements BodyOwner {
     const count = bodies.length;
     const parent = this._islandParent;
     const minSleep = this._islandMinSleep;
+    const timeToSleep = this.timeToSleep;
+    // Whether every dynamic body is already asleep. A sleeping body's timer is
+    // frozen at or above `timeToSleep` - the only thing that lowers it is
+    // `_unionContactIslands`, which wakes it in the same pass - and
+    // `timeToSleep` cannot be raised under it. So no island can hold a member
+    // below the threshold, every sleep decision below would come out as it
+    // already stands, and the pass has nothing left to do. Tracked while the
+    // loop below runs anyway.
+    let settled = true;
 
     // Assign dense indices, reset the union-find, and accumulate sleep timers for
     // awake dynamic bodies (a sleeping body's timer stays frozen ≥ timeToSleep).
@@ -1031,13 +1149,18 @@ export class PhysicsWorld implements BodyOwner {
 
       if (body.type === 'dynamic' && !body.isSleeping) {
         body._accumulateSleepTime(dt, this.sleepLinearVelocity, this.sleepAngularVelocity);
+        settled = false;
       }
     }
 
     parent.length = count;
     minSleep.length = count;
 
-    this._unionContactIslands(dt);
+    // A contact that zeroes a sleep timer is the one way a fully settled world
+    // still has a wake decision to make, so it cancels the shortcut.
+    if (!this._unionContactIslands(dt) && settled) {
+      return;
+    }
 
     // Joints couple their two bodies into the same island (sleep/wake together).
     for (const joint of this._joints) {
@@ -1064,8 +1187,6 @@ export class PhysicsWorld implements BodyOwner {
 
     // Sleep an island iff every member has rested for `timeToSleep`; otherwise
     // wake it (which also wakes any member dragged awake by a fresh contact).
-    const timeToSleep = this.timeToSleep;
-
     for (let i = 0; i < count; i++) {
       const body = bodies[i]!;
 
@@ -1086,8 +1207,12 @@ export class PhysicsWorld implements BodyOwner {
    * push-out is still working off (see {@link isUnresolved}), so the island it
    * belongs to stays awake until the overlap has reached the depth the contact's
    * own load holds it at.
+   *
+   * Returns whether any sleep timer was reset.
    */
-  private _unionContactIslands(dt: number): void {
+  private _unionContactIslands(dt: number): boolean {
+    let reset = false;
+
     for (const contact of this._backend.contactGraph.solidContacts) {
       // A contact the modifier disabled carries no load this step, so it neither
       // forms an island, nor keeps a passenger of a moving platform awake, nor
@@ -1105,8 +1230,10 @@ export class PhysicsWorld implements BodyOwner {
         this._union(bodyA._islandIndex, bodyB._islandIndex);
       } else if (dynamicA && isMovingBoundary(bodyB)) {
         bodyA._sleepTime = 0;
+        reset = true;
       } else if (dynamicB && isMovingBoundary(bodyA)) {
         bodyB._sleepTime = 0;
+        reset = true;
       }
 
       // Unresolved overlap only matters where there is a dynamic body to hold
@@ -1120,8 +1247,12 @@ export class PhysicsWorld implements BodyOwner {
         if (dynamicB) {
           bodyB._sleepTime = 0;
         }
+
+        reset = true;
       }
     }
+
+    return reset;
   }
 
   /** Union-find union by lower index (deterministic roots). */
@@ -1149,23 +1280,37 @@ export class PhysicsWorld implements BodyOwner {
     return index;
   }
 
-  /** Build each joint's per-frame constraint data (once per fixed step). */
-  private _prepareJoints(h: number): void {
+  /** Build each joint's per-frame constraint data and collect the active ones (once per fixed step). */
+  private _prepareJoints(h: number, contactHertz: number, dampingRatio: number): void {
+    // Twice the contact stiffness: a joint is the harder constraint of the two,
+    // and the pair has to stay separable or the softer one is solved away.
+    const rigid = softConstraint(2 * contactHertz, dampingRatio, h);
+    const active = this._activeJoints;
+
+    active.length = 0;
+
     for (const joint of this._joints) {
-      joint._prepare(h);
+      joint._prepare(h, rigid);
+
+      // Read after `_prepare` rather than derived from the body states before
+      // it: a joint may find nothing to solve while preparing (a slack rope
+      // limit) and clear the flag itself.
+      if (joint._active) {
+        active.push(joint);
+      }
     }
   }
 
-  /** Re-apply each joint's accumulated impulse (each sub-step). */
+  /** Re-apply each active joint's accumulated impulse (each sub-step). */
   private _warmStartJoints(): void {
-    for (const joint of this._joints) {
+    for (const joint of this._activeJoints) {
       joint._warmStart();
     }
   }
 
-  /** One joint velocity pass (each sub-step, after the contacts). */
+  /** One joint velocity pass over the active joints (each sub-step, after the contacts). */
   private _solveJoints(useBias: boolean): void {
-    for (const joint of this._joints) {
+    for (const joint of this._activeJoints) {
       joint._solve(useBias);
     }
   }
@@ -1314,7 +1459,16 @@ export class PhysicsWorld implements BodyOwner {
 
         // Sweep against every other body (static, kinematic, dynamic) under the
         // discrete narrow phase's rules: sensors never block, filtered pairs never collide.
-        if (target.isSensor || other.body === body || !shouldCollide(collider.filter, target.filter)) {
+        // The same pair filter the discrete path applies. CCD is a second
+        // collision path, not a second collision semantics: a bullet whose
+        // joint took it out of collision with its neighbour must not be stopped
+        // by that neighbour's swept shape either.
+        if (
+          target.isSensor ||
+          other.body === body ||
+          !shouldCollide(collider.filter, target.filter) ||
+          this._uncollidableJointPairs.has(bodyPairKey(body.id, other.body.id))
+        ) {
           continue;
         }
 
@@ -1386,12 +1540,34 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _teardownBody(body: PhysicsBody): void {
+    // A joint left behind would keep constraining a destroyed body every step,
+    // and its entry in the uncollidable-pair map would outlive everything that
+    // could ever release it - a claim on a pair that can no longer exist, held
+    // for as long as the world does.
+    this._removeJointsOf(body);
+
     for (const collider of body.colliders) {
       this._detachCollider(collider);
     }
 
     this._bindings.unbind(body);
     body._markDestroyed();
+  }
+
+  /** Drop every joint incident to `body`, releasing the pair claims they held. */
+  private _removeJointsOf(body: PhysicsBody): void {
+    for (let index = this._joints.length - 1; index >= 0; index -= 1) {
+      const joint = this._joints[index];
+
+      if (joint === undefined || (joint.bodyA !== body && joint.bodyB !== body)) {
+        continue;
+      }
+
+      this._joints.splice(index, 1);
+      this._holdPairApart(joint, -1);
+      // The body on the other side loses a constraint it was resting against.
+      (joint.bodyA === body ? joint.bodyB : joint.bodyA).wake();
+    }
   }
 
   private _removeCollider(collider: Collider): void {

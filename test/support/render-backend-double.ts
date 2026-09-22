@@ -9,6 +9,8 @@ import { RenderTarget } from '#rendering/RenderTarget';
 import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
+import { createPixelReadbackDouble } from './pixel-readback-double';
+
 export interface RenderBackendDoubleOptions {
   /** Root target the double reports and hands out views from. Created at 800x600 when omitted. */
   readonly renderTarget?: RenderTarget;
@@ -21,6 +23,8 @@ export interface RenderBackendDoubleOptions {
   readonly supportedTextureFormats?: readonly CompressedTextureFormat[];
   /** Colour attachments the double accepts in one pass. `1` when omitted. */
   readonly maxColorAttachments?: number;
+  /** Whether the double claims per-attachment blend state. `false` when omitted - the conservative answer. */
+  readonly supportsPerAttachmentBlend?: boolean;
 }
 
 /**
@@ -62,6 +66,7 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     maxTextureSize: options.maxTextureSize ?? 4096,
     supportedTextureFormats: options.supportedTextureFormats ?? [],
     maxColorAttachments: options.maxColorAttachments ?? 1,
+    supportsPerAttachmentBlend: options.supportsPerAttachmentBlend ?? false,
     onRenderError: new Signal<[RenderError]>(),
 
     async initialize() {
@@ -104,6 +109,12 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     },
     supportsColorFormat() {
       return true;
+    },
+    readPixels(_source: RenderTexture, _x: number, _y: number, width: number, height: number) {
+      return Promise.resolve(new Uint8ClampedArray(width * height * 4));
+    },
+    createPixelReadback(_source: RenderTexture, _x: number, _y: number, width: number, height: number, slots: number) {
+      return createPixelReadbackDouble(width, height, slots);
     },
     acquireRenderTexture(width: number, height: number) {
       return new RenderTexture(width, height);

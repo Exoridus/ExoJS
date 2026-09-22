@@ -1,6 +1,7 @@
 import type { RenderNode } from '#rendering/RenderNode';
 
 import type { Application } from './Application';
+import type { NodeDirtyIndex } from './nodeDirtyIndex';
 
 /**
  * Friend-class hooks a scene node uses to notify its owning interaction service
@@ -62,4 +63,15 @@ export interface Stage {
    * optional). Widgets that need input access should use `this._stage?.app`.
    */
   readonly app?: Application;
+  /**
+   * The owning application's changed-record index. Both halves of the retained
+   * seam resolve it from the node's stage, so a mutation and the consumer that
+   * answers for it always write and read the same index.
+   *
+   * Absent in lightweight test stubs, exactly like {@link app}; a node whose
+   * stage does not carry one falls back to `detachedNodeDirtyIndex`, which is
+   * the same index a detached subtree uses.
+   * @internal
+   */
+  readonly dirtyIndex?: NodeDirtyIndex;
 }

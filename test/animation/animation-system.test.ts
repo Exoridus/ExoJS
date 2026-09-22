@@ -18,10 +18,10 @@ describe('AnimationSystem', () => {
     sprite.play('walk');
     system.add(sprite);
 
-    system.preUpdate(frame(100));
+    system.preFrame(frame(100));
     expect(sprite.currentFrame).toBe(1);
 
-    system.preUpdate(frame(100));
+    system.preFrame(frame(100));
     expect(sprite.currentFrame).toBe(2);
   });
 
@@ -59,7 +59,7 @@ describe('AnimationSystem', () => {
     sprite.destroy();
 
     expect(() => {
-      system.preUpdate(frame(100));
+      system.preFrame(frame(100));
     }).not.toThrow();
     expect(system.size).toBe(0);
   });
@@ -78,7 +78,7 @@ describe('AnimationSystem', () => {
       system.remove(first);
     });
 
-    system.preUpdate(frame(100));
+    system.preFrame(frame(100));
 
     expect(first.currentFrame).toBe(1);
     expect(system.has(first)).toBe(false);
@@ -96,7 +96,7 @@ describe('AnimationSystem', () => {
     expect(system.size).toBe(0);
 
     system.add(sprite);
-    system.preUpdate(frame(100));
+    system.preFrame(frame(100));
 
     expect(system.size).toBe(0);
     expect(sprite.currentFrame).toBe(0);

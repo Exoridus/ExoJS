@@ -55,15 +55,15 @@ export interface RenderPassCoordinator {
 }
 
 /**
- * Duck-typing host for backends that own a {@link RenderPassCoordinator}.
+ * A backend that owns a {@link RenderPassCoordinator}. Both engine backends do;
+ * a renderer reaches the coordinator through this to open a pass of its own.
  *
- * Generic, `RenderBackend`-typed orchestration code ({@link BackendTargetPass},
- * {@link RenderingContext.renderTo}) reaches the coordinator through this
- * optional accessor and falls back to a legacy inline target/view save-restore
- * when it is absent (e.g. test stub backends), mirroring the `_beginDrawPlan?`
- * hook pattern used by `RenderPlanPlayer`.
- * @internal
+ * Read the coordinator per call rather than caching it: a backend creates it
+ * lazily and replaces it across a context loss. Generic `RenderBackend`-typed
+ * orchestration treats the accessor as optional and falls back to an inline
+ * target/view save-restore when a backend (a test stub, say) has none, so a
+ * renderer that needs a pass must tolerate its absence the same way.
  */
 export interface RenderPassCoordinatorHost {
-  readonly _passCoordinator: RenderPassCoordinator;
+  readonly passCoordinator: RenderPassCoordinator;
 }

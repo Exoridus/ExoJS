@@ -6,6 +6,7 @@ import {
   createTransformTextureRect,
   type MutableTransformTextureRect,
   tintTextureRect,
+  TRANSFORM_ROWS_PER_TEXTURE_LINE,
   TRANSFORM_TEXELS_PER_ROW,
   type TransformTextureLayout,
   transformTextureRect,
@@ -19,6 +20,7 @@ import { BlendModes, BufferTypes, BufferUsage, TextureFormat } from '#rendering/
 
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
 /**
  * Floats one slot occupies in each of the two rgba32f stores. Both hold two
@@ -72,8 +74,9 @@ const initialSlotCapacity = 1024;
 export interface PersistentSlotCapableRenderer {
   readonly _supportsPersistentSlots?: boolean;
   _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGl2Backend): WebGl2PersistentSlotStore | null;
+  _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
   _writePersistentSlotRows(store: WebGl2PersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
-  _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, count: number, backend: WebGl2Backend): void;
+  _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, offset: number, count: number, backend: WebGl2Backend): void;
 }
 
 export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
@@ -99,14 +102,21 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
 
   private _order = new Uint32Array(0);
   private _orderBuffer: WebGl2RenderBuffer | null = null;
+  /**
+   * The vertex array object the owner draws this store's order buffer through.
+   * Created by the owner on first draw, held here because its lifetime is the
+   * order buffer's: whatever replaces or releases the buffer drops it too.
+   */
+  public indexedVao: WebGl2VertexArrayObject | null = null;
 
   /**
    * The root's base textures, in the slot order the packed rows reference.
    *
-   * Fixed for the store's whole life. That is the promise which makes a slot's
-   * texture index item-stable: the acquisition check refuses a source whose
-   * distinct textures do not all fit one table, so no membership change can ever
-   * force a re-slotting.
+   * Append-only for the store's whole life. That is the promise which makes a
+   * slot's texture index item-stable: an entry never moves, and a source whose
+   * distinct textures do not all fit one table is refused - so neither a
+   * membership change nor a structure delta bringing a new texture in can force
+   * a re-slotting of what is already written.
    */
   public readonly textures: Array<Texture | RenderTexture> = [];
 
@@ -122,10 +132,14 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
    * item handle.
    *
    * Derived, not source data: it names a position in THIS store's table. Filled
-   * once during acquisition, which already walks every item to build that table,
-   * so an ENTER never has to ask a drawable for its texture.
+   * during acquisition, which already walks every item to build that table, so
+   * an ENTER never has to ask a drawable for its texture; a structure delta
+   * re-derives only the entries of the items it did not carry.
    */
   public textureIndexOfHandle = new Uint8Array(0);
+
+  /** See {@link PersistentSpriteSlotStore.spareTextureIndexOfHandle}. */
+  public spareTextureIndexOfHandle = new Uint8Array(0);
 
   private _gl: WebGL2RenderingContext | null = null;
   private _accountant: GpuResourceAccountant | null = null;
@@ -169,6 +183,30 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   }
 
   /**
+   * Whether a selection of `slots` fits the row textures this context can
+   * allocate. Asked by the plan before the first write, so a root past the
+   * ceiling is refused onto the ordinary path instead of failing the frame in
+   * {@link ensureCapacity}. The order buffer has no such ceiling on WebGL2.
+   */
+  public canRepresent(slots: number, _orderEntries: number): boolean {
+    const capacity = this._growthCapacity(slots);
+    const rowsPerLine = Math.min(TRANSFORM_ROWS_PER_TEXTURE_LINE, capacity);
+
+    return rowsPerLine * TRANSFORM_TEXELS_PER_ROW <= this._maxTextureSize && capacity / rowsPerLine <= this._maxTextureSize;
+  }
+
+  /** The capacity a growth to hold `slots` rows would settle on: doubling from the current one. */
+  private _growthCapacity(slots: number): number {
+    let next = Math.max(initialSlotCapacity, this._capacity);
+
+    while (next < slots) {
+      next *= 2;
+    }
+
+    return next;
+  }
+
+  /**
    * Grow the stores to hold at least `slots` rows, preserving every row already
    * written. Deliberately does not bump {@link generation}: a slot survives a
    * growth with its number and its contents intact, so nothing the plan believes
@@ -179,12 +217,7 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
       return;
     }
 
-    let next = Math.max(initialSlotCapacity, this._capacity);
-
-    while (next < slots) {
-      next *= 2;
-    }
-
+    const next = this._growthCapacity(slots);
     const layout = createTransformTextureLayout(next, this._maxTextureSize);
     const attributes = new Float32Array(next * floatsPerSlotRow);
     const transforms = new Float32Array(next * floatsPerSlotRow);
@@ -311,14 +344,23 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   }
 
   /**
-   * Upload `count` order entries and return the buffer they live in.
+   * Upload the `count` order entries at `offset` and return the buffer they
+   * live in, at its start: WebGL2 has no base instance, so every segment of a
+   * cut stream is uploaded to position zero and drawn from there. GL orders
+   * the upload against the draws before it, so the rewrite never reaches an
+   * earlier segment.
    *
    * This is the one per-frame upload proportional to the VISIBLE set rather than
    * to the delta, and it is four bytes an entry: an insertion moves every later
    * position, so a diff would have to answer where each survivor went, which
    * costs more than rewriting the stream.
    */
-  public uploadOrder(order: Uint32Array, count: number, createRuntime: (gl: WebGL2RenderingContext) => WebGl2RenderBufferRuntime): WebGl2RenderBuffer {
+  public uploadOrder(
+    order: Uint32Array,
+    offset: number,
+    count: number,
+    createRuntime: (gl: WebGL2RenderingContext) => WebGl2RenderBufferRuntime,
+  ): WebGl2RenderBuffer {
     const gl = this._gl;
 
     if (gl === null) {
@@ -333,11 +375,10 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
       }
 
       this._order = new Uint32Array(next);
-      this._orderBuffer?.destroy();
-      this._orderBuffer = null;
+      this._releaseOrderBuffer();
     }
 
-    this._order.set(order.subarray(0, count));
+    this._order.set(order.subarray(offset, offset + count));
 
     // At least one element: a zero-length store is not a valid buffer.
     const uploadCount = Math.max(1, count);
@@ -365,11 +406,10 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     this._attributeTexture?.destroy();
     this._transformTexture?.destroy();
     this._tintTexture?.destroy();
-    this._orderBuffer?.destroy();
+    this._releaseOrderBuffer();
     this._attributeTexture = null;
     this._transformTexture = null;
     this._tintTexture = null;
-    this._orderBuffer = null;
     this._capacity = 0;
     this._layout = null;
     this._attributes = new Float32Array(0);
@@ -377,6 +417,14 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     this._tints = new Uint8Array(0);
     this._dirtyLines = new Uint8Array(0);
     this._dirtyLineCount = 0;
+  }
+
+  /** Drop the order buffer and the vertex array object pointing into it, together. */
+  private _releaseOrderBuffer(): void {
+    this.indexedVao?.destroy();
+    this.indexedVao = null;
+    this._orderBuffer?.destroy();
+    this._orderBuffer = null;
   }
 
   public destroy(): void {
@@ -388,6 +436,7 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     this.invalidateDeviceResources();
     this.textures.length = 0;
     this.textureIndexOfHandle = new Uint8Array(0);
+    this.spareTextureIndexOfHandle = new Uint8Array(0);
     this._order = new Uint32Array(0);
   }
 

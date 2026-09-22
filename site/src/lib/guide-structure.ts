@@ -401,7 +401,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['rendering/graphics'],
         examples: ['geometry-graphics/immediate-mode-rendering'],
-        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh', 'mesh-material', 'shader-source', 'matrix', 'color'],
+        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh', 'mesh-material', 'shader', 'matrix', 'color'],
       },
       {
         slug: 'retained-containers',
@@ -463,6 +463,26 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'particles/custom-wgsl-module',
         ],
         apiLinks: [],
+      },
+      {
+        slug: 'lighting',
+        level: 'intermediate',
+        learningGoals: [
+          'light a scene with lights that are scene nodes',
+          'get normals out of art nobody authored a normal map for',
+          'read shadows out of colliders, tile layers and silhouettes',
+          'choose between the two renderers by the property you need',
+        ],
+        prerequisites: ['rendering/sprites'],
+        examples: [
+          'lighting/shadow-casters',
+          'lighting/radiance-rooms',
+          'lighting/light-cookies',
+          'lighting/lightmap-normals',
+          'lighting/normal-mapped-sprites',
+          'lighting/many-lights',
+        ],
+        apiLinks: ['lighting', 'point-light', 'spot-light', 'line-light', 'sun-light', 'lit-material'],
       },
       {
         slug: 'post-processing',
@@ -762,6 +782,16 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         prerequisites: ['debugging/custom-renderers'],
         examples: ['custom-renderers/custom-triangle-renderer', 'particles/emitter-basics'],
         apiLinks: ['extension', 'application', 'application-options'],
+      },
+      {
+        slug: 'renderer-sdk-contract',
+        level: 'advanced',
+        learningGoals: [
+          'keep a renderer correct inside a retained capture and on replay',
+          'opt into batch recording without promising more than the renderer can honour',
+          'own a bundle generation, a render pass and the shared transform rows correctly',
+        ],
+        prerequisites: ['debugging/authoring-extensions'],
       },
     ],
   },

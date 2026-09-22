@@ -5,7 +5,7 @@
  * check means adding a property, which then applies to every existing scene.
  * Neither requires touching this file beyond one import and one list entry.
  *
- * Run via:  pnpm test:parity  (or :firefox / :webkit)
+ * Run via:  pnpm test:parity  (or :firefox / :safari)
  */
 
 import { crossBackendParity } from './properties/crossBackendParity';
@@ -16,7 +16,9 @@ import { runParityMatrix } from './runner';
 import { clippingScenes } from './scenes/clipping';
 import { colourScenes } from './scenes/colour';
 import { computedColourScenes } from './scenes/computedColour';
+import { filterScenes } from './scenes/filters';
 import { graphicsScenes } from './scenes/graphics';
+import { lightingScenes } from './scenes/lighting';
 import { meshScenes } from './scenes/mesh';
 import { nineSliceScenes } from './scenes/nineSlice';
 import { particleScenes } from './scenes/particles';
@@ -40,10 +42,12 @@ const scenes: readonly Scene[] = [
   ...graphicsScenes,
   ...colourScenes,
   ...computedColourScenes,
+  ...filterScenes,
   ...clippingScenes,
   ...textScenes,
   ...tilemapScenes,
   ...particleScenes,
+  ...lightingScenes,
 ];
 
 const properties: readonly Property[] = [crossBackendParity, determinism, rendersSomething, oracleAgreement];

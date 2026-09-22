@@ -141,7 +141,7 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
 
     // World position of the child's 0..50 rect is 200..250 x 100..150.
     dispatchPointer(signals.onPointerDown, { x: 225, y: 125 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -170,7 +170,7 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     // (25, 25) is inside the child's GROUP-LOCAL rect but on screen the child
     // sits at 200..250 x 100..150 - a click here must miss.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -197,7 +197,7 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
 
     // Identity group: world rect 0..50.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
@@ -206,11 +206,11 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     group.setPosition(-300, 0);
 
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).not.toHaveBeenCalled();
 
     dispatchPointer(signals.onPointerDown, { x: -275, y: 25 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).toHaveBeenCalledTimes(1);
 
     im.destroy();
@@ -242,7 +242,7 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     const worldCenter = new Vector(25, 25).transform(child.getWorldTransform());
 
     dispatchPointer(signals.onPointerDown, { x: worldCenter.x, y: worldCenter.y });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
@@ -251,7 +251,7 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     // (but inside where the unrotated AABB around the origin would reach) -
     // must miss.
     dispatchPointer(signals.onPointerDown, { x: 250, y: 300 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).not.toHaveBeenCalled();
 
     im.destroy();
@@ -281,13 +281,13 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     child.onPointerDown.add(handler);
 
     dispatchPointer(signals.onPointerDown, { x: 225, y: 125 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
 
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).not.toHaveBeenCalled();
 
     im.destroy();
@@ -323,7 +323,7 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     groupChild.onPointerDown.add(groupHandler);
 
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
 
     expect(groupHandler).toHaveBeenCalledTimes(1);
     expect(worldHandler).not.toHaveBeenCalled();
@@ -356,7 +356,7 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
 
     // Identity group: the child's world rect is 0..50 - a click there hits.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
@@ -367,14 +367,14 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     group.setPosition(200, 100);
 
     dispatchPointer(signals.onPointerDown, { x: 225, y: 125 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
 
     // ...and a click at the child's OLD position must now miss.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).not.toHaveBeenCalled();
 
     im.destroy();
@@ -404,7 +404,7 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     grandChild.onPointerDown.add(handler);
 
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).toHaveBeenCalledTimes(1);
 
     handler.mockClear();
@@ -412,7 +412,7 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     group.setPosition(200, 100);
 
     dispatchPointer(signals.onPointerDown, { x: 225, y: 125 });
-    im.preUpdate(frameDelta);
+    im.preFrame(frameDelta);
     expect(handler).toHaveBeenCalledTimes(1);
 
     im.destroy();

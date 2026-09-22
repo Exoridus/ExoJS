@@ -8,7 +8,7 @@ import styles from './Editor.module.scss';
 import type { EditorCodeHandle, EditorCodeProps, EditorCursorEvent, EditorDiagnostic, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
 import { type CanvasSizeEvent, EditorPreview, type EditorPreviewHandle } from './EditorPreview';
 import { EditorStatusBar } from './EditorStatusBar';
-import { LoadingSpinner } from './LoadingSpinner';
+import { SidebarToggle, SwapButton } from './PlaygroundButtons';
 import { PreviewToolbar } from './PreviewToolbar';
 import { css, cx } from './react-utils';
 
@@ -30,8 +30,11 @@ export interface EditorHandle {
 }
 
 export type EditorLayout = 'split' | 'stacked';
+/** Which card sits next to the example list in the split layout. */
+export type EditorOrder = 'preview-first' | 'editor-first';
 
 const LAYOUT_STORAGE_KEY = 'exo-playground-layout';
+const ORDER_STORAGE_KEY = 'exo-playground-order';
 
 export interface EditorProps {
   activeExample: Example | null;
@@ -75,6 +78,7 @@ export const Editor = ({
   // preference is applied after mount so SSR and first client render match.
   // Below 1120px the CSS ignores the mode and always stacks.
   const [layout, setLayout] = useState<EditorLayout>('split');
+  const [order, setOrder] = useState<EditorOrder>('preview-first');
   const codeEditorRef = useRef<EditorCodeHandle | null>(null);
   const previewRef = useRef<EditorPreviewHandle | null>(null);
   const previewFrameRef = useRef<HTMLElement | null>(null);
@@ -167,7 +171,22 @@ export const Editor = ({
     // store on mount" effect.
     // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
     if (stored === 'split' || stored === 'stacked') setLayout(stored);
+    const storedOrder = window.localStorage.getItem(ORDER_STORAGE_KEY);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
+    if (storedOrder === 'preview-first' || storedOrder === 'editor-first') setOrder(storedOrder);
   }, []);
+
+  const swapOrder = (): void => {
+    setOrder(current => {
+      const next: EditorOrder = current === 'preview-first' ? 'editor-first' : 'preview-first';
+      try {
+        window.localStorage.setItem(ORDER_STORAGE_KEY, next);
+      } catch {
+        // localStorage disabled - the swap still works for the session.
+      }
+      return next;
+    });
+  };
 
   const toggleLayout = (): void => {
     setLayout(current => {
@@ -260,8 +279,15 @@ export const Editor = ({
     setViewMode(mode => (mode === 'source' ? 'compiled' : 'source'));
   };
 
+  // The example list's toggle sits in the header of the card beside the list,
+  // and the swap in the header of the card on the right; stacked, the preview
+  // is the top card and nothing swaps.
+  const previewLeads = layout === 'stacked' || order === 'preview-first';
+  const sidebarToggle = showSidebarToggle ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
+  const swapButton = layout === 'split' ? <SwapButton onSwap={swapOrder} /> : null;
+
   return (
-    <section className={css(styles, 'root')} data-layout={layout}>
+    <section className={css(styles, 'root')} data-layout={layout} data-order={order}>
       <section
         ref={previewFrameRef}
         className={cx(css(styles, 'preview-frame'), expandedActive && css(styles, 'preview-frame--expanded'))}
@@ -277,14 +303,11 @@ export const Editor = ({
           disabled={!sourceCode}
           expanded={expandedActive}
           layout={layout}
-          showSidebarToggle={showSidebarToggle}
-          sidebarOpen={sidebarOpen}
-          sidebarToggleRef={sidebarToggleRef}
+          leading={previewLeads ? sidebarToggle : swapButton}
           onReload={() => codeEditorRef.current?.triggerRefresh()}
           onOpenTab={() => previewRef.current?.openPreviewInTab()}
           onToggleExpand={() => setPreviewExpanded(value => !value)}
           onToggleLayout={toggleLayout}
-          onToggleSidebar={onToggleSidebar}
         />
         <div className={css(styles, 'preview-surface')} data-preview-surface>
           <div className={css(styles, 'preview-component')}>
@@ -321,10 +344,14 @@ export const Editor = ({
           server left an empty one - the mismatch React reports as #418, after
           which it discards and rebuilds this tree on every page load.
         */}
-        <Suspense fallback={<LoadingSpinner centered />}>
+        {/* No spinner of its own: the preview beside it already shows one
+            while the example boots, and two spinners on one screen read as
+            two things being broken rather than one page loading. */}
+        <Suspense fallback={null}>
           {!hydrated ? null : (
             <EditorCode
               ref={codeEditorRef}
+              leading={previewLeads ? swapButton : sidebarToggle}
               sourceCode={displayedSourceCode}
               sourcePath={displayedSourcePath}
               language={displayedLanguage}

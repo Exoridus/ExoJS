@@ -1,7 +1,7 @@
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import type { MeshMaterial } from '#rendering/material/MeshMaterial';
+import type { AnyMeshMaterial } from '#rendering/material/MeshMaterial';
 
 /** Component count of each per-instance attribute format. */
 const instanceFormatComponents = {
@@ -97,7 +97,7 @@ export class RenderBatch {
   public readonly geometry: Geometry;
 
   /** The shared mesh material, or `null` for the default mesh material. */
-  public readonly material: MeshMaterial | null;
+  public readonly material: AnyMeshMaterial | null;
 
   // Per-instance storage grows with `add` and is reused after `clear` - only the
   // logical `_count` resets, the pooled Matrix/Color instances are kept.
@@ -119,7 +119,7 @@ export class RenderBatch {
     readonly layoutKey: string;
   } | null;
 
-  public constructor(geometry: Geometry, material: MeshMaterial | null = null, options: RenderBatchOptions = {}) {
+  public constructor(geometry: Geometry, material: AnyMeshMaterial | null = null, options: RenderBatchOptions = {}) {
     // Defensive guard for JS callers; MeshMaterial's `target` is the literal
     // 'mesh' for TypeScript callers. Whether the material's shader satisfies the
     // instancing contract can only be decided from the LINKED program, so that

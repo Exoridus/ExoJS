@@ -45,6 +45,22 @@ export class Drawable extends RenderNode {
     return false;
   }
 
+  /**
+   * Scratch used by a render root's structure delta to carry this drawable's
+   * previous item handle across a re-discovery, and by nothing else. The epoch
+   * is compared against the delta's own, so a stale value from an earlier delta
+   * - or from another root - reads as "not carried" instead of as a handle into
+   * a numbering that no longer exists.
+   *
+   * A field rather than a map because the delta walks every item twice, once to
+   * stamp and once to consume, and a per-frame map over the whole subtree is the
+   * allocation the persistent path exists to avoid.
+   * @internal
+   */
+  public _sourceCarryEpoch = 0;
+  /** @internal - see {@link _sourceCarryEpoch}. */
+  public _sourceCarryHandle = -1;
+
   private _tint: Color = Color.white.clone();
   private _blendMode: BlendModes = BlendModes.Normal;
   private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;

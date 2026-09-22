@@ -9,13 +9,14 @@
  *
  * NOT derivable from here (different runtimes - kept in sync manually, guarded
  * by `verify:release-matrix` where possible):
- *   - `.github/workflows/release.yml` / `ci.yml` build/typecheck/pack
- *     steps (YAML, enumerated `--filter`s; release.yml build lines are asserted
- *     by `verify:release-matrix`).
+ *   - `.github/workflows/release.yml` build steps (YAML, enumerated
+ *     `--filter`s, asserted by `verify:release-matrix`). The root
+ *     `build:packages` / `typecheck:packages` scripts select by workspace
+ *     directory instead and need no edit.
  *   - `scripts/ci/select-lanes.ts` RUNTIME_PACKAGES (dependency-free ESM that
  *     runs before any install, so it cannot import this TS module).
- *   - `site/scripts/sync-exo-vendor.ts` / `full-zip.ts` vendor tree - a smaller,
- *     site-owned set (the offline examples site only embeds packages it uses).
+ *   - `site/scripts/sync-exo-vendor.ts` vendor tree - a smaller, site-owned
+ *     set (the offline examples site only embeds packages it uses).
  */
 
 /** Order is canonical PUBLISH_ORDER: Core first (peer of every extension), then extensions. */
@@ -80,7 +81,31 @@ export const INDEPENDENT_PACKAGES = [
     dir: 'packages/create-exo-app',
     reason: 'app scaffolder; run once via npx, never pinned to an engine version',
   },
+  {
+    name: '@codexo/exojs-cli',
+    dir: 'packages/exojs-cli',
+    reason: 'project tooling; installed once via npx and never pinned to an engine version, and it depends on no engine API',
+  },
+  {
+    name: '@codexo/eslint-plugin-exojs',
+    dir: 'packages/eslint-plugin-exojs',
+    reason: 'lint tooling; a consumer keeps one version in devDependencies across engine upgrades and its rules read source text, not engine API',
+  },
 ] as const satisfies readonly IndependentPackage[];
+
+/**
+ * The independent packages judged against the published-tooling policy profile
+ * (`verifyToolingPackage`): a library published from this repository that ships
+ * `dist/esm`, is imported rather than executed, and depends on no engine API.
+ *
+ * `create-exo-app` and `@codexo/exojs-cli` are deliberately absent. Both are
+ * `bin` entry points rather than libraries, so the profile's `exports`,
+ * `sideEffects` and no-engine-dependency expectations do not describe them -
+ * the CLI legitimately depends on the engine to read back what it packs.
+ */
+const TOOLING_PACKAGE_NAMES = new Set<string>(['@codexo/exojs-build', '@codexo/eslint-plugin-exojs']);
+
+export const TOOLING_PACKAGES = INDEPENDENT_PACKAGES.filter(p => TOOLING_PACKAGE_NAMES.has(p.name));
 
 /** Union of the official package names (literal type, preserved for `OfficialPackageName`). */
 export type OfficialPackageName = (typeof LOCKSTEP_PACKAGES)[number]['name'];

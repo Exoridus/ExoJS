@@ -90,6 +90,18 @@ html[data-theme='dark'] {
   --grid-dot: oklch(40% 0.014 245 / 0.45);
   --grid-line: oklch(30% 0.014 245 / 0.6);
 
+  // Benchmark comparison hues. They carry the same meaning as the semantic
+  // colours above but have to hold their own against the page background at
+  // small sizes - an 8px dot and 0.66rem mono - so their lightness is tuned per
+  // theme instead of being shared. The two sides are equally saturated and
+  // equally dark on purpose: a loss must never read as quieter than a win.
+  // `--bench-mark` is a measurement warning and nothing else: a time past the
+  // frame budget, or runs that moved too far to trust. A comparison without a
+  // verdict is drawn in neutral grey, so amber keeps meaning something.
+  --bench-lead: oklch(76% 0.12 205);
+  --bench-loss: oklch(70% 0.17 290);
+  --bench-mark: oklch(80% 0.14 70);
+
   --bg-canvas: var(--color-bg);
   --bg-elevated: var(--color-surface);
   --bg-panel: var(--color-panel);
@@ -123,6 +135,10 @@ html[data-theme='light'] {
 
   --grid-dot: oklch(75% 0.012 245 / 0.7);
   --grid-line: oklch(85% 0.01 245 / 0.7);
+
+  --bench-lead: oklch(48% 0.12 205);
+  --bench-loss: oklch(48% 0.2 290);
+  --bench-mark: oklch(52% 0.14 70);
 
   --color-accent: oklch(54% 0.18 142);
   --color-accent-contrast: oklch(99% 0.01 142);

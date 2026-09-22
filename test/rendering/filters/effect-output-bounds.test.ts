@@ -174,39 +174,39 @@ describe('capture quantisation covers every logical pixel', () => {
 });
 
 describe('BlurFilter declares its real sampling reach', () => {
-  test('the expansion is the radius on every edge', () => {
-    expect(resolve(new Rectangle(100, 50, 100, 50), [new BlurFilter({ radius: 8 })])).toEqual({ left: 92, top: 42, width: 116, height: 66 });
+  test('the expansion is three standard deviations on every edge', () => {
+    expect(resolve(new Rectangle(100, 50, 100, 50), [new BlurFilter({ strength: 4 })])).toEqual({ left: 88, top: 38, width: 124, height: 74 });
   });
 
-  test('quality adds samples without changing the reach', () => {
-    const low = resolve(new Rectangle(0, 0, 32, 32), [new BlurFilter({ radius: 6, quality: 1 })]);
-    const high = resolve(new Rectangle(0, 0, 32, 32), [new BlurFilter({ radius: 6, quality: 8 })]);
+  test('a tap cap redistributes samples without changing the reach', () => {
+    const capped = resolve(new Rectangle(0, 0, 32, 32), [new BlurFilter({ strength: 6, quality: 1 })]);
+    const derived = resolve(new Rectangle(0, 0, 32, 32), [new BlurFilter({ strength: 6 })]);
 
-    expect(low).toEqual(high);
+    expect(capped).toEqual(derived);
   });
 
-  test('a zero radius expands nothing', () => {
-    expect(resolve(new Rectangle(0, 0, 32, 32), [new BlurFilter({ radius: 0 })])).toEqual({ left: 0, top: 0, width: 32, height: 32 });
+  test('a zero strength expands nothing', () => {
+    expect(resolve(new Rectangle(0, 0, 32, 32), [new BlurFilter({ strength: 0 })])).toEqual({ left: 0, top: 0, width: 32, height: 32 });
   });
 
   test('two blurs in a chain sum their reaches', () => {
-    expect(resolve(new Rectangle(0, 0, 10, 10), [new BlurFilter({ radius: 3 }), new BlurFilter({ radius: 5 })])).toEqual({
-      left: -8,
-      top: -8,
-      width: 26,
-      height: 26,
+    expect(resolve(new Rectangle(0, 0, 10, 10), [new BlurFilter({ strength: 1 }), new BlurFilter({ strength: 3 })])).toEqual({
+      left: -12,
+      top: -12,
+      width: 34,
+      height: 34,
     });
   });
 
-  test('the expansion follows a radius changed after construction', () => {
-    const blur = new BlurFilter({ radius: 2 });
+  test('the expansion follows a strength changed after construction', () => {
+    const blur = new BlurFilter({ strength: 2 });
     const source = new Rectangle(0, 0, 10, 10);
 
-    expect(resolve(source, [blur])).toEqual({ left: -2, top: -2, width: 14, height: 14 });
+    expect(resolve(source, [blur])).toEqual({ left: -6, top: -6, width: 22, height: 22 });
 
-    blur.radius = 9;
+    blur.strength = 9;
 
-    expect(resolve(source, [blur])).toEqual({ left: -9, top: -9, width: 28, height: 28 });
+    expect(resolve(source, [blur])).toEqual({ left: -27, top: -27, width: 64, height: 64 });
   });
 });
 
@@ -214,13 +214,13 @@ describe('the resolver does not allocate per resolution', () => {
   test('repeated resolutions reuse the same scratch rectangles', () => {
     const resolver = new EffectBoundsResolver();
     const source = new Rectangle(0, 0, 10, 10);
-    const filters = [new BlurFilter({ radius: 4 }), new BlurFilter({ radius: 4 }), new BlurFilter({ radius: 4 })];
+    const filters = [new BlurFilter({ strength: 4 }), new BlurFilter({ strength: 4 }), new BlurFilter({ strength: 4 })];
 
     // An odd chain length leaves the scratch pair swapped relative to where it
     // started; running twice proves the swap is carried, not leaked.
     for (let run = 0; run < 4; run++) {
       expect(resolver.resolve(source, filters)).toBe(true);
-      expect([resolver.left, resolver.top, resolver.width, resolver.height]).toEqual([-12, -12, 34, 34]);
+      expect([resolver.left, resolver.top, resolver.width, resolver.height]).toEqual([-36, -36, 82, 82]);
     }
   });
 });

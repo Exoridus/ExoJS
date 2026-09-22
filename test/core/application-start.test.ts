@@ -9,6 +9,8 @@ import type { MockInstance } from 'vitest';
 import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
 
+import { isFrameLoopActive } from '../support/application-frame-loop';
+
 // ---------------------------------------------------------------------------
 // Backend stubs - keep WebGL2 / WebGPU out of jsdom. Inline factories: vi.mock()
 // is hoisted above any variable declarations in the file.
@@ -129,7 +131,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     await expect(app.start(FailingLoadScene)).rejects.toThrow('load failed');
 
-    expect((app as unknown as { _frameLoopActive: boolean })._frameLoopActive).toBe(false);
+    expect(isFrameLoopActive(app)).toBe(false);
 
     void app.destroy();
   });

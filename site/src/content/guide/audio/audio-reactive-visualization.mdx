@@ -133,6 +133,53 @@ A few things to keep in mind when working with audio-driven visuals:
 - The analyser spectrum reflects the current frame's audio buffer. You sample it once per `update` call; the `AnalyserNode`'s `smoothingTimeConstant` (default 0.8) smooths between consecutive analyses.
 - Beat detector events are dispatched from the worklet processor to the main thread. They arrive asynchronously and may be arbitrarily close to or slightly behind the visual frame; the worklet's internal temporal resolution is finer than `requestAnimationFrame` cadence. The polling getters (`pulse`, `justBeat`, `subdivisionPhase`) sample the detector's most recent cached state on the main thread.
 - `justBeat` is `true` for at most one or two visual frames per beat (with the default 30ms window at 60fps). If your frame rate drops below ~30fps, you may miss a `justBeat` window. For critical beat-triggered effects, prefer the `onBeat` signal — it is dispatched per beat and delivered on the main thread.
+- Every timestamp the detector reports — `BeatInfo.audioTime`, `nextBeatTime`, the `lookahead` entries and `analysisTime` — is an `AudioContext.currentTime` value, so [`AudioOutputClock`](/ExoJS/en/api/audio-output-clock/) converts any of them straight onto the `performance.now()` timeline.
+- `analysisTime` names the newest audio the current state describes, and `analysisLatency` is how far behind the context clock that state already was when the main thread received it. The figure is measured rather than assumed and covers the analysis hop together with the worklet-to-main-thread delivery, so it is a budget rather than an exact age.
+
+### Tempo confidence is not phase confidence
+
+`confidence` says how sure the detector is of the **tempo**; `phaseConfidence` says how well recent onsets support the **position** of the beat grid. They come apart more often than they look like they should — a passage with a rock-solid pulse played with heavy rubato reads high confidence and low phase confidence, and so does anything the detector has had to free-run through because no onset arrived where it predicted one.
+
+Gate anything that has to land exactly on the beat — a scored hit, a quantised trigger, a flash meant to be felt rather than seen — on `phaseConfidence`, and keep `confidence` for decisions about the tempo itself, such as whether to display a BPM readout at all:
+
+```ts
+import { BeatDetector } from '@codexo/exojs-audio-fx';
+
+const detector = new BeatDetector();
+
+const shouldScoreHits = (): boolean => detector.phaseConfidence > 0.6;
+const shouldShowBpm = (): boolean => detector.confidence > 0.5;
+```
+
+## Lining audio up with the frame clock
+
+Web Audio schedules in `AudioContext.currentTime` and your frame loop measures in `performance.now()`. The two are different clocks with different origins, and `currentTime` runs ahead of what the listener actually hears by the length of the output path. Subtracting one from the other gives a number that looks plausible and is wrong by tens of milliseconds - enough to visibly desynchronise a rhythm game.
+
+`AudioOutputClock` correlates them:
+
+```ts
+import { AudioOutputClock } from '@codexo/exojs';
+
+const clock = new AudioOutputClock();
+
+/** How long from now until the listener hears the sample scheduled for `contextTime`. */
+const msUntilHeard = (contextTime: number): number => clock.contextToPerformanceTime(contextTime) - performance.now();
+```
+
+Where the browser supports `AudioContext.getOutputTimestamp()`, the correlation names the sample the device is playing at this instant, so the converted time already accounts for the output path and needs no latency arithmetic of your own. Where it does not, the clock pairs `currentTime` with `performance.now()` and marks the snapshot `'estimated'` so you can tell the two cases apart:
+
+```ts
+import { AudioOutputClock } from '@codexo/exojs';
+
+const snapshot = new AudioOutputClock().snapshot();
+
+if (snapshot.source === 'estimated') {
+    // No output timestamp here: the correlation leads the true output by roughly
+    // `outputLatency`, which this environment may not report either.
+}
+```
+
+Display latency is deliberately outside this: only your code knows how far ahead of the photons its render loop runs, so the decision of which frame to draw a beat on stays yours.
 
 ## Examples
 

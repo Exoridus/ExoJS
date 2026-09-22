@@ -3,7 +3,7 @@
  *
  * The vitest `rendering-perf` project runs in jsdom, so the render-setup path
  * finds a real `document` there. The standalone launchers
- * (`pnpm perf:renderers:alloc`, `pnpm perf:renderers`) run under plain
+ * (`pnpm perf renderers:alloc`, `pnpm perf renderers`) run under plain
  * `node --import tsx/esm` with no DOM at all, and the setup path touches the
  * browser globals in exactly two places:
  *

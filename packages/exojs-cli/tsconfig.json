@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // A Node command line tool, not engine code: no DOM, no browser globals. A
+  // `document` reference here would be a compile error rather than a crash in
+  // somebody's terminal.
+  //
+  // `create-exo-app` resolves to source so the repository typecheck does not
+  // depend on that package having been built; `tsconfig.build.json` points the
+  // same specifier at its declarations instead.
+  "extends": "@codexo/exojs-config/typescript/library.json",
+  "compilerOptions": {
+    "lib": ["es2023"],
+    "types": ["node"],
+    "noEmit": true,
+    "paths": {
+      "create-exo-app": ["../create-exo-app/src/scaffold.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

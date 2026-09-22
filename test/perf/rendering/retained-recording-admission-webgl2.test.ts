@@ -2,7 +2,7 @@
  * Structural gates for the COLLECT-TIME admission predicate that decides
  * whether a retained group's fragment is recorded at all
  * (`isRetainedFragmentRecordable` ->
- * `RetainedBatchCapableRenderer._admitsRetainedRecording`).
+ * `RetainedBatchCapableRenderer.admitsRetainedRecording`).
  *
  * The predicate used to look only at the renderer's capability flag, so it
  * admitted draws whose renderer then had to POISON the open capture from inside

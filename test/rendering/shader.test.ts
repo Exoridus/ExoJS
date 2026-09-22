@@ -1,11 +1,11 @@
-﻿import { Shader } from '#rendering/shader/Shader';
-import { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
+﻿import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
+import { WebGl2ShaderAttribute } from '#rendering/webgl2/WebGl2ShaderAttribute';
 
-describe('Shader runtime ordering', () => {
+describe('WebGl2Shader runtime ordering', () => {
   it('initializes runtime reflection during connect so attributes are available before bind', () => {
-    const shader = new Shader('vertex', 'fragment');
-    const initialize = vi.fn((target: Shader) => {
-      target.attributes.set('a_position', new ShaderAttribute(0, 'a_position', 0));
+    const shader = new WebGl2Shader('vertex', 'fragment');
+    const initialize = vi.fn((target: WebGl2Shader) => {
+      target.attributes.set('a_position', new WebGl2ShaderAttribute(0, 'a_position', 0));
     });
     const runtime = {
       initialize,
@@ -18,6 +18,6 @@ describe('Shader runtime ordering', () => {
     shader.connect(runtime);
 
     expect(initialize).toHaveBeenCalledTimes(1);
-    expect(shader.getAttribute('a_position')).toBeInstanceOf(ShaderAttribute);
+    expect(shader.getAttribute('a_position')).toBeInstanceOf(WebGl2ShaderAttribute);
   });
 });

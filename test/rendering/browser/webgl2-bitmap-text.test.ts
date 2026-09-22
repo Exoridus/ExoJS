@@ -23,7 +23,7 @@
  * This test originally uncovered a real engine bug: `WebGl2TextRenderer
  * ._drawBatches()` called `shader.sync()` *before* setting that flush's
  * `u_projection` / `u_texture` / `u_nodeData` / `u_pageSize` uniforms. Because
- * `ShaderUniform.setValue()` only marks a uniform dirty for the *next* `sync()`,
+ * `WebGl2ShaderUniform.setValue()` only marks a uniform dirty for the *next* `sync()`,
  * the first flush of each text shaderType drew with a stale zero `u_projection`
  * - degenerate, so nothing rasterized. It self-healed from the second frame on
  * (the values are frame-constant), so no continuous-rendering test caught it,

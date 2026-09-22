@@ -1,0 +1,100 @@
+{
+  "title": "PolygonOccluderOptions",
+  "description": "Tuning for PolygonOccluder.",
+  "symbol": "PolygonOccluderOptions",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Tuning for PolygonOccluder."
+      ],
+      "importLine": "import { PolygonOccluderOptions } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "closed",
+          "signature": "closed?: boolean",
+          "signatureTokens": [
+            {
+              "text": "closed",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the last point joins the first. false leaves an open polyline, which is what a wall, a fence or a one-sided ledge is. Defaults to true."
+        },
+        {
+          "name": "node",
+          "signature": "node?: OccluderPlacement",
+          "signatureTokens": [
+            {
+              "text": "node",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderPlacement",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Node whose world transform places the outline, making the points local to it. Without one the points are world space. Local means the node's OWN space, scale included. A drawable sized through width / height carries that size as a scale, so its local space is its texture's pixels and not the size it appears at - points written in the size you see are then multiplied by it a second time, and the outline comes out many times too large. Where the shape you want IS the drawable's, AlphaOccluder takes it from the drawable itself and this cannot happen."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/PolygonOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PolygonOccluder.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/PolygonOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/PolygonOccluder.ts"
+}

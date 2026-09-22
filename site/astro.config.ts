@@ -57,6 +57,12 @@ export default defineConfig({
       fs: {
         allow: ['..'],
       },
+      watch: {
+        // Sync and build output, not sources: a site build or examples sync
+        // beside the dev server rewrites thousands of files here, and watching
+        // them exhausts the process's file handles (EMFILE) and hangs the server.
+        ignored: ['**/dist/**', '**/public/examples/**', '**/public/assets/**', '**/public/vendor/**'],
+      },
     },
     build: {
       target: 'es2022',

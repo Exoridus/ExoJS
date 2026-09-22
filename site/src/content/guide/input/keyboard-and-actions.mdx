@@ -104,21 +104,9 @@ Keyboard.AltLeft      Keyboard.AltRight      Keyboard.Alt      (aggregate)
 Keyboard.MetaLeft     Keyboard.MetaRight     Keyboard.Meta     (aggregate)
 ```
 
-Bind to the aggregate (`Keyboard.Control`) for a normal game binding — it is
-active whenever either physical key is held, and releasing one side while the
-other stays down keeps it active. Bind to a side-specific channel
-(`Keyboard.ControlLeft`) only when you genuinely need to tell the two keys
-apart, such as a key-press visualizer or a rebinding UI. `onKeyDown`/`onKeyUp`
-always report the side-specific channel that was actually pressed — the
-aggregate is buffer state an action reads, not something that fires its own
-signal, so one physical key press is still exactly one `onKeyDown` dispatch.
+Bind to the aggregate (`Keyboard.Control`) for a normal game binding — it is active whenever either physical key is held, and releasing one side while the other stays down keeps it active. Bind to a side-specific channel (`Keyboard.ControlLeft`) only when you genuinely need to tell the two keys apart, such as a key-press visualizer or a rebinding UI. `onKeyDown`/`onKeyUp` always report the side-specific channel that was actually pressed — the aggregate is buffer state an action reads, not something that fires its own signal, so one physical key press is still exactly one `onKeyDown` dispatch.
 
-`ChordAction`/`SequenceAction` string patterns also accept a few shorthand
-aliases for the modifier and `Escape` tokens: `Ctrl` for `Control`, `Cmd` /
-`Command` / `Super` for `Meta`, `Opt` for `Alt`, and `Esc` for `Escape` — so
-`'Ctrl+K'` and `'Control+K'` are equivalent. Aliases are a string-pattern
-convenience only; array bindings always use the `Keyboard` enum member
-directly.
+`ChordAction`/`SequenceAction` string patterns also accept a few shorthand aliases for the modifier and `Escape` tokens: `Ctrl` for `Control`, `Cmd` / `Command` / `Super` for `Meta`, `Opt` for `Alt`, and `Esc` for `Escape` — so `'Ctrl+K'` and `'Control+K'` are equivalent. Aliases are a string-pattern convenience only; array bindings always use the `Keyboard` enum member directly.
 
 ## Canvas focus
 
@@ -206,9 +194,7 @@ Scene-scoped bindings (`this.inputs.onTrigger(...)`) are automatically disposed 
 
 ## Named actions
 
-Wiring listeners by hand is fine for a couple of keys. Once a control scheme has
-a name for each thing the player can do — and each of those can come from the
-keyboard *or* the pad — describe it instead with an `ActionMap`:
+Wiring listeners by hand is fine for a couple of keys. Once a control scheme has a name for each thing the player can do — and each of those can come from the keyboard *or* the pad — describe it instead with an `ActionMap`:
 
 <SourceSnippet
   source="examples/guides/keyboard-and-actions/action-map.ts"
@@ -217,60 +203,34 @@ keyboard *or* the pad — describe it instead with an `ActionMap`:
   title="examples/guides/keyboard-and-actions/action-map.ts"
 />
 
-Attaching through `this.inputs` ties the map to the scene: it is detached when
-the scene ends, and its actions are reset across a suspend so a key held while
-the scene was away does not read as a fresh press on resume.
+Attaching through `this.inputs` ties the map to the scene: it is detached when the scene ends, and its actions are reset across a suspend so a key held while the scene was away does not read as a fresh press on resume.
 
 ### Which input object to use
 
-Inside a scene, reach for `this.inputs` for everything — action maps, scopes,
-per-channel bindings, and the gamepad slots (`this.inputs.gamepads`,
-`this.inputs.connectedGamepads`, `this.inputs.getGamepad(0)`). Everything it
-creates dies with the scene, which is what you want for gameplay.
+Inside a scene, reach for `this.inputs` for everything — action maps, scopes, per-channel bindings, and the gamepad slots (`this.inputs.gamepads`, `this.inputs.connectedGamepads`, `this.inputs.getGamepad(0)`). Everything it creates dies with the scene, which is what you want for gameplay.
 
-`app.input` is the application-lifetime surface. Use it for input that must
-outlive any single scene — a debug overlay's hotkeys, a global pause key, a
-device-configuration screen that watches every pad — via `app.input.attach(map)`.
-Nothing there is scoped to a scene, and nothing there takes part in a scene's
-scope stack.
+`app.input` is the application-lifetime surface. Use it for input that must outlive any single scene — a debug overlay's hotkeys, a global pause key, a device-configuration screen that watches every pad — via `app.input.attach(map)`. Nothing there is scoped to a scene, and nothing there takes part in a scene's scope stack.
 
 The rule of thumb: gameplay is `this.inputs`; system input is `app.input`.
 
 ### The action kinds
 
-- **`ButtonAction`** — `value` (0..1), `active`, `pressed`, `released`. Sources
-  may be digital or analog; the strongest one wins. `pressed` and `released`
-  both fire on the same frame for a tap that started and ended between two
-  frames, so a fast press is never missed.
-- **`AxisAction`** — a signed `value` in -1..1, from a stick axis or from two
-  opposing button groups (`{ negative, positive }`). Either side may be omitted
-  for a one-sided axis.
-- **`VectorAction`** — a 2D `value`, from `{ x, y }` stick axes or from
-  `{ up, down, left, right }` buttons. The result is clamped to unit length, so
-  a digital diagonal is no faster than a cardinal direction.
-- **`ChordAction`** and **`SequenceAction`** — several channels required at
-  once, or in order. Covered in their own chapter,
-  [Chords and sequences](/ExoJS/en/guide/input/chords-and-sequences/).
+- **`ButtonAction`** — `value` (0..1), `active`, `pressed`, `released`. Sources may be digital or analog; the strongest one wins. `pressed` and `released` both fire on the same frame for a tap that started and ended between two frames, so a fast press is never missed.
+- **`AxisAction`** — a signed `value` in -1..1, from a stick axis or from two opposing button groups (`{ negative, positive }`). Either side may be omitted for a one-sided axis.
+- **`VectorAction`** — a 2D `value`, from `{ x, y }` stick axes or from `{ up, down, left, right }` buttons. The result is clamped to unit length, so a digital diagonal is no faster than a cardinal direction.
+- **`ChordAction`** and **`SequenceAction`** — several channels required at once, or in order. Covered in their own chapter, [Chords and sequences](/ExoJS/en/guide/input/chords-and-sequences/).
 
-Pass one binding directly or several as an array; options are always a separate
-second argument (`new ButtonAction(GamepadButton.RightTrigger, { threshold: 0.5 })`).
+Pass one binding directly or several as an array; options are always a separate second argument (`new ButtonAction(GamepadButton.RightTrigger, { threshold: 0.5 })`).
 
 ### How alternatives resolve
 
-Alternative bindings are never summed. Each is evaluated on its own and the one
-with the largest deflection wins — so holding `D` while the stick rests reads as
-full right, not as one-and-a-bit. `VectorAction` picks whole vectors, so `x`
-never comes from the keyboard while `y` comes from the pad.
+Alternative bindings are never summed. Each is evaluated on its own and the one with the largest deflection wins — so holding `D` while the stick rests reads as full right, not as one-and-a-bit. `VectorAction` picks whole vectors, so `x` never comes from the keyboard while `y` comes from the pad.
 
-An action's `threshold` is its own, separate from a gamepad's device-level
-deadzone: the deadzone decides what reaches the channel at all, the threshold
-decides what counts as `active`.
+An action's `threshold` is its own, separate from a gamepad's device-level deadzone: the deadzone decides what reaches the channel at all, the threshold decides what counts as `active`.
 
 ### When you still want raw bindings
 
-The listener-based API below is still the right tool when you need a callback at
-the exact moment an edge happens rather than a value polled in `update()`, or
-when you are reacting to a channel that is not part of a named control scheme.
+The listener-based API below is still the right tool when you need a callback at the exact moment an edge happens rather than a value polled in `update()`, or when you are reacting to a channel that is not part of a named control scheme.
 
 ## Examples
 
@@ -296,15 +256,9 @@ A single sprite controlled by both keyboard (WASD + Space) and gamepad (left sti
 
 ## Rebinding and saved profiles
 
-An action's binding is data. A map can hand it out, take a replacement, and
-report what a player's saved settings say — without the gameplay code that reads
-`controls.jump.pressed` changing at all.
+An action's binding is data. A map can hand it out, take a replacement, and report what a player's saved settings say — without the gameplay code that reads `controls.jump.pressed` changing at all.
 
-Every control has a stable, lowercase token: `keyboard.space`, `keyboard.key-w`,
-`pointer.primary`, `gamepad.button.south`, `gamepad.axis.left-stick-x`. Tokens are
-the only form that may be written to disk. They carry no gamepad slot, no browser
-device index, and no enum number, so a save file survives a new build, a
-different browser, and a controller plugged into a different port.
+Every control has a stable, lowercase token: `keyboard.space`, `keyboard.key-w`, `pointer.primary`, `gamepad.button.south`, `gamepad.axis.left-stick-x`. Tokens are the only form that may be written to disk. They carry no gamepad slot, no browser device index, and no enum number, so a save file survives a new build, a different browser, and a controller plugged into a different port.
 
 <SourceSnippet
   source="examples/guides/keyboard-and-actions/binding-profile.ts"
@@ -315,28 +269,16 @@ different browser, and a controller plugged into a different port.
 
 A few properties are worth knowing:
 
-- **A profile stores overrides, not a snapshot.** An action the profile never
-  mentions keeps whatever default the current build gives it, so shipping a new
-  action does not leave returning players unable to use it.
-- **Application is all-or-nothing.** An unknown token or a binding whose kind no
-  longer matches its action throws, and the map is left exactly as it was.
-  Unknown tokens are never quietly mapped onto some other control.
-- **A rebind is baseline-safe.** A key held across the change does not surface as
-  a fresh press, and a release that follows is still reported.
-- **Conflicts are reported, not resolved.** `map.conflicts()` lists every channel
-  two of its actions bind, for a settings screen to warn with; two actions on one
-  key stays a legitimate design.
+- **A profile stores overrides, not a snapshot.** An action the profile never mentions keeps whatever default the current build gives it, so shipping a new action does not leave returning players unable to use it.
+- **Application is all-or-nothing.** An unknown token or a binding whose kind no longer matches its action throws, and the map is left exactly as it was. Unknown tokens are never quietly mapped onto some other control.
+- **A rebind is baseline-safe.** A key held across the change does not surface as a fresh press, and a release that follows is still reported.
+- **Conflicts are reported, not resolved.** `map.conflicts()` lists every channel two of its actions bind, for a settings screen to warn with; two actions on one key stays a legitimate design.
 
-For iterating a map in a rebinding UI, `map.names`, `map.get(name)` and
-`map.entries()` expose the actions with the names they were declared under, and
-every action reports its `kind`, its effective `binding`, its `defaultBinding`
-and the `channels` it currently reads.
+For iterating a map in a rebinding UI, `map.names`, `map.get(name)` and `map.entries()` expose the actions with the names they were declared under, and every action reports its `kind`, its effective `binding`, its `defaultBinding` and the `channels` it currently reads.
 
 ## Input scopes
 
-A pause menu should take the keys it needs and leave the rest alone. That is what
-an `InputScope` is: one or more action maps that, while pushed, own the controls
-they bind.
+A pause menu should take the keys it needs and leave the rest alone. That is what an `InputScope` is: one or more action maps that, while pushed, own the controls they bind.
 
 <SourceSnippet
   source="examples/guides/keyboard-and-actions/input-scope.ts"
@@ -345,27 +287,19 @@ they bind.
   title="examples/guides/keyboard-and-actions/input-scope.ts"
 />
 
-While the menu scope is pushed, `Space` reaches only `confirm` — `jump` sees
-neither the value nor the press edge, so it cannot reconstruct one. `W`/`A`/`S`/`D`
-are not bound by the menu and keep reaching `move`.
+While the menu scope is pushed, `Space` reaches only `confirm` — `jump` sees neither the value nor the press edge, so it cannot reconstruct one. `W`/`A`/`S`/`D` are not bound by the menu and keep reaching `move`.
 
 The rules are short:
 
 - Maps attached with `this.inputs.attach()` sit at the bottom, below every scope.
-- A scope claims exactly the controls its maps currently bind — rebind one and
-  the claim follows.
-- Only LOWER levels are masked. Maps inside one scope are peers and never hide
-  anything from each other.
-- Pushing and popping re-baselines the levels whose controls changed, so a button
-  held while a menu opens or closes never fires an edge it should not.
+- A scope claims exactly the controls its maps currently bind — rebind one and the claim follows.
+- Only LOWER levels are masked. Maps inside one scope are peers and never hide anything from each other.
+- Pushing and popping re-baselines the levels whose controls changed, so a button held while a menu opens or closes never fires an edge it should not.
 - A scope's maps are attached on push and detached on pop.
 
-A scope is not a `preventDefault()`: it decides which of your actions sees a
-control, not what the browser does with the event.
+A scope is not a `preventDefault()`: it decides which of your actions sees a control, not what the browser does with the event.
 
-`when` still answers a different question. It says whether a map is active at all
-given the scene's state (`'active'`, `'paused'`, `'always'`); a scope says which
-of the currently active contexts gets an overlapping control.
+`when` still answers a different question. It says whether a map is active at all given the scene's state (`'active'`, `'paused'`, `'always'`); a scope says which of the currently active contexts gets an overlapping control.
 
 ## Where to go next
 

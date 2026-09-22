@@ -1,3 +1,5 @@
+import { PARTICLE_SIZE } from './particles';
+import { TILE_SIZE, TILE_VARIANTS } from './tilemap';
 import { SPRITE_SIZE } from './world';
 
 /**
@@ -45,6 +47,118 @@ export const createDistinctTextureCanvas = (index: number, total: number): HTMLC
 
   context.fillStyle = `hsl(${hue}, 70%, 55%)`;
   context.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+
+  return canvas;
+};
+
+/** Edge length of the blur scene's source texture. Square, and resampled to whatever area the cell filters. */
+export const BLUR_SOURCE_SIZE = 256;
+
+/**
+ * The blur scene's source image: hard edges, flat fields and a thin grid.
+ *
+ * A blur is only measurable against content that has something to lose. A flat
+ * fill blurs to itself, so a scene built on one would compare two filters that
+ * both had nothing to do; the edges and the one-pixel grid here are what the
+ * kernel actually works on, and they make a wrong tap count visible by eye.
+ */
+export const createBlurSourceCanvas = (): HTMLCanvasElement => {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = BLUR_SOURCE_SIZE;
+  canvas.height = BLUR_SOURCE_SIZE;
+
+  const context = canvas.getContext('2d');
+
+  if (context === null) {
+    throw new Error('A 2D context is required to generate the benchmark blur source.');
+  }
+
+  context.fillStyle = '#101820';
+  context.fillRect(0, 0, BLUR_SOURCE_SIZE, BLUR_SOURCE_SIZE);
+
+  const quarter = BLUR_SOURCE_SIZE / 4;
+
+  context.fillStyle = '#e8443a';
+  context.fillRect(quarter, quarter, quarter * 2, quarter * 2);
+  context.fillStyle = '#3ad1e8';
+  context.fillRect(0, 0, quarter, BLUR_SOURCE_SIZE);
+  context.fillStyle = '#f2e85c';
+  context.fillRect(BLUR_SOURCE_SIZE - quarter, 0, quarter, BLUR_SOURCE_SIZE);
+
+  const grid = new Path2D();
+
+  for (let offset = 0; offset < BLUR_SOURCE_SIZE; offset += 16) {
+    grid.moveTo(offset + 0.5, 0);
+    grid.lineTo(offset + 0.5, BLUR_SOURCE_SIZE);
+    grid.moveTo(0, offset + 0.5);
+    grid.lineTo(BLUR_SOURCE_SIZE, offset + 0.5);
+  }
+
+  context.strokeStyle = '#ffffff';
+  context.lineWidth = 1;
+  context.stroke(grid);
+
+  return canvas;
+};
+
+/**
+ * The particle sprite: one flat white {@link PARTICLE_SIZE} square.
+ *
+ * White and opaque, so the per-particle tint and alpha every arm applies are
+ * what decide the drawn colour - a coloured or pre-faded source would let one
+ * arm's tint handling show up as a brightness difference rather than as the
+ * cost it is.
+ */
+export const createParticleCanvas = (): HTMLCanvasElement => {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = PARTICLE_SIZE;
+  canvas.height = PARTICLE_SIZE;
+
+  const context = canvas.getContext('2d');
+
+  if (context === null) {
+    throw new Error('A 2D context is required to generate the benchmark particle sprite.');
+  }
+
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, PARTICLE_SIZE, PARTICLE_SIZE);
+
+  return canvas;
+};
+
+/**
+ * The tile atlas: one row of {@link TILE_VARIANTS} cells of {@link TILE_SIZE}
+ * pixels, each a flat distinct colour with a one-pixel darker border.
+ *
+ * One row and one page, so every arm resolves its tiles out of a single texture
+ * and none of them pays a texture-slot or page-switch cost the others avoid. The
+ * border is what makes a captured frame readable as a tile grid rather than as a
+ * colour field, which is how a scroll or an edit is checked by eye; nothing
+ * measures it.
+ */
+export const createTileAtlasCanvas = (): HTMLCanvasElement => {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = TILE_SIZE * TILE_VARIANTS;
+  canvas.height = TILE_SIZE;
+
+  const context = canvas.getContext('2d');
+
+  if (context === null) {
+    throw new Error('A 2D context is required to generate the benchmark tile atlas.');
+  }
+
+  for (let index = 0; index < TILE_VARIANTS; index += 1) {
+    const hue = Math.round((index / TILE_VARIANTS) * 360);
+
+    context.fillStyle = `hsl(${hue}, 65%, 52%)`;
+    context.fillRect(index * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE);
+    context.fillStyle = `hsl(${hue}, 65%, 32%)`;
+    context.fillRect(index * TILE_SIZE, 0, TILE_SIZE, 1);
+    context.fillRect(index * TILE_SIZE, 0, 1, TILE_SIZE);
+  }
 
   return canvas;
 };

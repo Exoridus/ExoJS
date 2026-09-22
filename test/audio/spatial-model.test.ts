@@ -483,7 +483,7 @@ describe('SpatialZones', () => {
     const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     expect(system.zones.active).toBe(false);
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
 
     expect(voice.sends).toHaveLength(0);
 
@@ -502,7 +502,7 @@ describe('SpatialZones', () => {
     const voice = system.play(sound, { position: { x: 10, y: 10 } });
 
     system.listener.position.set(50, 50);
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
 
     expect(voice.sends).toHaveLength(1);
     expect(voice.sends[0]!.bus).toBe(reverb);
@@ -511,7 +511,7 @@ describe('SpatialZones', () => {
     const send = voice.sends[0]!;
 
     system.listener.position.set(400, 400);
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
 
     expect(voice.sends).toHaveLength(0);
     expect(send.destroyed).toBe(true);
@@ -530,7 +530,7 @@ describe('SpatialZones', () => {
     const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     system.listener.position.set(150, 50);
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
 
     expect(voice.sends[0]!.level).toBeCloseTo(0.5, 5);
 
@@ -539,7 +539,7 @@ describe('SpatialZones', () => {
     const send = voice.sends[0]!;
 
     system.listener.position.set(125, 50);
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
 
     expect(voice.sends[0]).toBe(send);
     expect(send.level).toBeCloseTo(0.75, 5);
@@ -561,7 +561,7 @@ describe('SpatialZones', () => {
     const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     system.listener.position.set(70, 70);
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
 
     expect(voice.sends.map(({ bus }) => bus.name)).toEqual(['reverb', 'echo']);
 
@@ -581,7 +581,7 @@ describe('SpatialZones', () => {
     const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     system.listener.position.set(50, 50);
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
     expect(voice.sends).toHaveLength(1);
 
     const send = voice.sends[0]!;
@@ -608,7 +608,7 @@ describe('SpatialZones', () => {
     const voice = system.play(sound);
 
     system.listener.position.set(50, 50);
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
 
     expect(voice.sends).toHaveLength(0);
 
@@ -626,13 +626,13 @@ describe('SpatialZones', () => {
     const voice = system.play(sound, { position: { x: 10, y: 10 } });
 
     system.listener.position.set(50, 50);
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
     expect(voice.sends).toHaveLength(1);
 
     const send = voice.sends[0]!;
 
     voice.position = null;
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
 
     expect(voice.sends).toHaveLength(0);
     expect(send.destroyed).toBe(true);
@@ -652,7 +652,7 @@ describe('SpatialZones', () => {
 
     system.listener.position.set(50, 50);
     voice.stop();
-    system.preUpdate(0.016 as never);
+    system.preFrame(0.016 as never);
 
     expect(voice.sends).toHaveLength(0);
 

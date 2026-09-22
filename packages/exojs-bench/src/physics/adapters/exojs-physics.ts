@@ -1,6 +1,6 @@
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
 
-import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsBodySpread, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
 import type { PerStepWork } from './perStepWork';
 import { createPerStepWork } from './perStepWork';
 import type { BodyDesc } from './scene';
@@ -65,7 +65,12 @@ export const createExoJsPhysicsAdapter = (): PhysicsAdapter => {
       bodies = scene.bodies.map(desc => createBody(w, desc));
 
       for (const joint of scene.joints) {
-        w.addJoint(new RevoluteJoint({ bodyA: bodies[joint.bodyA]!, bodyB: bodies[joint.bodyB]!, anchor: { x: joint.x, y: joint.y } }));
+        // Stated rather than inherited: the neutral scene requires that two
+        // jointed links do not also collide, and an arm must not depend on that
+        // happening to be its library's default.
+        w.addJoint(
+          new RevoluteJoint({ bodyA: bodies[joint.bodyA]!, bodyB: bodies[joint.bodyB]!, anchor: { x: joint.x, y: joint.y }, collideConnected: false }),
+        );
       }
 
       stepIndex = 0;
@@ -73,6 +78,12 @@ export const createExoJsPhysicsAdapter = (): PhysicsAdapter => {
         createBody: desc => createBody(w, desc),
         removeBody: body => w.destroyBody(body),
         castRay: ray => w.rayCast({ x: ray.x, y: ray.y }, { x: ray.dx, y: ray.dy }, undefined, ray.maxDistance) !== null,
+        // The velocity fields are plain writes and rouse nothing on their own.
+        setVelocity: (body, vx, vy) => {
+          body.linearVelocityX = vx;
+          body.linearVelocityY = vy;
+          body.wake();
+        },
       });
       world = w;
     },
@@ -97,6 +108,38 @@ export const createExoJsPhysicsAdapter = (): PhysicsAdapter => {
         jointCount: world.joints.length,
         rayHits: perStep.rayHits,
       };
+    },
+
+    sampleSleepState(): PhysicsSleepCensus {
+      if (world === null) {
+        throw new Error('exojs-physics adapter: sampleSleepState() called before setup().');
+      }
+
+      const dynamic = world.bodies.filter(body => body.type !== 'static');
+
+      return { dynamic: dynamic.length, awake: dynamic.filter(body => !body.isSleeping).length };
+    },
+
+    sampleBodySpread(): PhysicsBodySpread {
+      if (world === null) {
+        throw new Error('exojs-physics adapter: sampleBodySpread() called before setup().');
+      }
+
+      let minY = Number.POSITIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+      let maxSpeed = 0;
+
+      for (const body of world.bodies) {
+        if (body.type === 'static') {
+          continue;
+        }
+
+        minY = Math.min(minY, body.y);
+        maxY = Math.max(maxY, body.y);
+        maxSpeed = Math.max(maxSpeed, Math.hypot(body.linearVelocityX, body.linearVelocityY));
+      }
+
+      return { minY, maxY, maxSpeed };
     },
 
     teardown(): void {

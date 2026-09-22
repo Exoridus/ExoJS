@@ -170,6 +170,7 @@ export interface TextStyleOptions {
    * one.
    */
   textTransform?: TextTransform;
+  /** Multiplier of `fontSize` for the distance between lines. Default `1.2` - not a pixel value. */
   lineHeight?: number;
   /** Extra pixel gap between lines, added on top of `lineHeight`. */
   leading?: number;

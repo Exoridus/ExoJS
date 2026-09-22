@@ -1,15 +1,3 @@
-export type {
-  ApplicationOptions,
-  AutoBackendConfig,
-  BackendConfig,
-  CanvasAlphaMode,
-  CanvasApplicationOptions,
-  InputApplicationOptions,
-  RecentErrorEntry,
-  RenderingApplicationOptions,
-  WebGl2BackendConfig,
-  WebGpuBackendConfig,
-} from './Application';
 export { Application, ApplicationState } from './Application';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
@@ -21,9 +9,11 @@ export type { ColorInput } from './Color';
 export { Color } from './Color';
 export type { ConnectivityState, NetworkMode } from './Connectivity';
 export { Connectivity } from './Connectivity';
+export type { CoroutineBody, CoroutineOptions, CoroutineStatus, CoroutineSystemOptions } from './CoroutineSystem';
+export { Coroutine, CoroutineSystem } from './CoroutineSystem';
 export { DestroyScope } from './DestroyScope';
-export type { JobOptions, JobSchedulerOptions, JobStatus, JobWork } from './JobScheduler';
-export { Job, JobScheduler } from './JobScheduler';
+export type { FrameBudget } from './FrameBudget';
+export { InlineWorker, type InlineWorkerOptions } from './InlineWorker';
 export type { LoadStateValue } from './LoadState';
 export type { LogEntry, LogOptions, LogSink } from './Logger';
 export { Logger, logger, LogSeverity } from './Logger';
@@ -51,6 +41,19 @@ export type {
   ValueOf,
 } from './types';
 export { type Milliseconds, type Seconds, Time } from './units';
+export type { RecentErrorEntry } from '#core/application/ApplicationErrorReporter';
+export type {
+  ApplicationOptions,
+  AutoBackendConfig,
+  BackendConfig,
+  CanvasAlphaMode,
+  CanvasApplicationOptions,
+  InputApplicationOptions,
+  RenderingApplicationOptions,
+  WebGl2BackendConfig,
+  WebGpuBackendConfig,
+} from '#core/application/ApplicationOptions';
+export { onAppInitialized } from '#core/application/devHooks';
 export type { PhasedSceneTransitionOptions, SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/scene/PhasedSceneTransition';
 export { PhasedSceneTransition } from '#core/scene/PhasedSceneTransition';
 export { Scene } from '#core/scene/Scene';

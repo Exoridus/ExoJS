@@ -274,7 +274,7 @@ export const ALLOCATION_REPORT_ONLY: readonly AllocationArchetype[] = [
  * of the gate on purpose. One reading at this size costs orders more than the
  * whole rest of the catalog, which is the wrong trade for a lane every
  * contributor PR runs. Exposed here so the standalone launcher can offer it as
- * an explicit manual/reference mode (`pnpm perf:renderers:alloc --reference`),
+ * an explicit manual/reference mode (`pnpm perf renderers:alloc --reference`),
  * where the number is read by a human rather than gated.
  *
  * At this size the scene's START-UP allocation is not a warm-up detail that a

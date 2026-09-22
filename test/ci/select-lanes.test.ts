@@ -342,8 +342,11 @@ describe('CI lane selection - example-smoke lane', () => {
     expect(lanes.siteBuild).toBe(true);
     // The catalog is not engine code.
     expect(areas.engine).toBe(false);
-    expect(lanes.unit).toBe(false);
     expect(lanes.browserWebgl2).toBe(false);
+    // It IS site data: `examples-sync` fails a `.ts` edit whose generated `.js`
+    // twin was not regenerated, and that suite runs in the unit lane.
+    expect(areas.siteData).toBe(true);
+    expect(lanes.unit).toBe(true);
   });
 
   it('the generated `.js` twin and the catalog manifest run the lane too', () => {
@@ -396,6 +399,60 @@ describe('CI lane selection - example-smoke lane', () => {
   });
 });
 
+describe('CI lane selection - prose outside the documentation folders', () => {
+  it('prose under a code prefix selects no code area, whatever depth it sits at', () => {
+    for (const file of [
+      'scripts/release/RELEASING.md',
+      'test/perf/rendering/README.md',
+      'packages/exojs-bench/docs/harness.md',
+      'packages/exojs-bench/src/rendering/adapters/README.md',
+      'packages/create-exo-app/templates/top-down/README.md',
+    ]) {
+      const { areas, lanes } = decide(file);
+      expect(areas).toMatchObject({ engine: false, audioFx: false, tilemapWorker: false, exampleCatalog: false, benchStructural: false });
+      expect(lanes.unit).toBe(false);
+      expect(lanes.coverage).toBe(false);
+      expect(lanes.packageVerify).toBe(false);
+      expect(lanes.browserWebgl2).toBe(false);
+      expect(lanes.browserWebgpu).toBe(false);
+      expect(lanes.browserFirefox).toBe(false);
+      expect(lanes.exampleSmoke).toBe(false);
+      expect(lanes.benchStructural).toBe(false);
+      expect(lanes.createExoAppVerify).toBe(false);
+      expect(lanes.releaseDryRun).toBe(false);
+    }
+  });
+
+  it('package and template prose still runs the site lane, which renders it', () => {
+    expect(decide('packages/exojs-bench/docs/harness.md').lanes.siteBuild).toBe(true);
+    expect(decide('packages/create-exo-app/templates/top-down/README.md').lanes.siteBuild).toBe(true);
+  });
+
+  it('the code beside that prose keeps every lane it had', () => {
+    expect(decide('scripts/release/cut.ts').lanes.releaseDryRun).toBe(true);
+    expect(decide('test/perf/rendering/cull-margin-correctness.test.ts').lanes.unit).toBe(true);
+    expect(decide('packages/exojs-bench/src/rendering/adapters/exojs.ts').lanes.benchStructural).toBe(true);
+    expect(decide('packages/create-exo-app/templates/top-down/src/main.ts').lanes.createExoAppVerify).toBe(true);
+  });
+
+  it('a licence file is prose too', () => {
+    expect(decide('packages/exojs-bench/LICENSE').areas.engine).toBe(false);
+    expect(decide('LICENSE').areas.engine).toBe(false);
+  });
+
+  it('the ROOT changelog stays the one doc file that gates code', () => {
+    expect(decide('CHANGELOG.md').areas.engine).toBe(true);
+    expect(decide('CHANGELOG.md').lanes.unit).toBe(true);
+  });
+
+  it('guide content keeps its own area, because the unit lane reads it', () => {
+    const { areas, lanes } = decide('site/src/content/guide/physics/physics-basics.mdx');
+    expect(areas).toMatchObject({ guides: true, engine: false, site: true });
+    expect(lanes.unit).toBe(true);
+    expect(lanes.siteBuild).toBe(true);
+  });
+});
+
 describe('CI lane selection - bench structural gate', () => {
   it('rendering source runs the gate, because it decides what the counters record', () => {
     expect(decide('src/rendering/sprite/Sprite.ts').lanes.benchStructural).toBe(true);
@@ -422,5 +479,46 @@ describe('CI lane selection - bench structural gate', () => {
 
   it('a workflow change revalidates it, since a workflow edit can alter any lane', () => {
     expect(decide('.github/workflows/ci.yml').lanes.benchStructural).toBe(true);
+  });
+});
+
+describe('CI lane selection — site data gates the unit lane', () => {
+  it('a committed bench profile runs the unit lane that validates it', () => {
+    const { areas, lanes } = decide('packages/exojs-bench/results/rtx-5070-ti-windows-11-chromium.json');
+    expect(areas.siteData).toBe(true);
+    expect(areas.engine).toBe(false);
+    expect(areas.benchStructural).toBe(false);
+    expect(lanes.unit).toBe(true);
+    expect(lanes.coverage).toBe(false);
+    expect(lanes.packageVerify).toBe(false);
+    expect(lanes.browserWebgl2).toBe(false);
+  });
+
+  it('a site library change runs the unit lane, without pulling in the rest of engine', () => {
+    const { areas, lanes } = decide('site/src/lib/bench-cards.ts');
+    expect(areas.siteData).toBe(true);
+    expect(areas.engine).toBe(false);
+    expect(lanes.unit).toBe(true);
+    expect(lanes.browserWebgl2).toBe(false);
+  });
+
+  it('an example source change runs the unit lane alongside the smoke', () => {
+    const { areas, lanes } = decide('examples/rendering/sprites/basic.ts');
+    expect(areas.siteData).toBe(true);
+    expect(lanes.unit).toBe(true);
+    expect(lanes.exampleSmoke).toBe(true);
+  });
+
+  it('site pages and components stay out of the area: no suite reads them', () => {
+    const { areas, lanes } = decide('site/src/pages/index.astro', 'site/src/components/Nav.astro');
+    expect(areas.siteData).toBe(false);
+    expect(lanes.unit).toBe(false);
+    expect(lanes.siteBuild).toBe(true);
+  });
+
+  it('a bench package README stays prose: no unit lane', () => {
+    const { areas, lanes } = decide('packages/exojs-bench/README.md');
+    expect(areas.siteData).toBe(false);
+    expect(lanes.unit).toBe(false);
   });
 });

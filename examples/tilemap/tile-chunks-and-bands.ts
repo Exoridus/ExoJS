@@ -43,6 +43,13 @@ const MAP_WIDTH = COLUMNS * TILE;
 const MAP_HEIGHT = ROWS * TILE;
 const MOVE_SPEED = 260;
 
+// Seamless terrain-centre tiles from mapPack_tilesheet.png (17 columns,
+// localTileId = row * 17 + column). The block corners and edges that sit
+// around them are meant for terrain borders, not for filling an area.
+const GRASS_TILE = 23;
+const SAND_TILE = 18;
+const TREE_TILE = 60;
+
 class TileChunksAndBandsScene extends Scene {
   private camera!: View;
   private explorer!: Sprite;
@@ -93,13 +100,13 @@ class TileChunksAndBandsScene extends Scene {
 
     for (let ty = 0; ty < ROWS; ty++) {
       for (let tx = 0; tx < COLUMNS; tx++) {
-        // Deterministic scatter: a "path" tile threaded through the
+        // Deterministic scatter: a sand "path" tile threaded through the
         // grass, and sparse overhead canopy tiles above it.
-        const groundTile = (tx * 3 + ty * 5) % 11 === 0 ? 1 : 0;
+        const groundTile = (tx * 3 + ty * 5) % 11 === 0 ? SAND_TILE : GRASS_TILE;
         ground.setTileAt(tx, ty, { tileset, localTileId: groundTile, transform: TILE_TRANSFORM_IDENTITY });
 
         if ((tx * 7 + ty * 3) % 17 === 0) {
-          canopy.setTileAt(tx, ty, { tileset, localTileId: 9, transform: TILE_TRANSFORM_IDENTITY });
+          canopy.setTileAt(tx, ty, { tileset, localTileId: TREE_TILE, transform: TILE_TRANSFORM_IDENTITY });
         }
       }
     }
@@ -188,14 +195,17 @@ class TileChunksAndBandsScene extends Scene {
         this.mapView.band('canopy').visible = visible;
       },
     });
+    // Starts on the view's default, `geometry`. Cycling down to `none` shows
+    // what it buys: every boundary then samples between two device pixels and
+    // the seams shimmer as the camera moves.
     panel.addCycle({
       label: 'Pixel snap',
-      options: ['none', 'position', 'geometry'],
+      options: ['geometry', 'position', 'none'],
       index: 0,
       onChange: index => {
-        const modes = [PixelSnapMode.None, PixelSnapMode.Position, PixelSnapMode.Geometry] as const;
+        const modes = [PixelSnapMode.Geometry, PixelSnapMode.Position, PixelSnapMode.None] as const;
 
-        this.mapView.pixelSnapMode = modes[index] ?? PixelSnapMode.None;
+        this.mapView.pixelSnapMode = modes[index] ?? PixelSnapMode.Geometry;
       },
     });
   }

@@ -28,7 +28,7 @@ describe('TweenSystem', () => {
     system.create(a).to({ x: 100 }, 1.0).start();
     system.create(b).to({ x: 200 }, 1.0).start();
 
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(a.x).toBeCloseTo(50, 5);
     expect(b.x).toBeCloseTo(100, 5);
   });
@@ -38,11 +38,11 @@ describe('TweenSystem', () => {
     const target = makeTarget();
     const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
-    system.preUpdate(sec(1.0)); // completes
+    system.preFrame(sec(1.0)); // completes
     expect(tween.state).toBe(TweenState.Complete);
 
     // Further updates should not error and target should stay at 100
-    system.preUpdate(sec(1.0));
+    system.preFrame(sec(1.0));
     expect(target.x).toBe(100);
   });
 
@@ -52,7 +52,7 @@ describe('TweenSystem', () => {
     const tween = new Tween(target).to({ x: 100 }, 1.0).start();
 
     system.add(tween);
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(target.x).toBeCloseTo(50, 5);
   });
 
@@ -62,7 +62,7 @@ describe('TweenSystem', () => {
     const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
     system.add(tween); // add again
-    system.preUpdate(sec(1.0)); // should complete once, not advance twice
+    system.preFrame(sec(1.0)); // should complete once, not advance twice
     expect(target.x).toBe(100);
     expect(tween.state).toBe(TweenState.Complete);
   });
@@ -72,9 +72,9 @@ describe('TweenSystem', () => {
     const target = makeTarget();
     const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
-    system.preUpdate(sec(0.3));
+    system.preFrame(sec(0.3));
     system.remove(tween);
-    system.preUpdate(sec(0.7));
+    system.preFrame(sec(0.7));
     expect(target.x).toBeCloseTo(30, 5); // frozen at 0.3s
   });
 
@@ -116,17 +116,17 @@ describe('TweenSystem', () => {
       first.start();
       expect(trackedCount(system)).toBe(1);
 
-      system.preUpdate(sec(1.0));
+      system.preFrame(sec(1.0));
       expect(t1.state).toBe(TweenState.Complete);
       expect(t2.state).toBe(TweenState.Active);
       expect(a.x).toBe(100);
 
-      system.preUpdate(sec(1.0));
+      system.preFrame(sec(1.0));
       expect(t2.state).toBe(TweenState.Complete);
       expect(t3.state).toBe(TweenState.Active);
       expect(b.x).toBe(200);
 
-      system.preUpdate(sec(1.0));
+      system.preFrame(sec(1.0));
       expect(t3.state).toBe(TweenState.Complete);
       expect(c.x).toBe(300);
 
@@ -142,7 +142,7 @@ describe('TweenSystem', () => {
       system.sequence([t1, t2]);
 
       expect(trackedCount(system)).toBe(0);
-      system.preUpdate(sec(1.0));
+      system.preFrame(sec(1.0));
       expect(t1.state).toBe(TweenState.Idle);
       expect(t2.state).toBe(TweenState.Idle);
     });
@@ -177,7 +177,7 @@ describe('TweenSystem', () => {
     system.create(makeTarget()).to({ x: 200 }, 1.0).onComplete(onComplete).start();
 
     system.clear();
-    system.preUpdate(sec(1.0)); // no tweens remain — nothing should fire
+    system.preFrame(sec(1.0)); // no tweens remain — nothing should fire
     expect(onComplete).not.toHaveBeenCalled();
   });
 
@@ -206,7 +206,7 @@ describe('TweenSystem', () => {
     expect(tween.state).toBe(TweenState.Active);
     expect(trackedCount(system)).toBe(1);
 
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(target.x).toBeCloseTo(50, 5);
   });
 
@@ -221,7 +221,7 @@ describe('TweenSystem', () => {
     expect(tween.state).toBe(TweenState.Stopped);
     expect(trackedCount(system)).toBe(0);
 
-    system.preUpdate(sec(1.0));
+    system.preFrame(sec(1.0));
     expect(target.x).toBe(0); // never advanced — genuinely not running
   });
 
@@ -257,7 +257,7 @@ describe('TweenSystem', () => {
 
     system.create(target).to({ x: 100 }, 1.0).start();
     system.destroy();
-    system.preUpdate(sec(1.0));
+    system.preFrame(sec(1.0));
     expect(target.x).toBe(0); // never advanced
   });
 
@@ -281,7 +281,7 @@ describe('TweenSystem', () => {
       system.create(b).to({ x: 200 }, 1.0).start();
     });
 
-    expect(() => system.preUpdate(sec(1.0))).not.toThrow();
+    expect(() => system.preFrame(sec(1.0))).not.toThrow();
     expect(tweenA.state).toBe(TweenState.Complete);
   });
 
@@ -304,7 +304,7 @@ describe('TweenSystem', () => {
     const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
     expect(trackedCount(system)).toBe(1);
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(target.x).toBeCloseTo(50, 5);
     expect(tween.state).toBe(TweenState.Active);
   });
@@ -337,7 +337,7 @@ describe('TweenSystem', () => {
     tween.start();
 
     expect(trackedCount(system)).toBe(1);
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(target.x).toBeCloseTo(50, 5);
   });
 
@@ -345,7 +345,7 @@ describe('TweenSystem', () => {
     const system = new TweenSystem();
     const tween = system.create(makeTarget()).to({ x: 100 }, 1.0).start();
 
-    system.preUpdate(sec(1.0));
+    system.preFrame(sec(1.0));
     expect(tween.state).toBe(TweenState.Complete);
     expect(trackedCount(system)).toBe(0);
 
@@ -382,7 +382,7 @@ describe('TweenSystem', () => {
     expect(trackedCount(system)).toBe(1);
 
     tween.resume();
-    system.preUpdate(sec(0.5));
+    system.preFrame(sec(0.5));
     expect(target.x).toBeCloseTo(50, 5);
   });
 });

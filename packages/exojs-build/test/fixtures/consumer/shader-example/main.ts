@@ -1,4 +1,4 @@
-// Shader half of the consumer: three real shader files, imported as the source
+// WebGl2Shader half of the consumer: three real shader files, imported as the source
 // strings the engine's rendering APIs take.
 import fragmentSource from './demo.frag';
 import vertexSource from './demo.vert';

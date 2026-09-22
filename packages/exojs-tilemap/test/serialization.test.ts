@@ -67,15 +67,18 @@ describe('tilemap serialization', () => {
     expect(() => Prefab.fromJSON(prefabDocument({ type: 'TileMapNode' })).instantiate(emptyLoader)).toThrow(/pre-loaded/);
   });
 
-  it('omits the map/pixelSnapMode keys entirely for a procedural map with default pixelSnapMode', () => {
+  it('omits the map key for a procedural map, and writes the tilemap pixelSnapMode default', () => {
     const map = new TileMap({ name: 'procedural', width: 4, height: 4, tileWidth: 32, tileHeight: 32 });
-    const node = new TileMapNode(map); // pixelSnapMode stays PixelSnapMode.None
+    // The node defaults to Geometry, which differs from the core Drawable
+    // default the writer omits against - so it is written, and a reader on a
+    // future default still restores the mode this node actually had.
+    const node = new TileMapNode(map);
     const loaderWithoutSourceKey = { keyFor: () => null, _peekResource: () => null } as unknown as Loader;
 
     const data = Prefab.from(node, loaderWithoutSourceKey).toJSON();
 
     expect(data.root.map).toBeUndefined();
-    expect(data.root.pixelSnapMode).toBeUndefined();
+    expect(data.root.pixelSnapMode).toBe('geometry');
 
     node.destroy();
     map.destroy();
@@ -87,7 +90,7 @@ describe('tilemap serialization', () => {
 
     const restored = Prefab.fromJSON(prefabDocument({ type: 'TileMapNode', map: 'world.tmj' })).instantiate(loader) as TileMapNode;
 
-    expect(restored.pixelSnapMode).toBe(PixelSnapMode.None);
+    expect(restored.pixelSnapMode).toBe(PixelSnapMode.Geometry);
 
     restored.destroy();
     map.destroy();

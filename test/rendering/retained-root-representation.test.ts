@@ -27,7 +27,7 @@ class RecordableLeaf extends Drawable {
   }
 }
 
-const flaggedRenderer = { _supportsRetainedBatches: true };
+const flaggedRenderer = { supportsRetainedBatches: true };
 
 interface FakeBatchPayload {
   readonly ids: readonly string[];

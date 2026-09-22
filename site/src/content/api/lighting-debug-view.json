@@ -1,0 +1,97 @@
+{
+  "title": "LightingDebugView",
+  "description": "Intermediate to draw instead of the shaded frame. `null` shades normally. - `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. - `'mask'` shows the occluder mask: this frame's blocking edges and handed-over drawables, rasterised into a target of their own at the light field's resolution and widened so none of them can fall between two texels. It reaches past the view by `fieldMargin`; the view shows its own part. It is the input a GPU-resident occluder field marches, and the view that says whether a wall is thick enough to be seen at that resolution. - `'normals'` shows the normal prepass: the world-space normals the registered surfaces described this frame, encoded the way a normal map is. Black is where nothing described a surface, and light lands there with no `N dot L` term at all. - `'occluders'` draws the silhouettes the registered sources collected this frame over the shaded scene, which is how you see what the shadows are actually being cast from. A renderer with no such intermediate - `forward` shades inside the sprite shader and casts no shadows - ignores it.",
+  "symbol": "LightingDebugView",
+  "kind": "type",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Intermediate to draw instead of the shaded frame. `null` shades normally.",
+        "- `'light'` shows the accumulated light field on its own, which is how you see where a light reaches without the scene's own colours in the way. - `'mask'` shows the occluder mask: this frame's blocking edges and handed-over drawables, rasterised into a target of their own at the light field's resolution and widened so none of them can fall between two texels. It reaches past the view by `fieldMargin`; the view shows its own part. It is the input a GPU-resident occluder field marches, and the view that says whether a wall is thick enough to be seen at that resolution. - `'normals'` shows the normal prepass: the world-space normals the registered surfaces described this frame, encoded the way a normal map is. Black is where nothing described a surface, and light lands there with no `N dot L` term at all. - `'occluders'` draws the silhouettes the registered sources collected this frame over the shaded scene, which is how you see what the shadows are actually being cast from.",
+        "A renderer with no such intermediate - `forward` shades inside the sprite shader and casts no shadows - ignores it."
+      ],
+      "importLine": "import { LightingDebugView } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LightingDebugView",
+          "signature": "\"light\" | \"mask\" | \"normals\" | \"occluders\" | null",
+          "signatureTokens": [
+            {
+              "text": "\"light\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"mask\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"normals\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"occluders\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/Lighting.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/Lighting.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
+}

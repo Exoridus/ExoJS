@@ -1,0 +1,564 @@
+{
+  "title": "CoroutineSystem",
+  "description": "Advances generator-based coroutines a step at a time in the frame's leftover capacity, so heavy work (world generation, batch pathfinding, visibility rebuilds) spreads over frames without an `async` update. It runs in the SystemMethods.postFrame phase, after the backend has flushed: the work overlaps the GPU drawing the frame just submitted, and the frame's remaining time is known rather than guessed. `app.coroutines` is the instance the application owns, and `scene.coroutines` a scene-bound facade over it. Each coroutine is stepped at most once per frame, and the first step of a frame happens whatever the budget says, so a coroutine whose single step always overruns still makes progress. That one rule is what lets a body that ignores `budget` behave like a sequence (one `yield` is one frame) while a body that consults it fills whatever the frame has left. ```ts const terrain = scene.coroutines.queue(buildWorld(map), { name: 'terrain' }); terrain.done.then(world => { scene.root.addChild(world); }); ``` The engine cannot interrupt a running step - JavaScript is run-to-completion - so a body chooses its own granularity. A step that overruns its slice by a wide margin is reported in development, naming the coroutine.",
+  "symbol": "CoroutineSystem",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Advances generator-based coroutines a step at a time in the frame's leftover capacity, so heavy work (world generation, batch pathfinding, visibility rebuilds) spreads over frames without an `async` update.",
+        "It runs in the SystemMethods.postFrame phase, after the backend has flushed: the work overlaps the GPU drawing the frame just submitted, and the frame's remaining time is known rather than guessed. `app.coroutines` is the instance the application owns, and `scene.coroutines` a scene-bound facade over it.",
+        "Each coroutine is stepped at most once per frame, and the first step of a frame happens whatever the budget says, so a coroutine whose single step always overruns still makes progress. That one rule is what lets a body that ignores `budget` behave like a sequence (one `yield` is one frame) while a body that consults it fills whatever the frame has left.",
+        "```ts const terrain = scene.coroutines.queue(buildWorld(map), { name: 'terrain' });",
+        "terrain.done.then(world => { scene.root.addChild(world); }); ```",
+        "The engine cannot interrupt a running step - JavaScript is run-to-completion - so a body chooses its own granularity. A step that overruns its slice by a wide margin is reported in development, naming the coroutine."
+      ],
+      "importLine": "import { CoroutineSystem } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: CoroutineSystemOptions): CoroutineSystem",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CoroutineSystemOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CoroutineSystem",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "CoroutineSystemOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "CoroutineSystem",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(): void",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Cancel every queued coroutine."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "postFrame",
+          "signature": "postFrame(_delta: Seconds, budget: FrameBudget): void",
+          "signatureTokens": [
+            {
+              "text": "postFrame",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "budget",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FrameBudget",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Seconds",
+              "optional": false
+            },
+            {
+              "name": "budget",
+              "type": "FrameBudget",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "SystemMethods.postFrame phase: take this frame's slice out of what the frame has left and spend it on the queue."
+        },
+        {
+          "name": "queue",
+          "signature": "queue(body: CoroutineBody<T, P> | Iterator<P, T, undefined>, options: CoroutineOptions): Coroutine<T, P>",
+          "signatureTokens": [
+            {
+              "text": "queue",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "body",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CoroutineBody",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "P",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Iterator",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "P",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CoroutineOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Coroutine",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "P",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "body",
+              "type": "CoroutineBody<T, P> | Iterator<P, T, undefined>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "CoroutineOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Coroutine<T, P>",
+          "description": "Queue body and return its handle. The first step runs in the next frame's post-frame phase, never synchronously - and, because that phase is the last of the frame, work queued from an ordinary update() still takes its first step in the same frame. body is either a generator function, which is handed the frame budget, or a ready-made iterator for the sequencing case that has no use for one."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "budget",
+          "signature": "budget: Seconds | { max: Seconds; share: number }",
+          "signatureTokens": [
+            {
+              "text": "budget",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "max",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "share",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "See CoroutineSystemOptions.budget. Writable at runtime."
+        },
+        {
+          "name": "minSlice",
+          "signature": "minSlice: Seconds | null",
+          "signatureTokens": [
+            {
+              "text": "minSlice",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "See CoroutineSystemOptions.minSlice. null keeps the cadence-derived default."
+        },
+        {
+          "name": "order",
+          "signature": "order: number",
+          "signatureTokens": [
+            {
+              "text": "order",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lastFrameMs",
+          "signature": "lastFrameMs: number",
+          "signatureTokens": [
+            {
+              "text": "lastFrameMs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Milliseconds the most recent frame spent advancing coroutines."
+        },
+        {
+          "name": "pending",
+          "signature": "pending: number",
+          "signatureTokens": [
+            {
+              "text": "pending",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Coroutines that have not settled yet, including any a scene has suspended."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/CoroutineSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/CoroutineSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+}

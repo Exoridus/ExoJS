@@ -1,128 +1,164 @@
 // @vitest-environment node
-import { execFileSync } from 'node:child_process';
-import { copyFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+
+import { formatShaderProblem, scanShaderSources } from '../../scripts/check-shader-sources';
 
 /**
  * Proves `scripts/check-shader-sources.ts` actually fails on each defect it
- * claims to catch, by introducing that defect into a real shader and putting it
- * back afterwards. A hygiene gate that silently matches nothing is worse than no
- * gate: it reports a clean tree either way.
+ * claims to catch, by introducing that defect into a real shader. A hygiene gate
+ * that silently matches nothing is worse than no gate: it reports a clean tree
+ * either way.
  *
- * A real file is mutated rather than a fixture written, because two of the rules
- * - orphan detection and the stripped-output check - are properties of the file
- * in its place in the tree, which a fixture would not have.
+ * The defects go into a copy of the tree, never into the tree itself. Real
+ * shaders are what the suite renders with, and its files run in parallel
+ * workers - a shader emptied here for one assertion is read in that state by
+ * whichever worker loads it next, which surfaces as unrelated renderer failures
+ * ("Attribute ... is not available") somewhere else entirely.
+ *
+ * The copy keeps the properties a fixture written from scratch would not have:
+ * the shaders are the real ones, they sit at their real paths, and the module
+ * that imports them is copied alongside, so orphan detection and the
+ * stripped-output check see what they see in the repository.
  */
 const REPO_ROOT = resolve(__dirname, '../..');
-const SCANNER = 'scripts/check-shader-sources.ts';
-const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
 
 /** A GLSL shader with an entry point, a version line and an engine directive. */
 const GLSL_TARGET = 'src/rendering/webgl2/shaders/sprite.vert';
 /** A WGSL shader carrying substitution placeholders. */
 const WGSL_TARGET = 'src/rendering/webgpu/shaders/text.wgsl';
 
-const backups = new Map<string, string>();
+/** Copied wholesale: the shader directories plus the modules that import them. */
+const COPIED_DIRECTORIES = ['src/rendering/webgl2/shaders', 'src/rendering/webgpu/shaders'];
 
-/** Rewrites a tracked shader for the duration of one test. */
-const mutate = (file: string, transform: (text: string) => string): void => {
-  const path = join(REPO_ROOT, file);
+let fixtureRoot: string;
+const originals = new Map<string, string>();
 
-  if (!backups.has(file)) backups.set(file, readFileSync(path, 'utf8'));
+beforeAll(() => {
+  fixtureRoot = mkdtempSync(join(tmpdir(), 'exojs-shader-scan-'));
 
-  writeFileSync(path, transform(backups.get(file)!), 'utf8');
-};
-
-/** Runs the gate; returns its combined output on failure, or null when it passed. */
-const scan = (): string | null => {
-  try {
-    execFileSync('node', [TSX_CLI, SCANNER], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
-
-    return null;
-  } catch (error) {
-    const failure = error as { stdout?: string; stderr?: string };
-
-    return `${failure.stdout ?? ''}${failure.stderr ?? ''}`;
-  }
-};
-
-afterEach(() => {
-  for (const [file, text] of backups) {
-    writeFileSync(join(REPO_ROOT, file), text, 'utf8');
+  for (const directory of COPIED_DIRECTORIES) {
+    cpSync(join(REPO_ROOT, directory), join(fixtureRoot, directory), { recursive: true });
   }
 
-  backups.clear();
-  rmSync(join(REPO_ROOT, 'src/rendering/webgl2/shaders/__orphan-probe.frag'), { force: true });
+  for (const target of [GLSL_TARGET, WGSL_TARGET]) {
+    originals.set(target, readFileSync(join(fixtureRoot, target), 'utf8'));
+  }
+
+  // Orphan detection matches a shader's basename against the text of every
+  // importing module, so the copy needs importers of its own. One module that
+  // imports every copied shader keeps every shader non-orphaned, which is the
+  // state the repository is in and the baseline each defect is measured from.
+  const shaders = [...COPIED_DIRECTORIES.flatMap(directory => shadersIn(join(fixtureRoot, directory), directory))];
+  const importerPath = join(fixtureRoot, 'src/importers.ts');
+
+  mkdirSync(dirname(importerPath), { recursive: true });
+  writeFileSync(importerPath, shaders.map((file, index) => `import shader${index} from '${file}';`).join('\n') + '\n', 'utf8');
 });
 
+afterEach(() => {
+  for (const [file, text] of originals) {
+    writeFileSync(join(fixtureRoot, file), text, 'utf8');
+  }
+
+  rmSync(join(fixtureRoot, 'src/rendering/webgl2/shaders/__orphan-probe.frag'), { force: true });
+});
+
+afterAll(() => {
+  rmSync(fixtureRoot, { recursive: true, force: true });
+});
+
+/** Import specifiers for every shader under one copied directory, relative to `src/importers.ts`. */
+const shadersIn = (absoluteDirectory: string, repoRelative: string): string[] =>
+  readdirSync(absoluteDirectory, { withFileTypes: true })
+    .filter(entry => entry.isFile())
+    .map(entry => `./${repoRelative.slice('src/'.length)}/${entry.name}`);
+
+/** Rewrites a shader in the copied tree for the duration of one test. */
+const mutate = (file: string, transform: (text: string) => string): void => {
+  writeFileSync(join(fixtureRoot, file), transform(originals.get(file)!), 'utf8');
+};
+
+/** Runs the gate over the copied tree; returns its report on failure, or null when it passed. */
+const scan = async (root: string = fixtureRoot): Promise<string | null> => {
+  const { problems } = await scanShaderSources(root);
+
+  return problems.length === 0 ? null : problems.map(formatShaderProblem).join('\n');
+};
+
 describe('check-shader-sources', () => {
-  it('passes over the repository as it stands', () => {
-    expect(scan()).toBeNull();
+  it('passes over the repository as it stands', async () => {
+    expect(await scan(REPO_ROOT)).toBeNull();
   });
 
-  it('rejects a GLSL entry-point shader whose first line is not the version directive', () => {
+  it('passes over the copied tree the defect cases start from', async () => {
+    expect(await scan()).toBeNull();
+  });
+
+  it('rejects a GLSL entry-point shader whose first line is not the version directive', async () => {
     mutate(GLSL_TARGET, text => text.replace('#version 300 es\n', ''));
 
-    expect(scan()).toContain('line 1 is not');
+    expect(await scan()).toContain('line 1 is not');
   });
 
-  it('rejects a #version directive inside WGSL', () => {
+  it('rejects a #version directive inside WGSL', async () => {
     mutate(WGSL_TARGET, text => `#version 300 es\n${text}`);
 
-    expect(scan()).toContain('WGSL has no preprocessor');
+    expect(await scan()).toContain('WGSL has no preprocessor');
   });
 
-  it('rejects a placeholder fillShaderSource would never substitute', () => {
+  it('rejects a placeholder fillShaderSource would never substitute', async () => {
     mutate(WGSL_TARGET, text => text.replace('{{nodeIndexMask}}', '{{ nodeIndexMask }}'));
 
-    expect(scan()).toContain('does not match the {{NAME}} form');
+    expect(await scan()).toContain('does not match the {{NAME}} form');
   });
 
-  it('rejects an unknown engine directive', () => {
+  it('rejects an unknown engine directive', async () => {
     mutate(GLSL_TARGET, text => text.replace('// #exo-include transform-texture', '// #exo-inclde transform-texture'));
 
-    expect(scan()).toContain("unknown engine directive '#exo-inclde'");
+    expect(await scan()).toContain("unknown engine directive '#exo-inclde'");
   });
 
-  it('rejects a tab', () => {
+  it('rejects a tab', async () => {
     mutate(GLSL_TARGET, text => text.replace('#version 300 es\n', '#version 300 es\n//\tnote\n'));
 
-    expect(scan()).toContain('contains a tab');
+    expect(await scan()).toContain('contains a tab');
   });
 
-  it('rejects trailing whitespace', () => {
+  it('rejects trailing whitespace', async () => {
     mutate(GLSL_TARGET, text => text.replace('#version 300 es\n', '#version 300 es \n'));
 
-    expect(scan()).toContain('has trailing whitespace');
+    expect(await scan()).toContain('has trailing whitespace');
   });
 
-  it('rejects a CR', () => {
+  it('rejects a CR', async () => {
     mutate(GLSL_TARGET, text => text.replace('#version 300 es\n', '#version 300 es\r\n'));
 
-    expect(scan()).toContain('LF-only');
+    expect(await scan()).toContain('LF-only');
   });
 
-  it('rejects an empty shader', () => {
+  it('rejects an empty shader', async () => {
     mutate(GLSL_TARGET, () => '');
 
-    expect(scan()).toContain('file is empty');
+    expect(await scan()).toContain('file is empty');
   });
 
-  it('rejects a shader that strips to nothing', () => {
+  it('rejects a shader that strips to nothing', async () => {
     // Comment-only: valid text, imported, and completely gone from the shipped
     // bundle. Only the strip-aware check sees it.
     mutate(GLSL_TARGET, () => '// nothing but a comment\n');
 
-    expect(scan()).toContain('strips to nothing');
+    expect(await scan()).toContain('strips to nothing');
   });
 
-  it('rejects an orphan shader nothing imports', () => {
+  it('rejects an orphan shader nothing imports', async () => {
     const orphan = 'src/rendering/webgl2/shaders/__orphan-probe.frag';
 
-    copyFileSync(join(REPO_ROOT, 'src/rendering/webgl2/shaders/mesh.frag'), join(REPO_ROOT, orphan));
+    cpSync(join(fixtureRoot, 'src/rendering/webgl2/shaders/mesh.frag'), join(fixtureRoot, orphan));
 
-    expect(scan()).toContain('is not imported by any module');
+    expect(await scan()).toContain('is not imported by any module');
   });
 });

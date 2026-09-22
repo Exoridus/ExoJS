@@ -1,5 +1,5 @@
 /**
- * Shader source hygiene: the objective facts about a `.vert`/`.frag`/`.wgsl`
+ * WebGl2Shader source hygiene: the objective facts about a `.vert`/`.frag`/`.wgsl`
  * file that no other gate is in a position to check.
  *
  * The existing gates cover meaning. Real GLSL compile/link and real WGSL
@@ -23,13 +23,22 @@
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { SHADER_EXTENSIONS, stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
-/** Roots that hold engine-owned shaders and the modules importing them. */
+/** Roots that hold engine-owned shaders. */
 const SCAN_ROOTS = ['src', 'packages'];
+
+/**
+ * Roots searched for whatever imports them. Wider than {@link SCAN_ROOTS}
+ * because a chunk can legitimately be compiled only by the browser suite: a
+ * shader the specs build into a probe shader reaches a real compiler, which is
+ * what the orphan rule is about.
+ */
+const IMPORTER_ROOTS = [...SCAN_ROOTS, 'test'];
 
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', 'test-results']);
 
@@ -52,13 +61,13 @@ const ANY_PLACEHOLDER = /\{\{[^}]*\}\}/g;
 
 const EXO_DIRECTIVE_LINE = /^\s*\/\/\s*(#exo-[\w-]*)/;
 
-interface Problem {
+export interface Problem {
   readonly file: string;
   readonly line: number | null;
   readonly message: string;
 }
 
-const collectFiles = async (root: string, keep: (name: string) => boolean): Promise<string[]> => {
+const collectFiles = async (repoRoot: string, root: string, keep: (name: string) => boolean): Promise<string[]> => {
   const found: string[] = [];
 
   const walk = async (directory: string): Promise<void> => {
@@ -85,7 +94,7 @@ const collectFiles = async (root: string, keep: (name: string) => boolean): Prom
     }
   };
 
-  await walk(resolve(REPO_ROOT, root));
+  await walk(resolve(repoRoot, root));
 
   return found;
 };
@@ -110,7 +119,7 @@ const hasControlCharacter = (line: string): boolean => {
   return false;
 };
 
-const toRepoPath = (absolutePath: string): string => relative(REPO_ROOT, absolutePath).split(sep).join('/');
+const toRepoPath = (repoRoot: string, absolutePath: string): string => relative(repoRoot, absolutePath).split(sep).join('/');
 
 /**
  * Byte-level rules. A shader ships verbatim inside the bundle, so its bytes are
@@ -187,8 +196,20 @@ const checkLanguage = (file: string, text: string): Problem[] => {
 
   // A GLSL fragment meant for composition (an include body) legitimately has no
   // version line; only a file the backend compiles on its own needs one, and
-  // those are exactly the ones declaring an entry point.
-  if (/\bvoid\s+main\s*\(/.test(text) && firstLine.trim() !== GLSL_VERSION_DIRECTIVE) {
+  // those are exactly the ones declaring an entry point - except for the
+  // instanced-batch contract, whose constant is documented as going BETWEEN the
+  // version directive and the body, so a vertex stage using it must not carry
+  // one of its own. Calling `exoInstanceClipPosition` is that contract's own
+  // marker, which keeps this a property of the file rather than a path list.
+  const composedWithInstanceContract = text.includes('exoInstanceClipPosition(');
+  // The transport chunk is the same arrangement seen from the other side: it
+  // declares no entry point of its own and has to sit between the bindings and
+  // the body that walks with it, so a body calling `traceSegment` is composed
+  // and carries no version line either. Its own marker again, rather than a
+  // list of paths that would fall behind.
+  const composedWithTransportChunk = text.includes('traceSegment(');
+
+  if (/\bvoid\s+main\s*\(/.test(text) && !composedWithInstanceContract && !composedWithTransportChunk && firstLine.trim() !== GLSL_VERSION_DIRECTIVE) {
     problems.push({ file, line: 1, message: `declares main() but line 1 is not '${GLSL_VERSION_DIRECTIVE}'` });
   }
 
@@ -240,17 +261,38 @@ const checkStripped = (file: string, text: string): Problem[] => {
   return [];
 };
 
-const main = async (): Promise<void> => {
-  console.log('Checking shader source hygiene...\n');
+/** What one scan saw: how many shader files it read, and what is wrong with them. */
+export interface ShaderScan {
+  readonly files: number;
+  readonly problems: readonly Problem[];
+}
 
-  const shaderFiles = (await Promise.all(SCAN_ROOTS.map(root => collectFiles(root, name => SHADER_EXTENSIONS.some(ext => name.endsWith(ext)))))).flat();
-  const importerFiles = (await Promise.all(SCAN_ROOTS.map(root => collectFiles(root, name => IMPORTER_EXTENSIONS.some(ext => name.endsWith(ext)))))).flat();
+/** One problem rendered the way the gate reports it. */
+export const formatShaderProblem = (problem: Problem): string => `${problem.file}${problem.line === null ? '' : `:${problem.line}`}  ${problem.message}`;
+
+/**
+ * Check every tracked shader against the hygiene rules. An empty `problems`
+ * array means the tree is clean.
+ *
+ * `repoRoot` selects the tree to scan and defaults to this repository. A caller
+ * that needs to see the scanner react to a defective shader must point this at
+ * a copied tree rather than introduce the defect here: the suite runs its files
+ * in parallel workers, and a shader edited in place is read in that state by
+ * whichever worker happens to load it.
+ */
+export const scanShaderSources = async (repoRoot: string = REPO_ROOT): Promise<ShaderScan> => {
+  const shaderFiles = (
+    await Promise.all(SCAN_ROOTS.map(root => collectFiles(repoRoot, root, name => SHADER_EXTENSIONS.some(ext => name.endsWith(ext)))))
+  ).flat();
+  const importerFiles = (
+    await Promise.all(IMPORTER_ROOTS.map(root => collectFiles(repoRoot, root, name => IMPORTER_EXTENSIONS.some(ext => name.endsWith(ext)))))
+  ).flat();
   const importerText = (await Promise.all(importerFiles.map(path => readFile(path, 'utf8')))).join('\n');
 
   const problems: Problem[] = [];
 
   for (const absolutePath of shaderFiles) {
-    const file = toRepoPath(absolutePath);
+    const file = toRepoPath(repoRoot, absolutePath);
     const text = await readFile(absolutePath, 'utf8');
 
     problems.push(...checkBytes(file, text), ...checkLanguage(file, text), ...checkSubstitutions(file, text), ...checkStripped(file, text));
@@ -265,17 +307,27 @@ const main = async (): Promise<void> => {
     }
   }
 
+  return { files: shaderFiles.length, problems };
+};
+
+const main = async (): Promise<void> => {
+  console.log('Checking shader source hygiene...\n');
+
+  const { files, problems } = await scanShaderSources();
+
   if (problems.length > 0) {
     console.error(`\x1b[31m${problems.length} shader source problem(s):\x1b[0m`);
 
     for (const problem of problems) {
-      console.error(`  ${problem.file}${problem.line === null ? '' : `:${problem.line}`}  ${problem.message}`);
+      console.error(`  ${formatShaderProblem(problem)}`);
     }
 
     process.exit(1);
   }
 
-  console.log(`\x1b[32m${shaderFiles.length} shader file(s) checked, no problems.\x1b[0m`);
+  console.log(`\x1b[32m${files} shader file(s) checked, no problems.\x1b[0m`);
 };
 
-await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}

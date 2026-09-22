@@ -6,13 +6,13 @@ import { Container } from '#rendering/Container';
 import type { Drawable } from '#rendering/Drawable';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -364,12 +364,12 @@ describe('RenderingContext', () => {
 
     pip.follow({ x: 40, y: 0 }, { lerp: 1 });
     context.trackView(pip);
-    context.preUpdate(tick);
+    context.preFrame(tick);
     expect(pip.center.x).toBe(40); // tracked → followed to its target
 
     context.untrackView(pip);
     pip.follow({ x: 80, y: 0 }, { lerp: 1 });
-    context.preUpdate(tick);
+    context.preFrame(tick);
     expect(pip.center.x).toBe(40); // untracked → no longer advanced
 
     pip.destroy();
@@ -385,12 +385,12 @@ describe('RenderingContext', () => {
 
     pip.follow({ x: 40, y: 0 }, { lerp: 1 });
     context.render(node, { view: pip }); // render-usage registers pip for the next update
-    context.preUpdate(tick); // advances views rendered since the last update → pip follows
+    context.preFrame(tick); // advances views rendered since the last update → pip follows
     expect(pip.center.x).toBe(40);
 
     // Stop rendering pip: it is no longer auto-advanced.
     pip.follow({ x: 80, y: 0 }, { lerp: 1 });
-    context.preUpdate(tick);
+    context.preFrame(tick);
     expect(pip.center.x).toBe(40);
 
     pip.destroy();
@@ -501,7 +501,7 @@ const createStandardGeometry = (): Geometry => {
 
 const minimalMeshMaterial = (): MeshMaterial =>
   new MeshMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
       glsl: {
         vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
         fragment: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',
@@ -804,7 +804,7 @@ describe('RenderingContext.drawBatch', () => {
 });
 
 describe('_renderSurfaceInto', () => {
-  test('redirects an arbitrary draw callback into the target and restores the previous target/view (legacy fallback branch — no _passCoordinator on the stub)', () => {
+  test('redirects an arbitrary draw callback into the target and restores the previous target/view (legacy fallback branch — no passCoordinator on the stub)', () => {
     const { backend, drawEvents, setRenderTargetSpy, setViewSpy, root } = createMockBackend();
     const context = new RenderingContext(backend);
     const target = new RenderTexture(64, 64);

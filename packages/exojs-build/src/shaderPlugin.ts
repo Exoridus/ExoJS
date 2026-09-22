@@ -1,7 +1,7 @@
 // Rollup/Vite plugin that loads shader files (`.vert`, `.frag`, `.wgsl`) as JS
 // string modules.
 //
-// The engine's rendering APIs - `ShaderFilter`, `ShaderSource`, `MeshMaterial`,
+// The engine's rendering APIs - `ShaderFilter`, `Shader`, `MeshMaterial`,
 // `SpriteMaterial`, the WebGPU compute pipeline - all take shader source as a
 // `string`. Without a loader that string has to be an inline template literal,
 // which puts the shader outside every editor language service, formatter and

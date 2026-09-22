@@ -59,7 +59,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Interleaved attributes, in declaration order. Shader locations follow this order."
+          "description": "Interleaved attributes, in declaration order. WebGl2Shader locations follow this order."
         },
         {
           "name": "indices",

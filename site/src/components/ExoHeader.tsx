@@ -23,6 +23,7 @@ export const ExoHeader = ({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
   const guideHref = `${baseUrl}${normalizedLocale}/guide/`;
   const playgroundHref = `${baseUrl}${normalizedLocale}/playground/`;
   const apiHref = `${baseUrl}${normalizedLocale}/api/`;
+  const benchmarksHref = `${baseUrl}${normalizedLocale}/benchmarks/`;
   const npmUrl = appInfo.packageName ? `https://www.npmjs.com/package/${appInfo.packageName}` : '';
 
   const openMenu = (event: MouseEvent<HTMLButtonElement>): void => {
@@ -59,14 +60,21 @@ export const ExoHeader = ({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
           </span>
         </a>
         <nav className={css(styles, 'nav')} aria-label="Primary">
-          <a href={guideHref} data-active={currentPath.startsWith(guideHref) ? 'true' : 'false'}>
-            Guide
+          {/* Exact match, never a prefix: every other destination sits under the home path and would keep it lit. */}
+          <a href={homeHref} data-active={currentPath === homeHref ? 'true' : 'false'}>
+            Home
           </a>
           <a href={playgroundHref} data-active={currentPath.startsWith(playgroundHref) ? 'true' : 'false'}>
             Playground
           </a>
+          <a href={guideHref} data-active={currentPath.startsWith(guideHref) ? 'true' : 'false'}>
+            Guide
+          </a>
           <a href={apiHref} data-active={currentPath.startsWith(apiHref) ? 'true' : 'false'}>
             API
+          </a>
+          <a href={benchmarksHref} data-active={currentPath.startsWith(benchmarksHref) ? 'true' : 'false'}>
+            Benchmarks
           </a>
         </nav>
         <div className={css(styles, 'spacer')} />
@@ -130,6 +138,9 @@ export const ExoHeader = ({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
               </a>
               <a href={playgroundHref} onClick={dismissSheets}>
                 Playground
+              </a>
+              <a href={benchmarksHref} onClick={dismissSheets}>
+                Benchmarks
               </a>
             </div>
           </section>

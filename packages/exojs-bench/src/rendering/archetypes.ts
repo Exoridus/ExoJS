@@ -1,5 +1,6 @@
 import { createRng } from '../shared/rng';
 import type { ArchetypeSpec, Backend, CellSpec, EngineAdapter } from './EngineAdapter';
+import { LAYOUT_PASSES_PER_FRAME } from './uiLayout';
 
 // Re-exported from `shared/` so existing importers (e.g. the archetype tests and
 // `shared/mutation.ts`'s canonical selection) keep a single RNG implementation
@@ -18,6 +19,124 @@ const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
  * real HUD or dialogue scene contains.
  */
 const TEXT_COUNTS = [200, 1_000, 5_000] as const;
+
+/**
+ * Node counts for `dynamic-all`. Three steps spanning 100x, sharing 1k and 100k
+ * with the sprite ladder so the row can be read against `static-heavy` and
+ * `dynamic-heavy` at both ends of the sweep. The intermediate rungs the sprite
+ * ladder carries would only refine a slope this archetype states plainly.
+ */
+const DYNAMIC_ALL_COUNTS = [1_000, 10_000, 100_000] as const;
+
+/**
+ * Layer counts for `fill-layers`. The load is full-screen layers, not scene
+ * nodes, so the ladder is three steps of a few dozen rather than thousands: 8 is
+ * an ordinary parallax stack, 32 a heavy one, and 128 past anything that ships.
+ * At 1280x720 the top step already resolves the viewport 128 times over.
+ */
+const FILL_LAYER_COUNTS = [8, 32, 128] as const;
+
+/**
+ * World tile totals for the tilemap scenes. The visible window is the same at
+ * every rung - 1280x720 over 32 px tiles is about 41x23 tiles - so the ladder
+ * sweeps how large a map an arm can hold rather than how much of it it draws.
+ * `tilemap.ts` maps each count onto the map's dimensions.
+ */
+const TILEMAP_COUNTS = [10_000, 100_000, 1_000_000] as const;
+
+/**
+ * World tile totals for the editing scene. It stops below the million the
+ * scrolling scene reaches: an edit is submitted per frame, and at a million tiles
+ * an arm that has to repack or re-upload a whole map's worth of data would be
+ * measured on its allocator rather than on its tile path.
+ */
+const TILEMAP_EDIT_COUNTS = [10_000, 100_000] as const;
+
+/**
+ * Particle counts for the draw-only scene. Four steps spanning 1000x: the top
+ * one is a million quads submitted in a frame, which is where a particle draw
+ * path either holds up or does not.
+ */
+const PARTICLE_DRAW_COUNTS = [1_000, 10_000, 100_000, 1_000_000] as const;
+
+/**
+ * Light counts for the lighting archetypes. The sprite field underneath is the
+ * same at every rung, so the ladder sweeps what a light costs rather than what a
+ * scene costs: 8 is a lamp-lit room, 64 the forward renderer's own default cap,
+ * and 512 well past what a hand-placed scene contains - which is where an
+ * accumulated light field either holds up or does not.
+ */
+const LIGHT_COUNTS = [8, 64, 512] as const;
+
+/**
+ * Particle counts for the lifecycle scene. It stops below the million the
+ * draw-only scene reaches: a million simulated particles measures each arm's
+ * update loop rather than the effect, and no effect anything ships keeps that
+ * many alive at once.
+ */
+const PARTICLE_LIFECYCLE_COUNTS = [1_000, 10_000, 100_000] as const;
+
+/**
+ * Filtered heights for the blur scene, in logical pixels; the quad keeps a 16:9
+ * shape, so the count is also the area. 720 is the viewport itself, 360 a
+ * quarter of that area and 1080 more than twice it - an effect applied to a
+ * region larger than the screen, which a zoomed-out camera produces.
+ */
+const BLUR_HEIGHTS = [360, 720, 1_080] as const;
+
+/**
+ * Standard deviation of the shared Gaussian, in logical pixels.
+ *
+ * Both filters are configured from it directly - ExoJS's `strength` and Pixi's
+ * `strength` are the same quantity - so neither arm can end up blurring further
+ * than the other while the comparison claims they match.
+ */
+export const BLUR_SIGMA = 2;
+
+/**
+ * Standard deviations the shared blur reaches outside its input on every edge.
+ *
+ * Part of the contract rather than an implementation detail: a filter that held
+ * the effect back sooner would darken the border of the filtered region, and the
+ * arms derive their own padding from different multiples, so the reach is stated
+ * here and each arm is configured to it. Three sigmas is where a Gaussian has
+ * less than half a percent of its mass left.
+ */
+export const BLUR_KERNEL_SIGMAS = 3;
+
+/**
+ * Taps per side of the shared blur kernel, so both arms sweep 4 + 1 + 4 = nine.
+ *
+ * Exported because each arm configures its own filter from it, and a tap count
+ * that differed between them would be a quality difference published as a
+ * performance one.
+ */
+export const BLUR_TAPS_PER_SIDE = 4;
+
+/**
+ * Interactive rectangle counts for the picking scene. The query cost is what
+ * scales here, so the ladder sweeps how much scene the hit test has to search -
+ * a thousand is an ordinary interface, a hundred thousand is a map of clickable
+ * entities.
+ */
+const PICKING_COUNTS = [1_000, 10_000, 100_000] as const;
+
+/**
+ * Point queries resolved per frame.
+ *
+ * A block rather than one, because a single hit test is far below the clock's
+ * resolution: a hundred of them is a duration the timer can actually separate,
+ * and it is also roughly what an interface with hover, tooltips and a drag
+ * candidate resolves while a pointer moves.
+ */
+export const POINTER_QUERIES_PER_FRAME = 100;
+
+/**
+ * Leaf widget counts for the UI-layout scene. A hundred is a settings panel, a
+ * thousand an inventory or a property grid, five thousand the point where a
+ * layout engine's per-node cost is the whole frame.
+ */
+const UI_WIDGET_COUNTS = [100, 1_000, 5_000] as const;
 
 /**
  * Characters per text leaf across both text archetypes. Twelve is the length of
@@ -73,6 +192,25 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0.075,
     cullingEnabled: false,
   },
+  // EVERY leaf moves, every frame. `dynamic-heavy` builds the identical scene
+  // and moves 7.5 % of it, which is the shape a real scene has - a few actors
+  // over a mostly still background - so the delta between the two rows is what
+  // the remaining 92.5 % costs once it stops being still.
+  //
+  // It is a separate archetype rather than a raised `mutationFraction` on
+  // `dynamic-heavy` because the two answer different questions and both are
+  // worth publishing; changing the existing one would also silently invalidate
+  // every number measured under its name.
+  {
+    id: 'dynamic-all',
+    category: 'node-scaling',
+    crossArm: true,
+    nodeCounts: DYNAMIC_ALL_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 1,
+    cullingEnabled: false,
+  },
   {
     id: 'deep-hierarchy',
     category: 'node-scaling',
@@ -99,6 +237,31 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     textureCount: 1,
     mutationFraction: 0,
     cullingEnabled: false,
+    fullViewportLeaves: true,
+  },
+  // The same geometry as `overdraw` at a workload a real scene reaches: a
+  // handful of translucent full-screen layers rather than thousands of them.
+  // `overdraw` sweeps 1k to 25k viewport-sized quads, which is a fill-rate
+  // ceiling probe and not something anything ships; this sweeps 8 to 128, the
+  // range a parallax background, a weather pass and a few tint overlays add up
+  // to.
+  //
+  // `leafAlpha: 0.05` is what makes it a blend workload: every layer has to be
+  // composited, and none of them can be skipped by an occlusion policy the way
+  // an opaque top layer could. The load is the LAYER COUNT rather than a node
+  // count, which is why it carries its own short ladder instead of the sprite
+  // one.
+  {
+    id: 'fill-layers',
+    category: 'fill-and-state',
+    crossArm: true,
+    nodeCounts: FILL_LAYER_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    fullViewportLeaves: true,
+    leafAlpha: 0.05,
   },
   // 40 textures: must exceed EVERY sprite-batcher slot ceiling any granted
   // backend/tier reaches, or the archetype silently stops breaking batches on
@@ -386,8 +549,8 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // binding and blit, so a heavy kernel would move the bottleneck into the
   // fragment shader and hide the thing under test.
   //
-  // WebGL2/WebGPU arms only. The Phaser arm renders WebGL1, so its gap here
-  // would be attributable to the backend generation rather than to the engine.
+  // Arms with validated render-target support only. Competitor gaps here are
+  // coverage gaps, not approximations of a different scene.
   {
     id: 'filter-chain-1',
     category: 'render-targets',
@@ -426,7 +589,7 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // unrotated rect mask as GPU scissor/clip state, so the row measures the
   // nesting rather than one arm's intermediate-target policy.
   //
-  // Shares the render-target machinery of the filter rows and the same WebGL1
+  // Shares the render-target machinery of the filter rows and the same coverage
   // exclusion; otherwise identical to `static-heavy` at depth 4.
   //
   // The nesting depth is one greater than the mask depth on purpose: the scene
@@ -459,7 +622,7 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     textureCount: 1,
     mutationFraction: 0,
     cullingEnabled: false,
-    compositeBlurRadius: 4,
+    compositeBlurStrength: 2,
   },
   {
     id: 'mask-clip',
@@ -471,6 +634,221 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0,
     cullingEnabled: false,
     maskDepth: 3,
+  },
+  // `mask-clip` with every rect moving each frame: the delta against the row
+  // above is what an effect change alone costs the retained products around
+  // it, which is the shape of every scrolling clip.
+  // TILEMAPS. The one scene shape practically every 2D game has and that no
+  // sprite archetype describes: a world far larger than the viewport, drawn
+  // through a dedicated tile path rather than one node per tile.
+  //
+  // `scrolling-world` is NOT this test. It lays independent sprite nodes over a
+  // world a few viewports across, and its per-node cost is the finding; here the
+  // world is a hundred thousand tiles, the visible window never changes size, and
+  // what is being compared is each arm's tile path - an instanced chunk renderer,
+  // an imperatively painted quad buffer, a shader over a data texture.
+  //
+  // `nodeCount` is the WORLD tile total, so the ladder says how large a map an
+  // arm can hold, not how much of it is on screen. The visible tile count is
+  // fixed by the viewport at every rung, which is exactly what makes the two
+  // questions separable. See `tilemap.ts` for the shared map, camera and edits.
+  {
+    id: 'tilemap-scroll',
+    category: 'tilemaps',
+    crossArm: true,
+    nodeCounts: TILEMAP_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: true,
+    tilemap: 'scroll',
+  },
+  // The same map and the same camera, with visible tile ids replaced every frame.
+  // The delta against the row above is what submitting a tile change costs -
+  // which is where the three tile paths differ most sharply, because a shader
+  // reading a data texture has to re-upload it, a chunked quad buffer has to
+  // repack the affected chunk, and an instanced renderer has to invalidate the
+  // chunk's cached geometry.
+  {
+    id: 'tilemap-edit',
+    category: 'tilemaps',
+    crossArm: true,
+    nodeCounts: TILEMAP_EDIT_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: true,
+    tilemap: 'edit',
+  },
+  // PARTICLES. Two scenes on one draw path, kept apart because they answer
+  // different questions and a figure from one would be read as the other.
+  //
+  // `particles-draw` submits a fixed set of small translucent quads and
+  // simulates nothing, so it measures the submission path alone: an arm's
+  // particle renderer, Pixi's `ParticleContainer`, a Phaser emitter whose
+  // simulation is not stepped. A million quads here is a million quads drawn,
+  // NOT a million interactive sprites, and nothing in the published figure may
+  // suggest otherwise.
+  {
+    id: 'particles-draw',
+    category: 'particles',
+    crossArm: true,
+    nodeCounts: PARTICLE_DRAW_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    particles: 'draw',
+  },
+  // The same draw path with a steady effect on top: every particle ages, moves,
+  // fades and respawns at the end of its life, with the pool held at the node
+  // count. The delta against the row above is what the simulation costs, which
+  // is the half a bare container never pays.
+  {
+    id: 'particles-lifecycle',
+    category: 'particles',
+    crossArm: true,
+    nodeCounts: PARTICLE_LIFECYCLE_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    particles: 'lifecycle',
+  },
+  // LIGHTS OVER A FIXED SPRITE FIELD. The node count is the LIGHT count and the
+  // field beneath it never changes, so the row states what one more light costs
+  // - which is the number the `lightmap` renderer exists to make affordable, and
+  // the one no correctness test can report.
+  //
+  // Two rows rather than one. Unshadowed is the accumulation alone: one
+  // instanced draw over every light, each paying the fill of its own radius.
+  // Shadowed adds a fixed set of occluding boxes, so the delta between the rows
+  // is what the shadow term costs per light - a CPU polar row per light plus one
+  // texture fetch per lit fragment. Averaging the two into one figure would hide
+  // whichever half is the problem, which is the same reason the particle scenes
+  // are two rows.
+  //
+  // EXOJS-ONLY, and the excluded list says so rather than the comparison table
+  // implying a win. No competitor arm ships 2D lighting this scene could be
+  // posed to unmodified; `@pixi/lights` plus `@pixi/layers` would be the fair
+  // opponent and is a dependency decision that has not been taken.
+  {
+    id: 'lights-unshadowed',
+    category: 'lighting',
+    crossArm: false,
+    nodeCounts: LIGHT_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    lights: 'unshadowed',
+  },
+  {
+    id: 'lights-shadowed',
+    category: 'lighting',
+    crossArm: false,
+    nodeCounts: LIGHT_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    lights: 'shadowed',
+  },
+  // A BLUR OVER A FIXED AREA - the one effect every 2D project reaches for, and
+  // the only archetype whose load is an AREA rather than a node count. The scene
+  // is a single textured quad, so nothing about scene traversal enters the
+  // measurement: what scales is the filter's own target passes.
+  //
+  // A TWO-ARM comparison. ExoJS and Pixi both realize the shared contract - a
+  // separable two-pass Gaussian, nine taps, sigma 2, three sigmas of reach - and
+  // a capture of the two agrees to within 18 of 255 on the worst channel of the
+  // worst pixel at every rung, with more than 98 % of pixels inside 8. That is
+  // the stated tolerance: two GPU filters are never bit-identical, and what has
+  // to match is the kernel rather than the rounding.
+  //
+  // Getting there took two corrections on the Pixi side, both in the arm rather
+  // than in either engine, and both worth knowing before the row is read.
+  // `BlurFilter.strength` is a tap SPACING, not a sigma - the weights are a
+  // fixed table - so passing the archetype's sigma through blurred that arm
+  // about twice as far; and the two filters derive their reach from different
+  // multiples of the blur, which showed up as a several-pixel band at the
+  // filtered region's border. See the Pixi adapter's blur scene for both.
+  //
+  // Phaser sits the archetype out. `Filters.Blur` is an iterative step blur on a
+  // camera, parameterized by an offset and a step count rather than by a kernel,
+  // so it cannot be configured to the shared nine taps at sigma 2 - and matching
+  // it would mean writing a kernel of our own rather than measuring Phaser's.
+  {
+    id: 'fx-blur',
+    category: 'render-targets',
+    crossArm: true,
+    nodeCounts: BLUR_HEIGHTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    blurStrength: BLUR_SIGMA,
+  },
+  // HIT TESTING - the one cost a pointer-driven interface pays every frame that
+  // no drawing archetype touches. The scene is a field of interactive
+  // rectangles and the frame's work is a block of point queries against it, so
+  // what scales is each arm's spatial index rather than its renderer.
+  //
+  // All three arms expose a point query, and each is asked the identical
+  // hundred points: ExoJS through `interaction.nodeAt`, Pixi through its event
+  // boundary's `hitTest`, Phaser through `input.hitTest`. Nothing here writes a
+  // replacement search - the arm's own index is the thing under comparison.
+  {
+    id: 'interaction-picking',
+    category: 'interaction',
+    crossArm: true,
+    nodeCounts: PICKING_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    pointerQueriesPerFrame: POINTER_QUERIES_PER_FRAME,
+  },
+  // BOX-TREE LAYOUT - the cost an interface pays when a widget resizes and the
+  // boxes around it have to be resolved again. The scene draws nothing worth
+  // measuring: the frame's work is a block of layout passes over a tree of
+  // nested horizontal and vertical boxes, each pass changing a tenth of the leaf
+  // widths and alternating the viewport the root resolves against.
+  //
+  // A TWO-ARM comparison, and that is a capability finding rather than an
+  // omission. ExoJS resolves the tree through its own `Stack`, Pixi through
+  // `@pixi/layout` over Yoga. Phaser 4 ships no layout engine at all - its
+  // `Actions.GridAlign` places objects on a fixed raster and re-solves nothing -
+  // and Excalibur ships none either, so neither arm has a public path that
+  // answers this question. Building one inside the harness would measure the
+  // harness.
+  //
+  // The two algorithms are allowed to differ; the shared scope is what is
+  // fixed, and `layoutDigest` compares the resolved rectangles outside the
+  // timed bracket so a divergence surfaces as a failed check rather than as a
+  // faster arm.
+  {
+    id: 'ui-layout-update',
+    category: 'interaction',
+    crossArm: true,
+    nodeCounts: UI_WIDGET_COUNTS,
+    nestingDepth: 3,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    layoutPassesPerFrame: LAYOUT_PASSES_PER_FRAME,
+  },
+  {
+    id: 'mask-clip-animated',
+    category: 'render-targets',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    maskDepth: 3,
+    maskMotion: true,
   },
 ];
 

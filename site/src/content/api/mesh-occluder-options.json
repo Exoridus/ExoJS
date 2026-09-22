@@ -1,0 +1,125 @@
+{
+  "title": "MeshOccluderOptions",
+  "description": "Tuning for MeshOccluder.",
+  "symbol": "MeshOccluderOptions",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Tuning for MeshOccluder."
+      ],
+      "importLine": "import { MeshOccluderOptions } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "node",
+          "signature": "node?: OccluderPlacement",
+          "signatureTokens": [
+            {
+              "text": "node",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderPlacement",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Node whose world transform places the outline. Defaults to the mesh itself, which is what makes a moving mesh move its own shadow."
+        },
+        {
+          "name": "simplify",
+          "signature": "simplify?: number",
+          "signatureTokens": [
+            {
+              "text": "simplify",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How far, in local units, the simplified outline may drift from the extracted one. 0 only drops points that lie exactly on the line between their neighbours, which is what a tessellated rectangle is full of. Defaults to 0."
+        },
+        {
+          "name": "weld",
+          "signature": "weld?: number",
+          "signatureTokens": [
+            {
+              "text": "weld",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance below which two vertices count as the same corner. A mesh without an index stream repeats its corners per triangle and has no shared edges until they are welded. Defaults to 1e-4."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/MeshOccluder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/MeshOccluder.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/MeshOccluder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/MeshOccluder.ts"
+}

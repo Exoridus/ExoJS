@@ -42,6 +42,7 @@
  * @internal Test/perf-only.
  */
 import { Container } from '#rendering/Container';
+import { BloomFilter } from '#rendering/filters/BloomFilter';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
@@ -184,21 +185,33 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
 
   // ── DRAWS per filter pass: pass count held at one ────────────────────────
   {
-    id: 'filter/blur-q1 100',
-    rationale: 'BlurFilter quality 1 — one pass, six draws. Varies draws per pass while the pass and target counts match color/100.',
+    id: 'filter/blur-narrow 100',
+    rationale: 'A narrow BlurFilter — two passes, one draw each. Varies the kernel width while pass and target counts stay fixed.',
     warmup: WARMUP,
     build: () =>
       buildDecoratedSprites(100, sprite => {
-        sprite.addFilter(new BlurFilter({ radius: 2, quality: 1 }));
+        sprite.addFilter(new BlurFilter({ strength: 1 }));
       }),
   },
   {
-    id: 'filter/blur-q3 100',
-    rationale: 'BlurFilter quality 3 — one pass, fourteen draws. If cost tracks draws rather than passes, this row says so.',
+    id: 'filter/blur-wide 100',
+    rationale: 'A wider BlurFilter — the same two passes and draws, twice the taps. If cost tracks fragments rather than draws, this row says so.',
     warmup: WARMUP,
     build: () =>
       buildDecoratedSprites(100, sprite => {
-        sprite.addFilter(new BlurFilter({ radius: 4, quality: 3 }));
+        sprite.addFilter(new BlurFilter({ strength: 2 }));
+      }),
+  },
+
+  // ── PASSES per filter: one filter, a whole chain of targets ─────────────
+  {
+    id: 'filter/bloom 100',
+    rationale:
+      'A BloomFilter — one filter that borrows a chain of half-resolution targets and issues an extraction, three blits and a two-sweep blur per node. The deepest single filter there is, and the row that says whether the pool absorbs a chain or the chain allocates.',
+    warmup: WARMUP,
+    build: () =>
+      buildDecoratedSprites(100, sprite => {
+        sprite.addFilter(new BloomFilter({ strength: 4, levels: 2 }));
       }),
   },
 
@@ -287,8 +300,9 @@ export const FILTERED_NODE_COUNT: Readonly<Record<string, number>> = {
   'filter/color 100 margin': 100,
   'filter/stack2 100': 100,
   'filter/stack3 100': 100,
-  'filter/blur-q1 100': 100,
-  'filter/blur-q3 100': 100,
+  'filter/blur-narrow 100': 100,
+  'filter/blur-wide 100': 100,
+  'filter/bloom 100': 100,
   'filter/container 1000': 1,
   'filter/container-cached 1000': 1,
 };

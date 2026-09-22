@@ -4,10 +4,12 @@ import { Code } from 'astro:components';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import ExampleThumb from '../../components/ExampleThumb.astro';
 import { GuideExamplePreview } from '../../components/GuideExamplePreview';
+import InstallCommand from '../../components/InstallCommand.astro';
 import { appInfo } from '../../lib/app-info';
 import { getAllExamples, getExamplesForChapter } from '../../lib/examples-catalog';
 import { getExampleExecutionSource } from '../../lib/example-sources';
 import { GUIDE_PARTS } from '../../lib/guide-structure';
+import { SHIKI_THEMES } from '../../lib/shiki-theme';
 
 interface Props {
     locale: 'en' | 'de';
@@ -16,49 +18,58 @@ interface Props {
 const { locale } = Astro.props;
 const localeBase = `${import.meta.env.BASE_URL}${locale}/`;
 
-const majorVersion = Number.parseInt(appInfo.version.split('.')[0] ?? '0', 10);
-const releaseStage = Number.isFinite(majorVersion) && majorVersion < 1 ? 'Pre-1.0' : 'Stable';
 const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
 const demoCount = getAllExamples().length;
 
-// Live hero example — an ambient particle showcase that runs everywhere
+// Live hero example - an ambient lighting showcase that runs everywhere
 // (WebGL2, no input or audio gesture needed) so the landing shows the real
 // engine rendering in the page, not a video.
-const heroExample = getExamplesForChapter('particles').find(entry => entry.slug === 'bonfire');
-const heroExampleTitle = heroExample?.title ?? 'Bonfire';
-const heroExampleSource = getExampleExecutionSource('particles', 'bonfire');
+const heroExample = getExamplesForChapter('lighting').find(entry => entry.slug === 'many-lights');
+const heroExampleTitle = heroExample?.title ?? 'Many Lights';
+const heroExampleSource = getExampleExecutionSource('lighting', 'many-lights');
 
 const heroSnippet = `import { Application, Color, Scene, Sprite } from '@codexo/exojs';
+import { Lighting, LitMaterial, Normals, PointLight } from '@codexo/exojs-lighting';
 
-class HeroScene extends Scene {
-  private ship!: Sprite;
+const lighting = new Lighting();
+const lights = Array.from({ length: 24 }, (_, i) => {
+  const color = Color.fromCss(\`hsl(\${i * 15} 80% 60%)\`);
+  return new PointLight({ radius: 190, color });
+});
 
+class LitScene extends Scene {
   async load(loader) {
-    this.ship = new Sprite(await loader.load('ship.png'));
+    const stone = await loader.load('stone.png');
+    const normalMap = await loader.load('stone-normal.png');
+    const material = new LitMaterial({ lighting, normals: Normals.map(normalMap) });
+
+    for (let i = 0; i < 112; i++) {
+      const tile = new Sprite(stone);
+      tile.setPosition((i % 14) * 96, Math.floor(i / 14) * 96);
+      tile.material = material;
+      this.root.addChild(tile);
+    }
   }
 
   init() {
-    const { width, height } = this.app.canvas;
-    this.ship.setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.systems.add(lighting);
+    lights.forEach(light => lighting.add(light));
+  }
 
-    // Pulse and spin — two tweens running in parallel.
-    this.app.tweens.create(this.ship.scale)
-      .to({ x: 1.4, y: 1.4 }, 0.9).yoyo(true).repeat(-1).start();
-    this.app.tweens.create(this.ship)
-      .to({ rotation: Math.PI }, 1.8).yoyo(true).repeat(-1).start();
+  update() {
+    const t = this.app.activeSeconds;
+    lights.forEach((light, i) => {
+      const angle = t * (0.25 + i * 0.08) + i;
+      light.setPosition(640 + Math.cos(angle) * 420, 360 + Math.sin(angle * 1.37) * 260);
+    });
   }
 
   draw(context) {
-    context.render(this.ship);
+    context.render(this.root);
   }
 }
 
-const app = new Application({
-  canvas: { width: 960, height: 540 },
-  clearColor: Color.black,
-});
-
-app.start(new HeroScene());`;
+new Application({ canvas: { width: 1280, height: 720 } }).start(new LitScene());`;
 
 const quickstartSnippet = `import { Application, Scene } from '@codexo/exojs';
 
@@ -82,7 +93,7 @@ const examples = [
     },
     {
         title: 'Chromatic Aberration',
-        description: 'Stack two filters on a layer for analog feel.',
+        description: 'Split the red and blue channels apart with a fragment-shader filter.',
         chapter: 'Filters',
         tags: ['filter', 'blend'],
         anim: 'chroma' as const,
@@ -105,12 +116,12 @@ const examples = [
         href: `${localeBase}playground/?example=sprites-textures/spritesheet-frames`,
     },
     {
-        title: 'Easing Curves',
-        description: 'Tween any numeric property with built-in easings.',
-        chapter: 'Tweens & Animation',
-        tags: ['tween', 'easing'],
-        anim: 'easing' as const,
-        href: `${localeBase}playground/?example=tweens-animation/easing-curves`,
+        title: 'Many Lights',
+        description: 'Up to 48 point lights over a normal-mapped floor, still one batch.',
+        chapter: 'Lighting',
+        tags: ['lighting', 'normal-map'],
+        anim: 'lights' as const,
+        href: `${localeBase}playground/?example=lighting/many-lights`,
     },
     {
         title: 'Camera And View',
@@ -133,10 +144,6 @@ const examples = [
         <section class="hero">
             <div class="hero-inner">
                 <div class="hero-copy">
-                    <span class="hero-eyebrow">
-                        <span class="pip"><span class="dot"></span>v{appInfo.version}</span>
-                        <span>{releaseStage} / TypeScript / {appInfo.license}</span>
-                    </span>
                     <h1><span class="nowrap">A TypeScript-first</span><br />2D runtime for<br /><span class="hero-token-wrap"><span class="hero-token" id="hero-token">arcade games</span></span></h1>
                     <p class="lead">
                         ExoJS gives you scenes, sprites, graphics, input, audio, effects, assets, and rendering primitives — without turning your project into a full game-engine workflow.
@@ -145,16 +152,22 @@ const examples = [
                         <a class="btn btn-primary" href={`${localeBase}guide/`}>Read the Guide</a>
                         <a class="btn btn-ghost" href={`${localeBase}playground/`}>Open Playground</a>
                         <a class="btn btn-link" href={`${localeBase}api/`}>Browse API</a>
-                        <span class="meta">npm i @codexo/exojs</span>
+                    </div>
+                    <div class="hero-install">
+                        <InstallCommand />
+                        <a class="hero-download" href={`${appInfo.repositoryUrl}/releases/latest/download/exojs-full.zip`} rel="noopener">
+                            <span class="hero-download-label">Or download the latest release</span>
+                            <span class="hero-download-note">Full ZIP, no build step</span>
+                        </a>
                     </div>
                 </div>
                 <div class="hero-snippet">
                     <div class="head">
                         <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
                         <span class="file">game.ts</span>
-                        <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">tweens</span></span>
+                        <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">lighting</span></span>
                     </div>
-                    <Code code={heroSnippet} lang="ts" themes={{ light: 'github-light', dark: 'one-dark-pro' }} />
+                    <Code code={heroSnippet} lang="ts" themes={SHIKI_THEMES} />
                 </div>
             </div>
         </section>
@@ -178,15 +191,15 @@ const examples = [
             <div class="live-hero-stage">
                 <GuideExamplePreview
                     client:visible
-                    chapter="particles"
-                    slug="bonfire"
+                    chapter="lighting"
+                    slug="many-lights"
                     title={heroExampleTitle}
                     sourceCode={heroExampleSource}
                     capabilities={heroExample?.capabilities ?? []}
                 />
             </div>
             <div class="live-hero-actions">
-                <a class="btn btn-ghost" href={`${localeBase}playground/?example=particles/bonfire`}>Open in Playground</a>
+                <a class="btn btn-ghost" href={`${localeBase}playground/?example=lighting/many-lights`}>Open in Playground</a>
                 <a class="btn btn-link" href={`${localeBase}playground/`}>Browse all {demoCount} demos</a>
             </div>
         </section>
@@ -212,6 +225,14 @@ const examples = [
                 <h4>Filters & particles</h4>
                 <p>Post-processing, bloom, blur, particles — composable and GPU-accelerated.</p>
             </article>
+        </div>
+
+        <div class="bench-teaser">
+            <p>
+                Measured against Pixi, Phaser, Excalibur, matter.js, planck and Rapier on one reference machine — roughly 2x ahead of Pixi on WebGPU filter
+                chains, and about 7x behind it on masked clipping, both published with the counters behind them.
+            </p>
+            <a class="btn btn-ghost" href={`${localeBase}benchmarks/`}>See the benchmarks</a>
         </div>
 
         <section class="section">
@@ -249,19 +270,9 @@ const examples = [
                     <a class="btn btn-ghost" href={`${localeBase}guide/getting-started/setup/`}>Open Getting Started</a>
                 </div>
                 <div>
-                    <div class="install-tabs">
-                        <button type="button" data-active="true">npm</button>
-                        <button type="button">pnpm</button>
-                        <button type="button">yarn</button>
-                        <button type="button">bun</button>
-                    </div>
-                    <div class="install-line">
-                        <span class="dollar">$</span>
-                        <span><span class="key">npm</span> install <span class="pkg">@codexo/exojs</span></span>
-                        <span class="copy">COPY</span>
-                    </div>
+                    <InstallCommand />
                     <div class="snippet">
-                        <Code code={quickstartSnippet} lang="ts" themes={{ light: 'github-light', dark: 'github-dark' }} />
+                        <Code code={quickstartSnippet} lang="ts" themes={SHIKI_THEMES} />
                     </div>
                 </div>
             </div>
@@ -378,39 +389,6 @@ const examples = [
         }
     }
 
-    .hero-eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--s-2);
-        margin-bottom: var(--s-5);
-        padding: 4px 10px 4px 4px;
-        border-radius: var(--r-pill);
-        background: var(--bg-elevated);
-        border: 1px solid var(--line-soft);
-        font-size: 12px;
-        color: var(--fg-muted);
-        font-family: var(--f-mono);
-    }
-
-    .hero-eyebrow .pip {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 2px 8px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        border-radius: var(--r-pill);
-        font-weight: 600;
-    }
-
-    .hero-eyebrow .dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-soft);
-    }
-
     .hero h1 {
         font-size: clamp(40px, 5.4vw, 68px);
         font-weight: 600;
@@ -474,11 +452,42 @@ const examples = [
         align-items: center;
     }
 
-    .hero-cta .meta {
-        color: var(--fg-faint);
+    .hero-install {
+        margin-top: var(--s-5);
+        max-width: 420px;
+        display: grid;
+        gap: var(--s-3);
+        justify-items: start;
+    }
+
+    /*
+     * The archive itself, through GitHub's `/releases/latest/download/<asset>`
+     * redirect, so the button downloads instead of landing on release notes.
+     * It resolves against whatever release is newest, which is why the release
+     * workflow uploads a second copy of the Full ZIP under a version-less name:
+     * a URL carrying the version would have to be rebuilt for every release,
+     * and the version in `package.json` is the one being developed and is ahead
+     * of the last release for most of a cycle.
+     */
+    .hero-download {
+        display: grid;
+        gap: 2px;
+        text-decoration: none;
+        color: var(--fg-muted);
         font-size: 13px;
-        font-family: var(--f-mono);
-        margin-left: var(--s-3);
+    }
+
+    .hero-download-label {
+        color: var(--accent);
+        font-weight: 500;
+    }
+
+    .hero-download:hover .hero-download-label {
+        text-decoration: underline;
+    }
+
+    .hero-download-note {
+        color: var(--fg-faint);
     }
 
     .home .btn {
@@ -592,8 +601,10 @@ const examples = [
         border-radius: 0 !important;
         background: transparent !important;
         box-shadow: none !important;
-        font-size: 13px;
-        line-height: 1.7;
+        font-size: 12.5px;
+        line-height: 1.6;
+        overflow-x: hidden !important;
+        mask-image: linear-gradient(90deg, #000 92%, transparent);
     }
 
     .live-hero {
@@ -661,6 +672,25 @@ const examples = [
         max-width: 1180px;
         margin: var(--s-10) auto 0;
         padding: 0 var(--s-7);
+    }
+
+    .bench-teaser {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-4);
+        max-width: 1180px;
+        margin: var(--s-6) auto 0;
+        padding: var(--s-5) var(--s-7);
+    }
+
+    .bench-teaser p {
+        margin: 0;
+        flex: 1 1 32ch;
+        max-width: 74ch;
+        color: var(--fg-muted);
+        line-height: 1.6;
     }
 
     .cap {
@@ -854,62 +884,6 @@ const examples = [
         margin: 0 0 var(--s-5);
         color: var(--fg-muted);
         max-width: 460px;
-    }
-
-    .install-tabs {
-        display: flex;
-        gap: 4px;
-        padding: 4px;
-        background: var(--bg-canvas);
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-2);
-        width: max-content;
-        margin-bottom: var(--s-3);
-    }
-
-    .install-tabs button {
-        padding: 4px 10px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-family: var(--f-mono);
-        color: var(--fg-muted);
-        border: 0;
-        background: transparent;
-    }
-
-    .install-tabs button[data-active='true'] {
-        background: var(--bg-elevated);
-        color: var(--fg);
-    }
-
-    .install-line {
-        display: flex;
-        align-items: center;
-        gap: var(--s-2);
-        background: var(--bg-code);
-        border: 1px solid var(--line);
-        border-radius: var(--r-2);
-        padding: 10px 14px;
-        font-family: var(--f-mono);
-        font-size: 13px;
-        color: oklch(92% 0.02 245);
-    }
-
-    .install-line .dollar {
-        color: oklch(70% 0.012 245);
-    }
-
-    .install-line .copy {
-        margin-left: auto;
-        color: oklch(70% 0.012 245);
-    }
-
-    .install-line .key {
-        color: oklch(78% 0.16 95);
-    }
-
-    .install-line .pkg {
-        color: oklch(80% 0.14 30);
     }
 
     .snippet {

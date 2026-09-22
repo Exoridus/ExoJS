@@ -1,7 +1,8 @@
 import { Color } from '#core/Color';
 import { DirtyChannel } from '#core/nodeDirtyIndex';
-import { registerRetainedRenderRoot, SceneNode, unregisterRetainedRenderRoot } from '#core/SceneNode';
+import { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
+import type { Stage } from '#core/Stage';
 import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import type { Circle } from '#math/Circle';
@@ -42,6 +43,9 @@ interface RenderNodeSpriteLike extends Drawable {
   width: number;
   height: number;
   setTexture(texture: RenderTexture | null): this;
+  /** Extent of the region the sprite samples, for detecting a texture resized in place. */
+  readonly textureFrame: { readonly width: number; readonly height: number };
+  resetTextureFrame(): this;
   setBlendMode(blendMode: BlendModes): this;
   setTint(color: Color): this;
   setPosition(x: number, y: number): this;
@@ -489,7 +493,7 @@ export abstract class RenderNode extends SceneNode {
       }
     }
 
-    this.invalidateCache();
+    this._invalidateEffect();
   }
 
   /**
@@ -526,7 +530,7 @@ export abstract class RenderNode extends SceneNode {
 
     if (this._mask !== mask) {
       this._mask = mask;
-      this.invalidateCache();
+      this._invalidateEffect();
     }
   }
 
@@ -712,14 +716,41 @@ export abstract class RenderNode extends SceneNode {
    */
   public _retainedRootRepresentation(): RetainedRootRepresentation {
     if (this._retainedRoot === null) {
-      this._retainedRoot = new RetainedRootRepresentation();
-      // Arm the transform-move seam: while at least one representation is live,
-      // own-transform mutations walk their ancestor chain and offer themselves
-      // to every root above. Balanced by destroy().
-      registerRetainedRenderRoot();
+      this._retainedRoot = new RetainedRootRepresentation(this);
+      // Arm the transform-move seam on this tree's index: while at least one
+      // representation is live, own-transform mutations below the root record
+      // themselves for it. Balanced by destroy() and carried to another tree by
+      // _setStage().
+      this._dirtyIndex().retainConsumer();
     }
 
     return this._retainedRoot;
+  }
+
+  /**
+   * @internal - hand this node's retained-root registration to the index of the
+   * tree it is joining. A representation outlives any single attachment, so the
+   * arming has to travel with the node; leaving it on the old index would arm
+   * an application whose consumers are gone and leave the new one unarmed,
+   * which is the one direction that renders stale.
+   */
+  public override _setStage(stage: Stage | null): void {
+    if (this._stage === stage || this._retainedRoot === null) {
+      super._setStage(stage);
+
+      return;
+    }
+
+    const previous = this._dirtyIndex();
+
+    super._setStage(stage);
+
+    const next = this._dirtyIndex();
+
+    if (next !== previous) {
+      previous.releaseConsumer();
+      next.retainConsumer();
+    }
   }
 
   /** Part of the renderer SDK contract for extension renderers. */
@@ -747,7 +778,7 @@ export abstract class RenderNode extends SceneNode {
   public set cacheAsTexture(cacheAsTexture: boolean) {
     if (this._cacheAsTexture !== cacheAsTexture) {
       this._cacheAsTexture = cacheAsTexture;
-      this.invalidateCache();
+      this._invalidateEffect();
 
       if (!cacheAsTexture) {
         this._destroyCacheTexture();
@@ -775,7 +806,7 @@ export abstract class RenderNode extends SceneNode {
   public set cacheResolution(cacheResolution: TargetResolution) {
     if (this._cacheResolution !== cacheResolution) {
       this._cacheResolution = cacheResolution;
-      this.invalidateCache();
+      this._invalidateEffect();
     }
   }
 
@@ -785,7 +816,7 @@ export abstract class RenderNode extends SceneNode {
     // state reaches back here without the application having to re-add it.
     filter._attachOwner(this);
 
-    return this.invalidateCache();
+    return this._invalidateEffect();
   }
 
   public removeFilter(filter: Filter): this {
@@ -794,7 +825,7 @@ export abstract class RenderNode extends SceneNode {
     if (index !== -1) {
       this._filters!.splice(index, 1);
       filter._detachOwner(this);
-      this.invalidateCache();
+      this._invalidateEffect();
     }
 
     return this;
@@ -826,7 +857,7 @@ export abstract class RenderNode extends SceneNode {
     if (this._filters !== null && this._filters.length > 0) {
       this._detachFilterOwnership();
       this._filters.length = 0;
-      this.invalidateCache();
+      this._invalidateEffect();
     }
 
     return this;
@@ -835,6 +866,21 @@ export abstract class RenderNode extends SceneNode {
   public invalidateCache(): this {
     this._cacheDirty = true;
     this._markContentDirty();
+
+    return this;
+  }
+
+  /**
+   * Cache invalidation for a change to this node's effect - mask, filters,
+   * texture cache. Content-dirties exactly as {@link invalidateCache} does, so
+   * every consumer that recorded this node as ordinary content still rebuilds;
+   * the difference is the channel it marks, which is what lets a product that
+   * holds this node as a live entry keep replaying: the effect is never part
+   * of the product, it is read live on every dispatch.
+   */
+  private _invalidateEffect(): this {
+    this._cacheDirty = true;
+    this._markContentDirty(DirtyChannel.Effect);
 
     return this;
   }
@@ -988,7 +1034,7 @@ export abstract class RenderNode extends SceneNode {
     if (this._retainedRoot !== null) {
       this._retainedRoot.dispose();
       this._retainedRoot = null;
-      unregisterRetainedRenderRoot();
+      this._dirtyIndex().releaseConsumer();
     }
     this._cacheBounds?.destroy();
     this._cacheBounds = null;
@@ -1067,6 +1113,16 @@ export abstract class RenderNode extends SceneNode {
     const sprite = this._getCacheSprite();
 
     sprite.setTexture(texture).setBlendMode(blendMode).setTint(Color.white).setPosition(x, y).setRotation(0).setScale(1, 1);
+
+    // An effect texture is RESIZED IN PLACE when the barrier's bounds change -
+    // a filter whose reach grew, a subtree that got bigger - and `setTexture`
+    // is a no-op for a texture the sprite already holds, so the frame it
+    // samples would keep the previous texture's size. The composite would then
+    // read the new texture through the old UVs: the picture is stretched and
+    // cut off at the old extent rather than merely stale.
+    if (sprite.textureFrame.width !== texture.width || sprite.textureFrame.height !== texture.height) {
+      sprite.resetTextureFrame();
+    }
 
     sprite.width = width;
     sprite.height = height;

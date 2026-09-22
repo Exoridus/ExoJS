@@ -24,11 +24,11 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Shader } from '#rendering/shader/Shader';
 import { spriteVertexGlsl } from '#rendering/sprite/materialSources';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
@@ -41,7 +41,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { type RgbaTuple } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader wiring - substitute the REAL sprite.vert/frag (the snap logic under
+// WebGl2Shader wiring - substitute the REAL sprite.vert/frag (the snap logic under
 // test) via `?raw`; Mesh/Text stay mocked because `initialize()` eagerly
 // compiles every registered renderer's program.
 // ---------------------------------------------------------------------------
@@ -202,7 +202,7 @@ describe('WebGL2 GPU pixel snapping — Sprite position mode', () => {
     // Fragment samples the base texture unchanged, so the coverage/edge is the
     // same red quad as Case 1 - only the vertex path (custom vs default) differs.
     const material = new SpriteMaterial({
-      shader: new ShaderSource({
+      shader: new Shader({
         glsl: {
           vertex: spriteVertexGlsl,
           fragment: `#version 300 es

@@ -1,5 +1,5 @@
 import type { Material } from '@codexo/exojs';
-import { ShaderSource } from '@codexo/exojs';
+import { Shader } from '@codexo/exojs';
 
 import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
@@ -123,7 +123,7 @@ export class RibbonParticles extends ParticleRenderMode {
    */
   public get material(): Material {
     this._material ??= new ParticleMaterial({
-      shader: new ShaderSource({
+      shader: new Shader({
         glsl: { vertex: vertexSource, fragment: fragmentSource },
         wgsl: ribbonParticleWgsl,
       }),

@@ -25,7 +25,7 @@ const SCANNER = 'scripts/check-inline-source.ts';
 const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
 const FIXTURE_DIRECTORY = 'test/ci/inline-source-fixtures';
 /**
- * Shader detection is scoped to engine-owned code, so a shader fixture only
+ * WebGl2Shader detection is scoped to engine-owned code, so a shader fixture only
  * proves anything from inside that scope. It lives under `src/` for the duration
  * of the run and is removed again; the name says what it is to anyone who finds
  * one left behind by an interrupted run.

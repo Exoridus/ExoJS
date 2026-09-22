@@ -189,7 +189,7 @@ export enum IndexElementTypes {
 }
 
 /**
- * GLSL primitive type tokens used to describe {@link ShaderAttribute} and {@link ShaderUniform} data types.
+ * GLSL primitive type tokens used to describe {@link WebGl2ShaderAttribute} and {@link WebGl2ShaderUniform} data types.
  * Values are WebGL2 GLenum constants returned by `gl.getActiveAttrib` / `gl.getActiveUniform`.
  */
 // @eslint-ignore

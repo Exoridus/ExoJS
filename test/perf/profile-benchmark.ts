@@ -6,8 +6,8 @@
  * writes test/perf/results/findings.md with Top-3-Wins recommendations.
  *
  * Run via:
- *   pnpm perf:profile          (no GC forcing)
- *   pnpm perf:profile:gc       (--expose-gc for accurate memory deltas)
+ *   pnpm perf profile          (no GC forcing)
+ *   pnpm perf profile:gc       (--expose-gc for accurate memory deltas)
  */
 
 import { execSync } from 'node:child_process';

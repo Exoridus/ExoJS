@@ -68,7 +68,10 @@ export function createExtensionBuildOptions(opts) {
     external: isExternal,
     transform: { define: defines },
     resolve: sourceCondition ? { conditionNames: [sourceCondition, 'browser', 'module', 'import', 'default'], extensions: ['.ts', '.js'] } : undefined,
-    plugins: [createShaderPlugin(), createWorkletPlugin(), ...codecovPlugins],
+    // Shader text ships inside string literals, which no JavaScript minifier
+    // descends into, so its comments are payload every consumer downloads:
+    // stripped here, as the core's minified bundles strip them.
+    plugins: [createShaderPlugin({ minify: true }), createWorkletPlugin(), ...codecovPlugins],
     output: {
       dir: 'dist/esm',
       format: 'es',

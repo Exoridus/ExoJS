@@ -1,0 +1,21 @@
+{
+  "name": "exo-top-down",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@codexo/exojs": "latest",
+    "@codexo/exojs-pathfinding": "latest",
+    "@codexo/exojs-physics": "latest",
+    "@codexo/exojs-tiled": "latest",
+    "@codexo/exojs-tilemap": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "vite": "^6.0.0"
+  }
+}

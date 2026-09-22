@@ -40,6 +40,8 @@ export interface Lane {
   local?: 'browser' | 'gate';
   /** Runs on CI only: its assertions hold for the runner's software rasteriser, not a developer's GPU. */
   ciOnly?: boolean;
+  /** Lowest output mode this lane permits; useful for reportable measurements. */
+  minimumOutput?: 'compact' | 'normal' | 'silent' | 'verbose';
   /** Emits `test-results/<id>.junit.xml` for the skip budget and Codecov. */
   junit?: boolean;
   /** Pull requests only. */
@@ -47,7 +49,7 @@ export interface Lane {
   timeoutMinutes?: number;
 }
 
-const junit = (id: string): string => `--reporter=default --reporter=junit --outputFile.junit=./test-results/${id}.junit.xml`;
+const junit = (id: string): string => `--reporter=minimal --reporter=junit --outputFile.junit=./test-results/${id}.junit.xml`;
 
 export const LANES: readonly Lane[] = [
   { id: 'typecheck', stage: 'gates', when: 'typecheck', run: 'pnpm gates typecheck', local: 'gate' },
@@ -58,11 +60,11 @@ export const LANES: readonly Lane[] = [
     id: 'unit',
     stage: 'test',
     when: 'unit',
-    run: 'pnpm test && pnpm test:alloc',
+    run: 'pnpm test && pnpm test:alloc && pnpm test:physics-perf',
     // The WGSL tests validate through Naga when it is on PATH and skip
     // otherwise; CI installs it and refuses the skip.
-    ciRun: `EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc`,
-    coverageRun: `EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc`,
+    ciRun: `EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
+    coverageRun: `EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
     naga: true,
     junit: true,
   },
@@ -70,12 +72,12 @@ export const LANES: readonly Lane[] = [
     id: 'webgl',
     stage: 'test',
     when: 'browserWebgl2',
-    run: 'pnpm test:browser:webgl && pnpm test:browser:build && pnpm test:browser:assets',
-    ciRun: `pnpm test:browser:webgl ${junit('webgl')} && pnpm test:browser:build && pnpm test:browser:assets`,
+    run: 'pnpm test:browser:webgl && pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core',
+    ciRun: `pnpm test:browser:webgl ${junit('webgl')} && pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core`,
     coverageRun:
       `pnpm test:browser:webgl ${junit('webgl')} --coverage --coverage.reporter=lcov --coverage.reporter=text-summary ` +
       '--coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0 ' +
-      '&& pnpm test:browser:build && pnpm test:browser:assets',
+      '&& pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core',
     browser: 'chromium',
     local: 'browser',
     junit: true,
@@ -133,9 +135,15 @@ export const LANES: readonly Lane[] = [
     id: 'bench',
     stage: 'test',
     when: 'benchStructural',
-    run: 'pnpm gate:bench:structural',
+    // The harness typecheck needs the competitor libraries (the adapters are
+    // typed against them, which is what catches an upstream API change on a
+    // version bump), so it lives here, path-gated, rather than in
+    // `typecheck:packages`. The harness's unit tests need none of them and run
+    // in the ordinary `test` project list.
+    run: 'pnpm typecheck:bench && pnpm gate:bench:structural',
     browser: 'chromium',
     local: 'browser',
+    minimumOutput: 'normal',
     timeoutMinutes: 30,
   },
 
@@ -143,11 +151,7 @@ export const LANES: readonly Lane[] = [
     id: 'package',
     stage: 'verify',
     when: 'packageVerify',
-    run:
-      'pnpm size && pnpm size:summary && pnpm verify:exports && pnpm verify:declaration-imports && pnpm verify:lockstep && pnpm verify:release-matrix ' +
-      '&& pnpm pack --dry-run && pnpm --filter "@codexo/exojs-build" --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" ' +
-      '--filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-tilemap-physics" --filter "@codexo/exojs-lighting" --filter "@codexo/exojs-pathfinding" --filter "@codexo/exojs-audio-fx" ' +
-      '--filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" pack --dry-run && pnpm verify:publint',
+    run: 'pnpm size && pnpm size:summary && pnpm verify:exports && pnpm verify:declaration-imports && pnpm verify:lockstep && pnpm verify:release-matrix && pnpm verify:publish',
     dist: true,
   },
   {
@@ -156,6 +160,7 @@ export const LANES: readonly Lane[] = [
     when: 'releaseDryRun',
     run: 'pnpm release:prepare --build --skip-zip',
     pullRequestOnly: true,
+    minimumOutput: 'normal',
   },
   {
     id: 'create-exo-app',
@@ -222,6 +227,7 @@ const ALL_AREAS: LaneAreas = {
   benchStructural: true,
   release: true,
   guides: true,
+  siteData: true,
   createExoApp: true,
 };
 

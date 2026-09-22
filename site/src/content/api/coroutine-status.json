@@ -1,0 +1,95 @@
+{
+  "title": "CoroutineStatus",
+  "description": "Lifecycle of a Coroutine. `queued` until its first step, `running` from then on, and exactly one of the three terminal states afterwards.",
+  "symbol": "CoroutineStatus",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Lifecycle of a Coroutine. `queued` until its first step, `running` from then on, and exactly one of the three terminal states afterwards."
+      ],
+      "importLine": "import { CoroutineStatus } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "CoroutineStatus",
+          "signature": "\"cancelled\" | \"done\" | \"failed\" | \"queued\" | \"running\"",
+          "signatureTokens": [
+            {
+              "text": "\"cancelled\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"done\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"failed\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"queued\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"running\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/CoroutineSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/CoroutineSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+}

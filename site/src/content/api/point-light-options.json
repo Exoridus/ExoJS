@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -51,7 +51,57 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Light colour. The instance is stored by reference, so mutating it after construction is picked up on the next LightingSystem.commit. Defaults to opaque white; alpha is ignored."
+          "description": "Light colour. Alpha is ignored. Defaults to opaque white."
+        },
+        {
+          "name": "cookie",
+          "signature": "cookie?: Texture",
+          "signatureTokens": [
+            {
+              "text": "cookie",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Texture the light is shone through, sampled across its own bounding square - a window cross, leaf shade, a stained-glass pattern. Multiplied into the light, so a transparent part of the cookie casts nothing and an opaque white one changes nothing. The square maps onto the texture's full 0..1, turns with the light and scales with its radius, so the pattern stays fixed to the lamp rather than to the world. Wrapping is the texture's own business; a cookie meant to end at its edge wants ClampToEdge. Read by the lightmap renderer. forward shades inside the sprite stage, where a texture per light cannot be reached in one draw, and ignores it. Lights sharing a cookie share a draw, so a scene with three distinct cookies costs three draws rather than one - still one draw per texture, never one per light."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled?: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the light contributes at all. Defaults to true."
         },
         {
           "name": "height",
@@ -76,7 +126,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Height above the sprite plane, in pixels. Drives how grazing the light direction is: small values rake across the surface and exaggerate the normal map, large values flatten it out. Defaults to 64."
+          "description": "Height above the sprite plane, in pixels. Drives how grazing the light direction is: small values rake across the surface and exaggerate a normal map, large values flatten it out. Defaults to 64."
         },
         {
           "name": "intensity",
@@ -129,11 +179,11 @@
           "description": "Distance in pixels at which the light contributes nothing. Defaults to 256."
         },
         {
-          "name": "x",
-          "signature": "x?: number",
+          "name": "softness",
+          "signature": "softness?: number",
           "signatureTokens": [
             {
-              "text": "x",
+              "text": "softness",
               "kind": "name"
             },
             {
@@ -151,32 +201,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space x, in pixels."
-        },
-        {
-          "name": "y",
-          "signature": "y?: number",
-          "signatureTokens": [
-            {
-              "text": "y",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "World-space y, in pixels."
+          "description": "How soft the shadows this light casts are, in 0..1. 0 is the hardest edge the renderer can draw and 1 the widest. Defaults to 0.25. It means a different quantity in each renderer, and the difference is visible in a scene with depth: - lightmap reads it as FILTER WIDTH. The light stays a point, and the shadow term is averaged over a band of its angular shadow row, at most three percent of a full turn. The edge widens with distance from the LIGHT rather than from the wall, and it does not behave like a shadow cast by a source of that size. - radiance reads it as SOURCE SIZE. The emitter is given a width, and the penumbra follows from the geometry: it grows with the distance between the wall and what the shadow falls on. Neither adds a pass, so it is free of extra draws and can differ per light. Under lightmap the filter samples every bin under its kernel and spends between 7 and 23 texture fetches per shadowed fragment doing it, which also bounds the kernel at ten bins either side - see LightingOptions.shadowResolution."
         }
       ],
       "paragraphs": [],
@@ -190,11 +215,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-lighting/src/PointLight.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/PointLight.ts"
+        "label": "packages/exojs-lighting/src/lights/PointLight.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/PointLight.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-lighting/src/PointLight.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/PointLight.ts"
+  "sourcePath": "packages/exojs-lighting/src/lights/PointLight.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/lights/PointLight.ts"
 }

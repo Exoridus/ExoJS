@@ -1,87 +1,62 @@
 /**
- * Refuse to run a dist-consuming step against a stale build.
+ * Refuse to run a dist-consuming step against a stale build, or bring the
+ * build up to date first.
  *
  * The site build and the full-bundle export check read `dist/` (Core) and
  * `packages/exojs-*\/dist/` (extensions) rather than the sources. After a
  * pull or a local edit those artifacts silently lag behind: the site bundles
- * an engine without the new export and the example smoke then reports a
- * black canvas with no error; the export check names a symbol the package
- * "does not export". Each of those wasted a diagnosis before this check
- * existed. The smoke itself is not gated: it consumes the site build, which
- * is checked here, and in CI it runs from a downloaded site artifact with no
- * engine dist beside it.
+ * an engine without the new export and the example smoke then reports a black
+ * canvas with no error; the export check names a symbol the package "does not
+ * export". Each of those wasted a diagnosis before this check existed. The
+ * API docs generator is not gated: it converts from the sources.
  *
- * Every build records a content hash of its source tree in its dist (see
- * `source-hash.ts`); a unit is stale when the hash of the sources on disk no
- * longer matches. A Core dist without a stamp is stale; a package that was
- * never built is left to the consuming step's own error. Set
- * `EXOJS_SKIP_DIST_CHECK=1` to bypass.
+ * Without `--rebuild`, a stale unit fails the step with the rebuild command
+ * named; a package that was never built is left to the consuming step's own
+ * error. With `--rebuild`, a stale or unbuilt unit runs that command here and
+ * the check is repeated, so a caller that would otherwise fail minutes later
+ * pays the build exactly when it is due and nothing else. Set
+ * `EXOJS_SKIP_DIST_CHECK=1` to bypass either mode.
  */
+import { spawnSync } from 'node:child_process';
 
-import { existsSync, readdirSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { checkFreshness, REBUILD_COMMAND, repoRoot } from './dist-freshness.ts';
 
-import { hashSourceTree, readSourceStamp } from './source-hash.ts';
-
-const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-
-interface BuildUnit {
-  readonly name: string;
-  readonly sourceDir: string;
-  readonly distDir: string;
-}
-
-const TOOLING_PACKAGES = new Set(['exojs-build', 'exojs-config', 'exojs-bench', 'exojs-examples']);
-
-const units: BuildUnit[] = [{ name: '@codexo/exojs', sourceDir: join(root, 'src'), distDir: join(root, 'dist') }];
-
-for (const entry of readdirSync(join(root, 'packages'), { withFileTypes: true })) {
-  if (!entry.isDirectory() || !entry.name.startsWith('exojs-')) continue;
-
-  const dir = join(root, 'packages', entry.name);
-  const sourceDir = join(dir, 'src');
-  const distDir = join(dir, 'dist');
-
-  // Only runtime extension packages build through the shared library pipeline;
-  // tooling, config, the bench harness and the site own their outputs and are
-  // never bundled by the checks.
-  if (
-    TOOLING_PACKAGES.has(entry.name) ||
-    !existsSync(sourceDir) ||
-    !existsSync(join(dir, 'tsconfig.build.json')) ||
-    !existsSync(join(distDir, 'esm', 'index.js'))
-  )
-    continue;
-
-  units.push({ name: `@codexo/${entry.name}`, sourceDir, distDir });
-}
+const rebuild = process.argv.includes('--rebuild');
 
 if (process.env['EXOJS_SKIP_DIST_CHECK'] === '1') {
   console.log('check-dist-fresh: skipped (EXOJS_SKIP_DIST_CHECK=1).');
   process.exit(0);
 }
 
-const stale: string[] = [];
+let report = checkFreshness();
 
-for (const unit of units) {
-  const recorded = readSourceStamp(unit.distDir);
+if (rebuild && (report.stale.length > 0 || report.unbuilt.length > 0)) {
+  const reasons = [...report.stale, ...report.unbuilt.map(unit => `${unit.name}: never built`)];
 
-  if (recorded === null) {
-    stale.push(`${unit.name}: ${relative(root, unit.distDir)} carries no source stamp (built before stamps existed, or not at all)`);
-  } else if (recorded !== hashSourceTree(unit.sourceDir)) {
-    stale.push(`${unit.name}: ${relative(root, unit.sourceDir)} changed since ${relative(root, unit.distDir)} was built`);
+  console.log(`check-dist-fresh: rebuilding, because\n${reasons.map(line => `  - ${line}`).join('\n')}\n`);
+
+  // Through the shell: on Windows `pnpm` resolves to a `.cmd` shim, which the
+  // direct spawn path refuses to execute.
+  const result = spawnSync(REBUILD_COMMAND, { cwd: repoRoot, stdio: 'inherit', shell: true });
+
+  if (result.status !== 0) {
+    console.error(`check-dist-fresh: '${REBUILD_COMMAND}' failed (exit ${String(result.status)}).`);
+    process.exit(result.status ?? 1);
   }
+
+  report = checkFreshness();
 }
 
-if (stale.length === 0) {
-  console.log(`check-dist-fresh: ${units.length} build unit(s) up to date.`);
+const checked = report.units.length - report.unbuilt.length;
+
+if (report.stale.length === 0) {
+  console.log(`check-dist-fresh: ${checked} build unit(s) up to date.`);
   process.exit(0);
 }
 
 console.error('check-dist-fresh: dist is older than its sources; the step you are about to run would use a stale build.\n');
 
-for (const line of stale) console.error(`  - ${line}`);
+for (const line of report.stale) console.error(`  - ${line}`);
 
-console.error('\nRebuild with: pnpm build && pnpm -r --filter "@codexo/exojs-*" --filter "!@codexo/exojs-examples" build');
+console.error(`\nRebuild with: ${REBUILD_COMMAND}`);
 process.exit(1);

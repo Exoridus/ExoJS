@@ -1,0 +1,24 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+
+# Coverage runs only on pushes to main/next, and only when the pushed diff
+# actually needs the test lanes (scripts/ci/lanes.ts). A push that narrows to
+# e.g. docs or release metadata skips the whole test job and uploads nothing,
+# which otherwise leaves that commit - and the repo-level badge, when it lands
+# on the default branch - with no report at all. Carryforward reuses each
+# flag's last real upload for those commits instead of showing no coverage.
+flag_management:
+  default_rules:
+    carryforward: false
+  individual_flags:
+    - name: unit
+      carryforward: true
+    - name: webgl
+      carryforward: true

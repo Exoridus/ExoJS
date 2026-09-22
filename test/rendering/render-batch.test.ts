@@ -2,8 +2,8 @@ import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { RenderBatch } from '#rendering/RenderBatch';
+import { Shader } from '#rendering/shader/Shader';
 
 const triangleGeometry = (usage: 'static' | 'dynamic' | 'stream' = 'static'): Geometry =>
   new Geometry({
@@ -194,7 +194,7 @@ describe('RenderBatch', () => {
   test('accepts a mesh material', () => {
     const geometry = triangleGeometry();
     const material = new MeshMaterial({
-      shader: new ShaderSource({
+      shader: new Shader({
         glsl: {
           vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
           fragment: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',

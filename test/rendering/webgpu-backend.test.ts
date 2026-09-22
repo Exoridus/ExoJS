@@ -1,6 +1,7 @@
 ﻿import type { Mock, MockInstance } from 'vitest';
 
-import type { Application, RenderingApplicationOptions } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { Rectangle } from '#math/Rectangle';
@@ -2595,13 +2596,13 @@ describe('WebGpuBackend', () => {
       // A renderer switch no longer ends the pass, so destroy() can be reached
       // with one open - which used to be impossible, because switching to a
       // null renderer ended it.
-      manager._passCoordinator.acquirePass();
+      manager.passCoordinator.acquirePass();
 
-      expect(manager._passCoordinator.hasActivePass).toBe(true);
+      expect(manager.passCoordinator.hasActivePass).toBe(true);
 
       manager.destroy();
 
-      expect(manager._passCoordinator.hasActivePass).toBe(false);
+      expect(manager.passCoordinator.hasActivePass).toBe(false);
     } finally {
       environment.restore();
     }
@@ -2629,7 +2630,7 @@ describe('WebGpuBackend', () => {
 
       manager.onDeviceRestored.add(restored);
 
-      const deadPass = manager._passCoordinator.acquirePass();
+      const deadPass = manager.passCoordinator.acquirePass();
 
       environment.simulateDeviceLost({ message: 'gpu removed' });
       await Promise.resolve();
@@ -2645,8 +2646,8 @@ describe('WebGpuBackend', () => {
       // already-open pass. Inheriting the dead device's pass would record every
       // later frame into an encoder that can never be submitted - silently,
       // since operations on a lost device do not throw.
-      expect(manager._passCoordinator.hasActivePass).toBe(false);
-      expect(manager._passCoordinator.acquirePass()).not.toBe(deadPass);
+      expect(manager.passCoordinator.hasActivePass).toBe(false);
+      expect(manager.passCoordinator.acquirePass()).not.toBe(deadPass);
     } finally {
       manager?.destroy();
       environment.restore();

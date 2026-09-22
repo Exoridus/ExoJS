@@ -21,13 +21,55 @@ const shaderModules = import.meta.glob(['/src/rendering/webgl2/shaders/*.{vert,f
   eager: true,
 }) as Record<string, string>;
 
+/**
+ * What a file contributes to the program it ends up in. A whole stage opens
+ * the program with the version directive and carries its entry point; a chunk
+ * supplies one of the two, or neither, and the builder that composes it
+ * supplies the rest.
+ */
+interface ChunkRole {
+  /** Whether the composed source starts with this file, and so with its directive. */
+  readonly opens: boolean;
+  /** Whether the composed program takes `void main()` from this file. */
+  readonly entry: boolean;
+  readonly reason: string;
+}
+
+/**
+ * The files no backend compiles on their own. Anything absent from this map is
+ * held to the whole-stage contract, so a new chunk fails this suite until it
+ * is named and the composition it belongs to is written down.
+ *
+ * A vertex stage built on the instanced-batch contract is recognised without
+ * being listed: `INSTANCE_TRANSFORM_GLSL` is documented as going between the
+ * version directive and the body, and calling `exoInstanceClipPosition` is
+ * that contract's own marker.
+ */
+const CHUNKS: ReadonlyMap<string, ChunkRole> = new Map([
+  [
+    'transport-filter.frag',
+    { opens: true, entry: false, reason: "the preamble the transport filters share; the walked textures' bindings are appended to it" },
+  ],
+  ['transport.frag', { opens: false, entry: false, reason: 'the transport operator itself: functions, spliced into every shader that walks' }],
+  ['cascade-transport.frag', { opens: false, entry: true, reason: 'one cascade level, composed onto the preamble and the operator' }],
+  ['cascade-gather-transport.frag', { opens: false, entry: true, reason: 'the receiver reconstruction, composed onto the preamble and the operator' }],
+]);
+
 interface ShaderEntry {
   readonly name: string;
   readonly source: string;
+  /** How this file reaches a program, or `undefined` for a whole stage. */
+  readonly role: ChunkRole | undefined;
 }
 
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
-  .map(([path, source]) => ({ name: path.slice(path.lastIndexOf('/') + 1), source }))
+  .map(([path, source]) => ({
+    name: path.slice(path.lastIndexOf('/') + 1),
+    source,
+    role: source.includes('exoInstanceClipPosition(')
+      ? { opens: false, entry: true, reason: 'a vertex stage on the instanced-batch contract, which is spliced under the directive' }
+      : CHUNKS.get(path.slice(path.lastIndexOf('/') + 1)),
+  }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
 /** Strips GLSL line/block comments so bracket counting ignores commented-out code. */
@@ -69,10 +111,36 @@ describe('WebGL2 GLSL shader sources — structural integrity (jsdom, no GPU)', 
     expect(shaders.length).toBeGreaterThanOrEqual(8);
   });
 
-  test.each(shaders)('$name is non-empty, versioned GLSL ES 3.00 with a main entry point', ({ name, source }) => {
+  test.each(shaders)('$name is non-empty GLSL ES 3.00 with a main entry point', ({ name, source, role }) => {
     expect(source.length, `${name} is empty — a shader stub leaked into this check`).toBeGreaterThan(0);
-    expect(source.startsWith('#version 300 es'), `${name} is missing its #version 300 es directive`).toBe(true);
-    expect(/\bvoid\s+main\s*\(/.test(source), `${name} has no 'void main(' entry point`).toBe(true);
+    // Both directions: a whole stage that lost its directive or its entry point
+    // fails, and so does a chunk that grew one it must not have.
+    const hasDirective = source.startsWith('#version 300 es');
+    const hasEntry = /\bvoid\s+main\s*\(/.test(source);
+
+    if (role === undefined) {
+      expect(hasDirective, `${name} is missing its #version 300 es directive`).toBe(true);
+      expect(hasEntry, `${name} has no 'void main(' entry point`).toBe(true);
+    } else {
+      expect(
+        hasDirective,
+        `${name} ${role.opens ? 'opens its composition and needs the directive' : 'is composed under a directive and must carry none'}`,
+      ).toBe(role.opens);
+      expect(
+        hasEntry,
+        `${name} ${role.entry ? 'supplies the entry point of its composition' : 'is composed beside an entry point and must declare none'}`,
+      ).toBe(role.entry);
+    }
+  });
+
+  test('every chunk named still exists and carries a reason', () => {
+    for (const [name, role] of CHUNKS) {
+      expect(
+        shaders.some(shader => shader.name === name),
+        `${name} is named as a chunk but no longer exists`,
+      ).toBe(true);
+      expect(role.reason.trim().length, `${name} needs a reason`).toBeGreaterThan(0);
+    }
   });
 
   test.each(shaders)('$name has balanced brackets', ({ name, source }) => {

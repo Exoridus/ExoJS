@@ -1,0 +1,161 @@
+{
+  "title": "UniformStruct",
+  "description": "A struct nested inside a uniform block. A nested struct is a group of fields within the containing block, not a second GPU resource: it shares the block's buffer and its revision. Declaring one explicitly - rather than treating any plain object as a struct - is what keeps `{ type, default }` metadata distinguishable from a group of fields.",
+  "symbol": "UniformStruct",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A struct nested inside a uniform block.",
+        "A nested struct is a group of fields within the containing block, not a second GPU resource: it shares the block's buffer and its revision. Declaring one explicitly - rather than treating any plain object as a struct - is what keeps `{ type, default }` metadata distinguishable from a group of fields."
+      ],
+      "importLine": "import { UniformStruct } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(fields: F): UniformStruct<F>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "fields",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformStruct",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "fields",
+              "type": "F",
+              "optional": false
+            }
+          ],
+          "returnType": "UniformStruct<F>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fields",
+          "signature": "fields: F",
+          "signatureTokens": [
+            {
+              "text": "fields",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "kind",
+          "signature": "kind: \"struct\"",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"struct\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/uniforms/uniformDeclarations.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformDeclarations.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/uniforms/uniformDeclarations.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformDeclarations.ts"
+}

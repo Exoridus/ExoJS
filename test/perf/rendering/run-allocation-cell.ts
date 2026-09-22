@@ -9,9 +9,9 @@
  * else. See the process-level bimodality documented on `scrolling-world/10000`
  * in `allocationScenes.ts` for the failure mode this avoids.
  *
- *   pnpm perf:renderers:alloc:cell -- --id "mesh/1000" [--windows 1] [--frames 200] [--profile] [--top 25]
- *   pnpm perf:renderers:alloc:cell -- --id "mesh/1000" --cpu
- *   pnpm perf:renderers:alloc:cell -- --id "filter/color 100" --structural
+ *   pnpm perf renderers:alloc:cell --id "mesh/1000" [--windows 1] [--frames 200] [--profile] [--top 25]
+ *   pnpm perf renderers:alloc:cell --id "mesh/1000" --cpu
+ *   pnpm perf renderers:alloc:cell --id "filter/color 100" --structural
  *
  * Prints one JSON object on stdout (last line) so a driver can collect runs;
  * `--profile` writes the callsite table to stderr, so it never mixes into it.

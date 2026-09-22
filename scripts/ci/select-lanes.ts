@@ -34,6 +34,7 @@ export interface LaneAreas {
   benchStructural: boolean;
   release: boolean;
   guides: boolean;
+  siteData: boolean;
   createExoApp: boolean;
 }
 
@@ -73,6 +74,7 @@ export interface EffectiveLanes {
  * file runs before any install, so it cannot import that module).
  */
 const RUNTIME_PACKAGES = [
+  'eslint-plugin-exojs',
   'exojs-build',
   'exojs-config',
   'exojs-particles',
@@ -86,20 +88,35 @@ const RUNTIME_PACKAGES = [
   'exojs-tilemap-physics',
   'exojs-lighting',
   'exojs-pathfinding',
+  'exojs-cli',
 ];
 
 /**
- * Documentation-only files inside a package. A change limited to these must NOT
- * drag in the expensive engine lanes - it still triggers the docs/site lane via
- * the `site` area, because package READMEs feed the generated package API pages.
+ * Prose and licence text, wherever it sits. No lane executes, imports, bundles
+ * or typechecks it, so a change limited to these must NOT drag in the expensive
+ * code lanes - it still triggers the docs/site lane via the `site` area, because
+ * package and guide prose feed the generated pages.
+ *
+ * Depth matters, which is why the shape is an extension rather than a fixed set
+ * of paths: prose lives under `scripts/`, `test/` and `packages/<pkg>/src/` too
+ * (`scripts/release/RELEASING.md`, `test/perf/rendering/README.md`, the bench
+ * harness reference), and each of those prefixes otherwise selects a code area.
+ * Guide content keeps its own area (see `isGuidesPath`), because the unit lane
+ * carries the tests that read it.
  */
-const isPackageDocPath = (file: string): boolean => /^packages\/[^/]+\/(README\.md|CHANGELOG\.md|LICENSE)$/.test(file);
+const isDocPath = (file: string): boolean => /\.mdx?$/.test(file) || /(^|\/)LICENSE$/.test(file);
 
 /**
  * Engine area: core runtime code, shared root tooling, and runtime-package CODE.
  * Gates the unit/coverage, package-build-and-verify and browser lanes.
  */
 const isEnginePath = (file: string): boolean => {
+  // The release version-coherence tests derive expectations from the root
+  // CHANGELOG, so a changelog-only PR must still run the unit lane (a docs-only
+  // changelog edit once skipped it and the mismatch only failed on main). It is
+  // the one doc file that gates code, so it is read before the doc exemption.
+  if (file === 'CHANGELOG.md') return true;
+  if (isDocPath(file)) return false;
   // Core engine source, in-repo tests (incl. the browser/perf suites that import
   // package source through the vitest aliases), and repo automation scripts.
   if (file.startsWith('src/')) return true;
@@ -112,13 +129,9 @@ const isEnginePath = (file: string): boolean => {
   if (file.startsWith('tsconfig.') && file.endsWith('.json')) return true;
   // Root manifest + lockfile + workspace topology all affect the whole build.
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
-  // The release version-coherence tests derive expectations from the root
-  // CHANGELOG, so a changelog-only PR must still run the unit lane (a docs-only
-  // changelog edit once skipped it and the mismatch only failed on main).
-  if (file === 'CHANGELOG.md') return true;
-  // Runtime-package CODE (source, tests, build config, manifest) - but not docs.
+  // Runtime-package CODE (source, tests, build config, manifest).
   for (const pkg of RUNTIME_PACKAGES) {
-    if (file.startsWith(`packages/${pkg}/`) && !isPackageDocPath(file)) return true;
+    if (file.startsWith(`packages/${pkg}/`)) return true;
   }
   return false;
 };
@@ -133,11 +146,12 @@ const isEnginePath = (file: string): boolean => {
  * in the engine does NOT drag in the browser-audio lane.
  */
 const isAudioFxPath = (file: string): boolean => {
+  if (isDocPath(file)) return false;
   if (file.startsWith('.github/workflows/')) return true;
   if (file === 'vitest.config.ts') return true;
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
   if (file.startsWith('packages/exojs-config/')) return true;
-  if (file.startsWith('packages/exojs-audio-fx/') && !isPackageDocPath(file)) return true;
+  if (file.startsWith('packages/exojs-audio-fx/')) return true;
   return false;
 };
 
@@ -148,11 +162,12 @@ const isAudioFxPath = (file: string): boolean => {
  * same reasoning as isAudioFxPath: expensive relative to its blast radius.
  */
 const isTilemapWorkerPath = (file: string): boolean => {
+  if (isDocPath(file)) return false;
   if (file.startsWith('.github/workflows/')) return true;
   if (file === 'vitest.config.ts') return true;
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
   if (file.startsWith('packages/exojs-config/')) return true;
-  if (file.startsWith('packages/exojs-tilemap/') && !isPackageDocPath(file)) return true;
+  if (file.startsWith('packages/exojs-tilemap/')) return true;
   return false;
 };
 
@@ -178,6 +193,7 @@ const isTilemapWorkerPath = (file: string): boolean => {
  * run an example to notice.
  */
 const isExampleCatalogPath = (file: string): boolean => {
+  if (isDocPath(file)) return false;
   if (file.startsWith('.github/workflows/')) return true;
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
   // The catalog sources, their generated `.js` twins, the example assets, and
@@ -185,7 +201,7 @@ const isExampleCatalogPath = (file: string): boolean => {
   if (file.startsWith('examples/')) return true;
   // Engine and extension runtime code: what the examples actually execute.
   if (file.startsWith('src/')) return true;
-  if (file.startsWith('packages/') && !isPackageDocPath(file)) return true;
+  if (file.startsWith('packages/')) return true;
   // The harness, the playground route it drives, the page the preview iframe
   // loads, and the generator that copies the catalog into the served site.
   if (file === 'site/scripts/smoke-examples.ts') return true;
@@ -225,6 +241,7 @@ const isSitePath = (file: string): boolean => {
  * move a draw-call count, and the gate costs a browser run.
  */
 const isBenchStructuralPath = (file: string): boolean => {
+  if (isDocPath(file)) return false;
   if (file.startsWith('src/rendering/')) return true;
   if (file.startsWith('packages/exojs-bench/src/')) return true;
   if (file.startsWith('packages/exojs-bench/test/')) return true;
@@ -244,11 +261,47 @@ const isBenchStructuralPath = (file: string): boolean => {
 const isGuidesPath = (file: string): boolean => file.startsWith('site/src/content/');
 
 /**
+ * Site-data area: the sources the remaining `test/site/**` suites read. Same
+ * reasoning as `isGuidesPath` - those suites live under `test/`, so they run on
+ * every engine change and would otherwise never run on the change they exist to
+ * check.
+ *
+ *   - `site/src/lib/`                    every site suite that is not a guide
+ *                                        suite imports from here (bench cards
+ *                                        and profiles, playground navigation,
+ *                                        URL state, the example catalog, source
+ *                                        snippets, footgun diagnostics).
+ *   - `examples/`                        the catalog sources and their generated
+ *                                        twins, which `examples-sync`,
+ *                                        `runtime-dts` and `assets-global-dts`
+ *                                        read directly.
+ *   - `packages/exojs-bench/results/`    the committed profiles, which
+ *                                        `site/src/lib/bench-profiles` globs and
+ *                                        three suites validate. The bench
+ *                                        package is not a runtime package and
+ *                                        the structural gate covers only `src/`,
+ *                                        `test/` and `baselines/`, so a
+ *                                        profile-only commit reaches no other
+ *                                        area that runs a test.
+ *
+ * Deliberately not `site/src/pages/` or `site/src/components/`: no suite reads
+ * them, and the site build already gates on the wider `site` area.
+ */
+const isSiteDataPath = (file: string): boolean => {
+  if (isDocPath(file)) return false;
+  if (file.startsWith('site/src/lib/')) return true;
+  if (file.startsWith('examples/')) return true;
+  if (file.startsWith('packages/exojs-bench/results/')) return true;
+  return false;
+};
+
+/**
  * create-exo-app area: the scaffolding CLI is a standalone package with no
  * engine or browser impact, so it is deliberately outside `RUNTIME_PACKAGES`
  * and outside `engine`. Gates its own verify script instead.
  */
 const isCreateExoAppPath = (file: string): boolean => {
+  if (isDocPath(file)) return false;
   if (file.startsWith('.github/workflows/')) return true;
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
   if (file.startsWith('packages/create-exo-app/')) return true;
@@ -260,6 +313,7 @@ const isCreateExoAppPath = (file: string): boolean => {
  * release dry run, which builds and packs everything a release would.
  */
 const isReleasePath = (file: string): boolean => {
+  if (isDocPath(file)) return false;
   if (file.startsWith('scripts/release/')) return true;
   if (file === 'package.json' || file === 'pnpm-lock.yaml') return true;
   if (/^packages\/[^/]+\/package\.json$/.test(file)) return true;
@@ -276,6 +330,7 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let benchStructural = false;
   let release = false;
   let guides = false;
+  let siteData = false;
   let createExoApp = false;
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
@@ -289,10 +344,11 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
     if (!benchStructural && isBenchStructuralPath(file)) benchStructural = true;
     if (!release && isReleasePath(file)) release = true;
     if (!guides && isGuidesPath(file)) guides = true;
+    if (!siteData && isSiteDataPath(file)) siteData = true;
     if (!createExoApp && isCreateExoAppPath(file)) createExoApp = true;
-    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural && release && guides && createExoApp) break;
+    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural && release && guides && siteData && createExoApp) break;
   }
-  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, createExoApp };
+  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, siteData, createExoApp };
 };
 
 /**
@@ -310,16 +366,17 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
  *   - bench-structural-gate gates on `benchStructural` (rendering source, the
  *     bench harness, or the committed counter baseline);
  *   - the unit lane also gates on `guides` (guide content under
- *     `site/src/content/**`, which the `test/site/guide-*` suites validate);
+ *     `site/src/content/**`, which the `test/site/guide-*` suites validate) and
+ *     on `siteData` (the sources the remaining `test/site/**` suites read);
  *   - create-exo-app-verify gates on `createExoApp`, independent of `engine`
  *     (the scaffolder has no engine or browser impact of its own).
  */
 export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
-  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, createExoApp } = areas;
+  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, siteData, createExoApp } = areas;
   return {
     typecheck: true,
     lint: true,
-    unit: engine || guides,
+    unit: engine || guides || siteData,
     coverage: engine,
     browserWebgl2: engine,
     browserWebgpu: engine,

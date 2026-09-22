@@ -13,7 +13,7 @@ import { spawnSync } from 'node:child_process';
 
 const profile = process.argv[2] === 'full' ? 'full' : 'quick';
 
-console.log(`[perf:renderers] running ${profile} sweep → .workspace/output/render-perf/`);
+console.log(`[perf renderers] running ${profile} sweep → .workspace/output/render-perf/`);
 
 const result = spawnSync('pnpm exec vitest run --project=rendering-perf sweep.test.ts', {
   stdio: 'inherit',

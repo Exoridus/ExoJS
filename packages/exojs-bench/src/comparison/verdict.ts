@@ -69,3 +69,36 @@ export const compareMedians = (exojsMs: number, competitorMs: number): Verdict =
 
   return { side, ratio, factor, label: `${leader} ${structural ? 'leads clearly' : 'leads'} (${factor.toFixed(2)}x)`, structural };
 };
+
+/**
+ * The rung a verdict landed on, with the measured ratio dropped.
+ *
+ * Two runs of one cell never produce the same ratio, so agreement between runs
+ * can only be asked of the rung. This is the unit an aggregation compares.
+ */
+export type VerdictRung = 'not-comparable' | 'level' | 'exojs-leads' | 'exojs-leads-clearly' | 'competitor-leads' | 'competitor-leads-clearly';
+
+/** The rung `verdict` sits on. */
+export const verdictRung = (verdict: Verdict): VerdictRung => {
+  if (!Number.isFinite(verdict.ratio)) {
+    return 'not-comparable';
+  }
+
+  if (verdict.side === 'neither') {
+    return 'level';
+  }
+
+  return verdict.structural ? `${verdict.side}-leads-clearly` : `${verdict.side}-leads`;
+};
+
+/**
+ * The verdict a cell carries when the runs behind it did not agree on one.
+ *
+ * A verdict-shaped absence rather than a computed outcome: the runs disagreed
+ * about which arm the cell favours, so no rung is supported by the evidence,
+ * and publishing the pooled numbers' own rung would state a claim that part of
+ * the measurement contradicts. The cell is still published, with its observed
+ * range - the disagreement is a finding about the measurement, not a row to
+ * hide.
+ */
+export const UNSTABLE_VERDICT: Verdict = { side: 'neither', ratio: Number.NaN, factor: Number.NaN, label: 'unstable across runs', structural: false };

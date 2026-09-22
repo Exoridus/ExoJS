@@ -3,8 +3,8 @@ import { Interval } from '#math/Interval';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
 import { Drawable } from '#rendering/Drawable';
-import type { Material } from '#rendering/material/Material';
-import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import type { AnyMaterial } from '#rendering/material/Material';
+import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { RenderNode } from '#rendering/RenderNode';
 import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -57,7 +57,7 @@ export class Sprite extends Drawable {
    * instance.
    */
   private readonly _resetFrameScratch: Rectangle = new Rectangle();
-  private _material: SpriteMaterial | null = null;
+  private _material: AnySpriteMaterial | null = null;
   /**
    * Quad corner cache, built on the first {@link vertices} read. Nothing on the
    * render path reads it - the renderers pack their own quad through
@@ -156,13 +156,13 @@ export class Sprite extends Drawable {
    * into a single instanced draw call; the base texture stays on the sprite and
    * is bound per batch. Assigning a non-sprite material throws.
    */
-  public get material(): SpriteMaterial | null {
+  public get material(): AnySpriteMaterial | null {
     return this._material;
   }
 
-  public set material(material: SpriteMaterial | null) {
-    if (material !== null && (material as Material).target !== 'sprite') {
-      throw new Error(`Sprite requires a SpriteMaterial (got a ${(material as Material).target} material).`);
+  public set material(material: AnySpriteMaterial | null) {
+    if (material !== null && (material as AnyMaterial).target !== 'sprite') {
+      throw new Error(`Sprite requires a SpriteMaterial (got a ${(material as AnyMaterial).target} material).`);
     }
 
     this._material = material;
@@ -352,14 +352,18 @@ export class Sprite extends Drawable {
     this.flags.addMask(SpriteFlags.TextureCoords);
 
     // A frame the caller chose stands; only the schedule-time reset's own 0x0
-    // frame is replaced by the real dimensions.
+    // frame is replaced by the real dimensions. The sprite's scale is left as
+    // the caller set it: a scale applied while the texture was still loading
+    // is the size they asked for, and only a size assigned in the meantime
+    // overrides it. Resizing to the frame here would silently reset that
+    // scale to 1 the moment the texture arrives.
     if (this._textureFrame.width === 0 && this._textureFrame.height === 0) {
-      // Read before the reset: it sizes the sprite to the new frame, and that
-      // assignment goes through the same setter, which clears what is pending.
+      // Read before the frame is set: applying a size goes through the same
+      // setter, which clears what is pending.
       const width = this._pendingWidth;
       const height = this._pendingHeight;
 
-      this.resetTextureFrame();
+      this.setTextureFrame(this._resetFrameScratch.set(0, 0, texture.width, texture.height), false);
 
       if (width !== null) this.width = width;
       if (height !== null) this.height = height;

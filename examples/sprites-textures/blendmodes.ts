@@ -10,7 +10,7 @@ import {
   type Seconds,
   Sprite,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { mountControls } from '@examples/runtime';
 
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 
@@ -44,7 +44,6 @@ class BlendmodesScene extends Scene {
   private index = 0;
   private ticker = 0;
   private hud!: ReturnType<typeof mountControls>;
-  private cycle!: { set(value: number): void };
 
   // Note: passing `options` as a 3rd argument to `loader.get(...)` or
   // `loader.load(Asset.type('texture', ...))` alongside a non-Json type currently mis-resolves
@@ -86,12 +85,6 @@ class BlendmodesScene extends Scene {
       title: 'Blend Modes',
       controls: [{ keys: 'Click', action: 'next blend mode' }],
     });
-    this.cycle = mountControlPanel({ title: 'Compositing' }).addCycle({
-      label: 'Blend mode',
-      options: BLEND_MODES.map(entry => entry.name),
-      index: 0,
-      onChange: index => this.setIndex(index),
-    });
 
     app.input.onPointerDown.add(() => this.setIndex((this.index + 1) % BLEND_MODES.length));
 
@@ -109,7 +102,6 @@ class BlendmodesScene extends Scene {
 
     this.left.setBlendMode(mode);
     this.right.setBlendMode(mode);
-    this.cycle.set(this.index);
     this.hud.setStatus(`${name}  (${this.index + 1}/${BLEND_MODES.length})`);
   }
 

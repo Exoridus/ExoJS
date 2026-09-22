@@ -40,8 +40,9 @@ import { describePhysicsScene } from './scene';
  *   (`enableSleeping=false`), whereas exojs and rapier do - so a settled matter
  *   stack keeps paying full solve cost. Kept at matter's default and disclosed.
  * - `frictionAir` is set to `0` (matter's default `0.01` applies a per-step linear
- *   drag that neither exojs nor rapier apply by default) so all three arms
- *   integrate the SAME pure-gravity force field - matching the SCENE, while the
+ *   drag that exojs, planck, rapier and nape-js do not apply by default) so all
+ *   four arms integrate the SAME pure-gravity force field - matching the SCENE,
+ *   while the
  *   solver differences above are left to be measured.
  * - Contact count is matter's active colliding-pair count (`engine.pairs
  *   .collisionActive`), a pair-level proxy comparable to - but not semantically
@@ -56,9 +57,10 @@ import { describePhysicsScene } from './scene';
  *   rather than papered over by hand-writing a spatial index for matter that its
  *   users do not have.
  *
- * `matter-js` is a CommonJS default export loaded lazily via dynamic `import()`,
- * so a checkout that never ran `bench:setup` (the competitor library is not
- * linked) degrades to a skipped arm instead of crashing the run.
+ * `matter-js` is a CommonJS default export loaded lazily via dynamic `import()`.
+ * A checkout that never ran `bench:setup` has the library unlinked and the
+ * import rejects; the harness records the arm as unavailable with that reason
+ * rather than omitting it, so a missing arm is visible in the matrix.
  */
 
 /** matter's gravity `scale`; kept at its default. */
@@ -72,21 +74,15 @@ const GRAVITY_SCALE = 0.001;
 const PX_PER_S2_TO_MATTER = 1 / (GRAVITY_SCALE * 1_000_000);
 
 /**
- * Resolve the matter.js arm, or `null` if the library is not linked into the
- * bench (graceful degradation for a checkout that skipped `bench:setup`).
+ * Resolve the matter.js arm.
+ *
+ * Rejects when `matter-js` cannot be imported, carrying the loader's own
+ * message: the caller records that reason against the arm rather than guessing
+ * why it is missing.
  */
-export const createMatterJsAdapter = async (): Promise<PhysicsAdapter | null> => {
-  let M: typeof Matter;
-
-  try {
-    const mod = (await import('matter-js')) as unknown as { default: typeof Matter };
-
-    M = mod.default;
-  } catch {
-    console.warn("[physics] matter.js arm unavailable — 'matter-js' is not linked (run bench:setup). Skipping the matter arm.");
-
-    return null;
-  }
+export const createMatterJsAdapter = async (): Promise<PhysicsAdapter> => {
+  const mod = (await import('matter-js')) as unknown as { default: typeof Matter };
+  const M = mod.default;
 
   let engine: Matter.Engine | null = null;
   let perturbedSignature = '';
@@ -172,6 +168,8 @@ export const createMatterJsAdapter = async (): Promise<PhysicsAdapter | null> =>
           return body;
         },
         removeBody: body => M.Composite.remove(created.world, body),
+        // Matter has no sleeping here, and its velocity is per step rather than per second.
+        setVelocity: (body, vx, vy) => M.Body.setVelocity(body, { x: vx * STEP_DELTA, y: vy * STEP_DELTA }),
         // `Query.ray` is a segment query, so the unit direction and distance are
         // converted back to an end point.
         castRay: ray =>

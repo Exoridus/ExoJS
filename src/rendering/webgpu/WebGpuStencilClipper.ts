@@ -6,9 +6,10 @@ import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
 import type { View } from '#rendering/View';
 
 import stencilWriteShaderSourceModule from './shaders/stencil-write.wgsl';
+import { depthStencilAttachmentFormat } from './stencilState';
 
-/** depth24plus-stencil8 is the portable depth/stencil format with an 8-bit stencil aspect. */
-export const stencilAttachmentFormat: GPUTextureFormat = 'depth24plus-stencil8';
+/** The attachment format the clip pass writes its silhouette into. */
+export const stencilAttachmentFormat: GPUTextureFormat = depthStencilAttachmentFormat;
 
 const positionNames = new Set<string>(['a_position', 'position']);
 const matrixByteLength = 64; // mat4x4<f32>

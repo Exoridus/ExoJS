@@ -7,10 +7,10 @@
  * scaling table, and writes `bootstrap-allocation.json` into the perf output
  * directory, printing the resolved path on completion.
  *
- *   pnpm perf:renderers:bootstrap                       # 1k / 10k / 100k
- *   pnpm perf:renderers:bootstrap -- --counts 1000,1000000
- *   pnpm perf:renderers:bootstrap -- --cpu              # wall-clock companion
- *   pnpm perf:renderers:bootstrap -- --incremental 100  # streaming shape
+ *   pnpm perf renderers:bootstrap                       # 1k / 10k / 100k
+ *   pnpm perf renderers:bootstrap --counts 1000,1000000
+ *   pnpm perf renderers:bootstrap --cpu              # wall-clock companion
+ *   pnpm perf renderers:bootstrap --incremental 100  # streaming shape
  *
  * @internal Test/perf-only.
  */

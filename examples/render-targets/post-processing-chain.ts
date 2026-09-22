@@ -34,7 +34,7 @@ class PostProcessingChainScene extends Scene {
     this.a = new RenderTexture(width, height);
     this.b = new RenderTexture(width, height);
     this.c = new RenderTexture(width, height);
-    this.blur = new BlurFilter({ radius: 6, quality: 2 });
+    this.blur = new BlurFilter({ strength: 3 });
     this.color = new ColorMatrixFilter().tint(new Color(140, 190, 255));
     this.final = new Sprite(this.c);
 

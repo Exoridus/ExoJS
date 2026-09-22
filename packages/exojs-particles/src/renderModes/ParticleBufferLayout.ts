@@ -63,7 +63,7 @@ const validateAttributes = (attributes: readonly GeometryAttribute[], stride: nu
 
 /** Construction options for {@link ParticleBufferLayout}. */
 export interface ParticleBufferLayoutOptions {
-  /** Interleaved attributes, in declaration order. Shader locations follow this order. */
+  /** Interleaved attributes, in declaration order. WebGl2Shader locations follow this order. */
   readonly attributes: readonly GeometryAttribute[];
 
   /** Bytes one record occupies. Must be a positive integer. */

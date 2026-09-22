@@ -6,12 +6,12 @@
  * purpose: two browsers sharing one GPU contend for it, and a wall-clock or
  * allocation number taken under contention describes the contention.
  *
- *   pnpm perf:webgpu:alloc                        every scene, 3 fresh processes each
- *   pnpm perf:webgpu:alloc -- --id "mesh/1000"    one scene
- *   pnpm perf:webgpu:alloc -- --id "..." --profile  plus the callsite table
- *   pnpm perf:webgpu:alloc -- --mode cpu          wall-clock instead of bytes
- *   pnpm perf:webgpu:alloc -- --mode structural   work units instead of bytes
- *   pnpm perf:webgpu:alloc -- --json out.json     also write the raw records
+ *   pnpm perf webgpu:alloc                        every scene, 3 fresh processes each
+ *   pnpm perf webgpu:alloc --id "mesh/1000"    one scene
+ *   pnpm perf webgpu:alloc --id "..." --profile  plus the callsite table
+ *   pnpm perf webgpu:alloc --mode cpu          wall-clock instead of bytes
+ *   pnpm perf webgpu:alloc --mode structural   work units instead of bytes
+ *   pnpm perf webgpu:alloc --json out.json     also write the raw records
  *
  * @internal Test/perf-only.
  */

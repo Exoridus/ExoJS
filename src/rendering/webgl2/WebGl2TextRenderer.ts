@@ -1,7 +1,6 @@
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import type { OwnTransformRowPatcher } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderNode } from '#rendering/RenderNode';
-import { Shader } from '#rendering/shader/Shader';
 import { composeTextAtlasFragmentGlsl, packTextNodeAtlasSlot, textAtlasTextureSlots, textNodeIndexMask } from '#rendering/text/atlasTextureSlots';
 import { type BitmapText } from '#rendering/text/BitmapText';
 import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/nodeDataPacker';
@@ -10,6 +9,7 @@ import { Text } from '#rendering/text/Text';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives, TextureFormat } from '#rendering/types';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { createWebGl2ShaderProgram } from './shaderProgram';
@@ -149,7 +149,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * skips writing transform records for text draws.
    * @internal
    */
-  public readonly _consumesSharedTransform = false;
+  public readonly consumesSharedTransform = false;
 
   /**
    * Retained-batch opt-in: one compatible shader/page class containing at most
@@ -165,11 +165,11 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * texture instead of the shared `TransformBuffer`.
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
-  private readonly _sdfShader: Shader = new Shader(textVertSource, composeTextAtlasFragmentGlsl(textSdfFragSource));
-  private readonly _msdfShader: Shader = new Shader(textVertSource, composeTextAtlasFragmentGlsl(textMsdfFragSource));
-  private readonly _colorShader: Shader = new Shader(textVertSource, composeTextAtlasFragmentGlsl(textColorFragSource));
+  private readonly _sdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textSdfFragSource));
+  private readonly _msdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textMsdfFragSource));
+  private readonly _colorShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textColorFragSource));
 
   private readonly _nodeDataUnitScratch = new Int32Array([textAtlasTextureSlots]);
   private readonly _floatScratch = new Float32Array(1);
@@ -278,9 +278,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const c = this._connection;
     if (!c) return;
 
-    this._sdfShader.disconnect();
-    this._msdfShader.disconnect();
-    this._colorShader.disconnect();
+    this._sdfShader.destroy();
+    this._msdfShader.destroy();
+    this._colorShader.destroy();
     c.indexBuffer.destroy();
     c.vertexBuffer.destroy();
     c.vao.destroy();
@@ -619,7 +619,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     this._recordedCaptures.add(bundle);
   }
 
-  private _shaderFor(type: ShaderType): Shader {
+  private _shaderFor(type: ShaderType): WebGl2Shader {
     if (type === 'sdf') return this._sdfShader;
     if (type === 'msdf') return this._msdfShader;
     return this._colorShader;
@@ -938,7 +938,6 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
         gl.bindBuffer(buf.type, handle);
         if (state && state.dataByteLength >= buf.uploadByteLength) {
           uploadBufferRange(gl, buf, offset);
-          state.dataByteLength = buf.uploadByteLength;
         } else {
           uploadBufferStore(gl, buf);
           buffers.set(buf, { handle, dataByteLength: buf.uploadByteLength });

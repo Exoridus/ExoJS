@@ -33,8 +33,7 @@ The loader offers several forms. Pick the smallest one that covers your case:
 When in doubt, start with a bare path string. Reach for `Assets.from` when assets belong together, and `Asset.type(...)` whenever the path isn't a string literal or the type should be explicit.
 
 <Callout type="hint" title="Load different types together, not one await at a time">
-  Awaiting loads sequentially makes each one wait for the previous download to finish. Group independent `this.loader.load(...)` calls in a single `Promise.all` so
-  unrelated resource types fetch concurrently.
+  Awaiting loads sequentially makes each one wait for the previous download to finish. Group independent `this.loader.load(...)` calls in a single `Promise.all` so unrelated resource types fetch concurrently.
 </Callout>
 
 ## Which call when
@@ -48,6 +47,7 @@ The forms above say how to name an asset; these are the calls that fetch, look u
 | Wait for one asset, or for a type without a placeholder (`music`, `bmFont`, …)  | `await loader.load(Asset.type('music', path))` | The resolved resource                                                                     | Yes                                     |
 | Wait for a whole catalog at once                                                | `await loader.load(catalog)`                  | The catalog, its leaves healed in place                                                   | Yes, one per entry                      |
 | Unpack a packed `.exoa` container in one request                                | `await loader.loadContainer('pack.exoa')`     | A new scope owning every entry; entries resolve to the same identities as network loads   | Yes, one per entry, held by that scope  |
+| Find out which packs a deployment ships, and where they are now                 | `await loader.loadManifest('assets.json')`    | An `AssetManifest`; `manifest.pack(name)` addresses one for `loadContainer`                | No                                      |
 | Check whether something is already resident without fetching                   | `loader.peek('hero.png')`                     | The resource, or `undefined`                                                              | No                                      |
 | Let one asset go before its owner ends                                          | `scope.release(handle)`                       | Nothing; the handle stays valid and heals again on the next `get()`                       | Drops this scope's claim                |
 | Let everything an owner holds go                                                | `scope.destroy()` / the scene ending          | Nothing; assets other owners still hold stay resident                                     | Drops all of that owner's claims        |
@@ -83,9 +83,7 @@ The `loader.basePath` option in `ApplicationOptions` prepends a base prefix to a
 Because the path is the identity, the same source path returns the very same `Texture` instance from anywhere else in your code — `this.loader.get('image/hero.png')` from `init`, a later scene, or `app.loader.get(...)` from a system — as long as the string matches.
 
 <Callout type="hint" title="get() returns synchronously for a valid leaf type">
-  For a registered seamless or value suffix, `this.loader.get(...)` returns synchronously — even before the fetch finishes. Ask for a valid path you haven't loaded
-  yet and you get a placeholder handle/ref immediately, which then heals once the network request resolves. Invalid input or a missing type/handler still throws
-  synchronously. Check `.ready` / `.state` for asynchronous fetch outcomes (see [Status channel](#status-channel-instead-of-throwing) below).
+  For a registered seamless or value suffix, `this.loader.get(...)` returns synchronously — even before the fetch finishes. Ask for a valid path you haven't loaded yet and you get a placeholder handle/ref immediately, which then heals once the network request resolves. Invalid input or a missing type/handler still throws synchronously. Check `.ready` / `.state` for asynchronous fetch outcomes (see [Status channel](#status-channel-instead-of-throwing) below).
 </Callout>
 
 ## Dynamic paths and non-seamless types
@@ -101,9 +99,7 @@ Types that can't be inferred from a path at all need the same descriptor, even w
 <SourceSnippet source="examples/sprites-textures/asset-catalogs.ts" region="non-leaf-load" title="A non-leaf type" />
 
 <Callout type="hint" title="get(Asset.type(...)) is the dynamic-path escape hatch">
-  For seamless and value types, `this.loader.get(Asset.type(type, dynamicPath))` returns a handle or `AssetRef` immediately and starts the asynchronous load. Capture
-  that returned object: each descriptor call creates a fresh leaf, although the backend fetch is still deduplicated. Non-leaf types have no synchronous handle
-  and must use `await this.loader.load(Asset.type(...))`.
+  For seamless and value types, `this.loader.get(Asset.type(type, dynamicPath))` returns a handle or `AssetRef` immediately and starts the asynchronous load. Capture that returned object: each descriptor call creates a fresh leaf, although the backend fetch is still deduplicated. Non-leaf types have no synchronous handle and must use `await this.loader.load(Asset.type(...))`.
 </Callout>
 
 ## Multiple resource types in parallel
@@ -258,12 +254,7 @@ Unlike `LoadingQueue.onProgress`, which you attach to the return value of one `l
 
 ### Guard the final navigation
 
-`onLoadComplete` can fire after this scene is no longer the active one — a
-scene switch away from `BootScene` while a load is still in flight, or an
-app-level `stop()`/`destroy()` mid-load, are both real cases. Check
-`this.state` before navigating away, and unsubscribe from the loader
-signals in `unload()` so a listener from a torn-down scene never fires
-`change()` against a Director that has since moved on:
+`onLoadComplete` can fire after this scene is no longer the active one — a scene switch away from `BootScene` while a load is still in flight, or an app-level `stop()`/`destroy()` mid-load, are both real cases. Check `this.state` before navigating away, and unsubscribe from the loader signals in `unload()` so a listener from a torn-down scene never fires `change()` against a Director that has since moved on:
 
 <SourceSnippet source="examples/application-scenes/loading-screen.ts" region="boot-unsubscribe" title="Unsubscribing and guarding the hand-over" />
 
@@ -337,16 +328,11 @@ The hierarchy is a lifetime hierarchy only: it never affects asset identity or w
 There is deliberately no way to release an application-lifetime claim: `app.loader.get(...)` means "I want this for as long as the app runs". Anything you intend to free later is acquired through a scene or a scope instead.
 
 <Callout type="pitfall" title="release() only accepts a real asset identity">
-  Passing something that isn't a handle, descriptor, catalog, or `(type, source)` pair — a plain object, a resolved non-seamless resource, anything `release()`
-  can't resolve to a claim — throws instead of doing nothing. If you loaded a non-seamless type by reference (`load(Asset.type('bmFont', ...))`), release it
-  with the same `Asset` descriptor or the `(type, source)` pair, not the resolved resource itself.
+  Passing something that isn't a handle, descriptor, catalog, or `(type, source)` pair — a plain object, a resolved non-seamless resource, anything `release()` can't resolve to a claim — throws instead of doing nothing. If you loaded a non-seamless type by reference (`load(Asset.type('bmFont', ...))`), release it with the same `Asset` descriptor or the `(type, source)` pair, not the resolved resource itself.
 </Callout>
 
 <Callout type="hint" title="Non-seamless types have no placeholder">
-  Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()`
-  speculatively. Load them by reference and hold onto the resolved value: `const music = await this.loader.load(Asset.type('music', 'audio/theme.ogg'))`. There is no
-  `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded`
-  promise) before you use it.
+  Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()` speculatively. Load them by reference and hold onto the resolved value: `const music = await this.loader.load(Asset.type('music', 'audio/theme.ogg'))`. There is no `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded` promise) before you use it.
 </Callout>
 
 ### Streaming media
@@ -383,8 +369,7 @@ The descriptor is the same one you load. Whichever transport an asset arrives th
 The CORS mode is the exception, because it is baked into the element rather than into the bytes: `crossOrigin: null` and the default `'anonymous'` for one URL are two assets, and so is `'use-credentials'`. Nobody is ever handed an element whose CORS mode they did not ask for — a video that cannot be a texture never arrives where a texture was expected.
 
 <Callout type="hint" title="Inspecting what's currently loaded">
-  `this.app.loader.inspect()` returns a frozen, sorted snapshot — one row per canonical asset, with its state, how many owners hold it, and whether it's in flight or
-  still queued in the background — for debugging or a support bundle. It's read-only: nothing you do with the returned array changes what's actually loaded.
+  `this.app.loader.inspect()` returns a frozen, sorted snapshot — one row per canonical asset, with its state, how many owners hold it, and whether it's in flight or still queued in the background — for debugging or a support bundle. It's read-only: nothing you do with the returned array changes what's actually loaded.
 </Callout>
 
 ## When are resources available?
@@ -569,6 +554,43 @@ A database written under an earlier physical schema is **emptied on first open**
 
 [`MemoryCacheStore`](/ExoJS/en/api/memory-cache-store/) is the in-process counterpart: it holds values by reference for the lifetime of the page, which makes it a good front tier and the obvious choice in tests.
 
+## Packs and the asset manifest
+
+A `.exoa` container is compressed in **blocks**, and a block boundary always falls on an entry boundary, so changing one asset changes that asset's blocks and no others. Passing a [`ContainerBlockStore`](/ExoJS/en/api/container-block-store/) to `loadContainer` is what turns that into traffic: the head is read first, and only the blocks the store does not already hold are fetched.
+
+That only pays off if a returning client can tell that the pack changed without downloading it. The **asset manifest** is what makes it so. `exo assets pack <pack-description> --manifest dist/assets.json` writes each pack under a name derived from the hash of its own bytes (`level1.4b17e9a02c8d1f35.exoa`) and keeps a small JSON document beside the packs that says which file currently holds each logical pack:
+
+```json
+{
+  "version": 1,
+  "packs": {
+    "level1": {
+      "file": "level1.4b17e9a02c8d1f35.exoa",
+      "hash": "4b17e9a02c8d1f35...",
+      "byteLength": 812345,
+      "blockCount": 4,
+      "entries": ["images/hero.png", "data/level1.json"]
+    }
+  }
+}
+```
+
+A pack's URL therefore changes exactly when its bytes change, which means the pack file can be served with an immutable cache lifetime and the manifest is the one URL a client has to re-read. Read it with `loadManifest` and hand the pack to `loadContainer`:
+
+```ts
+import { cacheApiBlockStore, type Loader } from '@codexo/exojs';
+
+export const loadLevel = async (loader: Loader): Promise<void> => {
+  const manifest = await loader.loadManifest('assets.json');
+
+  await loader.loadContainer(manifest.pack('level1'), { store: cacheApiBlockStore() });
+};
+```
+
+Re-packing after one asset changed produces a new pack name and a manifest that points at it; the blocks that did not change are already in the store, keyed by their own hash, and are never fetched again. Nothing about that is automatic for a pack loaded from a plain URL, which is the reason the manifest exists.
+
+The manifest describes packs without opening them, so `manifest.packs`, `manifest.has(name)` and `manifest.packFor('images/hero.png')` answer before a single pack byte is fetched. A name the manifest does not carry throws and names the ones it does. Pack bytes that disagree with the record - a wrong length, or a digest that is not the one stated - are an `AssetDecodeError`, the same failure any other unusable asset raises, and they are never written to the cache. How much is checked follows how much is read: the single-request path holds the whole file and verifies the digest, while the block-wise path verifies the length and rests on the content-addressed URL for the rest. The manifest itself is always read from the network, so it is the one asset an offline application cannot get.
+
 ## Save data with a key-value store
 
 The cache above persists _loaded assets_. For **user save data** (settings, profiles, checkpoints) use a `KeyValueStore` instead — a small key/value surface whose backend you pick by capability:
@@ -588,12 +610,9 @@ All three share one async interface, so swapping `WebStorageStore` for `IndexedD
 
 ## Custom asset types (advanced)
 
-Teach the loader about a domain-specific resource by writing an `AssetType`. One
-value carries everything the loader needs: what the type is called, which
-suffixes name it, how its data is read, and how a resource is built from it.
+Teach the loader about a domain-specific resource by writing an `AssetType`. One value carries everything the loader needs: what the type is called, which suffixes name it, how its data is read, and how a resource is built from it.
 
-First extend `AssetDefinitions` via declaration merging so the type system knows
-the new type, then write the type:
+First extend `AssetDefinitions` via declaration merging so the type system knows the new type, then write the type:
 
 <SourceSnippet
   source="examples/guides/loading-and-resources/height-field-type.ts"
@@ -602,12 +621,9 @@ the new type, then write the type:
   title="examples/guides/loading-and-resources/height-field-type.ts"
 />
 
-The `id` is the type's permanent name: it appears in resource identities and in
-the storage namespace a persistent cache writes under, so it must survive a
-reload. Reverse-DNS keeps independently authored types apart.
+The `id` is the type's permanent name: it appears in resource identities and in the storage namespace a persistent cache writes under, so it must survive a reload. Reverse-DNS keeps independently authored types apart.
 
-A factory never fetches. It receives source data the loader already acquired,
-and its only outward reach is `dependencies`, which acquires other *assets*:
+A factory never fetches. It receives source data the loader already acquired, and its only outward reach is `dependencies`, which acquires other *assets*:
 
 | Member                     | What it gives you                                                  |
 | -------------------------- | ------------------------------------------------------------------ |
@@ -616,15 +632,9 @@ and its only outward reach is `dependencies`, which acquires other *assets*:
 | `context.dependencies`     | loads assets this resource needs, released together with it         |
 | `context.signal`           | the load's cancellation signal                                      |
 
-Override `resourceIdentity(request)` when an option changes the resource the
-factory builds, and `sourceIdentity(request)` when it changes which data is
-acquired - omit both when the source alone identifies the asset.
+Override `resourceIdentity(request)` when an option changes the resource the factory builds, and `sourceIdentity(request)` when it changes which data is acquired - omit both when the source alone identifies the asset.
 
-Install the type by listing it on an [`Extension`](/ExoJS/en/api/extension/)
-passed to `ApplicationOptions.extensions`. Installing is the only thing that
-makes it loadable, and it makes it loadable on that application alone - two
-applications in one process can map the same suffix to different types without
-seeing each other. Once installed, the type works everywhere the built-ins do:
+Install the type by listing it on an [`Extension`](/ExoJS/en/api/extension/) passed to `ApplicationOptions.extensions`. Installing is the only thing that makes it loadable, and it makes it loadable on that application alone - two applications in one process can map the same suffix to different types without seeing each other. Once installed, the type works everywhere the built-ins do:
 
 <SourceSnippet
   source="examples/guides/loading-and-resources/height-field-load.ts"
@@ -634,10 +644,7 @@ seeing each other. Once installed, the type works everywhere the built-ins do:
 />
 
 <Callout type="hint" title="Bare-path inference is built-in only">
-`heightFieldType.asset(...)` always works, and so does
-`Asset.type('com.example.height-field', ...)` on an application that installed
-the type. A bare `this.loader.load('maps/level-1.hf')` also works there once the
-type claims the suffix and the type system mirrors the mapping:
+`heightFieldType.asset(...)` always works, and so does `Asset.type('com.example.height-field', ...)` on an application that installed the type. A bare `this.loader.load('maps/level-1.hf')` also works there once the type claims the suffix and the type system mirrors the mapping:
 
 ```ts no-check -- abbreviated AssetType sketch; the class body is elided
 export class HeightFieldAssetType extends AssetType<string, HeightField> {
@@ -654,14 +661,9 @@ declare module '@codexo/exojs' {
 }
 ```
 
-`Assets.from('maps/level-1.hf')` is the one place this does not reach: a catalog
-is built with no application, so only the built-in suffixes resolve there. Name
-the asset with `heightFieldType.asset(...)` in a catalog instead.
+`Assets.from('maps/level-1.hf')` is the one place this does not reach: a catalog is built with no application, so only the built-in suffixes resolve there. Name the asset with `heightFieldType.asset(...)` in a catalog instead.
 
-`leaf` decides what a catalog hands out before the payload arrives: `'ref'` (the
-default) a deferred `AssetRef`, a `SeamlessAdapter` the resource itself healing
-in place, `'none'` nothing at all. The built-in `texture` and `sound` types are
-the reference for a seamless resource; `json` / `text` for a deferred value.
+`leaf` decides what a catalog hands out before the payload arrives: `'ref'` (the default) a deferred `AssetRef`, a `SeamlessAdapter` the resource itself healing in place, `'none'` nothing at all. The built-in `texture` and `sound` types are the reference for a seamless resource; `json` / `text` for a deferred value.
 
 </Callout>
 

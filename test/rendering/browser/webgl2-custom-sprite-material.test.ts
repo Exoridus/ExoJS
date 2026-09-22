@@ -1,10 +1,10 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Shader } from '#rendering/shader/Shader';
 import { spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/materialSources';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
@@ -132,7 +132,7 @@ void main() {
 
 const createTintMaterial = (color: readonly [number, number, number, number]): SpriteMaterial =>
   new SpriteMaterial({
-    shader: new ShaderSource({ glsl: { vertex: spriteVertexGlsl, fragment: tintFragment } }),
+    shader: new Shader({ glsl: { vertex: spriteVertexGlsl, fragment: tintFragment } }),
     uniforms: { u_userColor: color },
   });
 
@@ -241,7 +241,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
     const firstPattern = createSolidTexture(255, 0, 0);
     const secondPattern = createSolidTexture(0, 255, 0);
     const material = new SpriteMaterial({
-      shader: new ShaderSource({ glsl: { vertex: spriteVertexGlsl, fragment: patternFragment } }),
+      shader: new Shader({ glsl: { vertex: spriteVertexGlsl, fragment: patternFragment } }),
       textures: { u_pattern: firstPattern },
     });
     const group = new RetainedContainer();
@@ -329,7 +329,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
     const base = createSolidTexture(255, 0, 0);
     const pattern = createSolidTexture(0, 255, 0);
     const material = new SpriteMaterial({
-      shader: new ShaderSource({ glsl: { vertex: spriteVertexGlsl, fragment: patternFragment } }),
+      shader: new Shader({ glsl: { vertex: spriteVertexGlsl, fragment: patternFragment } }),
       textures: { u_pattern: pattern },
     });
     const sprite = new Sprite(base);
@@ -518,7 +518,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
     const backend = await createBackend();
     const texture = createSplitTexture();
     const material = new SpriteMaterial({
-      shader: new ShaderSource({
+      shader: new Shader({
         glsl: {
           vertex: spriteVertexGlsl,
           fragment: `#version 300 es
@@ -554,11 +554,11 @@ void main() {
       backend.destroy();
     }
   });
-  test('a fragment-only GLSL ShaderSource is enough for a sprite material', async () => {
+  test('a fragment-only GLSL Shader is enough for a sprite material', async () => {
     const backend = await createBackend();
     const texture = createSplitTexture();
     const material = new SpriteMaterial({
-      shader: new ShaderSource({
+      shader: new Shader({
         glsl: {
           fragment: `#version 300 es
 precision mediump float;

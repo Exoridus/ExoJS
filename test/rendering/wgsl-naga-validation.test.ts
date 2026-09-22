@@ -33,7 +33,11 @@ import { spawnSync } from 'node:child_process';
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 import { describe, expect, test } from 'vitest';
 
+import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
+import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
+import { filterUniformGroup } from '#rendering/uniforms/uniformLayout';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
 import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
 import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/WebGpuMaskCompositor';
@@ -61,6 +65,12 @@ const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   ['WebGpuStencilClipper', stencilWriteShaderSource],
   ['WebGpuTextRenderer', textShaderSource],
   ['spriteMaterialSources spriteMaterialPrologueWgsl (custom-material prelude)', spriteMaterialPrologueWgsl],
+  // The stock filters that declare a typed uniform schema: what a backend
+  // compiles is the author's body plus the generated block, so that is what has
+  // to validate.
+  ['BloomFilter (generated uniform block)', bloomThresholdShader._resolveWgsl(filterUniformGroup)!],
+  ['ColorMatrixFilter (generated uniform block)', colorMatrixShader._resolveWgsl(filterUniformGroup)!],
+  ['DropShadowFilter (generated uniform block)', dropShadowShader._resolveWgsl(filterUniformGroup)!],
 ];
 
 const nagaBinary = process.env['EXOJS_NAGA'] ?? 'naga';

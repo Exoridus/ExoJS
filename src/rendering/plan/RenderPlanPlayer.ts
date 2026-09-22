@@ -1,7 +1,7 @@
 import { Matrix } from '#math/Matrix';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
-import type { PersistentSlotBundle } from './persistentSlotDraw';
+import type { PersistentSlotBundle, PersistentSlotDrawRecord } from './persistentSlotDraw';
 import { RenderEntryKind } from './renderCommand';
 import { RenderEffectExecutor } from './RenderEffectExecutor';
 import type { RenderInstruction } from './RenderInstruction';
@@ -118,7 +118,7 @@ interface RenderPlanPlaybackHooks {
   _beginRetainedCapture?(set: RetainedInstructionSet): void;
   _endRetainedCapture?(set: RetainedInstructionSet): void;
   replayRetainedBatch?(batch: RetainedBatchInstruction): void;
-  _drawPersistentOrder?(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void;
+  _drawPersistentOrder?(bundle: PersistentSlotBundle, order: Uint32Array, orderCount: number, offset: number, count: number): void;
 }
 
 /**
@@ -213,15 +213,16 @@ export class RenderPlanPlayer {
       return;
     }
 
-    // Persistent-indexed root: the collect switch left this scope
-    // EMPTY and attached the order stream. The backend draws instance `i` from
-    // slot `order[i]`, so the stream IS the draw order - nothing here may
-    // reorder, group or split it. Truthy check: pooled scopes always carry the
-    // field, but hand-built test scopes may omit it.
+    // Persistent-indexed root: the collect switch attached the order stream and
+    // left this scope holding nothing but the live entries the stream is cut
+    // around, one child scope per mark. The backend draws instance `i` from slot
+    // `order[i]`, so the stream IS the draw order - nothing here may reorder,
+    // group or split it beyond the cuts the record names. Truthy check: pooled
+    // scopes always carry the field, but hand-built test scopes may omit it.
     const persistent = scope.persistentDraw;
 
     if (persistent && hooks._drawPersistentOrder !== undefined) {
-      hooks._drawPersistentOrder(persistent.bundle, persistent.order, persistent.count);
+      this._playPersistentDraw(scope, persistent, backend, hooks, context);
 
       return;
     }
@@ -265,6 +266,43 @@ export class RenderPlanPlayer {
       } else {
         recordTarget.commitRecording();
       }
+    }
+  }
+
+  /**
+   * Issue the order stream segment by segment, playing the `i`-th mark's child
+   * scope between the segments its position separates. A mark at the very
+   * start, at the very end, or directly after another mark leaves no empty
+   * segment behind: a zero-length draw is never issued.
+   */
+  private static _playPersistentDraw(
+    scope: GroupScope,
+    record: PersistentSlotDrawRecord,
+    backend: RenderBackend,
+    hooks: RenderPlanPlaybackHooks,
+    context: RenderPlanPlaybackContext,
+  ): void {
+    const { bundle, order, count, markPositions, markCount } = record;
+    const entries = scope.entries;
+    let cursor = 0;
+
+    for (let i = 0; i < markCount; i++) {
+      const position = markPositions[i]!;
+
+      if (position > cursor) {
+        hooks._drawPersistentOrder!(bundle, order, count, cursor, position - cursor);
+        cursor = position;
+      }
+
+      const entry = entries[i];
+
+      if (entry?.kind === RenderEntryKind.Group) {
+        this._playGroup(entry.scope, backend, hooks, context);
+      }
+    }
+
+    if (count > cursor) {
+      hooks._drawPersistentOrder!(bundle, order, count, cursor, count - cursor);
     }
   }
 

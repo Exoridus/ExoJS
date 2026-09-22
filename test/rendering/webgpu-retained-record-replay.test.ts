@@ -30,13 +30,13 @@ import { materializeRendererBindings } from '#extensions/materialize';
 import { Container } from '#rendering/Container';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import { RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
@@ -266,7 +266,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
 const createRetainedSpriteMaterial = (): SpriteMaterial =>
   new SpriteMaterial({
-    shader: new ShaderSource({ wgsl: retainedMaterialFragment }),
+    shader: new Shader({ wgsl: retainedMaterialFragment }),
     uniforms: { u_userColor: new Float32Array([1, 0, 0, 1]) },
   });
 

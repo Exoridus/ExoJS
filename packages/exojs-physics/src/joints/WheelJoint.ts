@@ -2,10 +2,11 @@ import type { PointLike } from '@codexo/exojs';
 
 import { applyInverseRotation, applyInverseTransform, applyRotation, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
+import type { JointOptions, JointSoftness } from './Joint';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link WheelJoint}. */
-export interface WheelJointOptions {
+export interface WheelJointOptions extends JointOptions {
   /** First body (the chassis). */
   bodyA: PhysicsBody;
   /** Second body (the wheel). */
@@ -92,7 +93,7 @@ export class WheelJoint extends Joint {
   private _upperImpulse = 0;
 
   public constructor(options: WheelJointOptions) {
-    super(options.bodyA, options.bodyB);
+    super(options.bodyA, options.bodyB, options.collideConnected);
 
     applyInverseTransform(options.bodyA.transform, options.anchor.x, options.anchor.y, scratch);
     this._localAnchorAx = scratch.x;
@@ -122,7 +123,7 @@ export class WheelJoint extends Joint {
   }
 
   /** @internal */
-  public override _prepare(h: number): void {
+  public override _prepare(h: number, rigid: JointSoftness): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
 
@@ -188,9 +189,12 @@ export class WheelJoint extends Joint {
       this._springMassScale = a2 * a3;
       this._springImpulseScale = a3;
     } else {
-      this._springBiasRate = 0.2 / h;
-      this._springMassScale = 1;
-      this._springImpulseScale = 0;
+      // The solver's own softness rather than a raw Baumgarte term; see
+      // `softConstraint`. An unscaled bias relaxes no impulse, which a chain of
+      // these constraints turns into energy.
+      this._springBiasRate = rigid.biasRate;
+      this._springMassScale = rigid.massScale;
+      this._springImpulseScale = rigid.impulseScale;
     }
 
     if (!this.enableMotor) {

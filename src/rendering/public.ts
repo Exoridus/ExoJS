@@ -13,6 +13,8 @@ export { CallbackRenderPass } from './CallbackRenderPass';
 export { Container } from './Container';
 export { Drawable } from './Drawable';
 export type { DrawContext, RenderToOptions } from './DrawContext';
+export type { FilterPassOptions } from './FilterPass';
+export { FilterPass } from './FilterPass';
 export type { MultiRenderTargetOptions } from './MultiRenderTarget';
 export { MultiRenderTarget } from './MultiRenderTarget';
 export { PassContext } from './PassContext';
@@ -21,7 +23,7 @@ export { RenderBackendType } from './RenderBackendType';
 export { RenderBatch } from './RenderBatch';
 export type { RenderErrorCode, RenderErrorOptions } from './RenderError';
 export { formatShaderError, RenderError } from './RenderError';
-export type { CaptureOptions, DrawBatchOptions, DrawGeometryOptions, RenderOptions } from './RenderingContext';
+export type { CaptureOptions, DrawBatchOptions, DrawGeometryOptions, PixelData, ReadPixelsOptions, RenderOptions } from './RenderingContext';
 export { RenderingContext } from './RenderingContext';
 export type { HitArea, MaskSource } from './RenderNode';
 export { RenderNode } from './RenderNode';
@@ -48,6 +50,8 @@ export {
 } from './types';
 export type { ViewFollowOptions, ViewFollowTarget, ViewOptions, ViewShakeOptions } from './View';
 export { View } from './View';
+export type { BloomFilterOptions } from '#rendering/filters/BloomFilter';
+export { BloomFilter } from '#rendering/filters/BloomFilter';
 export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';
 export { BlurFilter } from '#rendering/filters/BlurFilter';
 export type { ColorMatrixEntries } from '#rendering/filters/ColorMatrixFilter';
@@ -59,8 +63,17 @@ export { DropShadowFilter } from '#rendering/filters/DropShadowFilter';
 export { Filter } from '#rendering/filters/Filter';
 export type { LutFilterOptions, LutMode } from '#rendering/filters/LutFilter';
 export { LutFilter } from '#rendering/filters/LutFilter';
-export type { ShaderFilterLanguage, ShaderFilterOptions, ShaderFilterSourceOptions, ShaderFilterUniformValue } from '#rendering/filters/ShaderFilter';
-export { ShaderFilter } from '#rendering/filters/ShaderFilter';
+export type {
+  ShaderFilterBlocksView,
+  ShaderFilterLanguage,
+  ShaderFilterOptions,
+  ShaderFilterRawUniformName,
+  ShaderFilterSourceOptions,
+  ShaderFilterUniformsView,
+  ShaderFilterUniformValue,
+  ShaderFilterUniformValues,
+} from '#rendering/filters/ShaderFilter';
+export { createFilterShader, ShaderFilter } from '#rendering/filters/ShaderFilter';
 export { ShaderFilterBackendError } from '#rendering/filters/ShaderFilterBackendError';
 export { Geometry } from '#rendering/geometry/Geometry';
 export type { AttributeType, GeometryAttribute, GeometryOptions, GeometryUsage, Topology } from '#rendering/geometry/GeometryAttribute';
@@ -68,22 +81,29 @@ export type { GradientStop, GradientToTextureOptions, GradientType } from '#rend
 export { Gradient } from '#rendering/gradient/Gradient';
 export { LinearGradient } from '#rendering/gradient/LinearGradient';
 export { RadialGradient } from '#rendering/gradient/RadialGradient';
-export type { MaterialOptions, UniformValue } from '#rendering/material/Material';
+export type {
+  AnyMaterial,
+  MaterialOptions,
+  MaterialRawUniformName,
+  MaterialUniformBlocksView,
+  MaterialUniformsView,
+  MaterialUniformValues,
+  UniformValue,
+} from '#rendering/material/Material';
 export { Material } from '#rendering/material/Material';
+export type { AnyMeshMaterial, MeshMaterialOptions } from '#rendering/material/MeshMaterial';
 export { MeshMaterial } from '#rendering/material/MeshMaterial';
-export type { ShaderSourceOptions } from '#rendering/material/ShaderSource';
-export { ShaderSource } from '#rendering/material/ShaderSource';
+export type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 export { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 export type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 export { maxUint16VertexCount, meshIndexBytes, meshIndexFormatFor } from '#rendering/mesh/indices';
 export type { MeshOptions } from '#rendering/mesh/Mesh';
 export { Mesh } from '#rendering/mesh/Mesh';
 export { Graphics } from '#rendering/primitives/Graphics';
+export { GraphicsPath, type PathContour } from '#rendering/primitives/GraphicsPath';
 export { INSTANCE_TRANSFORM_GLSL, INSTANCE_TRANSFORM_WGSL } from '#rendering/shader/instanceContract';
-export type { ShaderProgram } from '#rendering/shader/Shader';
+export type { AnyShader, FragmentOutputCounts, ShaderOptions } from '#rendering/shader/Shader';
 export { Shader } from '#rendering/shader/Shader';
-export { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
-export { ShaderUniform } from '#rendering/shader/ShaderUniform';
 export type { AnimatedSpriteClipDefinition, AnimatedSpritePlayOptions } from '#rendering/sprite/AnimatedSprite';
 export { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 export type { NineSliceInsets, NineSliceModes, NineSliceOptions } from '#rendering/sprite/nineSlice';
@@ -144,10 +164,55 @@ export {
 } from '#rendering/texture/CompressedTextureFormat';
 export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
 export { DataTexture } from '#rendering/texture/DataTexture';
+export { DepthTexture } from '#rendering/texture/DepthTexture';
+export type { PixelReaderOptions } from '#rendering/texture/PixelReader';
+export { PixelRead, PixelReader } from '#rendering/texture/PixelReader';
+export type { RenderTextureOptions } from '#rendering/texture/RenderTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';
 export type { RepeatFit, RepeatMode, RepeatPlan, RepeatSegment } from '#rendering/texture/repeat';
 export { Texture } from '#rendering/texture/Texture';
 export type { SamplerOptions, TextureOptions, TextureUploadOptions } from '#rendering/texture/TextureOptions';
 export type { TextureRegionInsets, TextureRegionOptions } from '#rendering/texture/TextureRegion';
 export { TextureRegion } from '#rendering/texture/TextureRegion';
+export type {
+  UniformAccessorFor,
+  UniformArrayAccessor,
+  UniformFieldAccessors,
+  UniformMatrix3,
+  UniformMatrix4,
+  UniformScalar,
+  UniformStructAccessor,
+  UniformStructWriter,
+  UniformVector2,
+  UniformVector3,
+  UniformVector4,
+} from '#rendering/uniforms/uniformAccessors';
+export { UniformBlockData } from '#rendering/uniforms/UniformBlockData';
+export type {
+  UniformArrayElement,
+  UniformBlockRecord,
+  UniformFieldDeclaration,
+  UniformFieldOptions,
+  UniformFields,
+  UniformFieldType,
+  UniformInput,
+  UniformMat3Input,
+  UniformMat4Input,
+  UniformStructInput,
+  UniformVec2Input,
+  UniformVec3Input,
+  UniformVec4Input,
+} from '#rendering/uniforms/uniformDeclarations';
+export { UniformArray, UniformBlock, UniformStruct } from '#rendering/uniforms/uniformDeclarations';
+export type {
+  UniformArrayLayout,
+  UniformBlockLayout,
+  UniformLeafLayout,
+  UniformMemberLayout,
+  UniformNodeLayout,
+  UniformSchemaLayout,
+  UniformStructLayout,
+} from '#rendering/uniforms/uniformLayout';
+export type { UniformBlockDataRecord, UniformBlockInitialValues, UniformSchemaOptions } from '#rendering/uniforms/uniformSchema';
+export { UniformType } from '#rendering/uniforms/UniformType';
 export { Video } from '#rendering/video/Video';

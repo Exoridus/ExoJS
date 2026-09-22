@@ -59,7 +59,7 @@ export class TileLayerNode extends Container {
   private readonly _chunkNodes: TileChunkNode[] = [];
   private _syncedOpacity = -1;
   private _syncedTint: number | null | undefined = undefined;
-  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
+  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.Geometry;
 
   /**
    * Bound once so `TileLayer._addStructuralListener`/`_removeStructuralListener`
@@ -124,7 +124,12 @@ export class TileLayerNode extends Container {
    * integer pixel grid by construction). Setting the current value is a no-op;
    * an invalid value throws and leaves the prior mode unchanged.
    *
-   * @default PixelSnapMode.None
+   * Defaults to `Geometry` because a tile grid is made of quads that share
+   * their edges: left unsnapped, a boundary landing between two device pixels
+   * is sampled across both, so the seams blur and shimmer as the view moves.
+   * Set `None` to opt out.
+   *
+   * @default PixelSnapMode.Geometry
    * @stable
    */
   public get pixelSnapMode(): PixelSnapMode {
@@ -284,10 +289,9 @@ export class TileLayerNode extends Container {
     const node = new TileChunkNode(chunk, layer.tilesets, layer.tileWidth, layer.tileHeight, layer.chunkWidth, layer.chunkHeight);
 
     node.cullable = this._cullChunks;
-
-    if (this._pixelSnapMode !== PixelSnapMode.None) {
-      node.pixelSnapMode = this._pixelSnapMode;
-    }
+    // Unconditional: a chunk built after the layer was set to `None` has to
+    // inherit that too, not just a non-default mode.
+    node.pixelSnapMode = this._pixelSnapMode;
 
     return node;
   }

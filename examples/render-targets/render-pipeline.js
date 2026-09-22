@@ -36,7 +36,7 @@ class RenderPipelineScene extends Scene {
     this.sceneRt = new RenderTexture(width, height);
     this.blurredRt = new RenderTexture(width, height);
     this.composite = new Sprite(this.blurredRt);
-    this.blur = new BlurFilter({ radius: 8, quality: 2 });
+    this.blur = new BlurFilter({ strength: 4 });
     this.world = new Container();
     this.orb = new Graphics();
     this.world.addChild(this.orb);

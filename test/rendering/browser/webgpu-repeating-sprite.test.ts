@@ -2,7 +2,7 @@
  * WebGPU RepeatingSprite browser tests - opt-in, capability-aware.
  *
  * Validates both rendering paths:
- *  - Shader path: bare {@link Texture} source, UV tiling in WGSL, GPUSampler
+ *  - WebGl2Shader path: bare {@link Texture} source, UV tiling in WGSL, GPUSampler
  *    handles wrapping.
  *  - Geometry path: {@link TextureRegion} source, Cartesian-product quads
  *    built on the CPU with clamped UVs.
@@ -103,7 +103,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 };
 
 // ---------------------------------------------------------------------------
-// Shader path tests (bare Texture source)
+// WebGl2Shader path tests (bare Texture source)
 // ---------------------------------------------------------------------------
 
 describe('WebGPU RepeatingSprite — shader path', () => {

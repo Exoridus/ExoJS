@@ -87,6 +87,18 @@ export class ContactGraph {
 
   // Integer pair-keys (`(a.id << 16) | b.id`, a.id < b.id guaranteed by the broad
   // phase) - cheaper than string keys on the per-step solver hot path.
+  /**
+   * Body pairs a joint has taken out of collision, keyed by
+   * {@link bodyPairKey} and reference-counted by the world; `null` until a world
+   * hands its own map over.
+   *
+   * Consulted here rather than in the solver because the cheapest contact is
+   * the one the narrow phase never computes: a chain of N links otherwise pays
+   * for N-1 manifolds, warm-start slots and event records per step that nothing
+   * is allowed to act on.
+   */
+  private _uncollidablePairs: ReadonlyMap<number, number> | null = null;
+
   private readonly _records = new Map<number, ContactRecord>();
   // Live solver contacts per authored collider pair. Only pairs whose records
   // are engine-owned proxies appear here; everything else emits directly.
@@ -96,6 +108,11 @@ export class ContactGraph {
   /** Touching pairs currently tracked (for debug draw). */
   public get recordCount(): number {
     return this._records.size;
+  }
+
+  /** @internal - adopt the world's joint-filtered body pairs; see {@link _uncollidablePairs}. */
+  public _useUncollidablePairs(pairs: ReadonlyMap<number, number>): void {
+    this._uncollidablePairs = pairs;
   }
 
   /** Diff this pass's candidate pairs against the persistent set, collecting events + solid contacts. */
@@ -118,6 +135,12 @@ export class ContactGraph {
       const ownerB = authoredCollider(b);
 
       if (!shouldCollide(ownerA.filter, ownerB.filter)) {
+        continue;
+      }
+
+      // Checked against the size first so a world without such a joint pays one
+      // property read per pair rather than a map lookup.
+      if (this._uncollidablePairs !== null && this._uncollidablePairs.size > 0 && this._uncollidablePairs.has(bodyPairKey(ownerA.body.id, ownerB.body.id))) {
         continue;
       }
 
@@ -327,6 +350,13 @@ export const pairKeyStride = 0x4000000; // 2^26
  * @internal
  */
 export const pairKey = (aId: number, bId: number): number => aId * pairKeyStride + bId;
+
+/**
+ * Integer key for an unordered BODY pair, which unlike a collider pair arrives
+ * in no guaranteed order.
+ * @internal
+ */
+export const bodyPairKey = (aId: number, bId: number): number => (aId < bId ? pairKey(aId, bId) : pairKey(bId, aId));
 
 const authoredPairKey = (record: ContactRecord): number => {
   const first = record.ownerA.id;

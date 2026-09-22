@@ -238,7 +238,7 @@ export class AudioSystem {
    * of click sounds a second while audio is still locked, and every one of them
    * would produce the identical message - one line names the problem, a flood
    * buries it (and every other log the developer is reading). Re-armed by
-   * {@link AudioSystem.preUpdate} once the context runs, so a context that
+   * {@link AudioSystem.preFrame} once the context runs, so a context that
    * drops back to suspended later (an iOS audio-session interruption, a bfcache
    * restore) reports its own first occurrence again.
    */
@@ -273,7 +273,7 @@ export class AudioSystem {
     //   It does not dispatch to handlers subscribed while the context is
     //   already running, so subscribing in that case would only leak a handler
     //   that never fires.
-    // - `preUpdate` closes the remaining gaps by polling the transition. It
+    // - `preFrame` closes the remaining gaps by polling the transition. It
     //   already reads `isAudioContextReady()` every frame to re-arm the
     //   locked-playback warning, so this adds no work - and it is the only
     //   source that observes the running-to-suspended edge, which the ready
@@ -416,8 +416,8 @@ export class AudioSystem {
     });
   }
 
-  /** {@link SystemMethods.preUpdate} phase, at {@link SystemOrder.CoreAudio}. The frame delta is unused here (hence `_delta`). */
-  public preUpdate(_delta: Seconds): void {
+  /** {@link SystemMethods.preFrame} phase, at {@link SystemOrder.CoreAudio}. The frame delta is unused here (hence `_delta`). */
+  public preFrame(_delta: Seconds): void {
     this._syncLockState();
     this.listener._tick();
     // Tick spatial voices and prune ended ones.

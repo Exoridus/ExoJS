@@ -1,0 +1,1432 @@
+{
+  "title": "GraphicsPath",
+  "description": "A reusable 2D path: a sequence of subpaths built from lines, Bézier curves and arcs, kept as commands rather than as vertices. ```ts const arrow = new GraphicsPath().moveTo(0, 0).lineTo(40, 20).lineTo(0, 40).closePath(); graphics.fillColor = Color.white; graphics.drawShape(arrow); ``` Keeping the commands is what separates this from a list of points: the same path flattens to as many vertices as the size it is drawn at needs, so one path can back an icon and a full-screen backdrop without either being over-tessellated or visibly faceted. Pass the tolerance you need to contours; the default suits drawing at roughly one path unit per pixel. A path is a value, not a scene node. It holds no GPU resources, needs no disposal, and can be shared between any number of Graphics instances and drawn any number of times. This is not the same thing as Graphics's own `moveTo`/`lineTo` cursor, which draws each segment the moment it is called and gives every segment its own mesh. A path is assembled first and drawn as one shape, so it can be filled, joined across segments, and kept for later.",
+  "symbol": "GraphicsPath",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 18,
+  "counts": {
+    "constructors": 1,
+    "methods": 14,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A reusable 2D path: a sequence of subpaths built from lines, Bézier curves and arcs, kept as commands rather than as vertices.",
+        "```ts const arrow = new GraphicsPath().moveTo(0, 0).lineTo(40, 20).lineTo(0, 40).closePath();",
+        "graphics.fillColor = Color.white; graphics.drawShape(arrow); ```",
+        "Keeping the commands is what separates this from a list of points: the same path flattens to as many vertices as the size it is drawn at needs, so one path can back an icon and a full-screen backdrop without either being over-tessellated or visibly faceted. Pass the tolerance you need to contours; the default suits drawing at roughly one path unit per pixel.",
+        "A path is a value, not a scene node. It holds no GPU resources, needs no disposal, and can be shared between any number of Graphics instances and drawn any number of times.",
+        "This is not the same thing as Graphics's own `moveTo`/`lineTo` cursor, which draws each segment the moment it is called and gives every segment its own mesh. A path is assembled first and drawn as one shape, so it can be filled, joined across segments, and kept for later."
+      ],
+      "importLine": "import { GraphicsPath } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): GraphicsPath",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GraphicsPath",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GraphicsPath",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "arc",
+          "signature": "arc(centerX: number, centerY: number, radius: number, startAngle: number, endAngle: number, anticlockwise: boolean): this",
+          "signatureTokens": [
+            {
+              "text": "arc",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radius",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "startAngle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "endAngle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "anticlockwise",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "centerX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radius",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "startAngle",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "endAngle",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "anticlockwise",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Extend the current subpath with a circular arc, preceded by a straight segment from the current point to the arc's start where the two differ. Angles are in radians and anticlockwise reverses the sweep direction. Starts a new subpath when the path is empty, so an arc can open one."
+        },
+        {
+          "name": "arcTo",
+          "signature": "arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this",
+          "signatureTokens": [
+            {
+              "text": "arcTo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x1",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y1",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x2",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y2",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radius",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x2",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y2",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radius",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Extend the current subpath with an arc of radius tangent to the lines current point → (x1, y1) and (x1, y1) → (x2, y2), the corner rounding used for rounded polygons. Degenerate input - a zero radius, repeated points, or a corner too tight for the radius - falls back to a straight segment to (x1, y1)."
+        },
+        {
+          "name": "bezierCurveTo",
+          "signature": "bezierCurveTo(cpX1: number, cpY1: number, cpX2: number, cpY2: number, x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "bezierCurveTo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cpX1",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cpY1",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cpX2",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cpY2",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "cpX1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "cpY1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "cpX2",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "cpY2",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Extend the current subpath with a cubic Bézier curve through two control points."
+        },
+        {
+          "name": "circle",
+          "signature": "circle(centerX: number, centerY: number, radius: number): this",
+          "signatureTokens": [
+            {
+              "text": "circle",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radius",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "centerX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radius",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Add a closed circular subpath."
+        },
+        {
+          "name": "clear",
+          "signature": "clear(): this",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Discard every command, leaving the path as newly constructed."
+        },
+        {
+          "name": "clone",
+          "signature": "clone(): GraphicsPath",
+          "signatureTokens": [
+            {
+              "text": "clone",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GraphicsPath",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GraphicsPath",
+          "description": "An independent copy holding the same commands."
+        },
+        {
+          "name": "closePath",
+          "signature": "closePath(): this",
+          "signatureTokens": [
+            {
+              "text": "closePath",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Close the current subpath and return the cursor to where that subpath began."
+        },
+        {
+          "name": "contours",
+          "signature": "contours(tolerance: number): readonly PathContour[]",
+          "signatureTokens": [
+            {
+              "text": "contours",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tolerance",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathContour",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "tolerance",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "readonly PathContour[]",
+          "description": "Flatten the path into polylines, one per subpath. tolerance is the largest distance, in the path's own units, that a flattened edge may deviate from the true curve. Smaller values produce more vertices: halving it roughly doubles the vertex count of a curve. Pass the path unit size in device pixels to keep curves smooth on a scaled-up path. Subpaths of fewer than two points are dropped, and so is the closing vertex of a closed subpath that merely repeats its first."
+        },
+        {
+          "name": "ellipse",
+          "signature": "ellipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this",
+          "signatureTokens": [
+            {
+              "text": "ellipse",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "centerY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radiusX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radiusY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "centerX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radiusX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radiusY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Add a closed axis-aligned elliptical subpath. Approximated by four cubic Bézier quadrants, which stays within the flattening tolerance for every radius ratio."
+        },
+        {
+          "name": "lineTo",
+          "signature": "lineTo(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "lineTo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Extend the current subpath with a straight segment to (x, y)."
+        },
+        {
+          "name": "moveTo",
+          "signature": "moveTo(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "moveTo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Begin a new subpath at (x, y)."
+        },
+        {
+          "name": "quadraticCurveTo",
+          "signature": "quadraticCurveTo(cpX: number, cpY: number, x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "quadraticCurveTo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cpX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cpY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "cpX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "cpY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Extend the current subpath with a quadratic Bézier curve through control point (cpX, cpY)."
+        },
+        {
+          "name": "rect",
+          "signature": "rect(x: number, y: number, width: number, height: number): this",
+          "signatureTokens": [
+            {
+              "text": "rect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Add a closed rectangular subpath."
+        },
+        {
+          "name": "roundedRect",
+          "signature": "roundedRect(x: number, y: number, width: number, height: number, radius: number): this",
+          "signatureTokens": [
+            {
+              "text": "roundedRect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radius",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radius",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Add a closed rounded-rectangle subpath. The radius is clamped to half the shorter side; a clamped radius of zero gives a plain rect."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "currentX",
+          "signature": "currentX: number",
+          "signatureTokens": [
+            {
+              "text": "currentX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "X of the point the next segment starts from."
+        },
+        {
+          "name": "currentY",
+          "signature": "currentY: number",
+          "signatureTokens": [
+            {
+              "text": "currentY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Y of the point the next segment starts from."
+        },
+        {
+          "name": "isEmpty",
+          "signature": "isEmpty: boolean",
+          "signatureTokens": [
+            {
+              "text": "isEmpty",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether any command has been recorded."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/primitives/GraphicsPath.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/GraphicsPath.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/primitives/GraphicsPath.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/GraphicsPath.ts"
+}

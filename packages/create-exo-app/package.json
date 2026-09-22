@@ -4,8 +4,19 @@
   "description": "Official starter for ExoJS — scaffold a new app with npm create exo-app",
   "type": "module",
   "license": "MIT",
+  "sideEffects": false,
   "bin": {
     "create-exo-app": "./dist/index.js"
+  },
+  "main": "./dist/scaffold.js",
+  "types": "./dist/scaffold.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/scaffold.d.ts",
+      "import": "./dist/scaffold.js",
+      "default": "./dist/scaffold.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/",

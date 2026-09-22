@@ -131,7 +131,7 @@ export class TransformBuffer {
   /**
    * Number of draw commands whose transform write was skipped since the last
    * {@link begin} - recorded by the backend for renderers that opt out of the
-   * shared transform storage (`_consumesSharedTransform === false`).
+   * shared transform storage (`consumesSharedTransform === false`).
    * @internal
    */
   public get skippedWriteCount(): number {

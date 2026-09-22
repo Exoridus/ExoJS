@@ -1,0 +1,217 @@
+---
+/**
+ * BenchComparisonSummary - how one profile's comparisons came out, one bar per arm.
+ *
+ * This is a distribution, not a score. Nothing is summed across bars and no bar
+ * is ranked against another, because the arms answer different questions - and
+ * the block deliberately does not read as a league table.
+ *
+ * Coverage is not an outcome. A pair with no shared cell leaves the bar's track
+ * empty rather than taking a segment of its own: an arm that sits an archetype
+ * out is a gap in the matrix, and counting it beside the measured results would
+ * report missing coverage as a doubt about the measurement. The bar is
+ * therefore always the full row count wide, and how much of it is filled is the
+ * coverage figure printed in front of it.
+ *
+ * Ahead and behind get the same segment height and the same type, so a loss
+ * never reads as quieter than a lead. `unclear` is a measured outcome - the
+ * runs produced numbers and disagreed on the rung - so it is hatched rather
+ * than left empty.
+ *
+ * The bars are grouped by what kind of opponent they are, because a Rust/WASM
+ * solver and a JavaScript one answer different questions and a single flat list
+ * invites a reader to weigh them against each other.
+ */
+
+import { OUTCOME_LABELS, OUTCOME_ORDER, SUMMARY_OF, SUMMARY_ORDER, type ComparisonTally, type SummaryState } from '../lib/bench-profiles';
+
+interface Props {
+    tallies: readonly ComparisonTally[];
+}
+
+const { tallies } = Astro.props;
+
+/** What each state is called under a bar, with the arm's own name where it has a side. */
+const phraseOf = (state: SummaryState, arm: string, count: number): string => {
+    if (state === 'ahead') return `${String(count)} ExoJS ahead`;
+    if (state === 'behind') return `${String(count)} ${arm} ahead`;
+    if (state === 'level') return `${String(count)} level`;
+
+    return `${String(count)} no clear lead`;
+};
+
+/** The exact outcomes behind one summary state, for the segment's own tooltip. */
+const breakdownOf = (tally: ComparisonTally, state: SummaryState): string =>
+    OUTCOME_ORDER.filter(outcome => SUMMARY_OF[outcome] === state && tally.counts[outcome] > 0)
+        .map(outcome => `${String(tally.counts[outcome])} ${OUTCOME_LABELS[outcome]}`)
+        .join(', ');
+
+/** The bars, in the order they were built, split into the groups they announce. */
+const groups = tallies.reduce<{ label: string; lines: ComparisonTally[] }[]>((built, tally) => {
+    const last = built.at(-1);
+
+    if (last !== undefined && last.label === tally.group) {
+        last.lines.push(tally);
+
+        return built;
+    }
+
+    return [...built, { label: tally.group, lines: [tally] }];
+}, []);
+---
+
+{
+    tallies.length > 0 && (
+        <section class="summary" aria-label="Comparison outcomes per arm">
+            {groups.map(group => (
+                <div class="group">
+                    <h4>{group.label}</h4>
+                    {group.lines.map(tally => (
+                <div class="line">
+                    <span class="pair">
+                        {tally.label}
+                        <span class="meta">{tally.meta}</span>
+                    </span>
+                    <span class="bar">
+                        {SUMMARY_ORDER.filter(state => tally.summary[state] > 0).map(state => (
+                            <span class:list={['seg', state]} style={`flex:${String(tally.summary[state])}`} title={breakdownOf(tally, state)} />
+                        ))}
+                        {tally.total > tally.measured && (
+                            <span
+                                class="seg gap"
+                                style={`flex:${String(tally.total - tally.measured)}`}
+                                title={`${String(tally.total - tally.measured)} rows with no shared cell`}
+                            />
+                        )}
+                    </span>
+                    <span class="counts">
+                        <span class="coverage">
+                            {tally.measured}/{tally.total} measured
+                        </span>
+                        {SUMMARY_ORDER.filter(state => tally.summary[state] > 0).map(state => (
+                            <span class:list={['count', state]}>{phraseOf(state, tally.arm, tally.summary[state])}</span>
+                        ))}
+                    </span>
+                </div>
+                    ))}
+                </div>
+            ))}
+        </section>
+    )
+}
+
+<style>
+    .summary {
+        container-type: inline-size;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+        padding: var(--s-3) var(--s-5);
+    }
+
+    .group + .group {
+        margin-top: var(--s-4);
+        padding-top: var(--s-3);
+        border-top: 1px solid var(--line-soft);
+    }
+
+    .group h4 {
+        margin: 0 0 var(--s-1);
+        font-family: var(--f-mono);
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .line {
+        display: grid;
+        grid-template-columns: 11rem minmax(10rem, 1fr) 26rem;
+        column-gap: var(--s-5);
+        align-items: center;
+        padding: var(--s-2) 0;
+    }
+
+    .line + .line {
+        border-top: 1px solid color-mix(in oklab, var(--line-soft), transparent 45%);
+    }
+
+    .pair {
+        font-family: var(--f-mono);
+        font-size: 0.78rem;
+    }
+
+    .meta {
+        display: block;
+        font-size: 0.66rem;
+        color: var(--fg-faint);
+    }
+
+    /* The track is always the full row count wide, so an unfilled tail reads as coverage the matrix does not have. */
+    .bar {
+        display: flex;
+        gap: 2px;
+        height: 10px;
+        border-radius: 3px;
+        background: color-mix(in oklab, var(--fg-faint), transparent 88%);
+    }
+
+    .seg {
+        border-radius: 2px;
+    }
+
+    .seg.ahead {
+        background: var(--bench-lead);
+    }
+
+    .seg.level {
+        background: color-mix(in oklab, var(--fg-faint), transparent 40%);
+    }
+
+    .seg.behind {
+        background: var(--bench-loss);
+    }
+
+    .seg.unclear {
+        background: repeating-linear-gradient(135deg, var(--fg-faint) 0 2px, transparent 2px 5px);
+        box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--fg-faint), transparent 60%);
+    }
+
+    .seg.gap {
+        background: none;
+    }
+
+    .counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 var(--s-3);
+        font-family: var(--f-mono);
+        font-size: 0.72rem;
+        color: var(--fg-muted);
+    }
+
+    .coverage {
+        color: var(--fg-faint);
+    }
+
+    .count.ahead {
+        color: var(--bench-lead);
+    }
+
+    .count.behind {
+        color: var(--bench-loss);
+    }
+
+    .count.unclear,
+    .count.level {
+        color: var(--fg-muted);
+    }
+
+    @container (width < 46rem) {
+        .line {
+            grid-template-columns: minmax(0, 1fr);
+            row-gap: var(--s-2);
+        }
+    }
+</style>

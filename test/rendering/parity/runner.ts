@@ -8,9 +8,11 @@
  * verification - the thing a suite of green tests structurally cannot.
  */
 
-import { afterAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { commands } from 'vitest/browser';
 
+import { webGl2Available, webGpuAvailable } from '../browser/_backendSetup';
+import { openWebGl2, openWebGpu } from './backends';
 import type { EvidenceRow } from './evidenceSink';
 import { cappedEvidence, type Property, type Scene } from './types';
 
@@ -61,6 +63,32 @@ export const runParityMatrix = (scenes: readonly Scene[], properties: readonly P
 
   for (const scene of scenes) {
     describe(scene.name, () => {
+      // Opened once per scene and shared by every property that runs against
+      // it, rather than once per property: a fresh WebGpuBackend per property
+      // multiplied device/adapter construction by the property count, and a
+      // driver does not always reclaim a destroyed one before the next
+      // construction runs (see WebGpuBackend's shared-adapter comment for the
+      // same mechanism one level up, on GPUAdapter). `null` records "not
+      // available in this browser" for every property that checks it, rather
+      // than each of them probing separately.
+      let webgl2: Awaited<ReturnType<typeof openWebGl2>> | null = null;
+      let webgpu: Awaited<ReturnType<typeof openWebGpu>> | null = null;
+
+      beforeAll(async () => {
+        if (webGl2Available()) {
+          webgl2 = await openWebGl2(scene);
+        }
+
+        if (await webGpuAvailable()) {
+          webgpu = await openWebGpu(scene);
+        }
+      });
+
+      afterAll(() => {
+        webgl2?.destroy();
+        webgpu?.destroy();
+      });
+
       for (const property of properties) {
         if (!property.appliesTo(scene)) {
           // Not applicable is still information: it is why the matrix cell is
@@ -86,7 +114,7 @@ export const runParityMatrix = (scenes: readonly Scene[], properties: readonly P
           test(`${property.name}`, async ctx => {
             // Runtime skip for a lost device, not a disabled test.
             // eslint-disable-next-line vitest/no-disabled-tests
-            const result = await property.run({ scene, skip: reason => ctx.skip(reason) });
+            const result = await property.run({ scene, skip: reason => ctx.skip(reason), webgl2, webgpu });
 
             for (const backend of BACKENDS) record(scene, property, backend, result);
 
@@ -105,7 +133,7 @@ export const runParityMatrix = (scenes: readonly Scene[], properties: readonly P
           test(`${property.name} [${backend}]`, async ctx => {
             // Runtime skip for a lost device, not a disabled test.
             // eslint-disable-next-line vitest/no-disabled-tests
-            const result = await property.run({ scene, skip: reason => ctx.skip(reason) }, backend);
+            const result = await property.run({ scene, skip: reason => ctx.skip(reason), webgl2, webgpu }, backend);
 
             record(scene, property, backend, result);
 

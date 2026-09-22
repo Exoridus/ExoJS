@@ -2,8 +2,10 @@ import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
+import { NodeDirtyIndex } from '#core/nodeDirtyIndex';
 import { Time } from '#core/units';
 
+import { installFrameLoopDoubles } from '../support/application-frame-loop';
 import { frameDelta } from '../support/frame-delta';
 
 // ---------------------------------------------------------------------------
@@ -45,15 +47,15 @@ describe('AudioSystem.update()', () => {
     vi.restoreAllMocks();
   });
 
-  // 1. mixer.preUpdate() ticks listener
+  // 1. mixer.preFrame() ticks listener
   test('update() calls listener._tick()', () => {
     const mixer = new AudioSystem();
     const tickSpy = vi.spyOn(mixer.listener, '_tick');
-    mixer.preUpdate(frameDelta);
+    mixer.preFrame(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
   });
 
-  // 2. mixer.preUpdate() ticks all registered spatial voices
+  // 2. mixer.preFrame() ticks all registered spatial voices
   test('update() calls _tickSpatial() on all registered spatial voices', () => {
     const pannerSpy = setupPannerSpy();
     const mixer = new AudioSystem();
@@ -66,7 +68,7 @@ describe('AudioSystem.update()', () => {
     const tick1 = vi.spyOn(voice1, '_tickSpatial');
     const tick2 = vi.spyOn(voice2, '_tickSpatial');
 
-    mixer.preUpdate(frameDelta);
+    mixer.preFrame(frameDelta);
 
     expect(tick1).toHaveBeenCalledTimes(1);
     expect(tick2).toHaveBeenCalledTimes(1);
@@ -83,16 +85,16 @@ describe('AudioSystem.update()', () => {
     // sound.position remains null - not spatial
     const voice = mixer.play(sound) as SoundVoice;
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    mixer.preUpdate(frameDelta);
+    mixer.preFrame(frameDelta);
     expect(tickSpy).not.toHaveBeenCalled();
     sound.destroy();
   });
 
-  // 4. The engine's own core systems run as `preUpdate` systems, ahead of the
+  // 4. The engine's own core systems run as `preFrame` systems, ahead of the
   // fixed steps, in a fixed relative order pinned by their `SystemOrder.Core*`
   // values: input, interaction (which retires the pointers input flagged
   // terminal, in its own `finally`), audio, tweens, rendering.
-  test('Application.update() runs the core systems in order at the head of preUpdate', async () => {
+  test('Application.update() runs the core systems in order at the head of preFrame', async () => {
     vi.resetModules();
 
     const callOrder: string[] = [];
@@ -112,17 +114,17 @@ describe('AudioSystem.update()', () => {
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
-    const preUpdateStub = (name: string): { preUpdate: () => void } => ({ preUpdate: () => callOrder.push(name) });
+    const preFrameStub = (name: string): { preFrame: () => void } => ({ preFrame: () => callOrder.push(name) });
 
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
+    installFrameLoopDoubles(app);
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = new SystemRegistry();
     rawApp['scenes'] = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
-      preUpdate: vi.fn(),
+      preFrame: vi.fn(),
       fixedUpdate: vi.fn(),
       update: vi.fn(),
       draw: vi.fn(),
@@ -130,43 +132,40 @@ describe('AudioSystem.update()', () => {
       _transitionPlacement: vi.fn(() => null),
       _renderTransition: vi.fn(),
     };
-    rawApp['input'] = { ...preUpdateStub('input'), _finishInteractionFrame: () => callOrder.push('finishInteraction') };
+    rawApp['input'] = { ...preFrameStub('input'), _finishInteractionFrame: () => callOrder.push('finishInteraction') };
     rawApp['interaction'] = {
-      preUpdate: (): void => {
+      preFrame: (): void => {
         callOrder.push('interaction');
         (rawApp['input'] as { _finishInteractionFrame: () => void })._finishInteractionFrame();
       },
     };
-    rawApp['_audio'] = preUpdateStub('audio');
-    rawApp['tweens'] = preUpdateStub('tweens');
-    rawApp['_rendering'] = preUpdateStub('rendering');
+    rawApp['_audio'] = preFrameStub('audio');
+    rawApp['tweens'] = preFrameStub('tweens');
+    rawApp['_rendering'] = preFrameStub('rendering');
 
     // The constructor is bypassed here, so register the stubs the same way it
     // would - same order values, same phase restriction.
     const registry = rawApp['systems'] as InstanceType<typeof SystemRegistry>;
-    const preUpdateOnly = ['preUpdate'] as const;
+    const preFrameOnly = ['preFrame'] as const;
 
-    registry.add(rawApp['input'] as never, { order: SystemOrder.CoreInput, phases: preUpdateOnly });
-    registry.add(rawApp['interaction'] as never, { order: SystemOrder.CoreInteraction, phases: preUpdateOnly });
-    registry.add(rawApp['_audio'] as never, { order: SystemOrder.CoreAudio, phases: preUpdateOnly });
-    registry.add(rawApp['tweens'] as never, { order: SystemOrder.CoreTweens, phases: preUpdateOnly });
-    registry.add(rawApp['_rendering'] as never, { order: SystemOrder.CoreRendering, phases: preUpdateOnly });
+    registry.add(rawApp['input'] as never, { order: SystemOrder.CoreInput, phases: preFrameOnly });
+    registry.add(rawApp['interaction'] as never, { order: SystemOrder.CoreInteraction, phases: preFrameOnly });
+    registry.add(rawApp['_audio'] as never, { order: SystemOrder.CoreAudio, phases: preFrameOnly });
+    registry.add(rawApp['tweens'] as never, { order: SystemOrder.CoreTweens, phases: preFrameOnly });
+    registry.add(rawApp['_rendering'] as never, { order: SystemOrder.CoreRendering, phases: preFrameOnly });
     rawApp['_backend'] = {
       flush: vi.fn(),
       resetStats: vi.fn().mockReturnThis(),
       stats: { frameTimeMs: 0 },
     };
-    rawApp['_frameClock'] = {
-      elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: vi.fn(),
-    };
-    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
     // initializer (`= Time.seconds(0)`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = Time.seconds(0);
-    rawApp['_updateHandler'] = vi.fn();
-    rawApp['_frameCount'] = 0;
+    rawApp['_dirtyIndex'] = new NodeDirtyIndex();
+    // Same reason: the frame's draw path reads the frame-pass pipeline, and an
+    // uninitialised field is not the `null` an application without one holds.
+    rawApp['_framePasses'] = null;
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
@@ -186,7 +185,7 @@ describe('AudioSystem.update()', () => {
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } });
     voice.stop(); // mark ended
 
-    expect(() => mixer.preUpdate(frameDelta)).not.toThrow();
+    expect(() => mixer.preFrame(frameDelta)).not.toThrow();
     pannerSpy.restore();
     sound.destroy();
   });

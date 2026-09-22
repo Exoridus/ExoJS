@@ -1,7 +1,7 @@
 import type { MaterialOptions } from '#rendering/material/Material';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { Shader } from '#rendering/shader/Shader';
 import { Texture } from '#rendering/texture/Texture';
 import type { SamplerOptions } from '#rendering/texture/TextureOptions';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
@@ -31,10 +31,10 @@ struct MeshUniforms { projection: mat3x3<f32> };
 // @group(2) @binding(2) var u_hidden: texture_2d<f32>;
 `;
 
-const createShaderSource = (): ShaderSource => new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT }, wgsl: WGSL });
+const createShader = (): Shader => new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT }, wgsl: WGSL });
 
 const createMaterialOptions = (overrides: Partial<MaterialOptions> = {}): MaterialOptions => ({
-  shader: createShaderSource(),
+  shader: createShader(),
   ...overrides,
 });
 
@@ -48,10 +48,10 @@ const nearestRepeat: SamplerOptions = {
   wrapMode: WrapModes.Repeat,
 };
 
-describe('ShaderSource', () => {
+describe('Shader', () => {
   test('id is stable per instance and unique between instances', () => {
-    const a = createShaderSource();
-    const b = createShaderSource();
+    const a = createShader();
+    const b = createShader();
 
     expect(a.id).toBe(a.id);
     expect(b.id).toBe(b.id);
@@ -59,15 +59,15 @@ describe('ShaderSource', () => {
   });
 
   test('requires at least one language', () => {
-    expect(() => new ShaderSource({})).toThrow(/at least one of `glsl` or `wgsl`/);
+    expect(() => new Shader({})).toThrow(/at least one of `glsl` or `wgsl`/);
   });
 
   test('rejects empty glsl stages', () => {
-    expect(() => new ShaderSource({ glsl: { vertex: '', fragment: GLSL_FRAGMENT } })).toThrow(/glsl\.vertex/);
+    expect(() => new Shader({ glsl: { vertex: '', fragment: GLSL_FRAGMENT } })).toThrow(/glsl\.vertex/);
   });
 
   test('detects GLSL uniforms across both stages', () => {
-    const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
+    const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
     const { glsl } = source.getDeclaredUniforms();
 
     expect(glsl).toMatchObject({
@@ -79,7 +79,7 @@ describe('ShaderSource', () => {
   });
 
   test('strips commented-out GLSL uniform declarations', () => {
-    const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
+    const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
     const { glsl } = source.getDeclaredUniforms();
 
     expect(glsl).not.toHaveProperty('u_lineCommented');
@@ -87,7 +87,7 @@ describe('ShaderSource', () => {
   });
 
   test('detects WGSL @group(2) user uniforms and strips comments', () => {
-    const source = new ShaderSource({ wgsl: WGSL });
+    const source = new Shader({ wgsl: WGSL });
     const { wgsl } = source.getDeclaredUniforms();
 
     expect(wgsl).toMatchObject({
@@ -100,7 +100,7 @@ describe('ShaderSource', () => {
   });
 
   test('detectUniformDrift reports names declared in only one language', () => {
-    const source = new ShaderSource({
+    const source = new Shader({
       glsl: { vertex: GLSL_VERTEX, fragment: 'uniform float u_extra;\nvoid main() {}' },
       wgsl: WGSL,
     });
@@ -112,11 +112,11 @@ describe('ShaderSource', () => {
     expect(drift.onlyInWgsl).toContain('u_user');
   });
 
-  describe('countFragmentOutputs', () => {
+  describe('fragmentOutputs', () => {
     test('counts a single unqualified GLSL output as one', () => {
-      const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
+      const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
 
-      expect(source.countFragmentOutputs().glsl).toBe(1);
+      expect(source.fragmentOutputs.glsl).toBe(1);
     });
 
     test('counts explicit layout(location = n) GLSL outputs', () => {
@@ -126,9 +126,9 @@ layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec4 fragNormal;
 void main() {}
 `;
-      const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment } });
+      const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment } });
 
-      expect(source.countFragmentOutputs().glsl).toBe(2);
+      expect(source.fragmentOutputs.glsl).toBe(2);
     });
 
     test('counts a WGSL fragment entry that returns @location directly as one', () => {
@@ -138,9 +138,9 @@ fn fs_main() -> @location(0) vec4<f32> {
   return vec4<f32>(1.0);
 }
 `;
-      const source = new ShaderSource({ wgsl });
+      const source = new Shader({ wgsl });
 
-      expect(source.countFragmentOutputs().wgsl).toBe(1);
+      expect(source.fragmentOutputs.wgsl).toBe(1);
     });
 
     test('counts @location fields on a WGSL fragment entry that returns a struct', () => {
@@ -155,9 +155,9 @@ fn fs_main() -> FragmentOutput {
   return FragmentOutput(vec4<f32>(1.0), vec4<f32>(0.0));
 }
 `;
-      const source = new ShaderSource({ wgsl });
+      const source = new Shader({ wgsl });
 
-      expect(source.countFragmentOutputs().wgsl).toBe(2);
+      expect(source.fragmentOutputs.wgsl).toBe(2);
     });
 
     test('is null for a WGSL module with no @fragment entry', () => {
@@ -167,15 +167,63 @@ fn vs_main() -> @builtin(position) vec4<f32> {
   return vec4<f32>(1.0);
 }
 `;
-      const source = new ShaderSource({ wgsl });
+      const source = new Shader({ wgsl });
 
-      expect(source.countFragmentOutputs().wgsl).toBeNull();
+      expect(source.fragmentOutputs.wgsl).toBeNull();
     });
 
     test('is null for a language the source does not supply', () => {
-      const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
+      const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
 
-      expect(source.countFragmentOutputs().wgsl).toBeNull();
+      expect(source.fragmentOutputs.wgsl).toBeNull();
+    });
+
+    // An array output occupies one location per element, so this source really
+    // declares two - the regex sees none, and reporting that as `0` would turn
+    // a parser limitation into a refused draw.
+    test('is null rather than zero for a GLSL output the pattern cannot match', () => {
+      const fragment = /* glsl */ `#version 300 es
+precision highp float;
+layout(location = 0) out vec4 fragColor[2];
+void main() { fragColor[0] = vec4(1.0); fragColor[1] = vec4(0.0); }
+`;
+      const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment } });
+
+      expect(source.fragmentOutputs.glsl).toBeNull();
+    });
+
+    test('is null rather than zero for a WGSL entry whose return struct declares no @location', () => {
+      const wgsl = /* wgsl */ `
+struct FragmentOutput {
+  @builtin(frag_depth) depth: f32,
+};
+
+@fragment
+fn fs_main() -> FragmentOutput {
+  return FragmentOutput(1.0);
+}
+`;
+      const source = new Shader({ wgsl });
+
+      expect(source.fragmentOutputs.wgsl).toBeNull();
+    });
+
+    test('is null for a WGSL entry whose return struct is not declared in the source', () => {
+      const wgsl = /* wgsl */ `
+@fragment
+fn fs_main() -> ImportedOutput {
+  return ImportedOutput();
+}
+`;
+      const source = new Shader({ wgsl });
+
+      expect(source.fragmentOutputs.wgsl).toBeNull();
+    });
+
+    test('reflects once and returns the same cached record', () => {
+      const source = createShader();
+
+      expect(source.fragmentOutputs).toBe(source.fragmentOutputs);
     });
   });
 });
@@ -261,7 +309,7 @@ describe('Material.pipelineKey', () => {
   });
 
   test('is shared by identically configured materials', () => {
-    const shader = createShaderSource();
+    const shader = createShader();
     const a = new MeshMaterial({ shader, blendMode: BlendModes.Additive, sampler: linearClamp });
     const b = new MeshMaterial({ shader, blendMode: BlendModes.Additive, sampler: linearClamp });
 
@@ -289,7 +337,7 @@ describe('Material.pipelineKey', () => {
   });
 
   test('does not change with sampler binding state', () => {
-    const shader = createShaderSource();
+    const shader = createShader();
     const a = new MeshMaterial({ shader, sampler: linearClamp });
     const b = new MeshMaterial({ shader, sampler: nearestRepeat });
 
@@ -369,7 +417,7 @@ describe('Material.bindKey', () => {
   });
 
   test('differs between distinct material instances even with equal bindings', () => {
-    const shader = createShaderSource();
+    const shader = createShader();
     const a = new MeshMaterial({ shader });
     const b = new MeshMaterial({ shader });
 

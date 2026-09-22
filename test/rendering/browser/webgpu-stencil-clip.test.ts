@@ -26,11 +26,11 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { BitmapText, type BmFontData } from '#rendering/text/BitmapText';
 import { BmFont } from '#rendering/text/BmFont';
@@ -539,7 +539,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
     const backend = await setupBackend();
     const root = new Container();
     const clipped = new Container();
-    const material = new MeshMaterial({ shader: new ShaderSource({ wgsl: customMeshWgsl }) });
+    const material = new MeshMaterial({ shader: new Shader({ wgsl: customMeshWgsl }) });
     const mesh = new Mesh({
       vertices: new Float32Array([0, 0, 48, 0, 48, 48, 0, 0, 48, 48, 0, 48]),
       material,
@@ -572,7 +572,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
     const backend = await setupBackend();
     const root = new Container();
     const clipped = new Container();
-    const material = new MeshMaterial({ shader: new ShaderSource({ wgsl: customMeshWgsl }) });
+    const material = new MeshMaterial({ shader: new Shader({ wgsl: customMeshWgsl }) });
     const mesh = new Mesh({
       vertices: new Float32Array([0, 0, 64, 0, 64, 64, 0, 0, 64, 64, 0, 64]),
       material,
@@ -610,7 +610,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
     const root = new Container();
     const outer = new Container();
     const inner = new Container();
-    const material = new MeshMaterial({ shader: new ShaderSource({ wgsl: customMeshWgsl }) });
+    const material = new MeshMaterial({ shader: new Shader({ wgsl: customMeshWgsl }) });
     const mesh = new Mesh({
       vertices: new Float32Array([0, 0, 64, 0, 64, 64, 0, 0, 64, 64, 0, 64]),
       material,
@@ -651,7 +651,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
     const root = new Container();
     const clipped = new Container();
     const material = new SpriteMaterial({
-      shader: new ShaderSource({ wgsl: customSpriteWgsl }),
+      shader: new Shader({ wgsl: customSpriteWgsl }),
       uniforms: { color: [1, 0, 0, 1] },
     });
     const sprite = new Sprite(Texture.white);

@@ -244,6 +244,27 @@ const buildTaskUrl = (baseUrl: string, route: string): string => {
   return new URL(routeWithoutLeadingSlash, baseUrl).toString();
 };
 
+/**
+ * Open every collapsed disclosure on the page.
+ *
+ * A review pass needs both states: the page as a visitor first meets it, and the
+ * page with everything it can show already showing. The second is not reachable
+ * by scrolling, so a capture that only ever saw the default state reviews half
+ * the layout - and a `<details>` that breaks its surroundings once open breaks
+ * it for every reader who clicks.
+ *
+ * The disclosures are opened directly rather than clicked: a click scrolls the
+ * summary into view and fires the page's own handlers, which would reorder the
+ * captures against each other.
+ */
+const openEveryDisclosure = async (page: Page): Promise<void> => {
+  await page.evaluate(() => {
+    for (const details of document.querySelectorAll('details')) {
+      details.open = true;
+    }
+  });
+};
+
 const main = async (): Promise<void> => {
   const parsed = parseArgs({
     args: process.argv.slice(2),
@@ -260,6 +281,7 @@ const main = async (): Promise<void> => {
       'delay-ms': { type: 'string' },
       'timeout-ms': { type: 'string' },
       mobile: { type: 'boolean' },
+      expand: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
     },
     allowPositionals: false,
@@ -279,6 +301,7 @@ Options:
   --viewport      Single viewport WIDTHxHEIGHT (default: 1440x1000)
   --viewports     Comma-separated viewport list WIDTHxHEIGHT,...
   --mobile        Include extra 390x844 viewport
+  --expand        Open every <details> before capturing
   --concurrency   Max concurrent pages (default: 3)
   --max-height    Max panel split height (default: 1568)
   --delay-ms      Extra stabilization delay after load (default: 300)
@@ -293,6 +316,7 @@ Options:
   const maxHeight = Math.max(256, Number.parseInt(parsed.values['max-height'] ?? String(DEFAULT_MAX_PANEL_HEIGHT), 10) || DEFAULT_MAX_PANEL_HEIGHT);
   const delayMs = Math.max(0, Number.parseInt(parsed.values['delay-ms'] ?? String(DEFAULT_STABLE_DELAY_MS), 10) || DEFAULT_STABLE_DELAY_MS);
   const timeoutMs = Math.max(5_000, Number.parseInt(parsed.values['timeout-ms'] ?? String(DEFAULT_NAVIGATION_TIMEOUT_MS), 10) || DEFAULT_NAVIGATION_TIMEOUT_MS);
+  const expandDisclosures = parsed.values.expand === true;
 
   const routesFromList = parsed.values.routes
     ? parsed.values.routes
@@ -396,6 +420,11 @@ Options:
           }
           await page.waitForLoadState('networkidle', { timeout: timeoutMs }).catch(() => undefined);
           await applyStabilization(page);
+
+          if (expandDisclosures) {
+            await openEveryDisclosure(page);
+          }
+
           await waitForVisualReady(page, delayMs);
 
           const routeSlug = routeToFileSlug(task.route);

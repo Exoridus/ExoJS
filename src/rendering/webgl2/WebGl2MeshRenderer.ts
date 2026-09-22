@@ -1,16 +1,18 @@
 import { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import type { Material, UniformValue } from '#rendering/material/Material';
+import type { AnyMaterial, UniformValue } from '#rendering/material/Material';
+import { attachmentBlendModes, drawWritesDepth, resolveBlendMode } from '#rendering/material/MeshMaterial';
 import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 import { createIndexArray } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { InstanceDataView } from '#rendering/RenderBatch';
-import { Shader } from '#rendering/shader/Shader';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives } from '#rendering/types';
+import type { BlendModes } from '#rendering/types';
+import { BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives } from '#rendering/types';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { createWebGl2ShaderProgram } from './shaderProgram';
@@ -56,8 +58,8 @@ interface MeshRendererConnection {
 interface PendingMeshDraw {
   mesh: Mesh;
   command: DrawCommand | null;
-  material: Material | null;
-  shader: Shader;
+  material: AnyMaterial | null;
+  shader: WebGl2Shader;
   blendMode: BlendModes;
   texture: Texture | RenderTexture;
   supportsInstancing: boolean;
@@ -72,7 +74,7 @@ interface GeometryCacheEntry {
   readonly indexBuffer: WebGl2RenderBuffer;
   // Keyed by shader, then by the batch's instance-attribute layout: the same
   // geometry+shader pair needs a distinct VAO per divisor-1 layout bound to it.
-  readonly vaos: Map<Shader, Map<string, WebGl2VertexArrayObject>>;
+  readonly vaos: Map<WebGl2Shader, Map<string, WebGl2VertexArrayObject>>;
   readonly disposeListener: () => void;
   indexCount: number;
   /** Index width the buffer currently holds; every VAO cached here draws with it. */
@@ -90,9 +92,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * recorder can capture and replay. Custom-material and dynamic-geometry
    * meshes never take that path; both are excluded at collect time (own
    * material by the predicate's own-material rule, geometry storage by
-   * {@link _admitsRetainedRecording}), so no capture opens around them.
+   * {@link admitsRetainedRecording}), so no capture opens around them.
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   /**
    * Only a mesh backed by SHARED, STATIC {@link Geometry} is recordable: that is
@@ -113,16 +115,16 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * fragment entry.
    * @internal
    */
-  public _admitsRetainedRecording(drawable: Drawable): boolean {
+  public admitsRetainedRecording(drawable: Drawable): boolean {
     return (drawable as Mesh).geometry?.usage === 'static';
   }
 
   /** Reusable single-slot texture list handed to the recorder (avoids a per-batch array). */
   private readonly _retainedTextureScratch: [Texture | RenderTexture] = [Texture.white];
 
-  private readonly _defaultShader: Shader = new Shader(vertexSource, fragmentSource);
-  private readonly _customShaders = new Map<Material, Shader>();
-  private readonly _compatibilityCache = new Map<Shader, boolean>();
+  private readonly _defaultShader: WebGl2Shader = new WebGl2Shader(vertexSource, fragmentSource);
+  private readonly _customShaders = new Map<AnyMaterial, WebGl2Shader>();
+  private readonly _compatibilityCache = new Map<WebGl2Shader, boolean>();
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private readonly _tintUnitScratch: Int32Array = new Int32Array([transformTintTextureUnit]);
@@ -177,10 +179,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const backend = this.getBackend();
     const material = mesh.material;
     const shader = material === null ? this._defaultShader : this._getOrCreateCustomShader(material, connection.gl);
-    // The material owns its blend mode; the mesh's own blendMode overrides it
-    // when set away from the default (Normal). Default-path meshes keep their
-    // own blendMode verbatim.
-    const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
+    const blendMode = resolveBlendMode(mesh.blendMode, material);
     const texture = mesh.texture ?? Texture.white;
     const command = backend.activeDrawCommand;
     const supportsInstancing = material === null ? true : this._isInstancingCompatible(shader);
@@ -256,9 +255,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       backend._poisonRetainedCaptures();
     }
 
-    // The material owns its blend mode; the mesh's own blendMode overrides it
-    // when set away from the default (Normal) - same rule as the node path.
-    const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
+    const blendMode = resolveBlendMode(mesh.blendMode, material);
     const texture = mesh.texture ?? Texture.white;
     const cacheEntry = this._getOrCreateGeometryEntry(geometry, mesh, connection);
     const vao = this._getOrCreateStaticGeometryVao(
@@ -270,7 +267,11 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       connection.dynamicInstanceBuffer,
     );
 
+    const writesDepth = drawWritesDepth(material, backend.renderTarget);
+
     backend.setBlendMode(blendMode);
+    backend.setAttachmentBlendModes(attachmentBlendModes(material), blendMode);
+    backend.setDepthWrite(writesDepth);
     this._ensureNodeIndexCapacity(count);
 
     const maxNodeIndex = (startNodeIndex + count - 1) >>> 0;
@@ -292,6 +293,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._bindBaseTextureSampler(backend, material);
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
     this._unbindBaseTextureSampler(backend, material);
+    backend.setAttachmentBlendModes(null, blendMode);
+    backend.setDepthWrite(false);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -405,9 +408,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       return;
     }
 
-    this._defaultShader.disconnect();
+    this._defaultShader.destroy();
     for (const customShader of this._customShaders.values()) {
-      customShader.disconnect();
+      customShader.destroy();
     }
 
     for (const entry of this._geometryCache.values()) {
@@ -426,6 +429,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     connection.dynamicNodeIndexBuffer.destroy();
     connection.dynamicIndexBuffer.destroy();
     connection.dynamicVertexBuffer.destroy();
+    connection.dynamicInstanceBuffer.destroy();
     connection.dynamicVao.destroy();
 
     this._connection = null;
@@ -453,9 +457,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   private _drawDynamicInstancedSingle(draw: PendingMeshDraw, backend: WebGl2Backend, connection: MeshRendererConnection): void {
     // A dynamic-geometry (non-static) mesh cannot be recorded - its geometry is
     // not the shared, persistent buffer a retained batch references, which is
-    // why _admitsRetainedRecording keeps such a mesh from ever opening a
+    // why admitsRetainedRecording keeps such a mesh from ever opening a
     // capture. A mesh's geometry cannot change after that verdict was cached
-    // (see _admitsRetainedRecording), so this poison is unreachable through the
+    // (see admitsRetainedRecording), so this poison is unreachable through the
     // public API and stays only as a structural safety net.
     if (backend._isRetainedCapturing) {
       backend._poisonRetainedCaptures();
@@ -516,6 +520,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const vao = this._getOrCreateStaticGeometryVao(cacheEntry, first.shader, connection.gl, connection.dynamicNodeIndexBuffer);
 
     backend.setBlendMode(first.blendMode);
+    backend.setAttachmentBlendModes(attachmentBlendModes(first.material), first.blendMode);
+    backend.setDepthWrite(drawWritesDepth(first.material, backend.renderTarget));
 
     let maxNodeIndex = 0;
 
@@ -539,6 +545,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._bindBaseTextureSampler(backend, first.material);
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
     this._unbindBaseTextureSampler(backend, first.material);
+    backend.setAttachmentBlendModes(null, first.blendMode);
+    backend.setDepthWrite(false);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -560,6 +568,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const shader = draw.shader;
 
     backend.setBlendMode(draw.blendMode);
+    backend.setAttachmentBlendModes(attachmentBlendModes(draw.material), draw.blendMode);
+    backend.setDepthWrite(drawWritesDepth(draw.material, backend.renderTarget));
 
     if (shader.uniforms.has('u_projection')) {
       shader.getUniform('u_projection').setValue(backend.view.getTransform().toArray(false));
@@ -616,15 +626,17 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._bindBaseTextureSampler(backend, draw.material);
     connection.dynamicVao.draw(mesh.indexCount, 0, RenderingPrimitives.Triangles);
     this._unbindBaseTextureSampler(backend, draw.material);
+    backend.setAttachmentBlendModes(null, draw.blendMode);
+    backend.setDepthWrite(false);
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
   }
 
   private _bindInstancedShaderState(
-    shader: Shader,
+    shader: WebGl2Shader,
     texture: Texture | RenderTexture,
-    material: Material | null,
+    material: AnyMaterial | null,
     backend: WebGl2Backend,
     maxNodeIndex: number,
   ): void {
@@ -662,13 +674,13 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     shader.sync();
   }
 
-  private _bindBaseTextureSampler(backend: WebGl2Backend, material: Material | null): void {
+  private _bindBaseTextureSampler(backend: WebGl2Backend, material: AnyMaterial | null): void {
     if (material?.sampler !== null && material?.sampler !== undefined) {
       backend.bindMaterialSampler(material.sampler, 0);
     }
   }
 
-  private _unbindBaseTextureSampler(backend: WebGl2Backend, material: Material | null): void {
+  private _unbindBaseTextureSampler(backend: WebGl2Backend, material: AnyMaterial | null): void {
     if (material?.sampler !== null && material?.sampler !== undefined) {
       backend.unbindMaterialSampler(0);
     }
@@ -836,7 +848,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     );
   }
 
-  private _isInstancingCompatible(shader: Shader): boolean {
+  private _isInstancingCompatible(shader: WebGl2Shader): boolean {
     const cached = this._compatibilityCache.get(shader);
 
     if (cached !== undefined) {
@@ -855,7 +867,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   // individual conditions of _isInstancingCompatible rather than caching them.
   // Reflection reports the LINKED program, so a declared-but-unread uniform is
   // legitimately absent here - such a shader really cannot be instanced.
-  private _describeInstancingGap(shader: Shader): string {
+  private _describeInstancingGap(shader: WebGl2Shader): string {
     const gaps: string[] = [];
 
     if (!shader.attributes.has('a_nodeIndex')) {
@@ -994,7 +1006,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
   private _getOrCreateStaticGeometryVao(
     entry: GeometryCacheEntry,
-    shader: Shader,
+    shader: WebGl2Shader,
     gl: WebGL2RenderingContext,
     nodeIndexBuffer: WebGl2RenderBuffer,
     instances: InstanceDataView | null = null,
@@ -1175,7 +1187,6 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
         if (state && state.dataByteLength >= buffer.uploadByteLength) {
           uploadBufferRange(gl, buffer, offset);
-          state.dataByteLength = buffer.uploadByteLength;
         } else {
           uploadBufferStore(gl, buffer);
           buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
@@ -1246,13 +1257,13 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     };
   }
 
-  private _getOrCreateCustomShader(material: Material, gl: WebGL2RenderingContext): Shader {
+  private _getOrCreateCustomShader(material: AnyMaterial, gl: WebGL2RenderingContext): WebGl2Shader {
     const cached = this._customShaders.get(material);
     if (cached !== undefined) {
       return cached;
     }
 
-    const glsl = material.shader.glsl;
+    const glsl = material.shader._resolveGlsl();
 
     if (glsl === null) {
       throw new Error('Mesh material shader has no `glsl` source; cannot render through the WebGL2 backend.');
@@ -1262,7 +1273,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error('Mesh material shader has no GLSL vertex stage; only sprite materials and shader filters may omit it.');
     }
 
-    const shader = new Shader(glsl.vertex, glsl.fragment);
+    const shader = new WebGl2Shader(glsl.vertex, glsl.fragment);
+
+    shader.uniformBlockData = material._blocks;
     shader.connect(createWebGl2ShaderProgram(gl));
     // Force first finalize so getUniform()/uniforms.has() are usable below.
     shader.sync();
@@ -1281,7 +1294,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     return shader;
   }
 
-  private _bindCustomUniforms(shader: Shader, material: Material, backend: WebGl2Backend): void {
+  private _bindCustomUniforms(shader: WebGl2Shader, material: AnyMaterial, backend: WebGl2Backend): void {
     // Texture bindings take consecutive slots starting at 1 (slot 0 belongs to
     // the mesh's own `u_texture`). Texture-valued uniforms bind first, then the
     // entries of the material's dedicated `textures` map.
@@ -1302,7 +1315,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
   }
 
-  private _bindCustomTexture(shader: Shader, name: string, texture: Texture | RenderTexture, textureSlot: number, backend: WebGl2Backend): number {
+  private _bindCustomTexture(shader: WebGl2Shader, name: string, texture: Texture | RenderTexture, textureSlot: number, backend: WebGl2Backend): number {
     if (textureSlot >= maxCustomTextureSlots) {
       throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
     }

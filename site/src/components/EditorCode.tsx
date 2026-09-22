@@ -4,7 +4,7 @@ import MonacoReactEditor, { loader, type OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-import { type ChangeEvent, type Ref, type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { type ChangeEvent, type ReactNode, type Ref, type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsPromise } from '../lib/footgun-diagnostics';
 import { buildPublicUrl } from '../lib/url-builder';
@@ -49,6 +49,8 @@ export interface EditorCodeProps {
   canReset: boolean;
   exampleTitle: string;
   language: 'javascript' | 'typescript';
+  /** Controls shown before the toolbar's title. */
+  leading?: ReactNode;
   readOnly?: boolean;
   ref?: Ref<EditorCodeHandle>;
   selectedVersionId: string;
@@ -118,6 +120,7 @@ export const EditorCode = ({
   canReset,
   exampleTitle,
   language,
+  leading,
   onCursorChange,
   onDiagnostic,
   onDirty,
@@ -317,6 +320,18 @@ export const EditorCode = ({
     onDirty(false);
   };
 
+  /**
+   * Monaco's own document formatter, which for TypeScript and JavaScript is the
+   * language service's - the same one an editor formats with. It follows the
+   * model's own tab size, which is why that is two here: the catalog's sources
+   * are, and a format that reindented them to four would report every example as
+   * modified the moment it was opened.
+   */
+  const formatCode = (): void => {
+    setShowMenu(false);
+    void editorRef.current?.getAction('editor.action.formatDocument')?.run();
+  };
+
   const exportCode = (): void => {
     setShowMenu(false);
     const code = editorRef.current?.getValue() ?? editorValue;
@@ -350,8 +365,8 @@ export const EditorCode = ({
   };
 
   return (
-    <section className={css(styles, 'root')} aria-label={`Code editor for ${exampleTitle}`}>
-      <Toolbar title="Code">
+    <section className={css(styles, 'root')} data-editor-root aria-label={`Code editor for ${exampleTitle}`}>
+      <Toolbar title="Code" leading={leading}>
         <div className={css(styles, 'menu-anchor')} data-editor-menu-anchor>
           <button
             className={cx(css(styles, 'auto-button'), autoRefresh && css(styles, 'auto-button--active'))}
@@ -404,6 +419,9 @@ export const EditorCode = ({
           </button>
           {showMenu && (
             <div className={css(styles, 'menu-dropdown')} role="menu">
+              <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={formatCode}>
+                Format Code
+              </button>
               <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
                 Export Code
               </button>
@@ -418,8 +436,8 @@ export const EditorCode = ({
         </div>
       </Toolbar>
       <input ref={fileInputRef} className={css(styles, 'file-input')} type="file" accept=".js,.ts" onChange={onFileImport} />
-      <div className={css(styles, 'editor-shell')}>
-        <div className={css(styles, 'editor-host')}>
+      <div className={css(styles, 'editor-shell')} data-editor-shell>
+        <div className={css(styles, 'editor-host')} data-editor-host>
           {/*
             Withheld until the selected example is known. Mounting earlier would
             create a throwaway model under a placeholder path in whatever
@@ -451,7 +469,7 @@ export const EditorCode = ({
                 readOnly,
                 renderValidationDecorations: 'on',
                 scrollBeyondLastLine: false,
-                tabSize: 4,
+                tabSize: 2,
               }}
               path={getModelUrl(sourcePath)}
               theme="vs-dark"

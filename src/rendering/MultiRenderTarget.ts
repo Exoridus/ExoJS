@@ -12,6 +12,13 @@ export interface MultiRenderTargetOptions extends Partial<TextureOptions> {
    * the backend that will draw into it.
    */
   readonly formats: readonly ColorTextureFormat[];
+
+  /**
+   * Allocate a depth attachment for the target as a whole - one for the pass,
+   * not one per colour attachment - sampleable afterwards through
+   * {@link RenderTarget.depthTexture}. Defaults to `false`.
+   */
+  readonly depth?: boolean;
 }
 
 /**
@@ -31,13 +38,18 @@ export interface MultiRenderTargetOptions extends Partial<TextureOptions> {
  *
  * # What can draw into one
  *
- * Only a {@link Mesh} with a {@link MeshMaterial} whose fragment shader declares
- * one output per attachment. Every other renderer - sprites, text, nine-slice,
- * repeating sprites, video - and the default mesh material declare a single
- * output, so on WebGPU their pipelines cannot satisfy a multi-attachment pass at
- * all; drawing one into this target throws a `RenderError` naming the reason
- * rather than minting pipeline variants nothing writes to. Mask and
- * backdrop-blend compositing stay single-target for the same reason.
+ * A {@link Mesh} or a {@link Sprite} carrying a material whose fragment shader
+ * declares one output per attachment - a `MeshMaterial` or a `SpriteMaterial`
+ * respectively. Both renderers build their pipeline from the attachment formats
+ * of the pass they run in, so a material that declares the outputs is drawn;
+ * one that declares fewer is refused with a `RenderError` rather than writing
+ * attachment 0 on WebGL2 and failing pipeline creation on WebGPU.
+ *
+ * Every other renderer - text, nine-slice, repeating sprites, video - and both
+ * default materials declare a single output, so drawing one into this target
+ * throws a `RenderError` naming the reason rather than minting pipeline
+ * variants nothing writes to. Mask and backdrop-blend compositing stay
+ * single-target for the same reason.
  *
  * A single-attachment target is still just a {@link RenderTexture} - reach for
  * this only when one pass genuinely has to produce two images.
@@ -61,9 +73,16 @@ export class MultiRenderTarget extends RenderTarget {
     assert(options.formats.length > 0, 'MultiRenderTarget needs at least one colour format.');
     super(width, height, false);
 
-    const { formats, ...textureOptions } = options;
+    // `depth` is peeled off rather than forwarded: a pass has one depth
+    // attachment, so an attachment that allocated its own would be 4 bytes per
+    // pixel nothing ever writes into.
+    const { formats, depth, ...textureOptions } = options;
 
     this.attachments = Object.freeze(formats.map(format => new RenderTexture(width, height, { ...textureOptions, format })));
+
+    if (depth === true) {
+      this._enableDepthTexture();
+    }
   }
 
   /** Colour format of each attachment, in declaration order. */

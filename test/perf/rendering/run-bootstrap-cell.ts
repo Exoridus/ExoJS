@@ -6,9 +6,9 @@
  * measures exactly what they discard: everything a scene allocates on the way
  * from "nothing exists" to "the frame rate is flat".
  *
- *   pnpm perf:renderers:bootstrap:cell -- --count 1000000 [--frames 100] [--profile] [--top 25]
- *   pnpm perf:renderers:bootstrap:cell -- --count 1000000 --cpu
- *   pnpm perf:renderers:bootstrap:cell -- --count 100000 --incremental 100
+ *   pnpm perf renderers:bootstrap:cell --count 1000000 [--frames 100] [--profile] [--top 25]
+ *   pnpm perf renderers:bootstrap:cell --count 1000000 --cpu
+ *   pnpm perf renderers:bootstrap:cell --count 100000 --incremental 100
  *
  * ── Why one cardinality per process ─────────────────────────────────────────
  * V8's optimisation state carries across scenes inside a process and moves the

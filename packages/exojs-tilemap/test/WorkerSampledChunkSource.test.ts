@@ -8,9 +8,9 @@ import { TILE_TRANSFORM_IDENTITY, unpackTile } from '../src/types';
 import { createWorkerSampledChunkSource } from '../src/WorkerSampledChunkSource';
 
 // jsdom implements neither `Worker` nor `URL.createObjectURL` (verified empirically -
-// both are `undefined` in a fresh JSDOM window). createWorkerSampledChunkSource calls
-// `new Blob(...)`, `URL.createObjectURL(...)`, and `new Worker(...)` unconditionally at
-// construction time, so all three must be stubbed before any test in this file runs.
+// both are `undefined` in a fresh JSDOM window). createWorkerSampledChunkSource builds
+// an `InlineWorker` at construction time, which reaches for both unconditionally, so
+// they must be stubbed before any test in this file runs.
 
 class FakeWorker {
   public onmessage: ((event: MessageEvent) => void) | null = null;

@@ -12,9 +12,9 @@
  * D  hardware     sum of render-pass timestamp deltas           (timestamp-query ground truth)
  * ```
  *
- *   pnpm perf:webgpu:timer -- --nodes 1000000 --config retained --frames 30 --warmup 40
- *   pnpm perf:webgpu:timer -- --mode serialized --frames 30
- *   pnpm perf:webgpu:timer -- --controls-only --repeats 12
+ *   pnpm perf webgpu:timer --nodes 1000000 --config retained --frames 30 --warmup 40
+ *   pnpm perf webgpu:timer --mode serialized --frames 30
+ *   pnpm perf webgpu:timer --controls-only --repeats 12
  *
  * One browser process per cell: the timer question includes device bootstrap, so
  * a cell that inherited another cell's warm device would not be the same

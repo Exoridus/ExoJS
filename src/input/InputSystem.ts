@@ -697,7 +697,7 @@ export class InputSystem {
   }
 
   /**
-   * {@link SystemMethods.preUpdate} phase, registered on `app.systems` by the
+   * {@link SystemMethods.preFrame} phase, registered on `app.systems` by the
    * {@link Application} at {@link SystemOrder.CoreInput} - ahead of every other
    * core system, so this frame's snapshot is current before anything
    * simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel
@@ -707,7 +707,7 @@ export class InputSystem {
    * `delta` is also the clock a pending long-press matures on - see
    * {@link GestureRecognizer.update}.
    */
-  public preUpdate(delta: Seconds): void {
+  public preFrame(delta: Seconds): void {
     for (const pointer of this.pointers.values()) {
       pointer._beginFrame();
     }

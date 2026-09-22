@@ -13,7 +13,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const siteRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(siteRoot, '..');
-const outputDir = path.resolve(siteRoot, 'src', 'content', 'api');
+const finalOutputDir = path.resolve(siteRoot, 'src', 'content', 'api');
+// Pages are generated here and moved into place only once every package has
+// produced its own. Writing straight into the content directory meant a failed
+// extension conversion left the site with the core pages and nothing else.
+const outputDir = path.resolve(siteRoot, '.api-staging');
 const toPosix = (value: string): string => value.replaceAll('\\', '/');
 
 // The subsystem set is owned by the site, not by the generator: the pages order
@@ -551,12 +555,19 @@ const entryPointTitle = (reflection: DeclarationReflection): string => {
   return '@codexo/exojs';
 };
 
+// maxRetries covers the transient Windows EPERM/EBUSY that hits recursive
+// rmSync when a file indexer or a parallel build step (examples:sync) has
+// the directory momentarily open. Node retries these error codes.
+const RM_OPTIONS = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 } as const;
+
 const ensureCleanOutput = (): void => {
-  // maxRetries covers the transient Windows EPERM/EBUSY that hits recursive
-  // rmSync when a file indexer or a parallel build step (examples:sync) has
-  // the output directory momentarily open. Node retries these error codes.
-  fs.rmSync(outputDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  fs.rmSync(outputDir, RM_OPTIONS);
   fs.mkdirSync(outputDir, { recursive: true });
+};
+
+const publishOutput = (): void => {
+  fs.rmSync(finalOutputDir, RM_OPTIONS);
+  fs.renameSync(outputDir, finalOutputDir);
 };
 
 const MODIFIER_TAGS: `@${string}`[] = [
@@ -901,8 +912,10 @@ const build = async (): Promise<void> => {
     packageCounts.push({ importPath: pkg.importPath, count });
   }
 
+  publishOutput();
+
   const summary = [`${coreCount} core`, ...packageCounts.map(p => `${p.count} ${p.importPath}`)].join(', ');
-  console.log(`[build:api] Generated ${usedSlugs.size} API page(s) (${summary}) in ${outputDir}`);
+  console.log(`[build:api] Generated ${usedSlugs.size} API page(s) (${summary}) in ${finalOutputDir}`);
 };
 
 void build();

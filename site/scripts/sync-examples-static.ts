@@ -55,6 +55,41 @@ const copyExamples = (sourceDir: string, targetDir: string): void => {
   });
 };
 
+/**
+ * Join every multi-line import list in the served TypeScript sources onto one
+ * line. The repository's formatter wraps a long list at its column limit, which
+ * is right for a diff and wrong for the playground, where a dozen lines of
+ * imports push the first line of the example itself below the fold. The served
+ * copy is what the editor shows, so the join lives here rather than in a
+ * formatter override that would also unwrap everything else.
+ */
+const collapseImportLists = (dir: string): void => {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      collapseImportLists(fullPath);
+      continue;
+    }
+
+    if (!entry.name.endsWith('.ts') || entry.name.endsWith('.d.ts')) continue;
+
+    const source = fs.readFileSync(fullPath, 'utf8');
+    const joined = source.replace(/^(import(?: type)? \{)\n([\s\S]*?)\n\} from ('[^']+';)$/gm, (_match, head: string, specifiers: string, from: string) => {
+      const names = specifiers
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .join(' ')
+        .replace(/,$/, '');
+
+      return `${head} ${names} } from ${from}`;
+    });
+
+    if (joined !== source) fs.writeFileSync(fullPath, joined, 'utf8');
+  }
+};
+
 const run = async (): Promise<void> => {
   ensureSource(sourceExamplesDir);
   ensureSource(sourceAssetsDir);
@@ -88,6 +123,7 @@ const run = async (): Promise<void> => {
   resetDir(targetAssetsDir);
 
   copyExamples(sourceExamplesDir, targetExamplesDir);
+  collapseImportLists(targetExamplesDir);
   copyRecursive(sourceAssetsDir, targetAssetsDir);
   copyRecursive(sourceCatalogDemoDir, targetCatalogDemoDir);
   copyRecursive(sourceCatalogTechnicalDir, targetCatalogTechnicalDir);

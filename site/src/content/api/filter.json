@@ -335,7 +335,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ strength: 4 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
         }
       ],
       "paragraphs": [],

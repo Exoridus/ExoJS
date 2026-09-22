@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "depth",
+          "signature": "depth?: boolean",
+          "signatureTokens": [
+            {
+              "text": "depth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Allocate a depth attachment for the target as a whole - one for the pass, not one per colour attachment - sampleable afterwards through RenderTarget.depthTexture. Defaults to false."
+        },
         {
           "name": "flipY",
           "signature": "flipY?: boolean",

@@ -4,15 +4,15 @@ import type { PhysicsArchetypeSpec, PhysicsSceneShape } from '../PhysicsAdapter'
 
 /**
  * Engine-neutral description of a physics scene - the fairness backbone the
- * matter.js and rapier arms build from.
+ * matter.js, planck.js, nape-js and rapier arms build from.
  *
  * The native `adapters/exojs-physics.ts` arm builds its scene inline against the
  * `@codexo/exojs-physics` API. The competitor arms cannot share that code (they
- * speak matter/rapier body APIs), so the risk is two hand-written transcriptions
+ * speak different body APIs), so the risk is several hand-written transcriptions
  * quietly drifting into different scenes. This module removes that risk for the
  * competitor arms: it produces one neutral list of {@link BodyDesc}s, drawn from
  * the SAME shared deterministic RNG in the SAME order as the exojs arm, so
- * matter and rapier simulate a byte-identical body configuration to each other,
+ * all competitor arms simulate a byte-identical body configuration to each other,
  * and - because the draw order is a faithful transcription of exojs-physics.ts -
  * to the native arm as well.
  *
@@ -23,7 +23,7 @@ import type { PhysicsArchetypeSpec, PhysicsSceneShape } from '../PhysicsAdapter'
  *
  * Coordinate convention matches exojs: +Y points DOWN, and a body's position is
  * the CENTRE of its box/circle. Both competitor arms adopt this same convention
- * so the numeric positions are identical across all three arms.
+ * so the numeric positions are identical across all arms.
  */
 
 /** Side length of a dynamic box / diameter reference for a dynamic circle, px. Mirrors `exojs-physics.ts`. */
@@ -164,13 +164,26 @@ const buildBoxStack = (bodies: BodyDesc[], bodyCount: number, rng: () => number)
   }
 };
 
+/** Friction/restitution the `many-dynamic` scene gives its dynamic bodies unless {@link PhysicsArchetypeSpec.dynamicMaterial} overrides it. */
+const MANY_DYNAMIC_MATERIAL = { friction: 0, restitution: 0.4 } as const;
+
 /**
  * `many-dynamic`: a grid of small dynamic circles inside a bounded box, every
  * body given a deterministic initial impulse. Transcribes
  * `exojs-physics.ts::buildManyDynamic`: four static walls first (no RNG), then
  * two `rng()` draws (vx, vy) per perturbed body in ascending index order.
+ *
+ * `material` is the only thing that can distinguish an archetype simulating
+ * this scene from `many-dynamic` itself - every position, shape and impulse
+ * stays byte-identical regardless of what it is.
  */
-const buildManyDynamic = (bodies: BodyDesc[], bodyCount: number, rng: () => number, perturbed: readonly number[]): void => {
+const buildManyDynamic = (
+  bodies: BodyDesc[],
+  bodyCount: number,
+  rng: () => number,
+  perturbed: readonly number[],
+  material: { readonly friction: number; readonly restitution: number },
+): void => {
   const radius = BODY_SIZE / 2;
   const cell = BODY_SIZE + 8;
   const columns = Math.ceil(Math.sqrt(bodyCount));
@@ -193,8 +206,8 @@ const buildManyDynamic = (bodies: BodyDesc[], bodyCount: number, rng: () => numb
       y: 40 + row * cell + radius,
       shape: { kind: 'circle', radius },
       density: 1,
-      friction: 0,
-      restitution: 0.4,
+      friction: material.friction,
+      restitution: material.restitution,
     };
 
     if (perturbedSet.has(i)) {
@@ -256,11 +269,20 @@ const buildMixed = (bodies: BodyDesc[], bodyCount: number, rng: () => number): v
  *
  * The chains are laid out along X with a spacing wide enough that neighbouring
  * chains never touch, so the measured cost is constraint propagation along a
- * chain rather than contacts between chains. No RNG is consumed: a jittered
- * chain would swing differently per arm under identical solvers, and the
- * archetype is about the solver, not about the initial condition.
+ * chain rather than contacts between chains. Placement consumes no RNG: a
+ * jittered chain would swing differently per arm under identical solvers, and
+ * the archetype is about the solver, not about the initial condition. The
+ * perturbed links draw their velocity the way `many-dynamic` does, so every arm
+ * drives the same links the same way.
  */
-const buildJointChains = (bodies: BodyDesc[], joints: JointDesc[], bodyCount: number, chainLength: number): void => {
+const buildJointChains = (
+  bodies: BodyDesc[],
+  joints: JointDesc[],
+  bodyCount: number,
+  chainLength: number,
+  rng: () => number,
+  perturbed: readonly number[],
+): void => {
   const length = Math.max(1, chainLength);
   const chains = Math.max(1, Math.ceil(bodyCount / length));
   const spacing = BODY_SIZE * 4;
@@ -273,6 +295,7 @@ const buildJointChains = (bodies: BodyDesc[], joints: JointDesc[], bodyCount: nu
     bodies.push(staticBox(120 + chain * spacing, anchorY, BODY_SIZE, BODY_SIZE));
   }
 
+  const perturbedSet = new Set(perturbed);
   let placed = 0;
 
   for (let chain = 0; chain < chains && placed < bodyCount; chain++) {
@@ -282,8 +305,7 @@ const buildJointChains = (bodies: BodyDesc[], joints: JointDesc[], bodyCount: nu
     for (let link = 0; link < length && placed < bodyCount; link++) {
       const y = anchorY + (link + 1) * BODY_SIZE;
       const index = bodies.length;
-
-      bodies.push({
+      const base: BodyDesc = {
         type: 'dynamic',
         x,
         y,
@@ -291,7 +313,16 @@ const buildJointChains = (bodies: BodyDesc[], joints: JointDesc[], bodyCount: nu
         density: 1,
         friction: 0.5,
         restitution: DEFAULT_RESTITUTION,
-      });
+      };
+
+      if (perturbedSet.has(placed)) {
+        const vx = (rng() - 0.5) * 2 * PERTURB_SPEED;
+        const vy = (rng() - 0.5) * 2 * PERTURB_SPEED;
+
+        bodies.push({ ...base, perturb: { vx, vy } });
+      } else {
+        bodies.push(base);
+      }
 
       // Pivot on the seam between the two links, so the chain hangs straight and
       // every joint starts at zero error - the same initial condition on all arms.
@@ -385,13 +416,13 @@ export const describePhysicsScene = (spec: PhysicsArchetypeSpec, bodyCount: numb
       buildBoxStack(bodies, bodyCount, rng);
       break;
     case 'many-dynamic':
-      buildManyDynamic(bodies, bodyCount, rng, impulsed);
+      buildManyDynamic(bodies, bodyCount, rng, impulsed, spec.dynamicMaterial ?? MANY_DYNAMIC_MATERIAL);
       break;
     case 'mixed-static-dynamic':
       buildMixed(bodies, bodyCount, rng);
       break;
     case 'joint-chains':
-      buildJointChains(bodies, joints, bodyCount, spec.jointChainLength ?? 1);
+      buildJointChains(bodies, joints, bodyCount, spec.jointChainLength ?? 1, rng, impulsed);
       break;
   }
 

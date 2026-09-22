@@ -3034,7 +3034,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Render-only pixel-snap mode applied to every layer (and forwarded to every chunk node, current and rebuilt). Snaps tile chunk origins to the active render target's device-pixel grid for crisp tiles; with integer tile pitch the grid stays exact and adjacent chunks/layers cannot drift apart. Purely visual - tile data, layer offsets, chunk revisions, and culling are unchanged. Setting the current value is a no-op; an invalid value throws and leaves the prior mode unchanged."
+          "description": "Render-only pixel-snap mode applied to every layer (and forwarded to every chunk node, current and rebuilt). Snaps tile chunk origins to the active render target's device-pixel grid for crisp tiles; with integer tile pitch the grid stays exact and adjacent chunks/layers cannot drift apart. Purely visual - tile data, layer offsets, chunk revisions, and culling are unchanged. Setting the current value is a no-op; an invalid value throws and leaves the prior mode unchanged. Defaults to Geometry because a tile grid is made of quads that share their edges: left unsnapped, a boundary landing between two device pixels is sampled across both, so the seams blur and shimmer as the view moves. Set None to opt out."
         },
         {
           "name": "position",

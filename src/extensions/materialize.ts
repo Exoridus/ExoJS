@@ -7,7 +7,7 @@ import type { AssetEntry, RendererBinding, SerializerBinding } from './Extension
 
 /**
  * Materialise all renderer bindings into the backend's renderer registry.
- * Called once per backend from createBackend in Application.
+ * Called once per backend from `createBackend` in the application's backend selection.
  * @internal
  */
 export const materializeRendererBindings = (backend: RenderBackend, bindings: readonly RendererBinding[]): void => {

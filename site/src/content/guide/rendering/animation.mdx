@@ -282,9 +282,7 @@ player.onComplete.add(clip => {
 });
 ```
 
-Playback advances by itself. Once the sprite is part of the scene tree, the engine's
-`AnimationSystem` (`app.animations`) ticks every playing `AnimatedSprite` once per frame — there is
-nothing to call from your own `update`:
+Playback advances by itself. Once the sprite is part of the scene tree, the engine's `AnimationSystem` (`app.animations`) ticks every playing `AnimatedSprite` once per frame — there is nothing to call from your own `update`:
 
 <SourceSnippet
   source="examples/guides/animation/tween-scene.ts"
@@ -293,9 +291,7 @@ nothing to call from your own `update`:
   title="examples/guides/animation/tween-scene.ts"
 />
 
-A sprite you never add to the tree — one drawn immediate-mode via `context.render(sprite)` — has no
-owning application to reach, so drive it yourself with `update(deltaSeconds)`. The argument is
-**seconds**, the same unit as `Tween.update`:
+A sprite you never add to the tree — one drawn immediate-mode via `context.render(sprite)` — has no owning application to reach, so drive it yourself with `update(deltaSeconds)`. The argument is **seconds**, the same unit as `Tween.update`:
 
 ```ts
 import { AnimatedSprite } from '@codexo/exojs';

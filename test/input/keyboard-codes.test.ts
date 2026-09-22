@@ -186,7 +186,7 @@ describe('InputSystem — layout-independent keyboard channels', () => {
     press({ code: 'MediaPlayPause' });
     press({ code: '', key: 'Unidentified', keyCode: 229 });
     release({ code: 'MediaPlayPause' });
-    im.preUpdate(Time.seconds(0));
+    im.preFrame(Time.seconds(0));
 
     expect(onKeyDown).not.toHaveBeenCalled();
     expect(onKeyUp).not.toHaveBeenCalled();
@@ -200,7 +200,7 @@ describe('InputSystem — layout-independent keyboard channels', () => {
 
     im.onKeyDown.add(onKeyDown);
     press({ code: 'ArrowLeft', key: 'ArrowLeft', keyCode: 37 });
-    im.preUpdate(Time.seconds(0));
+    im.preFrame(Time.seconds(0));
 
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledWith(Keyboard.Left);
@@ -250,7 +250,7 @@ describe('InputSystem — modifier side and aggregate channels', () => {
 
     im.onKeyDown.add(onKeyDown);
     press({ code: 'AltLeft', key: 'Alt', keyCode: 18 });
-    im.preUpdate(Time.seconds(0));
+    im.preFrame(Time.seconds(0));
 
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledWith(Keyboard.AltLeft);
@@ -265,7 +265,7 @@ describe('InputSystem — modifier side and aggregate channels', () => {
     im.onStart(Keyboard.Control, onStart);
 
     press({ code: 'ControlRight', key: 'Control', keyCode: 17 });
-    im.preUpdate(Time.seconds(0));
+    im.preFrame(Time.seconds(0));
 
     expect(onStart).toHaveBeenCalledTimes(1);
 
@@ -279,7 +279,7 @@ describe('InputSystem — modifier side and aggregate channels', () => {
     im.onStart(Keyboard.ControlLeft, onStart);
 
     press({ code: 'ControlRight', key: 'Control', keyCode: 17 });
-    im.preUpdate(Time.seconds(0));
+    im.preFrame(Time.seconds(0));
 
     expect(onStart).not.toHaveBeenCalled();
 

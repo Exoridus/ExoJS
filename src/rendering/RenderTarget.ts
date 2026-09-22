@@ -1,6 +1,7 @@
 import { Rectangle } from '#math/Rectangle';
 import { Size } from '#math/Size';
 import { Vector } from '#math/Vector';
+import { DepthTexture } from '#rendering/texture/DepthTexture';
 
 import { View } from './View';
 
@@ -32,6 +33,7 @@ export class RenderTarget {
   public needsStencil = false;
 
   private readonly _root: boolean;
+  private _depthTexture: DepthTexture | null = null;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
   private _isDestroyed = false;
   private _version = 0;
@@ -81,6 +83,20 @@ export class RenderTarget {
 
   public get root(): boolean {
     return this._root;
+  }
+
+  /**
+   * Sampleable depth attachment, or `null` on a target that did not opt in -
+   * the on-screen root target always answers `null`.
+   *
+   * Opting in (`{ depth: true }` on a {@link RenderTexture} or a
+   * {@link MultiRenderTarget}) buys a depth buffer that survives the pass and
+   * can be read back as a texture; a {@link MeshMaterial} with `writesDepth`
+   * fills it. Without the opt-in a depth-writing material still draws, it just
+   * writes depth nowhere.
+   */
+  public get depthTexture(): DepthTexture | null {
+    return this._depthTexture;
   }
 
   public get version(): number {
@@ -134,6 +150,7 @@ export class RenderTarget {
   public resize(width: number, height: number): this {
     if (!this._size.equals({ width, height })) {
       this._size.set(width, height);
+      this._syncDepthSize();
       this._touch();
     }
 
@@ -192,6 +209,10 @@ export class RenderTarget {
 
     this._isDestroyed = true;
 
+    // Before the listeners fire: they are how the backends drop the framebuffer
+    // this attachment is bound into.
+    this._depthTexture?.destroy();
+
     for (const listener of [...this._destroyListeners]) {
       listener();
     }
@@ -205,6 +226,23 @@ export class RenderTarget {
     this._defaultView.destroy();
     this._viewport.destroy();
     this._size.destroy();
+  }
+
+  /**
+   * Give this target a sampleable depth attachment. Called once, from the
+   * constructor of a subclass whose options asked for one.
+   */
+  protected _enableDepthTexture(): void {
+    this._depthTexture ??= new DepthTexture(this);
+  }
+
+  /**
+   * Keep the depth attachment at the target's size. A subclass that resizes
+   * through a path other than {@link resize} calls this itself - a depth
+   * attachment left at the old size makes the whole framebuffer incomplete.
+   */
+  protected _syncDepthSize(): void {
+    this._depthTexture?.setSize(this._size.width, this._size.height);
   }
 
   protected _touch(): void {

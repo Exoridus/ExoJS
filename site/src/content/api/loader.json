@@ -1,15 +1,15 @@
 {
   "title": "Loader",
-  "description": "Central asset management hub for ExoJS applications. The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with a built-in AssetType for every first-party kind (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, JSON, text, SVG, subtitles, binary, and WASM); an application adds its own by listing them in an extension. Assets can be loaded in two ways: - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches immediately and resolves to the finished assets. - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm assets at low priority; awaitBackground resolves once the queue drains. Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching.",
+  "description": "",
   "symbol": "Loader",
   "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 39,
+  "memberCount": 40,
   "counts": {
     "constructors": 1,
-    "methods": 27,
+    "methods": 28,
     "properties": 3,
     "events": 8
   },
@@ -18,12 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Central asset management hub for ExoJS applications.",
-        "The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with a built-in AssetType for every first-party kind (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, JSON, text, SVG, subtitles, binary, and WASM); an application adds its own by listing them in an extension.",
-        "Assets can be loaded in two ways: - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches immediately and resolves to the finished assets. - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm assets at low priority; awaitBackground resolves once the queue drains.",
-        "Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching."
-      ],
+      "paragraphs": [],
       "importLine": "import { Loader } from '@codexo/exojs'",
       "sourceLink": null
     },
@@ -1616,7 +1611,7 @@
         },
         {
           "name": "loadContainer",
-          "signature": "loadContainer(url: string): Promise<LoaderScope>",
+          "signature": "loadContainer(source: ManifestPack | string, options?: LoadContainerOptions): Promise<LoaderScope>",
           "signatureTokens": [
             {
               "text": "loadContainer",
@@ -1627,7 +1622,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "url",
+              "text": "source",
               "kind": "param"
             },
             {
@@ -1635,8 +1630,36 @@
               "kind": "punctuation"
             },
             {
+              "text": "ManifestPack",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadContainerOptions",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -1665,13 +1688,102 @@
           ],
           "params": [
             {
-              "name": "url",
-              "type": "string",
+              "name": "source",
+              "type": "ManifestPack | string",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadContainerOptions",
+              "optional": true
             }
           ],
           "returnType": "Promise<LoaderScope>",
-          "description": "Load every asset packed into a binary container (.exoa) in a **single request**, and return the scope that owns them. A container is one file with an embedded index: its bytes are fetched once (and cached cross-session like any asset), then each slice is read through its type's own codec and factory and stored under the entry's own logical source. A container is therefore a transport, not a second naming system - an entry resolves to exactly the same asset identity as a network load of that source, so both can hold it and the payload is fetched and decoded once. The returned scope holds one ordinary claim per entry. Destroying it frees only the entries no other owner still holds, so unpacking a container can never pull an asset out from under a scene that also uses it. Use LoaderScope.loadContainer to claim the entries under an existing scope instead. Each entry's asset type must be readable from bytes alone - its AssetSourceCodec has to implement fromBytes, which every built-in type does. Throws on a malformed container, an unsupported format version, an unknown type, or a type that cannot be read from bytes."
+          "description": "Load every asset packed into a binary container (.exoa) and return the scope that owns them. A container is one file with an embedded index: its slices are read through each type's own codec and factory and stored under the entry's own logical source. A container is therefore a transport, not a second naming system - an entry resolves to exactly the same asset identity as a network load of that source, so both can hold it and the payload is fetched and decoded once. By default the file is fetched in a **single request** and cached whole, cross-session, like any other asset. Passing a ContainerBlockStore switches to the block-wise path instead: the head is read first, and only the blocks the store does not already hold are fetched. That is what makes a pack whose assets mostly did not change cost close to nothing on a second visit - at the price of the whole-file cache entry, since the two cache the same bytes at different granularity and keeping both would store them twice. Servers that do not answer byte ranges degrade to one request automatically. The returned scope holds one ordinary claim per entry. Destroying it frees only the entries no other owner still holds, so unpacking a container can never pull an asset out from under a scene that also uses it. Use LoaderScope.loadContainer to claim the entries under an existing scope instead. Each entry's asset type must be readable from bytes alone - its AssetSourceCodec has to implement fromBytes, which every built-in type does. Throws on a malformed container, an unsupported format version, an unknown type, or a type that cannot be read from bytes. A ManifestPack may be passed instead of a path. The pack carries the container's URL, length and hash, and the bytes are checked against that record before anything is unpacked - a mismatch is an AssetDecodeError and nothing is cached. How much is checked depends on how much is read: the whole-file path holds the file and verifies the digest, while the block-wise path never holds it and verifies only the length, leaving the content-addressed URL as the statement about the bytes. The digest is also skipped where crypto.subtle is unavailable, which is an insecure context; the length check still runs."
+        },
+        {
+          "name": "loadManifest",
+          "signature": "loadManifest(url: string, options?: LoadManifestOptions): Promise<AssetManifest>",
+          "signatureTokens": [
+            {
+              "text": "loadManifest",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "url",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadManifestOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetManifest",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "url",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadManifestOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<AssetManifest>",
+          "description": "Read the asset manifest at url: which packs this deployment holds, and which file currently carries each of them. A pack file is named after the hash of its own bytes, so it can be cached forever and the manifest is the one URL worth re-reading. Hand the pack to loadContainer, which then checks the bytes against what the manifest states. The manifest is read straight from the network with cache: 'no-cache', outside the loader's asset cache and outside its connectivity policy: it is the one document whose whole purpose is to say what the current deployment is, so a cached or policy-suppressed answer would be worse than none. The application's fetchOptions are carried except for cache, which LoadManifestOptions.cache is the only way to change. A manifest request therefore fails offline rather than resolving from a store. Throws an AssetNetworkError when the manifest cannot be fetched, and an AssetDecodeError when it is not JSON, states a version this build does not read, or describes a pack it cannot address."
         },
         {
           "name": "peek",

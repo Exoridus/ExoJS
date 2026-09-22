@@ -1,0 +1,545 @@
+---
+/**
+ * BenchmarksPage - the published cross-library measurements, rendering and
+ * physics on one page of scenario cards.
+ *
+ * The page is generated at build time from the machine profiles under
+ * `packages/exojs-bench/results/` and from nothing else, so it cannot drift from
+ * the harness: a re-measurement rewrites the cards and the provenance together.
+ * Losses are published on the same terms as wins, nothing is aggregated into a
+ * score or an overall winner, and which scenarios open each section is fixed in
+ * `bench-cards.ts` before any run happens, so the top of the page cannot become
+ * a selection of whatever ExoJS won.
+ *
+ * The page carries cards and nothing else. A withheld comparison states its own
+ * reason on the card that withholds it, and the full per-row report - every
+ * measured load, its spread and the rows the harness left out - is its own
+ * page, linked once rather than repeated on every card that would otherwise
+ * say the same thing.
+ *
+ * The page's axis is the BROWSER, not the machine. Switching machines changes
+ * the CPU, the GPU, the operating system, the driver stack and the browser
+ * engine at once, which is not an A/B of anything a reader can name; the
+ * browser names one dimension, and it is the one a reader shipping a web game
+ * chooses between.
+ *
+ * It is still not a browser benchmark, because each browser is currently
+ * measured on its own machine. So these are presented as separate reference
+ * profiles, each printing the machine it was measured on, and the page never
+ * invites a reader to divide one browser's figures by another's. Profiles are
+ * picked and never stacked: two of them share no comparison, so a second one
+ * appended under the first would read as more evidence about the first.
+ */
+
+import BenchResultCard from '../BenchResultCard.astro';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
+import { PHYSICS_HEADLINE_SCENARIOS, physicsCards, RENDERING_HEADLINE_SCENARIOS, renderingCards, selectCards } from '../../lib/bench-cards';
+import {
+    BACKEND_LABELS,
+    browserLabel,
+    type BrowserProfiles,
+    deviceLabel,
+    formatDay,
+    platformName,
+    profilesByBrowser,
+    type ProfileBackendName,
+} from '../../lib/bench-profiles';
+
+interface Props {
+    locale: 'en' | 'de';
+}
+
+const { locale } = Astro.props;
+const base = import.meta.env.BASE_URL;
+
+/**
+ * Runs a reference profile is built from. A published profile states the number
+ * it was actually built from; until one exists the page can only quote the
+ * count its own reproduction steps prescribe.
+ */
+const REPRODUCTION_RUNS = 3;
+
+const backends: readonly ProfileBackendName[] = ['webgl2', 'webgpu'];
+
+/** Everything one browser's reference profile contributes to the page. */
+const viewOf = (group: BrowserProfiles) => ({
+    browser: group.browser,
+    document: group.reference,
+    others: group.others,
+    rendering: backends
+        .map(backend => ({ backend, ...selectCards(renderingCards(group.reference, backend), RENDERING_HEADLINE_SCENARIOS, 6) }))
+        .filter(entry => entry.headline.length > 0),
+    physics: selectCards(physicsCards(group.reference), PHYSICS_HEADLINE_SCENARIOS, 4),
+});
+
+const browsers = profilesByBrowser.map(viewOf);
+const leading = browsers[0];
+---
+
+<DocsLayout title="ExoJS benchmarks" description="Measured comparisons between ExoJS and other 2D rendering and physics libraries." variant="wide">
+    <div class="prose bench-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
+        {locale === 'de' && <EnglishFallbackNotice />}
+
+        <header class="bench-head">
+            <h1>Benchmarks</h1>
+            <p class="lede">Rendering and physics, compared.</p>
+        </header>
+
+        {leading === undefined ? (
+            <p class="empty">
+                No measurements are published yet. The reference measurement is {REPRODUCTION_RUNS} separate runs on one machine after a release is tagged,
+                pooled into a single profile file in the repository. Until then there is nothing here to read.
+            </p>
+        ) : (
+            <>
+                <div class="profile-head">
+                    {/* Offered only where a second browser has a published profile: one choice is not a choice. */}
+                    {browsers.length > 1 && (
+                        <div class="browsers" role="group" aria-label="Reference profile">
+                            {browsers.map((entry, index) => (
+                                <button type="button" class="browser" data-browser={entry.browser} aria-pressed={index === 0 ? 'true' : 'false'}>
+                                    {browserLabel(entry.browser)}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {browsers.map((entry, index) => {
+                        const { profile } = entry.document;
+
+                        return (
+                            <p class="stamp" data-browser={entry.browser} hidden={index !== 0}>
+                                {/*
+                                  * The machine is provenance, not a mode. It is printed beside every
+                                  * set of figures because the browsers are measured on different
+                                  * machines, so one browser's numbers divided by another's would be
+                                  * a hardware ratio wearing a browser's name.
+                                  */}
+                                <b>{deviceLabel(profile)}</b>
+                                <span>{platformName(profile)}</span>
+                                <span>ExoJS {profile.engineVersion}</span>
+                                <span>measured {formatDay(profile.measuredAt)}</span>
+                                {/* Stated once, here, rather than again inside the opening sentence: it is a fact about the run, not about the result. */}
+                                <span>median of {profile.runs} pooled runs</span>
+                                {entry.others.length > 0 && (
+                                    <a href={`${base}${locale}/benchmarks/full/`}>
+                                        {entry.others.length} further {entry.others.length === 1 ? 'machine' : 'machines'} in this browser
+                                    </a>
+                                )}
+                            </p>
+                        );
+                    })}
+                </div>
+
+                {/*
+                  * One legend for the page, above the cards rather than after
+                  * them. The mark it explains is on a figure in almost every
+                  * card, so repeating the sentence per card would put it on
+                  * screen more often than the thing it describes - but printed
+                  * below the last card it arrived long after the first amber
+                  * figure had already been read as a warning.
+                  */}
+                <p class="legend">
+                    <b>Orange</b> marks a time over the 16.7 ms frame budget at 60 fps. The measurement is valid. The scene does not fit in one frame.
+                </p>
+
+                {browsers.map((entry, index) => (
+                    <div class="browser-panel" data-browser={entry.browser} hidden={index !== 0}>
+                        <section id={index === 0 ? 'rendering' : undefined} class="domain">
+                            <div class="domain-head">
+                                <div class="domain-title">
+                                    <h2>Rendering</h2>
+                                    <p class="unit">CPU time per frame · Lower is better</p>
+                                </div>
+                                {entry.rendering.length > 1 && (
+                                    <div class="backends" role="group" aria-label="Rendering backend">
+                                        {entry.rendering.map((block, position) => (
+                                            <button
+                                                type="button"
+                                                class="backend"
+                                                data-backend={block.backend}
+                                                aria-pressed={position === 0 ? 'true' : 'false'}
+                                            >
+                                                {BACKEND_LABELS[block.backend]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {entry.rendering.length === 0 ? (
+                                <p class="empty">This machine published no rendering measurement.</p>
+                            ) : (
+                                entry.rendering.map((block, position) => (
+                                    <div class="backend-panel" data-backend={block.backend} hidden={position !== 0}>
+                                        <div class:list={['cards', { odd: block.headline.length % 2 === 1 }]}>
+                                            {block.headline.map(card => (
+                                                <BenchResultCard card={card} domain="rendering" />
+                                            ))}
+                                        </div>
+
+                                        {block.rest.length > 0 && (
+                                            <details class="more">
+                                                <summary>All rendering tests ({block.rest.length} more)</summary>
+                                                <div class:list={['cards', { odd: block.rest.length % 2 === 1 }]}>
+                                                    {block.rest.map(card => (
+                                                        <BenchResultCard card={card} domain="rendering" />
+                                                    ))}
+                                                </div>
+                                            </details>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </section>
+
+                        <section id={index === 0 ? 'physics' : undefined} class="domain">
+                            <div class="domain-head">
+                                <div class="domain-title">
+                                    <h2>Physics</h2>
+                                    <p class="unit">CPU time per step · Lower is better</p>
+                                </div>
+                            </div>
+
+                            {entry.physics.headline.length === 0 ? (
+                                <p class="empty">This machine published no physics measurement.</p>
+                            ) : (
+                                <>
+                                    <div class:list={['cards', { odd: entry.physics.headline.length % 2 === 1 }]}>
+                                        {entry.physics.headline.map(card => (
+                                            <BenchResultCard card={card} domain="physics" />
+                                        ))}
+                                    </div>
+
+                                    {entry.physics.rest.length > 0 && (
+                                        <details class="more">
+                                            <summary>All physics tests ({entry.physics.rest.length} more)</summary>
+                                            <div class:list={['cards', { odd: entry.physics.rest.length % 2 === 1 }]}>
+                                                {entry.physics.rest.map(card => (
+                                                    <BenchResultCard card={card} domain="physics" />
+                                                ))}
+                                            </div>
+                                        </details>
+                                    )}
+                                </>
+                            )}
+                        </section>
+                    </div>
+                ))}
+
+                {/*
+                  * Why a card holds three rows where its neighbour holds four,
+                  * said once for the page.
+                  *
+                  * It was on every card that left an arm out, which put the
+                  * same sentence on screen 27 times to explain a rule that does
+                  * not change between them - and a reader can already see which
+                  * libraries a card lists. What they cannot see is why the
+                  * others are absent, and that is what this says.
+                  */}
+                <p class="scope">
+                    A library appears in a scenario where its own API covers it and its arm does the same work as the others. One that sits a scenario out, or that would
+                    render something else in it, is left out of that card rather than compared on unequal terms. Nothing measured is discarded. <a
+                        href={`${base}${locale}/benchmarks/full/`}>All measurements</a
+                    > lists every arm and every load.
+                </p>
+            </>
+        )}
+    </div>
+</DocsLayout>
+
+<script>
+    /**
+     * The reference profile and the backend choice both belong to the reader and
+     * neither is derived from which one won more rows. Without JavaScript the
+     * first panel of each is the one that is not `hidden`, so the page still
+     * shows measured cards of one profile rather than an empty frame.
+     *
+     * A profile's panel is switched together with the stamp that names the
+     * machine it was measured on: the numbers and their provenance are one
+     * statement, and showing one profile's cards under another's stamp is the
+     * single mistake this control can make.
+     */
+    const select = (buttons: NodeListOf<HTMLButtonElement>, panels: NodeListOf<HTMLElement>, key: 'browser' | 'backend', scope?: HTMLElement): void => {
+        for (const button of buttons) {
+            button.addEventListener('click', () => {
+                for (const other of buttons) {
+                    other.setAttribute('aria-pressed', String(other === button));
+                }
+
+                for (const panel of panels) {
+                    if (scope === undefined || scope.contains(panel)) panel.hidden = panel.dataset[key] !== button.dataset[key];
+                }
+            });
+        }
+    };
+
+    select(
+        document.querySelectorAll<HTMLButtonElement>('.browsers .browser'),
+        document.querySelectorAll<HTMLElement>('.browser-panel[data-browser], .stamp[data-browser]'),
+        'browser',
+    );
+
+    // Scoped per profile: each panel carries its own backend controls, and a
+    // click in one must not reveal the other profile's hidden panels.
+    for (const panel of document.querySelectorAll<HTMLElement>('.browser-panel')) {
+        select(panel.querySelectorAll<HTMLButtonElement>('.backend'), panel.querySelectorAll<HTMLElement>('.backend-panel'), 'backend', panel);
+    }
+</script>
+
+<style>
+    /*
+     * Card surfaces on this page sit a step above the canvas rather than on
+     * pure white.
+     *
+     * The light theme's surface is 100% lightness and its canvas is 98.5%, so a
+     * page made almost entirely of cards had a border doing all the separating
+     * and no plane behind it. Scoped here rather than retuned in the theme: the
+     * tokens are the whole site's, and this is one page's layering.
+     */
+    /*
+     * Narrower than the shell the full measurement table needs.
+     *
+     * That table is one wide grid and uses every pixel it is given; this page
+     * is two columns of cards whose rows are a label, a bar and a figure. Given
+     * 1720px they stretch to almost 700px each, where the bar carries the same
+     * comparison over twice the distance and the eye has to travel it. The
+     * width is the API reference's, so the site keeps one measure for its
+     * non-prose pages.
+     */
+    .bench-prose {
+        width: min(1320px, 100%);
+        max-width: none;
+        margin-inline: auto;
+    }
+
+    /* Light only: the dark theme's canvas and surface already sit a readable step apart. */
+    :global(html[data-theme='light']) .bench-prose {
+        --color-card: color-mix(in oklab, var(--color-surface) 65%, var(--color-surface-2));
+        --bg-elevated: var(--color-card);
+    }
+
+    /* The docs reading measure belongs to prose pages; here it would wrap short notes beside full-width cards. */
+    .bench-prose :where(p, li) {
+        max-width: none;
+    }
+
+    .bench-head {
+        margin-bottom: var(--s-4);
+    }
+
+    .bench-head h1 {
+        margin: 0 0 var(--s-2);
+    }
+
+    .lede {
+        margin: 0;
+        color: var(--fg-muted);
+        line-height: 1.6;
+    }
+
+    .profile-head {
+        display: flex;
+        flex-direction: column;
+        gap: var(--s-3);
+        margin-top: var(--s-4);
+    }
+
+    .browsers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+
+    .browsers .browser {
+        font: inherit;
+        font-size: 0.85rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--fg-muted);
+        cursor: pointer;
+    }
+
+    /* Weight and a filled ground as well as hue, so the selected profile is legible without separating the two colours. */
+    .browsers .browser[aria-pressed='true'] {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 14%, transparent);
+        color: var(--fg);
+        font-weight: 650;
+    }
+
+    /* A flex box outranks the user-agent rule the `hidden` attribute relies on, so the stamp of an unselected machine would stay on screen under the selected machine's own. */
+    .stamp[hidden] {
+        display: none;
+    }
+
+    .stamp {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.15rem var(--s-4);
+        margin: 0 !important;
+        font-family: var(--f-mono);
+        font-size: 0.74rem;
+        color: var(--fg-faint);
+    }
+
+    .stamp b {
+        font-weight: 600;
+        color: var(--fg-muted);
+    }
+
+    .stamp a {
+        color: var(--fg-muted);
+    }
+
+    .empty {
+        margin: 0;
+        padding: var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-left: 3px solid var(--accent);
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+        color: var(--fg-muted);
+    }
+
+    .domain {
+        margin-top: var(--s-6);
+    }
+
+    .domain-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--s-3);
+        margin-bottom: var(--s-4);
+    }
+
+    .domain-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--s-3);
+    }
+
+    .domain-title h2 {
+        margin: 0;
+    }
+
+    .unit {
+        margin: 0 !important;
+        color: var(--fg-muted);
+        font-size: 0.85rem;
+    }
+
+    .backends {
+        display: flex;
+        gap: 0.3rem;
+    }
+
+    .backend {
+        font: inherit;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--fg-muted);
+        cursor: pointer;
+    }
+
+    .backend[aria-pressed='true'] {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 14%, transparent);
+        color: var(--fg);
+        font-weight: 650;
+    }
+
+    /*
+     * Two per row on desktop: a card is a comparison to read, not a tile to
+     * scan, and a third column would shrink the bars past the point of being
+     * readable. The two cards of a row share a height, so the rows sit on one
+     * rhythm instead of each pair opening a hole under its shorter card; the
+     * headline order pairs cards of similar size, which keeps that shared
+     * height close to what each card needs.
+     */
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+        gap: var(--s-4);
+    }
+
+    /*
+     * An odd card closes its row instead of leaving a dead track beside it.
+     *
+     * A two-column grid holding an odd number of cards ends with one card and
+     * one empty cell, which reads as content that failed to load. The last card
+     * of an odd set spans the row: one card wider, not a banner, because the
+     * grid is two tracks and not six. The count decides it rather than
+     * `nth-child`, which counts whatever else the container ends up holding.
+     */
+    .cards.odd > :global(.card:last-child) {
+        grid-column: 1 / -1;
+    }
+
+    /*
+     * Narrow, the container is the card and its scenarios are sections of it -
+     * the frame each scenario carried separated nothing once they were stacked,
+     * and ten of them read as ten small pages rather than as one comparison.
+     * The scenario cards drop their own chrome at the same width; see
+     * `BenchResultCard`.
+     */
+    @media (max-width: 52rem) {
+        /*
+         * Ground and radius carry the container; the border does not. A visible
+         * outline down both sides of a container this tall is a contour a
+         * reader follows for screens at a time, and in the light theme it is
+         * the longest line on the page.
+         */
+        .cards {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 0;
+            padding: 0.35rem 0.9rem 0.9rem;
+            border: 0;
+            border-radius: var(--r-3);
+            background: var(--bg-elevated);
+        }
+    }
+
+    .more {
+        margin-top: var(--s-4);
+    }
+
+    .more > summary {
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .more .cards {
+        margin-top: var(--s-4);
+    }
+
+    .scope {
+        margin-top: var(--s-5);
+        font-size: 0.82rem;
+        color: var(--fg-muted);
+        max-width: 68ch;
+    }
+
+    .legend {
+        margin-top: var(--s-4) !important;
+        margin-bottom: var(--s-4);
+        font-size: 0.82rem;
+        color: var(--fg-muted);
+    }
+
+    .legend b {
+        color: var(--amber);
+        font-weight: 650;
+    }
+
+</style>

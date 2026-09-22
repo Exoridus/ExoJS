@@ -89,7 +89,7 @@ jobs:
       # No install: the planner is dependency-free TypeScript that node strips.
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.x'
+          node-version-file: .nvmrc
 
       - id: plan
         env:
@@ -111,6 +111,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
       - run: ${{ matrix.run }}
+      - name: Upload tooling logs on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tooling-logs-${{ matrix.id }}
+          path: .workspace/logs/
+          retention-days: 1
+          if-no-files-found: warn
 
   test:
     name: test (${{ matrix.id }})
@@ -188,16 +196,12 @@ jobs:
       - name: Build core
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-          EXOJS_FULL_BUNDLE: '1'
         run: pnpm build
 
       - name: Build extension packages
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: >-
-          pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled"
-          --filter "@codexo/exojs-physics" --filter "@codexo/exojs-tilemap-physics" --filter "@codexo/exojs-lighting" --filter "@codexo/exojs-pathfinding" --filter "@codexo/exojs-audio-fx"
-          --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
+        run: pnpm build:packages
 
       - name: Verify production stripping against the built dist
         env:
@@ -249,6 +253,15 @@ jobs:
           EXOJS_PACKAGE_PATH: ..
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm site:build
+
+      - name: Upload tooling logs on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tooling-logs-site
+          path: .workspace/logs/
+          retention-days: 1
+          if-no-files-found: warn
 
       # Deploy Pages ships exactly this artifact; it builds nothing itself.
       - uses: actions/upload-artifact@v4
@@ -303,7 +316,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.x'
+          node-version-file: .nvmrc
       - env:
           NEEDS: ${{ toJSON(needs) }}
           PLAN: ${{ toJSON(needs.plan.outputs) }}

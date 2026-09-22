@@ -290,7 +290,16 @@ export class Stack extends Widget {
       this._natural.delete(child);
     }
 
-    child.setSize(isRow ? mainSize : crossSize, isRow ? crossSize : mainSize);
+    const width = isRow ? mainSize : crossSize;
+    const height = isRow ? crossSize : mainSize;
+
+    // Only write a size the child does not already have. Re-setting the same
+    // extents looks harmless and is not: a nested Stack reads any setSize as its
+    // caller pinning an explicit box, so a stack of stacks would stop sizing
+    // itself to its content the first time its parent laid it out.
+    if (child.uiWidth !== width || child.uiHeight !== height) {
+      child.setSize(width, height);
+    }
   }
 
   /** A child's layout extent: a widget's explicit size, or a drawn node's bounds. */

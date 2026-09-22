@@ -1,0 +1,187 @@
+{
+  "title": "FrameLightingOptions",
+  "description": "What LightmapLighting and RadianceLighting both take.",
+  "symbol": "FrameLightingOptions",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What LightmapLighting and RadianceLighting both take."
+      ],
+      "importLine": "import { FrameLightingOptions } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "ambient",
+          "signature": "ambient?: Color",
+          "signatureTokens": [
+            {
+              "text": "ambient",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Baseline colour every lit fragment receives regardless of any light, as a multiplier on the albedo - 255 per channel means \"unlit areas keep their full albedo\". Stored by reference and re-read every frame."
+        },
+        {
+          "name": "fieldMargin",
+          "signature": "fieldMargin?: number",
+          "signatureTokens": [
+            {
+              "text": "fieldMargin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How far beyond the camera's view the occluder mask and the geometry a ray walks reach, as a fraction of the view's size on each side. It is what lets a wall or a lamp just outside the picture still shadow or light what is in it, so neither pops in at the edge as the camera moves; the probes themselves still cover only the view. Defaults to 0.25, and costs that much more mask fill and collected geometry."
+        },
+        {
+          "name": "lightResolution",
+          "signature": "lightResolution?: number",
+          "signatureTokens": [
+            {
+              "text": "lightResolution",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Texels per logical unit of the light target. Light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill. Defaults to 0.5 under LightmapLighting and to 1 under RadianceLighting, which SAMPLES the field instead of painting into it: the occluder mask a ray reads is rasterised at this density, so a coarse field quantises the scene rather than the light and a source moving by less than a texel makes the whole picture jump."
+        },
+        {
+          "name": "post",
+          "signature": "post?: readonly Filter[]",
+          "signatureTokens": [
+            {
+              "text": "post",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Filter",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Filters applied to the shaded frame, in order. A bloom belongs here rather than on a node: it reads the light the system produced, including the parts no single node drew. They run as one pass in the host's frame slot, reading the composite, which is where the light the system accumulated is still above 1.0 (see Lighting.hdr). Caller-owned, and fixed for the system's lifetime - the filters' own parameters stay live, which is what an animated effect actually needs."
+        },
+        {
+          "name": "shadowResolution",
+          "signature": "shadowResolution?: number",
+          "signatureTokens": [
+            {
+              "text": "shadowResolution",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Angular bins in each light's shadow map. A bin is the finest shadow edge the renderer can resolve, so a large light on a high-resolution canvas wants more of them; the cost is linear in the light count. Defaults to 256. It trades against how wide a penumbra can get. The shadow filter samples every bin under its kernel and spends at most 21 fetches doing it, so the widest kernel is ten bins either side - three percent of a turn at the default, and proportionally less as the resolution rises. Raising this sharpens the hard edge rather than widening the softest one."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/frameLighting.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/frameLighting.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/frameLighting.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/frameLighting.ts"
+}

@@ -12,6 +12,13 @@ import {
   TIMING_THRESHOLD,
   timingCellId,
 } from '../src/rendering/timingGate';
+import type { ClockReport } from '../src/shared/clock';
+
+/**
+ * A clock fine enough that no fixture duration trips the timer check, so a test
+ * asserts on the comparison it is about rather than on the grid it was read on.
+ */
+const FINE_CLOCK: ClockReport = { resolutionMs: 0.001, crossOriginIsolated: true };
 
 /** A measured cell with the timings the gate reads. */
 const cell = (options: { archetype: ArchetypeId; cpuMsMedian: number; cpuMsP95?: number; status?: 'ok' | 'exceeded' }): CellResult => ({
@@ -31,6 +38,7 @@ const cell = (options: { archetype: ArchetypeId; cpuMsMedian: number; cpuMsP95?:
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: 1, textureBinds: 0, bufferUploads: 0 },
+  clock: FINE_CLOCK,
   status: options.status ?? 'ok',
 });
 

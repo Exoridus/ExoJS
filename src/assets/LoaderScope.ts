@@ -1,3 +1,4 @@
+import type { ManifestPack } from '#assets/container/AssetManifest';
 import { Signal } from '#core/Signal';
 import type { Destroyable } from '#core/types';
 
@@ -7,7 +8,7 @@ import type { CatalogEntry, KindByPath, LeafForPath, ResourceForKind } from './A
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 import type { Assets, InferAssetsProperties } from './Assets';
 import { LoadBatch } from './LoadBatch';
-import type { InferLoadedMap, Loader, LoadOptions } from './Loader';
+import type { InferLoadedMap, LoadContainerOptions, Loader, LoadOptions } from './Loader';
 import type { LoadingQueue } from './LoadingQueue';
 
 /**
@@ -178,10 +179,10 @@ export class LoaderScope implements Destroyable {
    *
    * See {@link Loader.loadContainer} for the format and identity contract.
    */
-  public loadContainer(url: string): Promise<void> {
+  public loadContainer(source: string | ManifestPack, options?: LoadContainerOptions): Promise<void> {
     this._assertLive('loadContainer');
 
-    return this._loader._loadContainerInto(this, url);
+    return this._loader._loadContainerInto(this, source, options);
   }
 
   /**

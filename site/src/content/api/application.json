@@ -1,16 +1,16 @@
 {
   "title": "Application",
-  "description": "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core systems (input, interaction, audio, jobs, tweens, animations, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop. Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved. The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing. `pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations.",
+  "description": "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core systems (input, interaction, audio, coroutines, tweens, animations, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop. Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved. The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing. `pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations. **Several applications on one page** are a supported shape, and each owns its surface, backend, scene stack, core systems, extension set, asset loader, frame loop, RNG and changed-record index. Two applications therefore neither rotate each other's retained-plan window nor make each other's scene mutations record anything. What they do share is the process: the Web Audio context (deliberately, since a browser admits only a few) and the monotonic revision counters the scene graph stamps nodes with, which advance faster with a second application but are only ever compared per node. A scene node belongs to exactly one application at a time, and moving one across is an ordinary reparent - its retained state travels with it.",
   "symbol": "Application",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 55,
+  "memberCount": 57,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 36,
+    "properties": 38,
     "events": 8
   },
   "sections": [
@@ -19,10 +19,12 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core systems (input, interaction, audio, jobs, tweens, animations, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop.",
+        "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core systems (input, interaction, audio, coroutines, tweens, animations, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop.",
         "Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved.",
         "The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing.",
-        "`pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations."
+        "`pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations.",
+        "**Several applications on one page** are a supported shape, and each owns its surface, backend, scene stack, core systems, extension set, asset loader, frame loop, RNG and changed-record index. Two applications therefore neither rotate each other's retained-plan window nor make each other's scene mutations record anything.",
+        "What they do share is the process: the Web Audio context (deliberately, since a browser admits only a few) and the monotonic revision counters the scene graph stamps nodes with, which advance faster with a second application but are only ever compared per node. A scene node belongs to exactly one application at a time, and moving one across is an ordinary reparent - its retained state travels with it."
       ],
       "importLine": "import { Application } from '@codexo/exojs'",
       "sourceLink": null
@@ -218,7 +220,7 @@
           ],
           "params": [],
           "returnType": "Promise<void>",
-          "description": "Tear down every owned subsystem (loader, the core systems - input, interaction, audio, jobs, tweens, animations, rendering - the app system registry, backend, scene director, all clocks, all signals) and release event listeners. The application instance is unusable after this call. The page is left as it was found: the active sizing policy is detached, so its observers go and the CSS box it wrote is cleared, and a canvas the engine created itself is removed from the document. A canvas supplied through canvas.element belongs to the caller and stays in place, as does every element around it - no sizing policy ever styles the page itself. Fires the RAF halt synchronously (so no further frame runs after this call returns) and returns a Promise that fulfils once the rest of teardown has run: scenes - including every retained and preloaded scope, and any scene's own async unload() - is fully disposed FIRST, before the Loader, rendering context, audio system, or backend are destroyed, so a scene's teardown code never touches an already-destroyed dependency. This intentionally does not route through the public Application.stop, which fire-and-forgets its own scene-clear - that would race against scenes._dispose()'s own active-scope teardown for ownership of the same scope. destroy() instead halts the frame loop directly and lets scenes._dispose() own scene teardown entirely. destroy() called right after a stop() is covered by the same guarantee, not an exception to it: the scene teardown stop() fired and did not await is published on the director, and scenes._dispose() waits for it - including a still-pending Scene.unload() - before any dependency is destroyed. Every extension goes down with the application: the disposers Extension.install returned run in reverse installation order, after scene teardown and before any subsystem they might still reach for is released. An extension's lifetime is exactly this application's - there is no uninstall short of it. The returned Promise **never rejects**: teardown failures go to Application.onError and the log, exactly as they did when this was a fire-and-forget chain, and the remaining stages still run. Awaiting it therefore means \"teardown is over\", not \"teardown succeeded\" - which is what a caller reusing the canvas or asserting on released resources needs. Scene teardown is bounded: if scenes._dispose() has not settled within the grace period the engine reports a timeout and releases everything else anyway, rather than leaving the whole application pinned by one scene whose unload() never resolves. A scene that wants to cooperate with this should watch Scene.lifecycleSignal, which is aborted when its teardown begins - including for the incoming scene of a navigation still inside load(), which is aborted and awaited rather than left to finish preparing against subsystems this call has released. Idempotent: every call after the first returns the same Promise as the first and starts no second teardown. Application.state is Destroying while the returned Promise is pending and Destroyed afterwards."
+          "description": "Tear down every owned subsystem (loader, the core systems - input, interaction, audio, coroutines, tweens, animations, rendering - the app system registry, backend, scene director, all clocks, all signals) and release event listeners. The application instance is unusable after this call. The page is left as it was found: the active sizing policy is detached, so its observers go and the CSS box it wrote is cleared, and a canvas the engine created itself is removed from the document. A canvas supplied through canvas.element belongs to the caller and stays in place, as does every element around it - no sizing policy ever styles the page itself. Fires the RAF halt synchronously (so no further frame runs after this call returns) and returns a Promise that fulfils once the rest of teardown has run: scenes - including every retained and preloaded scope, and any scene's own async unload() - is fully disposed FIRST, before the Loader, rendering context, audio system, or backend are destroyed, so a scene's teardown code never touches an already-destroyed dependency. This intentionally does not route through the public Application.stop, which fire-and-forgets its own scene-clear - that would race against scenes._dispose()'s own active-scope teardown for ownership of the same scope. destroy() instead halts the frame loop directly and lets scenes._dispose() own scene teardown entirely. destroy() called right after a stop() is covered by the same guarantee, not an exception to it: the scene teardown stop() fired and did not await is published on the director, and scenes._dispose() waits for it - including a still-pending Scene.unload() - before any dependency is destroyed. Every extension goes down with the application: the disposers Extension.install returned run in reverse installation order, after scene teardown and before any subsystem they might still reach for is released. An extension's lifetime is exactly this application's - there is no uninstall short of it. The returned Promise **never rejects**: teardown failures go to Application.onError and the log, exactly as they did when this was a fire-and-forget chain, and the remaining stages still run. Awaiting it therefore means \"teardown is over\", not \"teardown succeeded\" - which is what a caller reusing the canvas or asserting on released resources needs. Scene teardown is bounded: if scenes._dispose() has not settled within the grace period the engine reports a timeout and releases everything else anyway, rather than leaving the whole application pinned by one scene whose unload() never resolves. A scene that wants to cooperate with this should watch Scene.lifecycleSignal, which is aborted when its teardown begins - including for the incoming scene of a navigation still inside load(), which is aborted and awaited rather than left to finish preparing against subsystems this call has released. Idempotent: every call after the first returns the same Promise as the first and starts no second teardown. Application.state is Destroying while the returned Promise is pending and Destroyed afterwards."
         },
         {
           "name": "resize",
@@ -798,7 +800,7 @@
             }
           ],
           "returnType": "this",
-          "description": "One iteration of the per-frame loop. Invoked by requestAnimationFrame. When the document is hidden and pauseOnHidden is true, the frame clock is reset and the body is skipped - preventing a large delta spike on the first visible frame after resume. Each normal frame runs, in order: 1. **Pre-update** - app.systems pre-update phase, then the scene's preUpdate() hook and its own systems' pre-update phase. The engine's input, interaction, audio, tween, animation and rendering systems are ordinary systems in this phase, pinned to the head of it by their SystemOrder Core* values, so this frame's input snapshot is current before anything simulates. An application system registered without an explicit order runs after all of them. 2. **Fixed steps** (zero or more) - app.systems fixed-update phase, scenes.fixedUpdate() + the scene's systems fixed-update phase, Application.onFixedFrame. 3. **Update** - app.systems update phase, then scenes.update() + the scene's systems update phase. 4. **Draw** - the canvas is cleared to Application.clearColor (unless autoClear: false), then the scene draws (plus its systems and UI layer); an active transition session's own visual output composites either below or above the app.systems draw phase depending on the session's placement ('scene': below app overlays; 'screen': above them, matching the pre-transition-runtime default). 5. **Frame dispatch / flush** - Application.onFrame, backend GPU flush, frame-time stat write. Running one frame is all this does: scheduling belongs to the loop, so a manual call runs an extra frame alongside a live loop rather than forking a second one, and does not restart a loop that Application.stop has halted - the body is skipped entirely while the loop is not live. The simulation delta forwarded to all update recipients is clamped to an internal maximum (100 ms) so that debugger pauses, device sleep/resume, or severe browser scheduling gaps cannot produce runaway animation advancement. Real wall-clock time and RAF cadence are unaffected; the raw elapsed delta is recorded separately in backend.stats.rawFrameDeltaMs."
+          "description": "One iteration of the per-frame loop. Invoked by requestAnimationFrame. When the document is hidden and pauseOnHidden is true, the frame clock is reset and the body is skipped - preventing a large delta spike on the first visible frame after resume. Each normal frame runs, in order: 1. **Pre-frame** - app.systems pre-frame phase, then the active scene's own systems' pre-frame phase. The engine's input, interaction, audio, tween, animation and rendering systems are ordinary systems in this phase, pinned to the head of it by their SystemOrder Core* values, so this frame's input snapshot is current before anything simulates. An application system registered without an explicit order runs after all of them. 2. **Fixed steps** (zero or more) - app.systems fixed-update phase, scenes.fixedUpdate() + the scene's systems fixed-update phase, Application.onFixedFrame. 3. **Update** - app.systems update phase, then scenes.update() + the scene's systems update phase. 4. **Draw** - the canvas is cleared to Application.clearColor (unless autoClear: false), then the scene draws (plus its systems and UI layer); an active transition session's own visual output composites either below or above the app.systems draw phase depending on the session's placement ('scene': below app overlays; 'screen': above them, matching the pre-transition-runtime default). 5. **Frame dispatch / flush** - Application.onFrame, backend GPU flush, frame-time stat write. 6. **Post-frame** - app.systems post-frame phase, then the active scene's own systems' post-frame phase, both handed the frame's remaining time (FrameBudget). Work placed here overlaps the GPU drawing the frame just submitted. Running one frame is all this does: scheduling belongs to the loop, so a manual call runs an extra frame alongside a live loop rather than forking a second one, and does not restart a loop that Application.stop has halted - the body is skipped entirely while the loop is not live. The simulation delta forwarded to all update recipients is clamped to an internal maximum (100 ms) so that debugger pauses, device sleep/resume, or severe browser scheduling gaps cannot produce runaway animation advancement. Real wall-clock time and RAF cadence are unaffected; the raw elapsed delta is recorded separately in backend.stats.rawFrameDeltaMs."
         }
       ],
       "paragraphs": [],
@@ -873,6 +875,27 @@
           "description": "Whether the application may reach the network right now, and what the host reports about it. An ordinary runtime service, not a cache detail: UI reads it for an offline banner, and the asset cache reaches it only through a ConnectivityPolicyResolver the application was configured with."
         },
         {
+          "name": "coroutines",
+          "signature": "coroutines: CoroutineSystem",
+          "signatureTokens": [
+            {
+              "text": "coroutines",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CoroutineSystem",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Frame-budgeted driver for generator coroutines (world generation, batch pathfinding, anything too heavy for one frame). Runs in the postFrame phase on a share of what the frame has left; see CoroutineSystem."
+        },
+        {
           "name": "element",
           "signature": "element: HTMLCanvasElement | null",
           "signatureTokens": [
@@ -942,27 +965,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "jobs",
-          "signature": "jobs: JobScheduler",
-          "signatureTokens": [
-            {
-              "text": "jobs",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "JobScheduler",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Frame-budgeted scheduler for generator jobs (world generation, batch pathfinding, anything too heavy for one frame). Ticks in the update phase with a 2 ms default budget; see JobScheduler."
         },
         {
           "name": "loader",
@@ -1154,7 +1156,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "App-level system registry for user/extension systems - Application lifetime, independent of the active scene. The core systems (input, interaction, audio, jobs, tweens, animations, rendering) are driven directly by the internal per-frame prepare stage and never occupy this registry, so any order is available; see SystemOrder for common reference points. Scene-scoped systems live on scenes.systems."
+          "description": "App-level system registry for user/extension systems - Application lifetime, independent of the active scene. The core systems (input, interaction, audio, coroutines, tweens, animations, rendering) are driven directly by the internal per-frame prepare stage and never occupy this registry, so any order is available; see SystemOrder for common reference points. Scene-scoped systems live on scenes.systems."
         },
         {
           "name": "tweens",
@@ -1409,6 +1411,27 @@
           "description": ""
         },
         {
+          "name": "framePasses",
+          "signature": "framePasses: RenderPipeline",
+          "signatureTokens": [
+            {
+              "text": "framePasses",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPipeline",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Passes that run after the frame has been drawn, with the frame itself as their input - the seam for a screen-wide effect (bloom over everything, a deferred lighting composite, a CRT filter) that a per-node filter cannot express. While this pipeline holds at least one pass, the scene, the systems' draw hooks and any scene transition render into Application.frameTexture instead of the canvas, and the pipeline is played afterwards; the last pass to write the active target produces the picture. An empty pipeline is the frame as it is drawn without this feature, at no cost. ts app.framePasses.addPass(new FilterPass(app.frameTexture, [new BloomFilter()]));  Owned by the application: its passes are destroyed with it. Remove a pass before destroying an extension that owns it, the same contract every RenderPipeline has."
+        },
+        {
           "name": "frameSeconds",
           "signature": "frameSeconds: Seconds",
           "signatureTokens": [
@@ -1428,6 +1451,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "frameTexture",
+          "signature": "frameTexture: RenderTexture",
+          "signatureTokens": [
+            {
+              "text": "frameTexture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The off-screen target the frame is drawn into while framePasses holds passes - the source a frame pass reads. Sized to the logical surface times pixelRatio in texels, with a view in logical units, so the frame is rasterized at the density the canvas is and a pass sees the coordinates the scene was drawn in. It follows every resize, so a pass built once against it stays valid for the application's life. Reading this allocates it. An application that never adds a frame pass never pays for it."
         },
         {
           "name": "height",

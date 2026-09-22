@@ -1,15 +1,23 @@
+// The iframe keeps the stage's own layout size and is scaled with a transform,
+// never with `zoom`: a transform leaves the iframe's inner viewport untouched,
+// so preview.html always fits its 1280x720 stage against a 1280x720 window and
+// the stage scale stays 1. Zoom rescales that inner viewport, and an example
+// whose canvas appears after the zoom was applied fitted its stage a second
+// time and rendered at a quarter of the size.
 .root {
   display: block;
-  width: calc(var(--canvas-w, 800px) * var(--preview-zoom, 1));
-  height: calc(var(--canvas-h, 600px) * var(--preview-zoom, 1));
+  width: calc(var(--canvas-w, 1280px) * var(--preview-zoom, 1));
+  height: calc(var(--canvas-h, 720px) * var(--preview-zoom, 1));
   position: relative;
+  overflow: hidden;
   background: var(--bg-code);
 }
 
 .preview {
-  width: var(--canvas-w, 100%);
-  height: var(--canvas-h, 100%);
+  width: var(--canvas-w, 1280px);
+  height: var(--canvas-h, 720px);
   border: 0;
-  zoom: var(--preview-zoom, 1);
+  transform: scale(var(--preview-zoom, 1));
+  transform-origin: top left;
   background: var(--bg-code);
 }

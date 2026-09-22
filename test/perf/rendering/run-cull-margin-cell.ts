@@ -9,7 +9,7 @@
  * that rendered every margin in one process would compare tier-up histories
  * rather than margins.
  *
- *   pnpm perf:renderers:cull-margin:cell -- --margin 0.0625 --nodes 25000 [--speed 8] [--frames 300] [--warmup 60]
+ *   pnpm perf renderers:cull-margin:cell --margin 0.0625 --nodes 25000 [--speed 8] [--frames 300] [--warmup 60]
  *
  * @internal Test/perf-only.
  */

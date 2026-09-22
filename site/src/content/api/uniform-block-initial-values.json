@@ -1,0 +1,63 @@
+{
+  "title": "UniformBlockInitialValues",
+  "description": "Per-block starting values accepted when an instance is constructed.",
+  "symbol": "UniformBlockInitialValues",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-block starting values accepted when an instance is constructed."
+      ],
+      "importLine": "import { UniformBlockInitialValues } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "UniformBlockInitialValues",
+          "signature": "mapped",
+          "signatureTokens": [
+            {
+              "text": "mapped",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/uniforms/uniformSchema.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformSchema.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/uniforms/uniformSchema.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformSchema.ts"
+}

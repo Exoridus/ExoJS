@@ -10,12 +10,12 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { LightingSystem, LitSpriteMaterial, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControls } from '@examples/runtime';
 
-// Forward normal mapping on plain sprites. A LitSpriteMaterial samples a
+// Forward normal mapping on plain sprites. A LitMaterial samples a
 // tangent-space normal map next to the base texture and shades each fragment
-// against the lights a LightingSystem publishes. Everything stays in one batch:
+// against the lights a Lighting system publishes. Everything stays in one batch:
 // the lights live in a data texture, not in extra draw calls.
 
 const LIGHT_COUNT = 4;
@@ -54,8 +54,10 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
   }
 });
 
-// Normal map: hemisphere normals encoded as rgb = n * 0.5 + 0.5. +y points
-// down the texture (towards larger v), matching the sprite's local y axis.
+// Normal map: hemisphere normals encoded as rgb = n * 0.5 + 0.5, in the OpenGL
+// convention the engine reads - green above the midpoint means the normal
+// leans towards the TOP of the image, so the image-space gradient is negated
+// on the way into the green channel.
 const normalTexture = canvasTexture(TILE_SIZE, context => {
   const image = context.createImageData(TILE_SIZE, TILE_SIZE);
   const half = TILE_SIZE / 2;
@@ -66,7 +68,7 @@ const normalTexture = canvasTexture(TILE_SIZE, context => {
       const inside = dx * dx + dy * dy;
       const nz = inside < 1 ? Math.sqrt(1 - inside) : 1;
       const nx = inside < 1 ? dx : 0;
-      const ny = inside < 1 ? dy : 0;
+      const ny = inside < 1 ? -dy : 0;
       const offset = (y * TILE_SIZE + x) * 4;
       image.data[offset] = (nx * 0.5 + 0.5) * 255;
       image.data[offset + 1] = (ny * 0.5 + 0.5) * 255;
@@ -81,8 +83,8 @@ const lightColors = [new Color(255, 180, 120), new Color(120, 180, 255), new Col
 
 class NormalMappedSpritesScene extends Scene {
   private layer!: Container;
-  private lighting!: LightingSystem;
-  private material!: LitSpriteMaterial;
+  private lighting!: Lighting;
+  private material!: LitMaterial;
   private lights!: PointLight[];
   private tiles!: { sprite: Sprite; spin: number }[];
   private markers!: Sprite[];
@@ -93,8 +95,8 @@ class NormalMappedSpritesScene extends Scene {
     const { width, height } = this.app;
     this.layer = new Container();
 
-    this.lighting = new LightingSystem({ maxLights: LIGHT_COUNT, ambient: new Color(30, 30, 40) });
-    this.material = new LitSpriteMaterial({ lighting: this.lighting, normalMap: normalTexture });
+    this.lighting = new ForwardLighting({ maxLights: LIGHT_COUNT, ambient: new Color(30, 30, 40) });
+    this.material = new LitMaterial({ lighting: this.lighting, normals: new NormalMap(normalTexture) });
 
     // Scene systems tick after Scene.update(), so the packed light texture
     // always describes the frame that is about to be drawn.

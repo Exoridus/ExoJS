@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 36,
+  "memberCount": 39,
   "counts": {
     "constructors": 1,
-    "methods": 17,
-    "properties": 18,
+    "methods": 19,
+    "properties": 19,
     "events": 0
   },
   "sections": [
@@ -132,6 +132,64 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "_enableDepthTexture",
+          "signature": "_enableDepthTexture(): void",
+          "signatureTokens": [
+            {
+              "text": "_enableDepthTexture",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Give this target a sampleable depth attachment. Called once, from the constructor of a subclass whose options asked for one."
+        },
+        {
+          "name": "_syncDepthSize",
+          "signature": "_syncDepthSize(): void",
+          "signatureTokens": [
+            {
+              "text": "_syncDepthSize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Keep the depth attachment at the target's size. A subclass that resizes through a path other than resize calls this itself - a depth attachment left at the old size makes the whole framebuffer incomplete."
+        },
         {
           "name": "_touch",
           "signature": "_touch(): void",
@@ -1037,6 +1095,35 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "depthTexture",
+          "signature": "depthTexture: DepthTexture | null",
+          "signatureTokens": [
+            {
+              "text": "depthTexture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DepthTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sampleable depth attachment, or null on a target that did not opt in - the on-screen root target always answers null. Opting in ({ depth: true } on a RenderTexture or a MultiRenderTarget) buys a depth buffer that survives the pass and can be read back as a texture; a MeshMaterial with writesDepth fills it. Without the opt-in a depth-writing material still draws, it just writes depth nowhere."
         },
         {
           "name": "destroyed",

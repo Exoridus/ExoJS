@@ -1,0 +1,329 @@
+{
+  "title": "Coroutine",
+  "description": "Handle for work handed to a CoroutineSystem. Poll Coroutine.status, Coroutine.progress and Coroutine.result from frame code, or await Coroutine.done from async code; both see the same settlement. Cancelling (or destroying, which is the same) stops the body at its current `yield` and settles the coroutine as `cancelled`.",
+  "symbol": "Coroutine",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Handle for work handed to a CoroutineSystem. Poll Coroutine.status, Coroutine.progress and Coroutine.result from frame code, or await Coroutine.done from async code; both see the same settlement. Cancelling (or destroying, which is the same) stops the body at its current `yield` and settles the coroutine as `cancelled`."
+      ],
+      "importLine": "import { Coroutine } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "cancel",
+          "signature": "cancel(): void",
+          "signatureTokens": [
+            {
+              "text": "cancel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Stop the coroutine at its current yield. No-op once settled."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "name",
+          "signature": "name: string | undefined",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The label passed at CoroutineSystem.queue, if any."
+        },
+        {
+          "name": "done",
+          "signature": "done: Promise<T>",
+          "signatureTokens": [
+            {
+              "text": "done",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolves with the result when the coroutine completes and rejects when it fails or is cancelled (cancellation rejects with an AbortError). Created on first access, so a coroutine nobody awaits never raises an unhandled rejection. The continuation runs after the frame step that settled it; read Coroutine.result for same-frame access."
+        },
+        {
+          "name": "error",
+          "signature": "error: Error | undefined",
+          "signatureTokens": [
+            {
+              "text": "error",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The error that failed or cancelled the coroutine, otherwise undefined. A thrown non-Error value is wrapped, with the value as cause."
+        },
+        {
+          "name": "priority",
+          "signature": "priority: number",
+          "signatureTokens": [
+            {
+              "text": "priority",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First claim on the frame's slice. Writable while the coroutine runs, so work the player is now waiting on can be promoted ahead of the rest; the system reorders before its next frame."
+        },
+        {
+          "name": "progress",
+          "signature": "progress: P | undefined",
+          "signatureTokens": [
+            {
+              "text": "progress",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "P",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The most recent value the body yielded, or undefined before the first step. A body that yields nothing types this as void."
+        },
+        {
+          "name": "result",
+          "signature": "result: T | undefined",
+          "signatureTokens": [
+            {
+              "text": "result",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The body's return value once the coroutine is done, otherwise undefined."
+        },
+        {
+          "name": "settled",
+          "signature": "settled: boolean",
+          "signatureTokens": [
+            {
+              "text": "settled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the coroutine has reached a terminal state."
+        },
+        {
+          "name": "status",
+          "signature": "status: CoroutineStatus",
+          "signatureTokens": [
+            {
+              "text": "status",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CoroutineStatus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/CoroutineSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/CoroutineSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CoroutineSystem.ts"
+}

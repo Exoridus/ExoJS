@@ -23,7 +23,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  */
 const REPO_ROOT = resolve(__dirname, '../..');
 const SCANNER = 'scripts/check-source-hygiene.ts';
-const FIXTURE_DIRECTORY = 'test/ci/hygiene-fixtures';
+const FIXTURE_DIRECTORY = 'test/ci/__hygiene-fixtures__';
 
 /** Comments that use "session" as domain vocabulary and must stay silent. */
 const ACCEPTED: Readonly<Record<string, string>> = {

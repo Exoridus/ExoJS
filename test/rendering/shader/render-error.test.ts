@@ -11,8 +11,8 @@
 
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { formatShaderError, RenderError } from '#rendering/RenderError';
-import { Shader } from '#rendering/shader/Shader';
 import { createWebGl2ShaderProgram } from '#rendering/webgl2/shaderProgram';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 interface MockGlOptions {
   /** Force COMPILE_STATUS false for this shader type (VERTEX_SHADER / FRAGMENT_SHADER). */
@@ -100,7 +100,7 @@ describe('WebGl2ShaderProgram — structured RenderError (contracts 1, 2)', () =
       shaderInfoLog: "ERROR: 0:5: 'gl_Position' : syntax error",
     });
     const program = createWebGl2ShaderProgram(gl, 'test:sprite');
-    const shader = new Shader(vertexSource, fragmentSource);
+    const shader = new WebGl2Shader(vertexSource, fragmentSource);
 
     let thrown: unknown = null;
 
@@ -131,7 +131,7 @@ describe('WebGl2ShaderProgram — structured RenderError (contracts 1, 2)', () =
       shaderInfoLog: 'ERROR: 0:4: syntax error',
     });
     const program = createWebGl2ShaderProgram(gl);
-    const shader = new Shader(vertexSource, fragmentSource);
+    const shader = new WebGl2Shader(vertexSource, fragmentSource);
 
     let thrown: unknown = null;
 
@@ -158,7 +158,7 @@ describe('WebGl2ShaderProgram — structured RenderError (contracts 1, 2)', () =
       programInfoLog: 'varying mismatch between stages',
     });
     const program = createWebGl2ShaderProgram(gl, 'test:mesh');
-    const shader = new Shader(vertexSource, fragmentSource);
+    const shader = new WebGl2Shader(vertexSource, fragmentSource);
 
     let thrown: unknown = null;
 
@@ -181,7 +181,7 @@ describe('WebGl2ShaderProgram — structured RenderError (contracts 1, 2)', () =
   test('a healthy program compiles, links and binds without throwing', () => {
     const gl = createMockGl();
     const program = createWebGl2ShaderProgram(gl, 'test:ok');
-    const shader = new Shader(vertexSource, fragmentSource);
+    const shader = new WebGl2Shader(vertexSource, fragmentSource);
 
     expect(() => {
       shader.connect(program);

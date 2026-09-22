@@ -12,6 +12,7 @@ import type { ColorTextureFormat } from '#rendering/types';
 
 import type { BackendRenderPass } from './BackendRenderPass';
 import type { Drawable } from './Drawable';
+import type { PixelReadback } from './PixelReadback';
 import type { RenderBackendType } from './RenderBackendType';
 import type { RendererRegistry } from './RendererRegistry';
 import type { RenderError } from './RenderError';
@@ -97,6 +98,19 @@ export interface RenderBackend {
   readonly maxColorAttachments: number;
 
   /**
+   * Whether this device can give each colour attachment of one draw its own
+   * blend state, which is what {@link MeshMaterial.blendModes} asks for.
+   *
+   * `false` before the backend is initialized. WebGPU always reports `true` -
+   * blend state is per target in a pipeline descriptor. WebGL2 reports whether
+   * `OES_draw_buffers_indexed` is available, which desktop drivers generally
+   * have and older mobile GPUs may not; a draw whose attachments would blend
+   * differently throws a {@link RenderError} without it, because there is no
+   * fallback that keeps what a multi-attachment pass is for.
+   */
+  readonly supportsPerAttachmentBlend: boolean;
+
+  /**
    * Dispatched when the backend detects a GPU error that does not surface as a
    * synchronous exception - WGSL compilation errors, WebGPU uncaptured
    * validation/OOM/internal errors. Synchronous failures (WebGL2 shader
@@ -169,6 +183,31 @@ export interface RenderBackend {
    * depend on hardware/extension support. Check before allocating a float target.
    */
   supportsColorFormat(format: ColorTextureFormat): boolean;
+
+  /**
+   * Read back `width × height` RGBA bytes from `source`, starting at `x`, `y`
+   * measured from its top-left corner, with the top row first.
+   *
+   * Pending work is submitted first, so the pixels are those of everything
+   * drawn into `source` up to this call. Both backends resolve on the GPU's own
+   * schedule rather than blocking, which is why this is asynchronous even where
+   * the platform call is not.
+   *
+   * The caller is expected to have validated the format and the rectangle;
+   * {@link RenderingContext.readPixels} is the checked entry point.
+   * @advanced
+   */
+  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray>;
+
+  /**
+   * Open a standing, non-blocking readback over `width × height` pixels of
+   * `source` at `x`, `y` from its top-left corner, with `slots` staging
+   * buffers. The backend drains it at every frame start and invalidates it on
+   * device loss; the caller destroys it. `PixelReader` is the checked,
+   * caller-facing wrapper and the way application code should reach this.
+   * @advanced
+   */
+  createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback;
 
   /**
    * Borrow a temporary {@link RenderTexture} of exactly `width × height` from

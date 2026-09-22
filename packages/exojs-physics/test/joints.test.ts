@@ -622,3 +622,479 @@ describe('joints', () => {
     expect(Number.isFinite(wheel.y)).toBe(true);
   });
 });
+
+/**
+ * Whether a joint's two bodies also collide with each other.
+ *
+ * `false` takes the pair out of collision before the narrow phase, which is
+ * what a chain or a ragdoll usually wants: a chain pinned at the edge its links
+ * share otherwise carries one contact per jointed pair, and the contact solver
+ * spends every step pushing apart what the joint is holding together.
+ *
+ * The default stays `true` - the behaviour every joint has had so far - because
+ * a revolute chain measured over a long window gains energy once those contacts
+ * are gone. These cover what the option does, not whether a chain stays settled
+ * without the contacts; that is a solver question and is deliberately not
+ * pinned by an assertion here.
+ *
+ * The contacts are counted through the world's own contact graph rather than
+ * through a derived position, because the point is whether the pair reaches the
+ * narrow phase at all.
+ */
+describe('connected-body collision', () => {
+  /** Two overlapping boxes, jointed at the point they share. */
+  const pinnedPair = (collideConnected?: boolean): { world: PhysicsWorld; joint: RevoluteJoint } => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const b = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 10, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const joint = world.addJoint(
+      new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, ...(collideConnected !== undefined && { collideConnected }) }),
+    );
+
+    return { world, joint };
+  };
+
+  const contacts = (world: PhysicsWorld): number => world.backend.contactGraph.solidContacts.length;
+
+  it('leaves a jointed pair colliding by default', () => {
+    const { world } = pinnedPair();
+
+    world.step(FRAME);
+
+    expect(contacts(world)).toBeGreaterThan(0);
+  });
+
+  it('takes an opted-out pair out of the contact graph', () => {
+    const { world } = pinnedPair(false);
+
+    world.step(FRAME);
+
+    expect(contacts(world)).toBe(0);
+  });
+
+  it('reports what the joint was constructed with', () => {
+    expect(pinnedPair().joint.collideConnected).toBe(true);
+    expect(pinnedPair(false).joint.collideConnected).toBe(false);
+  });
+
+  it('lets the pair collide again once the joint is removed', () => {
+    const { world, joint } = pinnedPair(false);
+
+    world.step(FRAME);
+    expect(contacts(world)).toBe(0);
+
+    world.removeJoint(joint);
+    world.step(FRAME);
+
+    expect(contacts(world)).toBeGreaterThan(0);
+  });
+
+  it('keeps the pair apart while any joint of it still asks for that', () => {
+    const { world, joint } = pinnedPair(false);
+    const [a, b] = world.bodies;
+    // A second joint on the same pair, opting in. The pair is held apart while
+    // either joint asks for it: a reference count, not a last-writer-wins flag.
+    const second = world.addJoint(new RevoluteJoint({ bodyA: a!, bodyB: b!, anchor: { x: 5, y: 0 }, collideConnected: true }));
+
+    world.step(FRAME);
+    expect(contacts(world)).toBe(0);
+
+    world.removeJoint(joint);
+    world.step(FRAME);
+    expect(contacts(world)).toBeGreaterThan(0);
+
+    world.removeJoint(second);
+    world.step(FRAME);
+    expect(contacts(world)).toBeGreaterThan(0);
+  });
+
+  it('does not let a disabled joint start pushing its own bodies apart', () => {
+    // Suspending the constraint must not hand the pair to the contact solver:
+    // a ragdoll whose joints are briefly disabled would come apart at the seams.
+    const { world, joint } = pinnedPair(false);
+
+    joint.enabled = false;
+    world.step(FRAME);
+
+    expect(contacts(world)).toBe(0);
+  });
+
+  it('builds a chain of edge-to-edge links with no contact between the links', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY }, enableSleeping: false });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    let previous = anchor;
+
+    for (let index = 1; index <= 8; index++) {
+      const link = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: index * 16 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+      world.addJoint(new RevoluteJoint({ bodyA: previous, bodyB: link, anchor: { x: 0, y: index * 16 - 8 }, collideConnected: false }));
+      previous = link;
+    }
+
+    advance(world, 0.5);
+
+    // What the option guarantees, and only that: the seams the joints hold are
+    // not also contacts. Whether the chain stays settled over a long window is
+    // a property of the joint solver and is not asserted here.
+    expect(contacts(world)).toBe(0);
+    expect(Number.isFinite(previous.y)).toBe(true);
+  });
+});
+
+/**
+ * What a joint's presence in a world means for the bodies it constrains.
+ *
+ * These are the seams the pair-keyed collision suppression made load-bearing. A
+ * joint left behind by a destroyed body keeps being prepared, warm-started and
+ * solved against it, and the pair claim it holds is one nothing can release
+ * again, because the joint that owned it is no longer reachable.
+ */
+describe('joint lifecycle', () => {
+  const boxBody = (world: PhysicsWorld, x: number, y: number, type: 'static' | 'dynamic' = 'dynamic'): PhysicsBody =>
+    world.add(new PhysicsBody({ type, position: { x, y }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+  it('refuses a joint between one body and itself', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = boxBody(world, 0, 0);
+
+    expect(() => world.addJoint(new RevoluteJoint({ bodyA: body, bodyB: body, anchor: { x: 0, y: 0 } }))).toThrow(/two different bodies/);
+  });
+
+  it('refuses a joint that constrains a destroyed body', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 40, 0);
+
+    world.destroyBody(b);
+
+    expect(() => world.addJoint(new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 20, y: 0 } }))).toThrow(/destroyed body/);
+  });
+
+  it('refuses a joint whose bodies belong to another world', () => {
+    // Ids are handed out per world, so a pair key built from two worlds' bodies
+    // names a pair that exists in neither.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const other = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const mine = boxBody(world, 0, 0);
+    const theirs = boxBody(other, 40, 0);
+
+    expect(() => world.addJoint(new RevoluteJoint({ bodyA: mine, bodyB: theirs, anchor: { x: 20, y: 0 } }))).toThrow(/another world/);
+  });
+
+  it('drops the joints of a destroyed body', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 10, 0);
+
+    world.addJoint(new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, collideConnected: false }));
+    world.step(FRAME);
+    expect(world.joints).toHaveLength(1);
+    expect(world.backend.contactGraph.solidContacts).toHaveLength(0);
+
+    world.destroyBody(b);
+    world.step(FRAME);
+
+    // Ids are never handed out twice, so no later body can inherit the pair
+    // this joint claimed; what the removal has to establish is that the joint
+    // stops being solved against a body that no longer exists.
+    expect(world.joints).toHaveLength(0);
+    expect(b.destroyed).toBe(true);
+  });
+
+  it("releases the pair claim a destroyed body's joint held", () => {
+    // The surviving body is put back into contact with a third one, which the
+    // claim would still be suppressing had it outlived the joint.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 10, 0);
+
+    world.addJoint(new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, collideConnected: false }));
+    world.step(FRAME);
+    expect(world.backend.contactGraph.solidContacts).toHaveLength(0);
+
+    world.destroyBody(b);
+    boxBody(world, 10, 0);
+    world.step(FRAME);
+
+    expect(world.backend.contactGraph.solidContacts.length).toBeGreaterThan(0);
+  });
+
+  it('counts one joint once however often it is added', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 10, 0);
+    const joint = new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, collideConnected: false });
+
+    world.addJoint(joint);
+    world.addJoint(joint);
+    world.step(FRAME);
+    expect(world.joints).toHaveLength(1);
+
+    // One removal has to be enough: a second registration that also bumped the
+    // pair count would leave the pair suppressed forever.
+    world.removeJoint(joint);
+    world.step(FRAME);
+
+    expect(world.joints).toHaveLength(0);
+    expect(world.backend.contactGraph.solidContacts.length).toBeGreaterThan(0);
+  });
+
+  it('survives removing one joint twice', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 10, 0);
+    const joint = world.addJoint(new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, collideConnected: false }));
+
+    world.step(FRAME);
+    world.removeJoint(joint);
+    world.removeJoint(joint);
+    world.step(FRAME);
+
+    expect(world.joints).toHaveLength(0);
+    expect(world.backend.contactGraph.solidContacts.length).toBeGreaterThan(0);
+  });
+
+  it('sweeps a bullet through the body its joint took it out of collision with', () => {
+    // CCD is a second collision path, not a second collision semantics: without
+    // the same filter a swept bullet is stopped by a neighbour the discrete path
+    // is not allowed to collide it with.
+    //
+    // The assertion is where the bullet ENDED UP, not the contact count: the
+    // sweep runs after detection, so a bullet the old path clamped at the wall
+    // produces its contact on the following step and leaves this one looking
+    // clean either way.
+    //
+    // The joint is a prismatic rail along the flight path rather than a pin:
+    // it has to take the pair out of collision without also holding the bullet
+    // still, which is what a revolute anchor to a static wall would do.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const wall = boxBody(world, 400, 0, 'static');
+    const bullet = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new BoxShape(8, 8) }] }));
+
+    world.addJoint(new PrismaticJoint({ bodyA: wall, bodyB: bullet, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 }, collideConnected: false }));
+    // 1000 px in one step at 60 Hz, so a clamp at the wall is unmistakable.
+    bullet.linearVelocityX = 60_000;
+
+    world.step(FRAME);
+
+    expect(bullet.x).toBeGreaterThan(wall.x + 100);
+  });
+
+  it('still stops a bullet at a body it is not jointed to', () => {
+    // The counterpart, so the test above cannot pass by CCD being off entirely.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const wall = boxBody(world, 400, 0, 'static');
+    const bullet = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new BoxShape(8, 8) }] }));
+
+    bullet.linearVelocityX = 60_000;
+
+    world.step(FRAME);
+
+    expect(bullet.x).toBeLessThan(wall.x);
+  });
+});
+
+/**
+ * A hanging revolute chain has to stay where it was built.
+ *
+ * The scene is the neutral benchmark chain: equal 16 px boxes at density 1,
+ * pinned at the seam they share so every joint starts at zero error, hanging
+ * from a static anchor under gravity, with nothing driving it. Left to itself
+ * it must lose energy, not gain it.
+ *
+ * It did gain it. Chains of seven links and up accelerated along their own axis
+ * from a standing start - 8 links reached ~1760 px/s inside 100 steps and 12
+ * diverged outright - while the same chains held still as long as the links
+ * also collided at their seams. Those contacts were damping a solver defect:
+ * the point constraint solved every sub-step against the anchor error measured
+ * at frame start, so each sub-step re-corrected an error the previous one had
+ * already taken out, and it applied that correction through an unscaled bias
+ * that relaxed none of the impulse it accumulated.
+ *
+ * The window is what the old 0.5 s test could not reach: the growth was not
+ * visible before step 75 and not decisive before several hundred.
+ */
+describe('revolute chain stability', () => {
+  /** Steps to run - ten seconds at the fixed rate, well past where the growth used to be unmistakable. */
+  const WINDOW = 600;
+
+  /** How far a link may hang below where it was built. A soft constraint stretches under load; it must not drift. */
+  const MAX_SAG_PX = 8;
+
+  const hangChain = (
+    links: number,
+    options: { subStepCount?: number; enableSleeping?: boolean; contacts?: boolean } = {},
+  ): { world: PhysicsWorld; chain: readonly PhysicsBody[] } => {
+    const { contacts = true, ...worldOptions } = options;
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY }, ...worldOptions });
+    const chain: PhysicsBody[] = [];
+    let previous = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 200 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+    for (let link = 1; link <= links; link++) {
+      const y = 200 + link * 16;
+      const body = world.add(
+        new PhysicsBody({
+          type: 'dynamic',
+          position: { x: 0, y },
+          // Identical negative groups never collide, so `contacts: false` takes
+          // every pair in the chain out, not just the connected seams.
+          colliders: [{ shape: new BoxShape(16, 16), density: 1, friction: 0.5, ...(contacts ? {} : { filter: { group: -1 } }) }],
+        }),
+      );
+
+      // Connected-body collision off: the seam contacts are exactly what used
+      // to hold this chain together, and the joint has to do it on its own.
+      world.addJoint(new RevoluteJoint({ bodyA: previous, bodyB: body, anchor: { x: 0, y: y - 8 }, collideConnected: false }));
+      chain.push(body);
+      previous = body;
+    }
+
+    return { world, chain };
+  };
+
+  const fastest = (chain: readonly PhysicsBody[]): number =>
+    chain.reduce((peak, body) => Math.max(peak, Math.hypot(body.linearVelocityX, body.linearVelocityY)), 0);
+
+  /** Kinetic plus potential energy, taken against the anchor row (+Y is down, so a link below it has negative potential). */
+  const mechanicalEnergy = (chain: readonly PhysicsBody[]): number =>
+    chain.reduce(
+      (total, body) =>
+        total +
+        0.5 * body.mass * (body.linearVelocityX * body.linearVelocityX + body.linearVelocityY * body.linearVelocityY) +
+        0.5 * body.inertia * body.angularVelocity * body.angularVelocity -
+        body.mass * GRAVITY * (body.y - 200),
+      0,
+    );
+
+  for (const links of [7, 8, 12]) {
+    it(`holds a ${String(links)}-link chain still for ${String(WINDOW)} steps`, () => {
+      const { world, chain } = hangChain(links);
+      let peak = 0;
+
+      for (let step = 0; step < WINDOW; step++) {
+        world.step(FRAME);
+        peak = Math.max(peak, fastest(chain));
+      }
+
+      // Invariants rather than the numbers this run happens to produce: the
+      // chain stays finite, stays where it was built, and ends at rest.
+      for (const [index, body] of chain.entries()) {
+        const restY = 200 + (index + 1) * 16;
+
+        expect(Number.isFinite(body.x)).toBe(true);
+        expect(Number.isFinite(body.y)).toBe(true);
+        expect(body.y).toBeGreaterThanOrEqual(restY - MAX_SAG_PX);
+        expect(body.y).toBeLessThanOrEqual(restY + MAX_SAG_PX);
+      }
+
+      // A chain under no excitation may only lose speed. The bound is the
+      // settling motion of the first few steps, not the runaway that followed.
+      expect(peak).toBeLessThan(GRAVITY * FRAME * 4);
+      expect(fastest(chain)).toBeLessThan(1);
+    });
+  }
+
+  for (const subStepCount of [1, 2, 4, 8, 16]) {
+    it(`gives a kicked chain no energy back at ${String(subStepCount)} sub-steps`, () => {
+      // Contacts off entirely: they are the only sink in this scene, and with
+      // them gone the joints are the only thing left that could be a source.
+      const { world, chain } = hangChain(8, { subStepCount, contacts: false, enableSleeping: false });
+      const tip = chain[chain.length - 1]!;
+
+      tip.linearVelocityX = 400;
+      tip.linearVelocityY = -400;
+
+      const given = mechanicalEnergy(chain);
+      let peak = -Infinity;
+
+      for (let step = 0; step < WINDOW * 2; step++) {
+        world.step(FRAME);
+        peak = Math.max(peak, mechanicalEnergy(chain));
+      }
+
+      // Nothing drives the chain after the kick, so the sum of kinetic and
+      // potential energy can only fall - and it has to fall the same way at
+      // every sub-step count, since a sub-step is a solver detail and not a
+      // force. Warm-starting on the frame-start arms broke exactly that: the
+      // accumulated impulse went in on the arms as they stood at frame start
+      // and came back out on the arms as they stand now, and from the second
+      // sub-step on those differ by however far the body has turned. The
+      // leftover is angular momentum out of nothing, once per sub-step, which
+      // is why a single sub-step never showed it.
+      expect(peak).toBeLessThanOrEqual(given);
+
+      // The chain ends where a chain hangs: 8 links of 16 px below the anchor.
+      expect(tip.y).toBeGreaterThan(200 + 8 * 16 - 16);
+    });
+  }
+
+  it('lets a long chain come to rest and sleep', () => {
+    const { world, chain } = hangChain(12);
+
+    advance(world, WINDOW * FRAME);
+
+    expect(chain.every(body => body.isSleeping)).toBe(true);
+  });
+
+  it('solves a slept chain again once one of its links is woken', () => {
+    // The sub-steps iterate only the joints the last prepare pass found active,
+    // so a chain that dropped out of that list while it slept has to be picked
+    // back up - otherwise the woken link is integrated with nothing holding it
+    // and simply leaves.
+    const pivotY = 200 + 8; // the seam the top link is pinned to the static anchor at
+
+    const kick = (world: PhysicsWorld, chain: readonly PhysicsBody[]): { swing: number[]; offPivot: number } => {
+      const swing = chain.map(() => 0);
+      let offPivot = 0;
+
+      chain[0]!.applyImpulse(40_000, 0);
+
+      for (let step = 0; step < 60; step++) {
+        world.step(FRAME);
+
+        for (const [index, body] of chain.entries()) {
+          swing[index] = Math.max(swing[index]!, Math.abs(body.x));
+        }
+
+        offPivot = Math.max(offPivot, Math.hypot(chain[0]!.x, chain[0]!.y - pivotY));
+      }
+
+      return { swing, offPivot };
+    };
+
+    const { world, chain } = hangChain(6);
+
+    advance(world, WINDOW * FRAME);
+
+    expect(chain.every(body => body.isSleeping)).toBe(true);
+
+    // The same chain, settled just as long but never allowed to sleep. It is
+    // the reference the woken one has to reproduce: same build, same state at
+    // the moment of the kick, only the sleep pass in between.
+    const reference = hangChain(6, { enableSleeping: false });
+
+    advance(reference.world, WINDOW * FRAME);
+
+    const woken = kick(world, chain);
+    const awake = kick(reference.world, reference.chain);
+
+    // Waking one link wakes its island, and the links hang in the x = 0 column
+    // at rest, so a peak below the links the kick did not touch would mean the
+    // comparison below is comparing two chains that both stayed put.
+    expect(Math.max(...woken.swing.slice(1))).toBeGreaterThan(1);
+
+    // Every link answers the kick the way the chain that never slept does.
+    for (const [index, peak] of woken.swing.entries()) {
+      expect(peak).toBeCloseTo(awake.swing[index]!, 1);
+    }
+
+    // Unconstrained, the impulse carries the top link over 300px in this
+    // window. Pinned 8 px from its centre, it can only turn about that seam.
+    expect(woken.offPivot).toBeLessThan(16);
+
+    for (const body of chain) {
+      expect(Number.isFinite(body.x)).toBe(true);
+      expect(Number.isFinite(body.y)).toBe(true);
+    }
+  });
+});

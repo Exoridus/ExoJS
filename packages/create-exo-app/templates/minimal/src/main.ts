@@ -1,5 +1,6 @@
 // #region guide:minimal-main
 import { Application, Color } from '@codexo/exojs';
+
 import { MainScene } from './scenes/MainScene';
 
 const app = new Application({
@@ -7,11 +8,10 @@ const app = new Application({
   canvas: {
     width: 800,
     height: 600,
+    mount: 'body',
   },
   clearColor: new Color(0x6495ed),
 });
 
-document.body.append(app.canvas);
-
-app.start(MainScene);
+await app.start(MainScene);
 // #endregion guide:minimal-main

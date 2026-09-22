@@ -13,6 +13,7 @@ export const GATE_GROUPS = {
     'typecheck',
     'typecheck:guides',
     'typecheck:examples',
+    'typecheck:templates',
     'typecheck:workers',
     'typecheck:type-tests',
     'typecheck:packages',
@@ -28,6 +29,7 @@ export const GATE_GROUPS = {
     'lint:config-paths',
     'lint:js-files',
     'lint:shaders',
+    'verify:bench-results',
     'format:check',
   ],
   // `perf:smoke` runs the benchmarks for their EXIT CODE, not their numbers -
@@ -36,8 +38,10 @@ export const GATE_GROUPS = {
   // module-resolution change and no other lane touches them.
   sync: ['docs:api:check', 'examples:sync:check', 'perf:smoke'],
   // `full-bundle:exports:check` reads every bundled package's built ESM barrel,
-  // so it needs the same built dist this group's job already provides.
-  site: ['typecheck:site', 'typecheck:site-scripts', 'full-bundle:exports:check'],
+  // so it needs the same built dist this group's job already provides. It runs
+  // first because it also carries the freshness check: a dist that lags the
+  // sources fails in seconds here rather than after the site typecheck.
+  site: ['full-bundle:exports:check', 'typecheck:site', 'typecheck:site-scripts'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type GateGroup = keyof typeof GATE_GROUPS;

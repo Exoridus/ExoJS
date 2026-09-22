@@ -1,3 +1,4 @@
+import type { ClockReport } from '../shared/clock';
 import type { BaseCellResult } from '../shared/result';
 
 /** Rendering backend under test. */
@@ -7,8 +8,19 @@ export type Backend = 'webgl2' | 'webgpu';
 export type ArchetypeId =
   | 'static-heavy'
   | 'dynamic-heavy'
+  | 'dynamic-all'
   | 'deep-hierarchy'
   | 'overdraw'
+  | 'fill-layers'
+  | 'tilemap-scroll'
+  | 'tilemap-edit'
+  | 'particles-draw'
+  | 'particles-lifecycle'
+  | 'lights-shadowed'
+  | 'lights-unshadowed'
+  | 'fx-blur'
+  | 'interaction-picking'
+  | 'ui-layout-update'
   | 'batch-breaking'
   | 'batch-breaking-atlased'
   | 'split-screen'
@@ -26,6 +38,7 @@ export type ArchetypeId =
   | 'filter-chain-2'
   | 'filter-chain-4'
   | 'mask-clip'
+  | 'mask-clip-animated'
   | 'composite';
 
 /**
@@ -34,7 +47,18 @@ export type ArchetypeId =
  * several archetypes into one number, and any average over them hides the worst
  * cell. Nothing in the report aggregates across archetypes.
  */
-export type ArchetypeCategory = 'node-scaling' | 'fill-and-state' | 'material-variety' | 'text' | 'render-targets' | 'camera-and-world' | 'submission';
+export type ArchetypeCategory =
+  | 'node-scaling'
+  | 'fill-and-state'
+  | 'material-variety'
+  | 'text'
+  | 'render-targets'
+  | 'camera-and-world'
+  | 'submission'
+  | 'tilemaps'
+  | 'particles'
+  | 'lighting'
+  | 'interaction';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -120,7 +144,7 @@ export interface ArchetypeSpec {
    * leaves, or `undefined`/`0` for the default (material-less) sprite path.
    *
    * ExoJS-ONLY, like `viewCount`: Pixi 8 has no per-Sprite custom-shader API
-   * (its equivalent is a `Mesh` with its own `Shader`, a different geometry
+   * (its equivalent is a `Mesh` with its own `WebGl2Shader`, a different geometry
    * path entirely), so the Pixi arm renders the same scene WITHOUT materials.
    * An archetype that sets this is therefore an ExoJS-internal probe on the
    * material dimension - read it against the otherwise-identical
@@ -237,6 +261,97 @@ export interface ArchetypeSpec {
    */
   readonly churn?: boolean;
   /**
+   * When `true`, every leaf is stretched to the whole viewport and stacked at
+   * the origin, so the scene's cost is fill rather than node count.
+   *
+   * Read through {@link '../rendering/traits'.hasFullViewportLeaves} rather than
+   * by testing the archetype id in each arm, so every arm lays the scene out the
+   * same way.
+   */
+  readonly fullViewportLeaves?: boolean;
+  /**
+   * Alpha every leaf carries, or `undefined` for opaque leaves.
+   *
+   * Meaningful together with {@link fullViewportLeaves}: a stack of
+   * viewport-sized quads is a blend workload only while each of them is
+   * translucent. Opaque, the cost depends on whatever occlusion policy each arm
+   * happens to have, which is a different comparison.
+   */
+  readonly leafAlpha?: number;
+  /**
+   * Renders a tilemap instead of a sprite scene, and whether the scene also
+   * edits tiles.
+   *
+   * `'scroll'` scrolls a fully-populated map past a fixed viewport; `'edit'` does
+   * the same and additionally replaces a fixed number of VISIBLE tile ids every
+   * frame, so the arm has to submit the change before it draws. The node count is
+   * the map's total tile count, not its visible one - a large world with a small
+   * window is the point, and `tilemap.ts` maps the count onto the map's
+   * dimensions.
+   */
+  readonly tilemap?: 'scroll' | 'edit';
+  /**
+   * Renders particles instead of a sprite scene, and whether the scene also
+   * simulates them.
+   *
+   * `'draw'` submits a fixed set of quads through the arm's particle draw path
+   * and advances nothing; `'lifecycle'` runs a steady effect - ageing, movement,
+   * fading, respawning - on top of that same path. The two answer different
+   * questions and a figure from one says nothing about the other, which is why
+   * they are separate archetypes. See `particles.ts` for the shared scene.
+   */
+  readonly particles?: 'draw' | 'lifecycle';
+  /**
+   * Lights a fixed sprite field instead of drawing it flat, and whether the
+   * lights also cast shadows.
+   *
+   * The node count is the LIGHT count, not a number of sprites: the field is
+   * the same at every rung, and what the ladder sweeps is what a light costs.
+   * `'unshadowed'` accumulates the lights alone; `'shadowed'` registers a fixed
+   * set of occluding boxes as well, so the delta between the two rows is what a
+   * shadow term costs per light. See `lighting.ts` for the shared scene.
+   *
+   * ExoJS-only. No competitor arm ships 2D lighting whose scene this could be
+   * posed to without writing the missing feature first, which is what
+   * `crossArm: false` and the coverage predicates say between them.
+   */
+  readonly lights?: 'shadowed' | 'unshadowed';
+  /**
+   * Gaussian standard deviation in logical pixels for the effect scene, or
+   * `undefined` for every archetype that renders no blur.
+   *
+   * Setting it replaces the scene with ONE textured quad under a separable
+   * two-pass Gaussian blur, and the node count becomes the HEIGHT of that quad
+   * rather than a number of nodes - the scene measures how a blur scales with
+   * the area it covers, which is what an effect pass actually costs.
+   */
+  readonly blurStrength?: number;
+  /**
+   * Point queries resolved against the scene each frame, or `undefined` for an
+   * archetype that resolves none.
+   *
+   * Setting it makes the scene a field of interactive rectangles and the frame's
+   * work a block of that many hit tests - the cost a pointer-driven interface
+   * pays per frame, which no drawing archetype touches. The node count is how
+   * many interactive rectangles the query has to search.
+   */
+  readonly pointerQueriesPerFrame?: number;
+  /**
+   * Box-tree layout passes resolved per frame, or `undefined` for the scenes
+   * that resolve none.
+   *
+   * Setting it makes the scene a tree of nested horizontal and vertical boxes
+   * and the frame's work a block of that many layout passes, each changing a
+   * tenth of the leaf widths and alternating the viewport the root resolves
+   * against. The node count is how many leaf widgets the tree holds.
+   *
+   * The block is the published unit, not one pass: a single resolve lands under
+   * the clock's resolution on both arms. Nothing is drawn while the block runs -
+   * this archetype measures a layout engine, and a draw would put an arm's
+   * renderer into a number that claims to be about layout.
+   */
+  readonly layoutPassesPerFrame?: number;
+  /**
    * Number of chained post-process filters applied to the scene root, or
    * `undefined` for the unfiltered scene every other archetype builds.
    *
@@ -264,6 +379,14 @@ export interface ArchetypeSpec {
    */
   readonly maskDepth?: number;
   /**
+   * Whether every mask rect moves each frame. A static clip is one live entry
+   * the persistent tiers cut around once; a moving one is the shape a scrolling
+   * view has, where the effect changes on every frame while the content behind
+   * it does not - the cost being isolated is what an effect change alone does
+   * to the retained products around it.
+   */
+  readonly maskMotion?: boolean;
+  /**
    * Blur extent, in logical px, of the bloom-shaped multipass composite, or
    * `undefined` for the single-pass scene every other archetype renders.
    *
@@ -275,13 +398,15 @@ export interface ArchetypeSpec {
    * walk, a resolution change, and a full-screen additive blend on top of the
    * target ping-pong the filter rows already measure.
    *
-   * The radius is what makes the blur a real separable sweep rather than a blit;
-   * it is deliberately modest, because the archetype measures the pass structure
-   * and not fragment ALU.
+   * Stated as the Gaussian standard deviation, which is what BOTH arms'
+   * filters take, so neither can end up sweeping further than the other. It is
+   * what makes the blur a real separable sweep rather than a blit, and
+   * deliberately modest, because the archetype measures the pass structure and
+   * not fragment ALU.
    *
    * WebGL2/WebGPU arms only - see the Phaser exclusion in `archetypes.ts`.
    */
-  readonly compositeBlurRadius?: number;
+  readonly compositeBlurStrength?: number;
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */
@@ -347,9 +472,27 @@ export interface CellResult extends BaseCellResult<CellSpec> {
   readonly queueMsP95: number | null;
   /** Structural draw-call counters gathered while measuring this cell. */
   readonly structural: StructuralCounters;
+  /**
+   * What the clock of the page this cell was measured in resolved to, or `null`
+   * where no page produced the cell.
+   *
+   * Recorded per cell rather than per backend because a rendering run opens one
+   * browser session per arm: a grid read from whichever page happened to be open
+   * would qualify cells it never timed. The comparison builder checks each
+   * measured duration against the grid it was actually read on.
+   */
+  readonly clock: ClockReport | null;
 }
 
 /** Neutral contract an engine arm implements so the harness can drive it identically across arms. */
+/** What an arm reports about the geometry its last layout pass produced. */
+export interface LayoutDigestReport {
+  /** Index of the last pass the arm resolved, counted from the first pass of the cell (warmup included). */
+  readonly pass: number;
+  /** Digest of that pass's resolved rectangles, per `uiLayout.ts::layoutDigest`. */
+  readonly digest: number;
+}
+
 export interface EngineAdapter {
   /** Engine label, e.g. `'exojs'` or `'reference'`. */
   readonly engine: string;
@@ -390,6 +533,22 @@ export interface EngineAdapter {
    * blocking the run.
    */
   mutationSignature?(): string;
+  /**
+   * Hits the picking archetype's last block of queries resolved, for a smoke
+   * run to compare across arms: identical points against an identical layout
+   * have to produce an identical count, or one arm searched a different scene
+   * and its timing is not comparable. Optional - only the picking arms report
+   * it.
+   */
+  pickHits?(): number;
+  /**
+   * The UI-layout archetype's last resolved pass and a digest of the rectangles
+   * it produced (see `uiLayout.ts::layoutDigest`). The harness checks the digest
+   * against the geometry the shared definition prescribes for that pass, so an
+   * arm that laid out a different scene fails loudly instead of reporting a
+   * faster time for less work. Optional - only the layout arms report it.
+   */
+  layoutDigest?(): LayoutDigestReport;
   /**
    * The live WebGPU device when this adapter was initialised on the `'webgpu'`
    * backend, so the harness can attach a structural probe to it - unlike a

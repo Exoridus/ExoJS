@@ -1,13 +1,15 @@
 /**
  * AnimatedSprite frame playback is scheduled by the engine, not by hand:
  * a playing sprite attached to an Application's scene tree registers with
- * `app.animations` and is advanced once per frame from the core preUpdate
+ * `app.animations` and is advanced once per frame from the core preFrame
  * phase - and deregisters again on stop, detach, completion and destroy.
  */
 import { Application, ApplicationState } from '#core/Application';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
+
+import { lastFrameTimestampOf, setFrameLoopActive } from '../support/application-frame-loop';
 
 // ---------------------------------------------------------------------------
 // Backend stubs - keep WebGL2 / WebGPU out of jsdom. The factories must be
@@ -75,12 +77,12 @@ const forceRunning = (app: Application): void => {
   const record = app as unknown as Record<string, unknown>;
 
   record['_state'] = ApplicationState.Running;
-  record['_frameLoopActive'] = true;
+  setFrameLoopActive(app, true);
 };
 
 /** Run one frame of the real per-frame loop with a fixed `milliseconds` delta. */
 const advanceFrame = (app: Application, milliseconds: number): void => {
-  const previous = (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] as number;
+  const previous = lastFrameTimestampOf(app);
 
   app.update(previous + milliseconds);
 };
@@ -102,8 +104,8 @@ describe('AnimatedSprite scheduling', () => {
     forceRunning(app);
 
     // The input subsystem is not under test and jsdom has no gamepad API.
-    vi.spyOn(app.input, 'preUpdate').mockImplementation(() => undefined);
-    vi.spyOn(app.interaction, 'preUpdate').mockImplementation(() => undefined);
+    vi.spyOn(app.input, 'preFrame').mockImplementation(() => undefined);
+    vi.spyOn(app.interaction, 'preFrame').mockImplementation(() => undefined);
 
     // A stage-attached root, the way a scene's structural root is bound.
     root = new Container();

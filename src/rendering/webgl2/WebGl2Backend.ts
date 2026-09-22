@@ -5,7 +5,8 @@
  * coupled GL state across modules. Known deviation, candidate for extraction.
  */
 /* eslint-disable max-lines */
-import type { Application, CanvasAlphaMode, RenderingApplicationOptions } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
@@ -18,9 +19,16 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { GpuTimer } from '#rendering/GpuTimer';
+import { attachmentBlendModesDiffer } from '#rendering/material/MeshMaterial';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
+import {
+  assertBatchSingleAttachment,
+  assertDrawsAllAttachments,
+  assertPerAttachmentBlendSupported,
+  assertSingleAttachmentCompose,
+} from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
+import type { PixelReadback } from '#rendering/PixelReadback';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
@@ -44,7 +52,6 @@ import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexturePool } from '#rendering/RenderTexturePool';
-import type { Shader } from '#rendering/shader/Shader';
 import {
   createTransformTextureLayout,
   createTransformTextureRect,
@@ -55,20 +62,24 @@ import {
 import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
 import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
+import { DepthTexture } from '#rendering/texture/DepthTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
+import type { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { probeWebgl2CompressedFormats, type Webgl2CompressedFormatSupport } from './compressedFormat';
 import { createWebGl2GpuTimer } from './createWebGl2GpuTimer';
+import { flipRowsInPlace } from './flipRowsInPlace';
 import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
 import type { PersistentSlotCapableRenderer, WebGl2PersistentSlotStore } from './WebGl2PersistentSlotStore';
+import { WebGl2PixelReadback, type WebGl2PixelReadbackHost } from './WebGl2PixelReadback';
 import {
   type WebGl2RecordedTextureState,
   type WebGl2RetainedBatchPayload,
@@ -177,6 +188,12 @@ interface ManagedRenderTargetState {
    */
   attachedTextures: Array<WebGLTexture | null>;
   stencilRenderbuffer: WebGLRenderbuffer | null;
+  /**
+   * `DEPTH24_STENCIL8` texture attached in place of the renderbuffer, for a
+   * target that opted into a sampleable depth attachment. Exactly one of the
+   * two is ever non-null: they occupy the same `DEPTH_STENCIL_ATTACHMENT` slot.
+   */
+  depthStencilTexture: WebGLTexture | null;
   stencilWidth: number;
   stencilHeight: number;
 }
@@ -297,6 +314,13 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _onContextRestoredHandler: () => void;
   private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<Texture | RenderTexture, ManagedTextureState>();
   private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
+  /**
+   * Bind state for depth attachments sampled as textures. Separate from
+   * `_textureStates`: the handle belongs to the owning render target, so none of
+   * the upload, eviction or accounting machinery in there applies to it.
+   */
+  private readonly _depthTextureStates: Map<DepthTexture, ManagedTextureState> = new Map<DepthTexture, ManagedTextureState>();
+  private _depthWriteEnabled = false;
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
   /** Context-local base-texture sampler overrides shared by custom materials. */
@@ -353,6 +377,13 @@ export class WebGl2Backend implements RenderBackend {
    */
   private _compressedFormats: Webgl2CompressedFormatSupport = { formats: [], internalFormats: new Map() };
   private _maxColorAttachments = 1;
+  /**
+   * `OES_draw_buffers_indexed`, or `null` on a device without it. Re-fetched
+   * with the context, whose extension enablement does not survive a loss.
+   */
+  private _indexedBlendExtension: OES_draw_buffers_indexed | null = null;
+  /** Whether the last draw left per-attachment blend state in the context - see {@link setAttachmentBlendModes}. */
+  private _attachmentBlendActive = false;
   /** Whether the bound target writes more than one colour attachment - see {@link draw}. */
   private _multiAttachmentTarget = false;
   /** Reused per-bind scratch for the colour-attachment handles and the draw-buffer list. */
@@ -369,7 +400,7 @@ export class WebGl2Backend implements RenderBackend {
   private _renderer: Renderer | null = null;
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
-  private _shader: Shader | null = null;
+  private _shader: WebGl2Shader | null = null;
   private _blendMode: BlendModes | null = null;
   // What GL currently has bound to TEXTURE_2D on each texture unit, indexed by
   // unit. Keyed on the `WebGLTexture` handle rather than the user-side
@@ -381,6 +412,16 @@ export class WebGl2Backend implements RenderBackend {
   private _vao: WebGl2VertexArrayObject | null = null;
   private _clearColor: Color = new Color();
   private _boundFramebuffer: WebGLFramebuffer | null = null;
+  /**
+   * The framebuffer `readPixels` attaches its source to, created on first
+   * read. A read borrows its own rather than a render target's: the target
+   * states cache which textures are attached to theirs, and attaching for a
+   * read would leave that cache describing something else.
+   */
+  private _readbackFramebuffer: WebGLFramebuffer | null = null;
+  /** Live standing readbacks, drained at frame start and invalidated together on context loss. */
+  private readonly _pixelReadbacks = new Set<WebGl2PixelReadback>();
+  private _pixelReadbackHostInstance: WebGl2PixelReadbackHost | null = null;
   private readonly _stats: RenderStats = createRenderStats();
   private readonly _accountant: GpuResourceAccountant = new GpuResourceAccountant(this._stats);
   private readonly _transformBuffer = new TransformBuffer();
@@ -444,6 +485,7 @@ export class WebGl2Backend implements RenderBackend {
     this._maxTextureSize = this._context.getParameter(this._context.MAX_TEXTURE_SIZE) as number;
     this._compressedFormats = probeWebgl2CompressedFormats(this._context);
     this._maxColorAttachments = readMaxColorAttachments(this._context);
+    this._indexedBlendExtension = this._context.getExtension('OES_draw_buffers_indexed');
 
     // Grab the lose-context extension up front so a later restore can act on the
     // live instance (see the field comment). `null` on backends that don't
@@ -468,7 +510,7 @@ export class WebGl2Backend implements RenderBackend {
     this._setupContext();
     this._addEvents();
 
-    // Core renderers are bound via buildCoreRendererBindings in Application.createBackend.
+    // Core renderers are bound via buildCoreRendererBindings when the application creates the backend.
     // Connect the registry now so newly bound renderers are immediately connected.
     this.rendererRegistry.connect(this);
 
@@ -531,6 +573,10 @@ export class WebGl2Backend implements RenderBackend {
     return this._maxColorAttachments;
   }
 
+  public get supportsPerAttachmentBlend(): boolean {
+    return this._indexedBlendExtension !== null;
+  }
+
   public get clearColor(): Color {
     return this._clearColor;
   }
@@ -565,7 +611,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public get _passCoordinator(): WebGl2PassCoordinator {
+  public get passCoordinator(): WebGl2PassCoordinator {
     return (this._passCoordinatorInstance ??= new WebGl2PassCoordinator(this));
   }
 
@@ -582,6 +628,13 @@ export class WebGl2Backend implements RenderBackend {
     // previously reset per render() call in _beginDrawPlan).
     this._transformBuffer.begin();
     this._gpuTimer?.beginFrame();
+
+    // Frame start rather than frame end: a fence never signals in the task
+    // that created it, so polling here is what lets a read requested in one
+    // frame's update be ready by the next one's.
+    for (const readback of this._pixelReadbacks) {
+      readback.poll();
+    }
 
     return this;
   }
@@ -682,6 +735,31 @@ export class WebGl2Backend implements RenderBackend {
    * @internal
    */
   public _acquirePersistentSlots(source: RenderRootSource): PersistentSlotBundle | null {
+    const owner = this._resolvePersistentSlotOwner(source);
+
+    // Prepack BEFORE allocating anything: a source holding an item that cannot
+    // describe itself as a quad is not servable, and finding that out after the
+    // store exists would mean tearing it down again.
+    if (owner === null || !source.prepack()) {
+      return null;
+    }
+
+    const store = owner._acquirePersistentSlotStore(source, this);
+
+    if (store !== null) {
+      store.owner = owner;
+      this._persistentStores.add(store);
+    }
+
+    return store;
+  }
+
+  /**
+   * The single renderer that can serve every item in `source`, or `null` when
+   * there is none.
+   * @internal
+   */
+  private _resolvePersistentSlotOwner(source: RenderRootSource): PersistentSlotCapableRenderer | null {
     let owner: PersistentSlotCapableRenderer | null = null;
 
     for (const scope of source.scopes) {
@@ -709,25 +787,56 @@ export class WebGl2Backend implements RenderBackend {
       }
     }
 
-    if (owner === null) {
-      return null;
+    return owner;
+  }
+
+  /** @internal */
+  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+    const store = bundle as WebGl2PersistentSlotStore;
+    const owner = store.owner;
+
+    if (owner === null || !this._ownerServesArrivals(source, owner, carried, previousHandleCount) || !source.prepack()) {
+      return false;
     }
 
-    // Prepack BEFORE allocating anything: a source holding an item that cannot
-    // describe itself as a quad is not servable, and finding that out after the
-    // store exists would mean tearing it down again.
-    if (!source.prepack()) {
-      return null;
+    return owner._rekeyPersistentSlotStore(store, source, carried, previousHandleCount);
+  }
+
+  /**
+   * Whether `owner` can also serve the items a structure delta did not carry.
+   *
+   * Only those are resolved: an item the delta carried is the same drawable the
+   * store was already serving, so re-resolving it would put the acquisition walk
+   * back on a path that runs on every structural frame.
+   */
+  private _ownerServesArrivals(source: RenderRootSource, owner: PersistentSlotCapableRenderer, carried: Int32Array, previousHandleCount: number): boolean {
+    for (const scope of source.scopes) {
+      const drawables = scope.items.drawables;
+      const count = scope.items.count;
+      const handleBase = scope.handleBase;
+
+      for (let i = 0; i < count; i++) {
+        const previous = carried[handleBase + i]!;
+
+        if (previous >= 0 && previous < previousHandleCount) {
+          continue;
+        }
+
+        let renderer: PersistentSlotCapableRenderer | null;
+
+        try {
+          renderer = this.rendererRegistry.resolve(drawables[i]!) as unknown as PersistentSlotCapableRenderer | null;
+        } catch {
+          return false;
+        }
+
+        if (renderer !== owner || renderer._supportsPersistentSlots !== true) {
+          return false;
+        }
+      }
     }
 
-    const store = owner._acquirePersistentSlotStore(source, this);
-
-    if (store !== null) {
-      store.owner = owner;
-      this._persistentStores.add(store);
-    }
-
-    return store;
+    return true;
   }
 
   /** @internal */
@@ -738,10 +847,16 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** @internal */
-  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void {
+  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, _orderCount: number, offset: number, count: number): void {
     const store = bundle as WebGl2PersistentSlotStore;
 
-    store.owner?._drawPersistentSlots(store, order, count, this);
+    // Whatever renderer still holds a live batch recorded before this draw -
+    // a parallax layer played as a mark, a previous render() call kept for
+    // cross-call batching - issues it now, or it would land on top of slots
+    // recorded after it. The owner's own batcher is not necessarily the active
+    // one, so this is the backend's flush, not the owner's.
+    this._flushActiveRenderer();
+    store.owner?._drawPersistentSlots(store, order, offset, count, this);
   }
 
   /** @internal */
@@ -791,7 +906,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public stageViewportUniform(shader: Shader): void {
+  public stageViewportUniform(shader: WebGl2Shader): void {
     if (!shader.uniforms.has('u_viewport')) {
       return;
     }
@@ -881,7 +996,10 @@ export class WebGl2Backend implements RenderBackend {
     // Only consulted while a multi-attachment target is bound, so an ordinary
     // frame pays one boolean read per drawable.
     if (this._multiAttachmentTarget) {
-      assertDrawsAllAttachments(drawable, (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
+      const attachments = (this._renderTarget as MultiRenderTarget).attachments.length;
+
+      assertDrawsAllAttachments(drawable, attachments, RenderBackendType.WebGl2);
+      assertPerAttachmentBlendSupported(drawable, attachments, this.supportsPerAttachmentBlend, RenderBackendType.WebGl2);
     }
 
     const renderer = this.rendererRegistry.resolve(drawable);
@@ -890,7 +1008,7 @@ export class WebGl2Backend implements RenderBackend {
     // predicate keeps non-capable renderers from ever arming a capture. If
     // one still draws inside an open capture window, poison the recording so
     // the set never validates - entry replay instead of missing draws.
-    if (this._retainedCaptures.length > 0 && (renderer as RetainedBatchCapableRenderer)._supportsRetainedBatches !== true) {
+    if (this._retainedCaptures.length > 0 && (renderer as RetainedBatchCapableRenderer).supportsRetainedBatches !== true) {
       this._poisonRetainedCaptures();
     }
 
@@ -909,6 +1027,10 @@ export class WebGl2Backend implements RenderBackend {
 
     if (transforms.length < count || tints.length < count) {
       throw new Error(`drawInstanced requires ${count} transforms and tints (got ${transforms.length}/${tints.length}).`);
+    }
+
+    if (this._multiAttachmentTarget) {
+      assertBatchSingleAttachment((this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
     }
 
     const renderer = this.rendererRegistry.resolve(mesh);
@@ -1170,6 +1292,69 @@ export class WebGl2Backend implements RenderBackend {
     return format === TextureFormat.Rgba8 || this._floatRenderable;
   }
 
+  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray> {
+    this.flush();
+
+    const gl = this._context;
+    const rows = new Uint8ClampedArray(width * height * 4);
+
+    this._withReadFramebuffer(source, () => {
+      // GL addresses pixels from the bottom-left, so the requested top-down
+      // rectangle starts this far up, and the rows arrive in reverse order.
+      gl.readPixels(x, source.height - (y + height), width, height, gl.RGBA, gl.UNSIGNED_BYTE, rows);
+    });
+
+    this._accountant.recordDownload(rows.byteLength);
+
+    return Promise.resolve(flipRowsInPlace(rows, width, height));
+  }
+
+  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback {
+    const readback = new WebGl2PixelReadback(this._pixelReadbackHost(), source, x, y, width, height, slots);
+
+    this._pixelReadbacks.add(readback);
+
+    return readback;
+  }
+
+  private _pixelReadbackHost(): WebGl2PixelReadbackHost {
+    return (this._pixelReadbackHostInstance ??= {
+      gl: this._context,
+      accountant: this._accountant,
+      isContextLost: () => this._contextLost,
+      flushDraws: () => this._flushActiveRenderer(),
+      withReadFramebuffer: (source, body) => this._withReadFramebuffer(source, body),
+      forgetPixelReadback: readback => {
+        this._pixelReadbacks.delete(readback);
+      },
+    });
+  }
+
+  /**
+   * Run `body` with `source` attached to the read framebuffer, then restore
+   * the previous binding. A read borrows its own framebuffer rather than a
+   * render target's: the target states cache which textures are attached to
+   * theirs, and attaching for a read would leave that cache describing
+   * something else.
+   */
+  private _withReadFramebuffer(source: RenderTexture, body: () => void): void {
+    const gl = this._context;
+    const handle = this._syncTexture(source).handle;
+    const framebuffer = (this._readbackFramebuffer ??= gl.createFramebuffer());
+    const previousFramebuffer = this._boundFramebuffer;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, handle, 0);
+
+    try {
+      body();
+    } finally {
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+      this._boundFramebuffer = previousFramebuffer;
+    }
+  }
+
   public acquireRenderTexture(width: number, height: number): RenderTexture {
     return this._renderTexturePool.acquire(width, height);
   }
@@ -1217,7 +1402,7 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  public bindShader(shader: Shader | null): this {
+  public bindShader(shader: WebGl2Shader | null): this {
     if (this._shader !== shader) {
       if (this._shader) {
         this._shader.unbind();
@@ -1434,35 +1619,130 @@ export class WebGl2Backend implements RenderBackend {
 
   public setBlendMode(blendMode: BlendModes | null): this {
     if (blendMode !== this._blendMode) {
-      const gl = this._context;
-
       this._blendMode = blendMode;
-
-      switch (blendMode) {
-        case BlendModes.Additive:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ONE, gl.ONE);
-          break;
-        case BlendModes.Subtract:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_COLOR);
-          break;
-        case BlendModes.Multiply:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
-          break;
-        case BlendModes.Screen:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
-          break;
-        default:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-          break;
-      }
+      this._applyBlendMode(blendMode, null, 0);
     }
 
     return this;
+  }
+
+  /**
+   * Give each colour attachment of the bound target its own blend state for the
+   * draws that follow, from `modes` read in attachment order. An attachment
+   * past the end of `modes` blends with `fallback`, which is what the draw
+   * would have used anyway; entries past the target's attachment count are
+   * ignored.
+   *
+   * Pass `null` for `modes` to return to one blend state for the whole draw.
+   * Callers own that restore: indexed blend state outlives the draw that set it
+   * and {@link setBlendMode} would not notice, so everything drawn afterwards
+   * keeps blending per attachment.
+   *
+   * Throws a {@link RenderError} when the modes in force differ from one
+   * another and the context has no `OES_draw_buffers_indexed` - check
+   * {@link supportsPerAttachmentBlend} first. Modes that all agree are applied
+   * as one whole-draw blend state and need no extension.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
+  public setAttachmentBlendModes(modes: readonly BlendModes[] | null, fallback: BlendModes): this {
+    if (modes === null) {
+      // `fallback` and not only the cached mode: a renderer that set indexed
+      // state without a whole-draw `setBlendMode` first leaves the cache at
+      // `null`, which the setter would answer with no GL call at all.
+      return this._clearAttachmentBlendModes(this._blendMode ?? fallback);
+    }
+
+    const attachments = this._multiAttachmentTarget ? (this._renderTarget as MultiRenderTarget).attachments.length : 1;
+
+    if (!attachmentBlendModesDiffer(modes, attachments, fallback)) {
+      // Nothing to distinguish, so this is an ordinary blend state - and a
+      // device without the extension can still draw it.
+      const single = modes[0] ?? fallback;
+
+      this._clearAttachmentBlendModes(single);
+
+      return this.setBlendMode(single);
+    }
+
+    const extension = this._indexedBlendExtension;
+
+    if (extension === null) {
+      // Reached only by a caller that skipped the drawable-level guard: the
+      // backend entry points refuse such a draw before any state moves.
+      throw new RenderError({
+        code: 'unsupported-format',
+        backendType: RenderBackendType.WebGl2,
+        message:
+          `Blending the ${attachments} colour attachments of a draw differently needs the WebGL2 extension 'OES_draw_buffers_indexed', which this context does not support. ` +
+          'Check backend.supportsPerAttachmentBlend, and give every attachment the same blend mode where it is false.',
+      });
+    }
+
+    for (let index = 0; index < attachments; index++) {
+      this._applyBlendMode(modes[index] ?? fallback, extension, index);
+    }
+
+    this._attachmentBlendActive = true;
+
+    return this;
+  }
+
+  /** Put `restore` back in force as one whole-draw blend state after an indexed draw. */
+  private _clearAttachmentBlendModes(restore: BlendModes | null): this {
+    if (!this._attachmentBlendActive) {
+      return this;
+    }
+
+    this._attachmentBlendActive = false;
+    // Uncached first: `_blendMode` still names the mode in force before the
+    // indexed calls, so the setter would skip the very call that resets them.
+    this._blendMode = null;
+
+    return this.setBlendMode(restore);
+  }
+
+  /**
+   * Apply one blend mode's fixed-function state, to a single draw buffer when
+   * `extension` is given and to all of them at once when it is `null`.
+   */
+  private _applyBlendMode(blendMode: BlendModes | null, extension: OES_draw_buffers_indexed | null, attachment: number): void {
+    const gl = this._context;
+    let src: GLenum;
+    let dst: GLenum;
+
+    switch (blendMode) {
+      case BlendModes.Additive:
+        src = gl.ONE;
+        dst = gl.ONE;
+        break;
+      case BlendModes.Subtract:
+        src = gl.ZERO;
+        dst = gl.ONE_MINUS_SRC_COLOR;
+        break;
+      case BlendModes.Multiply:
+        src = gl.DST_COLOR;
+        dst = gl.ONE_MINUS_SRC_ALPHA;
+        break;
+      case BlendModes.Screen:
+        src = gl.ONE;
+        dst = gl.ONE_MINUS_SRC_COLOR;
+        break;
+      default:
+        src = gl.ONE;
+        dst = gl.ONE_MINUS_SRC_ALPHA;
+        break;
+    }
+
+    if (extension === null) {
+      gl.blendEquation(gl.FUNC_ADD);
+      gl.blendFunc(src, dst);
+
+      return;
+    }
+
+    extension.blendEquationSeparateiOES(attachment, gl.FUNC_ADD, gl.FUNC_ADD);
+    extension.blendFuncSeparateiOES(attachment, src, dst, src, dst);
   }
 
   private _setTextureUnit(unit: number): void {
@@ -1490,6 +1770,52 @@ export class WebGl2Backend implements RenderBackend {
 
     this._context.bindTexture(this._context.TEXTURE_2D, handle);
     this._boundHandles[unit] = handle;
+  }
+
+  /**
+   * Unbind this target's colour textures from any sampler unit still holding
+   * them.
+   *
+   * A texture bound to a sampled unit while it is the framebuffer's colour
+   * attachment is a feedback loop: GL raises `INVALID_OPERATION` and drops the
+   * whole draw, silently as far as the caller is concerned. The binding does
+   * not have to come from the draw being made - a filter that sampled this
+   * target earlier leaves its unit bound, and the next frame's render INTO the
+   * target is the one that disappears. Nothing that renders can know which
+   * units some earlier pass left behind, so the release belongs here, where
+   * the target becomes a destination.
+   *
+   * Costs a loop over the units and one GL call per unit that actually held
+   * the texture, which is none in the ordinary case.
+   */
+  private _releaseSampledAttachments(state: ManagedRenderTargetState): void {
+    const attached = state.attachedTextures;
+    const boundHandles = this._boundHandles;
+    const activeUnit = this._textureUnit;
+
+    for (let index = 0; index < attached.length; index++) {
+      const handle = attached[index];
+
+      if (handle === null || handle === undefined) {
+        continue;
+      }
+
+      for (let unit = 0; unit < boundHandles.length; unit++) {
+        if (boundHandles[unit] !== handle) {
+          continue;
+        }
+
+        // Through the unit cache rather than around it: the binding that is
+        // gone from GL has to be gone from the cache as well, or the next
+        // sampler set up on this unit would skip a bind GL still needs.
+        this._setTextureUnit(unit);
+        this._bindTextureHandle(null);
+      }
+    }
+
+    // Whoever called this was pointed at a unit of their own; sweeping is not
+    // a reason to leave them pointed somewhere else.
+    this._setTextureUnit(activeUnit);
   }
 
   /**
@@ -1527,7 +1853,61 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._bindRenderTarget(this._renderTarget);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    if (this._renderTarget.depthTexture === null) {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      return this;
+    }
+
+    // A depth attachment that is read back has to start each frame at the far
+    // plane, and `clear` ignores DEPTH_TEST but obeys the depth mask - so the
+    // mask goes up for the call whatever the current draw state is.
+    if (!this._depthWriteEnabled) {
+      gl.depthMask(true);
+    }
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    if (!this._depthWriteEnabled) {
+      gl.depthMask(false);
+    }
+
+    return this;
+  }
+
+  /**
+   * Turn depth writes on or off for the draws that follow.
+   *
+   * The comparison stays "always pass", so this never changes what is visible -
+   * it only decides whether a draw's depth reaches the target's depth
+   * attachment. On a target without one the writes go nowhere.
+   *
+   * Callers own the restore: turn it back off after the draws that need it, or
+   * everything drawn afterwards writes depth too.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
+  public setDepthWrite(enabled: boolean): this {
+    if (this._depthWriteEnabled === enabled) {
+      return this;
+    }
+
+    const gl = this._context;
+
+    this._depthWriteEnabled = enabled;
+
+    if (enabled) {
+      // GL discards depth writes entirely while DEPTH_TEST is off, so enabling
+      // the test is what makes the write happen; ALWAYS keeps it from also
+      // deciding visibility.
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.ALWAYS);
+      gl.depthMask(true);
+    } else {
+      gl.depthMask(false);
+      gl.disable(gl.DEPTH_TEST);
+    }
 
     return this;
   }
@@ -1688,7 +2068,7 @@ export class WebGl2Backend implements RenderBackend {
 
     // A group whose every recorded batch opts out of the shared transform
     // buffer (Text bakes world positions into its own instance bytes and reads
-    // its style from a private per-node texture - `_consumesSharedTransform ===
+    // its style from a private per-node texture - `consumesSharedTransform ===
     // false`) leaves the range empty: there is nothing to rebase or store, but
     // the instance bytes and per-batch VAOs still need finalizing below.
     // Connect first: the group's transform store sizes its textures against the
@@ -1818,7 +2198,7 @@ export class WebGl2Backend implements RenderBackend {
    * Most callers are belt-and-braces for draws the collect-time recordability
    * predicate already excluded, and those never fire on a healthy frame - a
    * renderer whose non-recordable draws are decidable PER DRAWABLE states that
-   * through `_admitsRetainedRecording` so the capture is never opened at all
+   * through `admitsRetainedRecording` so the capture is never opened at all
    * (mesh geometry storage, the repeating sprite's shader path).
    *
    * One caller is not defensive and DOES fire on healthy frames: the Text
@@ -1981,6 +2361,13 @@ export class WebGl2Backend implements RenderBackend {
     this._destroyManagedResources();
     this._renderTexturePool.destroy();
 
+    // Copy first: a readback removes itself from the set as it goes.
+    for (const readback of [...this._pixelReadbacks]) {
+      readback.destroy();
+    }
+
+    this._pixelReadbacks.clear();
+
     this._clipPixelStack.length = 0;
     this._clipDepth = 0;
     this._clipPointA.destroy();
@@ -2019,8 +2406,14 @@ export class WebGl2Backend implements RenderBackend {
     this._renderer = null;
     this._shader = null;
     this._blendMode = null;
+    this._attachmentBlendActive = false;
     this._boundHandles.length = 0;
     this._boundFramebuffer = null;
+    if (this._readbackFramebuffer !== null) {
+      this._context.deleteFramebuffer(this._readbackFramebuffer);
+      this._readbackFramebuffer = null;
+    }
+
     this._activeDrawCommand = null;
     this._transformTextureCount = -1;
     this._transformTextureHash = 0;
@@ -2079,6 +2472,8 @@ export class WebGl2Backend implements RenderBackend {
     const { r, g, b, a } = this._clearColor;
 
     gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    this._depthWriteEnabled = false;
     gl.disable(gl.STENCIL_TEST);
     gl.disable(gl.CULL_FACE);
 
@@ -2108,6 +2503,10 @@ export class WebGl2Backend implements RenderBackend {
     event.preventDefault();
 
     this._contextLost = true;
+    // The extension object belongs to the dead context, so the capability it
+    // answers for is gone with it until `_reinitializeDeviceState` probes the
+    // restored one - a caller that asked in between would be told yes.
+    this._indexedBlendExtension = null;
     // The queries belong to the dead context; `_reinitializeDeviceState` mints a
     // fresh timer against the restored one if timing is still wanted.
     this._gpuTimer?.destroy();
@@ -2152,6 +2551,7 @@ export class WebGl2Backend implements RenderBackend {
     this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
     this._compressedFormats = probeWebgl2CompressedFormats(gl);
     this._maxColorAttachments = readMaxColorAttachments(gl);
+    this._indexedBlendExtension = gl.getExtension('OES_draw_buffers_indexed');
     // Drop the cached transform layout: it was derived from the LOST context's
     // limit, and the restored one may report a different one.
     this._transformTextureLayout = null;
@@ -2215,15 +2615,23 @@ export class WebGl2Backend implements RenderBackend {
       store.invalidateDeviceResources();
     }
 
+    // Standing readbacks lose their pack buffers and fences the same way;
+    // finished reads keep their bytes, pending ones fail.
+    for (const readback of this._pixelReadbacks) {
+      readback.invalidateDeviceResources();
+    }
+
     // Reset the cached GL bind state - every handle these tracked is dead, so
     // the next bind must run unconditionally rather than short-circuiting on a
     // stale identity match.
     this._boundFramebuffer = null;
+    this._readbackFramebuffer = null;
     this._boundHandles.length = 0;
     this._textureUnit = 0;
     this._vao = null;
     this._shader = null;
     this._blendMode = null;
+    this._attachmentBlendActive = false;
     this._renderer = null;
     this._renderTarget = this._rootRenderTarget;
     this._activeDrawCommand = null;
@@ -2324,6 +2732,7 @@ export class WebGl2Backend implements RenderBackend {
       version: -1,
       attachedTextures: [],
       stencilRenderbuffer: null,
+      depthStencilTexture: null,
       stencilWidth: 0,
       stencilHeight: 0,
     };
@@ -2430,10 +2839,20 @@ export class WebGl2Backend implements RenderBackend {
         state.stencilRenderbuffer = null;
       }
 
+      if (state.depthStencilTexture !== null) {
+        this._forgetTextureHandle(state.depthStencilTexture);
+        this._context.deleteTexture(state.depthStencilTexture);
+        state.depthStencilTexture = null;
+      }
+
       this._renderTargetStates.delete(target);
     }
 
     this._stencilStates.delete(target);
+
+    if (target.depthTexture !== null) {
+      this._depthTextureStates.delete(target.depthTexture);
+    }
 
     if (this._renderTarget === target) {
       this._renderTarget = this._rootRenderTarget;
@@ -2475,6 +2894,12 @@ export class WebGl2Backend implements RenderBackend {
     const state = this._prepareRenderTarget(target);
 
     if (this._boundFramebuffer !== state.framebuffer || state.version !== target.version) {
+      // Only where the target changes: a pass that keeps drawing into the
+      // framebuffer it already has cannot have picked up a sampler binding of
+      // its own attachments in between, and sweeping per draw would cost every
+      // draw in a pass the rebind of whatever it samples.
+      this._releaseSampledAttachments(state);
+
       const gl = this._context;
       const viewport = target.getViewport();
       const scaleX = target.root && target.width > 0 ? this._canvas.width / target.width : 1;
@@ -2667,17 +3092,19 @@ export class WebGl2Backend implements RenderBackend {
         target.needsStencil = false;
       }
 
-      // Keep an existing stencil attachment sized to the (possibly resized)
-      // texture so the framebuffer stays complete during non-clip rendering.
-      if (target.needsStencil || state.stencilRenderbuffer !== null) {
-        this._syncStencilAttachment(target, state);
+      // Keep an existing depth/stencil attachment sized to the (possibly
+      // resized) texture so the framebuffer stays complete during non-clip
+      // rendering. A target that opted into a sampleable depth attachment
+      // always carries one, clip or no clip.
+      if (target.depthTexture !== null || target.needsStencil || state.stencilRenderbuffer !== null) {
+        this._syncDepthStencilAttachment(target, state);
       }
     }
 
     return state;
   }
 
-  /** Attach a depth/stencil renderbuffer to the active target if it lacks one. */
+  /** Attach a depth/stencil buffer to the active target if it lacks one. */
   private _ensureTargetStencil(): void {
     const target = this._renderTarget;
 
@@ -2687,10 +3114,10 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     target.needsStencil = true;
-    this._syncStencilAttachment(target, this._getRenderTargetState(target));
+    this._syncDepthStencilAttachment(target, this._getRenderTargetState(target));
   }
 
-  private _syncStencilAttachment(target: RenderTarget, state: ManagedRenderTargetState): void {
+  private _syncDepthStencilAttachment(target: RenderTarget, state: ManagedRenderTargetState): void {
     if (state.framebuffer === null) {
       return;
     }
@@ -2698,24 +3125,55 @@ export class WebGl2Backend implements RenderBackend {
     const gl = this._context;
     const width = Math.max(1, target.width);
     const height = Math.max(1, target.height);
+    // A target that wants to read its depth back needs a texture in the slot; a
+    // renderbuffer is cheaper but cannot be sampled. Both are DEPTH24_STENCIL8,
+    // so the stencil clip path works either way and a clipped target pays
+    // nothing extra for opting in.
+    const sampleable = target.depthTexture !== null;
+    const allocated = sampleable ? state.depthStencilTexture !== null : state.stencilRenderbuffer !== null;
 
-    if (state.stencilRenderbuffer !== null && state.stencilWidth === width && state.stencilHeight === height) {
+    if (allocated && state.stencilWidth === width && state.stencilHeight === height) {
       return;
     }
 
-    if (state.stencilRenderbuffer === null) {
-      state.stencilRenderbuffer = gl.createRenderbuffer();
-    }
-
-    gl.bindRenderbuffer(gl.RENDERBUFFER, state.stencilRenderbuffer);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-
     const previousFramebuffer = this._boundFramebuffer;
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, state.stencilRenderbuffer);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+    if (sampleable) {
+      const previousUnit = this._textureUnit;
+
+      this._setTextureUnit(renderTargetTextureSyncUnit);
+
+      if (state.depthStencilTexture === null) {
+        state.depthStencilTexture = this._createTextureHandle();
+      }
+
+      this._bindTextureHandle(state.depthStencilTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH24_STENCIL8, width, height, 0, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8, null);
+      // Depth formats are not filterable, and a depth texture left at the
+      // default LINEAR/mipmap filters is incomplete - it samples as zero rather
+      // than failing loudly.
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      this._setTextureUnit(previousUnit);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, state.depthStencilTexture, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+    } else {
+      if (state.stencilRenderbuffer === null) {
+        state.stencilRenderbuffer = gl.createRenderbuffer();
+      }
+
+      gl.bindRenderbuffer(gl.RENDERBUFFER, state.stencilRenderbuffer);
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, state.stencilRenderbuffer);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+    }
 
     state.stencilWidth = width;
     state.stencilHeight = height;
@@ -2794,6 +3252,10 @@ export class WebGl2Backend implements RenderBackend {
   private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
     assertLiveTexture(texture);
 
+    if (texture instanceof DepthTexture) {
+      return this._syncDepthTexture(texture);
+    }
+
     const state = this._getTextureState(texture);
     const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
 
@@ -2810,6 +3272,47 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     return this._syncTextureUpload(texture, state, version);
+  }
+
+  /**
+   * Bind a target's depth attachment for sampling.
+   *
+   * There is nothing to upload or re-parameterize: the GL texture is the
+   * framebuffer's depth attachment, created and sized by
+   * {@link _syncDepthStencilAttachment} with its sampler parameters already set.
+   */
+  private _syncDepthTexture(texture: DepthTexture): ManagedTextureState {
+    const handle = this._renderTargetStates.get(texture.target)?.depthStencilTexture ?? null;
+
+    if (handle === null) {
+      throw new RenderError({
+        code: 'validation',
+        backendType: RenderBackendType.WebGl2,
+        message: 'This render target has no depth attachment yet. Render into the target once before sampling its `depthTexture`.',
+      });
+    }
+
+    // Cached whole: a depth texture's sampling state is fixed at construction
+    // (see DepthTexture) and its filter/wrap parameters were set on the handle
+    // when the attachment was allocated, so nothing here is ever re-resolved.
+    let state = this._depthTextureStates.get(texture);
+
+    if (state?.handle !== handle) {
+      state = {
+        handle,
+        samplerKey: samplerStateKey(texture.scaleMode, texture.wrapMode),
+        version: texture.version,
+        width: texture.width,
+        height: texture.height,
+        accountedBytes: 0,
+        partialUploadScratch: null,
+      };
+      this._depthTextureStates.set(texture, state);
+    }
+
+    this._bindTextureHandle(handle);
+
+    return state;
   }
 
   /**

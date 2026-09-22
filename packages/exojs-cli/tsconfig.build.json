@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Emit profile. `tsc` alone is the whole build: the package ships plain Node
+  // ESM and there is nothing for a bundler to do.
+  //
+  // The emit is flat rather than `dist/esm/`: `cliVersion.ts` reads the package
+  // manifest through a module-relative path, and only a flat emit keeps that
+  // path the same distance from the manifest in source and in `dist`.
+  //
+  // `paths` resolves `create-exo-app` against its built declarations here,
+  // unlike `tsconfig.json`, which points at its source for the in-repo
+  // typecheck. Runtime deps build first, so the declarations exist.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "declarationDir": "dist",
+    "declarationMap": false,
+    "sourceMap": true,
+    "inlineSources": true,
+    "paths": {
+      "create-exo-app": ["../create-exo-app/dist/scaffold.d.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

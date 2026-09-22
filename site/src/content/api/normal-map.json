@@ -1,0 +1,171 @@
+{
+  "title": "NormalMap",
+  "description": "An authored tangent-space normal map. ```ts hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals) }); hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals, { convention: 'directx' }) }); ``` The default input convention is OpenGL: green above the midpoint means the normal leans towards the top of the image, and a flat texel is `(128, 128, 255)`. A map authored the other way up lights its vertical detail from the wrong side while its horizontal detail stays correct; declare it as `directx` rather than editing the texture.",
+  "symbol": "NormalMap",
+  "kind": "class",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An authored tangent-space normal map.",
+        "```ts hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals) }); hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals, { convention: 'directx' }) }); ```",
+        "The default input convention is OpenGL: green above the midpoint means the normal leans towards the top of the image, and a flat texel is `(128, 128, 255)`. A map authored the other way up lights its vertical detail from the wrong side while its horizontal detail stays correct; declare it as `directx` rather than editing the texture."
+      ],
+      "importLine": "import { NormalMap } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(texture: Texture, options: NormalMapOptions): NormalMap",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalMapOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalMap",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "texture",
+              "type": "Texture",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "NormalMapOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "NormalMap",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "convention",
+          "signature": "convention: NormalConvention",
+          "signatureTokens": [
+            {
+              "text": "convention",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NormalConvention",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which way up the map's green channel is authored. Defaults to opengl where a source leaves it out, which is what every generator in this package writes."
+        },
+        {
+          "name": "texture",
+          "signature": "texture: Texture",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The tangent-space normal map to bind."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/normals/NormalMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/NormalMap.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/normals/NormalMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/normals/NormalMap.ts"
+}

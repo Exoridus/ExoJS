@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 15,
+  "memberCount": 18,
   "counts": {
     "constructors": 1,
     "methods": 6,
-    "properties": 8,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: MaterialOptions): MeshMaterial",
+          "signature": "new(options: MeshMaterialOptions<F, B>): MeshMaterial<F, B>",
           "signatureTokens": [
             {
               "text": "new",
@@ -50,8 +50,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "MaterialOptions",
+              "text": "MeshMaterialOptions",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -64,16 +84,36 @@
             {
               "text": "MeshMaterial",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "options",
-              "type": "MaterialOptions",
+              "type": "MeshMaterialOptions<F, B>",
               "optional": false
             }
           ],
-          "returnType": "MeshMaterial",
+          "returnType": "MeshMaterial<F, B>",
           "description": ""
         }
       ],
@@ -247,7 +287,7 @@
         },
         {
           "name": "setUniform",
-          "signature": "setUniform(name: string, value: UniformValue): this",
+          "signature": "setUniform(name: MaterialRawUniformName<F, B>, value: UniformValue): this",
           "signatureTokens": [
             {
               "text": "setUniform",
@@ -266,8 +306,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "MaterialRawUniformName",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -301,7 +361,7 @@
           "params": [
             {
               "name": "name",
-              "type": "string",
+              "type": "MaterialRawUniformName<F, B>",
               "optional": false
             },
             {
@@ -311,11 +371,11 @@
             }
           ],
           "returnType": "this",
-          "description": "Replace a declared uniform value, returning this for chaining. Unknown names and scalar↔texture kind changes are rejected."
+          "description": "Replace a declared uniform value, returning this for chaining. Unknown names and scalar↔texture kind changes are rejected. Only available on a material whose shader source declares no uniform schema; a typed material writes through uniforms instead."
         },
         {
           "name": "from",
-          "signature": "from(source: ShaderSource, options?: Omit<MaterialOptions, \"shader\">): MeshMaterial",
+          "signature": "from(source: Shader<F, B>, options?: Omit<MeshMaterialOptions<F, B>, \"shader\">): MeshMaterial<F, B>",
           "signatureTokens": [
             {
               "text": "from",
@@ -334,8 +394,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderSource",
+              "text": "Shader",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -362,8 +442,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "MaterialOptions",
+              "text": "MeshMaterialOptions",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -388,26 +488,46 @@
             {
               "text": "MeshMaterial",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "source",
-              "type": "ShaderSource",
+              "type": "Shader<F, B>",
               "optional": false
             },
             {
               "name": "options",
-              "type": "Omit<MaterialOptions, \"shader\">",
+              "type": "Omit<MeshMaterialOptions<F, B>, \"shader\">",
               "optional": true
             }
           ],
-          "returnType": "MeshMaterial",
-          "description": "Build a MeshMaterial from an existing ShaderSource. Equivalent to new MeshMaterial({ shader, ...options })."
+          "returnType": "MeshMaterial<F, B>",
+          "description": "Build a MeshMaterial from an existing Shader. Equivalent to new MeshMaterial({ shader, ...options })."
         },
         {
           "name": "from",
-          "signature": "from(glslVertex: string, glslFragment: string, options?: { blendMode?: BlendModes; sampler?: SamplerOptions | null; uniforms?: Record<string, UniformValue>; wgsl?: string }): MeshMaterial",
+          "signature": "from(glslVertex: string, glslFragment: string, options?: { blendMode?: BlendModes; blendModes?: readonly BlendModes[]; sampler?: SamplerOptions | null; uniforms?: Record<string, UniformValue>; wgsl?: string; writesDepth?: boolean }): MeshMaterial",
           "signatureTokens": [
             {
               "text": "from",
@@ -480,6 +600,38 @@
             {
               "text": "BlendModes",
               "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "blendModes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BlendModes",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
             },
             {
               "text": "; ",
@@ -570,6 +722,26 @@
               "kind": "keyword"
             },
             {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "writesDepth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
               "text": " }",
               "kind": "punctuation"
             },
@@ -599,12 +771,12 @@
             },
             {
               "name": "options",
-              "type": "{ blendMode?: BlendModes; sampler?: SamplerOptions | null; uniforms?: Record<string, UniformValue>; wgsl?: string }",
+              "type": "{ blendMode?: BlendModes; blendModes?: readonly BlendModes[]; sampler?: SamplerOptions | null; uniforms?: Record<string, UniformValue>; wgsl?: string; writesDepth?: boolean }",
               "optional": true
             }
           ],
           "returnType": "MeshMaterial",
-          "description": "Build a MeshMaterial from raw GLSL vertex and fragment source strings. Wraps them in a new ShaderSource; pass options.wgsl to also cover the WebGPU backend."
+          "description": "Build a MeshMaterial from raw GLSL vertex and fragment source strings. Wraps them in a new Shader; pass options.wgsl to also cover the WebGPU backend."
         }
       ],
       "paragraphs": [],
@@ -637,6 +809,47 @@
           "description": "Compositing blend mode applied when drawing with this material."
         },
         {
+          "name": "blendModes",
+          "signature": "blendModes: null | readonly BlendModes[]",
+          "signatureTokens": [
+            {
+              "text": "blendModes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BlendModes",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Blend mode per colour attachment, or null when the draw blends as a whole."
+        },
+        {
           "name": "sampler",
           "signature": "sampler: SamplerOptions | null",
           "signatureTokens": [
@@ -667,7 +880,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: ShaderSource",
+          "signature": "shader: Shader<F, B>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -678,8 +891,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderSource",
+              "text": "Shader",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -706,6 +939,27 @@
           "params": [],
           "returnType": null,
           "description": "Which drawable class this material can serve; renderers check compatibility."
+        },
+        {
+          "name": "writesDepth",
+          "signature": "writesDepth: boolean",
+          "signatureTokens": [
+            {
+              "text": "writesDepth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether draws with this material write into the target's depth attachment."
         },
         {
           "name": "bindKey",
@@ -799,8 +1053,41 @@
           "description": "Live identities behind the fixed named texture slots."
         },
         {
+          "name": "uniformBlocks",
+          "signature": "uniformBlocks: MaterialUniformBlocksView<B>",
+          "signatureTokens": [
+            {
+              "text": "uniformBlocks",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MaterialUniformBlocksView",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The declared named uniform blocks, each owning its own values."
+        },
+        {
           "name": "uniforms",
-          "signature": "uniforms: Record<string, UniformValue>",
+          "signature": "uniforms: MaterialUniformsView<F, B>",
           "signatureTokens": [
             {
               "text": "uniforms",
@@ -811,7 +1098,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Record",
+              "text": "MaterialUniformsView",
               "kind": "type"
             },
             {
@@ -819,15 +1106,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "F",
+              "kind": "type"
             },
             {
               "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "UniformValue",
+              "text": "B",
               "kind": "type"
             },
             {
@@ -837,7 +1124,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Live user uniform values. Construction declares the fixed set of names and each name's scalar/texture kind; existing values can be replaced between frames and typed arrays can be mutated in place. material.uniforms.u_time = performance.now() / 1000; material.uniforms.u_color = [1, 0.5, 0, 1];"
+          "description": "The typed accessors of the declared uniform block, or - on a source without a schema - the live user uniform values, where construction declares the fixed set of names and each name's scalar/texture kind: material.uniforms.u_time = performance.now() / 1000; material.uniforms.u_color = [1, 0.5, 0, 1];"
         }
       ],
       "paragraphs": [],

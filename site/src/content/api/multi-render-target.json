@@ -1,16 +1,16 @@
 {
   "title": "MultiRenderTarget",
-  "description": "An off-screen render target with several colour attachments, written in one pass. One draw can produce more than one image: a colour pass that also writes a selection id, a normal buffer, a velocity buffer. Without it the same information costs one full pass per output, re-transforming and re-rasterizing the same geometry each time. Each attachment is an ordinary RenderTexture and is sampled like any other texture once the pass has run. They are OWNED by this target - created, resized and destroyed with it - because a mismatched attachment size is a framebuffer-completeness error on WebGL2 and a validation error on WebGPU, and that is not a failure worth handing to callers to avoid. # What can draw into one Only a Mesh with a MeshMaterial whose fragment shader declares one output per attachment. Every other renderer - sprites, text, nine-slice, repeating sprites, video - and the default mesh material declare a single output, so on WebGPU their pipelines cannot satisfy a multi-attachment pass at all; drawing one into this target throws a `RenderError` naming the reason rather than minting pipeline variants nothing writes to. Mask and backdrop-blend compositing stay single-target for the same reason. A single-attachment target is still just a RenderTexture - reach for this only when one pass genuinely has to produce two images.",
+  "description": "An off-screen render target with several colour attachments, written in one pass. One draw can produce more than one image: a colour pass that also writes a selection id, a normal buffer, a velocity buffer. Without it the same information costs one full pass per output, re-transforming and re-rasterizing the same geometry each time. Each attachment is an ordinary RenderTexture and is sampled like any other texture once the pass has run. They are OWNED by this target - created, resized and destroyed with it - because a mismatched attachment size is a framebuffer-completeness error on WebGL2 and a validation error on WebGPU, and that is not a failure worth handing to callers to avoid. # What can draw into one A Mesh or a Sprite carrying a material whose fragment shader declares one output per attachment - a `MeshMaterial` or a `SpriteMaterial` respectively. Both renderers build their pipeline from the attachment formats of the pass they run in, so a material that declares the outputs is drawn; one that declares fewer is refused with a `RenderError` rather than writing attachment 0 on WebGL2 and failing pipeline creation on WebGPU. Every other renderer - text, nine-slice, repeating sprites, video - and both default materials declare a single output, so drawing one into this target throws a `RenderError` naming the reason rather than minting pipeline variants nothing writes to. Mask and backdrop-blend compositing stay single-target for the same reason. A single-attachment target is still just a RenderTexture - reach for this only when one pass genuinely has to produce two images.",
   "symbol": "MultiRenderTarget",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 22,
+  "memberCount": 25,
   "counts": {
     "constructors": 1,
-    "methods": 11,
-    "properties": 10,
+    "methods": 13,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -23,7 +23,8 @@
         "One draw can produce more than one image: a colour pass that also writes a selection id, a normal buffer, a velocity buffer. Without it the same information costs one full pass per output, re-transforming and re-rasterizing the same geometry each time.",
         "Each attachment is an ordinary RenderTexture and is sampled like any other texture once the pass has run. They are OWNED by this target - created, resized and destroyed with it - because a mismatched attachment size is a framebuffer-completeness error on WebGL2 and a validation error on WebGPU, and that is not a failure worth handing to callers to avoid.",
         "# What can draw into one",
-        "Only a Mesh with a MeshMaterial whose fragment shader declares one output per attachment. Every other renderer - sprites, text, nine-slice, repeating sprites, video - and the default mesh material declare a single output, so on WebGPU their pipelines cannot satisfy a multi-attachment pass at all; drawing one into this target throws a `RenderError` naming the reason rather than minting pipeline variants nothing writes to. Mask and backdrop-blend compositing stay single-target for the same reason.",
+        "A Mesh or a Sprite carrying a material whose fragment shader declares one output per attachment - a `MeshMaterial` or a `SpriteMaterial` respectively. Both renderers build their pipeline from the attachment formats of the pass they run in, so a material that declares the outputs is drawn; one that declares fewer is refused with a `RenderError` rather than writing attachment 0 on WebGL2 and failing pipeline creation on WebGPU.",
+        "Every other renderer - text, nine-slice, repeating sprites, video - and both default materials declare a single output, so drawing one into this target throws a `RenderError` naming the reason rather than minting pipeline variants nothing writes to. Mask and backdrop-blend compositing stay single-target for the same reason.",
         "A single-attachment target is still just a RenderTexture - reach for this only when one pass genuinely has to produce two images."
       ],
       "importLine": "import { MultiRenderTarget } from '@codexo/exojs'",
@@ -131,6 +132,64 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "_enableDepthTexture",
+          "signature": "_enableDepthTexture(): void",
+          "signatureTokens": [
+            {
+              "text": "_enableDepthTexture",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Give this target a sampleable depth attachment. Called once, from the constructor of a subclass whose options asked for one."
+        },
+        {
+          "name": "_syncDepthSize",
+          "signature": "_syncDepthSize(): void",
+          "signatureTokens": [
+            {
+              "text": "_syncDepthSize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Keep the depth attachment at the target's size. A subclass that resizes through a path other than resize calls this itself - a depth attachment left at the old size makes the whole framebuffer incomplete."
+        },
         {
           "name": "_touch",
           "signature": "_touch(): void",
@@ -743,6 +802,35 @@
           "params": [],
           "returnType": null,
           "description": "Whether this target needs a stencil attachment for geometric stencil clipping (RenderNode.clip with a Geometry clipShape). Set by the WebGL2 backend when such a clip is rendered into an offscreen RenderTexture, so its framebuffer gets a depth/stencil renderbuffer; the WebGL2 on-screen root uses the default framebuffer's stencil (requested at context creation), so the flag only affects offscreen WebGL2 targets. The WebGPU backend does not consult this flag: it allocates a separate depth24plus-stencil8 attachment per clipped target (root included) on demand, sized to the colour attachment's physical pixels."
+        },
+        {
+          "name": "depthTexture",
+          "signature": "depthTexture: DepthTexture | null",
+          "signatureTokens": [
+            {
+              "text": "depthTexture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DepthTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sampleable depth attachment, or null on a target that did not opt in - the on-screen root target always answers null. Opting in ({ depth: true } on a RenderTexture or a MultiRenderTarget) buys a depth buffer that survives the pass and can be read back as a texture; a MeshMaterial with writesDepth fills it. Without the opt-in a depth-writing material still draws, it just writes depth nowhere."
         },
         {
           "name": "destroyed",

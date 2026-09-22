@@ -52,10 +52,10 @@ const videoInstanceVertexBufferLayout: GPUVertexBufferLayout = {
  * seek, and source changes all affect readiness), falling back to a
  * `texture_2d` copy-upload path on any failure.
  *
- * Deliberately declares neither `_supportsRetainedBatches` nor
+ * Deliberately declares neither `supportsRetainedBatches` nor
  * `_supportsPersistentSlots`, unlike {@link WebGpuSpriteRenderer}. The cost is
  * real: `isRetainedFragmentRecordable` requires every draw's renderer to
- * declare `_supportsRetainedBatches`, so a retained fragment containing a
+ * declare `supportsRetainedBatches`, so a retained fragment containing a
  * `Video` is never recorded into the WebGPU retained-batch tier at all - not
  * just the video draw, the WHOLE fragment, siblings included. That is not
  * incidental; it is the mechanism that keeps a video from freezing when its
@@ -280,7 +280,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       const sourceElement = texture.source instanceof HTMLVideoElement ? texture.source : null;
       const externalTexture = sourceElement !== null ? this._tryImportExternalTexture(device, sourceElement) : null;
 
-      const coordinator = backend._passCoordinator;
+      const coordinator = backend.passCoordinator;
       let active = coordinator.acquirePass();
 
       this._instanceArena.syncPass(active);
@@ -375,7 +375,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       // No drawable content but a clear is pending: open the coordinator pass so
       // createColorAttachment consumes the clear state once (submitted at the
       // next boundary).
-      backend._passCoordinator.acquirePass();
+      backend.passCoordinator.acquirePass();
     }
 
     this._pendingVideo = null;
@@ -390,7 +390,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
    * spurious split.
    */
   private _endPassOnProjectionChange(backend: WebGpuBackend): void {
-    const activePass = backend._passCoordinator.activePass;
+    const activePass = backend.passCoordinator.activePass;
 
     if (
       activePass !== null &&
@@ -398,7 +398,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       this._instanceArena.tracksPass(activePass) &&
       (activePass.viewUpdateId !== backend.view.updateId || this._groupContentChanged(backend))
     ) {
-      backend._passCoordinator.endPass();
+      backend.passCoordinator.endPass();
       this._instanceArena.resetPass();
     }
   }
@@ -424,9 +424,9 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
    * arena's slice to match.
    */
   private _reopenPass(backend: WebGpuBackend): WebGpuActiveRenderPass {
-    backend._passCoordinator.endPass();
+    backend.passCoordinator.endPass();
 
-    const active = backend._passCoordinator.acquirePass();
+    const active = backend.passCoordinator.acquirePass();
 
     this._instanceArena.resetPass();
     this._instanceArena.syncPass(active);

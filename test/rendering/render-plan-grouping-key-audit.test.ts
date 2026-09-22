@@ -51,7 +51,6 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { materialKeyForcesFlush } from '#rendering/material/MaterialKey';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderPlan } from '#rendering/plan/RenderPlan';
@@ -61,6 +60,7 @@ import type { GroupScope } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
@@ -218,7 +218,7 @@ const minimalGlsl = {
   fragment: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',
 };
 
-const createSpriteMaterial = () => new SpriteMaterial({ shader: new ShaderSource({ glsl: minimalGlsl }) });
+const createSpriteMaterial = () => new SpriteMaterial({ shader: new Shader({ glsl: minimalGlsl }) });
 
 // ---------------------------------------------------------------------------
 // groupKey internals
@@ -510,7 +510,7 @@ describe('render plan grouping key audit', () => {
       const { backend, destroy } = createBuildBackend();
 
       try {
-        const shader = new ShaderSource({ glsl: minimalGlsl });
+        const shader = new Shader({ glsl: minimalGlsl });
         const matNormal = new SpriteMaterial({ shader, blendMode: BlendModes.Normal });
         const matAdditive = new SpriteMaterial({ shader, blendMode: BlendModes.Additive });
         const tex = createTexture();

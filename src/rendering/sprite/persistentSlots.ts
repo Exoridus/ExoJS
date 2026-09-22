@@ -20,6 +20,15 @@ export interface PersistentSpriteSlotStore {
   readonly textures: Array<Texture | RenderTexture>;
   blendMode: BlendModes;
   textureIndexOfHandle: Uint8Array;
+  /**
+   * The table a rekey retires, kept as the next one's write target.
+   *
+   * Two buffers rather than one, because a rekey reads the old numbering while
+   * writing the new one and an item's handle can move in either direction;
+   * filling in place would overwrite an entry another item still has to read.
+   * Grow-only, so a churning root allocates none per frame.
+   */
+  spareTextureIndexOfHandle: Uint8Array;
   ensureCapacity(slots: number): void;
   writeSlotFrom(
     slot: number,
@@ -103,6 +112,77 @@ export const fillPersistentSpriteSlotTable = (source: RenderRootSource, store: P
 
   store.blendMode = blendMode;
   store.textureIndexOfHandle = textureIndexOfHandle;
+
+  return true;
+};
+
+/**
+ * Re-derive the table after a structure delta renumbered the source's items,
+ * reading only the items the delta did not carry.
+ *
+ * `carried` gives, for each new handle, the handle the same drawable held
+ * before, or -1. A carried item is by construction unchanged - the delta
+ * withdraws the carry of anything marked since the last selection - so its
+ * entry is copied across the renumbering instead of being re-derived, and the
+ * drawable is not touched at all. Only arrivals are asked for their texture,
+ * material and blend mode, which is what keeps a churning root's cost
+ * proportional to what it added rather than to what it holds.
+ *
+ * The table stays append-only, so every entry an arrival copies still names the
+ * texture it was written for. `false` leaves the store untouched and means it
+ * can no longer serve the source: the caller must drop it, and the next
+ * acquisition then starts from an empty table.
+ * @internal
+ */
+export const rekeyPersistentSpriteSlotTable = (
+  source: RenderRootSource,
+  store: PersistentSpriteSlotStore,
+  maxTextures: number,
+  carried: Int32Array,
+  previousHandleCount: number,
+): boolean => {
+  const count = source.itemCount;
+  const before = store.textureIndexOfHandle;
+  const target = store.spareTextureIndexOfHandle.length >= count ? store.spareTextureIndexOfHandle : new Uint8Array(count);
+
+  for (const scope of source.scopes) {
+    const drawables = scope.items.drawables;
+    const items = scope.items.count;
+    const handleBase = scope.handleBase;
+
+    for (let i = 0; i < items; i++) {
+      const handle = handleBase + i;
+      const previous = carried[handle]!;
+
+      if (previous >= 0 && previous < previousHandleCount) {
+        target[handle] = before[previous]!;
+
+        continue;
+      }
+
+      const sprite = drawables[i] as Sprite;
+      const texture = sprite.texture;
+
+      if (texture === null || sprite.material !== null || sprite.blendMode !== store.blendMode) {
+        return false;
+      }
+
+      let index = store.textures.indexOf(texture);
+
+      if (index === -1) {
+        if (store.textures.length >= maxTextures) {
+          return false;
+        }
+
+        index = store.textures.push(texture) - 1;
+      }
+
+      target[handle] = index;
+    }
+  }
+
+  store.spareTextureIndexOfHandle = before;
+  store.textureIndexOfHandle = target;
 
   return true;
 };

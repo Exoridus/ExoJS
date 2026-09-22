@@ -2,6 +2,8 @@ import type { MockInstance } from 'vitest';
 
 import { Signal } from '#core/Signal';
 
+import { installFrameLoopDoubles } from '../support/application-frame-loop';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -11,7 +13,7 @@ interface FocusVisibilityHarness {
   readonly ApplicationState: typeof import('#core/Application').ApplicationState;
   readonly inputSystemMock: {
     update: MockInstance;
-    preUpdate: MockInstance;
+    preFrame: MockInstance;
     _finishInteractionFrame: MockInstance;
     destroy: MockInstance;
     canvasFocused: boolean;
@@ -31,7 +33,7 @@ interface FocusVisibilityHarness {
   };
   readonly interactionMock: {
     update: MockInstance;
-    preUpdate: MockInstance;
+    preFrame: MockInstance;
     destroy: MockInstance;
   };
 }
@@ -41,7 +43,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
 
   const inputSystemMock = {
     update: vi.fn(),
-    preUpdate: vi.fn(),
+    preFrame: vi.fn(),
     _finishInteractionFrame: vi.fn(),
     destroy: vi.fn(),
     canvasFocused: false,
@@ -51,7 +53,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
   const sceneDirectorMock = {
     _beginFrame: vi.fn(),
     _endFrame: vi.fn(),
-    preUpdate: vi.fn(),
+    preFrame: vi.fn(),
     fixedUpdate: vi.fn(),
     update: vi.fn(),
     draw: vi.fn(),
@@ -64,7 +66,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
 
   const interactionMock = {
     update: vi.fn(),
-    preUpdate: vi.fn(),
+    preFrame: vi.fn(),
     destroy: vi.fn(),
   };
 
@@ -259,16 +261,9 @@ describe('Application focus / visibility', () => {
 
     // Set up raw state for update()
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
-    rawApp['_updateHandler'] = vi.fn();
-    rawApp['_frameClock'] = {
-      elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: vi.fn(),
-      stop: vi.fn(),
-      destroy: vi.fn(),
-    };
-    rawApp['_activeClock'] = { stop: vi.fn(), start: vi.fn(), destroy: vi.fn() };
-    rawApp['_startupClock'] = { start: vi.fn(), destroy: vi.fn() };
+
+    const { scheduler } = installFrameLoopDoubles(app);
+
     rawApp['onFrame'] = { dispatch: vi.fn(), destroy: vi.fn() };
     rawApp['onResize'] = { dispatch: vi.fn(), destroy: vi.fn() };
 
@@ -293,7 +288,7 @@ describe('Application focus / visibility', () => {
 
     // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
     rawApp['_state'] = ApplicationState.Stopped;
-    rawApp['_frameLoopActive'] = false;
+    scheduler.active = false;
     void app.destroy();
   });
 
@@ -310,16 +305,9 @@ describe('Application focus / visibility', () => {
     document.dispatchEvent(new Event('visibilitychange'));
 
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
-    rawApp['_updateHandler'] = vi.fn();
-    rawApp['_frameClock'] = {
-      elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: vi.fn(),
-      stop: vi.fn(),
-      destroy: vi.fn(),
-    };
-    rawApp['_activeClock'] = { stop: vi.fn(), start: vi.fn(), destroy: vi.fn() };
-    rawApp['_startupClock'] = { start: vi.fn(), destroy: vi.fn() };
+
+    const { scheduler } = installFrameLoopDoubles(app);
+
     rawApp['onFrame'] = { dispatch: vi.fn(), destroy: vi.fn() };
     rawApp['onResize'] = { dispatch: vi.fn(), destroy: vi.fn() };
     rawApp['_backend'] = {
@@ -328,9 +316,8 @@ describe('Application focus / visibility', () => {
       stats: { frameTimeMs: 0 },
       destroy: vi.fn(),
     };
-    rawApp['interaction'] = { update: vi.fn(), preUpdate: vi.fn(), destroy: vi.fn() };
-    rawApp['tweens'] = { update: vi.fn(), preUpdate: vi.fn(), destroy: vi.fn() };
-    rawApp['_frameCount'] = 0;
+    rawApp['interaction'] = { update: vi.fn(), preFrame: vi.fn(), destroy: vi.fn() };
+    rawApp['tweens'] = { update: vi.fn(), preFrame: vi.fn(), destroy: vi.fn() };
 
     // pauseOnHidden defaults to false
     expect(app.pauseOnHidden).toBe(false);
@@ -339,7 +326,7 @@ describe('Application focus / visibility', () => {
 
     app.update();
 
-    expect(inputSystemMock.preUpdate).toHaveBeenCalledTimes(1);
+    expect(inputSystemMock.preFrame).toHaveBeenCalledTimes(1);
     expect(sceneDirectorMock.update).toHaveBeenCalledTimes(1);
 
     // Restore
@@ -350,7 +337,7 @@ describe('Application focus / visibility', () => {
 
     // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
     rawApp['_state'] = ApplicationState.Stopped;
-    rawApp['_frameLoopActive'] = false;
+    scheduler.active = false;
     void app.destroy();
   });
 

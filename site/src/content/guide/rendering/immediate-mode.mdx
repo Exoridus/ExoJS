@@ -174,10 +174,10 @@ You should not have to know any of that, and it is not stable: the tint has alre
 So the engine exports the contract instead. Insert [`INSTANCE_TRANSFORM_GLSL`](/ExoJS/en/api/functions/) after your `#version` directive and position through `exoInstanceClipPosition` — it returns **clip space**, snapping included, because snapping is defined in device pixels and needs the projection and viewport together:
 
 ```ts
-import { INSTANCE_TRANSFORM_GLSL, MeshMaterial, ShaderSource } from '@codexo/exojs';
+import { INSTANCE_TRANSFORM_GLSL, MeshMaterial, Shader } from '@codexo/exojs';
 
 const sparkMaterial = new MeshMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
         glsl: {
             vertex: `#version 300 es
 ${INSTANCE_TRANSFORM_GLSL}
@@ -213,7 +213,7 @@ A shader that ignores the contract is **rejected** on the first `drawBatch`, nam
 
 ### Targeting WebGPU too
 
-Give the same `ShaderSource` a `wgsl` body built on [`INSTANCE_TRANSFORM_WGSL`](/ExoJS/en/api/functions/), which exposes the same two helpers. Two differences follow from WGSL itself:
+Give the same `Shader` a `wgsl` body built on [`INSTANCE_TRANSFORM_WGSL`](/ExoJS/en/api/functions/), which exposes the same two helpers. Two differences follow from WGSL itself:
 
 - It has no global vertex inputs, so your entry point declares them in an input struct and passes `nodeIndex` to the helpers explicitly. The GLSL helpers take it as a parameter too, so both shader bodies read alike.
 - It has no name-based vertex binding, so **declaration order fixes the location**: the Nth declared instance attribute is `@location(7 + N)`, starting from [`FIRST_INSTANCE_ATTRIBUTE_LOCATION`](/ExoJS/en/api/functions/). Locations 0–2 carry the geometry and 6 carries the node index.

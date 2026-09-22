@@ -1,0 +1,1065 @@
+---
+/**
+ * BenchComparisonTable - the comparisons of one domain, as a matrix or as cards.
+ *
+ * Wide, the block is a matrix: one archetype per row, one comparison pair per
+ * column, so a reader follows a single archetype across every backend and every
+ * opponent on one line. Narrow, the same markup becomes one card per archetype
+ * with its comparisons stacked inside it. The switch is a container query on the
+ * block's own width, not on the viewport: a docs page can hand this component
+ * 700px of room inside a 1400px window, and a matrix squeezed into that is a
+ * matrix nobody can read. Measurements never scroll sideways at any width.
+ *
+ * A cell carries three things and no more: which way the pair went and by how
+ * much, the two medians, and the bar. Everything a reader needs only when
+ * verifying a row - p95, the range the pooled runs observed, the spread factor,
+ * the structural evidence, what each run concluded - sits behind one disclosure
+ * per archetype rather than one per comparison: a row of five pairs otherwise
+ * carried five toggles that each opened the same six terms.
+ *
+ * The bar is a diverging one on a fixed log axis shared by every column and
+ * every table on the page, so a length means the same thing wherever it is
+ * read. A comparison past the axis is drawn cut rather than rescaling everyone
+ * else into a few pixels, and its exact factor is printed beside it either way.
+ * The bar keeps a track of its own, apart from the text: a mark that grows
+ * outward from a centre, laid over text that reads from the left, gives a
+ * column two competing origins and no continuous line to scan down.
+ *
+ * A pair whose runs landed on different rungs publishes no verdict. Its bar is
+ * the interval those runs spanned, drawn hollow and in neither side's hue, and
+ * its figure is the factor of the two pooled medians with a tilde - the pair's
+ * central observation, not a decision. An arm that produced no shared cell at
+ * all prints a dash: that is a gap in the matrix, not a result, and spelling it
+ * out in every affected row only crowds the ones that carry numbers.
+ */
+
+import {
+    archetypeTitle,
+    armLabel,
+    describeRungs,
+    formatBand,
+    formatApproximate,
+    formatFactor,
+    formatMs,
+    formatRange,
+    formatSpread,
+    frameShare,
+    FRAME_BUDGET_MS,
+    isWideSpread,
+    OUTCOME_NOTES,
+    OUTCOME_STATUS,
+    publishedMs,
+    outcomeOf,
+    pooledFactor,
+    ratioBand,
+    rungSide,
+    withheldScenario,
+    type ProfileCell,
+    type ProfileSpread,
+} from '../lib/bench-profiles';
+import type { ComparisonTable } from '../lib/bench-tables';
+
+interface Props {
+    table: ComparisonTable;
+    /** Accessible name for the table, since the caption carries the reading terms rather than a title. */
+    label: string;
+}
+
+const { table, label } = Astro.props;
+const { columns, rows, countColumn, defaultColumn } = table;
+
+/**
+ * Half-width of the axis in decades, fixed for every column and every table.
+ *
+ * A per-column axis makes a given bar length mean something different in each
+ * column, which is the one thing a shared visual scale exists to prevent. Two
+ * decades holds every comparison a reader is weighing against another; the
+ * handful of order-of-magnitude outliers saturate at the edge, marked as cut,
+ * and are read from their printed factor instead.
+ */
+const AXIS_DECADES = 2;
+
+/** Where a ratio sits on the axis, as a percentage from its left edge. */
+const positionOf = (ratio: number): number => 50 + (Math.max(-AXIS_DECADES, Math.min(AXIS_DECADES, Math.log10(ratio))) / AXIS_DECADES) * 50;
+
+/** True where a ratio runs past the axis and its bar is drawn cut. */
+const saturates = (ratio: number): boolean => Math.abs(Math.log10(ratio)) > AXIS_DECADES;
+
+/** A bar from the centre out to one ratio. */
+const barOf = (ratio: number): string => {
+    const at = positionOf(ratio);
+
+    return at < 50 ? `right:50%;width:${String(50 - at)}%` : `left:50%;width:${String(at - 50)}%`;
+};
+
+/** A bar spanning the interval two ratios bound. */
+const intervalOf = (low: number, high: number): string => {
+    const from = positionOf(low);
+    const to = positionOf(high);
+
+    return `left:${String(Math.min(from, to))}%;width:${String(Math.max(2, Math.abs(to - from)))}%`;
+};
+
+/** The range a pooled measurement observed, in milliseconds, or a dash where it reported none. */
+const rangeOf = (spread: ProfileSpread | undefined): string => (spread === undefined || formatRange(spread) === '' ? '-' : formatRange(spread));
+
+/** Consecutive columns that share a heading, such as the backend they were measured on. */
+const groups = columns.reduce<{ label: string; span: number }[]>((built, column) => {
+    if (column.group === null) return built;
+
+    const last = built.at(-1);
+
+    if (last !== undefined && last.label === column.group) {
+        last.span += 1;
+
+        return built;
+    }
+
+    return [...built, { label: column.group, span: 1 }];
+}, []);
+
+/** What a cell announces itself as once the block is stacked into cards. */
+const labelOf = (index: number): string => {
+    const column = columns[index];
+
+    if (column === undefined) return '';
+
+    return column.group === null ? `vs ${column.label}` : `${column.group} · vs ${column.label}`;
+};
+
+/** The word beside a factor: which arm the comparison favours, or nothing where it favours neither. */
+const winnerOf = (cell: ProfileCell): string => {
+    const side = cell.verdict.side;
+
+    return side === 'exojs' ? 'ExoJS' : side === 'competitor' ? armLabel(cell.competitor) : '';
+};
+---
+
+<figure class="comparison">
+    {/*
+     * Hiding a group narrows the matrix to one question at a time. It is an
+     * enhancement and never a gate: without the script every column is shown,
+     * which is also what the printed and indexed page carries.
+     */}
+    {columns.length > 1 && (
+        <div class="filters" data-bench-filter data-default-column={String(defaultColumn)}>
+            {groups.length > 1 && (
+                <div class="chips" role="group" aria-label="Show columns for">
+                    <button type="button" data-group-filter="" aria-pressed="true">All</button>
+                    {groups.map(group => (
+                        <button type="button" data-group-filter={group.label} aria-pressed="false">
+                            {group.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+            {/* Stacked, a card would otherwise carry every comparison of its archetype one under the other; picked, it carries one. */}
+            <label class="pick">
+                Comparison
+                <select data-column-filter>
+                    <option value="">All comparisons</option>
+                    {columns.map((_, index) => (
+                        <option value={String(index)}>{labelOf(index)}</option>
+                    ))}
+                </select>
+            </label>
+        </div>
+    )}
+    <table aria-label={label}>
+        {/* A fixed layout takes its widths from the first row, which is the group row and carries colspans rather than columns; declared on the cells, every width here would be ignored. */}
+        <colgroup>
+            <col class="col-archetype" />
+            {countColumn && <col class="col-count" />}
+            {columns.map((column, index) => (
+                <col class="col-arm" data-group={column.group ?? undefined} data-column={String(index)} />
+            ))}
+        </colgroup>
+        <thead>
+            {groups.length > 0 && (
+                <tr class="groups">
+                    <td colspan={countColumn ? 2 : 1} />
+                    {groups.map(group => (
+                        <th scope="colgroup" colspan={group.span} data-group={group.label}>
+                            {group.label}
+                        </th>
+                    ))}
+                </tr>
+            )}
+            <tr>
+                <th scope="col" class="col-archetype">Archetype</th>
+                {countColumn && <th scope="col" class="col-count">Load</th>}
+                {columns.map((column, index) => (
+                    <th scope="col" class="col-arm" data-group={column.group ?? undefined} data-column={String(index)}>
+                        {column.overline !== '' && <span class="overline">{column.overline}</span>}
+                        <span class="arm">
+                            <i>vs</i>
+                            {column.label}
+                        </span>
+                    </th>
+                ))}
+            </tr>
+        </thead>
+        <tbody>
+            {rows.map((row, index) => (
+                <>
+                    {row.section !== null && row.section !== rows[index - 1]?.section && (
+                        <tr class="section">
+                            <td colspan={columns.length + (countColumn ? 2 : 1)}>{row.section}</td>
+                        </tr>
+                    )}
+                    <tr>
+                        <th scope="row">
+                            {/* Plain words, as the cards name it: the archetype id is the contract with the harness and belongs in the details. */}
+                            {archetypeTitle(row.archetype)}
+                            {row.description !== undefined && <span class="row-description">{row.description}</span>}
+                            {!countColumn && <span class="row-count">{row.load}</span>}
+                        </th>
+                        {countColumn && (
+                            <td class="count" data-label="Load">
+                                {row.load}
+                            </td>
+                        )}
+                        {/*
+                          * A row whose arms are known not to do the same work
+                          * publishes their times and no comparison: the factor,
+                          * the bar and the winner all go, the same way they do
+                          * for a pair the clock could not separate.
+                          */}
+                        {row.entries.map((entry, column) => {
+                            const cell = entry.cell;
+                            const withheld = withheldScenario(row.archetype) !== undefined;
+
+                            if (cell === null) {
+                                const reason =
+                                    entry.count === null
+                                        ? 'This archetype was not measured on this backend.'
+                                        : `No shared cell at ${row.load}: the arm sits this archetype out, or exceeded the run budget there.`;
+
+                                return (
+                                    <td class="cell empty" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined} data-column={String(column)} title={reason}>
+                                        <span class="dash" aria-label={reason}>
+                                            -
+                                        </span>
+                                    </td>
+                                );
+                            }
+
+                            const outcome = outcomeOf(cell);
+                            const mixed = outcome === 'unstable';
+                            const level = outcome === 'level';
+                            // A pair the clock never separated publishes neither a figure nor a bar; only its two times survive.
+                            const unresolved = withheld || outcome === 'timer-limited' || outcome === 'timer-unknown';
+                            const band = mixed ? ratioBand(cell) : null;
+                            const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
+                            const ratio = cell.verdict.ratio;
+                            const plotted = !mixed && !unresolved && ratio !== null && Number.isFinite(ratio) && ratio > 0;
+                            const referenceMs = publishedMs(cell, cell.referenceMs);
+                            const competitorMs = publishedMs(cell, cell.competitorMs);
+
+                            return (
+                                <td class="cell" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined} data-column={String(column)}>
+                                    <span class="tracks">
+                                        <span class="plot">
+                                            <span class="axis" />
+                                            {!unresolved && band !== null && (
+                                                <span
+                                                    class:list={['fill', 'mixed', (saturates(band.low) || saturates(band.high)) && 'cut']}
+                                                    style={intervalOf(band.low, band.high)}
+                                                />
+                                            )}
+                                            {plotted && ratio !== null && (
+                                                <span
+                                                    class:list={['fill', outcome, saturates(ratio) && (ratio < 1 ? 'cut-left' : 'cut-right')]}
+                                                    style={barOf(ratio)}
+                                                />
+                                            )}
+                                        </span>
+                                        <span class="track">
+                                            <span class:list={['verdict', mixed ? 'unclear' : outcome]}>
+                                                {/* A pair inside the noise band is named, not scored: its factor is pinned to 1 by the ladder, so printing 1.00x beside two medians that differ would claim a precision the ladder never measured. */}
+                                                <b>{unresolved ? '-' : mixed ? (factor === null ? '-' : formatApproximate(factor)) : level ? 'similar' : formatFactor(factor)}</b>
+                                                {/* The word alone; what it means is stated once in the legend rather than in every cell that carries it. */}
+                                                <i title={withheld ? withheldScenario(row.archetype) : unresolved || mixed ? OUTCOME_NOTES[outcome] : undefined}>
+                                                    {withheld
+                                                        ? 'not comparable'
+                                                        : unresolved
+                                                          ? OUTCOME_STATUS[outcome]
+                                                          : mixed
+                                                            ? OUTCOME_STATUS.unstable
+                                                            : level
+                                                              ? ''
+                                                              : winnerOf(cell)}
+                                                </i>
+                                            </span>
+                                            <span class="medians">
+                                                <b class:list={[cell.referenceOverFrameBudget && 'warn']}>{formatMs(referenceMs)}</b>
+                                                <em>vs</em>
+                                                <b class:list={[cell.competitorOverFrameBudget && 'warn']}>{formatMs(competitorMs)}</b> ms
+                                            </span>
+                                        </span>
+                                    </span>
+                                </td>
+                            );
+                        })}
+                    </tr>
+                    {/* One disclosure for the archetype, not one per comparison: a matrix row carried five toggles that each opened the same six terms. */}
+                    <tr class="detail">
+                        <td colspan={columns.length + (countColumn ? 2 : 1)}>
+                            <details class="row-more">
+                                {/* The row already names its archetype; the label repeats it only where a reader reaches the summary without that context. */}
+                                <summary aria-label={`How ${archetypeTitle(row.archetype)} was measured`}>Measurement detail</summary>
+                                {withheldScenario(row.archetype) !== undefined && <p class="row-withheld">{withheldScenario(row.archetype)}</p>}
+                                <div class="arms">
+                                    {row.entries.map((entry, column) => {
+                                        const cell = entry.cell;
+
+                                        if (cell === null) {
+                                            return (
+                                                <section class="arm-detail absent" data-group={columns[column]?.group ?? undefined} data-column={String(column)}>
+                                                    <h4>{labelOf(column)}</h4>
+                                                    <p>
+                                                        {entry.count === null
+                                                            ? 'Not measured on this backend.'
+                                                            : `No shared cell at ${row.load}: the arm sits this archetype out, or exceeded the run budget there.`}
+                                                    </p>
+                                                </section>
+                                            );
+                                        }
+
+                                        const band = outcomeOf(cell) === 'unstable' ? ratioBand(cell) : null;
+                                        const referenceMs = publishedMs(cell, cell.referenceMs);
+                                        const competitorMs = publishedMs(cell, cell.competitorMs);
+
+                                        return (
+                                            <section class="arm-detail" data-group={columns[column]?.group ?? undefined} data-column={String(column)}>
+                                                <h4>{labelOf(column)}</h4>
+                                                <dl>
+                                                    <div>
+                                                        <dt>p95</dt>
+                                                        <dd>
+                                                            {formatMs(publishedMs(cell, cell.referenceP95Ms))} vs {formatMs(publishedMs(cell, cell.competitorP95Ms))} ms
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>run range</dt>
+                                                        <dd>
+                                                            <span class:list={[isWideSpread(cell.aggregate.reference) && 'warn']}>
+                                                                {rangeOf(cell.aggregate.reference)}
+                                                            </span>{' '}
+                                                            vs{' '}
+                                                            <span class:list={[isWideSpread(cell.aggregate.competitor) && 'warn']}>
+                                                                {rangeOf(cell.aggregate.competitor)}
+                                                            </span>{' '}
+                                                            ms, spread {formatSpread(cell.aggregate.reference)} vs {formatSpread(cell.aggregate.competitor)}
+                                                        </dd>
+                                                    </div>
+                                                    {band !== null && (
+                                                        <div>
+                                                            <dt>run ratios</dt>
+                                                            <dd>{formatBand(band)}</dd>
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <dt>{FRAME_BUDGET_MS} ms frame</dt>
+                                                        <dd>
+                                                            {[
+                                                                { name: 'ExoJS', share: frameShare(referenceMs) },
+                                                                { name: armLabel(cell.competitor), share: frameShare(competitorMs) },
+                                                            ].map(share => (
+                                                                <span class="budget-row">
+                                                                    <em>{share.name}</em>
+                                                                    <b class:list={[share.share !== null && share.share > 100 && 'warn']}>
+                                                                        {share.share === null ? '-' : `${share.share.toFixed(1)}%`}
+                                                                    </b>
+                                                                </span>
+                                                            ))}
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>runs</dt>
+                                                        <dd>
+                                                            <span class="runs" title={describeRungs(cell.aggregate.rungs)}>
+                                                                {cell.aggregate.rungs.map(rung => (
+                                                                    <span class:list={['run', rungSide(rung)]} />
+                                                                ))}
+                                                            </span>
+                                                            {describeRungs(cell.aggregate.rungs)}
+                                                        </dd>
+                                                    </div>
+                                                    {cell.mechanism !== null && (
+                                                        <div>
+                                                            <dt>mechanism</dt>
+                                                            <dd>{cell.mechanism}</dd>
+                                                        </div>
+                                                    )}
+                                                </dl>
+                                            </section>
+                                        );
+                                    })}
+                                </div>
+                            </details>
+                        </td>
+                    </tr>
+                </>
+            ))}
+        </tbody>
+    </table>
+    <script>
+        /** Width at which the block stacks into cards; keep in step with the container query below. */
+        const CARD_WIDTH_PX = 56 * 16;
+
+        for (const filter of document.querySelectorAll('[data-bench-filter]')) {
+            const figure = filter.closest('figure');
+            const select = filter.querySelector('[data-column-filter]');
+
+            if (figure === null) continue;
+
+            /**
+             * Hidden per element rather than through a class on the table: a
+             * column collapses only when its col, its headers and its cells all
+             * go, and the group and column names are data rather than known here.
+             */
+            const show = (attribute: 'group' | 'column', value: string): void => {
+                for (const element of figure.querySelectorAll('[data-group],[data-column]')) {
+                    if (element instanceof HTMLElement) element.hidden = value !== '' && element.dataset[attribute] !== value;
+                }
+            };
+
+            filter.addEventListener('click', event => {
+                const button = event.target instanceof Element ? event.target.closest('[data-group-filter]') : null;
+
+                if (!(button instanceof HTMLButtonElement)) return;
+
+                if (select instanceof HTMLSelectElement) select.value = '';
+                show('group', button.dataset.groupFilter ?? '');
+
+                for (const other of filter.querySelectorAll('[data-group-filter]')) {
+                    other.setAttribute('aria-pressed', String(other === button));
+                }
+            });
+
+            select?.addEventListener('change', () => {
+                if (!(select instanceof HTMLSelectElement)) return;
+
+                for (const other of filter.querySelectorAll('[data-group-filter]')) {
+                    if (other instanceof HTMLElement) other.setAttribute('aria-pressed', String(other.dataset.groupFilter === ''));
+                }
+
+                show('column', select.value);
+            });
+
+            // Stacked, every comparison of an archetype would sit one under the
+            // other in its card, so the narrow view opens on one of them. Applied
+            // once and never re-applied: past the first paint the reader's own
+            // choice outranks the default, at any width.
+            if (select instanceof HTMLSelectElement && figure.getBoundingClientRect().width < CARD_WIDTH_PX) {
+                select.value = filter.getAttribute('data-default-column') ?? '';
+                select.dispatchEvent(new Event('change'));
+            }
+        }
+    </script>
+
+    <figcaption>
+        Bars share one log axis across the whole page: the centre is 1.00x and each side reaches 100x, with anything past that drawn cut. A hollow bar is a
+        pair whose pooled runs landed on different rungs; it spans the interval they produced, publishes no verdict, and prints the two medians' own factor
+        with a tilde. A dash is a pair with no shared cell. Open a comparison for its p95, what share of a {FRAME_BUDGET_MS} ms frame each time takes, and
+        which way each pooled run fell.
+    </figcaption>
+</figure>
+
+<style>
+    .comparison {
+        margin: 0;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    th,
+    td {
+        padding: 0.5rem 0.7rem;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    thead th {
+        background: var(--bg-elevated);
+        padding-block: 0.5rem;
+        vertical-align: bottom;
+    }
+
+    tr.groups th {
+        padding-block: 0.4rem 0;
+        border-bottom: 0;
+        font-family: var(--f-mono);
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    tr.groups th + th {
+        border-left: 1px solid var(--line-soft);
+    }
+
+    tr.groups td {
+        background: var(--bg-elevated);
+        border-bottom: 0;
+    }
+
+    .overline {
+        display: block;
+        font-family: var(--f-mono);
+        font-size: 0.62rem;
+        font-weight: 400;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .arm {
+        display: block;
+        font-family: var(--f-mono);
+        font-size: 0.82rem;
+        color: var(--fg);
+    }
+
+    /* The column is a comparison, not a third measurement column; the word says so without competing with the name. */
+    .arm i {
+        font-style: normal;
+        margin-right: 0.35rem;
+        font-weight: 400;
+        color: var(--fg-faint);
+    }
+
+    .filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--s-2) var(--s-4);
+        margin-bottom: var(--s-3);
+    }
+
+    .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-2);
+    }
+
+    /* The matrix shows a column per comparison already, so picking one there would hide the reading the matrix exists for. */
+    .pick {
+        display: none;
+    }
+
+    .pick select {
+        margin-left: var(--s-2);
+        padding: 0.2rem 0.4rem;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-2);
+        background: var(--bg-elevated);
+        color: var(--fg);
+        font-family: var(--f-mono);
+        font-size: 0.7rem;
+    }
+
+    .filters button {
+        padding: 0.2rem 0.65rem;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-pill);
+        background: none;
+        font-family: var(--f-mono);
+        font-size: 0.7rem;
+        color: var(--fg-muted);
+        cursor: pointer;
+    }
+
+    .filters button:hover {
+        color: var(--fg);
+        border-color: var(--line);
+    }
+
+    /* The chosen filter is filled as well as tinted, so it is not colour alone that says which one is on. */
+    .filters button[aria-pressed='true'] {
+        border-color: var(--line);
+        background: var(--bg-elevated);
+        color: var(--fg);
+        font-weight: 600;
+    }
+
+    /* Stacked cards give td a display of their own, which the UA rule behind `hidden` does not outrank. */
+    [data-group][hidden] {
+        display: none !important;
+    }
+
+    .col-archetype {
+        width: 14rem;
+    }
+
+    .col-count {
+        width: 5rem;
+    }
+
+    /* Left to share what the two fixed columns do not take, so the slack lands on the comparisons rather than beside a four-digit count. */
+    .col-arm {
+        width: auto;
+    }
+
+    tbody th {
+        font-family: var(--f-mono);
+        font-size: 0.78rem;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .row-count {
+        display: none;
+    }
+
+    tr.section td {
+        background: var(--bg-panel);
+        padding-block: 0.25rem;
+        font-size: 0.64rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .count {
+        font-family: var(--f-mono);
+        font-size: 0.76rem;
+        color: var(--fg-muted);
+        text-align: right;
+    }
+
+    .dash {
+        display: block;
+        font-family: var(--f-mono);
+        font-size: 0.9rem;
+        color: var(--fg-faint);
+    }
+
+    /*
+     * Text and bar each take a full-width lane rather than sharing a row.
+     * Beside a ten-rem text track, a column of a five-pair table leaves the plot
+     * about sixty pixels, on which every ratio short of 10x is a few pixels of
+     * bar and the axis stops carrying meaning; the intrinsic minimum of that
+     * two-column layout is also wider than such a column, so the table pushed
+     * past the viewport. Stacked, the axis is as wide as the column, and since
+     * the columns are equal width the axes still line up down the table.
+     */
+    .tracks {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+        gap: var(--s-2);
+    }
+
+    .track {
+        min-width: 0;
+        order: 1;
+    }
+
+    .plot {
+        position: relative;
+        display: block;
+        order: 2;
+        height: 14px;
+        margin-top: 0.2rem;
+    }
+
+    /* Every bar grows outward from this line, so a bar means nothing without it: it is the 1.00x the length is read against. */
+    .axis {
+        position: absolute;
+        left: 50%;
+        top: -5px;
+        bottom: -5px;
+        width: 1px;
+        background: color-mix(in oklab, var(--fg-faint), transparent 45%);
+    }
+
+    .fill {
+        position: absolute;
+        top: 3px;
+        height: 8px;
+        border-radius: 2px;
+    }
+
+    .fill.clear-lead,
+    .fill.lead {
+        background: var(--bench-lead);
+    }
+
+    .fill.level {
+        background: var(--fg-faint);
+        min-width: 3px;
+    }
+
+    .fill.loss,
+    .fill.clear-loss {
+        background: var(--bench-loss);
+    }
+
+    /*
+     * A pair the runs split on is drawn as the interval they spanned: hollow,
+     * in neither side's hue, and crossing the centre wherever the runs did.
+     * Filling it would make an undecided measurement look like a decided one.
+     */
+    .fill.mixed {
+        background: none;
+        border: 1px dashed color-mix(in oklab, var(--fg-faint), transparent 15%);
+    }
+
+    /* A cut end says the bar ran past the shared axis; its printed factor is still the measured one. */
+    .fill.cut-right,
+    .fill.cut {
+        clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 50%, calc(100% - 5px) 100%, 0 100%);
+    }
+
+    .fill.cut-left {
+        clip-path: polygon(5px 0, 100% 0, 100% 100%, 5px 100%, 0 50%);
+    }
+
+    .verdict {
+        display: block;
+        font-family: var(--f-mono);
+        line-height: 1.25;
+    }
+
+    .verdict b {
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .verdict i {
+        font-style: normal;
+        margin-left: 0.4rem;
+        font-size: 0.72rem;
+        color: var(--fg-muted);
+    }
+
+    .verdict.clear-lead b,
+    .verdict.lead b {
+        color: var(--bench-lead);
+    }
+
+    .verdict.level b {
+        color: var(--fg-muted);
+    }
+
+    .verdict.loss b,
+    .verdict.clear-loss b {
+        color: var(--bench-loss);
+    }
+
+    .verdict.unclear b {
+        color: var(--fg-muted);
+    }
+
+    /* Without a side to name, the state gets the line the winner's name would have had. */
+    .verdict.unclear i {
+        display: block;
+        margin-left: 0;
+    }
+
+    .medians {
+        display: block;
+        margin-top: 0.25rem;
+        font-family: var(--f-mono);
+        font-size: 0.76rem;
+        color: var(--fg-muted);
+    }
+
+    .medians b {
+        font-weight: 600;
+        color: var(--fg);
+    }
+
+    .medians em {
+        font-style: normal;
+        margin: 0 0.15rem;
+        opacity: 0.7;
+    }
+
+    /* Amber is a measurement warning and nothing else: a time past the frame, or runs that moved too far to trust. */
+    .warn {
+        color: var(--bench-mark);
+    }
+
+    /* The detail row is a full-width strip under its archetype, not a cell: it belongs to the row, and its terms read as prose rather than as a column. */
+    tr.detail > td {
+        padding: 0 0.7rem 0.5rem;
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    .row-withheld {
+        margin: 0.4rem 0 0.6rem;
+        font-size: 0.8rem;
+        line-height: 1.45;
+        color: var(--fg-muted);
+    }
+
+    .row-more summary {
+        cursor: pointer;
+        font-family: var(--f-mono);
+        font-size: 0.7rem;
+        color: var(--fg-faint);
+    }
+
+    .row-more summary:hover {
+        color: var(--fg-muted);
+    }
+
+    .row-more summary code {
+        font-size: inherit;
+    }
+
+    .arms {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+        gap: var(--s-3) var(--s-5);
+        margin-top: var(--s-3);
+    }
+
+    .arm-detail h4 {
+        margin: 0 0 0.3rem;
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+    }
+
+    .arm-detail.absent p {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        line-height: 1.5;
+        color: var(--fg-faint);
+    }
+
+    .row-description {
+        display: block;
+        max-width: 34rem;
+        margin-top: var(--s-1);
+        color: var(--fg-muted);
+        font-family: var(--f-sans);
+        font-size: 0.72rem;
+        font-weight: 400;
+        line-height: 1.35;
+    }
+
+    .arm-detail dl {
+        display: grid;
+        grid-template-columns: 5.5rem minmax(0, 1fr);
+        column-gap: var(--s-3);
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        line-height: 1.5;
+        color: var(--fg-muted);
+    }
+
+    .arm-detail dl > div {
+        display: contents;
+    }
+
+    .arm-detail dt {
+        color: var(--fg-faint);
+    }
+
+    .arm-detail dd {
+        margin: 0 0 0.25rem;
+        overflow-wrap: anywhere;
+    }
+
+    /*
+     * A millisecond figure only means something against the frame it has to fit
+     * in. Nothing is derived from the share - no verdict, no capacity figure -
+     * it restates the published time in the unit a reader already thinks in.
+     */
+    .budget-row {
+        display: inline-flex;
+        gap: 0.35rem;
+        margin-right: var(--s-3);
+    }
+
+    .budget-row em {
+        font-style: normal;
+        color: var(--fg-faint);
+    }
+
+    .budget-row b {
+        font-weight: 400;
+    }
+
+    /*
+     * The profile records which rung each pooled run reached but not the median
+     * behind it, so a run can be shown as a side and never on the axis. Four
+     * marks that sit together and four that straddle the middle are different
+     * measurements with the same printed range.
+     */
+    .runs {
+        display: inline-flex;
+        gap: 3px;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .run {
+        width: 7px;
+        height: 7px;
+        border-radius: 2px;
+    }
+
+    .run.exojs {
+        background: var(--bench-lead);
+    }
+
+    .run.competitor {
+        background: var(--bench-loss);
+    }
+
+    .run.neither {
+        background: var(--fg-faint);
+    }
+
+    figcaption {
+        max-width: none;
+        margin-top: var(--s-3);
+        color: var(--fg-faint);
+        font-size: 0.72rem;
+        line-height: 1.5;
+    }
+
+    /*
+     * Narrow, the matrix becomes one card per archetype. The switch is on this
+     * block's own width because a docs page can hand it far less room than the
+     * window suggests, and it is a real re-layout rather than a scrollbar: the
+     * measurements never move sideways.
+     */
+    @container (width < 56rem) {
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td {
+            display: block;
+            width: auto;
+        }
+
+        thead {
+            display: none;
+        }
+
+        /* An archetype and its detail row are two table rows but one card, so the border opens on the first and closes on the second. */
+        tbody tr:not(.section):not(.detail) {
+            border: 1px solid var(--line-soft);
+            border-bottom: 0;
+            border-radius: var(--r-3) var(--r-3) 0 0;
+            background: var(--bg-elevated);
+            padding: var(--s-3) var(--s-4) 0;
+        }
+
+        tbody tr.detail {
+            margin-bottom: var(--s-3);
+            border: 1px solid var(--line-soft);
+            border-top: 0;
+            border-radius: 0 0 var(--r-3) var(--r-3);
+            background: var(--bg-elevated);
+            padding: 0 var(--s-4) var(--s-3);
+        }
+
+        tbody tr.section td {
+            margin: var(--s-5) 0 var(--s-2);
+            padding: 0;
+            background: none;
+            border-bottom: 0;
+        }
+
+        th,
+        td {
+            padding: 0;
+            border-bottom: 0;
+        }
+
+        tbody th[scope='row'] {
+            font-size: 0.92rem;
+            padding-bottom: var(--s-2);
+            margin-bottom: var(--s-2);
+            border-bottom: 1px solid var(--line-soft);
+        }
+
+        .row-count {
+            display: block;
+            margin-top: 0.15rem;
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: var(--fg-faint);
+        }
+
+        .cell,
+        .count {
+            padding: var(--s-2) 0;
+            border-top: 1px solid color-mix(in oklab, var(--line-soft), transparent 45%);
+            text-align: left;
+        }
+
+        .cell::before,
+        .count::before {
+            content: attr(data-label);
+            display: block;
+            margin-bottom: 0.35rem;
+            font-family: var(--f-mono);
+            font-size: 0.68rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--fg-faint);
+        }
+
+        /* Stacked into cards there is no column of bars left to align down, so the bar leads its comparison instead of trailing it. */
+        .plot {
+            order: 0;
+            margin-top: 0;
+        }
+
+        /*
+         * An arm with no cell keeps its place in the matrix, where the gap is
+         * visible against the columns beside it. Stacked, that same gap becomes
+         * a labelled block with a rule and a dash and the height of a result -
+         * so the card lists only what was measured, and the detail row below
+         * still names every arm that was not.
+         */
+        .cell.empty {
+            display: none;
+        }
+
+        /* The card carries the row's border; a second one under the disclosure would draw a line across the middle of it. */
+        tr.detail > td {
+            padding: var(--s-2) 0 0;
+            border-bottom: 0;
+        }
+
+        .arms {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        /* One comparison at a time is the readable unit here, and the picker names the pair the chips could only narrow to a group. */
+        .pick {
+            display: block;
+            font-family: var(--f-mono);
+            font-size: 0.7rem;
+            color: var(--fg-muted);
+        }
+
+        .chips {
+            display: none;
+        }
+    }
+</style>

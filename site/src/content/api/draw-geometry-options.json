@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "material",
-          "signature": "material?: MeshMaterial",
+          "signature": "material?: AnyMeshMaterial",
           "signatureTokens": [
             {
               "text": "material",
@@ -45,7 +45,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "MeshMaterial",
+              "text": "AnyMeshMaterial",
               "kind": "type"
             }
           ],

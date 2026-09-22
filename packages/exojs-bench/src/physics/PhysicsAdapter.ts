@@ -9,7 +9,7 @@ import type { BaseCellResult } from '../shared/result';
  * ExoJS user cares about when deciding stay-native vs. attach an adapter -
  * resting-contact solving, wide broad-phase + many active contacts, and a mix.
  */
-export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints';
+export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints' | 'settling-pile';
 
 /**
  * Body layout an archetype simulates, independent of what its per-step work is.
@@ -40,6 +40,19 @@ export interface PhysicsArchetypeSpec {
    */
   readonly perturbFraction: number;
   /**
+   * Steps between re-applying every perturbed body's initial velocity, or
+   * `undefined` for an archetype whose impulse is given once at setup.
+   *
+   * An impulse given once dissipates, and a scene without contacts to keep it
+   * alive comes to rest inside the warmup: every arm that sleeps then times an
+   * empty step, and the one that sleeps most eagerly wins a comparison of
+   * nothing. Re-driving the same bodies with the same velocities keeps the
+   * timed window on the work the archetype names, and stays deterministic
+   * across arms because the selection and the velocities are the shared
+   * descriptor's own.
+   */
+  readonly kickEverySteps?: number;
+  /**
    * Rays cast per step, or `undefined` for an archetype that runs no queries.
    *
    * Queries exercise the broad-phase acceleration structure rather than the
@@ -65,6 +78,31 @@ export interface PhysicsArchetypeSpec {
    * from its own static anchor.
    */
   readonly jointChainLength?: number;
+  /**
+   * Material override applied to every DYNAMIC body a scene builds, replacing
+   * that scene's own default friction/restitution.
+   *
+   * This is what lets an archetype reuse an existing {@link PhysicsSceneShape}
+   * (body layout, RNG draws and therefore `seedFor` seed) unchanged while
+   * differing from it in exactly one property - how contacts behave rather
+   * than where bodies start. `undefined` leaves the scene's own defaults in
+   * place.
+   */
+  readonly dynamicMaterial?: { readonly friction: number; readonly restitution: number };
+  /**
+   * Per-body-count warmup override, in fixed `1/60 s` steps, keyed by the
+   * exact values in {@link bodyCounts}. Replaces the shared `warmupStepsFor`
+   * schedule for this archetype's cells only; every other archetype keeps
+   * that schedule unchanged.
+   *
+   * `warmupStepsFor` is sized for a scene that reaches ITS steady state well
+   * inside the shared budget - a settled stack, a bouncing field, a resting
+   * mix. An archetype whose steady state takes longer needs its own number:
+   * a warmup that stops mid-transition times a mix of still-active and
+   * already-steady bodies, which is neither cost regime and not a number
+   * worth reporting.
+   */
+  readonly warmupStepsOverride?: Readonly<Record<number, number>>;
 }
 
 /** One physics matrix cell: an (engine, config, archetype, body count) combination to measure. */
@@ -112,8 +150,35 @@ export interface PhysicsCellResult extends BaseCellResult<PhysicsCellSpec> {
   readonly stepMsMedian: number;
   /** 95th-percentile per-`step` CPU time in milliseconds. */
   readonly stepMsP95: number;
+  /**
+   * `step`s one timing sample covered, the sample divided by this to give the
+   * per-step times above.
+   *
+   * `1` means every step was timed on its own, which is what a cell whose step
+   * cost comfortably clears the browser clock's grid does. A larger value means
+   * the step was too fast to time individually at the available resolution and
+   * the harness batched steps per sample instead; the median and p95 are then
+   * per-step averages over that batch, so their tail detail is coarser. The
+   * timed-step budget is unaffected - the batch only decides how finely the
+   * fixed window is sampled.
+   */
+  readonly stepsPerSample: number;
   /** Structural counters sampled after the timed window. */
   readonly structural: PhysicsStructuralCounters;
+}
+
+/**
+ * The two labels that name one physics engine arm in the matrix.
+ *
+ * Separate from {@link PhysicsAdapter} because the matrix is built before any
+ * arm is constructed: an arm the measuring browser cannot build still has an
+ * identity, and its cells are recorded as unavailable under it.
+ */
+export interface PhysicsArmIdentity {
+  /** Physics engine arm label, e.g. `'exojs-physics'`. */
+  readonly engine: string;
+  /** Arm configuration label, e.g. `'native'`. */
+  readonly config: string;
 }
 
 /**
@@ -121,16 +186,13 @@ export interface PhysicsCellResult extends BaseCellResult<PhysicsCellSpec> {
  * identically across arms - the CPU-domain counterpart of the rendering
  * {@link '../rendering/EngineAdapter'.EngineAdapter}.
  *
- * The native `@codexo/exojs-physics` arm is the only implementation today; the
- * planned matter.js + rapier adapter arms (a separate follow-on) implement this
- * same interface so a stay-native vs. attach-an-adapter comparison drops in
- * without the driver or archetypes changing.
+ * Every arm - the native `@codexo/exojs-physics` runtime and the matter.js,
+ * planck, nape-js and rapier libraries an app would attach instead - implements this one
+ * interface, so the stay-native vs. attach-an-adapter comparison rests on the
+ * harness driving all of them through the identical calls. Implementations run
+ * in the browser page, not in the driver process.
  */
-export interface PhysicsAdapter {
-  /** Physics engine arm label, e.g. `'exojs-physics'`. */
-  readonly engine: string;
-  /** Arm configuration label, e.g. `'native'`. */
-  readonly config: string;
+export interface PhysicsAdapter extends PhysicsArmIdentity {
   /**
    * Build the world and its bodies for the given archetype/body count from the
    * shared deterministic RNG seed, so every arm simulates the identical scene.
@@ -151,4 +213,44 @@ export interface PhysicsAdapter {
    * a warning, leaving its determinism unverified rather than blocking the run.
    */
   mutationSignature?(): string;
+  /**
+   * Census of how much of the world is still being simulated, for a diagnostic
+   * that runs OUTSIDE any timed window.
+   *
+   * The structural counters say what exists - bodies, constraints, contacts -
+   * and not what is stepped, so they cannot separate a world that legitimately
+   * went to sleep from one that is present but not simulating. Both report the
+   * same bodies and the same joints while one of them costs almost nothing per
+   * step.
+   *
+   * Optional and never read by a measurement: an arm whose library exposes no
+   * sleep state omits it, and no number a cell publishes depends on it.
+   */
+  sampleSleepState?(): PhysicsSleepCensus;
+  /**
+   * Where the world's dynamic bodies are and how fast they move, for the same
+   * class of diagnostic as {@link sampleSleepState} and under the same rule:
+   * outside any timed window, and read by no measurement.
+   *
+   * A contact count says a pair touches; it does not say whether a scene is
+   * hanging where it was built or has collapsed into a heap, and those are
+   * different findings with the same counter.
+   */
+  sampleBodySpread?(): PhysicsBodySpread;
+}
+
+/** Extent and peak speed of a world's dynamic bodies, at the moment of the call. */
+export interface PhysicsBodySpread {
+  readonly minY: number;
+  readonly maxY: number;
+  /** Largest linear speed any dynamic body carries, so a settled scene is distinguishable from a moving one. */
+  readonly maxSpeed: number;
+}
+
+/** How many of a world's dynamic bodies are still awake, at the moment of the call. */
+export interface PhysicsSleepCensus {
+  /** Dynamic bodies in the world. */
+  readonly dynamic: number;
+  /** Of those, how many the engine still integrates and solves. */
+  readonly awake: number;
 }

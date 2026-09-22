@@ -4,7 +4,7 @@ import AppShell from './AppShell.astro';
 interface Props {
     title: string;
     description?: string;
-    variant?: 'default' | 'guide' | 'api';
+    variant?: 'default' | 'guide' | 'api' | 'wide';
 }
 
 const { title, description = 'ExoJS documentation', variant = 'default' } = Astro.props;
@@ -13,6 +13,7 @@ const hasRail = Astro.slots.has('rail');
 const sidebarToggleLabel = variant === 'api' ? 'Browse API' : 'Browse chapters';
 const isGuideVariant = variant === 'guide';
 const isApiVariant = variant === 'api';
+const isWideVariant = variant === 'wide';
 ---
 
 <AppShell title={title} description={description}>
@@ -22,6 +23,7 @@ const isApiVariant = variant === 'api';
             !hasSidebar && 'docs-shell--full',
             isGuideVariant && 'docs-shell--guide',
             isApiVariant && 'docs-shell--api',
+            isWideVariant && 'docs-shell--wide',
             hasRail && 'docs-shell--with-rail',
         ]}
     >
@@ -508,6 +510,23 @@ const isApiVariant = variant === 'api';
 
     .docs-shell--full {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    /*
+     * Wide pages carry data tables rather than prose, so the shell's reading
+     * width would push their columns into a horizontal scroller for no reason.
+     */
+    .docs-shell--wide {
+        width: min(1720px, 100% - 2.5rem);
+    }
+
+    .docs-shell--wide .docs-shell__content {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+        padding: 0;
+        max-width: none;
     }
 
     .docs-shell--full .docs-shell__sidebar {

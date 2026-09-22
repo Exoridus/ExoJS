@@ -1,4 +1,4 @@
-import { Color, Geometry, INSTANCE_TRANSFORM_GLSL, Matrix, MeshMaterial, RenderBatch, Scene, ShaderSource } from '@codexo/exojs';
+import { Color, Geometry, INSTANCE_TRANSFORM_GLSL, Matrix, MeshMaterial, RenderBatch, Scene, Shader } from '@codexo/exojs';
 
 interface Spark {
   driftX: number;
@@ -18,7 +18,7 @@ const sparkGeometry = new Geometry({
 });
 
 const sparkMaterial = new MeshMaterial({
-  shader: new ShaderSource({
+  shader: new Shader({
     glsl: {
       vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}`,
       fragment: '#version 300 es\nprecision mediump float;\nout vec4 fragColor;\nvoid main() { fragColor = vec4(1.0); }',

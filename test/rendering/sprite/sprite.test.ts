@@ -88,6 +88,36 @@ describe('Sprite', () => {
       expect(sprite.width).toBe(40);
     });
 
+    test('a scale set while the texture is loading survives hydration', async () => {
+      const { texture, finishLoad } = makeDeferredTexture();
+      const sprite = new Sprite(texture).setScale(5, 2);
+
+      finishLoad(128, 64);
+      await texture.loaded;
+      await Promise.resolve(); // flush the .then microtask
+
+      expect(sprite.textureFrame.width).toBe(128);
+      expect(sprite.scale.x).toBe(5);
+      expect(sprite.scale.y).toBe(2);
+      expect(sprite.width).toBe(640);
+      expect(sprite.height).toBe(128);
+    });
+
+    test('a size assigned while the texture is loading wins over an earlier scale', async () => {
+      const { texture, finishLoad } = makeDeferredTexture();
+      const sprite = new Sprite(texture).setScale(5);
+
+      sprite.width = 32;
+
+      finishLoad(128, 64);
+      await texture.loaded;
+      await Promise.resolve(); // flush the .then microtask
+
+      expect(sprite.width).toBe(32);
+      expect(sprite.scale.x).toBe(0.25);
+      expect(sprite.scale.y).toBe(5);
+    });
+
     test('an explicit frame set while the texture is loading survives hydration', async () => {
       const { texture, finishLoad } = makeDeferredTexture();
       const sprite = new Sprite(texture);

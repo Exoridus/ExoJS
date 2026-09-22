@@ -31,7 +31,7 @@ class BloomLiteScene extends Scene {
     this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(1.9);
     this.baseSprite = new Sprite(this.baseRt);
     this.glowSprite = new Sprite(this.blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
-    this.blur = new BlurFilter({ radius: 10, quality: 2 });
+    this.blur = new BlurFilter({ strength: 5 });
     // The same sprite is drawn twice with different tints (white base, warm glow), so each
     // off-screen step is a callback that sets the tint before rendering.
     this.pipeline = new RenderPipeline()

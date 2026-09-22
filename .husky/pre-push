@@ -1,7 +1,15 @@
 #!/usr/bin/env sh
 # Pre-push verification.
 #
-# Branch pushes:  `verify:quick` — the static CI-parity gates: typecheck (core
+# Branch pushes:  first `scripts/ci/push-scope.ts`, which answers how much of
+#                 the below the pushed range needs. A range that changes no
+#                 tracked file verifies nothing; one carrying published
+#                 benchmark data alone runs only `verify:bench-results`, the
+#                 single gate that opens those files. Anything else - including
+#                 a range whose scope cannot be determined - takes the full
+#                 path:
+#
+#                 `verify:quick` — the static CI-parity gates: typecheck (core
 #                 + guides + examples + extension packages), lint:all,
 #                 format:check, docs:api:check and the site gates. Then the test
 #                 lanes the pushed range actually requires, chosen from
@@ -23,10 +31,6 @@
 #                 re-verified locally because CI already ran every lane on the
 #                 push that brought the commit to main; a tag that would be
 #                 rejected remotely is rejected here first.
-#
-# Also, on branch pushes only: a path-gated `@codexo/exojs-bench` typecheck
-# (see the block below verify:quick — it is intentionally NOT part of
-# verify:quick/CI; see packages/exojs-bench/README.md for why).
 #
 # Refs being pushed are read from stdin in the format:
 #   <local_ref> <local_sha> <remote_ref> <remote_sha>
@@ -57,24 +61,6 @@ while read local_ref local_sha remote_ref remote_sha; do
     esac
 done
 
-# verify:quick includes `typecheck:site`, which type-checks the site/examples
-# package against the PUBLISHED entry points (package.json `exports` →
-# dist/esm/*.d.ts) rather than against src/. Without a build those declaration
-# files don't exist and tsc reports a wall of ts(2307) "Cannot find module
-# 'exojs'" — a failure mode that reads like a broken import in the pushed
-# change, not like a missing prerequisite. Checking for the root entry point's
-# .d.ts up front turns that into one actionable line. Deliberately not running
-# the build here: it is slow enough that a hook doing it silently would be the
-# thing people bypass.
-if [ "$is_branch_push" = "1" ]; then
-    if [ ! -e dist/esm/index.d.ts ]; then
-        echo "[pre-push] dist/ is missing — 'typecheck:site' would fail with ts(2307) 'Cannot find module exojs'."
-        echo "[pre-push] It type-checks site/examples against the published entry points, which only exist after a build."
-        echo "[pre-push] Run 'pnpm build', then push again."
-        exit 1
-    fi
-fi
-
 if [ "$is_tag_push" = "1" ]; then
     echo "[pre-push] tag push detected - checking the tagged commit is releasable"
     git fetch --quiet origin main || exit 1
@@ -84,12 +70,9 @@ if [ "$is_tag_push" = "1" ]; then
 fi
 
 if [ "$is_branch_push" = "1" ]; then
-    echo "[pre-push] running verify:quick (static CI-parity gates)"
-    npm run verify:quick || exit 1
-
     # Range for lane selection. A branch with no remote tracking ref yet has no
     # base to diff against, so fall back to the merge base with origin/HEAD
-    # (the remote's default branch, whichever one that is) — and to running
+    # (the remote's default branch, whichever one that is) - and to running
     # every lane if even that is unavailable, because a push whose scope cannot
     # be determined must not be validated partially.
     lane_base="$push_base_sha"
@@ -97,51 +80,42 @@ if [ "$is_branch_push" = "1" ]; then
         lane_base=$(git merge-base "$push_head_sha" origin/HEAD 2>/dev/null || true)
     fi
 
-    if [ -n "$lane_base" ]; then
-        echo "[pre-push] running the test lanes this push requires"
-        npm run lanes -- --run --tests-only --base "$lane_base" || exit 1
-    else
-        echo "[pre-push] no base commit to scope lanes against — running every lane"
-        npm run lanes -- --run --tests-only --all || exit 1
-    fi
-fi
+    # How much of the above the range actually needs. `full` for anything
+    # `push-scope.ts` does not positively recognise, including an undeterminable
+    # range, so a narrower answer is always a deliberate one.
+    scope=$(node scripts/ci/push-scope.ts "$lane_base" "$push_head_sha")
 
-# Path-gated bench typecheck. @codexo/exojs-bench is deliberately kept out of
-# verify:quick / CI: its competitor devDependencies (pixi/phaser/excalibur/
-# matter/rapier) only resolve via `bench:setup`'s `pnpm install --dir
-# competitors --ignore-workspace`, which bypasses pnpm-workspace.yaml's
-# minimumReleaseAge supply-chain gate — installing that inside the shared-CI
-# trust boundary is exactly what we don't want. So this hook is the only
-# automated backstop, and it stays cheap for everyone else:
-#   - fires ONLY when the pushed commits touch packages/exojs-bench/** (zero
-#     cost otherwise — no diff, no pnpm call);
-#   - only runs the actual typecheck when the competitor deps are already
-#     linked locally (never forces the ~235MB bench:setup install on push —
-#     that would punish a push just because the optional deps aren't there
-#     yet, so it prints a warning and skips instead of failing).
-# Residual gap (see packages/exojs-bench/README.md): an engine API change
-# under src/ that breaks the bench adapters' types, without ALSO touching
-# packages/exojs-bench/**, is not caught here.
-if [ "$is_branch_push" = "1" ] && [ -n "$push_head_sha" ]; then
-    if [ -z "$push_base_sha" ]; then
-        # New branch / no remote tracking ref yet — fall back to the
-        # merge-base with origin/HEAD so the check still has a diff range.
-        push_base_sha=$(git merge-base "$push_head_sha" origin/HEAD 2>/dev/null || true)
-    fi
+    case "$scope" in
+        none)
+            echo "[pre-push] the pushed range changes no tracked file - nothing to verify"
+            ;;
+        data)
+            echo "[pre-push] published benchmark data only - running its own gate"
+            npm run verify:bench-results || exit 1
+            ;;
+        *)
+            # verify:quick includes `typecheck:site` and `full-bundle:exports:check`, which
+            # read the PUBLISHED entry points (package.json `exports` → dist/) rather than
+            # src/. A dist that is missing fails them with a wall of ts(2307) "Cannot find
+            # module 'exojs'"; one that merely lags the sources - the state every local
+            # edit leaves behind - fails the freshness gate inside the site group, after
+            # the typecheck and lint groups have already run. Either way the push is lost,
+            # the build runs by hand, and everything runs again. So the build runs here
+            # instead, exactly when the source stamp says it is due and never otherwise: a
+            # clean tree pays one hash walk.
+            echo "[pre-push] checking dist against the sources"
+            node scripts/check-dist-fresh.ts --rebuild || exit 1
 
-    bench_changed=""
-    if [ -n "$push_base_sha" ]; then
-        bench_changed=$(git diff --name-only "$push_base_sha" "$push_head_sha" -- packages/exojs-bench 2>/dev/null)
-    fi
+            echo "[pre-push] running verify:quick (static CI-parity gates)"
+            npm run verify:quick || exit 1
 
-    if [ -n "$bench_changed" ]; then
-        if [ -e packages/exojs-bench/node_modules/pixi.js ]; then
-            echo "[pre-push] packages/exojs-bench changed — running bench typecheck"
-            pnpm --filter @codexo/exojs-bench typecheck || exit 1
-        else
-            echo "[pre-push] WARNING: packages/exojs-bench changed but its competitor deps aren't linked locally."
-            echo "[pre-push] Run 'pnpm --filter @codexo/exojs-bench bench:setup' (or 'pnpm typecheck:bench') to type-check it, then push again."
-            echo "[pre-push] Skipping bench typecheck for this push (not blocking)."
-        fi
-    fi
+            if [ -n "$lane_base" ]; then
+                echo "[pre-push] running the test lanes this push requires"
+                npm run lanes -- --run --tests-only --base "$lane_base" || exit 1
+            else
+                echo "[pre-push] no base commit to scope lanes against - running every lane"
+                npm run lanes -- --run --tests-only --all || exit 1
+            fi
+            ;;
+    esac
 fi

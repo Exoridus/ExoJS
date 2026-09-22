@@ -1,7 +1,7 @@
 // Auto-generated from pause-blur.ts - edit the .ts source, not this file.
 import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Keyboard, Label, Panel, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const PAUSE_BLUR_RADIUS = 6;
+const PAUSE_BLUR_STRENGTH = 3;
 const PAUSE_FADE_SECONDS = 0.35;
 /**
  * Pause without a scene stack: a pause overlay lives on `scene.ui` (always
@@ -14,7 +14,7 @@ class GameScene extends Scene {
   sprite;
   time = 0;
   frozen = false;
-  blur = new BlurFilter({ radius: 0, quality: 2 });
+  blur = new BlurFilter({ strength: 0 });
   pausePanel;
   pauseLabel;
   hud;
@@ -61,9 +61,9 @@ class GameScene extends Scene {
     this.pausePanel.visible = this.frozen;
     this.pauseLabel.visible = this.frozen;
     if (this.frozen) {
-      this.blur.radius = 0;
+      this.blur.strength = 0;
       this.root.filters = [this.blur];
-      this.tweens.create(this.blur).to({ radius: PAUSE_BLUR_RADIUS }, PAUSE_FADE_SECONDS).start();
+      this.tweens.create(this.blur).to({ strength: PAUSE_BLUR_STRENGTH }, PAUSE_FADE_SECONDS).start();
     } else {
       this.root.clearFilters();
     }

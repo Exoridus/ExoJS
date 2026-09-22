@@ -47,7 +47,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
    * nine-slice has no custom-material path to exclude.
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // Projection-uniform skip state: a matching (view identity, view.updateId,
@@ -275,7 +275,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     // were projected with a now-changed view transform (same View object mutated
     // between merged flushes) would retroactively re-project them; end that pass
     // first. Guarded on the arena tracking the current active pass.
-    const activePass = backend._passCoordinator.activePass;
+    const activePass = backend.passCoordinator.activePass;
     const groupChanged = this._groupContentChanged(backend);
 
     if (
@@ -284,7 +284,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       this._instanceArena.tracksPass(activePass) &&
       (activePass.viewUpdateId !== backend.view.updateId || groupChanged)
     ) {
-      backend._passCoordinator.endPass();
+      backend.passCoordinator.endPass();
       this._instanceArena.resetPass();
     }
 
@@ -316,7 +316,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       const batchBytes = this._quadIndex * instanceStrideBytes;
       const needCount = this._maxNodeIndex + 1;
 
-      const coordinator = backend._passCoordinator;
+      const coordinator = backend.passCoordinator;
       let active = coordinator.acquirePass();
 
       this._instanceArena.syncPass(active);
@@ -358,7 +358,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
       const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, this._currentTexture!);
 
-      const stencil = backend._passCoordinator.stencilActive;
+      const stencil = backend.passCoordinator.stencilActive;
       const pipeline = this._getPipeline(this._currentBlendMode!, backend.renderTargetFormat, stencil);
 
       pass.setPipeline(pipeline);
@@ -373,7 +373,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       backend.stats.drawCalls++;
     } else if (backend.clearRequested) {
       // Honor a pending clear with an open pass (submitted at the next boundary).
-      backend._passCoordinator.acquirePass();
+      backend.passCoordinator.acquirePass();
     }
 
     // Retained capture: while a capture window is active,
@@ -522,7 +522,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       return;
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
 
     // Same-frame texture mutation guard: resolving the bindings below
     // re-uploads mutated content on the queue timeline BEFORE the deferred

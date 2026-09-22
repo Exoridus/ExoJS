@@ -21,6 +21,20 @@ export interface HarnessOptions {
   readonly height?: number;
   readonly spriteRendererBatchSize?: number;
   readonly tileRendererBatchSize?: number;
+  /**
+   * Register the core renderer bindings on the backend. Default `true`.
+   *
+   * Pass `false` to get a backend whose registry is empty, so a caller can bind
+   * one renderer of its own choosing: binding a core target twice throws, so a
+   * suite that materialises the Sprite binding itself cannot start from a
+   * backend that already has it.
+   */
+  readonly coreRenderers?: boolean;
+  /**
+   * Extensions `getExtension` answers with, by name. Empty by default, so the
+   * backend probes a context that supports none of the optional ones.
+   */
+  readonly extensions?: Readonly<Record<string, object>>;
 }
 
 /** A wired-up backend ready to render scenes against the recording fake context. */
@@ -88,7 +102,7 @@ export const createWebGl2Harness = (options: HarnessOptions = {}): WebGl2Harness
   const width = options.width ?? 1280;
   const height = options.height ?? 720;
   const recorder = new GlRecorder();
-  const context = createFakeWebGl2Context(recorder);
+  const context = createFakeWebGl2Context(recorder, options.extensions ?? {});
   const canvas = createFakeCanvas(width, height, context);
 
   const app = {
@@ -102,7 +116,9 @@ export const createWebGl2Harness = (options: HarnessOptions = {}): WebGl2Harness
 
   const backend = new WebGl2Backend(app as unknown as ConstructorParameters<typeof WebGl2Backend>[0]);
 
-  wireCoreRenderers(backend, options.spriteRendererBatchSize === undefined ? {} : { spriteRendererBatchSize: options.spriteRendererBatchSize });
+  if (options.coreRenderers !== false) {
+    wireCoreRenderers(backend, options.spriteRendererBatchSize === undefined ? {} : { spriteRendererBatchSize: options.spriteRendererBatchSize });
+  }
 
   return {
     backend,

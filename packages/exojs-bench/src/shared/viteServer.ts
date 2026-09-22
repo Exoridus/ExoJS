@@ -21,17 +21,84 @@ const REPO_ROOT = resolve(HERE, '..', '..', '..', '..');
 /** The engine's TypeScript source root every harness page benchmarks (`<repo>/src`). */
 const ENGINE_SRC = resolve(REPO_ROOT, 'src');
 
-/** Shader extensions the engine imports as text. */
+/**
+ * Engine and official-extension package entries, mapped to their SOURCE.
+ *
+ * The engine's `@codexo/exojs-source` condition only redirects a package's own
+ * `#*` imports; the package ENTRY still resolves through `exports`, which points
+ * at `dist`. Without these aliases an extension arm would load the built engine
+ * while the adapter beside it loads the source, so one cell would measure a
+ * different tree from the rest of the matrix - and the two copies of a class
+ * fail every `instanceof` across the boundary, which is how a `ParticleSystem`
+ * silently kept its default capacity instead of the one the cell asked for.
+ */
+const SOURCE_PACKAGE_ALIASES: ReadonlyArray<{ find: string; replacement: string }> = [
+  { find: '@codexo/exojs-lighting', replacement: resolve(REPO_ROOT, 'packages/exojs-lighting/src/index.ts') },
+  { find: '@codexo/exojs-particles', replacement: resolve(REPO_ROOT, 'packages/exojs-particles/src/index.ts') },
+  { find: '@codexo/exojs-tilemap', replacement: resolve(REPO_ROOT, 'packages/exojs-tilemap/src/index.ts') },
+  { find: '@codexo/exojs/renderer-sdk', replacement: resolve(ENGINE_SRC, 'renderer-sdk.ts') },
+  { find: '@codexo/exojs/extensions', replacement: resolve(ENGINE_SRC, 'extensions/index.ts') },
+  { find: '@codexo/exojs', replacement: resolve(ENGINE_SRC, 'index.ts') },
+];
+
+/**
+ * Source roots whose `#*` specifiers belong to the package they sit in rather
+ * than to the engine - the official extensions the harness measures through.
+ * The benchmark package itself is deliberately absent: its adapters use `#*` to
+ * reach engine modules.
+ */
+const EXTENSION_SOURCE_ROOTS: readonly string[] = [resolve(REPO_ROOT, 'packages/exojs-particles'), resolve(REPO_ROOT, 'packages/exojs-tilemap')];
+
+/**
+ * Resolve `#...` specifiers to the ENGINE source - but only for importers
+ * outside the extension packages.
+ *
+ * Each extension package has its own `#*` map pointing at its own `src`, and a
+ * blanket alias would send `#gpu/ParticleGpuState` into the engine tree, where
+ * no such module exists. Declining here leaves those specifiers to Vite's normal
+ * `imports` resolution, which the source conditions already steer to the
+ * package's own sources.
+ */
+const engineHashImports = () => ({
+  name: 'exojs-bench-engine-hash-imports',
+  enforce: 'pre',
+  resolveId(source: string, importer: string | undefined) {
+    if (!source.startsWith('#') || source.endsWith('.vert') || source.endsWith('.frag')) {
+      return null;
+    }
+
+    if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) {
+      return null;
+    }
+
+    return `${resolve(ENGINE_SRC, source.slice(1))}.ts`;
+  },
+});
+
+/** WebGl2Shader extensions the engine imports as text. */
 const SHADER_EXTENSIONS = ['.vert', '.frag', '.glsl', '.wgsl'] as const;
 
 /**
- * Competitor library arms whose installed version + resolution are stamped into
- * every report header (via the shared `readLibraryProvenance`) and, when
- * resolvable, pre-bundled by Vite (see {@link resolvableCompetitors}). Pinned
- * exact in `@codexo/exojs-bench`'s devDependencies, so an "ExoJS vs X" number is
- * auditable against a reproducible build.
+ * Competitor library arms of the rendering domain, whose installed version +
+ * resolution are stamped into every rendering report header (via the shared
+ * `readLibraryProvenance`) and, when resolvable, pre-bundled by Vite (see
+ * {@link resolvableCompetitors}). Pinned exact in `@codexo/exojs-bench`'s
+ * devDependencies, so an "ExoJS vs X" number is auditable against a reproducible
+ * build.
  */
-export const LIBRARY_ARMS = ['pixi.js', 'phaser', 'excalibur'] as const;
+export const RENDERING_LIBRARY_ARMS = ['pixi.js', 'phaser', 'excalibur'] as const;
+
+/**
+ * Competitor library arms of the physics domain, resolved and pre-bundled by the
+ * same mechanism as the rendering ones because that domain is measured in the
+ * page too. `matter-js` is CommonJS and `@dimforge/rapier2d-compat` carries its
+ * own WASM, so both only reach the browser's native ESM loader through the
+ * optimizer.
+ */
+export const PHYSICS_LIBRARY_ARMS = ['matter-js', 'planck', '@dimforge/rapier2d-compat', '@newkrok/nape-js'] as const;
+
+/** Every competitor arm this package can measure, across both domains. */
+export const LIBRARY_ARMS = [...RENDERING_LIBRARY_ARMS, ...PHYSICS_LIBRARY_ARMS] as const;
 
 /** ExoJS package version, read from the repository root manifest. */
 export const readEngineVersion = (): string => {
@@ -41,16 +108,16 @@ export const readEngineVersion = (): string => {
 };
 
 /**
- * The subset of {@link LIBRARY_ARMS} actually resolvable from this package, so
- * Vite's `optimizeDeps.include` only pre-bundles competitors that are present. A
+ * The subset of `arms` actually resolvable from this package, so Vite's
+ * `optimizeDeps.include` only pre-bundles competitors that are present. A
  * competitor left unlinked (no `bench:setup`) is simply omitted rather than
  * crashing esbuild's optimizer at server startup - an ExoJS-only run then needs
  * none of the competitor deps present.
  */
-const resolvableCompetitors = (): string[] => {
+const resolvableCompetitors = (arms: readonly string[]): string[] => {
   const nodeRequire = createRequire(import.meta.url);
 
-  return LIBRARY_ARMS.filter(name => {
+  return arms.filter(name => {
     try {
       nodeRequire.resolve(name);
 
@@ -183,11 +250,17 @@ export interface StartViteServerOptions {
    * repository directly instead of being copied across devices by hand.
    */
   readonly extraPlugins?: readonly unknown[];
+  /**
+   * Competitor arms this page can import, pre-bundled when resolvable. Defaults
+   * to every arm; a domain passes its own subset so a run never pays the
+   * optimizer cost of the other domain's libraries.
+   */
+  readonly libraryArms?: readonly string[];
 }
 
 /** Starts a programmatic Vite dev server rooted at a harness page directory. */
 export const startViteServer = async (options: StartViteServerOptions): Promise<ViteDevServer> => {
-  const { pageDir, version, host = '127.0.0.1', https, extraDefine, extraPlugins = [] } = options;
+  const { pageDir, version, host = '127.0.0.1', https, extraDefine, extraPlugins = [], libraryArms = LIBRARY_ARMS } = options;
   const vite = await loadVite();
   const server = await vite.createServer({
     configFile: false,
@@ -213,7 +286,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // condition below, so the engine graph is measured exactly as it ships.
     // `.vert`/`.frag` specifiers carry their extension and are handled by
     // `realShaderPlugin`'s transform.
-    resolve: { alias: [{ find: /^#(.*)$/, replacement: `${ENGINE_SRC}/$1` }], conditions: srcConditions },
+    resolve: { alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag)$/, replacement: `${ENGINE_SRC}/$1.$2` }], conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
     // `noDiscovery` keeps the automatic dep scanner OFF - it runs esbuild over
     // the whole import graph, which would choke on the engine's `.vert`/`.frag`
@@ -227,9 +300,9 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // (see `resolvableCompetitors`) rather than crashing the optimizer. Engine
     // source still resolves to local `.ts` files via the `#*` alias and is never
     // pre-bundled.
-    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors() },
+    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(libraryArms) },
     define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline'), ...extraDefine },
-    plugins: [realShaderPlugin, devGlobalsPlugin(version), ...extraPlugins],
+    plugins: [engineHashImports(), realShaderPlugin, devGlobalsPlugin(version), ...extraPlugins],
   });
 
   await server.listen();

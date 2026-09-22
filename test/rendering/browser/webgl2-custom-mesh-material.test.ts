@@ -3,9 +3,9 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Shader } from '#rendering/shader/Shader';
 import { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
@@ -206,7 +206,7 @@ describe('custom MeshMaterial WebGL2 browser', () => {
     // white/black fallback); the per-channel uniform proves uniform binding.
     const pattern = createSolidTexture(128, 128, 128);
     const material = new MeshMaterial({
-      shader: new ShaderSource({ glsl: { vertex: customVertex, fragment: customFragment } }),
+      shader: new Shader({ glsl: { vertex: customVertex, fragment: customFragment } }),
       uniforms: { u_userColor: [1, 0, 0.5, 1] as const },
       textures: { u_pattern: pattern },
       sampler: { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat },
@@ -238,7 +238,7 @@ describe('custom MeshMaterial WebGL2 browser', () => {
     const backend = await createBackend();
     const pattern = createSolidTexture(255, 255, 255);
     const material = new MeshMaterial({
-      shader: new ShaderSource({ glsl: { vertex: customVertex, fragment: customFragment } }),
+      shader: new Shader({ glsl: { vertex: customVertex, fragment: customFragment } }),
       uniforms: { u_userColor: [1, 0, 0, 1] as const },
       textures: { u_pattern: pattern },
     });
@@ -266,7 +266,7 @@ describe('custom MeshMaterial WebGL2 browser', () => {
     const texture = createSolidTexture(255, 255, 255);
     const geometry = createQuadGeometry(12);
     const material = new MeshMaterial({
-      shader: new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } }),
+      shader: new Shader({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } }),
       uniforms: { u_userColor: [1, 1, 1, 1] as const },
     });
     const root = new Container();
@@ -297,7 +297,7 @@ describe('custom MeshMaterial WebGL2 browser', () => {
     const texture = createSolidTexture(255, 255, 255);
     const geometry = createQuadGeometry(12);
     const material = new MeshMaterial({
-      shader: new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } }),
+      shader: new Shader({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } }),
       uniforms: { u_userColor: [1, 1, 1, 1] as const },
     });
     const root = new Container();
@@ -329,7 +329,7 @@ describe('custom MeshMaterial WebGL2 browser', () => {
     const leftGeometry = createQuadGeometry(12);
     const rightGeometry = createQuadGeometry(12);
     const material = new MeshMaterial({
-      shader: new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } }),
+      shader: new Shader({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } }),
       uniforms: { u_userColor: [1, 1, 1, 1] as const },
     });
     const root = new Container();
@@ -358,7 +358,7 @@ describe('custom MeshMaterial WebGL2 browser', () => {
     const backend = await createBackend();
     const texture = createSolidTexture(255, 255, 255);
     const geometry = createQuadGeometry(12);
-    const sharedShader = new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } });
+    const sharedShader = new Shader({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } });
     const normalMaterial = new MeshMaterial({
       shader: sharedShader,
       uniforms: { u_userColor: [1, 1, 1, 1] as const },
@@ -397,7 +397,7 @@ describe('custom MeshMaterial WebGL2 browser', () => {
     const geometry = createQuadGeometry(12);
     const patternA = createSolidTexture(255, 255, 255);
     const patternB = createSolidTexture(255, 0, 0);
-    const sharedShader = new ShaderSource({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } });
+    const sharedShader = new Shader({ glsl: { vertex: instancedBatchVertex, fragment: instancedBatchFragment } });
     const leftMaterial = new MeshMaterial({
       shader: sharedShader,
       uniforms: { u_userColor: [1, 1, 1, 1] as const },

@@ -2,7 +2,7 @@ import type { PointLike } from '@codexo/exojs';
 
 import { applyInverseTransform, applyTransform } from '../math';
 import { PhysicsBody } from '../PhysicsBody';
-import { Joint } from './Joint';
+import { Joint, type JointSoftness } from './Joint';
 
 /** Construction options for a {@link MouseJoint}. */
 export interface MouseJointOptions {
@@ -85,7 +85,7 @@ export class MouseJoint extends Joint {
   }
 
   /** @internal */
-  public override _prepare(h: number): void {
+  public override _prepare(h: number, _rigid: JointSoftness): void {
     const body = this.bodyB;
 
     this._active = this.enabled && !body.isSleeping && body.invMass > 0;

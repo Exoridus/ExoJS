@@ -130,7 +130,7 @@ const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
 /**
  * Opaque, renderer-private snapshot carried on {@link WebGpuRetainedBatchPayload.rendererData}
  * for one recorded Text/BitmapText batch.
- * Text opts out of the shared `TransformBuffer` (`_consumesSharedTransform ===
+ * Text opts out of the shared `TransformBuffer` (`consumesSharedTransform ===
  * false`), so the generic bundle machinery has nothing to persist for it - this
  * is the renderer's own carrier from record time (`flush()`) through to replay
  * (`replayRetainedBatch`), where `TextRetainedReplayState` uploads it into a
@@ -260,7 +260,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * transform records for text draws.
    * @internal
    */
-  public readonly _consumesSharedTransform = false;
+  public readonly consumesSharedTransform = false;
 
   /**
    * Retained-batch opt-in: one compatible shader/page class containing at most
@@ -270,7 +270,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * optimization.
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   // Retained-batch record-time scratch: which capture windows this renderer
   // has already recorded a batch into (nesting-safe - a fresh
@@ -508,7 +508,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       this._tryRecordRetainedBatch(backend, batches);
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
     const flushVertexBytes = packedV * vertexStrideBytes;
     const flushIndexBytes = alignIndexBytes(packedI);
 
@@ -1252,7 +1252,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       return;
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
     const state = this._getTextReplayState(bundle, device);
 
     if (state.lastPayload !== payload) {
@@ -1447,7 +1447,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * renderer, exactly like `WebGpuNineSliceSpriteRenderer`'s static per-quad
    * index buffer serves every nine-slice instance.
    */
-  private _ensureRetainedQuadIndexBuffer(device: GPUDevice, quadCount: number, coordinator: WebGpuBackend['_passCoordinator']): GPUBuffer {
+  private _ensureRetainedQuadIndexBuffer(device: GPUDevice, quadCount: number, coordinator: WebGpuBackend['passCoordinator']): GPUBuffer {
     if (this._retainedQuadIndexBuffer !== null && this._retainedQuadIndexCapacity >= quadCount) {
       return this._retainedQuadIndexBuffer;
     }

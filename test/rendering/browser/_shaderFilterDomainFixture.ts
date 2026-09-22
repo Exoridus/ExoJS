@@ -10,11 +10,11 @@
  */
 
 import type { ReadonlyRectangle, Rectangle } from '#math/Rectangle';
-import { createFilterShaderSource, ShaderFilter } from '#rendering/filters/ShaderFilter';
+import { createFilterShader, ShaderFilter } from '#rendering/filters/ShaderFilter';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
-const passThroughSource = createFilterShaderSource({
+const passThroughSource = createFilterShader({
   glsl: {
     fragment: `#version 300 es
 precision mediump float;
@@ -61,7 +61,7 @@ export const PROBE_ROWS: ReadonlyArray<readonly [y: number, insideSquare: boolea
 /** Logical units {@link ShiftingPassThrough} moves its input down by, and reaches above and below. */
 export const V_SHIFT = 8;
 
-const shiftingSource = createFilterShaderSource({
+const shiftingSource = createFilterShader({
   glsl: {
     fragment: `#version 300 es
 precision mediump float;

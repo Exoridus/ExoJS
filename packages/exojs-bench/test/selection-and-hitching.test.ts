@@ -1,6 +1,13 @@
 import type { CellResult, CellSpec } from '../src/rendering/EngineAdapter';
 import { isHitching } from '../src/rendering/report';
 import { applySelection } from '../src/rendering/selection';
+import type { ClockReport } from '../src/shared/clock';
+
+/**
+ * A clock fine enough that no fixture duration trips the timer check, so a test
+ * asserts on the comparison it is about rather than on the grid it was read on.
+ */
+const FINE_CLOCK: ClockReport = { resolutionMs: 0.001, crossOriginIsolated: true };
 
 const cell = (overrides: Partial<CellSpec> = {}): CellSpec => ({
   engine: 'exojs',
@@ -22,6 +29,7 @@ const result = (cpuMsMedian: number, cpuMsP95: number): CellResult => ({
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: 0, textureBinds: 0, bufferUploads: 0 },
+  clock: FINE_CLOCK,
   status: 'ok',
 });
 

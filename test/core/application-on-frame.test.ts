@@ -1,6 +1,9 @@
 import type { MockInstance } from 'vitest';
 
+import { NodeDirtyIndex } from '#core/nodeDirtyIndex';
 import { Time } from '#core/units';
+
+import { installFrameLoopDoubles } from '../support/application-frame-loop';
 /**
  * Tests for Application.onFrame signal (added in 0.6.17).
  */
@@ -154,7 +157,8 @@ describe('Application.onFrame', () => {
     const sceneDirector = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
-      preUpdate: vi.fn(),
+      preFrame: vi.fn(),
+      postFrame: vi.fn(),
       fixedUpdate: vi.fn(),
       update: vi.fn(() => {
         callOrder.push('sceneDirector.update');
@@ -184,10 +188,20 @@ describe('Application.onFrame', () => {
     };
 
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
+
+    installFrameLoopDoubles(app);
+
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
-    rawApp['systems'] = { _beginFrame: vi.fn(), _endFrame: vi.fn(), _preUpdate: vi.fn(), _fixedUpdate: vi.fn(), _update: vi.fn(), _draw: vi.fn() };
+    rawApp['systems'] = {
+      _beginFrame: vi.fn(),
+      _endFrame: vi.fn(),
+      _preFrame: vi.fn(),
+      _fixedUpdate: vi.fn(),
+      _update: vi.fn(),
+      _draw: vi.fn(),
+      _postFrame: vi.fn(),
+    };
     rawApp['scenes'] = sceneDirector;
     rawApp['input'] = { _prepareFrame: vi.fn(), _finishInteractionFrame: vi.fn() };
     rawApp['interaction'] = { _prepareFrame: vi.fn() };
@@ -195,14 +209,14 @@ describe('Application.onFrame', () => {
     rawApp['tweens'] = { _prepareFrame: vi.fn() };
     rawApp['_rendering'] = { _prepareFrame: vi.fn() };
     rawApp['_backend'] = backend;
-    rawApp['_frameClock'] = { elapsedSeconds: 0.016, restart: vi.fn() };
-    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
     // initializer (`= Time.seconds(0)`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = Time.seconds(0);
-    rawApp['_updateHandler'] = vi.fn();
-    rawApp['_frameCount'] = 0;
+    rawApp['_dirtyIndex'] = new NodeDirtyIndex();
+    // Same reason: the frame's draw path reads the frame-pass pipeline, and an
+    // uninitialised field is not the `null` an application without one holds.
+    rawApp['_framePasses'] = null;
     rawApp['onFrame'] = onFrame;
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 

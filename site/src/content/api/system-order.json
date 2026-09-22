@@ -55,6 +55,19 @@
           "description": ""
         },
         {
+          "name": "CoreCoroutines",
+          "signature": "CoreCoroutines",
+          "signatureTokens": [
+            {
+              "text": "CoreCoroutines",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "CoreInput",
           "signature": "CoreInput",
           "signatureTokens": [
@@ -73,19 +86,6 @@
           "signatureTokens": [
             {
               "text": "CoreInteraction",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "CoreJobs",
-          "signature": "CoreJobs",
-          "signatureTokens": [
-            {
-              "text": "CoreJobs",
               "kind": "name"
             }
           ],

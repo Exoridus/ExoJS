@@ -1,4 +1,4 @@
-// Shader files loaded as source text by the ExoJS shader plugin. Declared here
+// WebGl2Shader files loaded as source text by the ExoJS shader plugin. Declared here
 // rather than pulled in from `@codexo/exojs-build/client` because the engine's
 // own program must not depend on a package it only uses at build time.
 // See `@codexo/exojs-build`.
@@ -28,9 +28,8 @@ declare module '*?worklet' {
 }
 
 // The Web Worker counterpart: a `*.worker.ts` module bundled into one
-// classic-script-compatible string, ready for `new Blob([source])` →
-// `URL.createObjectURL` → `new Worker(url)`. See
-// `@codexo/exojs-build`.
+// classic-script-compatible string, ready to hand to `InlineWorker`. See
+// `@codexo/exojs-build` for the transform.
 declare module '*?worker' {
   const content: string;
   export default content;

@@ -13,6 +13,8 @@ import { Application, ApplicationState } from '#core/Application';
 import { logger } from '#core/Logger';
 import { Time } from '#core/units';
 
+import { frameClockOf, setFrameLoopActive, tickFrame } from '../support/application-frame-loop';
+
 const overlaySpies = vi.hoisted(() => ({
   show: vi.fn(),
   hide: vi.fn(),
@@ -101,15 +103,11 @@ const forceRunning = (app: Application): void => {
   const record = app as unknown as Record<string, unknown>;
 
   record['_state'] = ApplicationState.Running;
-  record['_frameLoopActive'] = true;
-};
-
-const frameClock = (app: Application): import('#core/Clock').Clock => {
-  return (app as unknown as Record<string, unknown>)['_frameClock'] as import('#core/Clock').Clock;
+  setFrameLoopActive(app, true);
 };
 
 const mockFrameElapsed = (app: Application, ms: number): void => {
-  vi.spyOn(frameClock(app), 'elapsedSeconds', 'get').mockReturnValue(Time.toSeconds(Time.milliseconds(ms)));
+  vi.spyOn(frameClockOf(app), 'elapsedSeconds', 'get').mockReturnValue(Time.toSeconds(Time.milliseconds(ms)));
 };
 
 /**
@@ -118,7 +116,7 @@ const mockFrameElapsed = (app: Application, ms: number): void => {
  * rescheduling has to go through it.
  */
 const tick = (app: Application): void => {
-  ((app as unknown as Record<string, unknown>)['_updateHandler'] as (timestamp: number) => void)(0);
+  tickFrame(app);
 };
 
 describe('Application frame guard', () => {
@@ -135,8 +133,8 @@ describe('Application frame guard', () => {
     forceRunning(app);
     mockFrameElapsed(app, 16);
 
-    vi.spyOn(app.input, 'preUpdate').mockImplementation(() => undefined);
-    vi.spyOn(app.interaction, 'preUpdate').mockImplementation(() => undefined);
+    vi.spyOn(app.input, 'preFrame').mockImplementation(() => undefined);
+    vi.spyOn(app.interaction, 'preFrame').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

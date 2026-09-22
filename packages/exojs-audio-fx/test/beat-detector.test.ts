@@ -1114,6 +1114,73 @@ describe('BeatDetector', () => {
     });
   });
 
+  // ---- Analysis timing ----
+
+  describe('analysis timing', () => {
+    const stateMessage = (overrides: Record<string, unknown>): Record<string, unknown> => ({
+      type: 'state',
+      tempo: 120,
+      confidence: 0.9,
+      ...overrides,
+    });
+
+    it('reports zero before the first state message', () => {
+      const d = new BeatDetector();
+
+      expect(d.analysisTime).toBe(0);
+      expect(d.analysisLatency).toBe(0);
+      expect(d.phaseConfidence).toBe(0);
+
+      d.destroy();
+    });
+
+    it('measures the age of the state against the context clock at receipt', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+
+      const ctx = getAudioContext() as unknown as { currentTime: number };
+      ctx.currentTime = 12.5;
+
+      simulateMessage(d, stateMessage({ analysisTime: 12.2, phaseConfidence: 0.7 }));
+
+      expect(d.analysisTime).toBeCloseTo(12.2, 9);
+      expect(d.analysisLatency).toBeCloseTo(0.3, 9);
+      expect(d.phaseConfidence).toBeCloseTo(0.7, 9);
+
+      d.destroy();
+    });
+
+    it('never reports a negative age when the context clock trails the analysis', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+
+      const ctx = getAudioContext() as unknown as { currentTime: number };
+      ctx.currentTime = 4;
+
+      simulateMessage(d, stateMessage({ analysisTime: 4.05 }));
+
+      expect(d.analysisLatency).toBe(0);
+
+      d.destroy();
+    });
+
+    it('treats a state message without the timing fields as zero rather than NaN', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+
+      const ctx = getAudioContext() as unknown as { currentTime: number };
+      ctx.currentTime = 3;
+
+      simulateMessage(d, stateMessage({}));
+
+      expect(d.analysisTime).toBe(0);
+      expect(d.phaseConfidence).toBe(0);
+      expect(Number.isFinite(d.analysisLatency)).toBe(true);
+
+      d.destroy();
+    });
+  });
+
   // ---- MediaStream re-resolution (private guard) ----
 
   describe('private defensive guards', () => {

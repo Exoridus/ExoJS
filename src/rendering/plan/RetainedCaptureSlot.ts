@@ -31,7 +31,7 @@ export type RenderTargetIdentity = RenderBackend['renderTarget'];
  * @internal
  */
 export class RetainedCaptureSlot {
-  public readonly fragment = new RetainedGroupFragment();
+  public readonly fragment: RetainedGroupFragment;
 
   private _hasCapture = false;
   private _contentRevision = -1;
@@ -93,6 +93,10 @@ export class RetainedCaptureSlot {
   private _observedView: View | null = null;
   private _observedViewUpdateId = -1;
 
+  public constructor(root: RenderNode) {
+    this.fragment = new RetainedGroupFragment(root);
+  }
+
   /**
    * Settle the CONTENT channel for a frame whose content revision moved:
    * `true` means the product still describes the subtree and may go on to the
@@ -114,7 +118,7 @@ export class RetainedCaptureSlot {
       return true;
     }
 
-    if (!this._hasCapture || !reconcileRetainedTintRows(this.fragment, node => isUnder(node, root))) {
+    if (!this._hasCapture || !reconcileRetainedTintRows(this.fragment, root, node => isUnder(node, root))) {
       return false;
     }
 

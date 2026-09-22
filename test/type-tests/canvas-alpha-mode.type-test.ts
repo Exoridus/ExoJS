@@ -1,4 +1,4 @@
-import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/Application';
+import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 
 declare const freeform: string;
 

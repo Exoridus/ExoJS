@@ -1,6 +1,7 @@
 /// <reference types="@webgpu/types" />
 
-import type { Application, CanvasAlphaMode } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { CanvasAlphaMode } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
@@ -15,8 +16,9 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
+import { assertBatchSingleAttachment, assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
+import type { PixelReadback } from '#rendering/PixelReadback';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
@@ -42,6 +44,7 @@ import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
 import { compressedBlockLayout, compressedBlocksAcross, compressedBlocksDown, type CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
+import { DepthTexture } from '#rendering/texture/DepthTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
@@ -60,6 +63,7 @@ import {
   type WebGpuRetainedNodeIndexRange,
 } from './retainedGroupResources';
 import mipmapWgslModule from './shaders/mipmap.wgsl';
+import { depthStencilAttachmentFormat as depthAttachmentFormat } from './stencilState';
 import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './storageLimits';
 import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuGpuTimer } from './WebGpuGpuTimer';
@@ -67,10 +71,26 @@ import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import type { WebGpuPersistentSlotCapableRenderer, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
+import { WebGpuPixelReadback, type WebGpuPixelReadbackHost } from './WebGpuPixelReadback';
 import { WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
 import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
+
+/**
+ * A target's own depth/stencil attachment, allocated because the target opted
+ * into a sampleable depth texture.
+ *
+ * Two views over one texture: the pass binds all aspects, a sampler can only
+ * see the depth one.
+ */
+interface ManagedDepthAttachment {
+  texture: GPUTexture;
+  attachmentView: GPUTextureView;
+  sampleView: GPUTextureView;
+  width: number;
+  height: number;
+}
 
 interface ManagedWebGpuTextureState {
   texture: GPUTexture;
@@ -154,6 +174,71 @@ const MANAGED_TEXTURE_BYTES_PER_PIXEL = 4;
 export const mipmapWgsl: string = mipmapWgslModule;
 
 /**
+ * The one `GPUAdapter` requested per `GPU` object, shared across every
+ * `WebGpuBackend` instance that initializes against that same `navigator.gpu`.
+ *
+ * `GPUDevice` has an explicit `destroy()` for exactly this reason - see the
+ * comment on {@link WebGpuBackend.destroy} - but the spec gives `GPUAdapter`
+ * no equivalent: an adapter is released only once every reference to it is
+ * garbage collected, and GC timing is not something a hot path can rely on.
+ * An application that creates one `Application` never notices, but a process
+ * that constructs many backends back to back (the rendering parity matrix
+ * does, once per scene per property) can request adapters faster than the
+ * browser reclaims the previous ones. Firefox in particular enforces a low
+ * ceiling on simultaneously live adapters/devices and fails the next
+ * `requestDevice()` with "not enough memory" well before anything has
+ * actually leaked. Mirroring a single adapter here removes the pile-up
+ * without changing behaviour: an adapter can mint any number of devices, so
+ * reuse costs nothing a fresh request would have bought.
+ *
+ * Keyed by the `GPU` object rather than held as one bare value so a real page
+ * - which keeps exactly one `navigator.gpu` for its whole life - shares one
+ * adapter, while a test that installs its own mock `GPU` object gets its own
+ * cache entry for free and cannot observe another test's adapter. A `WeakMap`
+ * also means a mock `GPU` object never outlives its test in this cache.
+ */
+const sharedAdapters = new WeakMap<GPU, GPUAdapter>();
+const pendingAdapterRequests = new WeakMap<GPU, Promise<GPUAdapter | null>>();
+
+/** The `GPU` object's shared adapter, requesting it once if nothing has yet. */
+const requestSharedAdapter = async (gpu: GPU): Promise<GPUAdapter | null> => {
+  const cached = sharedAdapters.get(gpu);
+
+  if (cached !== undefined) return cached;
+
+  let pending = pendingAdapterRequests.get(gpu);
+
+  if (pending === undefined) {
+    pending = gpu.requestAdapter();
+    pendingAdapterRequests.set(gpu, pending);
+  }
+
+  const adapter = await pending;
+
+  pendingAdapterRequests.delete(gpu);
+
+  if (adapter !== null) {
+    sharedAdapters.set(gpu, adapter);
+  }
+
+  return adapter;
+};
+
+/**
+ * Drops the `GPU` object's shared adapter so the next backend to initialize
+ * against it requests a new one.
+ *
+ * Called when there is a concrete reason to believe the cached adapter is no
+ * longer good: `requestDevice()` rejected on it, or a device it minted was
+ * lost for a reason other than an explicit `destroy()` - loss this backend
+ * did not cause is the strongest signal available that the adapter itself,
+ * not just one device, went away (a GPU reset invalidates both).
+ */
+const invalidateSharedAdapter = (gpu: GPU): void => {
+  sharedAdapters.delete(gpu);
+};
+
+/**
  * WebGPU implementation of {@link RenderBackend}. Manages the GPU device,
  * canvas context configuration, format selection, managed-texture cache
  * (sized + format-aware), pre-warmed render pipelines per (blend-mode ×
@@ -163,7 +248,8 @@ export const mipmapWgsl: string = mipmapWgslModule;
  *
  * Detects device loss via the platform's `device.lost` Promise and
  * automatically attempts recovery: drops dead GPU state, requests a
- * fresh adapter+device with exponential backoff (up to 5 tries), then
+ * device from the shared adapter (a fresh one if the loss was not an
+ * explicit `destroy()`) with exponential backoff (up to 5 tries), then
  * fires {@link WebGpuBackend.onDeviceRestored}. While recovering, draw
  * submissions silently no-op so user code survives transient outages
  * without explicit error handling. If every retry fails, a
@@ -216,6 +302,8 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _samplers = new Map<number, GPUSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
+  private readonly _depthAttachments: Map<RenderTarget, ManagedDepthAttachment> = new Map<RenderTarget, ManagedDepthAttachment>();
+  private readonly _depthTextureStates: Map<DepthTexture, ManagedWebGpuTextureState> = new Map<DepthTexture, ManagedWebGpuTextureState>();
   /**
    * Resolved scissor rectangles in target pixels, innermost at
    * `_clipDepth - 1`. Grow-only and reused; {@link _clipDepth}, not `length`,
@@ -309,6 +397,9 @@ export class WebGpuBackend implements RenderBackend {
    * them - their buffers belong to the device that just went away.
    */
   private readonly _persistentStores = new Set<WebGpuPersistentSlotStore>();
+  /** Live standing readbacks, drained at frame start and invalidated together on device loss. */
+  private readonly _pixelReadbacks = new Set<WebGpuPixelReadback>();
+  private _pixelReadbackHostInstance: WebGpuPixelReadbackHost | null = null;
   private readonly _rejectedRetainedSets = new WeakSet<RetainedInstructionSet>();
   // Reused across per-batch scans at record time to avoid an
   // allocation per flush; the renderer-agnostic counterpart of WebGL2's
@@ -338,7 +429,7 @@ export class WebGpuBackend implements RenderBackend {
       this._clearColor.copy(clearColor);
     }
 
-    // Core renderers are bound via buildCoreRendererBindings in Application.createBackend.
+    // Core renderers are bound via buildCoreRendererBindings when the application creates the backend.
     this.resize(width, height);
   }
 
@@ -402,6 +493,12 @@ export class WebGpuBackend implements RenderBackend {
     const reported = limits?.maxColorAttachments;
 
     return typeof reported === 'number' && reported > 0 ? reported : 1;
+  }
+
+  public get supportsPerAttachmentBlend(): boolean {
+    // Blend state is declared per fragment target in a pipeline descriptor, so
+    // there is no capability behind this beyond having a device at all.
+    return this._device !== null;
   }
 
   public get device(): GPUDevice {
@@ -537,7 +634,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public get _passCoordinator(): WebGpuPassCoordinator {
+  public get passCoordinator(): WebGpuPassCoordinator {
     if (this._passCoordinatorInstance === null) {
       this._passCoordinatorInstance = new WebGpuPassCoordinator(this);
       // A coordinator first reached after timing was enabled has to inherit the
@@ -579,6 +676,13 @@ export class WebGpuBackend implements RenderBackend {
     // previously reset per render() call in _beginDrawPlan).
     this._getTransformStorage().buffer.begin();
     this._gpuTimer?.beginFrame();
+
+    // Frame start rather than frame end: a map never settles in the task that
+    // requested it, so polling here is what lets a read requested in one
+    // frame's update be ready by the next one's.
+    for (const readback of this._pixelReadbacks) {
+      readback.poll();
+    }
 
     return this;
   }
@@ -701,6 +805,31 @@ export class WebGpuBackend implements RenderBackend {
       return null;
     }
 
+    const owner = this._resolvePersistentSlotOwner(source);
+
+    // Prepack BEFORE allocating anything: a source holding an item that cannot
+    // describe itself as a quad is not servable, and finding that out after the
+    // store exists would mean tearing it down again.
+    if (owner === null || !source.prepack()) {
+      return null;
+    }
+
+    const store = owner._acquirePersistentSlotStore(source, this);
+
+    if (store !== null) {
+      store.owner = owner;
+      this._persistentStores.add(store);
+    }
+
+    return store;
+  }
+
+  /**
+   * The single renderer that can serve every item in `source`, or `null` when
+   * there is none.
+   * @internal
+   */
+  private _resolvePersistentSlotOwner(source: RenderRootSource): WebGpuPersistentSlotCapableRenderer | null {
     let owner: WebGpuPersistentSlotCapableRenderer | null = null;
 
     for (const scope of source.scopes) {
@@ -728,25 +857,65 @@ export class WebGpuBackend implements RenderBackend {
       }
     }
 
-    if (owner === null) {
-      return null;
+    return owner;
+  }
+
+  /** @internal */
+  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+    const store = bundle as WebGpuPersistentSlotStore;
+    const owner = store.owner;
+
+    if (this._deviceLost || this._device === null || owner === null) {
+      return false;
     }
 
-    // Prepack BEFORE allocating anything: a source holding an item that cannot
-    // describe itself as a quad is not servable, and finding that out after the
-    // store exists would mean tearing it down again.
-    if (!source.prepack()) {
-      return null;
+    if (!this._ownerServesArrivals(source, owner, carried, previousHandleCount) || !source.prepack()) {
+      return false;
     }
 
-    const store = owner._acquirePersistentSlotStore(source, this);
+    return owner._rekeyPersistentSlotStore(store, source, carried, previousHandleCount);
+  }
 
-    if (store !== null) {
-      store.owner = owner;
-      this._persistentStores.add(store);
+  /**
+   * Whether `owner` can also serve the items a structure delta did not carry.
+   *
+   * Only those are resolved: an item the delta carried is the same drawable the
+   * store was already serving, so re-resolving it would put the acquisition walk
+   * back on a path that runs on every structural frame.
+   */
+  private _ownerServesArrivals(
+    source: RenderRootSource,
+    owner: WebGpuPersistentSlotCapableRenderer,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
+    for (const scope of source.scopes) {
+      const drawables = scope.items.drawables;
+      const count = scope.items.count;
+      const handleBase = scope.handleBase;
+
+      for (let i = 0; i < count; i++) {
+        const previous = carried[handleBase + i]!;
+
+        if (previous >= 0 && previous < previousHandleCount) {
+          continue;
+        }
+
+        let renderer: WebGpuPersistentSlotCapableRenderer | null;
+
+        try {
+          renderer = this.rendererRegistry.resolve(drawables[i]!) as unknown as WebGpuPersistentSlotCapableRenderer | null;
+        } catch {
+          return false;
+        }
+
+        if (renderer !== owner || renderer._supportsPersistentSlots !== true) {
+          return false;
+        }
+      }
     }
 
-    return store;
+    return true;
   }
 
   /** @internal */
@@ -757,10 +926,15 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /** @internal */
-  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void {
+  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, orderCount: number, offset: number, count: number): void {
     const store = bundle as WebGpuPersistentSlotStore;
 
-    store.owner?._drawPersistentSlots(store, order, count, this);
+    // Drain the active renderer's live batch first, whichever renderer that
+    // is: a parallax layer played as a mark leaves the repeating renderer's
+    // batch pending, and the owner's own flush inside the draw covers only the
+    // sprite batcher. Same reasoning as `replayRetainedBatch`.
+    this._renderer?.flush();
+    store.owner?._drawPersistentSlots(store, order, orderCount, offset, count, this);
   }
 
   /** @internal */
@@ -821,7 +995,7 @@ export class WebGpuBackend implements RenderBackend {
     // Defensive: a draw the recorder cannot capture inside an active
     // window poisons it - the predicate excludes these at collect time, but
     // an incomplete replay stream must never be committable.
-    if (this._retainedCaptureFrames.length > 0 && (renderer as { _supportsRetainedBatches?: boolean })._supportsRetainedBatches !== true) {
+    if (this._retainedCaptureFrames.length > 0 && (renderer as { supportsRetainedBatches?: boolean }).supportsRetainedBatches !== true) {
       this._poisonActiveRetainedCaptures();
     }
 
@@ -837,6 +1011,10 @@ export class WebGpuBackend implements RenderBackend {
     if (count <= 0 || mesh.vertexCount === 0 || this._deviceLost || this._device === null) {
       this._activeDrawCommand = null;
       return this;
+    }
+
+    if (this._multiAttachmentTarget) {
+      assertBatchSingleAttachment((this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
     }
 
     const renderer = this.rendererRegistry.resolve(mesh);
@@ -1060,7 +1238,7 @@ export class WebGpuBackend implements RenderBackend {
     // select stencil-enabled pipeline variants while the clip is in effect.
     this._flushActiveRendererAndEndPass();
     this._setActiveRenderer(null);
-    this._passCoordinator.pushStencilClip(shape, transform);
+    this.passCoordinator.pushStencilClip(shape, transform);
 
     return this;
   }
@@ -1072,7 +1250,7 @@ export class WebGpuBackend implements RenderBackend {
 
     this._flushActiveRendererAndEndPass();
     this._setActiveRenderer(null);
-    this._passCoordinator.popStencilClip();
+    this.passCoordinator.popStencilClip();
 
     return this;
   }
@@ -1101,6 +1279,65 @@ export class WebGpuBackend implements RenderBackend {
     // float32-filterable / float32-blendable features, requested at init when
     // available; float RenderTextures default to nearest, unblended feedback.)
     return true;
+  }
+
+  public async readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray> {
+    this.flush();
+
+    const texture = this._syncTexture(source).texture;
+    // `copyTextureToBuffer` wants every row to start on a 256-byte boundary,
+    // unlike `writeTexture`, so the staging rows are padded and the payload is
+    // unpacked out of them below.
+    const bytesPerRow = Math.ceil((width * 4) / 256) * 256;
+    const staging = this.device.createBuffer({
+      label: 'backend:readPixels',
+      size: bytesPerRow * height,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+
+    try {
+      const encoder = this.device.createCommandEncoder({ label: 'backend:readPixels:encoder' });
+
+      encoder.copyTextureToBuffer({ texture, origin: { x, y } }, { buffer: staging, bytesPerRow, rowsPerImage: height }, { width, height });
+      this.device.queue.submit([encoder.finish()]);
+
+      await staging.mapAsync(GPUMapMode.READ);
+
+      const padded = new Uint8Array(staging.getMappedRange());
+      const stride = width * 4;
+      const pixels = new Uint8ClampedArray(stride * height);
+
+      for (let row = 0; row < height; row++) {
+        pixels.set(padded.subarray(row * bytesPerRow, row * bytesPerRow + stride), row * stride);
+      }
+
+      staging.unmap();
+      this._accountant.recordDownload(pixels.byteLength);
+
+      return pixels;
+    } finally {
+      staging.destroy();
+    }
+  }
+
+  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback {
+    const readback = new WebGpuPixelReadback(this._pixelReadbackHost(), source, x, y, width, height, slots);
+
+    this._pixelReadbacks.add(readback);
+
+    return readback;
+  }
+
+  private _pixelReadbackHost(): WebGpuPixelReadbackHost {
+    return (this._pixelReadbackHostInstance ??= {
+      accountant: this._accountant,
+      liveDevice: () => (this._device !== null && !this._deviceLost ? this._device : null),
+      flushDraws: () => this._flushActiveRendererAndEndPass(),
+      textureOf: source => this._syncTexture(source).texture,
+      forgetPixelReadback: readback => {
+        this._pixelReadbacks.delete(readback);
+      },
+    });
   }
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
@@ -1171,8 +1408,8 @@ export class WebGpuBackend implements RenderBackend {
     } else if (this._clearRequested) {
       // No active renderer but a clear is pending: open an empty coordinator
       // pass so createColorAttachment consumes the clear state once.
-      this._passCoordinator.acquirePass();
-      this._passCoordinator.endPass();
+      this.passCoordinator.acquirePass();
+      this.passCoordinator.endPass();
     }
 
     if (this._gpuTimer !== null) {
@@ -1248,6 +1485,12 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     this._persistentStores.clear();
+
+    for (const readback of [...this._pixelReadbacks]) {
+      readback.destroy();
+    }
+
+    this._pixelReadbacks.clear();
     this._retainedCaptureFrames.length = 0;
     this._passCoordinatorInstance?.destroyStencil();
     this._drawPlanDepth = 0;
@@ -1320,7 +1563,14 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     if (index === 0) {
-      this._loadOpForPass = this._passCoordinator.resolveLoad(renderTarget, this._clearRequested);
+      if (renderTarget.depthTexture !== null) {
+        // Allocated on the first pass into the target rather than on the first
+        // depth-writing draw, so `depthTexture` is samplable after any render
+        // into the target - which is what the WebGL2 framebuffer does too.
+        this._ensureDepthAttachment(renderTarget);
+      }
+
+      this._loadOpForPass = this.passCoordinator.resolveLoad(renderTarget, this._clearRequested);
       this._clearRequested = false;
 
       const clearValue = this._clearValue;
@@ -1368,14 +1618,25 @@ export class WebGpuBackend implements RenderBackend {
 
     if (this._renderTarget === this._rootRenderTarget) {
       this._hasPresentedFrame = true;
-    } else if (this._renderTarget instanceof RenderTexture) {
-      const state = this._syncTexture(this._renderTarget);
-
-      state.hasContent = true;
-
-      if (state.mipLevelCount > 1) {
-        this._generateMipmaps(state.texture, state.mipLevelCount);
+    } else if (this._renderTarget instanceof MultiRenderTarget) {
+      // Every attachment of one target is written by the same pass, so they
+      // gain content together.
+      for (const attachment of this._renderTarget.attachments) {
+        this._markTargetContent(attachment);
       }
+    } else if (this._renderTarget instanceof RenderTexture) {
+      this._markTargetContent(this._renderTarget);
+    }
+  }
+
+  /** Book a render texture as holding this frame's content, and refresh its mips. */
+  private _markTargetContent(texture: RenderTexture): void {
+    const state = this._syncTexture(texture);
+
+    state.hasContent = true;
+
+    if (state.mipLevelCount > 1) {
+      this._generateMipmaps(state.texture, state.mipLevelCount);
     }
   }
 
@@ -1388,6 +1649,13 @@ export class WebGpuBackend implements RenderBackend {
   public _targetHasContent(target: RenderTarget): boolean {
     if (target === this._rootRenderTarget) {
       return this._hasPresentedFrame;
+    }
+
+    // A multi-attachment target has no texture of its own; its attachments are
+    // written together, so the first one answers for all of them. Without this
+    // an MRT reported "no content" on every pass, so every pass cleared it.
+    if (target instanceof MultiRenderTarget) {
+      return this._getTextureState(target.attachment(0)).hasContent;
     }
 
     if (target instanceof RenderTexture) {
@@ -1442,7 +1710,7 @@ export class WebGpuBackend implements RenderBackend {
       // fresh record costs nothing measurable; giving them the state's own
       // record would mean the default path and an override path could not be
       // resolved in the same batch.
-      return { view: state.view, sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this._isNonFilterable(texture)) };
+      return { view: state.view, sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this.isNonFilterableTexture(texture)) };
     }
 
     // Refreshed in place: `_syncTexture` may have replaced the GPU texture (and
@@ -1465,7 +1733,7 @@ export class WebGpuBackend implements RenderBackend {
    * sampling state and safe to hold across frames as long as the device lives.
    */
   public getTextureSampler(texture: Texture | RenderTexture): GPUSampler {
-    return this._getSampler(texture.scaleMode, texture.wrapMode, this._isNonFilterable(texture));
+    return this._getSampler(texture.scaleMode, texture.wrapMode, this.isNonFilterableTexture(texture));
   }
 
   /**
@@ -1923,7 +2191,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Most callers are defensive and the collect-time recordability predicate
    * keeps them unreachable - a renderer whose non-recordable draws are decidable
-   * PER DRAWABLE states that through `_admitsRetainedRecording` so no capture is
+   * PER DRAWABLE states that through `admitsRetainedRecording` so no capture is
    * opened for them at all. Two callers do fire on healthy frames and cannot be
    * pre-empted per drawable, because both are properties of how a frame's draws
    * compose into flushes rather than of any one drawable: the Text renderer's
@@ -1960,7 +2228,7 @@ export class WebGpuBackend implements RenderBackend {
     let base = 0xffffffff;
     let maxNodeIndex = 0;
     // A batch whose renderer opts out of the shared transform store
-    // (`_consumesSharedTransform === false`, e.g. Text - its per-instance
+    // (`consumesSharedTransform === false`, e.g. Text - its per-instance
     // "node index" addresses its OWN private data store, not a row in the
     // shared TransformBuffer) leaves `scanRetainedNodeIndexRange` a no-op, so
     // its `minNodeIndex`/`maxNodeIndex` stay at the unset sentinel
@@ -2100,11 +2368,12 @@ export class WebGpuBackend implements RenderBackend {
 
     // Request the adapter AND the device before acquiring a WebGPU canvas
     // context - see the getContext('webgpu') call below for why the order
-    // matters.
+    // matters. The adapter is the process-wide shared one (see
+    // `requestSharedAdapter`), not a fresh request per backend.
     let adapter: GPUAdapter | null;
 
     try {
-      adapter = await gpuNavigator.gpu.requestAdapter();
+      adapter = await requestSharedAdapter(gpuNavigator.gpu);
     } catch (error) {
       throw this._createInitializationError('Failed to request a WebGPU adapter.', error);
     }
@@ -2113,63 +2382,33 @@ export class WebGpuBackend implements RenderBackend {
       throw new Error('Could not acquire a WebGPU adapter.');
     }
 
-    if (typeof adapter.requestDevice !== 'function') {
-      throw new Error('WebGPU adapter does not expose requestDevice().');
-    }
-
     let device: GPUDevice | null;
 
     try {
-      // rgba16float and rgba32float are both core color-renderable in WebGPU (no
-      // feature needed). Opt into the optional float features the adapter offers
-      // so float32 targets can additionally be linear-sampled / blended when used
-      // that way (float RenderTextures default to nearest, so this is a bonus).
-      const floatFeatures = (['float32-filterable', 'float32-blendable'] as const).filter(feature => adapter.features?.has(feature) ?? false);
-
-      // Compressed-format families are optional features, and a device only
-      // carries what the request asked for - so an adapter that supports BC
-      // still yields a device that rejects a BC texture unless it is requested
-      // here. Filtering against the adapter first keeps the request satisfiable:
-      // asking for a family the adapter lacks fails the whole `requestDevice`.
-      const compressedFeatures = webgpuCompressedTextureFeatures.filter(feature => adapter.features?.has(feature) ?? false);
-
-      // The sprite batcher sizes its multi-texture bind-group layout from the
-      // GRANTED device limits (resolveSpriteBatchTextureSlots): request up to
-      // the 32-slot ceiling when the adapter offers more than the spec base of
-      // 16 texture/sampler bindings per stage. Requesting min(adapterLimit,
-      // ceiling) is always satisfiable, so this can never fail the request.
-      const requiredLimits: Record<string, number> = {};
-      const adapterLimits = (adapter as { limits?: GPUSupportedLimits }).limits;
-
-      if (adapterLimits !== undefined) {
-        for (const limit of ['maxSampledTexturesPerShaderStage', 'maxSamplersPerShaderStage'] as const) {
-          const available = adapterLimits[limit];
-
-          if (typeof available === 'number' && available > baseSpriteBatchTextureSlots) {
-            requiredLimits[limit] = Math.min(maxSpriteBatchTextureSlots, available);
-          }
-        }
-      }
-
-      // A device's feature set is fixed at creation, so `timestamp-query` has to
-      // be requested here or `setGpuTimingEnabled` can never succeed on this
-      // device. Requesting a feature nothing uses changes no rendering behaviour
-      // and costs nothing until a timer actually allocates a query set.
-      const timestampFeatures = (['timestamp-query'] as const).filter(feature => adapter.features?.has(feature) ?? false);
-
-      const descriptor: GPUDeviceDescriptor = {};
-
-      if (floatFeatures.length > 0 || compressedFeatures.length > 0 || timestampFeatures.length > 0) {
-        descriptor.requiredFeatures = [...floatFeatures, ...compressedFeatures, ...timestampFeatures];
-      }
-
-      if (Object.keys(requiredLimits).length > 0) {
-        descriptor.requiredLimits = requiredLimits;
-      }
-
-      device = await adapter.requestDevice(Object.keys(descriptor).length > 0 ? descriptor : undefined);
+      device = await this._requestDeviceFrom(adapter);
     } catch (error) {
-      throw this._createInitializationError('Failed to request a WebGPU device.', error);
+      // The shared adapter may have gone stale since another backend last
+      // used it - released by the browser, or invalidated by a driver reset.
+      // One retry against a freshly requested adapter tells that apart from
+      // an ordinary request failure: a genuinely dead adapter fails again
+      // immediately, so the retry only ever costs one extra round trip.
+      invalidateSharedAdapter(gpuNavigator.gpu);
+
+      try {
+        adapter = await requestSharedAdapter(gpuNavigator.gpu);
+      } catch (retryError) {
+        throw this._createInitializationError('Failed to request a WebGPU adapter.', retryError);
+      }
+
+      if (adapter === null) {
+        throw new Error('Could not acquire a WebGPU adapter.', { cause: error });
+      }
+
+      try {
+        device = await this._requestDeviceFrom(adapter);
+      } catch (retryError) {
+        throw this._createInitializationError('Failed to request a WebGPU device.', retryError);
+      }
     }
 
     if (device === null) {
@@ -2276,6 +2515,16 @@ export class WebGpuBackend implements RenderBackend {
     // user code). Don't try to recover - the loss is intentional.
     if (info.reason === 'destroyed') {
       return;
+    }
+
+    // A loss we did not cause is the strongest signal available that the
+    // adapter itself may be gone too (a GPU reset invalidates both), so
+    // recovery requests a fresh one rather than risk retrying against a dead
+    // cached adapter for every one of its attempts.
+    const gpuNavigator = this._getGpuNavigator();
+
+    if (gpuNavigator !== null) {
+      invalidateSharedAdapter(gpuNavigator.gpu);
     }
 
     void this._attemptRecovery();
@@ -2458,6 +2707,12 @@ export class WebGpuBackend implements RenderBackend {
       store.invalidateDeviceResources();
     }
 
+    // Standing readbacks hold staging buffers of the dead device the same way;
+    // finished reads keep their bytes, pending ones fail.
+    for (const readback of this._pixelReadbacks) {
+      readback.invalidateDeviceState();
+    }
+
     this._persistentStores.clear();
 
     this._retainedCaptureFrames.length = 0;
@@ -2465,6 +2720,13 @@ export class WebGpuBackend implements RenderBackend {
     // Stencil GPU resources belong to the dead device; drop them so they are
     // lazily rebuilt against the fresh device on the next clip.
     this._passCoordinatorInstance?.destroyStencil();
+
+    // Same for the depth attachments: the handles are the dead device's, and
+    // the next bind of each target allocates a fresh one.
+    for (const target of [...this._depthAttachments.keys()]) {
+      this._depthAttachments.delete(target);
+      this._dropDepthTextureState(target);
+    }
 
     this._context?.unconfigure();
     this._context = null;
@@ -2489,6 +2751,62 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     await Promise.all(promises);
+  }
+
+  /** Requests a device from the given adapter with the feature/limit set this backend needs. */
+  private async _requestDeviceFrom(adapter: GPUAdapter): Promise<GPUDevice | null> {
+    if (typeof adapter.requestDevice !== 'function') {
+      throw new Error('WebGPU adapter does not expose requestDevice().');
+    }
+
+    // rgba16float and rgba32float are both core color-renderable in WebGPU (no
+    // feature needed). Opt into the optional float features the adapter offers
+    // so float32 targets can additionally be linear-sampled / blended when used
+    // that way (float RenderTextures default to nearest, so this is a bonus).
+    const floatFeatures = (['float32-filterable', 'float32-blendable'] as const).filter(feature => adapter.features?.has(feature) ?? false);
+
+    // Compressed-format families are optional features, and a device only
+    // carries what the request asked for - so an adapter that supports BC
+    // still yields a device that rejects a BC texture unless it is requested
+    // here. Filtering against the adapter first keeps the request satisfiable:
+    // asking for a family the adapter lacks fails the whole `requestDevice`.
+    const compressedFeatures = webgpuCompressedTextureFeatures.filter(feature => adapter.features?.has(feature) ?? false);
+
+    // The sprite batcher sizes its multi-texture bind-group layout from the
+    // GRANTED device limits (resolveSpriteBatchTextureSlots): request up to
+    // the 32-slot ceiling when the adapter offers more than the spec base of
+    // 16 texture/sampler bindings per stage. Requesting min(adapterLimit,
+    // ceiling) is always satisfiable, so this can never fail the request.
+    const requiredLimits: Record<string, number> = {};
+    const adapterLimits = (adapter as { limits?: GPUSupportedLimits }).limits;
+
+    if (adapterLimits !== undefined) {
+      for (const limit of ['maxSampledTexturesPerShaderStage', 'maxSamplersPerShaderStage'] as const) {
+        const available = adapterLimits[limit];
+
+        if (typeof available === 'number' && available > baseSpriteBatchTextureSlots) {
+          requiredLimits[limit] = Math.min(maxSpriteBatchTextureSlots, available);
+        }
+      }
+    }
+
+    // A device's feature set is fixed at creation, so `timestamp-query` has to
+    // be requested here or `setGpuTimingEnabled` can never succeed on this
+    // device. Requesting a feature nothing uses changes no rendering behaviour
+    // and costs nothing until a timer actually allocates a query set.
+    const timestampFeatures = (['timestamp-query'] as const).filter(feature => adapter.features?.has(feature) ?? false);
+
+    const descriptor: GPUDeviceDescriptor = {};
+
+    if (floatFeatures.length > 0 || compressedFeatures.length > 0 || timestampFeatures.length > 0) {
+      descriptor.requiredFeatures = [...floatFeatures, ...compressedFeatures, ...timestampFeatures];
+    }
+
+    if (Object.keys(requiredLimits).length > 0) {
+      descriptor.requiredLimits = requiredLimits;
+    }
+
+    return adapter.requestDevice(Object.keys(descriptor).length > 0 ? descriptor : undefined);
   }
 
   private _getGpuNavigator(): (Navigator & { gpu: GPU }) | null {
@@ -2606,6 +2924,123 @@ export class WebGpuBackend implements RenderBackend {
     for (const texture of [...this._textureStates.keys()]) {
       this._evictTexture(texture);
     }
+
+    // Depth attachments are keyed by target, not by texture, so the loop above
+    // never reaches them - and each one is a full-size GPU texture.
+    for (const target of [...this._depthAttachments.keys()]) {
+      this._releaseDepthAttachment(target);
+    }
+  }
+
+  /**
+   * The depth/stencil attachment view for a target that owns a depth texture,
+   * allocated (or re-allocated after a resize) on demand.
+   * @internal
+   */
+  public _getDepthAttachmentView(target: RenderTarget): GPUTextureView {
+    return this._ensureDepthAttachment(target).attachmentView;
+  }
+
+  private _ensureDepthAttachment(target: RenderTarget): ManagedDepthAttachment {
+    const { width, height } = this._getAttachmentPixelSize(target);
+    const safeWidth = Math.max(1, width);
+    const safeHeight = Math.max(1, height);
+    const existing = this._depthAttachments.get(target);
+
+    if (existing !== undefined) {
+      if (existing.width === safeWidth && existing.height === safeHeight) {
+        return existing;
+      }
+
+      existing.texture.destroy();
+      this._depthAttachments.delete(target);
+      this._dropDepthTextureState(target);
+    }
+
+    const texture = this.device.createTexture({
+      label: 'backend:depth-attachment',
+      size: { width: safeWidth, height: safeHeight },
+      format: depthAttachmentFormat,
+      // TEXTURE_BINDING is the whole point of the opt-in; without it the
+      // attachment works and cannot be read back.
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    const attachment: ManagedDepthAttachment = {
+      texture,
+      attachmentView: texture.createView(),
+      // A combined depth/stencil texture is only ever sampleable one aspect at
+      // a time, and the stencil half is the clip bookkeeping, not data.
+      sampleView: texture.createView({ aspect: 'depth-only' }),
+      width: safeWidth,
+      height: safeHeight,
+    };
+
+    this._depthAttachments.set(target, attachment);
+
+    return attachment;
+  }
+
+  private _releaseDepthAttachment(target: RenderTarget): void {
+    const attachment = this._depthAttachments.get(target);
+
+    if (attachment !== undefined) {
+      attachment.texture.destroy();
+      this._depthAttachments.delete(target);
+    }
+
+    this._dropDepthTextureState(target);
+  }
+
+  private _dropDepthTextureState(target: RenderTarget): void {
+    if (target.depthTexture !== null) {
+      this._depthTextureStates.delete(target.depthTexture);
+    }
+  }
+
+  /**
+   * Resolve a target's depth attachment for sampling. Nothing is created here:
+   * a depth texture read before anything was ever rendered into its target has
+   * no attachment behind it, and silently handing out an empty one would show
+   * up as a black depth buffer rather than as a mistake.
+   */
+  private _syncDepthTexture(texture: DepthTexture): ManagedWebGpuTextureState {
+    const attachment = this._depthAttachments.get(texture.target);
+
+    if (attachment === undefined) {
+      throw new RenderError({
+        code: 'validation',
+        backendType: RenderBackendType.WebGpu,
+        message: 'This render target has no depth attachment yet. Render into the target once before sampling its `depthTexture`.',
+      });
+    }
+
+    // Resolved once and kept: a depth texture's sampling state is fixed at
+    // construction (see DepthTexture), so there is nothing to re-resolve.
+    const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, true);
+    let state = this._depthTextureStates.get(texture);
+
+    if (state?.texture !== attachment.texture) {
+      state = {
+        texture: attachment.texture,
+        view: attachment.sampleView,
+        sampler,
+        samplerKey: this._samplerKey(texture.scaleMode, texture.wrapMode, true),
+        version: texture.version,
+        width: attachment.width,
+        height: attachment.height,
+        mipLevelCount: 1,
+        format: depthAttachmentFormat,
+        hasContent: true,
+        accountedBytes: 0,
+        partialUploadScratch: null,
+        partialUploadView: null,
+        contiguousUploadView: null,
+        binding: { view: attachment.sampleView, sampler },
+      };
+      this._depthTextureStates.set(texture, state);
+    }
+
+    return state;
   }
 
   private _getTextureState(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
@@ -2627,7 +3062,7 @@ export class WebGpuBackend implements RenderBackend {
       const mipLevelCount = this._getMipLevelCount(texture);
 
       const view = gpuTexture.createView();
-      const nonFilterable = this._isNonFilterable(texture);
+      const nonFilterable = this.isNonFilterableTexture(texture);
       const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
       const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
 
@@ -2836,6 +3271,10 @@ export class WebGpuBackend implements RenderBackend {
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
     assertLiveTexture(texture);
 
+    if (texture instanceof DepthTexture) {
+      return this._syncDepthTexture(texture);
+    }
+
     // A texture whose image has not arrived yet is a lifecycle state, not a
     // caller error: the upload is skipped and the version left unstamped, so
     // the next frame that finds a source performs it. Raising here instead
@@ -2854,7 +3293,7 @@ export class WebGpuBackend implements RenderBackend {
     const compressedPayload = compressedPayloadOf(texture);
     const textureVersion = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
     const mipLevelCount = this._getMipLevelCount(texture);
-    const nonFilterable = this._isNonFilterable(texture);
+    const nonFilterable = this.isNonFilterableTexture(texture);
     const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
 
     if (state.samplerKey !== samplerKey) {
@@ -3103,6 +3542,7 @@ export class WebGpuBackend implements RenderBackend {
         }
 
         this._passCoordinatorInstance?.releaseStencilTarget(target);
+        this._releaseDepthAttachment(target);
         this._renderTargetDestroyHandlers.delete(target);
       };
 
@@ -3159,12 +3599,21 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
+   * Whether this texture may only be sampled unfiltered.
+   *
    * Float32 textures (r32float, rgba32float) are non-filterable by default in
    * WebGPU, so a linear sampler on one is a validation error. Apps that need
    * linear filtering on floats can opt into the 'float32-filterable' device
-   * feature, which this backend does not expose yet.
+   * feature, which this backend does not expose yet. A bind group layout that
+   * declares such a texture has to agree with the sampler this decides on, so
+   * the answer is shared rather than restated per call site.
+   * @internal
    */
-  private _isNonFilterable(texture: Texture | RenderTexture): boolean {
+  public isNonFilterableTexture(texture: Texture | RenderTexture): boolean {
+    if (texture instanceof DepthTexture) {
+      return true;
+    }
+
     return texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
   }
 
@@ -3210,6 +3659,9 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _getGpuTextureFormat(texture: Texture | RenderTexture): GPUTextureFormat {
+    if (texture instanceof DepthTexture) {
+      return depthAttachmentFormat;
+    }
     if (texture instanceof DataTexture) {
       // `instanceof DataTexture` erases the generic, widening `format` to `any`;
       // the class invariant guarantees it is a `DataTextureFormat`.

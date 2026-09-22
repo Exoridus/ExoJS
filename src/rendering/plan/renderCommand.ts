@@ -46,16 +46,18 @@ export interface DrawCommand {
  * Graphics' meshes) fetch the transform via `nodeIndex` and therefore consume
  * it. Text/BitmapText and particle renderers pack their own per-node data into
  * a private data texture / uniforms and never touch the shared buffer, so they
- * opt out via `_consumesSharedTransform === false` and their writes are skipped.
+ * opt out via `consumesSharedTransform === false` and their writes are skipped.
  *
  * Anything else - a custom renderer, or a drawable with no registered renderer
  * (resolve throws) - defaults to writing, so behaviour is unchanged for any
  * path that might still rely on the shared transform.
  *
- * @internal
+ * Declare `false` only when the renderer's vertex stage never reads the shared
+ * rows. A renderer that carries `TRANSFORM_TEXTURE_GLSL_INCLUDE` reads them and
+ * must leave this unset.
  */
-interface SharedTransformRenderer {
-  readonly _consumesSharedTransform?: boolean;
+export interface SharedTransformRenderer {
+  readonly consumesSharedTransform?: boolean;
 }
 
 export const drawCommandUsesSharedTransform = (command: DrawCommand, backend: RenderBackend): boolean => {
@@ -63,5 +65,5 @@ export const drawCommandUsesSharedTransform = (command: DrawCommand, backend: Re
   // conservative write so any consumer of the shared transform keeps working.
   const renderer = resolveRendererFor(backend, command.drawable) as SharedTransformRenderer | null;
 
-  return renderer?._consumesSharedTransform !== false;
+  return renderer?.consumesSharedTransform !== false;
 };

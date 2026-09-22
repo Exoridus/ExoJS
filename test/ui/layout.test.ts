@@ -119,6 +119,22 @@ describe('Stack reactivity', () => {
     expect(two.uiWidth).toBe(95);
   });
 
+  test('keeps a nested stack sizing to its content after its parent has laid it out', () => {
+    const outer = new Stack({ direction: 'column', spacing: 0 });
+    const inner = new Stack({ direction: 'row', spacing: 0 });
+    const child = new Panel({ width: 20, height: 10 });
+
+    outer.addChild(inner);
+    inner.addChild(child);
+
+    expect(inner.uiWidth).toBe(20);
+
+    child.setSize(50, 10);
+
+    expect(inner.uiWidth).toBe(50);
+    expect(outer.uiWidth).toBe(50);
+  });
+
   test('drops a grow factor when it is cleared or its child leaves', () => {
     const stack = new Stack({ direction: 'row', spacing: 0 });
     const child = new Panel({ width: 20, height: 10 });

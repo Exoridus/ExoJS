@@ -1,6 +1,6 @@
 {
   "title": "BlurFilter",
-  "description": "Gaussian blur Filter, run as two separable passes. The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep taking `quality * 2 + 1` taps spread over ±`radius` logical units and weighted by a Gaussian. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product - a real isotropic blur that reaches diagonally as well as along the axes. (Summing the two sweeps into one target instead, which is what this filter used to do, produces a cross: a pixel diagonally off a corner is touched by neither sweep and stays black at any radius.) Higher `quality` values add taps and smooth the result at the cost of extra draw calls; they do not change how far the blur reaches.",
+  "description": "Gaussian blur Filter, run as two separable passes. The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep sampling a Gaussian kernel of strength standard deviations in ONE draw. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product - a real isotropic blur that reaches diagonally as well as along the axes. (Summing the two sweeps into one target instead, which is what this filter used to do, produces a cross: a pixel diagonally off a corner is touched by neither sweep and stays black at any strength.) ```ts // The same blur as CSS `filter: blur(4px)`. subtree.filters = [new BlurFilter({ strength: 4 })]; ``` The kernel is truncated at three standard deviations, so the filter reaches `strength * 3` logical units outside its input on every edge and the tap count follows the strength without the caller choosing one. Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one.",
   "symbol": "BlurFilter",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,9 +20,11 @@
       "members": [],
       "paragraphs": [
         "Gaussian blur Filter, run as two separable passes.",
-        "The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep taking `quality * 2 + 1` taps spread over ±`radius` logical units and weighted by a Gaussian. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product - a real isotropic blur that reaches diagonally as well as along the axes.",
-        "(Summing the two sweeps into one target instead, which is what this filter used to do, produces a cross: a pixel diagonally off a corner is touched by neither sweep and stays black at any radius.)",
-        "Higher `quality` values add taps and smooth the result at the cost of extra draw calls; they do not change how far the blur reaches."
+        "The input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep sampling a Gaussian kernel of strength standard deviations in ONE draw. Because the two sweeps are chained rather than summed, the effective 2D kernel is their product - a real isotropic blur that reaches diagonally as well as along the axes.",
+        "(Summing the two sweeps into one target instead, which is what this filter used to do, produces a cross: a pixel diagonally off a corner is touched by neither sweep and stays black at any strength.)",
+        "```ts // The same blur as CSS `filter: blur(4px)`. subtree.filters = [new BlurFilter({ strength: 4 })]; ```",
+        "The kernel is truncated at three standard deviations, so the filter reaches `strength * 3` logical units outside its input on every edge and the tap count follows the strength without the caller choosing one.",
+        "Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one."
       ],
       "importLine": "import { BlurFilter } from '@codexo/exojs'",
       "sourceLink": null
@@ -292,7 +294,7 @@
             }
           ],
           "returnType": "void",
-          "description": "The blur reaches radius logical units outside its input on every edge. Read off the sampling loop rather than assumed: each sweep draws its source at offsets spread evenly over [-radius, +radius], so the horizontal sweep moves a value at most radius in x and the vertical one at most radius in y. Chaining them means a value can travel radius in BOTH - the corner of the box, which is exactly what this rectangle already declares. quality adds taps between those extremes and does not change the reach."
+          "description": "The blur reaches strength * 3 logical units outside its input on every edge - the point the kernel is truncated at, and therefore the furthest a value can travel along one sweep. Chaining the two sweeps means it can travel that far in BOTH, which is the corner of the box this rectangle already declares. quality redistributes the taps inside that reach and does not change it."
         },
         {
           "name": "invalidate",
@@ -351,7 +353,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ radius: 8 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ strength: 4 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
         },
         {
           "name": "quality",
@@ -372,14 +374,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Taps per side of each sweep - see BlurFilterOptions.quality."
+          "description": "Tap cap per side - see BlurFilterOptions.quality. 0 means derived."
         },
         {
-          "name": "radius",
-          "signature": "radius: number",
+          "name": "strength",
+          "signature": "strength: number",
           "signatureTokens": [
             {
-              "text": "radius",
+              "text": "strength",
               "kind": "name"
             },
             {
@@ -393,7 +395,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Blur extent in LOGICAL units. Independent of the display: the filter scales it into target texels itself, so a radius of 8 covers the same on-screen distance at every Filter.resolution and every device pixel ratio."
+          "description": "Gaussian standard deviation in LOGICAL units. Independent of the display: the filter scales it into target texels itself, so a strength of 8 covers the same on-screen distance at every Filter.resolution and every device pixel ratio."
         }
       ],
       "paragraphs": [],

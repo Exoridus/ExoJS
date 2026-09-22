@@ -552,7 +552,7 @@ describe('SoundVoice — capabilities', () => {
 
     expect(pannerSpy.panners.length).toBe(1);
 
-    system.preUpdate(frameDelta);
+    system.preFrame(frameDelta);
 
     expect(node.getWorldTransform).toHaveBeenCalled();
     expect(pannerSpy.panners[0].positionX.setValueAtTime).toHaveBeenCalledWith(10, expect.any(Number));

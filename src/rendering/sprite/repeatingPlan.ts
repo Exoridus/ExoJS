@@ -72,7 +72,7 @@ export const validateOffset = (value: number, label: string): void => {
 };
 
 // ---------------------------------------------------------------------------
-// Shader-path tiling helpers
+// WebGl2Shader-path tiling helpers
 // ---------------------------------------------------------------------------
 
 /**

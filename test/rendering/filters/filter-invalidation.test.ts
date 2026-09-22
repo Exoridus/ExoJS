@@ -37,20 +37,20 @@ class ProbeFilter extends Filter {
 describe('a mutated filter reaches the nodes that render it', () => {
   test('a bounds-affecting mutation invalidates the owner', () => {
     const node = new CountingNode();
-    const blur = new BlurFilter({ radius: 2 });
+    const blur = new BlurFilter({ strength: 2 });
 
     node.addFilter(blur);
 
     const afterAttach = node.invalidations;
 
-    blur.radius = 12;
+    blur.strength = 12;
 
     expect(node.invalidations).toBe(afterAttach + 1);
   });
 
   test('a visual-only mutation invalidates the owner too', () => {
     const node = new CountingNode();
-    const blur = new BlurFilter({ radius: 2, quality: 1 });
+    const blur = new BlurFilter({ strength: 2, quality: 1 });
 
     node.addFilter(blur);
 
@@ -63,13 +63,13 @@ describe('a mutated filter reaches the nodes that render it', () => {
 
   test('writing a property its current value notifies nobody', () => {
     const node = new CountingNode();
-    const blur = new BlurFilter({ radius: 5 });
+    const blur = new BlurFilter({ strength: 5, quality: 1 });
 
     node.addFilter(blur);
 
     const afterAttach = node.invalidations;
 
-    blur.radius = 5;
+    blur.strength = 5;
     blur.quality = 1;
 
     expect(node.invalidations).toBe(afterAttach);
@@ -77,10 +77,10 @@ describe('a mutated filter reaches the nodes that render it', () => {
 
   test('the application does not have to remove and re-add the filter', () => {
     const node = new CountingNode();
-    const blur = new BlurFilter({ radius: 2 });
+    const blur = new BlurFilter({ strength: 2 });
 
     node.addFilter(blur);
-    blur.radius = 9;
+    blur.strength = 9;
 
     // The filter is still attached exactly once - the invalidation came from
     // the mutation itself.
@@ -214,7 +214,7 @@ describe('a shared filter notifies every consumer', () => {
   test('one mutation reaches both nodes', () => {
     const first = new CountingNode();
     const second = new CountingNode();
-    const blur = new BlurFilter({ radius: 1 });
+    const blur = new BlurFilter({ strength: 1 });
 
     first.addFilter(blur);
     second.addFilter(blur);
@@ -222,7 +222,7 @@ describe('a shared filter notifies every consumer', () => {
     const afterAttachFirst = first.invalidations;
     const afterAttachSecond = second.invalidations;
 
-    blur.radius = 7;
+    blur.strength = 7;
 
     expect(first.invalidations).toBe(afterAttachFirst + 1);
     expect(second.invalidations).toBe(afterAttachSecond + 1);
@@ -231,7 +231,7 @@ describe('a shared filter notifies every consumer', () => {
   test('removing one consumer leaves the other notified', () => {
     const first = new CountingNode();
     const second = new CountingNode();
-    const blur = new BlurFilter({ radius: 1 });
+    const blur = new BlurFilter({ strength: 1 });
 
     first.addFilter(blur);
     second.addFilter(blur);
@@ -240,7 +240,7 @@ describe('a shared filter notifies every consumer', () => {
     const afterRemoval = first.invalidations;
     const secondBefore = second.invalidations;
 
-    blur.radius = 7;
+    blur.strength = 7;
 
     expect(first.invalidations).toBe(afterRemoval);
     expect(second.invalidations).toBe(secondBefore + 1);

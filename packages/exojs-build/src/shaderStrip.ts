@@ -1,7 +1,7 @@
 // Comment/whitespace stripping for shader sources, kept free of any Node import
 // so a browser test lane can compile the exact text a production build ships.
 //
-// Shader text is shipped verbatim inside the bundle: neither Terser nor
+// WebGl2Shader text is shipped verbatim inside the bundle: neither Terser nor
 // esbuild descends into a string literal, so every explanatory comment in a
 // shader is payload every consumer downloads.
 //

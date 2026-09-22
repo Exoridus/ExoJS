@@ -588,7 +588,7 @@ describe('RepeatingSprite — no-op setters (geometry path)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Shader path - offset does NOT trigger geometry rebuild
+// WebGl2Shader path - offset does NOT trigger geometry rebuild
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — shader path offset behavior', () => {
@@ -658,7 +658,7 @@ describe('RepeatingSprite — lazy geometry (geometry path)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Shader path - quads is always empty
+// WebGl2Shader path - quads is always empty
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — quads on shader path', () => {

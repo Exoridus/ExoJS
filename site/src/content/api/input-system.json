@@ -872,11 +872,11 @@
           "description": "Register a callback fired when the input is released within InputBindingOptions.threshold ms of activation (a \"tap\")."
         },
         {
-          "name": "preUpdate",
-          "signature": "preUpdate(delta: Seconds): void",
+          "name": "preFrame",
+          "signature": "preFrame(delta: Seconds): void",
           "signatureTokens": [
             {
-              "text": "preUpdate",
+              "text": "preFrame",
               "kind": "name"
             },
             {
@@ -916,7 +916,7 @@
             }
           ],
           "returnType": "void",
-          "description": "SystemMethods.preUpdate phase, registered on app.systems by the Application at SystemOrder.CoreInput - ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding. delta is also the clock a pending long-press matures on - see GestureRecognizer.update."
+          "description": "SystemMethods.preFrame phase, registered on app.systems by the Application at SystemOrder.CoreInput - ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding. delta is also the clock a pending long-press matures on - see GestureRecognizer.update."
         },
         {
           "name": "unlockPointer",

@@ -1,6 +1,7 @@
 import { createExoJsAdapter } from '../src/rendering/adapters/exojs';
 import { ARCHETYPES, buildMatrix, createRng, timedFramesFor, warmupFramesFor } from '../src/rendering/archetypes';
 import type { Backend, EngineAdapter } from '../src/rendering/EngineAdapter';
+import { hasFullViewportLeaves, leafAlpha } from '../src/rendering/traits';
 
 describe('createRng', () => {
   test('is deterministic for a given seed', () => {
@@ -69,6 +70,35 @@ describe('ARCHETYPES', () => {
 
     expect(byId['static-heavy']!.mutationFraction).toBe(0);
     expect(byId['dynamic-heavy']!.mutationFraction).toBeGreaterThan(0);
+  });
+
+  test('dynamic-all moves every leaf while dynamic-heavy keeps moving only a few', () => {
+    const byId = Object.fromEntries(ARCHETYPES.map(a => [a.id, a]));
+    const all = byId['dynamic-all']!;
+    const heavy = byId['dynamic-heavy']!;
+
+    expect(all.mutationFraction).toBe(1);
+    // The delta between the two rows is only the mutated fraction, so every
+    // other field has to stay identical.
+    expect(heavy.mutationFraction).toBe(0.075);
+    expect(all.nestingDepth).toBe(heavy.nestingDepth);
+    expect(all.textureCount).toBe(heavy.textureCount);
+    expect(all.cullingEnabled).toBe(heavy.cullingEnabled);
+  });
+
+  test('fill-layers stacks translucent viewport-sized layers on a ladder of its own', () => {
+    const byId = Object.fromEntries(ARCHETYPES.map(a => [a.id, a]));
+    const layers = byId['fill-layers']!;
+
+    expect(hasFullViewportLeaves(layers)).toBe(true);
+    expect(leafAlpha(layers)).toBeLessThan(1);
+    // The load is full-screen layers, not scene nodes, so the sprite ladder
+    // would describe a workload nothing ships.
+    expect(layers.nodeCounts).toEqual([8, 32, 128]);
+    // `overdraw` shares the geometry and is deliberately opaque: it probes the
+    // fill ceiling, where this one probes an ordinary layered scene.
+    expect(hasFullViewportLeaves(byId['overdraw']!)).toBe(true);
+    expect(leafAlpha(byId['overdraw']!)).toBe(1);
   });
 
   test('separates retained-recordable mesh switches from array-mesh repacking', () => {

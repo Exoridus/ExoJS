@@ -23,7 +23,7 @@
  * an AudioWorklet processor, the worker global's message plumbing, a GLSL
  * version directive, a WGSL entry-point attribute.
  *
- * Shader text is scoped to engine-owned code: the core and package sources.
+ * WebGl2Shader text is scoped to engine-owned code: the core and package sources.
  * Accepting a caller-supplied shader string IS the public `ShaderFilter` API, so
  * examples, guides and tests write shader source into strings on purpose; a rule
  * that flagged those would be flagging the feature.

@@ -5,7 +5,7 @@
 // etc. — instead of a dead placeholder. The stage uses --bg-code (always dark,
 // both themes) so the motifs read like a tiny running canvas everywhere.
 // All motion is gated behind prefers-reduced-motion.
-type Anim = 'particles' | 'chroma' | 'fft' | 'frames' | 'easing' | 'camera';
+type Anim = 'particles' | 'chroma' | 'fft' | 'frames' | 'easing' | 'camera' | 'lights';
 
 interface Props {
     anim: Anim;
@@ -17,6 +17,7 @@ const { anim, title, tone = 0 } = Astro.props;
 const FFT_BARS = 9;
 const SPARKS = 11;
 const FRAMES = 4;
+const LIGHTS = 5;
 ---
 
 <div class="thumb" data-anim={anim} data-tone={tone}>
@@ -71,6 +72,15 @@ const FRAMES = 4;
                         <span class="corner bl" />
                         <span class="corner br" />
                     </div>
+                </div>
+            )
+        }
+        {
+            anim === 'lights' && (
+                <div class="lights">
+                    {Array.from({ length: LIGHTS }).map((_, i) => (
+                        <span class="light" style={`--i:${i}`} />
+                    ))}
                 </div>
             )
         }
@@ -400,6 +410,39 @@ const FRAMES = 4;
         }
     }
 
+    /* ---- lights: coloured point lights orbiting over a tiled floor ---- */
+    .lights {
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(oklch(34% 0.012 245) 1px, transparent 1px),
+            linear-gradient(90deg, oklch(34% 0.012 245) 1px, transparent 1px);
+        background-size: 24px 24px;
+        background-color: oklch(19% 0.012 245);
+    }
+    .light {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        --hue: calc(var(--i) * 72);
+        background: radial-gradient(circle, oklch(78% 0.19 var(--hue) / 0.95) 0%, oklch(70% 0.19 var(--hue) / 0.35) 38%, transparent 68%);
+        mix-blend-mode: screen;
+        will-change: transform;
+        animation: light-orbit 7.5s linear infinite;
+        animation-delay: calc(var(--i) * -1.5s);
+    }
+    @keyframes light-orbit {
+        0% {
+            transform: translate(-50%, -50%) rotate(0deg) translateX(46px) rotate(0deg);
+        }
+        100% {
+            transform: translate(-50%, -50%) rotate(360deg) translateX(46px) rotate(-360deg);
+        }
+    }
+
     @media (prefers-reduced-motion: reduce) {
         .spark,
         .particles::after,
@@ -409,8 +452,12 @@ const FRAMES = 4;
         .ease-dot,
         .curve,
         .cam-world,
-        .cam-frame {
+        .cam-frame,
+        .light {
             animation: none;
+        }
+        .light {
+            transform: translate(calc(-50% + (var(--i) - 2) * 26px), -50%);
         }
         /* Settle into a readable static state. */
         .bar {

@@ -1,0 +1,64 @@
+{
+  "name": "@codexo/exojs-cli",
+  "version": "0.1.0",
+  "description": "Command line tools for ExoJS projects: a cross-origin-isolated static server, the app scaffolder, an environment check, and the .exoa asset container packer.",
+  "keywords": [
+    "asset-pipeline",
+    "cli",
+    "cross-origin-isolation",
+    "exojs",
+    "scaffold",
+    "static-server"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/exojs-cli"
+  },
+  "homepage": "https://github.com/Exoridus/ExoJS",
+  "bugs": {
+    "url": "https://github.com/Exoridus/ExoJS/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "exo": "./dist/exo.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest run --root ../.. --project=exojs-cli"
+  },
+  "dependencies": {
+    "@codexo/exojs-build": "workspace:*",
+    "create-exo-app": "workspace:*"
+  },
+  "devDependencies": {
+    "@codexo/exojs": "workspace:*",
+    "@types/node": "^26.4.0",
+    "typescript": "~6.0.3"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

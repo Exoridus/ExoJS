@@ -14,11 +14,36 @@ import type { ArchetypeSpec } from './EngineAdapter';
 /** Whether the archetype's leaves are text nodes rather than sprites. */
 export const isTextArchetype = (spec: ArchetypeSpec): boolean => (spec.textGlyphsPerNode ?? 0) > 0;
 
+/**
+ * Whether every leaf is stretched to the whole viewport and stacked at the
+ * origin, which makes the scene fill-bound rather than node-bound.
+ *
+ * A predicate rather than an archetype-id check in each adapter: the arms used
+ * to test the id separately, and an archetype added with the same geometry under
+ * a different name would have been laid out four different ways.
+ */
+export const hasFullViewportLeaves = (spec: ArchetypeSpec): boolean => spec.fullViewportLeaves === true;
+
+/** Per-leaf alpha the archetype fixes, or `1` where it leaves the leaves opaque. */
+export const leafAlpha = (spec: ArchetypeSpec): number => spec.leafAlpha ?? 1;
+
 /** Whether the per-frame mutation re-sets each selected text leaf's string. */
 export const isTextUpdating = (spec: ArchetypeSpec): boolean => isTextArchetype(spec) && spec.textUpdate === true;
 
 /** Whether the per-frame mutation destroys and rebuilds each selected leaf. */
 export const isChurning = (spec: ArchetypeSpec): boolean => spec.churn === true && spec.mutationFraction > 0;
+
+/** Point queries the archetype resolves per frame; `0` when it resolves none. */
+export const pointerQueriesPerFrame = (spec: ArchetypeSpec): number => Math.max(0, Math.trunc(spec.pointerQueriesPerFrame ?? 0));
+
+/** Whether the archetype measures hit testing rather than drawing. */
+export const isPicking = (spec: ArchetypeSpec): boolean => pointerQueriesPerFrame(spec) > 0;
+
+/** Gaussian standard deviation in logical pixels for the effect scene; `0` when the archetype renders no blur. */
+export const blurStrength = (spec: ArchetypeSpec): number => Math.max(0, spec.blurStrength ?? 0);
+
+/** Whether the archetype renders the standalone blur effect rather than a scene of nodes. */
+export const isBlurEffect = (spec: ArchetypeSpec): boolean => blurStrength(spec) > 0;
 
 /** Chained post-process filter count on the scene root; `0` when the archetype is unfiltered. */
 export const filterChainDepth = (spec: ArchetypeSpec): number => Math.max(0, Math.trunc(spec.filterChainDepth ?? 0));
@@ -26,21 +51,24 @@ export const filterChainDepth = (spec: ArchetypeSpec): number => Math.max(0, Mat
 /** Nested rectangle-mask depth down the container spine; `0` when the archetype is unmasked. */
 export const maskDepth = (spec: ArchetypeSpec): number => Math.max(0, Math.trunc(spec.maskDepth ?? 0));
 
-/** Bloom-composite blur extent in logical px; `0` when the archetype renders the scene in one pass. */
-export const compositeBlurRadius = (spec: ArchetypeSpec): number => Math.max(0, spec.compositeBlurRadius ?? 0);
+/** Whether the archetype moves its mask rects every frame (see `ArchetypeSpec.maskMotion`). */
+export const hasMaskMotion = (spec: ArchetypeSpec): boolean => maskDepth(spec) > 0 && spec.maskMotion === true;
+
+/** Bloom-composite Gaussian standard deviation in logical px; `0` when the archetype renders the scene in one pass. */
+export const compositeBlurStrength = (spec: ArchetypeSpec): number => Math.max(0, spec.compositeBlurStrength ?? 0);
 
 /** Whether the archetype renders the bloom-shaped capture/blur/composite multipass. */
-export const isComposite = (spec: ArchetypeSpec): boolean => compositeBlurRadius(spec) > 0;
+export const isComposite = (spec: ArchetypeSpec): boolean => compositeBlurStrength(spec) > 0;
 
 /**
  * Whether the archetype exercises render-target machinery - a filter chain, a
  * mask stack, or the bloom-shaped composite.
  *
- * This is the WebGL1 exclusion boundary: the Phaser arm renders through a WebGL1
- * context, so a target-heavy row's gap would be attributable to the backend
- * generation rather than to the engine, which is not a claim this matrix makes.
+ * This is the render-target coverage boundary: competitor arms without a
+ * validated per-node equivalent sit these rows out rather than approximating
+ * them and making the comparison answer a different question.
  */
-export const usesRenderTargets = (spec: ArchetypeSpec): boolean => filterChainDepth(spec) > 0 || maskDepth(spec) > 0 || isComposite(spec);
+export const usesRenderTargets = (spec: ArchetypeSpec): boolean => filterChainDepth(spec) > 0 || maskDepth(spec) > 0 || isComposite(spec) || isBlurEffect(spec);
 
 /**
  * Glyph string for text leaf `index`, `length` characters long.

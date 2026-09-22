@@ -8,7 +8,8 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import type { Application, CanvasAlphaMode } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { CanvasAlphaMode } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 

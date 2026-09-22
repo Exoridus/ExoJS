@@ -27,11 +27,11 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Shader } from '#rendering/shader/Shader';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -226,7 +226,7 @@ describe('WebGPU GPU pixel snapping — Sprite position mode', () => {
     // boundary is the same as Case 1 - only the vertex path (custom module vs
     // built-in) differs.
     const material = new SpriteMaterial({
-      shader: new ShaderSource({
+      shader: new Shader({
         wgsl: `
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {

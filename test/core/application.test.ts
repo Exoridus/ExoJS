@@ -1,7 +1,12 @@
 import type { MockInstance } from 'vitest';
 
+import { FrameLoop } from '#core/application/FrameLoop';
+import { NodeDirtyIndex } from '#core/nodeDirtyIndex';
 import { Scene } from '#core/scene/Scene';
 import { Time } from '#core/units';
+import type { PlatformAdapter } from '#platform/PlatformAdapter';
+
+import { activeClockOf, frameClockOf, installFrameLoopDoubles } from '../support/application-frame-loop';
 
 // SceneDirector is fully mocked in this file's harness (see
 // loadApplicationHarness) - its change() is a plain vi.fn() that never
@@ -216,15 +221,17 @@ describe('Application', () => {
     const systems = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
-      _preUpdate: vi.fn(),
+      _preFrame: vi.fn(),
       _fixedUpdate: vi.fn(),
       _update: systemsUpdate,
       _draw: vi.fn(),
+      _postFrame: vi.fn(),
     };
     const sceneDirector = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
-      preUpdate: vi.fn(),
+      preFrame: vi.fn(),
+      postFrame: vi.fn(),
       fixedUpdate: vi.fn(),
       update: vi.fn(),
       draw: vi.fn(),
@@ -237,13 +244,10 @@ describe('Application', () => {
       resetStats: vi.fn().mockReturnThis(),
       stats: { frameTimeMs: 0 },
     };
-    const frameClock = {
-      elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: vi.fn(),
-    };
-
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
+
+    const { scheduler } = installFrameLoopDoubles(app);
+
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = systems;
@@ -254,14 +258,14 @@ describe('Application', () => {
     rawApp['tweens'] = { _prepareFrame: vi.fn() };
     rawApp['_rendering'] = { _prepareFrame: vi.fn() };
     rawApp['_backend'] = backend;
-    rawApp['_frameClock'] = frameClock;
-    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
     // initializer (`= Time.seconds(0)`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = Time.seconds(0);
-    rawApp['_updateHandler'] = vi.fn();
-    rawApp['_frameCount'] = 0;
+    rawApp['_dirtyIndex'] = new NodeDirtyIndex();
+    // Same reason: the frame's draw path reads the frame-pass pipeline, and an
+    // uninitialised field is not the `null` an application without one holds.
+    rawApp['_framePasses'] = null;
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
@@ -276,7 +280,7 @@ describe('Application', () => {
     expect(backend.resetStats).toHaveBeenCalledTimes(1);
     expect(backend.flush).toHaveBeenCalledTimes(1);
     expect(backend.stats.frameTimeMs).toBeGreaterThanOrEqual(0);
-    expect(frameClock.restart).toHaveBeenCalledTimes(1);
+    expect(scheduler.beginFrame).toHaveBeenCalledTimes(1);
     // Scheduling is the loop's, not update()'s: a manual tick runs one frame
     // and leaves the RAF chain alone.
     expect(rafSpy).not.toHaveBeenCalled();
@@ -592,7 +596,7 @@ describe('Application', () => {
 
   test('ignores removed flat options at runtime (no compatibility shim)', async () => {
     const { Application } = await loadApplicationHarness();
-    const app = new Application({ width: 123, height: 45 } as unknown as import('#core/Application').ApplicationOptions);
+    const app = new Application({ width: 123, height: 45 } as unknown as import('#core/application/ApplicationOptions').ApplicationOptions);
 
     expect(app.canvas.width).toBe(800);
     expect(app.canvas.height).toBe(600);
@@ -610,27 +614,32 @@ describe('Application', () => {
       _stopAndClearActiveScene: vi.fn().mockRejectedValue(sceneTeardownError),
       _abortInFlightNavigation: vi.fn().mockReturnValue(false),
     };
-    const activeClock = { stop: vi.fn() };
-    const frameClock = { stop: vi.fn() };
     const cancelSpy = vi.fn();
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    rawApp['platform'] = { requestFrame: vi.fn().mockReturnValue(1), cancelFrame: cancelSpy };
+    rawApp['platform'] = { now: () => 0, requestFrame: vi.fn().mockReturnValue(99), cancelFrame: cancelSpy };
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
-    rawApp['_frameRequest'] = 99;
     rawApp['scenes'] = sceneDirector;
-    rawApp['_activeClock'] = activeClock;
-    rawApp['_frameClock'] = frameClock;
-    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
+
+    // A real scheduler rather than a double: this spec is about `stop()`
+    // reaching the pending frame request and both running clocks, which are
+    // the scheduler's own state.
+    const scheduler = new FrameLoop(rawApp['platform'] as PlatformAdapter, vi.fn(), 1000 / 60);
+
+    rawApp['_scheduler'] = scheduler;
+
+    const activeClockStop = vi.spyOn(activeClockOf(app), 'stop');
+    const frameClockStop = vi.spyOn(frameClockOf(app), 'stop');
+
+    scheduler.start();
 
     app.stop();
     await Promise.resolve();
 
     expect(sceneDirector._stopAndClearActiveScene).toHaveBeenCalledTimes(1);
     expect(cancelSpy).toHaveBeenCalledWith(99);
-    expect(activeClock.stop).toHaveBeenCalledTimes(1);
-    expect(frameClock.stop).toHaveBeenCalledTimes(1);
+    expect(activeClockStop).toHaveBeenCalledTimes(1);
+    expect(frameClockStop).toHaveBeenCalledTimes(1);
     expect(app.state).toBe(ApplicationState.Stopped);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       '%c[ExoJS][Application]',

@@ -330,14 +330,15 @@ describe('ImageLayerNode repeat coverage cache', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('ImageLayerNode pixelSnapMode', () => {
-  it('defaults to none and forwards a valid mode to the sprite', () => {
+  it('defaults to geometry, forwards it to the sprite, and forwards a changed mode', () => {
     const node = new ImageLayerNode(makeLayer());
-    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
-
-    node.pixelSnapMode = PixelSnapMode.Geometry;
-
     expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     expect(spriteOf(node).pixelSnapMode).toBe(PixelSnapMode.Geometry);
+
+    node.pixelSnapMode = PixelSnapMode.None;
+
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
+    expect(spriteOf(node).pixelSnapMode).toBe(PixelSnapMode.None);
   });
 
   it('rejects an invalid mode and leaves the prior mode unchanged', () => {

@@ -1,0 +1,81 @@
+{
+  "title": "LightingQuality",
+  "description": "Which renderer shades the scene, as Lighting.quality reports it. A scene never names one: it constructs the system it wants - see ForwardLighting, LightmapLighting and RadianceLighting - and reads this back to say which one is running. - `forward` shades inside the sprite shader against a capacity-bounded light texture. One draw, no extra targets, and the only renderer that does normal mapping - but every lit fragment walks every light, so the count is capped. - `lightmap` accumulates the lights into a target of their own and multiplies the frame by it. No light cap, shadows from the registered occluder sources, and normals from a prepass over the registered surfaces rather than from a material. - `radiance` fills the same light field from a chain of radiance cascades instead: light propagates from the emitters rather than falling off around each light, so a lamp fills the room it stands in, thins with distance instead of ending at a radius, and casts penumbrae that widen the way a source with a size does. It needs a renderable float target, and does NOT make a scene look the way the other two renderers make it look.",
+  "symbol": "LightingQuality",
+  "kind": "type",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Which renderer shades the scene, as Lighting.quality reports it.",
+        "A scene never names one: it constructs the system it wants - see ForwardLighting, LightmapLighting and RadianceLighting - and reads this back to say which one is running.",
+        "- `forward` shades inside the sprite shader against a capacity-bounded light texture. One draw, no extra targets, and the only renderer that does normal mapping - but every lit fragment walks every light, so the count is capped. - `lightmap` accumulates the lights into a target of their own and multiplies the frame by it. No light cap, shadows from the registered occluder sources, and normals from a prepass over the registered surfaces rather than from a material. - `radiance` fills the same light field from a chain of radiance cascades instead: light propagates from the emitters rather than falling off around each light, so a lamp fills the room it stands in, thins with distance instead of ending at a radius, and casts penumbrae that widen the way a source with a size does. It needs a renderable float target, and does NOT make a scene look the way the other two renderers make it look."
+      ],
+      "importLine": "import { LightingQuality } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LightingQuality",
+          "signature": "\"forward\" | \"lightmap\" | \"radiance\"",
+          "signatureTokens": [
+            {
+              "text": "\"forward\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"lightmap\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"radiance\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/Lighting.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/Lighting.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/Lighting.ts"
+}

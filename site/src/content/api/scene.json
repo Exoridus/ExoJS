@@ -1,6 +1,6 @@
 {
   "title": "Scene",
-  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Seconds): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type - the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } `AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it: class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle. Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio, Scene.animations) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
+  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Seconds): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type - the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } `AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it: class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle. Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.coroutines, Scene.audio, Scene.animations) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
   "symbol": "Scene",
   "kind": "class",
   "subsystem": "core",
@@ -9,8 +9,8 @@
   "memberCount": 32,
   "counts": {
     "constructors": 1,
-    "methods": 13,
-    "properties": 14,
+    "methods": 12,
+    "properties": 15,
     "events": 4
   },
   "sections": [
@@ -28,7 +28,7 @@
         "`AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it:",
         "class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication",
         "For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle.",
-        "Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio, Scene.animations) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy."
+        "Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.coroutines, Scene.audio, Scene.animations) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy."
       ],
       "importLine": "import { Scene } from '@codexo/exojs'",
       "sourceLink": null
@@ -451,53 +451,6 @@
           "description": "Optional asynchronous loading hook. Runs once per activation, before Scene.init: initial asset loading, activation-data-dependent asset selection, remote/storage reads, or any other work that must complete before synchronous setup. Reach the loader via this.loader (scene lifetime) or this.app.loader (app lifetime). Override in subclass."
         },
         {
-          "name": "preUpdate",
-          "signature": "preUpdate(_delta: Seconds): Synchronous",
-          "signatureTokens": [
-            {
-              "text": "preUpdate",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "_delta",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Seconds",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Synchronous",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "_delta",
-              "type": "Seconds",
-              "optional": false
-            }
-          ],
-          "returnType": "Synchronous",
-          "description": "Pre-simulation hook, called once per frame before this frame's fixed steps - and therefore before Scene.fixedUpdate and Scene.update. Runs after the engine's own core systems, so this frame's input snapshot is already current here. Use it for state the simulation must see this frame rather than next: feeding networked or replayed input, resolving intents before physics consumes them. Ordinary gameplay belongs in Scene.update, which runs after the simulation. Default is a no-op. Override in subclass. Must be synchronous - see Scene.update."
-        },
-        {
           "name": "removeChild",
           "signature": "removeChild(child: RenderNode): this",
           "signatureTokens": [
@@ -820,6 +773,27 @@
           "params": [],
           "returnType": null,
           "description": "Scene-bound audio facade. Playback started via this.audio.play(...) is automatically stopped when the scene ends permanently - no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+        },
+        {
+          "name": "coroutines",
+          "signature": "coroutines: SceneCoroutines",
+          "signatureTokens": [
+            {
+              "text": "coroutines",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneCoroutines",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scene-bound coroutine facade over app.coroutines. Work queued via this.coroutines.queue(...) stops advancing while the scene is paused or suspended, resumes exactly where it left off, and is cancelled when the scene ends permanently - no manual cleanup required. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "inputs",

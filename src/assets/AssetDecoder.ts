@@ -244,10 +244,34 @@ export class AssetDecoder {
    * A container is not an asset of any type - it is a transport that yields
    * several - so it caches under its own namespace rather than borrowing one
    * from whatever happens to be inside it.
+   *
+   * `verify` runs on the network leg, before the bytes reach the cache: what it
+   * rejects is never persisted, so a later load cannot be served the same bad
+   * bytes from a store. A cache hit skips it, having passed it when it was
+   * written.
    * @internal
    */
-  public _acquireContainer(url: string): Promise<ArrayBuffer> {
-    return this._acquire(url, CONTAINER_NAMESPACE, containerLayout, canonicalizeSource(this._basePath, url), response => response.arrayBuffer());
+  public _acquireContainer(url: string, verify?: (bytes: ArrayBuffer) => Promise<void>): Promise<ArrayBuffer> {
+    return this._acquire(url, CONTAINER_NAMESPACE, containerLayout, canonicalizeSource(this._basePath, url), async response => {
+      const bytes = await response.arrayBuffer();
+
+      await verify?.(bytes);
+
+      return bytes;
+    });
+  }
+
+  /**
+   * The absolute URL and request options a container read runs under.
+   *
+   * The block-wise container path does its own fetching - that is the point of
+   * it - but must still resolve the source against the loader's base path and
+   * carry the application's `fetchOptions`, exactly as every other acquisition
+   * does.
+   * @internal
+   */
+  public _containerRequest(url: string, signal?: AbortSignal): { url: string; init: RequestInit } {
+    return { url: this._resolveUrl(url), init: this._requestOptions(signal) };
   }
 
   /** The context a factory sees for one request. */

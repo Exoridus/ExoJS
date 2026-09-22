@@ -309,11 +309,11 @@
           "description": "Tear down the system. Clears tweens and tickers and makes subsequent updates no-ops."
         },
         {
-          "name": "preUpdate",
-          "signature": "preUpdate(delta: Seconds): void",
+          "name": "preFrame",
+          "signature": "preFrame(delta: Seconds): void",
           "signatureTokens": [
             {
-              "text": "preUpdate",
+              "text": "preFrame",
               "kind": "name"
             },
             {
@@ -353,7 +353,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Advance all active tweens by the frame delta (read as seconds), then advance all registered tickers. The SystemMethods.preUpdate phase, at SystemOrder.CoreTweens. Uses snapshots so callbacks that add or remove tweens/tickers do not corrupt mid-iteration."
+          "description": "Advance all active tweens by the frame delta (read as seconds), then advance all registered tickers. The SystemMethods.preFrame phase, at SystemOrder.CoreTweens. Uses snapshots so callbacks that add or remove tweens/tickers do not corrupt mid-iteration."
         },
         {
           "name": "remove",

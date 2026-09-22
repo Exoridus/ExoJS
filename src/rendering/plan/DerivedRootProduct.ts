@@ -164,6 +164,102 @@ export class DerivedRootProduct {
   }
 
   /**
+   * Membership of the last selection as one byte per global handle, so a
+   * structure delta can carry it across a renumbering.
+   *
+   * Handle-indexed rather than scope-local because that is the only description
+   * that survives the renumbering: a delta knows which handle an item held
+   * before, not which scope-local index it sat at.
+   */
+  private _visibleOfHandle = new Uint8Array(0);
+
+  /**
+   * Record which items the last selection admitted, keyed by their CURRENT
+   * handles. Call while the source still describes the pre-delta numbering.
+   */
+  public snapshotMembership(scopes: readonly SourceScope[], handleCount: number): void {
+    if (this._visibleOfHandle.length < handleCount) {
+      this._visibleOfHandle = new Uint8Array(handleCount);
+    }
+
+    const visible = this._visibleOfHandle;
+
+    visible.fill(0, 0, handleCount);
+
+    if (!this._hasPrevious) {
+      return;
+    }
+
+    for (const scope of scopes) {
+      const bits = this._current[scope.ordinal];
+
+      if (bits === undefined) {
+        continue;
+      }
+
+      const words = bits.words;
+      const wordCount = bits.wordCount;
+      const base = scope.handleBase;
+
+      for (let w = 0; w < wordCount; w++) {
+        let word = words[w]!;
+
+        while (word !== 0) {
+          const lowest = word & -word;
+
+          word ^= lowest;
+          visible[base + (w << 5) + (31 - Math.clz32(lowest))] = 1;
+        }
+      }
+    }
+  }
+
+  /**
+   * Re-key against a source whose scopes were re-discovered by a structure
+   * delta, using the carry map to keep both the membership and the derived slots
+   * of every item that is still there.
+   *
+   * Unlike {@link rebind} this does NOT report every admitted item as entering:
+   * a carried item's slot still holds the rows the backend wrote for it, so the
+   * next selection must see it as having been visible or it would be handed a
+   * second slot and written again.
+   *
+   * `previousHandleCount` bounds the carry map's back-references, so a handle
+   * from a numbering older than the snapshot can never be read.
+   */
+  public recarry(scopes: readonly SourceScope[], carried: Int32Array, handleCount: number, previousHandleCount: number): void {
+    const visible = this._visibleOfHandle;
+
+    this._current = resizeBits(this._current, scopes);
+    this._previous = resizeBits(this._previous, scopes);
+
+    if (this._queried.length !== scopes.length) {
+      this._queried = new Uint8Array(scopes.length);
+    }
+
+    this._scopeCount = scopes.length;
+    this._handleCount = handleCount;
+
+    for (const scope of scopes) {
+      const bits = this._current[scope.ordinal]!;
+      const count = scope.items.count;
+      const base = scope.handleBase;
+
+      for (let i = 0; i < count; i++) {
+        const previous = carried[base + i]!;
+
+        if (previous >= 0 && previous < previousHandleCount && visible[previous] === 1) {
+          bits.set(i);
+        }
+      }
+    }
+
+    if (this.slotsEnabled) {
+      this.slots.recarry(carried, handleCount);
+    }
+  }
+
+  /**
    * Start a selection: the set computed last time becomes the one this one is
    * diffed against, and the new set starts empty.
    */
@@ -282,6 +378,27 @@ const sizedBits = (count: number): MembershipBits => {
   const bits = new MembershipBits();
 
   bits.reset(count);
+
+  return bits;
+};
+
+/**
+ * Size one membership array to `scopes`, reusing the sets already there.
+ *
+ * A set's backing store survives, its contents do not: after a structure delta a
+ * given ordinal may name a different scope, so anything still in it would be
+ * membership for the wrong items.
+ */
+const resizeBits = (bits: MembershipBits[], scopes: readonly SourceScope[]): MembershipBits[] => {
+  while (bits.length < scopes.length) {
+    bits.push(new MembershipBits());
+  }
+
+  bits.length = scopes.length;
+
+  for (const scope of scopes) {
+    bits[scope.ordinal]!.reset(scope.items.count);
+  }
 
   return bits;
 };

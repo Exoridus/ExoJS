@@ -8,29 +8,20 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Physics basics
 
-`@codexo/exojs-physics` is the official 2D rigid-body engine for ExoJS — a native,
-warm-started **TGS-Soft** solver (the Box2D-v3 "soft step") with shapes, colliders,
-bodies, contacts, sensors, queries, joints, sleeping and continuous collision. It
-turns a static scene graph into one where boxes fall, stack, bounce and collide.
+`@codexo/exojs-physics` is the official 2D rigid-body engine for ExoJS — a native, warm-started **TGS-Soft** solver (the Box2D-v3 "soft step") with shapes, colliders, bodies, contacts, sensors, queries, joints, sleeping and continuous collision. It turns a static scene graph into one where boxes fall, stack, bounce and collide.
 
 <Callout type="info" title="Physics is a library, not a registered extension">
 There is no `extensions: [...]` entry — you construct a `PhysicsWorld` yourself and step it. Gravity is in px/s² with **+Y pointing down**, so a positive `y` value is "down".
 </Callout>
 
-> **Note:** physics ships as a separate package. Install `@codexo/exojs-physics`
-> alongside `@codexo/exojs`:
+> **Note:** physics ships as a separate package. Install `@codexo/exojs-physics` alongside `@codexo/exojs`:
 > ```sh
 > npm install @codexo/exojs @codexo/exojs-physics
 > ```
 
 ## A library, not an extension
 
-Unlike [Tiled](/ExoJS/en/guide/assets/tiled-maps/) or
-[Particles](/ExoJS/en/guide/effects/particles/), physics is **not** an
-`Application` extension. It contributes no renderer and no asset type, so there is
-**no `extensions: [...]` activation**. `@codexo/exojs` is a
-peer dependency; you construct a [`PhysicsWorld`](/ExoJS/en/api/physics-world/)
-directly and step it yourself:
+Unlike [Tiled](/ExoJS/en/guide/assets/tiled-maps/) or [Particles](/ExoJS/en/guide/effects/particles/), physics is **not** an `Application` extension. It contributes no renderer and no asset type, so there is **no `extensions: [...]` activation**. `@codexo/exojs` is a peer dependency; you construct a [`PhysicsWorld`](/ExoJS/en/api/physics-world/) directly and step it yourself:
 
 <SourceSnippet
   source="examples/guides/physics-basics/world-setup.ts"
@@ -39,24 +30,17 @@ directly and step it yourself:
   title="examples/guides/physics-basics/world-setup.ts"
 />
 
-The world holds **no module-level state**, so any number of worlds run in complete
-isolation — one per scene, or several side by side. Gravity is in px/s² with **+Y
-pointing down** (the ExoJS screen convention), so "down" is a positive `y`.
+The world holds **no module-level state**, so any number of worlds run in complete isolation — one per scene, or several side by side. Gravity is in px/s² with **+Y pointing down** (the ExoJS screen convention), so "down" is a positive `y`.
 
 ## Bodies and colliders
 
-A [`PhysicsBody`](/ExoJS/en/api/physics-body/) is a transform plus a mass model; a
-[`Collider`](/ExoJS/en/api/collider/) is the geometry attached to it. A body owns one
-or more colliders, and its mass, centre of mass and rotational inertia are computed
-from their shape and density. Every body has a **type**:
+A [`PhysicsBody`](/ExoJS/en/api/physics-body/) is a transform plus a mass model; a [`Collider`](/ExoJS/en/api/collider/) is the geometry attached to it. A body owns one or more colliders, and its mass, centre of mass and rotational inertia are computed from their shape and density. Every body has a **type**:
 
 - `'static'` — never moves (floors, walls). Infinite mass.
 - `'dynamic'` — integrates under gravity, forces and contacts. This is the default.
 - `'kinematic'` — moves only by the velocity you set; immovable under contacts (moving platforms).
 
-Construct a body freely, then hand it to `world.add(...)`. Colliders can be passed
-as plain option objects in `colliders: [...]` — you don't have to build a `Collider`
-instance yourself:
+Construct a body freely, then hand it to `world.add(...)`. Colliders can be passed as plain option objects in `colliders: [...]` — you don't have to build a `Collider` instance yourself:
 
 <SourceSnippet
   source="examples/guides/physics-basics/box-body.ts"
@@ -65,19 +49,13 @@ instance yourself:
   title="examples/guides/physics-basics/box-body.ts"
 />
 
-`world.add(...)` returns the body, so you can keep a reference (`crate` above) to read
-its position or drive it later. Collider material is set per collider:
+`world.add(...)` returns the body, so you can keep a reference (`crate` above) to read its position or drive it later. Collider material is set per collider:
 
 - `density` (default `1`) — mass per px²; feeds the body's mass model.
 - `friction` (default `0.2`) — Coulomb friction coefficient.
 - `restitution` (default `0`) — bounciness in `[0, 1]`.
 
-Four shapes enclose an area and therefore carry mass:
-[`BoxShape(width, height)`](/ExoJS/en/api/box-shape/),
-[`CircleShape(radius)`](/ExoJS/en/api/circle-shape/),
-[`CapsuleShape(x0, y0, x1, y1, radius)`](/ExoJS/en/api/capsule-shape/) — the exact
-geometry, never a polygon approximation — and
-[`PolygonShape(points)`](/ExoJS/en/api/polygon-shape/) for a convex outline:
+Four shapes enclose an area and therefore carry mass: [`BoxShape(width, height)`](/ExoJS/en/api/box-shape/), [`CircleShape(radius)`](/ExoJS/en/api/circle-shape/), [`CapsuleShape(x0, y0, x1, y1, radius)`](/ExoJS/en/api/capsule-shape/) — the exact geometry, never a polygon approximation — and [`PolygonShape(points)`](/ExoJS/en/api/polygon-shape/) for a convex outline:
 
 <SourceSnippet
   source="examples/guides/physics-basics/circle-body.ts"
@@ -88,17 +66,9 @@ geometry, never a polygon approximation — and
 
 ### Boundary shapes for level geometry
 
-[`SegmentShape(x0, y0, x1, y1)`](/ExoJS/en/api/segment-shape/) is a single edge and
-[`ChainShape(points)`](/ExoJS/en/api/chain-shape/) a connected run of them. Both are
-**boundaries**: they have no interior, so they contribute collision only, and a
-`dynamic` body carrying nothing but boundary geometry is rejected — give it a solid
-collider too.
+[`SegmentShape(x0, y0, x1, y1)`](/ExoJS/en/api/segment-shape/) is a single edge and [`ChainShape(points)`](/ExoJS/en/api/chain-shape/) a connected run of them. Both are **boundaries**: they have no interior, so they contribute collision only, and a `dynamic` body carrying nothing but boundary geometry is rejected — give it a solid collider too.
 
-Reach for a chain rather than a list of segments whenever the geometry is one
-connected surface. The engine owns the shared vertices, so a body sliding along it
-never snags on a seam, and the whole chain stays **one** collider: one entry in
-`world.colliders`, one `collisionStart`, one query result, however many of its edges
-are touched.
+Reach for a chain rather than a list of segments whenever the geometry is one connected surface. The engine owns the shared vertices, so a body sliding along it never snags on a seam, and the whole chain stays **one** collider: one entry in `world.colliders`, one `collisionStart`, one query result, however many of its edges are touched.
 
 <SourceSnippet
   source="examples/guides/physics-basics/capsule-and-chain.ts"
@@ -107,23 +77,13 @@ are touched.
   title="examples/guides/physics-basics/capsule-and-chain.ts"
 />
 
-A chain is **one-sided**: the vertex order decides which side is solid, and a body
-may pass through it from behind — which is what makes it the right shape for ground
-you only ever land on. A single `SegmentShape` has no such order and blocks from both
-sides; one-way behaviour there is a contact rule, not geometry, and belongs in the
-[contact modifier](/ExoJS/en/guide/physics/joints-and-dynamics/).
+A chain is **one-sided**: the vertex order decides which side is solid, and a body may pass through it from behind — which is what makes it the right shape for ground you only ever land on. A single `SegmentShape` has no such order and blocks from both sides; one-way behaviour there is a contact rule, not geometry, and belongs in the [contact modifier](/ExoJS/en/guide/physics/joints-and-dynamics/).
 
 ## Stepping the world
 
-Physics is **caller-driven**: nothing moves until you call `world.step(seconds)`. The
-world accumulates elapsed time into a fixed timestep (default `1 / 60 s`) and runs as
-many fixed sub-steps as needed, so the simulation is **frame-rate independent** and
-**deterministic** — the same inputs replay identically.
+Physics is **caller-driven**: nothing moves until you call `world.step(seconds)`. The world accumulates elapsed time into a fixed timestep (default `1 / 60 s`) and runs as many fixed sub-steps as needed, so the simulation is **frame-rate independent** and **deterministic** — the same inputs replay identically.
 
-That makes [`Scene.fixedUpdate`](/ExoJS/en/guide/runtime/scenes-and-lifecycle/) the
-right hook to step it. `fixedUpdate(delta)` runs zero or more times per frame with a
-constant `delta` — exactly what a stable simulation wants. Leave camera, UI and purely
-visual work in `update`; put `world.step(...)` in `fixedUpdate`:
+That makes [`Scene.fixedUpdate`](/ExoJS/en/guide/runtime/scenes-and-lifecycle/) the right hook to step it. `fixedUpdate(delta)` runs zero or more times per frame with a constant `delta` — exactly what a stable simulation wants. Leave camera, UI and purely visual work in `update`; put `world.step(...)` in `fixedUpdate`:
 
 <SourceSnippet
   source="examples/guides/physics-basics/physics-scene.ts"
@@ -146,23 +106,10 @@ Stepping inside `update` works — pass `delta` the same way — but `fixedUpdat
 
 ### Fixed timestep vs. the variable render loop
 
-`world.step(frameDeltaSeconds)` owns its **own** fixed-timestep accumulator — it
-does not assume the delta you pass is already fixed-size. Internally it adds
-whatever you give it to a running total and converts that into a whole number
-of `1 / 60 s` sub-steps (configurable via `fixedDelta`), carrying any leftover
-fraction into the next call. That means both of these are correct:
+`world.step(frameDeltaSeconds)` owns its **own** fixed-timestep accumulator — it does not assume the delta you pass is already fixed-size. Internally it adds whatever you give it to a running total and converts that into a whole number of `1 / 60 s` sub-steps (configurable via `fixedDelta`), carrying any leftover fraction into the next call. That means both of these are correct:
 
-- **`fixedUpdate(delta)`** (the recommendation above) — the engine's own
-  fixed-timestep accumulator already turns the browser's variable
-  `requestAnimationFrame` delta into a constant-rate hook, so `world.step`
-  typically consumes exactly one sub-step per call here.
-- **`update(delta)`** — passing the *raw*, variable per-frame `delta`
-  straight from the render loop also works: `world.step`'s own accumulator
-  still produces the right number of fixed sub-steps (`0`, `1`, or several on
-  a slow frame), so the simulation stays frame-rate independent either way.
-  This is the "fixed timestep + accumulator against a variable RAF loop"
-  pattern — ExoJS's physics package implements the accumulator half of it for
-  you; you only need to feed it a delta, fixed or not.
+- **`fixedUpdate(delta)`** (the recommendation above) — the engine's own fixed-timestep accumulator already turns the browser's variable `requestAnimationFrame` delta into a constant-rate hook, so `world.step` typically consumes exactly one sub-step per call here.
+- **`update(delta)`** — passing the *raw*, variable per-frame `delta` straight from the render loop also works: `world.step`'s own accumulator still produces the right number of fixed sub-steps (`0`, `1`, or several on a slow frame), so the simulation stays frame-rate independent either way. This is the "fixed timestep + accumulator against a variable RAF loop" pattern — ExoJS's physics package implements the accumulator half of it for you; you only need to feed it a delta, fixed or not.
 
 <SourceSnippet
   source="examples/guides/physics-basics/variable-step.ts"
@@ -171,22 +118,11 @@ fraction into the next call. That means both of these are correct:
   title="examples/guides/physics-basics/variable-step.ts"
 />
 
-One visible consequence: because bound sprites are written once per
-`world.step` call (once per rendered frame), a display refresh rate *above*
-the fixed step rate (e.g. 144 Hz rendering against 60 Hz physics) can show the
-same simulated position across a couple of frames before the next fixed
-sub-step lands — a slight stutter compared to a fully interpolated renderer.
-`world.timeStepper.alpha` (`[0, 1)`) exposes the leftover sub-step fraction
-after each `step` call if you want to interpolate a bound node's rendered
-position yourself between the last two fixed states; bindings do not do this
-automatically.
+One visible consequence: because bound sprites are written once per `world.step` call (once per rendered frame), a display refresh rate *above* the fixed step rate (e.g. 144 Hz rendering against 60 Hz physics) can show the same simulated position across a couple of frames before the next fixed sub-step lands — a slight stutter compared to a fully interpolated renderer. `world.timeStepper.alpha` (`[0, 1)`) exposes the leftover sub-step fraction after each `step` call if you want to interpolate a bound node's rendered position yourself between the last two fixed states; bindings do not do this automatically.
 
 ## Binding bodies to sprites
 
-A body is pure simulation — it has no visual. To draw it, link it to a `Drawable`
-(such as a `Sprite`) with a [`PhysicsBinding`](/ExoJS/en/api/physics-binding/). After
-each `step`, the binding writes the body's **position and rotation** onto the node
-(the body's angle is radians; the node's rotation is set in degrees for you):
+A body is pure simulation — it has no visual. To draw it, link it to a `Drawable` (such as a `Sprite`) with a [`PhysicsBinding`](/ExoJS/en/api/physics-binding/). After each `step`, the binding writes the body's **position and rotation** onto the node (the body's angle is radians; the node's rotation is set in degrees for you):
 
 <SourceSnippet
   source="examples/guides/physics-basics/sprite-binding.ts"
@@ -195,8 +131,7 @@ each `step`, the binding writes the body's **position and rotation** onto the no
   title="examples/guides/physics-basics/sprite-binding.ts"
 />
 
-`world.attach(node, def)` is the one-call shortcut for the common case — it creates a
-body with a single collider, adds it and binds it in one go:
+`world.attach(node, def)` is the one-call shortcut for the common case — it creates a body with a single collider, adds it and binds it in one go:
 
 <SourceSnippet
   source="examples/guides/physics-basics/binding-options.ts"
@@ -205,9 +140,7 @@ body with a single collider, adds it and binds it in one go:
   title="examples/guides/physics-basics/binding-options.ts"
 />
 
-If you'd rather position things yourself, skip the binding and read the body's
-transform after each step — `body.x`, `body.y` (world position) and `body.angle`
-(radians):
+If you'd rather position things yourself, skip the binding and read the body's transform after each step — `body.x`, `body.y` (world position) and `body.angle` (radians):
 
 <SourceSnippet
   source="examples/guides/physics-basics/manual-sync.ts"
@@ -218,15 +151,9 @@ transform after each step — `body.x`, `body.y` (world position) and `body.angl
 
 ## Smoothing motion between fixed steps
 
-Physics runs at a fixed rate; the screen does not. At 60 Hz physics on a 144 Hz
-display most frames show the same fixed state twice, then jump — visible judder on
-anything that moves fast. The fix is not a faster simulation but **interpolation**:
-draw the body somewhere between the last two fixed states, using the fraction of a
-step the frame landed on.
+Physics runs at a fixed rate; the screen does not. At 60 Hz physics on a 144 Hz display most frames show the same fixed state twice, then jump — visible judder on anything that moves fast. The fix is not a faster simulation but **interpolation**: draw the body somewhere between the last two fixed states, using the fraction of a step the frame landed on.
 
-Every body brackets its most recent fixed step with `previousX`/`previousY`/
-`previousAngle` and `x`/`y`/`angle`. Turn on `interpolation` and bindings place the
-node between them instead of snapping to the latest one:
+Every body brackets its most recent fixed step with `previousX`/`previousY`/ `previousAngle` and `x`/`y`/`angle`. Turn on `interpolation` and bindings place the node between them instead of snapping to the latest one:
 
 <SourceSnippet
   source="examples/guides/physics-basics/solver-tuning.ts"
@@ -235,12 +162,9 @@ node between them instead of snapping to the latest one:
   title="examples/guides/physics-basics/solver-tuning.ts"
 />
 
-That is enough when you drive the world yourself with `world.step(delta)` — the
-world owns the accumulator, so it already knows the leftover fraction.
+That is enough when you drive the world yourself with `world.step(delta)` — the world owns the accumulator, so it already knows the leftover fraction.
 
-A world registered as a **system** is different: the engine's scheduler owns the
-fixed-step accumulator, and `fixedUpdate` bypasses the world's own. Point the world
-at the host's fraction:
+A world registered as a **system** is different: the engine's scheduler owns the fixed-step accumulator, and `fixedUpdate` bypasses the world's own. Point the world at the host's fraction:
 
 ```ts
 import { Application, SystemOrder } from '@codexo/exojs';
@@ -259,18 +183,13 @@ world.frameAlphaSource = () => app.frameAlpha;
 Without it the world falls back to its own accumulator, which `fixedUpdate` never advances — the factor stays `0` and every bound node renders a full fixed step behind. There is deliberately no second clock inside physics to paper over this: two accumulators would drift apart the moment the host clamps or drops a step.
 </Callout>
 
-Interpolation is **presentation only**. Nothing written onto a node is read back, the
-simulation is bit-identical either way, and `body.x`/`body.y` remain the authoritative
-fixed-step values. The trade is latency: a bound node renders up to one fixed step
-behind the newest state, which is what makes the motion continuous.
+Interpolation is **presentation only**. Nothing written onto a node is read back, the simulation is bit-identical either way, and `body.x`/`body.y` remain the authoritative fixed-step values. The trade is latency: a bound node renders up to one fixed step behind the newest state, which is what makes the motion continuous.
 
-A teleport is not motion, so `setTransform()` collapses the pair — the node appears at
-the destination instead of sweeping across the jump.
+A teleport is not motion, so `setTransform()` collapses the pair — the node appears at the destination instead of sweeping across the jump.
 
 ## Worked example: a ball drops onto a floor
 
-Putting it together — a static floor, a dynamic ball bound to a sprite, stepped from
-`fixedUpdate`:
+Putting it together — a static floor, a dynamic ball bound to a sprite, stepped from `fixedUpdate`:
 
 <SourceSnippet
   source="examples/guides/physics-basics/drop-scene.ts"
@@ -279,38 +198,21 @@ Putting it together — a static floor, a dynamic ball bound to a sprite, steppe
   title="examples/guides/physics-basics/drop-scene.ts"
 />
 
-The ball falls under gravity, hits the floor, bounces a few times (restitution `0.5`)
-and settles. Because the body is bound to the sprite, the sprite follows automatically —
-you never touch its position in `update`.
+The ball falls under gravity, hits the floor, bounces a few times (restitution `0.5`) and settles. Because the body is bound to the sprite, the sprite follows automatically — you never touch its position in `update`.
 
 ## Performance envelope: broad phase
 
-Collision detection's broad phase (which colliders are worth a precise test)
-is a **dynamic AABB tree** (Box2D-style): each collider's leaf carries a
-slightly enlarged ("fat") bounding box, and the tree is updated incrementally
-across steps rather than rebuilt from scratch. A collider whose motion stays
-inside its fat margin costs nothing to re-sync — only colliders that actually
-move enough to escape their margin trigger a tree update. There's still a
-cheap linear check over every live collider each step, but that dominant
-reinsertion cost tracks how much of the world is actually moving, not how
-large the world is, and sleeping bodies skip it entirely — scaling
-comfortably to tens of thousands of simultaneously-live colliders, including
-dense clusters that would degrade a sort-and-sweep broad phase.
+Collision detection's broad phase (which colliders are worth a precise test) is a **dynamic AABB tree** (Box2D-style): each collider's leaf carries a slightly enlarged ("fat") bounding box, and the tree is updated incrementally across steps rather than rebuilt from scratch. A collider whose motion stays inside its fat margin costs nothing to re-sync — only colliders that actually move enough to escape their margin trigger a tree update. There's still a cheap linear check over every live collider each step, but that dominant reinsertion cost tracks how much of the world is actually moving, not how large the world is, and sleeping bodies skip it entirely — scaling comfortably to tens of thousands of simultaneously-live colliders, including dense clusters that would degrade a sort-and-sweep broad phase.
 
 ## Colliders from a tilemap
 
-`@codexo/exojs-tilemap-physics` turns tilemap collision geometry into static
-bodies, so a level authored in Tiled or LDtk becomes solid world without a
-hand-written loop. It is a separate package because tilemap and physics
-deliberately do not depend on each other:
+`@codexo/exojs-tilemap-physics` turns tilemap collision geometry into static bodies, so a level authored in Tiled or LDtk becomes solid world without a hand-written loop. It is a separate package because tilemap and physics deliberately do not depend on each other:
 
 ```sh
 npm install @codexo/exojs-tilemap @codexo/exojs-physics @codexo/exojs-tilemap-physics
 ```
 
-For a tile layer, `TileColliderStreamer` owns one static body per chunk-sized
-partition of the layer and keeps them in sync - building bodies for chunks that
-load, rebuilding edited ones, destroying evicted ones:
+For a tile layer, `TileColliderStreamer` owns one static body per chunk-sized partition of the layer and keeps them in sync - building bodies for chunks that load, rebuilding edited ones, destroying evicted ones:
 
 ```ts
 import { PhysicsWorld } from '@codexo/exojs-physics';
@@ -326,13 +228,9 @@ const colliders = new TileColliderStreamer(world, groundLayer, { friction: 0.8 }
 colliders.sync();
 ```
 
-`sync()` is cheap every frame: with no change since the last call it returns
-immediately. Call `destroy()` to remove every body it created.
+`sync()` is cheap every frame: with no change since the last call it returns immediately. Call `destroy()` to remove every body it created.
 
-Tiled authors collision per tile, and that is what the example above reads.
-LDtk authors it per grid cell with `IntGrid`, which is not tied to the tiles a
-layer draws - a collision layer there often renders nothing at all. Pass its
-cells in and the same bridge covers it:
+Tiled authors collision per tile, and that is what the example above reads. LDtk authors it per grid cell with `IntGrid`, which is not tied to the tiles a layer draws - a collision layer there often renders nothing at all. Pass its cells in and the same bridge covers it:
 
 ```ts
 import { createLdtkIntGridCellSource } from '@codexo/exojs-ldtk';
@@ -349,12 +247,9 @@ const colliders = new TileColliderStreamer(world, intGridLayer, {
 });
 ```
 
-The string a cell source returns is the value's authored name, nothing more.
-Deciding that `Water` means "sensor" is your call, made in `material` - the
-engine never assigns meaning to a classification.
+The string a cell source returns is the value's authored name, nothing more. Deciding that `Water` means "sensor" is your call, made in `material` - the engine never assigns meaning to a classification.
 
-For an object layer - spawn regions, triggers, hand-drawn collision - there is
-nothing to stream, so it is a one-shot build:
+For an object layer - spawn regions, triggers, hand-drawn collision - there is nothing to stream, so it is a one-shot build:
 
 ```ts
 import { PhysicsWorld } from '@codexo/exojs-physics';
@@ -372,10 +267,7 @@ const built = buildObjectLayerColliders(world, collisionLayer, {
 console.log(`${built.length} static colliders`);
 ```
 
-Rectangles become boxes, ellipses become capsules (a circle when round), convex
-polygons become one polygon each, concave polygons become several convex
-polygons on one body, and polylines become chains. Points carry no collision
-area and are skipped.
+Rectangles become boxes, ellipses become capsules (a circle when round), convex polygons become one polygon each, concave polygons become several convex polygons on one body, and polylines become chains. Points carry no collision area and are skipped.
 
 <Callout type="info" title="Two ways to represent a solid tile region">
 By default a solid run of tiles becomes merged boxes, which keep an interior: queries and sensors work inside them, and a body that starts inside is pushed out. With `regionMode: 'outline'` the region becomes a closed one-sided chain instead - no internal edges for a sliding body to catch on, but no interior either, so a body spawned inside falls through.
@@ -383,16 +275,7 @@ By default a solid run of tiles becomes merged boxes, which keep an interior: qu
 
 ## Where to go next
 
-- **Joints, sleeping & CCD:** the next chapter,
-  [Joints, sleeping & CCD](/ExoJS/en/guide/physics/joints-and-dynamics/), connects bodies
-  with hinges, ropes, motors and springs, explains how resting bodies sleep to save CPU,
-  and shows how to stop fast projectiles from tunnelling.
-- **API reference:** [`PhysicsWorld`](/ExoJS/en/api/physics-world/),
-  [`PhysicsBody`](/ExoJS/en/api/physics-body/), [`Collider`](/ExoJS/en/api/collider/),
-  [`BoxShape`](/ExoJS/en/api/box-shape/), [`CircleShape`](/ExoJS/en/api/circle-shape/),
-  [`CapsuleShape`](/ExoJS/en/api/capsule-shape/), [`SegmentShape`](/ExoJS/en/api/segment-shape/),
-  [`ChainShape`](/ExoJS/en/api/chain-shape/) and [`PhysicsBinding`](/ExoJS/en/api/physics-binding/).
-- **Tilemap collision:** [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) covers the
-  authoring side of the per-tile collision shapes the bridge consumes.
-- **The frame loop:** [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/)
-  covers `fixedUpdate`, `update` and `draw` and the order they run in.
+- **Joints, sleeping & CCD:** the next chapter, [Joints, sleeping & CCD](/ExoJS/en/guide/physics/joints-and-dynamics/), connects bodies with hinges, ropes, motors and springs, explains how resting bodies sleep to save CPU, and shows how to stop fast projectiles from tunnelling.
+- **API reference:** [`PhysicsWorld`](/ExoJS/en/api/physics-world/), [`PhysicsBody`](/ExoJS/en/api/physics-body/), [`Collider`](/ExoJS/en/api/collider/), [`BoxShape`](/ExoJS/en/api/box-shape/), [`CircleShape`](/ExoJS/en/api/circle-shape/), [`CapsuleShape`](/ExoJS/en/api/capsule-shape/), [`SegmentShape`](/ExoJS/en/api/segment-shape/), [`ChainShape`](/ExoJS/en/api/chain-shape/) and [`PhysicsBinding`](/ExoJS/en/api/physics-binding/).
+- **Tilemap collision:** [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) covers the authoring side of the per-tile collision shapes the bridge consumes.
+- **The frame loop:** [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/) covers `fixedUpdate`, `update` and `draw` and the order they run in.

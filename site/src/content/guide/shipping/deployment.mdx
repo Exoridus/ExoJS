@@ -180,6 +180,15 @@ If you don't have any module-aware setup — no bundler, no import maps, just a 
 
 There is no `import` statement anywhere in this path — `Exo` is already in scope by the time the second `<script>` block runs, as long as it comes after the bundle's `<script>` tag. A minified build for production is available at `dist/exo.iife.min.js`; swap the `src` to use it.
 
+The IIFE above is the core alone. Extensions are not available as separate script tags; the zero-build path to them is the full bundle, `dist/exo.full.iife.js` (minified: `dist/exo.full.iife.min.js`), which carries the core and every extension except React on the same `Exo` global. It is a single, considerably larger file, so use it when you actually reach for an extension, and the core bundle otherwise:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@codexo/exojs/dist/exo.full.iife.min.js"></script>
+<script>
+    const { Application, ParticleSystem, PointLight } = Exo;
+</script>
+```
+
 Prefer the ES module bundle when your host supports import maps and you want the browser to load only what you use. Prefer the IIFE bundle when you need a true zero-build setup — for example a single static HTML file, a CMS or forum post that only allows pasting a `<script>` tag, or any environment without import-map support.
 
 ## MIME types

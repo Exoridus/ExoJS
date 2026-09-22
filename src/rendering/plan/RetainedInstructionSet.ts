@@ -285,21 +285,29 @@ export class RetainedInstructionSet {
 }
 
 /**
- * Structural capability flag for renderers that support flush-level batch
- * recording. Own-material draws require the additional per-draw opt-in below,
- * so a renderer can support its default path without accidentally promising
- * live custom-state replay. Same
- * structural-flag convention as `_consumesSharedTransform`.
- * @internal
+ * Opt-in by which a renderer tells the engine it can have its flush-level
+ * batches recorded once and replayed on later frames, instead of re-issuing
+ * them from the scene graph.
+ *
+ * Declaring {@link supportsRetainedBatches} covers the renderer's DEFAULT draw
+ * path only. A draw whose drawable carries its own material additionally needs
+ * {@link canRecordRetainedDrawable}, so a renderer can accept recording for its
+ * ordinary work without promising that live custom state replays correctly.
+ * Leaving the flag unset keeps every draw on the entry-replay tier, which is
+ * correct but not batch-cached.
+ *
+ * Structural-flag convention, as with {@link SharedTransformRenderer}: the
+ * engine reads the members off the renderer instance and treats an absent one
+ * as the conservative answer.
  */
 export interface RetainedBatchCapableRenderer {
-  readonly _supportsRetainedBatches?: boolean;
+  readonly supportsRetainedBatches?: boolean;
   /** Opt an own-material drawable into retained recording. @internal */
-  _canRecordRetainedDrawable?(drawable: Drawable): boolean;
+  canRecordRetainedDrawable?(drawable: Drawable): boolean;
   /**
    * Veto a drawable this renderer cannot record REGARDLESS of its material,
    * because the drawable's own storage or draw path is not the one
-   * `_supportsRetainedBatches` promises. Consulted for every draw entry, before
+   * `supportsRetainedBatches` promises. Consulted for every draw entry, before
    * the own-material hook; an absent implementation means the renderer records
    * anything it is handed on its default path.
    *
@@ -320,14 +328,14 @@ export interface RetainedBatchCapableRenderer {
    * strategy are fixed at construction.
    * @internal
    */
-  _admitsRetainedRecording?(drawable: Drawable): boolean;
+  admitsRetainedRecording?(drawable: Drawable): boolean;
 }
 
 /**
  * A captured fragment can be recorded as an instruction set iff every draw's
  * renderer opts in via {@link RetainedBatchCapableRenderer}; no draw is vetoed
  * by its renderer's per-drawable
- * {@link RetainedBatchCapableRenderer._admitsRetainedRecording} check (a mesh
+ * {@link RetainedBatchCapableRenderer.admitsRetainedRecording} check (a mesh
  * without static geometry, a shader-path repeating sprite - draws whose
  * renderer would otherwise poison the capture on every frame); own-material
  * draws additionally pass that renderer's live-state capability check; and no
@@ -376,15 +384,15 @@ const entriesRecordable = (entries: readonly RetainedFragmentEntry[], entryCount
       return false;
     }
 
-    if (renderer === null || typeof renderer !== 'object' || renderer._supportsRetainedBatches !== true) {
+    if (renderer === null || typeof renderer !== 'object' || renderer.supportsRetainedBatches !== true) {
       return false;
     }
 
-    if (renderer._admitsRetainedRecording?.(drawable) === false) {
+    if (renderer.admitsRetainedRecording?.(drawable) === false) {
       return false;
     }
 
-    if (drawableHasOwnMaterial(drawable) && renderer._canRecordRetainedDrawable?.(drawable) !== true) {
+    if (drawableHasOwnMaterial(drawable) && renderer.canRecordRetainedDrawable?.(drawable) !== true) {
       return false;
     }
   }

@@ -18,10 +18,10 @@
 
 import { Color } from '#core/Color';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -98,7 +98,7 @@ describe('WebGPU custom SpriteMaterial user-uniform flush caching', () => {
 
   const makeSprite = (): { sprite: Sprite; material: SpriteMaterial } => {
     const material = new SpriteMaterial({
-      shader: new ShaderSource({ wgsl: spriteFragmentWgsl }),
+      shader: new Shader({ wgsl: spriteFragmentWgsl }),
       uniforms: { u_userColor: [1, 0, 0.5, 1] },
     });
     const sprite = new Sprite(createCanvasTexture());
@@ -222,7 +222,7 @@ describe('WebGPU custom MeshMaterial user-uniform flush caching', () => {
 
   const makeMesh = (): { mesh: Mesh; material: MeshMaterial } => {
     const material = new MeshMaterial({
-      shader: new ShaderSource({ wgsl: meshWgsl }),
+      shader: new Shader({ wgsl: meshWgsl }),
       uniforms: { u_userColor: [1, 0, 0.5, 1] },
     });
     const mesh = new Mesh({

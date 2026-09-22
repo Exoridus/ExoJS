@@ -259,6 +259,7 @@ const makeWebGpuBackend = (env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
     execute,
     getTextureBinding,
     getTextureFormat,
+    isNonFilterableTexture: vi.fn(() => false),
     createColorAttachment,
     // The coordinator sizes its attachment list from this; a single-attachment
     // target is what every filter path renders into.
@@ -268,7 +269,7 @@ const makeWebGpuBackend = (env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
 
   // The shader filter records into the backend-owned coordinator's active pass;
   // give the mock a real coordinator over itself (it satisfies WebGpuPassBackend).
-  (backend as unknown as { _passCoordinator: WebGpuPassCoordinator })._passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
+  (backend as unknown as { passCoordinator: WebGpuPassCoordinator }).passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
 
   return backend;
 };
@@ -404,7 +405,7 @@ describe('ShaderFilter on WebGPU', () => {
 
   // 2. Construction without any source - throws
   test('throws when constructed without any shader source', () => {
-    expect(() => new ShaderFilter()).toThrow('ShaderSource requires at least one of `glsl` or `wgsl`.');
+    expect(() => new ShaderFilter()).toThrow('Shader requires at least one of `glsl` or `wgsl`.');
   });
 
   // 3. The default vertex stage is prepended to a fragment-only module

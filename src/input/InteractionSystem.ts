@@ -352,8 +352,11 @@ export class InteractionSystem {
     this._focus = new FocusController(app);
     this._dragThreshold = app.options?.input?.dragThreshold ?? defaultDragThreshold;
     this._platform = app.platform;
-    this._stage = { interaction: this, focus: this._focus, app };
-    this._uiStage = { interaction: this._uiInteraction, focus: this._focus, app };
+    // Both stages carry the SAME index: they are two service bundles of one
+    // application, so a node moving between the scene tree and the UI tree must
+    // not change which index its consumers read.
+    this._stage = { interaction: this, focus: this._focus, app, dirtyIndex: app._dirtyIndex };
+    this._uiStage = { interaction: this._uiInteraction, focus: this._focus, app, dirtyIndex: app._dirtyIndex };
 
     this._onPointerDownHandler = this._handlePointerDown.bind(this);
     this._onPointerMoveHandler = this._handlePointerMove.bind(this);
@@ -373,10 +376,28 @@ export class InteractionSystem {
   }
 
   /**
-   * Returns the RenderNode currently hovered by the given pointer, or null.
-   * If pointerId is omitted, returns the hovered node for the first pointer
-   * in iteration order (typically the primary mouse pointer).
+   * The deepest interactive node at a point, or `null` where the point hits
+   * none.
+   *
+   * `x` and `y` are in the same space a pointer event reports - design/screen
+   * coordinates, not world ones - and are resolved exactly as an event would be:
+   * an active scope wins, otherwise the screen-fixed UI layer is tried before
+   * the camera world, and clipping, visibility and hit-test flags all apply.
+   *
+   * Purely a query. It changes no hover, capture or focus state and emits no
+   * events, so it is safe to call for a hovered tooltip at a computed position,
+   * an editor's selection, a gamepad-driven cursor, or a test - all cases where
+   * synthesising a pointer event would leave the interaction state believing a
+   * pointer had moved.
+   *
+   * For what the user's pointer is actually over, prefer
+   * {@link getHoveredNode}: it reports the result the last real event already
+   * resolved instead of testing again.
    */
+  public nodeAt(x: number, y: number): RenderNode | null {
+    return this._resolveHit(x, y).node;
+  }
+
   /**
    * Return the deepest interactive node currently under the given pointer,
    * or under any active pointer when `pointerId` is omitted (the first
@@ -621,7 +642,7 @@ export class InteractionSystem {
   }
 
   /**
-   * {@link SystemMethods.preUpdate} phase: dispatch this frame's node-level
+   * {@link SystemMethods.preFrame} phase: dispatch this frame's node-level
    * pointer events, then retire the pointers {@link InputSystem} flagged
    * terminal. Registered on `app.systems` by the {@link Application} at
    * {@link SystemOrder.CoreInteraction}, directly after {@link InputSystem}.
@@ -633,7 +654,7 @@ export class InteractionSystem {
    * pair be a single system: `order` alone could not express "B runs after A
    * even when A throws".
    */
-  public preUpdate(_delta: Seconds): void {
+  public preFrame(_delta: Seconds): void {
     try {
       this._dispatchFrame();
     } finally {

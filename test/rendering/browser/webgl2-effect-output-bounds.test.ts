@@ -2,7 +2,7 @@
  * WebGL2 browser regressions for the effect output-bounds contract.
  *
  * A barrier's capture domain used to be the drawable's own bounds, quantised.
- * A blur samples up to `radius` outside the edge it was given, so its tail had
+ * A blur samples up to three standard deviations outside the edge it was given, so its tail had
  * nowhere to land: the render target ended exactly where the source did and the
  * effect was structurally clipped by its own input.
  *
@@ -76,9 +76,18 @@ const litSpanOnColumn = (frame: Uint8Array, column: number): readonly [number, n
   return first === -1 ? null : [first, last];
 };
 
+/** One row's red channel, for comparing two frames pixel by pixel. */
+const rowOf = (frame: Uint8Array, y: number): number[] => {
+  const values: number[] = [];
+
+  for (let x = 0; x < size; x++) values.push(frame[(y * size + x) * 4]!);
+
+  return values;
+};
+
 interface SceneOptions {
-  readonly radius?: number;
-  readonly radii?: readonly number[];
+  readonly strength?: number;
+  readonly strengths?: readonly number[];
   readonly offset?: number;
   readonly clip?: boolean;
   readonly cacheAsTexture?: boolean;
@@ -94,8 +103,8 @@ const render = async (options: SceneOptions): Promise<Scene> => {
   const texture = createWhiteTexture();
   const root = new Container();
   const sprite = new Sprite(texture);
-  const radii = options.radii ?? [options.radius ?? 0];
-  const filters = radii.filter(radius => radius > 0).map(radius => new BlurFilter({ radius }));
+  const strengths = options.strengths ?? [options.strength ?? 0];
+  const filters = strengths.filter(strength => strength > 0).map(strength => new BlurFilter({ strength }));
 
   sprite.width = contentSide;
   sprite.height = contentSide;
@@ -130,8 +139,8 @@ const recordedTargetSizes = async (options: SceneOptions): Promise<Array<[number
   const texture = createWhiteTexture();
   const root = new Container();
   const sprite = new Sprite(texture);
-  const radii = options.radii ?? [options.radius ?? 0];
-  const filters = radii.filter(radius => radius > 0).map(radius => new BlurFilter({ radius }));
+  const strengths = options.strengths ?? [options.strength ?? 0];
+  const filters = strengths.filter(strength => strength > 0).map(strength => new BlurFilter({ strength }));
   const owner = backend as unknown as Record<string, unknown>;
   const original = backend.acquireRenderTexture.bind(backend);
   const sizes: Array<[number, number]> = [];
@@ -164,14 +173,14 @@ const recordedTargetSizes = async (options: SceneOptions): Promise<Array<[number
 
 describe('a blur is not clipped by the bounds it was captured from', () => {
   test('the tail reaches past the left and right source edges', async () => {
-    const scene = await render({ radius: 10 });
+    const scene = await render({ strength: 5 });
 
     try {
       const span = litSpanOnRow(scene.frame, centre);
 
       expect(span, 'the row must cross the square').not.toBeNull();
       // Both edges have to move outward. A capture sized to the source would
-      // pin the span to [48, 79] exactly, whatever the radius.
+      // pin the span to [48, 79] exactly, whatever the strength.
       expect(span![0], `left span edge: ${span!.join('..')}`).toBeLessThan(contentLeft - 3);
       expect(span![1], `right span edge: ${span!.join('..')}`).toBeGreaterThan(contentRight + 2);
     } finally {
@@ -180,7 +189,7 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
   });
 
   test('the tail reaches past the top and bottom source edges', async () => {
-    const scene = await render({ radius: 10 });
+    const scene = await render({ strength: 5 });
 
     try {
       const span = litSpanOnColumn(scene.frame, centre);
@@ -196,7 +205,7 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
   test('an unfiltered square spans exactly its own bounds', async () => {
     // The control the two cells above are measured against: without an effect
     // nothing may reach outside the source at all.
-    const scene = await render({ radius: 0 });
+    const scene = await render({ strength: 0 });
 
     try {
       expect(litSpanOnRow(scene.frame, centre)).toEqual([contentLeft, contentRight - 1]);
@@ -205,9 +214,9 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
     }
   });
 
-  test('a larger radius reaches further', async () => {
-    const small = await render({ radius: 4 });
-    const large = await render({ radius: 14 });
+  test('a larger strength reaches further', async () => {
+    const small = await render({ strength: 2 });
+    const large = await render({ strength: 7 });
 
     try {
       const smallSpan = litSpanOnRow(small.frame, centre)!;
@@ -222,8 +231,8 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
   });
 
   test('a fractionally positioned square keeps its whole tail', async () => {
-    const integral = await render({ radius: 10 });
-    const fractional = await render({ radius: 10, offset: 0.25 });
+    const integral = await render({ strength: 5 });
+    const fractional = await render({ strength: 5, offset: 0.25 });
 
     try {
       const integralSpan = litSpanOnRow(integral.frame, centre)!;
@@ -242,15 +251,16 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
   });
 
   test('a chain of two blurs reaches further than either alone', async () => {
-    const single = await render({ radii: [6] });
-    const chained = await render({ radii: [6, 6] });
+    const single = await render({ strengths: [3] });
+    const chained = await render({ strengths: [3, 3] });
 
     try {
       // The outer tail of a chained blur is a fraction of a fraction of white -
       // the composition question is where the SIGNAL ends, not where it crosses
-      // the threshold the single-pass cells use. The Gaussian kernel puts the
-      // outermost tap at e⁻² of the centre, so twelve units out lands on 2/255;
-      // one is the lowest floor that can tell it from the single blur's 0.
+      // the threshold the single-pass cells use. The kernel is truncated at
+      // three standard deviations, where the Gaussian is down to e^-4.5 of the
+      // centre; one is the lowest floor that can tell that from the single
+      // blur's 0.
       const faint = 1;
       const singleSpan = litSpanOnRow(single.frame, centre, faint)!;
       const chainedSpan = litSpanOnRow(chained.frame, centre, faint)!;
@@ -267,8 +277,9 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
 
   test('the chain allocates one domain, sized by the whole sequence', async () => {
     // The target size is where the plan is unambiguously observable: two blurs
-    // of 6 give a 32-square a 12-unit margin on every side, not 6 and not 24.
-    const sizes = await recordedTargetSizes({ radii: [6, 6] });
+    // of strength 3 reach 9 units each, so a 32-square gets an 18-unit margin
+    // on every side - not 9 and not 36.
+    const sizes = await recordedTargetSizes({ strengths: [3, 3] });
 
     // Three chain targets plus the scratch each separable blur borrows for its
     // horizontal sweep. What the domain contract pins is that every one of them
@@ -276,19 +287,19 @@ describe('a blur is not clipped by the bounds it was captured from', () => {
     expect(sizes).toHaveLength(5);
 
     for (const recorded of sizes) {
-      expect(recorded).toEqual([contentSide + 24, contentSide + 24]);
+      expect(recorded).toEqual([contentSide + 36, contentSide + 36]);
     }
   });
 
   test('a node without effects allocates no target at all', async () => {
-    expect(await recordedTargetSizes({ radius: 0 })).toEqual([]);
+    expect(await recordedTargetSizes({ strength: 0 })).toEqual([]);
   });
 });
 
 describe('an explicit clip stays intentionally restrictive', () => {
   test('a clip cuts the expanded blur back to the clip region', async () => {
-    const unclipped = await render({ radius: 10 });
-    const clipped = await render({ radius: 10, clip: true });
+    const unclipped = await render({ strength: 5 });
+    const clipped = await render({ strength: 5, clip: true });
 
     try {
       const unclippedSpan = litSpanOnRow(unclipped.frame, centre)!;
@@ -309,12 +320,13 @@ describe('an explicit clip stays intentionally restrictive', () => {
 });
 
 describe('a cached node follows a mutated filter', () => {
-  test('growing the radius re-bakes the cache and expands the bounds', async () => {
+  /** A cached, blurred square, rendered once at `strength` and read back. */
+  const renderCached = async (strength: number, grownFrom?: number): Promise<Uint8Array> => {
     const backend = await createWebGl2TestBackend(size, 1);
     const texture = createWhiteTexture();
     const root = new Container();
     const sprite = new Sprite(texture);
-    const blur = new BlurFilter({ radius: 3 });
+    const blur = new BlurFilter({ strength: grownFrom ?? strength });
 
     sprite.width = contentSide;
     sprite.height = contentSide;
@@ -326,23 +338,43 @@ describe('a cached node follows a mutated filter', () => {
     try {
       renderWebGl2Once(backend, root, Color.black);
 
-      const before = litSpanOnRow(readWebGl2Frame(backend, size), centre)!;
+      if (grownFrom !== undefined) {
+        // No remove/re-add, no invalidateCache from the application: mutating
+        // the filter is the whole signal.
+        blur.strength = strength;
+        renderWebGl2Once(backend, root, Color.black);
+      }
 
-      // No remove/re-add, no invalidateCache from the application: mutating the
-      // filter is the whole signal.
-      blur.radius = 14;
-
-      renderWebGl2Once(backend, root, Color.black);
-
-      const after = litSpanOnRow(readWebGl2Frame(backend, size), centre)!;
-
-      expect(after[0], `${before.join('..')} vs ${after.join('..')}`).toBeLessThan(before[0]);
-      expect(after[1], `${before.join('..')} vs ${after.join('..')}`).toBeGreaterThan(before[1]);
+      return readWebGl2Frame(backend, size);
     } finally {
       root.destroy();
       blur.destroy();
       texture.destroy();
       backend.destroy();
     }
+  };
+
+  test('growing the strength re-bakes the cache and expands the bounds', async () => {
+    const before = litSpanOnRow(await renderCached(1.5), centre)!;
+    const after = litSpanOnRow(await renderCached(7, 1.5), centre)!;
+
+    expect(after[0], `${before.join('..')} vs ${after.join('..')}`).toBeLessThan(before[0]);
+    expect(after[1], `${before.join('..')} vs ${after.join('..')}`).toBeGreaterThan(before[1]);
+  });
+
+  test('a re-baked cache is the frame a fresh node produces, not a stretched one', async () => {
+    // The barrier's texture is RESIZED IN PLACE when the effect bounds change,
+    // and the composite sprite already holds it - so a composite that does not
+    // re-read the frame samples the new texture through the old UVs. The
+    // result still moves both span edges, which is why this reads the whole
+    // row against a node that was never mutated rather than its extent.
+    const grown = await renderCached(7, 1.5);
+    const fresh = await renderCached(7);
+    const shrunk = await renderCached(1.5, 7);
+    const small = await renderCached(1.5);
+
+    expect(litSpanOnRow(grown, centre)).toEqual(litSpanOnRow(fresh, centre));
+    expect(rowOf(grown, centre)).toEqual(rowOf(fresh, centre));
+    expect(rowOf(shrunk, centre)).toEqual(rowOf(small, centre));
   });
 });
