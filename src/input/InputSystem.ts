@@ -1189,6 +1189,9 @@ export class InputSystem {
 
     pointer.handlePress(event);
     this._recordPointerChanges(pointer);
+    // Without a capture a release outside the surface never reaches it, and
+    // the press - with every drag built on it - would never end.
+    this.platform.capturePointer(event.pointerId);
     this.gestureRecognizer.onPointerDown(pointer);
     this._pushPointerPhase(pointer, PointerStateFlag.Down, pointer.x, pointer.y);
 
