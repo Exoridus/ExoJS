@@ -135,6 +135,24 @@
   color: oklch(76% 0.15 27);
 }
 
+.menu-note {
+  display: grid;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line-soft);
+
+  > span {
+    padding: 0.3rem 0.58rem 0.1rem;
+    color: var(--fg-muted);
+    font-size: 0.72rem;
+  }
+
+  > a {
+    text-decoration: none;
+    white-space: nowrap;
+  }
+}
+
 .file-input {
   display: none;
 }
