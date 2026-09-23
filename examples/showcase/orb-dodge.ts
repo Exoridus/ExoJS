@@ -1,14 +1,17 @@
 import {
+  ActionMap,
   Application,
   Color,
   Container,
   FixedResolutionCanvasSizing,
+  GamepadAxis,
   Graphics,
   Keyboard,
   type RenderingContext,
   Scene,
   type Seconds,
   Text,
+  VectorAction,
 } from '@codexo/exojs';
 
 // #region guide:constants
@@ -35,8 +38,12 @@ class PlayScene extends Scene {
   private orbs: OrbData[] = [];
   private px = CANVAS_WIDTH / 2;
   private py = CANVAS_HEIGHT / 2;
-  private dx = 0;
-  private dy = 0;
+  private readonly actions = new ActionMap({
+    move: new VectorAction([
+      { up: [Keyboard.W, Keyboard.Up], down: [Keyboard.S, Keyboard.Down], left: [Keyboard.A, Keyboard.Left], right: [Keyboard.D, Keyboard.Right] },
+      { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+    ]),
+  });
   private score = 0;
   private elapsed = 0;
   private spawnTimer = 0;
@@ -50,9 +57,8 @@ class PlayScene extends Scene {
     this.score = 0;
     this.elapsed = 0;
     this.spawnTimer = 0;
-    this.dx = 0;
-    this.dy = 0;
     this.orbs = [];
+    this.inputs.attach(this.actions);
 
     this.world = new Container();
 
@@ -67,58 +73,6 @@ class PlayScene extends Scene {
 
     this.timeText = new Text('0.0 s', { fillColor: Color.white, fontSize: 20 });
     this.timeText.setPosition(CANVAS_WIDTH - 90, 14);
-
-    this.inputs.onActive(Keyboard.W, () => {
-      this.dy = -1;
-    });
-    this.inputs.onStop(Keyboard.W, () => {
-      if (this.dy < 0) this.dy = 0;
-    });
-    this.inputs.onActive(Keyboard.Up, () => {
-      this.dy = -1;
-    });
-    this.inputs.onStop(Keyboard.Up, () => {
-      if (this.dy < 0) this.dy = 0;
-    });
-
-    this.inputs.onActive(Keyboard.S, () => {
-      this.dy = 1;
-    });
-    this.inputs.onStop(Keyboard.S, () => {
-      if (this.dy > 0) this.dy = 0;
-    });
-    this.inputs.onActive(Keyboard.Down, () => {
-      this.dy = 1;
-    });
-    this.inputs.onStop(Keyboard.Down, () => {
-      if (this.dy > 0) this.dy = 0;
-    });
-
-    this.inputs.onActive(Keyboard.A, () => {
-      this.dx = -1;
-    });
-    this.inputs.onStop(Keyboard.A, () => {
-      if (this.dx < 0) this.dx = 0;
-    });
-    this.inputs.onActive(Keyboard.Left, () => {
-      this.dx = -1;
-    });
-    this.inputs.onStop(Keyboard.Left, () => {
-      if (this.dx < 0) this.dx = 0;
-    });
-
-    this.inputs.onActive(Keyboard.D, () => {
-      this.dx = 1;
-    });
-    this.inputs.onStop(Keyboard.D, () => {
-      if (this.dx > 0) this.dx = 0;
-    });
-    this.inputs.onActive(Keyboard.Right, () => {
-      this.dx = 1;
-    });
-    this.inputs.onStop(Keyboard.Right, () => {
-      if (this.dx > 0) this.dx = 0;
-    });
   }
 
   // #endregion guide:play-init
@@ -153,7 +107,11 @@ class PlayScene extends Scene {
 
     const gfx = new Graphics();
     gfx.fillColor = danger ? new Color(255, 80, 80) : new Color(80, 220, 120);
-    gfx.drawCircle(0, 0, ORB_RADIUS);
+    if (danger) {
+      gfx.drawStar(0, 0, 4, ORB_RADIUS * 1.25, ORB_RADIUS * 0.68, Math.PI / 4);
+    } else {
+      gfx.drawCircle(0, 0, ORB_RADIUS);
+    }
     gfx.setPosition(ox, oy);
     this.world.addChild(gfx);
     this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
@@ -171,10 +129,11 @@ class PlayScene extends Scene {
       this.spawnOrb();
     }
 
-    const mag = Math.hypot(this.dx, this.dy) || 1;
-    if (this.dx !== 0 || this.dy !== 0) {
-      this.px += (this.dx / mag) * PLAYER_SPEED * delta;
-      this.py += (this.dy / mag) * PLAYER_SPEED * delta;
+    const { x, y } = this.actions.move.value;
+    const mag = Math.max(1, Math.hypot(x, y));
+    if (x !== 0 || y !== 0) {
+      this.px += (x / mag) * PLAYER_SPEED * delta;
+      this.py += (y / mag) * PLAYER_SPEED * delta;
     }
     this.px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this.px));
     this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));

@@ -4,6 +4,7 @@ import {
   Asset,
   Color,
   FixedResolutionCanvasSizing,
+  Keyboard,
   type RenderingContext,
   Scene,
   Spritesheet,
@@ -11,47 +12,76 @@ import {
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const walkFps = 8;
+const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'] as const;
+const WALK_FPS = 8;
 
 class FrameAnimationScene extends Scene {
   private sprite!: AnimatedSprite;
-  private frameCount = 0;
   private hud!: ReturnType<typeof mountControls>;
+  private characterIndex = 0;
+  private playing = true;
 
   override async load(): Promise<void> {
-    const app = this.app;
-    const { width, height } = app;
     const texture = this.loader.get('image/platformer-characters.png');
     const data = (await this.loader.load(Asset.type('json', 'json/platformer-characters.json'))) as SpritesheetData;
     const sheet = new Spritesheet(texture, data);
+    const clips = Object.fromEntries(
+      CHARACTERS.map(character => [
+        character,
+        {
+          frames: ['a', 'b'].map(frame => sheet.getFrame(`character_${character}_walk_${frame}`)),
+          fps: WALK_FPS,
+        },
+      ]),
+    );
 
-    const walkFrames = ['character_beige_walk_a', 'character_beige_walk_b'].map(name => sheet.getFrame(name));
-
-    this.frameCount = walkFrames.length;
-    this.sprite = new AnimatedSprite(texture, { walk: { frames: walkFrames, fps: walkFps } });
-    this.sprite
+    this.sprite = new AnimatedSprite(texture, clips)
       .setAnchor(0.5)
       .setScale(3)
-      .setPosition(width / 2, height / 2);
+      .setPosition(this.app.width / 2, this.app.height / 2);
+    this.addChild(this.sprite);
+    this.sprite.onFrame.add((_clip, frame) => this.updateHud(frame));
 
     this.hud = mountControls({
-      title: 'Frame Animation',
-      controls: [{ keys: 'Auto', action: `looping walk cycle @ ${walkFps} fps` }],
-      status: `Frame: 1/${this.frameCount}`,
-      hint: 'AnimatedSprite steps through spritesheet frames on a timer; onFrame drives the live readout.',
+      title: 'Sprite Animation',
+      controls: [
+        { keys: 'Right', action: 'change character' },
+        { keys: 'Space', action: 'pause / resume' },
+      ],
+      hint: 'AnimatedSprite plays named clips from a spritesheet. The scene tree advances it automatically.',
     });
+    this.inputs.onTrigger(Keyboard.Space, () => {
+      this.playing = !this.playing;
+      if (this.playing) {
+        this.sprite.resume();
+      } else {
+        this.sprite.pause();
+      }
+      this.updateHud(this.sprite.currentFrame);
+    });
+    this.inputs.onTrigger(Keyboard.Right, () => this.selectCharacter());
+    this.sprite.play(CHARACTERS[0]);
+  }
 
-    // The onFrame signal fires on every frame advance with the 0-based index.
-    this.sprite.onFrame.add((_clip, frame) => this.hud.setStatus(`Frame: ${frame + 1}/${this.frameCount}`));
+  private selectCharacter(): void {
+    this.characterIndex = (this.characterIndex + 1) % CHARACTERS.length;
+    this.sprite.play(CHARACTERS[this.characterIndex]);
+    if (!this.playing) {
+      this.sprite.pause();
+    }
+  }
 
-    // In the scene tree, playback is advanced by the engine's
-    // AnimationSystem once per frame -- no update() call of our own.
-    this.addChild(this.sprite);
-    this.sprite.play('walk');
+  private updateHud(frame: number): void {
+    this.hud.setStatus(`${CHARACTERS[this.characterIndex]} · frame ${frame + 1}/2 · ${this.playing ? 'playing' : 'paused'}`);
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.root);
+  }
+
+  override destroy(): void {
+    this.hud.dispose();
+    super.destroy();
   }
 }
 
@@ -64,9 +94,7 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
+  loader: { basePath: 'assets/' },
 });
 
 await app.start(FrameAnimationScene);

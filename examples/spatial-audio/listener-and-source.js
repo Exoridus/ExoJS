@@ -1,6 +1,6 @@
 // Auto-generated from listener-and-source.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 // Spatial parameters tuned to the canvas so attenuation is visible across the
 // wide 1280px canvas. These mirror the Web Audio `linear` model (see
 // DistanceModel in src/audio/Sound.ts) so the on-screen readout matches what
@@ -9,11 +9,18 @@ const REF_DISTANCE = 50;
 const MAX_DISTANCE = 560;
 const ROLLOFF = 1;
 const SOURCE_RADIUS = 24;
-function linearAttenuation(distance) {
-  if (distance <= REF_DISTANCE) return 1;
-  const t = (distance - REF_DISTANCE) / (MAX_DISTANCE - REF_DISTANCE);
-  return Math.max(0, 1 - ROLLOFF * t);
-}
+const attenuation = (model, distance) => {
+  if (distance <= REF_DISTANCE) {
+    return 1;
+  }
+  if (model === 'linear') {
+    return Math.max(0, 1 - (ROLLOFF * (distance - REF_DISTANCE)) / (MAX_DISTANCE - REF_DISTANCE));
+  }
+  if (model === 'inverse') {
+    return REF_DISTANCE / (REF_DISTANCE + ROLLOFF * (distance - REF_DISTANCE));
+  }
+  return Math.pow(distance / REF_DISTANCE, -ROLLOFF);
+};
 class ListenerAndSourceScene extends Scene {
   sound;
   voice = null;
@@ -24,6 +31,9 @@ class ListenerAndSourceScene extends Scene {
   label;
   tapPrompt;
   hud;
+  mode = 'drag';
+  model = 'linear';
+  angle = 0;
   async load() {
     const app = this.app;
     const { width, height } = app;
@@ -44,24 +54,57 @@ class ListenerAndSourceScene extends Scene {
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 48);
     this.hud = mountControls({
-      title: 'Listener and Source',
-      controls: [{ keys: 'Drag', action: 'move the red source around the listener' }],
+      title: 'Spatial Audio',
+      controls: [{ keys: 'Drag', action: 'move the red source in drag mode' }],
       status: 'Click or press any key to start…',
-      hint: 'The green dot is the listener. Drag the red source — volume falls off with distance.',
+      hint: 'Move the source or let it orbit, then compare distance models with the live volume readout.',
     });
+    const panel = mountControlPanel({ title: 'Source and falloff' });
+    panel.addButton({
+      label: 'Drag source',
+      onClick: () => {
+        this.mode = 'drag';
+        this.dragging = false;
+      },
+    });
+    panel.addButton({
+      label: 'Orbit source',
+      onClick: () => {
+        this.mode = 'orbit';
+        this.dragging = false;
+        this.angle = Math.atan2((this.source.y - this.listener.y) / 160, (this.source.x - this.listener.x) / 220);
+      },
+    });
+    for (const model of ['linear', 'inverse', 'exponential']) {
+      panel.addButton({
+        label: model,
+        onClick: () => {
+          this.model = model;
+          if (this.voice) {
+            this.voice.distanceModel = model;
+          }
+        },
+      });
+    }
     this.source.x = width / 2 + 220;
     this.source.y = height / 2;
     app.input.onPointerDown.add(pointer => {
       const dx = pointer.x - this.source.x;
       const dy = pointer.y - this.source.y;
       // Generous grab radius so the source is easy to pick up.
-      if (dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4) this.dragging = true;
+      if (this.mode === 'drag' && dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4) {
+        this.dragging = true;
+      }
     });
     app.input.onPointerMove.add(pointer => {
-      if (!this.dragging) return;
+      if (!this.dragging) {
+        return;
+      }
       this.source.x = pointer.x;
       this.source.y = pointer.y;
-      if (this.voice) this.voice.position = this.source;
+      if (this.voice) {
+        this.voice.position = this.source;
+      }
     });
     app.input.onPointerUp.add(() => {
       this.dragging = false;
@@ -76,7 +119,7 @@ class ListenerAndSourceScene extends Scene {
         loop: true,
         volume: 1,
         position: this.source,
-        distanceModel: 'linear',
+        distanceModel: this.model,
         refDistance: REF_DISTANCE,
         maxDistance: MAX_DISTANCE,
         rolloffFactor: ROLLOFF,
@@ -84,17 +127,28 @@ class ListenerAndSourceScene extends Scene {
       this.hud.setStatus('Drag the red source to move it');
     });
   }
+  update(delta) {
+    if (this.mode !== 'orbit') {
+      return;
+    }
+    this.angle += delta * 1.1;
+    this.source.x = this.listener.x + Math.cos(this.angle) * 220;
+    this.source.y = this.listener.y + Math.sin(this.angle) * 160;
+    if (this.voice) {
+      this.voice.position = this.source;
+    }
+  }
   draw(context) {
     const app = this.app;
     const source = this.source;
     const dx = source.x - this.listener.x;
     const dy = source.y - this.listener.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const volume = linearAttenuation(dist);
+    const volume = attenuation(this.model, dist);
     // Horizontal offset maps to stereo pan (left of listener = left ear).
     const pan = Math.max(-1, Math.min(1, dx / MAX_DISTANCE));
     const panText = pan < -0.05 ? `L ${Math.abs(pan).toFixed(2)}` : pan > 0.05 ? `R ${pan.toFixed(2)}` : 'center';
-    this.label.text = `distance: ${dist.toFixed(0)} px   volume: ${(volume * 100).toFixed(0)}%   pan: ${panText}`;
+    this.label.text = `${this.mode} · ${this.model} · distance ${dist.toFixed(0)} px · volume ${(volume * 100).toFixed(0)}% · pan ${panText}`;
     this.graphics.clear();
     // Reference + max distance rings around the listener.
     this.graphics.fillColor = new Color(50, 60, 60);
@@ -113,6 +167,10 @@ class ListenerAndSourceScene extends Scene {
     if (app.audio.locked) {
       context.render(this.tapPrompt);
     }
+  }
+  destroy() {
+    this.voice?.stop();
+    super.destroy();
   }
 }
 const app = new Application({

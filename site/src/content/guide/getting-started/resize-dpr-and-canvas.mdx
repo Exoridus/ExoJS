@@ -24,13 +24,15 @@ Changing the canvas size never repositions existing content — a sprite you pla
 
 ## Crisp rendering with `pixelRatio`
 
-On a high-DPI display, a canvas sized in CSS pixels is stretched across more physical pixels, so anything drawn at the CSS resolution looks soft. The `pixelRatio` canvas option scales the canvas backing store up by that factor while the CSS display size stays the same. It defaults to the display's `devicePixelRatio` (clamped to `2`), so output is crisp out of the box; set it explicitly to override:
+On a high-DPI display, a canvas sized in CSS pixels is stretched across more physical pixels, so anything drawn at the CSS resolution looks soft. The `pixelRatio` canvas option scales the canvas backing store up by that factor while the CSS display size stays the same. It defaults to the display's `devicePixelRatio` (clamped to `2`) and follows it when it changes — the window moves to another monitor, or the page is zoomed — so output is crisp out of the box. The example relies on that default and reads the ratio in effect from `app.pixelRatio`:
 
 <SourceSnippet
   source="examples/getting-started/resize-and-dpr.ts"
   region="app-setup"
-  title="Application with pixelRatio"
+  title="Application with the automatic pixelRatio"
 />
+
+Pass `canvas.pixelRatio` only to pin a ratio. An explicit value is the caller's fixed decision: it is never updated when the display's ratio changes, so passing `window.devicePixelRatio` freezes the value from startup.
 
 With `pixelRatio: 2`, an 800×600 canvas renders into a 1600×1200 backing store but still displays at 800×600 CSS pixels — twice the detail per pixel, so sprites and text stay crisp. Pass `pixelRatio: 1` to force a backing store that matches the CSS size.
 

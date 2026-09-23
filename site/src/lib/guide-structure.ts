@@ -156,12 +156,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'release resources in destroy',
         ],
         prerequisites: ['getting-started/your-first-scene'],
-        examples: [
-          'application-scenes/multiple-scenes',
-          'application-scenes/scene-lifecycle',
-          'application-scenes/pause-and-resume',
-          'getting-started/game-loop',
-        ],
+        examples: ['application-scenes/multiple-scenes', 'showcase/pause-blur', 'getting-started/hello-world'],
         apiLinks: ['scene', 'loader', 'time'],
       },
       {
@@ -181,14 +176,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         level: 'intermediate',
         learningGoals: ['compose drawables with containers', 'reason about transforms, draw order, and masks'],
         prerequisites: ['runtime/scenes-and-lifecycle'],
-        examples: [
-          'scene-graph/containers',
-          'scene-graph/nested-transforms',
-          'scene-graph/local-vs-global-transform',
-          'scene-graph/pivot-and-anchor',
-          'scene-graph/z-ordering',
-          'scene-graph/masks',
-        ],
+        examples: ['scene-graph/nested-transforms', 'scene-graph/pivot-and-anchor', 'debug-layer/pointer-and-hittest', 'scene-graph/masks'],
         apiLinks: ['container', 'drawable'],
       },
       {
@@ -196,12 +184,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         level: 'intermediate',
         learningGoals: ['map world space to screen space', 'move and zoom a camera view'],
         prerequisites: ['runtime/scene-graph'],
-        examples: [
-          'application-scenes/camera-and-view',
-          'application-scenes/multi-view-split-screen',
-          'application-scenes/picture-in-picture',
-          'application-scenes/world-vs-screen-coords',
-        ],
+        examples: ['application-scenes/multi-view-split-screen', 'application-scenes/picture-in-picture', 'application-scenes/world-vs-screen-coords'],
         apiLinks: ['view', 'pass-context'],
       },
       {
@@ -213,7 +196,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'anchor and stack widgets, and route clicks and keyboard focus',
         ],
         prerequisites: ['runtime/scenes-and-lifecycle'],
-        examples: ['ui/hud-and-widgets', 'application-scenes/hud-overlay-scene'],
+        examples: ['ui/hud-and-widgets', 'ui/settings-menu', 'ui/text-entry-and-scrolling'],
         apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'interaction-system'],
       },
       {
@@ -239,7 +222,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         level: 'intermediate',
         learningGoals: ['declare and load assets predictably', 'access loaded resources by name'],
         prerequisites: ['runtime/scenes-and-lifecycle'],
-        examples: ['sprites-textures/texture-loader'],
+        examples: ['application-scenes/loading-screen'],
         apiLinks: ['loader', 'texture'],
       },
       {
@@ -307,6 +290,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'rely on deterministic spawn order, atomic rollback and cancellation',
         ],
         prerequisites: ['assets/ldtk'],
+        examples: ['tilemap/editor-objects-gameplay', 'tilemap/level-loading-and-ownership'],
         apiLinks: ['map-world', 'map-world-runtime', 'map-level-runtime', 'map-object-spawner', 'map-spawn-session', 'ldtk-project', 'loader-scope'],
       },
     ],
@@ -321,13 +305,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         level: 'intro',
         learningGoals: ['draw procedural shapes with Graphics', 'fill, stroke, and position drawn geometry'],
         prerequisites: ['getting-started/your-first-scene'],
-        examples: [
-          'geometry-graphics/graphics-primitives',
-          'geometry-graphics/infinite-grid',
-          'geometry-graphics/mesh-triangle',
-          'geometry-graphics/mesh-textured-quad',
-          'geometry-graphics/mesh-deformed-grid',
-        ],
+        examples: ['geometry-graphics/graphics-gradient', 'geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
         apiLinks: ['graphics', 'color'],
       },
       {
@@ -337,9 +315,9 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         prerequisites: ['getting-started/your-first-scene'],
         examples: [
           'sprites-textures/sprite-basics',
+          'sprites-textures/texture-sampling',
           'sprites-textures/blendmodes',
-          'sprites-textures/spritesheet-frames',
-          'sprites-textures/svg-drawable',
+          'tweens-animation/frame-animation',
           'sprites-textures/video-drawable',
         ],
         apiLinks: ['sprite', 'spritesheet', 'texture'],
@@ -348,22 +326,14 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         slug: 'text',
         level: 'intro',
         learningGoals: ['render and style runtime text', 'lay out multiline and wrapped text'],
-        examples: ['text-fonts/basic-text', 'text-fonts/multiline-and-wrap', 'text-fonts/stroke-and-shadow', 'text-fonts/web-fonts', 'text-fonts/text-glitch'],
+        examples: ['text-fonts/typographic-styling', 'text-fonts/multiline-and-wrap'],
         apiLinks: ['text', 'bitmap-text', 'text-style'],
       },
       {
         slug: 'animation',
         level: 'intermediate',
         learningGoals: ['tween transforms and values over time', 'chain, yoyo, and interrupt tweens'],
-        examples: [
-          'tweens-animation/easing-curves',
-          'tweens-animation/frame-animation',
-          'tweens-animation/interrupt-and-replace',
-          'tweens-animation/tween-basics',
-          'tweens-animation/tween-chains',
-          'tweens-animation/tween-from-array',
-          'tweens-animation/tween-with-yoyo',
-        ],
+        examples: ['tweens-animation/easing-curves', 'tweens-animation/frame-animation', 'tweens-animation/tween-basics', 'tweens-animation/tween-chains'],
         apiLinks: ['tween', 'tween-system', 'animated-sprite'],
       },
       {
@@ -387,6 +357,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'rely on the render-only contract: logical state never changes',
         ],
         prerequisites: ['rendering/sprites'],
+        examples: ['sprites-textures/texture-sampling'],
         apiLinks: ['drawable', 'sprite', 'view'],
       },
       {
@@ -424,7 +395,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'move expensive sampling off the main thread with createWorkerSampledChunkSource',
         ],
         prerequisites: ['assets/tiled-maps'],
-        examples: ['tilemap/infinite-terrain', 'tilemap/worker-streamed-terrain', 'tilemap/tiled-infinite-map'],
+        examples: ['tilemap/worker-streamed-terrain', 'tilemap/tiled-infinite-map'],
         apiLinks: ['tile-map', 'tile-layer', 'chunk-streamer', 'chunk-source', 'tilemap-functions', 'tiled-map'],
       },
     ],
@@ -437,18 +408,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         slug: 'filters',
         level: 'intermediate',
-        examples: [
-          'filters/blur-filter',
-          'filters/chromatic-aberration',
-          'filters/color-matrix-filter',
-          'filters/crt-scanlines',
-          'filters/custom-fragment-shader',
-          'filters/filter-stack',
-          'filters/metaballs',
-          'filters/noise-vignette',
-          'filters/palette-cycling',
-          'showcase/color-grading',
-        ],
+        examples: ['filters/blur-filter', 'filters/color-matrix-filter', 'filters/crt-scanlines', 'filters/custom-fragment-shader', 'filters/metaballs'],
         apiLinks: ['filter', 'color-matrix-filter', 'blur-filter'],
       },
       {
@@ -474,28 +434,21 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'choose between the two renderers by the property you need',
         ],
         prerequisites: ['rendering/sprites'],
-        examples: [
-          'lighting/shadow-casters',
-          'lighting/radiance-rooms',
-          'lighting/light-cookies',
-          'lighting/lightmap-normals',
-          'lighting/normal-mapped-sprites',
-          'lighting/many-lights',
-        ],
+        examples: ['lighting/shadow-casters', 'lighting/radiance-rooms', 'lighting/light-cookies', 'lighting/lightmap-normals', 'lighting/many-lights'],
         apiLinks: ['lighting', 'point-light', 'spot-light', 'line-light', 'sun-light', 'lit-material'],
       },
       {
         slug: 'post-processing',
         level: 'advanced',
         prerequisites: ['rendering/render-targets'],
-        examples: ['render-targets/bloom-lite', 'render-targets/post-processing-chain', 'render-targets/trail-feedback', 'render-targets/water-mirror'],
+        examples: ['filters/bloom-filter', 'render-targets/render-pipeline', 'render-targets/trail-feedback', 'render-targets/water-mirror'],
         apiLinks: ['render-target', 'filter'],
       },
       {
         slug: 'custom-mesh-shaders',
         level: 'advanced',
         prerequisites: ['rendering/graphics'],
-        examples: ['geometry-graphics/mesh-triangle', 'geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
+        examples: ['geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
         apiLinks: ['mesh'],
       },
     ],
@@ -523,7 +476,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         level: 'intro',
         learningGoals: ['read unified pointer events across mouse and touch', 'translate pointer position into world space'],
         prerequisites: ['input/keyboard-and-actions'],
-        examples: ['input/mouse-and-pointer', 'input/multitouch', 'input/pointer-to-world'],
+        examples: ['input/mouse-and-pointer', 'input/multitouch', 'application-scenes/world-vs-screen-coords'],
         apiLinks: ['pointer', 'input-system'],
       },
       {
@@ -531,7 +484,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         level: 'intermediate',
         learningGoals: ['read controller buttons and axes', 'support multiple connected gamepads'],
         prerequisites: ['input/keyboard-and-actions'],
-        examples: ['input/gamepad', 'input/multi-gamepad'],
+        examples: ['input/gamepad', 'application-scenes/multi-view-split-screen'],
         apiLinks: ['gamepad', 'input-system'],
       },
       {
@@ -563,7 +516,6 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'audio-basics/music-loop',
           'audio-basics/crossfade-tracks',
           'audio-basics/sound-pool',
-          'audio-basics/random-pitch-pool',
           'audio-basics/audio-buses',
         ],
         apiLinks: ['sound', 'audio-stream', 'audio-system'],
@@ -579,7 +531,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'feed one shared reverb from many voices, and gate it on a zone',
         ],
         prerequisites: ['audio/audio-basics'],
-        examples: ['spatial-audio/listener-and-source', 'spatial-audio/moving-source', 'spatial-audio/falloff-curves'],
+        examples: ['spatial-audio/listener-and-source'],
         apiLinks: ['audio-listener', 'audio-system', 'audio-send', 'audio-zone', 'spatial-zones'],
       },
       {
@@ -595,7 +547,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         level: 'intermediate',
         learningGoals: ['read beat and frequency information', 'drive timing from audio analysis'],
         prerequisites: ['audio/audio-basics'],
-        examples: ['beat-detection/beat-sync-pulse', 'beat-detection/frequency-bands', 'beat-detection/tempo-tracking'],
+        examples: ['beat-detection/beat-sync-pulse', 'showcase/audio-visualisation'],
         apiLinks: ['beat-detector', 'audio-analyser'],
       },
       {
@@ -676,12 +628,12 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         slug: 'hud-overlay',
         level: 'intermediate',
-        examples: ['application-scenes/hud-overlay-scene', 'showcase/minimap-with-mask'],
+        examples: ['ui/hud-and-widgets', 'render-targets/mini-map'],
       },
       {
         slug: 'camera-follow-and-parallax',
         level: 'intermediate',
-        examples: ['showcase/mouse-parallax', 'scene-graph/parallax-starfield'],
+        examples: ['scene-graph/parallax-starfield'],
       },
       {
         slug: 'pause-menu',
@@ -696,17 +648,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         slug: 'audio-reactive-scene',
         level: 'intermediate',
-        examples: ['showcase/audio-reactive-particles', 'showcase/audio-visualisation', 'showcase/low-band-camera-shake', 'showcase/vinyl-record'],
+        examples: ['showcase/audio-reactive-particles', 'showcase/audio-visualisation'],
       },
       {
         slug: 'game-feel',
         level: 'intermediate',
-        examples: ['showcase/damage-flash', 'showcase/screen-shake-on-explosion', 'showcase/gamepad-spaceship'],
+        examples: ['showcase/screen-shake-on-explosion', 'showcase/gamepad-spaceship'],
       },
       {
         slug: 'ui-patterns',
         level: 'intermediate',
-        examples: ['showcase/dialog-system', 'showcase/typewriter-text'],
+        examples: ['showcase/dialog-system'],
       },
       {
         slug: 'cinematics',
@@ -747,14 +699,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'inspect filter chains and render-pass counts',
         ],
         prerequisites: ['getting-started/your-first-scene'],
-        examples: [
-          'debug-layer/performance-overlay',
-          'debug-layer/bounding-boxes',
-          'debug-layer/pointer-and-hittest',
-          'debug-layer/signal-bus-inspector',
-          'render-targets/post-processing-chain',
-          'render-targets/bloom-lite',
-        ],
+        examples: ['performance/backend-comparison', 'debug-layer/pointer-and-hittest', 'render-targets/render-pipeline'],
         apiLinks: ['debug-overlay', 'performance-layer', 'bounding-boxes-layer', 'hit-test-layer', 'render-pass-inspector-layer'],
       },
       {
@@ -762,7 +707,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         level: 'intermediate',
         learningGoals: ['measure scene limits with stress examples', 'read the performance overlay to find bottlenecks'],
         prerequisites: ['debugging/debugging-and-inspection'],
-        examples: ['performance/sprite-stress', 'performance/multi-texture-stress', 'performance/particle-stress'],
+        examples: ['performance/backend-comparison', 'particles/gpu-particles'],
         apiLinks: ['performance-layer'],
       },
       {
@@ -774,7 +719,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         slug: 'custom-renderers',
         level: 'advanced',
-        examples: ['custom-renderers/custom-render-pass', 'custom-renderers/custom-triangle-renderer'],
+        examples: ['render-targets/render-pipeline', 'custom-renderers/custom-triangle-renderer'],
       },
       {
         slug: 'authoring-extensions',
@@ -821,7 +766,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         slug: 'troubleshooting',
         level: 'intro',
-        examples: ['debug-layer/performance-overlay', 'input/keyboard', 'input/gamepad', 'audio-basics/play-sound'],
+        examples: ['performance/backend-comparison', 'input/keyboard', 'input/gamepad', 'audio-basics/play-sound'],
       },
       {
         slug: 'deployment',
@@ -893,7 +838,7 @@ export const GUIDE_LEARNING_PATH: ReadonlyArray<LearningPathStep> = [
   { path: 'getting-started/setup', goal: 'Scaffold a typed project and run the dev server.' },
   { path: 'getting-started/project-structure', goal: 'Find your way around a create-exo-app project.', example: 'getting-started/hello-world' },
   { path: 'getting-started/your-first-scene', goal: 'Load a texture, draw a sprite, and animate it.', example: 'getting-started/hello-world' },
-  { path: 'runtime/scenes-and-lifecycle', goal: 'Update state and render each frame.', example: 'getting-started/game-loop' },
+  { path: 'runtime/scenes-and-lifecycle', goal: 'Update state and render each frame.', example: 'getting-started/hello-world' },
   { path: 'input/keyboard-and-actions', goal: 'Move something in response to key presses.', example: 'input/keyboard' },
   { path: 'audio/audio-basics', goal: 'Play sound and music with reliable controls.', example: 'audio-basics/play-sound' },
   { path: 'recipes/build-orb-dodge', goal: 'Combine it all into a complete small game.', example: 'showcase/orb-dodge' },

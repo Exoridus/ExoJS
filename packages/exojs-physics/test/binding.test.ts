@@ -1,4 +1,4 @@
-import { Container, Drawable, logger, RetainedContainer, type SceneNode } from '@codexo/exojs';
+import { Container, Drawable, logger, RetainedContainer, type SceneNode, Vector } from '@codexo/exojs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { NativePhysicsBackend } from '../src/backend/NativePhysicsBackend';
@@ -51,19 +51,35 @@ describe('SceneNode binding', () => {
     expect(node.y).toBe(44);
   });
 
-  it('writes the body rotation onto the node (radians → degrees)', () => {
+  it('writes the body rotation as the counter-rotating degrees a SceneNode expects', () => {
     const world = new PhysicsWorld();
     const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, angle: Math.PI / 2, colliders: [{ shape: new BoxShape(10, 10) }] }));
     const node = fakeNode();
 
     world.bind(body, node as unknown as SceneNode);
 
-    expect(node.rotation).toBeCloseTo(90, 6);
+    expect(node.rotation).toBeCloseTo(-90, 6);
 
     body.setTransform({ x: 0, y: 0 }, Math.PI);
     world.step(1 / 60);
 
-    expect(node.rotation).toBeCloseTo(180, 6);
+    expect(node.rotation).toBeCloseTo(-180, 6);
+  });
+
+  it("renders the bound node where the body's colliders are", () => {
+    const world = new PhysicsWorld();
+    const angle = Math.PI / 6;
+    const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 50, y: 20 }, angle, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const node = new Drawable();
+
+    world.bind(body, node);
+
+    const rendered = new Vector(100, 0).transform(node.getGlobalTransform());
+
+    expect(rendered.x).toBeCloseTo(50 + Math.cos(angle) * 100, 4);
+    expect(rendered.y).toBeCloseTo(20 + Math.sin(angle) * 100, 4);
+
+    node.destroy();
   });
 
   it('rejects binding a node with non-zero skew', () => {

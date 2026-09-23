@@ -4,11 +4,12 @@ import MonacoReactEditor, { loader, type OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-import { type ChangeEvent, type ReactNode, type Ref, type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { type ChangeEvent, type ReactNode, type Ref, type RefObject, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
+import { findExampleCompanions } from '../lib/example-companions';
 import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsPromise } from '../lib/footgun-diagnostics';
-import { buildPublicUrl } from '../lib/url-builder';
-import { CURRENT_VERSION_ID } from '../lib/versions';
+import { buildExampleUrl, buildGithubRawExampleUrl, buildPublicUrl } from '../lib/url-builder';
+import { CURRENT_VERSION_ID, isCurrentVersion } from '../lib/versions';
 import styles from './EditorCode.module.scss';
 import { css, cx } from './react-utils';
 import { Toolbar } from './Toolbar';
@@ -332,6 +333,11 @@ export const EditorCode = ({
     void editorRef.current?.getAction('editor.action.formatDocument')?.run();
   };
 
+  const companions = useMemo(
+    () => (sourceCode && sourcePath ? findExampleCompanions(sourceCode, sourcePath.replace(/\.js$/, '.ts')) : []),
+    [sourceCode, sourcePath],
+  );
+
   const exportCode = (): void => {
     setShowMenu(false);
     const code = editorRef.current?.getValue() ?? editorValue;
@@ -423,8 +429,25 @@ export const EditorCode = ({
                 Format Code
               </button>
               <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
-                Export Code
+                Export this file
               </button>
+              {companions.length > 0 && (
+                <div className={css(styles, 'menu-note')} role="group" aria-label="Files this example also imports">
+                  <span>Also imports</span>
+                  {companions.map(companion => (
+                    <a
+                      key={companion}
+                      className={css(styles, 'menu-item')}
+                      role="menuitem"
+                      href={isCurrentVersion(selectedVersionId) ? buildExampleUrl(companion) : buildGithubRawExampleUrl(selectedVersionId, companion)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {companion}
+                    </a>
+                  ))}
+                </div>
+              )}
               <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={importCode}>
                 Import Code
               </button>

@@ -31,9 +31,15 @@ type PaintMode = 'goal' | 'wall' | 'mud';
 
 /** Deterministic room-and-pillar layout, so the example looks the same every run. */
 const initialCost = (x: number, y: number): number => {
-  if (x === 0 || y === 0 || x === COLUMNS - 1 || y === ROWS - 1) return 0;
-  if (x % 8 === 4 && y % 3 !== 1) return 0;
-  if (x % 4 === 2 && y % 6 === 3) return 0;
+  if (x === 0 || y === 0 || x === COLUMNS - 1 || y === ROWS - 1) {
+    return 0;
+  }
+  if (x % 8 === 4 && y % 3 !== 1) {
+    return 0;
+  }
+  if (x % 4 === 2 && y % 6 === 3) {
+    return 0;
+  }
 
   return 1;
 };
@@ -100,7 +106,9 @@ class GridNavigationScene extends Scene {
   override update(delta: Seconds): void {
     const points = this.result?.points ?? [];
 
-    if (this.waypoint >= points.length) return;
+    if (this.waypoint >= points.length) {
+      return;
+    }
 
     let travel = AGENT_SPEED * delta;
 
@@ -149,7 +157,9 @@ class GridNavigationScene extends Scene {
     const x = Math.floor(screenX / CELL);
     const y = Math.floor(screenY / CELL);
 
-    if (this.grid.nodeAt(x, y) < 0) return;
+    if (this.grid.nodeAt(x, y) < 0) {
+      return;
+    }
 
     if (this.paint === 'goal') {
       this.goal = { x, y };
@@ -191,9 +201,13 @@ class GridNavigationScene extends Scene {
       for (let x = 0; x < COLUMNS; x++) {
         const cost = this.grid.costAt(x, y);
 
-        if (cost === 0) this.terrain.fillColor = WALL_COLOR;
-        else if (cost > 1) this.terrain.fillColor = MUD_COLOR;
-        else this.terrain.fillColor = FLOOR_COLOR;
+        if (cost === 0) {
+          this.terrain.fillColor = WALL_COLOR;
+        } else if (cost > 1) {
+          this.terrain.fillColor = MUD_COLOR;
+        } else {
+          this.terrain.fillColor = FLOOR_COLOR;
+        }
 
         this.terrain.drawRectangle(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
       }

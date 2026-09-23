@@ -1,17 +1,4 @@
-import {
-  Application,
-  Asset,
-  Assets,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  Keyboard,
-  type RenderingContext,
-  Scene,
-  SceneState,
-  Sprite,
-  Text,
-} from '@codexo/exojs';
+import { Application, Asset, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const GameAssets = Assets.from({
@@ -25,7 +12,8 @@ const GameAssets = Assets.from({
  * One progress bar for everything the loader is doing, then a hand-over to the
  * game scene. Nothing is awaited in `load()`: the bar is driven by the loader's
  * own signals, which see every `load(...)` call from every scene and system -
- * not just this scene's.
+ * not just this scene's. Completion is recorded as state and acted on from
+ * `update()`, which only runs while this scene is active.
  */
 class BootScene extends Scene {
   private bar!: Graphics;
@@ -33,6 +21,10 @@ class BootScene extends Scene {
 
   private loaded = 0;
   private total = 0;
+  private failed = false;
+  private loading = false;
+  private complete = false;
+  private leaving = false;
   private message = 'Waiting for the first request…';
 
   private onLoadStart!: (key: string, url: string) => void;
@@ -54,19 +46,29 @@ class BootScene extends Scene {
 
     // Every listener is kept in a field so `unload()` can take it off again.
     this.onLoadStart = (key: string) => {
-      this.message = `Loading ${key}…`;
+      this.loading = true;
+      if (!this.failed) {
+        this.message = `Loading ${key}…`;
+      }
     };
     this.onLoadProgress = (loaded: number, total: number, key: string) => {
       this.loaded = loaded;
       this.total = total;
-      this.message = `${loaded} / ${total} — ${key}`;
+      if (!this.failed) {
+        this.message = `${loaded} / ${total} — ${key}`;
+      }
     };
     this.onLoadError = (key: string, error: Error) => {
-      // onLoadComplete still fires once the rest of the batch settles.
+      this.failed = true;
       this.message = `Failed to load "${key}": ${error.message}`;
     };
     this.onLoadComplete = () => {
-      this.enterGame();
+      this.loading = false;
+      if (this.failed) {
+        this.message = 'Load failed. Press Space to retry.';
+      } else {
+        this.complete = true;
+      }
     };
 
     app.loader.onLoadStart.add(this.onLoadStart);
@@ -76,9 +78,27 @@ class BootScene extends Scene {
 
     // Trigger loads from anywhere - the signals above see all of them. The
     // claim goes on the application loader so the assets outlive this scene.
-    app.loader.load(GameAssets);
+    this.inputs.onTrigger(Keyboard.Space, () => {
+      if (this.failed && !this.loading) {
+        this.loadAssets();
+      }
+    });
+    this.loadAssets();
   }
   // #endregion guide:boot-signals
+
+  private loadAssets(): void {
+    this.failed = false;
+    this.complete = false;
+    this.loading = true;
+    this.loaded = 0;
+    this.total = 0;
+    this.message = 'Loading assets…';
+    void this.app.loader.load(GameAssets).catch(error => {
+      this.failed = true;
+      this.message = `Load failed: ${String(error)}. Press Space to retry.`;
+    });
+  }
 
   // #region guide:boot-unsubscribe
   override unload(): void {
@@ -93,17 +113,17 @@ class BootScene extends Scene {
     app.loader.onLoadComplete.remove(this.onLoadComplete);
   }
 
-  /** Leaves for the game - but only while this scene is still the one on screen. */
-  private enterGame(): void {
-    // Check `attached` first: it never throws, unlike `state`, which does
-    // once the scene has been fully detached. `Active` is the only state
-    // allowed to navigate - suspended, unloading, or detached must not.
-    if (!this.attached || this.state !== SceneState.Active) {
+  override update(): void {
+    // A warm cache completes while this scene is still preparing, before it
+    // may navigate. Acting on the recorded completion here instead of inside
+    // the signal handler covers that case, and never navigates away from a
+    // scene that is no longer the active one.
+    if (!this.complete || this.leaving) {
       return;
     }
 
-    const app = this.app;
-    void app.scenes.change(PlayScene);
+    this.leaving = true;
+    void this.app.scenes.change(PlayScene);
   }
   // #endregion guide:boot-unsubscribe
 
@@ -144,7 +164,7 @@ class PlayScene extends Scene {
     // loader, so reading the same handles here costs nothing.
     this.ship = new Sprite(GameAssets.ship).setAnchor(0.5).setPosition(width / 2, height / 2);
 
-    this.label = new Text('Loaded — press Space to boot again.', { fillColor: Color.white, fontSize: 22, align: 'center' });
+    this.label = new Text('Loaded — press Space to visit the warm cache.', { fillColor: Color.white, fontSize: 22, align: 'center' });
     this.label.setAnchor(0.5, 0).setPosition(width / 2, height * 0.68);
 
     this.inputs.onTrigger(Keyboard.Space, () => {
@@ -152,9 +172,9 @@ class PlayScene extends Scene {
     });
 
     this.hud = mountControls({
-      title: 'Loading Screen',
+      title: 'Loading Progress and Retry',
       controls: [{ keys: 'Space', action: 'return to the boot scene' }],
-      hint: 'The boot scene drives its bar from the loader-wide signals, then navigates once the shared batch drains.',
+      hint: 'The boot scene follows real loader signals, retries failures, and enters the game after a successful batch.',
     });
   }
 

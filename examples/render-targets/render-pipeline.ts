@@ -14,6 +14,7 @@ import {
   type Seconds,
   Sprite,
 } from '@codexo/exojs';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // A composable frame, configured once: the world renders off-screen, a blur step turns it into its
 // blurred version, a composite step draws that to the screen, and a nested UI pipeline overlays a HUD.
@@ -28,7 +29,9 @@ class RenderPipelineScene extends Scene {
   private blurPass!: CallbackRenderPass;
   private hud!: Container;
   private hudBar!: Graphics;
+  private overlay!: Graphics;
   private frame!: RenderPipeline;
+  private controls!: ReturnType<typeof mountControls>;
   private detachResize: (() => void) | null = null;
   private time = 0;
 
@@ -48,6 +51,7 @@ class RenderPipelineScene extends Scene {
 
     this.hud = new Container();
     this.hudBar = new Graphics();
+    this.overlay = new Graphics();
     this.hud.addChild(this.hudBar);
 
     // A filter step: read the off-screen scene, write its blurred version.
@@ -56,7 +60,20 @@ class RenderPipelineScene extends Scene {
     });
 
     // The HUD is its own nested pipeline, rendered in screen space.
-    const ui = new RenderPipeline({ label: 'ui' }).addPass(new RenderNodePass(this.hud, { view: screenView, label: 'hud' }));
+    const ui = new RenderPipeline({ label: 'ui' })
+      .addPass(
+        new CallbackRenderPass(
+          context => {
+            this.overlay.clear();
+            this.overlay.lineWidth = 7;
+            this.overlay.lineColor = new Color(130, 235, 180);
+            this.overlay.drawArc(app.width / 2, app.height / 2, 130, this.time, this.time + Math.PI * 1.3);
+            context.render(this.overlay, { view: screenView });
+          },
+          { label: 'custom-arc' },
+        ),
+      )
+      .addPass(new RenderNodePass(this.hud, { view: screenView, label: 'hud' }));
 
     // world → off-screen → blur → composite → UI overlay. A RenderPipeline is itself a RenderPass,
     // so `ui` nests directly.
@@ -75,6 +92,21 @@ class RenderPipelineScene extends Scene {
     };
     app.onResize.add(handleResize);
     this.detachResize = () => app.onResize.remove(handleResize);
+
+    this.controls = mountControls({
+      title: 'Composable Render Pipeline',
+      status: 'Blur: on',
+      hint: 'Named world, blur, composite, custom callback, and HUD passes run in order. Disable blur to bypass to the current unblurred frame.',
+    });
+    mountControlPanel({ title: 'Passes' }).addToggle({
+      label: 'Blur',
+      value: true,
+      onChange: enabled => {
+        this.blurPass.enabled = enabled;
+        this.composite.setTexture(enabled ? this.blurredRt : this.sceneRt);
+        this.controls.setStatus(`Blur: ${enabled ? 'on' : 'off'}`);
+      },
+    });
   }
 
   override update(delta: Seconds): void {
@@ -82,16 +114,13 @@ class RenderPipelineScene extends Scene {
     const { width, height } = app;
     this.time += delta;
 
-    // `enabled` lives on the pass - flip it and the composer skips the step next frame.
-    this.blurPass.enabled = Math.floor(this.time / 2.5) % 2 === 0;
-
     this.orb.clear();
     this.orb.fillColor = new Color(90, 150, 255);
     this.orb.drawCircle(width / 2 + Math.cos(this.time) * (width * 0.32), height / 2 + Math.sin(this.time * 1.3) * (height * 0.32), 90);
 
     this.hudBar.clear();
     this.hudBar.fillColor = this.blurPass.enabled ? new Color(120, 230, 150) : new Color(230, 120, 120);
-    this.hudBar.drawRectangle(20, 20, 200, 16);
+    this.hudBar.drawRectangle(width - 220, 20, 200, 16);
   }
 
   override draw(context: RenderingContext): void {
@@ -105,6 +134,7 @@ class RenderPipelineScene extends Scene {
     this.sceneRt.destroy();
     this.blurredRt.destroy();
     this.blur.destroy();
+    this.controls.dispose();
     super.destroy();
   }
 }

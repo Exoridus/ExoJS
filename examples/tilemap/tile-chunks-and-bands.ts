@@ -155,19 +155,27 @@ class TileChunksAndBandsScene extends Scene {
   private setupInput(): void {
     this.inputs.onActive(Keyboard.A, () => (this.moveX = -1));
     this.inputs.onStop(Keyboard.A, () => {
-      if (this.moveX < 0) this.moveX = 0;
+      if (this.moveX < 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.D, () => (this.moveX = 1));
     this.inputs.onStop(Keyboard.D, () => {
-      if (this.moveX > 0) this.moveX = 0;
+      if (this.moveX > 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.W, () => (this.moveY = -1));
     this.inputs.onStop(Keyboard.W, () => {
-      if (this.moveY < 0) this.moveY = 0;
+      if (this.moveY < 0) {
+        this.moveY = 0;
+      }
     });
     this.inputs.onActive(Keyboard.S, () => (this.moveY = 1));
     this.inputs.onStop(Keyboard.S, () => {
-      if (this.moveY > 0) this.moveY = 0;
+      if (this.moveY > 0) {
+        this.moveY = 0;
+      }
     });
   }
 

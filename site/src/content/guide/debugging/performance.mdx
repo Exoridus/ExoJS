@@ -35,7 +35,7 @@ Isolate a single change per measurement — stacking several optimizations at on
 
 Sprites that share the same texture are batched into a single draw call on WebGPU backends. On WebGL2, single-texture batching also applies. The practical consequence: 600 sprites all using one texture atlas cost far less than 600 sprites each using a different texture.
 
-The [`multi-texture-stress`](/ExoJS/en/playground/?slug=performance/multi-texture-stress) example demonstrates this — a grid of sprites spread across 4 textures vs. a grid using 1 texture. The draw-call count difference is visible in the performance layer.
+The [Sprite Batching Laboratory](/ExoJS/en/playground/?example=performance/backend-comparison) switches between one and four otherwise identical textures while keeping positions and motion fixed. The performance layer shows how the draw-call count changes.
 
 For texture-atlas workflows, use a single `Spritesheet`-sliced `Texture` and select frames via `sprite.setTextureFrame()` rather than loading separate images per sprite.
 
@@ -118,17 +118,17 @@ The engine's own reproducible stress benchmarks live with [`@codexo/exojs-bench`
 ## Examples
 
 <a id="sprite-stress"></a>
-<ExamplePreview chapter="performance" slug="sprite-stress" />
+<ExamplePreview chapter="performance" slug="backend-comparison" />
 
-A 34×20 grid of sprites (680 total) from a single texture atlas, each with animated position, scale, and rotation. Demonstrates sprite batching throughput.
+Change the sprite count and texture diversity in a seeded workload, then read the resulting frame time and draw-call count.
 
 <a id="particle-stress"></a>
-<ExamplePreview chapter="performance" slug="particle-stress" />
+<ExamplePreview chapter="particles" slug="gpu-particles" />
 
-Three particle systems emitting 240–320 particles per second each, with custom tint-cycling, scale-over-lifetime, alpha-fade, and force-based velocity. Demonstrates particle system throughput with a non-GPU-eligible custom update module.
+Adjust the spawn rate and watch live occupancy, frame time, and the active execution path. WebGPU uses GPU compute simulation; WebGL2 uses a smaller CPU fallback budget.
 
 <TryIt
-  examples={['performance/sprite-stress', 'performance/particle-stress']}
+  examples={['performance/backend-comparison', 'particles/gpu-particles']}
   api={['performance-layer']}
 />
 

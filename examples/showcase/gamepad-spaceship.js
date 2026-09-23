@@ -1,23 +1,33 @@
 // Auto-generated from gamepad-spaceship.ts - edit the .ts source, not this file.
 import {
+  ActionMap,
   Application,
   AudioGenerator,
+  ButtonAction,
   Color,
   FixedResolutionCanvasSizing,
   GamepadAxis,
   GamepadButton,
   Graphics,
+  Keyboard,
   Scene,
   Sprite,
   Text,
   Vector,
+  VectorAction,
 } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 class GamepadSpaceshipScene extends Scene {
   ship;
   velocity = new Vector(0, 0);
-  thrust = new Vector(0, 0);
+  actions = new ActionMap({
+    move: new VectorAction([
+      { up: [Keyboard.W, Keyboard.Up], down: [Keyboard.S, Keyboard.Down], left: [Keyboard.A, Keyboard.Left], right: [Keyboard.D, Keyboard.Right] },
+      { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+    ]),
+    fire: new ButtonAction([Keyboard.Space, GamepadButton.RightTrigger]),
+  });
   facing = -Math.PI / 2;
   engine;
   bullets = [];
@@ -27,7 +37,6 @@ class GamepadSpaceshipScene extends Scene {
   burst;
   pad = null;
   score = 0;
-  hasPad = false;
   connectPrompt;
   hud;
   init() {
@@ -38,6 +47,7 @@ class GamepadSpaceshipScene extends Scene {
       .setScale(0.5)
       .setPosition(width / 2, height / 2);
     this.engine = app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
+    this.inputs.attach(this.actions);
     this.fx = new Graphics();
     this.particles = new ParticleSystem(this.loader.get(assets.demo.textures.particleSpark), { capacity: 4000 });
     this.systems.add(this.particles);
@@ -54,24 +64,14 @@ class GamepadSpaceshipScene extends Scene {
       this.asteroids.push(this.spawnAsteroid(width, height));
     }
     this.pad = app.input.getGamepad(0);
-    this.pad.onActive(GamepadAxis.LeftStickX, v => (this.thrust.x = v));
-    this.pad.onStop(GamepadAxis.LeftStickX, () => (this.thrust.x = 0));
-    this.pad.onActive(GamepadAxis.LeftStickY, v => (this.thrust.y = v));
-    this.pad.onStop(GamepadAxis.LeftStickY, () => (this.thrust.y = 0));
-    this.pad.onStart(GamepadButton.RightTrigger, () => this.fire());
-    // Track controller presence with the engine's connect/disconnect signals
-    // and prompt with an on-screen Text while none is attached.
-    this.hasPad = app.input.gamepads.some(pad => pad.connected);
-    app.input.onGamepadConnected.add(() => (this.hasPad = true));
-    app.input.onGamepadDisconnected.add(() => (this.hasPad = app.input.gamepads.some(pad => pad.connected)));
-    this.connectPrompt = new Text('Connect a controller to fly', { fillColor: Color.white, fontSize: 24, align: 'center' })
+    this.connectPrompt = new Text('WASD / Arrows to fly  ·  Space to fire', { fillColor: Color.white, fontSize: 24, align: 'center' })
       .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height / 2);
+      .setPosition(width / 2, height - 48);
     this.hud = mountControls({
-      title: 'Gamepad Spaceship',
+      title: 'Fly a Spaceship',
       controls: [
-        { keys: 'L-Stick', action: 'steer & thrust' },
-        { keys: 'R-Trigger', action: 'fire' },
+        { keys: 'WASD / Arrows / Left stick', action: 'steer and thrust' },
+        { keys: 'Space / Right trigger', action: 'fire' },
       ],
       status: 'Score: 0',
     });
@@ -110,9 +110,13 @@ class GamepadSpaceshipScene extends Scene {
   update(delta) {
     const app = this.app;
     const { width, height } = app;
-    const mag = Math.min(1, Math.hypot(this.thrust.x, this.thrust.y));
+    const thrust = this.actions.move.value;
+    const mag = Math.min(1, Math.hypot(thrust.x, thrust.y));
+    if (this.actions.fire.pressed) {
+      this.fire();
+    }
     if (mag > 0.05) {
-      this.facing = Math.atan2(this.thrust.y, this.thrust.x);
+      this.facing = Math.atan2(thrust.y, thrust.x);
       this.ship.setRotation((this.facing * 180) / Math.PI + 90);
       this.velocity.x += Math.cos(this.facing) * mag * 420 * delta;
       this.velocity.y += Math.sin(this.facing) * mag * 420 * delta;
@@ -121,8 +125,9 @@ class GamepadSpaceshipScene extends Scene {
       this.engine.volume = 0;
     }
     this.ship.move(this.velocity.x * delta, this.velocity.y * delta);
-    this.velocity.x *= 0.985;
-    this.velocity.y *= 0.985;
+    const damping = Math.pow(0.985, delta * 60);
+    this.velocity.x *= damping;
+    this.velocity.y *= damping;
     this.wrap(this.ship.position, width, height);
     for (const asteroid of this.asteroids) {
       asteroid.x += asteroid.vx * delta;
@@ -150,10 +155,16 @@ class GamepadSpaceshipScene extends Scene {
     }
   }
   wrap(point, width, height) {
-    if (point.x < -24) point.x = width + 24;
-    else if (point.x > width + 24) point.x = -24;
-    if (point.y < -24) point.y = height + 24;
-    else if (point.y > height + 24) point.y = -24;
+    if (point.x < -24) {
+      point.x = width + 24;
+    } else if (point.x > width + 24) {
+      point.x = -24;
+    }
+    if (point.y < -24) {
+      point.y = height + 24;
+    } else if (point.y > height + 24) {
+      point.y = -24;
+    }
   }
   draw(context) {
     this.fx.clear();
@@ -168,9 +179,17 @@ class GamepadSpaceshipScene extends Scene {
     context.render(this.fx);
     context.render(this.particles);
     context.render(this.ship);
-    if (!this.hasPad) {
+    if (!this.app.input.gamepads.some(pad => pad.connected)) {
       context.render(this.connectPrompt);
     }
+  }
+  destroy() {
+    this.engine?.stop();
+    this.hud?.dispose();
+    this.fx?.destroy();
+    this.ship?.destroy();
+    this.connectPrompt?.destroy();
+    super.destroy();
   }
 }
 const app = new Application({

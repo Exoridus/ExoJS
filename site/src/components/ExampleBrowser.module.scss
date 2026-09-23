@@ -6,7 +6,7 @@
   --nav-width: 280px;
   display: grid;
   grid-template-columns: var(--nav-width) minmax(0, 1fr);
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 64px - var(--playground-offset, 0px));
   position: relative;
   background: var(--bg-canvas);
   overflow-x: clip;
@@ -54,7 +54,7 @@
   .side-content {
     position: sticky;
     top: 64px;
-    height: calc(100vh - 64px);
+    height: calc(100vh - 64px - var(--playground-offset, 0px));
     align-self: start;
   }
 
@@ -105,8 +105,8 @@
 
 @media (max-width: 760px) {
   .root {
-    height: calc(100dvh - 64px);
-    min-height: calc(100dvh - 64px);
+    height: calc(100dvh - 64px - var(--playground-offset, 0px));
+    min-height: calc(100dvh - 64px - var(--playground-offset, 0px));
     grid-template-columns: minmax(0, 1fr);
     --mobile-actions-block-size: 68px;
   }
@@ -171,7 +171,7 @@
   }
 
   .sheet-navigation {
-    min-height: min(64dvh, 560px);
+    height: min(64dvh, 560px);
     border-right: 0;
   }
 }

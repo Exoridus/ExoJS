@@ -11,7 +11,7 @@ const GEAR_COUNT = 14;
 // (f32 x2) + color (u8 x4, normalized) per vertex, triangle-list. This is the
 // exact "standard mesh layout" the immediate path repacks - position, optional
 // texcoord, optional color - so an untextured colored shape needs no material.
-function polygonGeometry(radius: number, sides: number, fill: Color, center: Color): Geometry {
+const polygonGeometry = (radius: number, sides: number, fill: Color, center: Color): Geometry => {
   const stride = 12; // 2 * f32 (8) + 4 * u8 (4)
   const buffer = new ArrayBuffer(sides * 3 * stride);
   const view = new DataView(buffer);
@@ -48,18 +48,18 @@ function polygonGeometry(radius: number, sides: number, fill: Color, center: Col
     // buffer is uploaded once and cached by identity across frames.
     usage: 'static',
   });
-}
+};
 
 // Compose a raw world matrix (no node, no parent) from translation, rotation,
 // and uniform scale. drawGeometry / RenderBatch take this verbatim as the
 // instance's world transform - there is no origin/position/scale to compose.
-function composeTransform(out: Matrix, tx: number, ty: number, radians: number, scale: number): Matrix {
+const composeTransform = (out: Matrix, tx: number, ty: number, radians: number, scale: number): Matrix => {
   const cos = Math.cos(radians) * scale;
   const sin = Math.sin(radians) * scale;
 
   // Row-major affine: world = (a*lx + b*ly + x, c*lx + d*ly + y).
   return out.set(cos, -sin, tx, sin, cos, ty);
-}
+};
 
 interface Gear {
   geometry: Geometry;

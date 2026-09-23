@@ -446,6 +446,11 @@ class AssetBrowserScene extends Scene {
     return '';
   }
 
+  private assetExpression(): string {
+    const category = this.cat === 'technical' ? 'technical' : `demo.${this.cat}`;
+    return `assets.${category}.${this.key}`;
+  }
+
   private typeLabel(): string {
     return this.assetPath().split('.').pop()?.toUpperCase() ?? '';
   }
@@ -568,8 +573,7 @@ class AssetBrowserScene extends Scene {
     }
 
     if (this.key && x >= PREVIEW_X + PREVIEW_W - 84 && x < PREVIEW_X + PREVIEW_W - 10 && y >= PREVIEW_Y + 8 && y < PREVIEW_Y + 8 + 26) {
-      const fullKey = `assets.${this.cat}.${this.key}`;
-      navigator.clipboard?.writeText(fullKey).catch(() => undefined);
+      navigator.clipboard?.writeText(this.assetExpression()).catch(() => undefined);
       return;
     }
 
@@ -856,7 +860,7 @@ class AssetBrowserScene extends Scene {
 
     if (!this.key) return;
 
-    this.txtKey.text = `assets.${this.cat}.${this.key}`;
+    this.txtKey.text = this.assetExpression();
     this.txtKey.setPosition(PREVIEW_X + 10, PREVIEW_Y + 5);
     context.render(this.txtKey);
 
@@ -1109,7 +1113,7 @@ class AssetBrowserScene extends Scene {
     }
     const packs = data.packs ?? [];
     const lines = [
-      `License: ${data.license ?? 'CC0'}`,
+      `License: ${data.license ?? 'Unknown'}`,
       `Packs: ${packs.length}`,
       '',
       ...packs.slice(0, 14).map(p => `  ${p.slug}  (${Object.values(p.fileCountByExtension ?? {}).reduce((a, b) => a + b, 0)} files)`),

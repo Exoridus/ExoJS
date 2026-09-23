@@ -49,7 +49,9 @@ class VideoDrawableScene extends Scene {
     });
     app.input.onKeyDown.add(channel => {
       const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three, Keyboard.Four].indexOf(channel);
-      if (idx !== -1) void this.switchVideo(idx);
+      if (idx !== -1) {
+        void this.switchVideo(idx);
+      }
     });
     this.video.play();
   }
@@ -64,7 +66,9 @@ class VideoDrawableScene extends Scene {
     this.video.applyOptions({ loop: true, muted: true, volume: 0.5 });
   }
   async switchVideo(idx) {
-    if (idx === this.videoIdx || this.switching) return;
+    if (idx === this.videoIdx || this.switching) {
+      return;
+    }
     const entry = VIDEOS[idx];
     this.switching = true;
     this.hud.setStatus(`Loading — ${entry.label}…`);

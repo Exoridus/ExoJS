@@ -5,7 +5,6 @@ import {
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
-  Graphics,
   Keyboard,
   type RenderingContext,
   Scene,
@@ -52,22 +51,26 @@ class AssetCatalogsScene extends Scene {
   private ship!: Sprite;
   private ground!: Sprite;
   private summary!: Text;
-  private bar!: Graphics;
   private hud!: ReturnType<typeof mountControls>;
 
   private dayGround!: Texture;
   private nightGround!: Texture;
   private theme!: AudioStream;
 
-  private progress = 0;
   private frameCount = 0;
   private loadError = '';
   private night = false;
-  private barX = 0;
-  private barY = 0;
-  private barWidth = 0;
-
   override async load(): Promise<void> {
+    this.hud = mountControls({
+      title: 'Asset Catalogs',
+      controls: [
+        { keys: 'N', action: 'swap the ground texture for the derived night catalog' },
+        { keys: 'G', action: 'load a ground texture by a computed path' },
+        { keys: 'M', action: 'play the streamed theme (a non-leaf asset)' },
+      ],
+      status: 'Loading the shared and day catalogs...',
+      hint: 'Catalog handles expose their queue and cache state while loading.',
+    });
     // #region guide:queue-progress
     // Every `load(...)` call returns a LoadingQueue. It is `PromiseLike`, so
     // it can be awaited directly, and it reports the progress of this one
@@ -75,7 +78,7 @@ class AssetCatalogsScene extends Scene {
     const loading = this.loader.load(LevelAssets);
 
     loading.onProgress.add(progress => {
-      this.progress = progress.loaded / progress.total;
+      this.hud.setStatus(`Day catalog: ${progress.loaded}/${progress.total} loaded; logo ${SharedAssets.logo.state}.`);
     });
     // #endregion guide:queue-progress
 
@@ -83,6 +86,7 @@ class AssetCatalogsScene extends Scene {
     // Independent catalogs get independent queues - start both, await both.
     // The result tuple keeps each catalog's shape.
     const [day, night] = await Promise.all([loading, this.loader.load(NightAssets)]);
+    this.hud.setStatus(`Both catalogs ready; logo ${SharedAssets.logo.state}, night ground ${NightAssets.ground.state}.`);
 
     this.dayGround = day.ground;
     this.nightGround = night.ground;
@@ -132,13 +136,8 @@ class AssetCatalogsScene extends Scene {
       .setPosition(width * 0.75, height * 0.55)
       .setScale(1.4);
 
-    this.barWidth = width * 0.5;
-    this.barX = (width - this.barWidth) / 2;
-    this.barY = height * 0.16;
-    this.bar = new Graphics();
-
     this.summary = new Text('', { fillColor: Color.white, fontSize: 18, align: 'center' });
-    this.summary.setAnchor(0.5, 0).setPosition(width / 2, this.barY + 44);
+    this.summary.setAnchor(0.5, 0).setPosition(width / 2, height * 0.16);
 
     this.inputs.onTrigger(Keyboard.N, () => {
       this.night = !this.night;
@@ -151,16 +150,6 @@ class AssetCatalogsScene extends Scene {
 
     this.inputs.onTrigger(Keyboard.G, () => {
       void this.useVariant('hue-ramp');
-    });
-
-    this.hud = mountControls({
-      title: 'Asset Catalogs',
-      controls: [
-        { keys: 'N', action: 'swap the ground texture for the derived night catalog' },
-        { keys: 'G', action: 'load a ground texture by a computed path' },
-        { keys: 'M', action: 'play the streamed theme (a non-leaf asset)' },
-      ],
-      hint: 'Three catalogs — a shared one, a composed one, and one derived with extend — loaded through two parallel queues.',
     });
   }
 
@@ -178,17 +167,10 @@ class AssetCatalogsScene extends Scene {
   // #endregion guide:dynamic-path
 
   override draw(context: RenderingContext): void {
-    this.bar.clear();
-    this.bar.fillColor = new Color(48, 52, 62);
-    this.bar.drawRectangle(this.barX, this.barY, this.barWidth, 22);
-    this.bar.fillColor = new Color(110, 200, 255);
-    this.bar.drawRectangle(this.barX, this.barY, this.barWidth * this.progress, 22);
-    context.render(this.bar);
-
     const failure = this.loadError === '' ? '' : `\n${this.loadError}`;
     this.summary.text =
       `LevelAssets = compose(SharedAssets, LevelLocalAssets) — ${Object.keys(LevelAssets.entries).length} keys\n` +
-      `atlas frames: ${this.frameCount}   ground: ${this.night ? 'night' : 'day'}   queue: ${Math.round(this.progress * 100)}%${failure}`;
+      `atlas frames: ${this.frameCount}   ground: ${this.night ? 'night' : 'day'}   logo: ${SharedAssets.logo.state}${failure}`;
     context.render(this.summary);
 
     context.render(this.logo);

@@ -227,12 +227,12 @@ Changing `cacheResolution` invalidates the cache, as does anything that moves th
 <a id="render-to-texture"></a>
 <ExamplePreview chapter="render-targets" slug="render-to-texture" />
 
-A container of 25 sprites rendered once into a `RenderTexture`, then displayed as a single sprite alongside the original container for comparison.
+A group of moving sprites feeds one live `RenderTexture` and one frozen snapshot. Click to recapture the snapshot after the source texture is ready.
 
 <a id="mini-map"></a>
 <ExamplePreview chapter="render-targets" slug="mini-map" />
 
-A zoomed-out view of a tile map rendered into a small `RenderTexture` and displayed as a corner mini-map.
+A second view of the world rendered into a small `RenderTexture` and displayed through a circular mask in the corner.
 
 ## Where to go next
 

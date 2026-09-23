@@ -252,13 +252,11 @@ Because the batch is shared, `total` can grow mid-flight: if a new `loader.load(
 
 Unlike `LoadingQueue.onProgress`, which you attach to the return value of one `loader.load(...)` call, these four are properties on the `Loader` itself — subscribe once (for example in your boot scene's `init`) and they report every foreground load for the lifetime of that loader.
 
-### Guard the final navigation
+### Treat completion as state
 
-`onLoadComplete` can fire after this scene is no longer the active one — a scene switch away from `BootScene` while a load is still in flight, or an app-level `stop()`/`destroy()` mid-load, are both real cases. Check `this.state` before navigating away, and unsubscribe from the loader signals in `unload()` so a listener from a torn-down scene never fires `change()` against a Director that has since moved on:
+`onLoadComplete` is not tied to this scene's lifecycle. With a warm cache it fires while `BootScene` is still preparing, before the scene may navigate; after a switch away from `BootScene` or an app-level `stop()`/`destroy()` mid-load it fires for a scene that is no longer on screen. Navigating directly from the handler loses the first case and misfires in the second. Record the completion instead, act on it from `update()` — which only runs while the scene is active — and unsubscribe from the loader signals in `unload()`:
 
-<SourceSnippet source="examples/application-scenes/loading-screen.ts" region="boot-unsubscribe" title="Unsubscribing and guarding the hand-over" />
-
-`Scene.state` is a `SceneState` enum, not a string — compare against `SceneState.Active` rather than `'active'`.
+<SourceSnippet source="examples/application-scenes/loading-screen.ts" region="boot-unsubscribe" title="Unsubscribing and handing over from update()" />
 
 ## Status channel instead of throwing
 
@@ -669,17 +667,13 @@ declare module '@codexo/exojs' {
 
 ## Examples
 
-<ExamplePreview chapter="sprites-textures" slug="texture-loader" />
-
-The minimum loader workflow — register textures during `load`, retrieve them during `init`, track per-queue progress with `LoadingQueue.onProgress`.
-
 <ExamplePreview chapter="sprites-textures" slug="asset-catalogs" />
 
 The catalog snippets on this page, end to end: a mixed `Assets.from` group, a composition, a derived catalog, two parallel queues, and a runtime-computed path.
 
 <ExamplePreview chapter="application-scenes" slug="loading-screen" />
 
-The boot-scene snippets on this page — one bar driven by the loader-wide signals, unsubscribed in `unload`, with a guarded hand-over to the game scene.
+The boot-scene snippets on this page — one bar driven by real loader signals, a retry path after failure, and a guarded hand-over to the game scene.
 
 ## Where to go next
 

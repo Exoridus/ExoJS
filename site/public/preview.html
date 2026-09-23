@@ -165,7 +165,7 @@
                 // has no shell, so the catalog is resolved here against this
                 // page's location before the example runs.
                 var prelude =
-                    "import { assets as rawAssets } from './assets/catalog.js';\n" +
+                    "import { assets as rawAssets } from './assets/assets.js';\n" +
                     "import { resolveAssetCatalog } from './assets/resolver.js';\n" +
                     "window.assets = resolveAssetCatalog(rawAssets, new URL('assets/', window.location.href).href);\n";
 

@@ -2,7 +2,8 @@
 import Layout from '../../layouts/Layout.astro';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import { getAllExamples } from '../../lib/examples-catalog';
-import { CHAPTER_BY_SLUG } from '../../lib/chapters';
+import { resolveExampleAlias } from '../../lib/example-aliases';
+import { PLAYGROUND_CATEGORY_BY_SLUG } from '../../lib/playground-categories';
 import { CURRENT_VERSION_ID } from '../../lib/versions';
 
 interface Props {
@@ -12,13 +13,13 @@ interface Props {
 
 const { locale, path } = Astro.props;
 
-const entry = getAllExamples().find(item => item.path === path);
+const entry = getAllExamples().find(item => item.path === resolveExampleAlias(path));
 
 if (!entry) {
     throw new Error(`Unknown playground example: ${path}`);
 }
 
-const categoryTitle = CHAPTER_BY_SLUG.get(entry.chapter)?.title ?? entry.chapter;
+const categoryTitle = PLAYGROUND_CATEGORY_BY_SLUG.get(entry.chapter)?.title ?? entry.chapter;
 const slug = entry.path.replace(/\.js$/, '');
 const playgroundHref = `${import.meta.env.BASE_URL}${locale}/playground/?version=${CURRENT_VERSION_ID}&example=${slug}`;
 const title = `${entry.title} — ExoJS Playground`;

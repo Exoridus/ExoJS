@@ -59,7 +59,9 @@ const buildWorld = (tiles: readonly WorldTile[], layer: Container) =>
  */
 function* blinkCaret(caret: Graphics): Generator<void, void> {
   while (true) {
-    for (let frame = 0; frame < 30; frame++) yield;
+    for (let frame = 0; frame < 30; frame++) {
+      yield;
+    }
 
     caret.visible = !caret.visible;
   }
@@ -121,7 +123,10 @@ class CoroutineLoadingScene extends Scene {
 
   private start(): void {
     this.build?.cancel();
-    this.world.removeChildren();
+
+    for (const tile of [...this.world.children]) {
+      tile.destroy();
+    }
 
     const tiles: WorldTile[] = Array.from({ length: TILE_COUNT }, (_unused, index) => ({
       x: (index % COLUMNS) * TILE_SIZE,
@@ -135,7 +140,9 @@ class CoroutineLoadingScene extends Scene {
   private statusLine(): string {
     const build = this.build;
 
-    if (build === null) return 'idle';
+    if (build === null) {
+      return 'idle';
+    }
 
     switch (build.status) {
       case 'done':

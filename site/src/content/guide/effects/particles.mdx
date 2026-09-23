@@ -256,7 +256,7 @@ The decision is per-system and automatic. When:
 1. A `WebGpuBackend` is active
 2. Every registered update module implements `wgsl()`
 
-...the system compiles a composite WGSL compute shader that integrates position, velocity, rotation, and every module's dynamic behavior in one dispatch, writing directly into the renderer's instance vertex buffer. No CPU readback in the steady state. The `gpu-particles` example demonstrates this at 60,000 particles.
+...the system compiles a composite WGSL compute shader that integrates position, velocity, rotation, and every module's dynamic behavior in one dispatch, writing directly into the renderer's instance vertex buffer. No CPU readback in the steady state. The `gpu-particles` example lets you vary the emission rate and observe the live count and execution path.
 
 If conditions aren't met (WebGL2 backend, or any module without `wgsl()`), the system runs on CPU with the same API. Your scene code is identical — no branching, no backend checks.
 

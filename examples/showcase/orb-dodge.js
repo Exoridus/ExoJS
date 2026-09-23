@@ -1,5 +1,17 @@
 // Auto-generated from orb-dodge.ts - edit the .ts source, not this file.
-import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+import {
+  ActionMap,
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  GamepadAxis,
+  Graphics,
+  Keyboard,
+  Scene,
+  Text,
+  VectorAction,
+} from '@codexo/exojs';
 // #region guide:constants
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
@@ -15,8 +27,12 @@ class PlayScene extends Scene {
   orbs = [];
   px = CANVAS_WIDTH / 2;
   py = CANVAS_HEIGHT / 2;
-  dx = 0;
-  dy = 0;
+  actions = new ActionMap({
+    move: new VectorAction([
+      { up: [Keyboard.W, Keyboard.Up], down: [Keyboard.S, Keyboard.Down], left: [Keyboard.A, Keyboard.Left], right: [Keyboard.D, Keyboard.Right] },
+      { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+    ]),
+  });
   score = 0;
   elapsed = 0;
   spawnTimer = 0;
@@ -29,9 +45,8 @@ class PlayScene extends Scene {
     this.score = 0;
     this.elapsed = 0;
     this.spawnTimer = 0;
-    this.dx = 0;
-    this.dy = 0;
     this.orbs = [];
+    this.inputs.attach(this.actions);
     this.world = new Container();
     this.player = new Graphics();
     this.player.fillColor = new Color(80, 160, 255);
@@ -42,54 +57,6 @@ class PlayScene extends Scene {
     this.scoreText.setPosition(16, 14);
     this.timeText = new Text('0.0 s', { fillColor: Color.white, fontSize: 20 });
     this.timeText.setPosition(CANVAS_WIDTH - 90, 14);
-    this.inputs.onActive(Keyboard.W, () => {
-      this.dy = -1;
-    });
-    this.inputs.onStop(Keyboard.W, () => {
-      if (this.dy < 0) this.dy = 0;
-    });
-    this.inputs.onActive(Keyboard.Up, () => {
-      this.dy = -1;
-    });
-    this.inputs.onStop(Keyboard.Up, () => {
-      if (this.dy < 0) this.dy = 0;
-    });
-    this.inputs.onActive(Keyboard.S, () => {
-      this.dy = 1;
-    });
-    this.inputs.onStop(Keyboard.S, () => {
-      if (this.dy > 0) this.dy = 0;
-    });
-    this.inputs.onActive(Keyboard.Down, () => {
-      this.dy = 1;
-    });
-    this.inputs.onStop(Keyboard.Down, () => {
-      if (this.dy > 0) this.dy = 0;
-    });
-    this.inputs.onActive(Keyboard.A, () => {
-      this.dx = -1;
-    });
-    this.inputs.onStop(Keyboard.A, () => {
-      if (this.dx < 0) this.dx = 0;
-    });
-    this.inputs.onActive(Keyboard.Left, () => {
-      this.dx = -1;
-    });
-    this.inputs.onStop(Keyboard.Left, () => {
-      if (this.dx < 0) this.dx = 0;
-    });
-    this.inputs.onActive(Keyboard.D, () => {
-      this.dx = 1;
-    });
-    this.inputs.onStop(Keyboard.D, () => {
-      if (this.dx > 0) this.dx = 0;
-    });
-    this.inputs.onActive(Keyboard.Right, () => {
-      this.dx = 1;
-    });
-    this.inputs.onStop(Keyboard.Right, () => {
-      if (this.dx > 0) this.dx = 0;
-    });
   }
   // #endregion guide:play-init
   // #region guide:spawn-orb
@@ -122,7 +89,11 @@ class PlayScene extends Scene {
     const speed = ORB_SPEED_MIN + Math.random() * (ORB_SPEED_MAX - ORB_SPEED_MIN);
     const gfx = new Graphics();
     gfx.fillColor = danger ? new Color(255, 80, 80) : new Color(80, 220, 120);
-    gfx.drawCircle(0, 0, ORB_RADIUS);
+    if (danger) {
+      gfx.drawStar(0, 0, 4, ORB_RADIUS * 1.25, ORB_RADIUS * 0.68, Math.PI / 4);
+    } else {
+      gfx.drawCircle(0, 0, ORB_RADIUS);
+    }
     gfx.setPosition(ox, oy);
     this.world.addChild(gfx);
     this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
@@ -137,10 +108,11 @@ class PlayScene extends Scene {
       this.spawnTimer -= SPAWN_INTERVAL;
       this.spawnOrb();
     }
-    const mag = Math.hypot(this.dx, this.dy) || 1;
-    if (this.dx !== 0 || this.dy !== 0) {
-      this.px += (this.dx / mag) * PLAYER_SPEED * delta;
-      this.py += (this.dy / mag) * PLAYER_SPEED * delta;
+    const { x, y } = this.actions.move.value;
+    const mag = Math.max(1, Math.hypot(x, y));
+    if (x !== 0 || y !== 0) {
+      this.px += (x / mag) * PLAYER_SPEED * delta;
+      this.py += (y / mag) * PLAYER_SPEED * delta;
     }
     this.px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this.px));
     this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));

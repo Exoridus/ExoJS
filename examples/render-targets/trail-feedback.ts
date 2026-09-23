@@ -22,6 +22,9 @@ class TrailFeedbackScene extends Scene {
   private bunny!: Sprite;
   private pipeAtoB!: RenderPipeline;
   private pipeBtoA!: RenderPipeline;
+  private decayA!: Sprite;
+  private decayB!: Sprite;
+  private readonly decayTint = new Color(255, 255, 255);
   private forward = true;
   private time = 0;
 
@@ -33,9 +36,8 @@ class TrailFeedbackScene extends Scene {
     this.rtB = new RenderTexture(width, height);
     this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5);
 
-    // A 93%-alpha copy of the source target = the decaying trail.
-    const decayA = new Sprite(this.rtA).setTint(new Color(255, 255, 255, 0.93));
-    const decayB = new Sprite(this.rtB).setTint(new Color(255, 255, 255, 0.93));
+    this.decayA = new Sprite(this.rtA);
+    this.decayB = new Sprite(this.rtB);
     const showA = new Sprite(this.rtA);
     const showB = new Sprite(this.rtB);
 
@@ -45,7 +47,7 @@ class TrailFeedbackScene extends Scene {
         new CallbackRenderPass(
           context => {
             context.backend.clear();
-            context.render(decayA);
+            context.render(this.decayA);
             context.render(this.bunny);
           },
           { target: this.rtB },
@@ -59,7 +61,7 @@ class TrailFeedbackScene extends Scene {
         new CallbackRenderPass(
           context => {
             context.backend.clear();
-            context.render(decayB);
+            context.render(this.decayB);
             context.render(this.bunny);
           },
           { target: this.rtA },
@@ -72,6 +74,9 @@ class TrailFeedbackScene extends Scene {
     const app = this.app;
     const { width, height } = app;
     this.time += delta;
+    this.decayTint.set(255, 255, 255, Math.pow(0.93, delta * 60));
+    this.decayA.setTint(this.decayTint);
+    this.decayB.setTint(this.decayTint);
     this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
   }
 

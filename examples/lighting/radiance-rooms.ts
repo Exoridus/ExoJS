@@ -51,7 +51,9 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
-  if (context === null) throw new Error('2D canvas context unavailable.');
+  if (context === null) {
+    throw new Error('2D canvas context unavailable.');
+  }
   paint(context);
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };

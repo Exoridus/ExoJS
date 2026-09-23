@@ -14,12 +14,8 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 import { fbm } from '@examples/terrain-noise';
 const terrainWorkerSource =
   '"use strict";\n(() => {\n  // ../shared/terrain-noise.ts\n  function hash2D(seed2, x, y) {\n    let h = seed2 ^ Math.imul(x, 668265261) ^ Math.imul(y, 374761393) | 0;\n    h = Math.imul(h ^ h >>> 15, 2246822507);\n    h = Math.imul(h ^ h >>> 13, 3266489909);\n    h ^= h >>> 16;\n    return (h >>> 0) / 4294967296;\n  }\n  function valueNoise(seed2, x, y) {\n    const x0 = Math.floor(x);\n    const y0 = Math.floor(y);\n    const fx = x - x0;\n    const fy = y - y0;\n    const sx = fx * fx * (3 - 2 * fx);\n    const sy = fy * fy * (3 - 2 * fy);\n    const n00 = hash2D(seed2, x0, y0);\n    const n10 = hash2D(seed2, x0 + 1, y0);\n    const n01 = hash2D(seed2, x0, y0 + 1);\n    const n11 = hash2D(seed2, x0 + 1, y0 + 1);\n    const nx0 = n00 + (n10 - n00) * sx;\n    const nx1 = n01 + (n11 - n01) * sx;\n    return nx0 + (nx1 - nx0) * sy;\n  }\n  function fbm(seed2, x, y) {\n    let value = 0;\n    let amplitude = 0.5;\n    let frequency = 1;\n    for (let octave = 0; octave < 4; octave++) {\n      value += amplitude * valueNoise(seed2 + octave, x * frequency, y * frequency);\n      amplitude *= 0.5;\n      frequency *= 2;\n    }\n    return value;\n  }\n\n  // worker-streamed-terrain.worker.ts\n  var isInit = (message) => "type" in message && message.type === "terrain-init";\n  var seed = 0;\n  var featureSize = 1;\n  var extraCost = 0;\n  self.onmessage = (event) => {\n    const message = event.data;\n    if (isInit(message)) {\n      seed = message.seed;\n      featureSize = message.featureSize;\n      extraCost = message.extraCost;\n      return;\n    }\n    const { requestId, cx, cy, chunkWidth, chunkHeight } = message;\n    try {\n      const values = new Float64Array(chunkWidth * chunkHeight);\n      for (let localTy = 0; localTy < chunkHeight; localTy++) {\n        for (let localTx = 0; localTx < chunkWidth; localTx++) {\n          const tx = cx * chunkWidth + localTx;\n          const ty = cy * chunkHeight + localTy;\n          let value = fbm(seed, tx / featureSize, ty / featureSize);\n          for (let i = 0; i < extraCost; i++) {\n            value = fbm(seed, tx / featureSize, ty / featureSize);\n          }\n          values[localTy * chunkWidth + localTx] = value;\n        }\n      }\n      self.postMessage({ requestId, values }, [values.buffer]);\n    } catch (error) {\n      self.postMessage({ requestId, error: String(error) });\n    }\n  };\n})();\n';
-// The same infinite, procedurally generated world as "Infinite Procedural
-// Terrain", but the noise sampling can run off the main thread via
-// createWorkerSampledChunkSource. Toggle "Provider" between sync/worker and
-// raise "Sample cost" to make each tile artificially expensive to sample -
-// on the sync path the main thread stalls and the spinning marker + camera
-// motion visibly hitch; on the worker path they stay smooth.
+// Both providers sample the same deterministic terrain. Raise "Sample cost"
+// to compare main-thread frame time against worker-backed generation.
 //
 // Both providers call the same fbm from @examples/terrain-noise: the worker
 // gets it bundled into its source string at build time, which is what keeps
@@ -36,14 +32,24 @@ const TILE_SAND = 18; // beige center     (row 1, col 1)
 const TILE_GRASS = 23; // green center     (row 1, col 6)
 const TILE_ROCK = 28; // gray center      (row 1, col 11)
 const TILE_SNOW = 86; // white center     (row 5, col 1)
-function biomeTileId(value) {
-  if (value < 0.34) return TILE_DEEP_WATER;
-  if (value < 0.42) return TILE_WATER;
-  if (value < 0.5) return TILE_SAND;
-  if (value < 0.68) return TILE_GRASS;
-  if (value < 0.8) return TILE_ROCK;
+const biomeTileId = value => {
+  if (value < 0.34) {
+    return TILE_DEEP_WATER;
+  }
+  if (value < 0.42) {
+    return TILE_WATER;
+  }
+  if (value < 0.5) {
+    return TILE_SAND;
+  }
+  if (value < 0.68) {
+    return TILE_GRASS;
+  }
+  if (value < 0.8) {
+    return TILE_ROCK;
+  }
   return TILE_SNOW;
-}
+};
 class WorkerStreamedTerrainScene extends Scene {
   camera;
   explorer;
@@ -54,13 +60,14 @@ class WorkerStreamedTerrainScene extends Scene {
   tileset;
   streamer;
   seed = 1337;
-  providerMode = 'worker';
-  extraCost = 200;
+  providerMode = 'sync';
+  extraCost = 0;
   workerSourceHandle = null;
   moveX = 0;
   moveY = 0;
   hudTimer = 0;
-  frameMs = 0;
+  frameIntervalMs = 0;
+  streamingMs = 0;
   hud;
   async load() {
     const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
@@ -146,35 +153,43 @@ class WorkerStreamedTerrainScene extends Scene {
   setupInput() {
     this.inputs.onActive(Keyboard.A, () => (this.moveX = -1));
     this.inputs.onStop(Keyboard.A, () => {
-      if (this.moveX < 0) this.moveX = 0;
+      if (this.moveX < 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.D, () => (this.moveX = 1));
     this.inputs.onStop(Keyboard.D, () => {
-      if (this.moveX > 0) this.moveX = 0;
+      if (this.moveX > 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.W, () => (this.moveY = -1));
     this.inputs.onStop(Keyboard.W, () => {
-      if (this.moveY < 0) this.moveY = 0;
+      if (this.moveY < 0) {
+        this.moveY = 0;
+      }
     });
     this.inputs.onActive(Keyboard.S, () => (this.moveY = 1));
     this.inputs.onStop(Keyboard.S, () => {
-      if (this.moveY > 0) this.moveY = 0;
+      if (this.moveY > 0) {
+        this.moveY = 0;
+      }
     });
   }
   setupHud() {
     this.hud = mountControls({
-      title: 'Worker-Streamed Terrain',
+      title: 'Streamed Terrain',
       controls: [
         { keys: 'WASD', action: 'fly across the endless world' },
-        { keys: 'panel', action: 'switch provider / raise sample cost' },
+        { keys: 'panel', action: 'change seed, provider, and sample cost' },
       ],
       status: '',
-      hint: 'createWorkerSampledChunkSource runs the noise sampler on a Worker thread; createSampledChunkSource runs it on the main thread. Raise the sample cost and switch providers to see which one keeps the frame time flat.',
+      hint: 'Both providers generate the same unbounded world from the current seed. Raise sample cost, then switch to worker to compare frame time while moving.',
     });
     const panel = mountControlPanel({ title: 'Provider' });
     panel.addCycle({
       label: 'Provider',
-      options: ['worker', 'sync'],
+      options: ['sync', 'worker'],
       index: 0,
       onChange: (_, mode) => {
         this.providerMode = mode;
@@ -186,9 +201,16 @@ class WorkerStreamedTerrainScene extends Scene {
       min: 0,
       max: 500,
       step: 50,
-      value: 200,
+      value: 0,
       onChange: value => {
         this.extraCost = value;
+        this.rebuildStreamer();
+      },
+    });
+    panel.addButton({
+      label: 'New seed',
+      onClick: () => {
+        this.seed = (Math.random() * 0x7fffffff) | 0;
         this.rebuildStreamer();
       },
     });
@@ -199,22 +221,34 @@ class WorkerStreamedTerrainScene extends Scene {
       this.explorer.move((this.moveX / length) * MOVE_SPEED * delta, (this.moveY / length) * MOVE_SPEED * delta);
     }
     this.marker.rotation += 2 * delta;
+    const streamStart = performance.now();
     this.streamer.update();
-    // Exponential moving average smooths out single-frame noise so the
-    // readout reflects sustained jank rather than every GC blip.
-    this.frameMs = this.frameMs * 0.9 + delta * 1000 * 0.1;
+    const streamingMs = performance.now() - streamStart;
+    // The raw frame-to-frame delta, not the clamped `update` delta, which would
+    // cap exactly the stalls this comparison is about; the streaming time is
+    // what the provider costs the main thread inside it. The moving averages
+    // reflect sustained jank rather than GC blips.
+    const { rawFrameDeltaMs } = this.app.backend.stats;
+    this.frameIntervalMs = this.frameIntervalMs * 0.9 + rawFrameDeltaMs * 0.1;
+    this.streamingMs = this.streamingMs * 0.9 + streamingMs * 0.1;
     this.hudTimer += delta;
     if (this.hudTimer >= 0.25) {
-      this.hudTimer = 0;
       const tx = Math.floor(this.explorer.x / TILE);
       const ty = Math.floor(this.explorer.y / TILE);
+      this.hudTimer = 0;
       this.hud.setStatus(
-        `${this.providerMode} · ${this.frameMs.toFixed(1)} ms/frame · ${this.streamer.residentCount} chunks · tile ${tx}, ${ty} · cost ${this.extraCost}`,
+        `${this.providerMode} · ${this.frameIntervalMs.toFixed(1)} ms between frames · ${this.streamingMs.toFixed(1)} ms streaming on the main thread · ${this.streamer.residentCount} chunks · tile ${tx}, ${ty} · seed ${this.seed} · cost ${this.extraCost}`,
       );
     }
   }
   draw(context) {
     context.render(this.worldRoot, { view: this.camera });
+  }
+  destroy() {
+    this.streamer?.destroy();
+    this.workerSourceHandle?.destroy();
+    this.workerSourceHandle = null;
+    super.destroy();
   }
 }
 const app = new Application({

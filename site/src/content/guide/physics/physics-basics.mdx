@@ -122,7 +122,7 @@ One visible consequence: because bound sprites are written once per `world.step`
 
 ## Binding bodies to sprites
 
-A body is pure simulation — it has no visual. To draw it, link it to a `Drawable` (such as a `Sprite`) with a [`PhysicsBinding`](/ExoJS/en/api/physics-binding/). After each `step`, the binding writes the body's **position and rotation** onto the node (the body's angle is radians; the node's rotation is set in degrees for you):
+A body is pure simulation — it has no visual. To draw it, link it to a `Drawable` (such as a `Sprite`) with a [`PhysicsBinding`](/ExoJS/en/api/physics-binding/). After each `step`, the binding writes the body's **position and rotation** onto the node (the body's angle is radians and turns clockwise on screen, while a node's rotation is degrees and turns counter-clockwise; the binding converts between the two for you):
 
 <SourceSnippet
   source="examples/guides/physics-basics/sprite-binding.ts"
@@ -140,7 +140,7 @@ A body is pure simulation — it has no visual. To draw it, link it to a `Drawab
   title="examples/guides/physics-basics/binding-options.ts"
 />
 
-If you'd rather position things yourself, skip the binding and read the body's transform after each step — `body.x`, `body.y` (world position) and `body.angle` (radians):
+If you'd rather position things yourself, skip the binding and read the body's transform after each step — `body.x`, `body.y` (world position) and `body.angle` (radians). Negate the angle when you convert it to a node rotation, because the two turn in opposite directions:
 
 <SourceSnippet
   source="examples/guides/physics-basics/manual-sync.ts"

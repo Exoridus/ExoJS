@@ -16,6 +16,8 @@ import {
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
+const BAND_LABELS = ['Sub', 'Bass', 'Low mid', 'Mid', 'High mid', 'Presence', 'Treble', 'Air'];
+
 class AudioVisualisationScene extends Scene {
   private music!: AudioStream;
   private musicVoice!: Voice & Pausable & Seekable;
@@ -29,6 +31,7 @@ class AudioVisualisationScene extends Scene {
   private screen!: Sprite;
   private hud!: ReturnType<typeof mountControls>;
   private tapPrompt!: Text;
+  private bandEdges: number[] = [];
 
   override async load(): Promise<void> {
     const app = this.app;
@@ -43,6 +46,9 @@ class AudioVisualisationScene extends Scene {
     // beat-pulse ring. Both read the music bus the stream plays through,
     // without altering playback.
     this.analyser = new AudioAnalyser({ source: app.audio.music });
+    for (let i = 0; i <= BAND_LABELS.length; i++) {
+      this.bandEdges.push(Math.round(Math.pow(this.analyser.frequencyBinCount, i / BAND_LABELS.length)));
+    }
     this.detector = new BeatDetector();
     this.detector.source = app.audio.music;
 
@@ -68,10 +74,10 @@ class AudioVisualisationScene extends Scene {
     this.screen = new Sprite(this.texture);
 
     this.hud = mountControls({
-      title: 'Audio Visualisation',
+      title: 'Spectrum and Waveform',
       controls: [{ keys: 'Click', action: 'play / pause' }],
       status: 'Playing…',
-      hint: 'Frequency bars, waveform, and a beat-pulse ring — all driven by live AudioAnalyser + BeatDetector data.',
+      hint: 'Live spectrum, waveform, eight frequency bands, and a beat pulse from the music bus.',
     });
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
@@ -150,6 +156,30 @@ class AudioVisualisationScene extends Scene {
     // restore the default stroke style for the next frame's waveform.
     this.context.strokeStyle = '#fff';
     this.context.lineWidth = 4;
+
+    const bandWidth = width / BAND_LABELS.length;
+    const bandBase = height - 28;
+    const bandHeight = 92;
+    this.context.fillStyle = 'rgba(8, 13, 24, 0.82)';
+    this.context.fillRect(0, height - 142, width, 142);
+    this.context.textAlign = 'center';
+    this.context.font = '17px sans-serif';
+    for (let band = 0; band < BAND_LABELS.length; band++) {
+      const start = this.bandEdges[band];
+      const end = Math.max(start + 1, this.bandEdges[band + 1]);
+      let sum = 0;
+      for (let bin = start; bin < end; bin++) {
+        sum += freqData[bin];
+      }
+      const level = sum / ((end - start) * 255);
+      const x = band * bandWidth + bandWidth / 2;
+      this.context.fillStyle = '#283342';
+      this.context.fillRect(x - 24, bandBase - bandHeight, 48, bandHeight);
+      this.context.fillStyle = '#70d6ff';
+      this.context.fillRect(x - 24, bandBase - bandHeight * level, 48, bandHeight * level);
+      this.context.fillStyle = '#dbe9f5';
+      this.context.fillText(BAND_LABELS[band], x, height - 7);
+    }
 
     this.screen.updateTexture();
 

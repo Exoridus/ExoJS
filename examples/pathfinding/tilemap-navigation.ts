@@ -50,15 +50,21 @@ const isBorder = (x: number, y: number): boolean => x === 0 || y === 0 || x === 
 
 /** Deterministic layout: a walled arena with pillars and a band of rough ground. */
 const tileAt = (x: number, y: number): number => {
-  if (isBorder(x, y) || (x % 6 === 3 && y % 4 !== 2)) return WALL_TILE;
-  if (y >= 4 && y <= 5 && x > 1 && x < COLUMNS - 2) return ROUGH_TILE;
+  if (isBorder(x, y) || (x % 6 === 3 && y % 4 !== 2)) {
+    return WALL_TILE;
+  }
+  if (y >= 4 && y <= 5 && x > 1 && x < COLUMNS - 2) {
+    return ROUGH_TILE;
+  }
 
   return FLOOR_TILE;
 };
 
 /** The one place the two packages meet: a tile turns into a traversal cost. */
 const walkCost = (tile: ResolvedTile | null): number => {
-  if (tile === null || tile.localTileId === WALL_TILE) return 0;
+  if (tile === null || tile.localTileId === WALL_TILE) {
+    return 0;
+  }
 
   return tile.localTileId === ROUGH_TILE ? ROUGH_COST : 1;
 };
@@ -75,7 +81,9 @@ class TilemapNavigationScene extends Scene {
   private agent = { x: 1.5 * TILE, y: 1.5 * TILE };
   private waypoint = 0;
   private avoidRough = true;
+  private editing = false;
   private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof mountControlPanel>;
 
   override async load(): Promise<void> {
     const texture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
@@ -104,29 +112,21 @@ class TilemapNavigationScene extends Scene {
 
     this.buildGrid();
 
-    this.app.input.onPointerTap.add(pointer => {
-      const x = Math.floor(pointer.x / TILE);
-      const y = Math.floor(pointer.y / TILE);
-
-      if (this.grid.nodeAt(x, y) < 0) return;
-
-      this.goal = { x, y };
-      this.replan();
-    });
+    this.app.input.onPointerTap.add(this.onTap);
 
     this.hud = mountControls({
       title: 'Tilemap Navigation',
       controls: [
         { keys: 'Click', action: 'send the agent to a tile' },
-        { keys: 'panel', action: 'terrain cost / carve a door' },
+        { keys: 'Edit walls + Click', action: 'open or close the selected tile' },
       ],
       status: '',
       hint: 'The grid is built from a cost callback over the tile layer — the pathfinding package never sees the tilemap.',
     });
 
-    const panel = mountControlPanel({ title: 'Navigation' });
+    this.panel = mountControlPanel({ title: 'Navigation' });
 
-    panel.addToggle({
+    this.panel.addToggle({
       label: 'Rough ground costs more',
       value: true,
       onChange: value => {
@@ -135,9 +135,12 @@ class TilemapNavigationScene extends Scene {
         this.replan();
       },
     });
-    panel.addButton({
-      label: 'Carve a door in the next wall',
-      onClick: () => this.carveDoor(),
+    this.panel.addToggle({
+      label: 'Edit walls',
+      value: false,
+      onChange: value => {
+        this.editing = value;
+      },
     });
 
     this.replan();
@@ -146,7 +149,9 @@ class TilemapNavigationScene extends Scene {
   override update(delta: Seconds): void {
     const points = this.result?.points ?? [];
 
-    if (this.waypoint >= points.length) return;
+    if (this.waypoint >= points.length) {
+      return;
+    }
 
     let travel = AGENT_SPEED * delta;
 
@@ -208,22 +213,30 @@ class TilemapNavigationScene extends Scene {
     );
   }
 
-  /** Edits map and grid together, which is what `setCost` and `revision` exist for. */
-  private carveDoor(): void {
-    for (let x = 1; x < COLUMNS - 1; x++) {
-      for (let y = 1; y < ROWS - 1; y++) {
-        if (this.layer.getTileAt(x, y)?.localTileId !== WALL_TILE) continue;
+  private readonly onTap = (pointer: { x: number; y: number }): void => {
+    const x = Math.floor(pointer.x / TILE);
+    const y = Math.floor(pointer.y / TILE);
+    if (x < 0 || x >= COLUMNS || y < 0 || y >= ROWS) {
+      return;
+    }
 
-        const tileset = this.layer.tilesets[0]!;
-
-        this.layer.setTileAt(x, y, { tileset, localTileId: FLOOR_TILE, transform: TILE_TRANSFORM_IDENTITY });
-        this.grid.setCost(x, y, 1);
-        this.replan();
-
+    if (this.editing) {
+      if (isBorder(x, y)) {
         return;
       }
+      const tile = this.layer.getTileAt(x, y);
+      const blocked = tile?.localTileId === WALL_TILE;
+      const tileset = this.layer.tilesets[0]!;
+      this.layer.setTileAt(x, y, { tileset, localTileId: blocked ? FLOOR_TILE : WALL_TILE, transform: TILE_TRANSFORM_IDENTITY });
+      this.grid.setCost(x, y, blocked ? 1 : 0);
+    } else {
+      if (this.grid.nodeAt(x, y) < 0) {
+        return;
+      }
+      this.goal = { x, y };
     }
-  }
+    this.replan();
+  };
 
   private replan(): void {
     this.result = this.pathfinder.findPathBetween(this.grid, this.agent.x, this.agent.y, (this.goal.x + 0.5) * TILE, (this.goal.y + 0.5) * TILE, {
@@ -237,6 +250,15 @@ class TilemapNavigationScene extends Scene {
     this.hud.setStatus(
       `${status} · cost ${cost.toFixed(1)} · ${expandedNodes} nodes expanded · grid revision ${this.grid.revision} · ${this.grid.uniformCost ? 'jump-point' : 'weighted A*'}`,
     );
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerTap.remove(this.onTap);
+    this.panel?.dispose();
+    this.hud?.dispose();
+    this.worldRoot?.destroy();
+    this.overlay.destroy();
+    super.destroy();
   }
 }
 

@@ -643,6 +643,20 @@ describe('InputSystem — pointer signal lifecycle', () => {
     im.destroy();
   });
 
+  test('captures a pressed pointer so a release outside the surface still ends the press', () => {
+    const capture = vi.spyOn(BrowserPlatform.prototype, 'capturePointer');
+    const { im, canvas } = createInputSystem();
+
+    fire(canvas, 'pointerover', { pointerId: 7, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
+    expect(capture).not.toHaveBeenCalled();
+
+    fire(canvas, 'pointerdown', { pointerId: 7, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true, buttons: 1 });
+    expect(capture).toHaveBeenCalledWith(7);
+
+    capture.mockRestore();
+    im.destroy();
+  });
+
   test('onPointerMove fires on update() after pointermove', () => {
     const { im, canvas } = createInputSystem();
     const onMove = vi.fn();

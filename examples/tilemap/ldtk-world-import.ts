@@ -23,10 +23,18 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // one tileset: "Level_Harbor" and "Level_Lighthouse", each with a Ground
 // tile layer, a Walls IntGrid layer (Wall / Water), and an Entities layer.
 
+/** Parse an LDtk `"#rrggbb"` colour string into an engine `Color` with the given alpha. */
+const hexToColor = (hex: string, alpha: number): Color => {
+  const value = Number.parseInt(hex.replace('#', ''), 16);
+
+  return new Color((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff, alpha);
+};
+
 class LdtkWorldImportScene extends Scene {
   private world!: LdtkMap;
   private content = new Container();
   private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof mountControlPanel>;
   private showIntGrid = true;
 
   override async load(): Promise<void> {
@@ -46,14 +54,14 @@ class LdtkWorldImportScene extends Scene {
       hint: 'Coloured squares come from getLdtkIntGridValueAt() — the raw Walls IntGrid cell values, resolved to their LDtk-authored name + colour.',
     });
 
-    const panel = mountControlPanel({ title: 'LDtk' });
-    panel.addCycle({
+    this.panel = mountControlPanel({ title: 'LDtk' });
+    this.panel.addCycle({
       label: 'Level',
       options: this.world.levels.map(level => level.name),
       index: 0,
       onChange: index => this.showLevel(index),
     });
-    panel.addToggle({
+    this.panel.addToggle({
       label: 'IntGrid overlay',
       value: true,
       onChange: on => {
@@ -69,7 +77,12 @@ class LdtkWorldImportScene extends Scene {
 
   private showLevel(index: number): void {
     this.currentLevelIndex = index;
-    this.content.removeChildren();
+
+    // The level view owns these nodes; detaching alone would leave each
+    // TileLayerNode subscribed to its (loader-owned) layer.
+    for (const child of [...this.content.children]) {
+      child.destroy();
+    }
 
     const level = this.world.levels[index];
 
@@ -141,13 +154,13 @@ class LdtkWorldImportScene extends Scene {
   override draw(context: RenderingContext): void {
     context.render(this.content);
   }
-}
 
-/** Parse an LDtk `"#rrggbb"` colour string into an engine `Color` with the given alpha. */
-function hexToColor(hex: string, alpha: number): Color {
-  const value = Number.parseInt(hex.replace('#', ''), 16);
-
-  return new Color((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff, alpha);
+  override destroy(): void {
+    this.content.destroy();
+    this.hud?.dispose();
+    this.panel?.dispose();
+    super.destroy();
+  }
 }
 
 const app = new Application({

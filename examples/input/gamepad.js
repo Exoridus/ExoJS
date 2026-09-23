@@ -1,235 +1,81 @@
 // Auto-generated from gamepad.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, GamepadAxis, GamepadButton, lerp, Scene, Spritesheet, Vector } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, GamepadAxis, GamepadButton, Graphics, Scene, Text } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
+const AXES = [
+  { name: 'Left X', channel: GamepadAxis.LeftStickX },
+  { name: 'Left Y', channel: GamepadAxis.LeftStickY },
+  { name: 'Right X', channel: GamepadAxis.RightStickX },
+  { name: 'Right Y', channel: GamepadAxis.RightStickY },
+];
+const BUTTONS = [
+  { name: 'South', channel: GamepadButton.South },
+  { name: 'East', channel: GamepadButton.East },
+  { name: 'West', channel: GamepadButton.West },
+  { name: 'North', channel: GamepadButton.North },
+  { name: 'Left shoulder', channel: GamepadButton.LeftShoulder },
+  { name: 'Right shoulder', channel: GamepadButton.RightShoulder },
+  { name: 'Left trigger', channel: GamepadButton.LeftTrigger },
+  { name: 'Right trigger', channel: GamepadButton.RightTrigger },
+  { name: 'Start', channel: GamepadButton.Start },
+  { name: 'Select', channel: GamepadButton.Select },
+];
 class GamepadScene extends Scene {
-  activePad = null;
-  buttons;
-  buttonColor = new Color(255, 255, 255, 0.25);
-  mappingButtons = new Map();
-  mappingFunctions = new Map();
-  resetFunctions = [];
-  padBindings = [];
+  pad;
+  axes = [];
+  buttons = [];
   status;
-  container;
-  async load() {
-    const app = this.app;
-    const buttonsData = await this.loader.load(Asset.type('json', 'json/buttons.json'));
-    this.buttons = new Spritesheet(this.loader.get('image/buttons.png'), buttonsData);
-    const { width, height } = app;
-    this.status = this.createStatus(width, height);
-    this.container = this.createGamepad(width, height);
-    for (const sprite of this.mappingButtons.values()) {
-      sprite.setTint(this.buttonColor);
-    }
-    app.input.onGamepadConnected.add(pad => this.handleGamepadConnected(pad));
-    app.input.onGamepadDisconnected.add(pad => this.handleGamepadDisconnected(pad));
-    for (const pad of app.input.gamepads) {
-      if (pad.connected) {
-        this.setActivePad(pad);
-        break;
-      }
-    }
+  axisText;
+  buttonText;
+  graphics = new Graphics();
+  hud;
+  init() {
+    this.pad = this.app.input.getGamepad(0);
+    this.axes = AXES.map(({ name, channel }) => ({ name, binding: this.pad.onActive(channel) }));
+    this.buttons = BUTTONS.map(({ name, channel }) => ({ name, binding: this.pad.onActive(channel) }));
+    this.status = new Text('', { fillColor: Color.white, fontSize: 23 }).setPosition(260, 130);
+    this.axisText = new Text('', { fillColor: new Color(125, 215, 255), fontSize: 23 }).setPosition(270, 450);
+    this.buttonText = new Text('', { fillColor: new Color(255, 195, 125), fontSize: 21 }).setPosition(800, 240);
+    this.hud = mountControls({
+      title: 'Controller Inspector',
+      status: 'Slot 1 is waiting for a controller.',
+      hint: 'Axes and button values update live; disconnected state stays visible.',
+    });
+  }
+  update() {
+    this.status.text = this.pad.connected
+      ? `Slot 1: ${this.pad.info?.label ?? 'Connected controller'}`
+      : 'No controller connected. Attach one and press a button.';
+    this.axisText.text = this.axes.map(axis => `${axis.name}: ${axis.binding.value.toFixed(2)}`).join('\n');
+    this.buttonText.text = this.buttons.map(button => `${button.name}: ${button.binding.value.toFixed(2)}`).join('\n');
   }
   draw(context) {
+    this.graphics.clear();
+    this.graphics.fillColor = new Color(44, 53, 67);
+    this.graphics.drawCircle(390, 310, 100);
+    this.graphics.drawCircle(650, 310, 100);
+    this.graphics.fillColor = new Color(100, 205, 245);
+    this.graphics.drawCircle(390 + this.axes[0].binding.value * 75, 310 + this.axes[1].binding.value * 75, 22);
+    this.graphics.drawCircle(650 + this.axes[2].binding.value * 75, 310 + this.axes[3].binding.value * 75, 22);
+    context.render(this.graphics);
     context.render(this.status);
-    context.render(this.container);
+    context.render(this.axisText);
+    context.render(this.buttonText);
   }
-  handleGamepadConnected(pad) {
-    if (!this.activePad) {
-      this.setActivePad(pad);
+  destroy() {
+    for (const entry of [...this.axes, ...this.buttons]) {
+      entry.binding.unbind();
     }
-  }
-  handleGamepadDisconnected(pad) {
-    if (this.activePad !== pad) {
-      return;
-    }
-    const app = this.app;
-    const next = app.input.gamepads.find(other => other !== pad && other.connected) || null;
-    this.setActivePad(next);
-  }
-  setActivePad(pad) {
-    for (const binding of this.padBindings) {
-      binding.unbind();
-    }
-    this.padBindings.length = 0;
-    this.activePad = pad;
-    if (!pad) {
-      this.status.setTint(this.buttonColor);
-      this.resetVisualState();
-      return;
-    }
-    this.status.setTint(Color.white);
-    for (const [channel, sprite] of this.mappingButtons.entries()) {
-      this.padBindings.push(
-        pad.onActive(channel, v => {
-          sprite.tint.a = lerp(0.25, 1, v);
-        }),
-        pad.onStop(channel, () => {
-          sprite.tint.a = this.buttonColor.a;
-        }),
-      );
-    }
-    for (const [channel, fn] of this.mappingFunctions.entries()) {
-      this.padBindings.push(
-        pad.onActive(channel, v => {
-          fn(v);
-        }),
-        pad.onStop(channel, () => {
-          fn(0);
-        }),
-      );
-    }
-  }
-  resetVisualState() {
-    for (const sprite of this.mappingButtons.values()) {
-      sprite.tint.a = this.buttonColor.a;
-    }
-    for (const reset of this.resetFunctions) {
-      reset();
-    }
-  }
-  createStatus(width, height) {
-    const status = this.buttons.getFrameSprite('status');
-    status.setAnchor(0.5);
-    status.setPosition(width / 2, height / 5);
-    status.setTint(this.buttonColor);
-    return status;
-  }
-  createGamepad(width, height) {
-    const container = new Container();
-    container.addChild(this.createDPadField(width, height));
-    container.addChild(this.createFaceButtons(width, height));
-    container.addChild(this.createShoulderButtons(width, height));
-    container.addChild(this.createMenuButtons(width, height));
-    container.addChild(this.createJoysticks(width, height));
-    return container;
-  }
-  createDPadField(width, height) {
-    const mappedButtons = this.mappingButtons;
-    const container = new Container();
-    const dPad = this.buttons.getFrameSprite('dpad');
-    const dPadUp = this.buttons.getFrameSprite('DPadUp');
-    const dPadDown = this.buttons.getFrameSprite('DPadDown');
-    const dPadLeft = this.buttons.getFrameSprite('DPadLeft');
-    const dPadRight = this.buttons.getFrameSprite('DPadRight');
-    mappedButtons.set(GamepadButton.DPadUp, dPadUp);
-    mappedButtons.set(GamepadButton.DPadDown, dPadDown);
-    mappedButtons.set(GamepadButton.DPadLeft, dPadLeft);
-    mappedButtons.set(GamepadButton.DPadRight, dPadRight);
-    dPad.setTint(this.buttonColor);
-    dPad.setScale(1.75);
-    dPadUp.setScale(1.75);
-    dPadDown.setScale(1.75);
-    dPadLeft.setScale(1.75);
-    dPadRight.setScale(1.75);
-    container.addChild(dPad);
-    container.addChild(dPadUp);
-    container.addChild(dPadDown);
-    container.addChild(dPadLeft);
-    container.addChild(dPadRight);
-    container.setPosition(width / 5, height / 2);
-    return container;
-  }
-  createFaceButtons(width, height) {
-    const mappedButtons = this.mappingButtons;
-    const container = new Container();
-    const buttonTop = this.buttons.getFrameSprite('FaceTop');
-    const buttonLeft = this.buttons.getFrameSprite('FaceLeft');
-    const buttonRight = this.buttons.getFrameSprite('FaceRight');
-    const buttonBottom = this.buttons.getFrameSprite('FaceBottom');
-    mappedButtons.set(GamepadButton.North, buttonTop);
-    mappedButtons.set(GamepadButton.West, buttonLeft);
-    mappedButtons.set(GamepadButton.East, buttonRight);
-    mappedButtons.set(GamepadButton.South, buttonBottom);
-    buttonTop.setScale(0.75);
-    buttonTop.setPosition(50, 0);
-    buttonLeft.setScale(0.75);
-    buttonLeft.setPosition(0, 50);
-    buttonRight.setScale(0.75);
-    buttonRight.setPosition(100, 50);
-    buttonBottom.setScale(0.75);
-    buttonBottom.setPosition(50, 100);
-    container.addChild(buttonTop);
-    container.addChild(buttonLeft);
-    container.addChild(buttonRight);
-    container.addChild(buttonBottom);
-    container.setPosition(width * 0.8, height / 2);
-    return container;
-  }
-  createShoulderButtons(width, height) {
-    const mappedButtons = this.mappingButtons;
-    const container = new Container();
-    const leftButton = this.buttons.getFrameSprite('ShoulderLeftBottom');
-    const rightButton = this.buttons.getFrameSprite('ShoulderRightBottom');
-    const leftTrigger = this.buttons.getFrameSprite('ShoulderLeftTop');
-    const rightTrigger = this.buttons.getFrameSprite('ShoulderRightTop');
-    mappedButtons.set(GamepadButton.LeftShoulder, leftButton);
-    mappedButtons.set(GamepadButton.RightShoulder, rightButton);
-    mappedButtons.set(GamepadButton.LeftTrigger, leftTrigger);
-    mappedButtons.set(GamepadButton.RightTrigger, rightTrigger);
-    leftButton.setPosition(0, 75);
-    rightButton.setAnchor(0.5, 0);
-    rightButton.setPosition(width * 0.65, 75);
-    rightTrigger.setAnchor(0.5, 0);
-    rightTrigger.setPosition(width * 0.65, 0);
-    container.addChild(leftButton);
-    container.addChild(rightButton);
-    container.addChild(leftTrigger);
-    container.addChild(rightTrigger);
-    container.setPosition(width / 2, height / 5);
-    return container;
-  }
-  createMenuButtons(width, height) {
-    const mappedButtons = this.mappingButtons;
-    const container = new Container();
-    const selectButton = this.buttons.getFrameSprite('Select');
-    const startButton = this.buttons.getFrameSprite('Start');
-    mappedButtons.set(GamepadButton.Select, selectButton);
-    mappedButtons.set(GamepadButton.Start, startButton);
-    startButton.setAnchor(1, 0);
-    startButton.setPosition(width * 0.3, 0);
-    container.addChild(selectButton);
-    container.addChild(startButton);
-    container.setPosition(width / 2, height / 2);
-    return container;
-  }
-  createJoysticks(width, height) {
-    const mappedButtons = this.mappingButtons;
-    const mappingFunctions = this.mappingFunctions;
-    const container = new Container();
-    const leftStick = this.buttons.getFrameSprite('LeftStick');
-    const rightStick = this.buttons.getFrameSprite('RightStick');
-    const startLeft = new Vector(0, 0);
-    const startRight = new Vector(width * 0.3, 0);
-    const range = 35;
-    mappedButtons.set(GamepadButton.LeftStick, leftStick);
-    mappedButtons.set(GamepadButton.RightStick, rightStick);
-    mappingFunctions.set(GamepadAxis.LeftStickX, value => (leftStick.x = startLeft.x + value * range));
-    mappingFunctions.set(GamepadAxis.LeftStickY, value => (leftStick.y = startLeft.y + value * range));
-    mappingFunctions.set(GamepadAxis.RightStickX, value => (rightStick.x = startRight.x + value * range));
-    mappingFunctions.set(GamepadAxis.RightStickY, value => (rightStick.y = startRight.y + value * range));
-    this.resetFunctions.push(() => {
-      leftStick.setPosition(startLeft.x, startLeft.y);
-      rightStick.setPosition(startRight.x, startRight.y);
-    });
-    leftStick.setPosition(startLeft.x, startLeft.y);
-    rightStick.setPosition(startRight.x, startRight.y);
-    container.addChild(leftStick);
-    container.addChild(rightStick);
-    container.setPosition(width / 2, height * 0.65);
-    return container;
+    this.hud?.dispose();
+    this.status?.destroy();
+    this.axisText?.destroy();
+    this.buttonText?.destroy();
+    this.graphics.destroy();
+    super.destroy();
   }
 }
 const app = new Application({
   scenes: { GamepadScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(12, 18, 28),
 });
 await app.start(GamepadScene);

@@ -1,26 +1,20 @@
-// Pure, DOM-free helpers for the playground sidenav.
-//
-// The playground browser shows the *flat* example catalog: one category level
-// (the `examples.json` directory / `CHAPTERS` slug) with the examples of that
-// category directly underneath - never the guide's Part → Chapter → Example
-// nesting. Keeping these helpers free of Lit/DOM imports lets them be unit
-// tested directly (see `test/site/playground-nav.test.ts`).
+// The navigation uses the thematic examples.json keys, while each entry's
+// source path keeps its original directory for stable routes and guide links.
 
-import { CHAPTER_BY_SLUG } from './chapters';
+import { PLAYGROUND_CATEGORY_BY_SLUG } from './playground-categories';
 import type { Example } from './types';
 
 export interface PlaygroundNavCategory {
   /** Catalog category slug, e.g. `"particles"` (matches the `examples.json` key). */
   slug: string;
-  /** Display label, taken from `CHAPTERS` when available. */
+  /** Display label, taken from the Playground categories when available. */
   title: string;
-  /** Sort key from `CHAPTERS`; unknown categories sort last. */
+  /** Category sort key; unknown categories sort last. */
   order: number;
   examples: Array<Example>;
 }
 
-// Title-cases an unknown category slug as a last resort. Known categories use
-// their curated `CHAPTERS` title instead.
+// Title-cases an unknown category slug as a last resort.
 const humanizeSlug = (slug: string): string => {
   return slug
     .split(/[-/]/)
@@ -62,7 +56,7 @@ export const isExampleRouteActive = (candidatePath: string, activePath: string |
 
 /**
  * Groups a flat list of examples into one nav level - category → examples -
- * ordered and titled by `CHAPTERS`. Each example appears exactly once (under
+ * ordered and titled by the Playground categories. Each example appears exactly once (under
  * its own `section`), which is what makes the active-link state unambiguous.
  * Categories that end up empty (e.g. after search/tag filtering upstream) are
  * not produced.
@@ -81,7 +75,7 @@ export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array
 
   const categories: Array<PlaygroundNavCategory> = [];
   for (const [slug, sectionExamples] of bySection) {
-    const meta = CHAPTER_BY_SLUG.get(slug);
+    const meta = PLAYGROUND_CATEGORY_BY_SLUG.get(slug);
     categories.push({
       slug,
       title: meta?.title ?? humanizeSlug(slug),

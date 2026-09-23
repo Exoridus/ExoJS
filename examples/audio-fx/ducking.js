@@ -68,7 +68,9 @@ class DuckingScene extends Scene {
     app.input.onPointerTap.add(() => {
       // The pointer gesture also unlocks the AudioContext; firing while
       // still locked would be silent, so wait until audio is ready.
-      if (app.audio.locked) return;
+      if (app.audio.locked) {
+        return;
+      }
       app.audio.play(this.voice, { bus: this.voiceBus });
       this.hud.setStatus('Voice playing — music ducked');
     });

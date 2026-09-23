@@ -38,25 +38,21 @@ class LowBandCameraShakeScene extends Scene {
     // gesture, then starts automatically - play() returns the Voice now.
     this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
   }
-  update(delta) {
+  update() {
     const low = this.analyser.getBandEnergy(20, 180);
     // No constant floor: amplitude is purely low-band energy, so a quiet
     // passage produces zero shake. A small deadzone keeps faint noise still.
     const amplitude = low > 0.04 ? low * 28 : 0;
     this.view.shake(amplitude, Time.seconds(0.09), { decay: true, frequency: 22 });
-    // Advance the shake oscillation (the View only animates when updated).
-    this.view.update(delta * 1000);
     if (this.musicVoice) {
       this.hud.setStatus(`bass ${(low * 100) | 0}%`);
     }
   }
   draw(context) {
     const app = this.app;
-    context.backend.setView(this.view);
-    context.render(this.sprite);
-    context.backend.setView(null);
+    context.render(this.sprite, { view: this.view });
     if (app.audio.locked) {
-      context.render(this.tapPrompt);
+      context.render(this.tapPrompt, { view: context.screenView });
     }
   }
 }

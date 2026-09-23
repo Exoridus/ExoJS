@@ -1,6 +1,6 @@
 ---
 title: 'Build Orb Dodge'
-description: 'Build a complete small game from scratch: player movement, spawning orbs, collision, scoring, a HUD, and a game-over screen — all without external assets.'
+description: 'Build a complete small game from scratch: player movement, spawning orbs, collision, scoring, a HUD, and a game-over screen - all without external assets.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
@@ -10,7 +10,7 @@ import Callout from '../../../components/Callout.astro';
 
 # Build Orb Dodge
 
-This chapter builds a small, complete game end-to-end. You will see how several ExoJS concepts fit together in one project: a scene that runs every frame, keyboard input, `Graphics` primitives for all visuals, a HUD with live score and time, and a separate game-over scene that transitions back into the game on restart.
+This chapter builds a small, complete game from start to finish. You will see how several ExoJS concepts fit together in one project: a scene that runs every frame, input actions, `Graphics` primitives for all visuals, a HUD with live score and time, and a separate game-over scene that transitions back into the game on restart.
 
 No external assets are needed. Every shape is drawn in code.
 
@@ -58,9 +58,9 @@ A scene has four lifecycle hooks — override the ones you need:
 - `update(delta)` — per-frame logic; `delta` carries elapsed time
 - `draw(context)` — per-frame rendering, onto an already-cleared frame
 
-## Player and keyboard movement
+## Player movement
 
-The player is a filled circle drawn with `Graphics`. Keyboard movement uses `this.inputs.onActive` (fires every frame while the key is held) and `this.inputs.onStop` (fires when the key is released) to track a directional velocity:
+The player is a filled circle drawn with `Graphics`. A `VectorAction` combines keyboard and controller movement into one value, which the scene uses without checking the active device:
 
 <SourceSnippet
   source="examples/showcase/orb-dodge.ts"
@@ -73,7 +73,7 @@ The player is a filled circle drawn with `Graphics`. Keyboard movement uses `thi
 Bindings registered through `this.inputs` auto-dispose when the scene is destroyed, and `init` runs again on every restart. Re-bind there each time rather than once at module load, and input survives restarts with no leaks or manual cleanup.
 </Callout>
 
-In `update`, normalize the direction vector so diagonal movement is not faster than cardinal movement, then clamp the position inside the canvas:
+In `update`, normalize the action value so diagonal movement is not faster than cardinal movement, then clamp the position inside the canvas:
 
 <SourceSnippet
   source="examples/showcase/orb-dodge.ts"
@@ -95,7 +95,7 @@ Orbs are created dynamically during `update` on a timer. Each orb spawns just ou
   title="examples/showcase/orb-dodge.ts"
 />
 
-Orbs are stored in an array of `{ gfx, vx, vy, danger }` objects. Danger orbs are red; collectible orbs are green.
+Orbs are stored in an array of `{ gfx, vx, vy, danger }` objects. Danger orbs are red stars; collectible orbs are green circles.
 
 ## Collision and scoring
 
