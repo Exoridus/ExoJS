@@ -669,17 +669,13 @@ declare module '@codexo/exojs' {
 
 ## Examples
 
-<ExamplePreview chapter="sprites-textures" slug="texture-loader" />
-
-The minimum loader workflow — register textures during `load`, retrieve them during `init`, track per-queue progress with `LoadingQueue.onProgress`.
-
 <ExamplePreview chapter="sprites-textures" slug="asset-catalogs" />
 
 The catalog snippets on this page, end to end: a mixed `Assets.from` group, a composition, a derived catalog, two parallel queues, and a runtime-computed path.
 
 <ExamplePreview chapter="application-scenes" slug="loading-screen" />
 
-The boot-scene snippets on this page — one bar driven by the loader-wide signals, unsubscribed in `unload`, with a guarded hand-over to the game scene.
+The boot-scene snippets on this page — one bar driven by real loader signals, a retry path after failure, and a guarded hand-over to the game scene.
 
 ## Where to go next
 

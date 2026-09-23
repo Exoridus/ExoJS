@@ -31,12 +31,8 @@ import { fbm } from '@examples/terrain-noise';
 
 import terrainWorkerSource from './worker-streamed-terrain.worker.ts?worker';
 
-// The same infinite, procedurally generated world as "Infinite Procedural
-// Terrain", but the noise sampling can run off the main thread via
-// createWorkerSampledChunkSource. Toggle "Provider" between sync/worker and
-// raise "Sample cost" to make each tile artificially expensive to sample -
-// on the sync path the main thread stalls and the spinning marker + camera
-// motion visibly hitch; on the worker path they stay smooth.
+// Both providers sample the same deterministic terrain. Raise "Sample cost"
+// to compare main-thread frame time against worker-backed generation.
 //
 // Both providers call the same fbm from @examples/terrain-noise: the worker
 // gets it bundled into its source string at build time, which is what keeps
@@ -75,8 +71,8 @@ class WorkerStreamedTerrainScene extends Scene {
   private tileset!: TileSet;
   private streamer!: ChunkStreamer;
   private seed = 1337;
-  private providerMode: 'worker' | 'sync' = 'worker';
-  private extraCost = 200;
+  private providerMode: 'worker' | 'sync' = 'sync';
+  private extraCost = 0;
   private workerSourceHandle: (ChunkSource & { destroy(): void }) | null = null;
   private moveX = 0;
   private moveY = 0;
@@ -198,18 +194,18 @@ class WorkerStreamedTerrainScene extends Scene {
 
   private setupHud(): void {
     this.hud = mountControls({
-      title: 'Worker-Streamed Terrain',
+      title: 'Streamed Terrain',
       controls: [
         { keys: 'WASD', action: 'fly across the endless world' },
-        { keys: 'panel', action: 'switch provider / raise sample cost' },
+        { keys: 'panel', action: 'change seed, provider, and sample cost' },
       ],
       status: '',
-      hint: 'createWorkerSampledChunkSource runs the noise sampler on a Worker thread; createSampledChunkSource runs it on the main thread. Raise the sample cost and switch providers to see which one keeps the frame time flat.',
+      hint: 'Both providers generate the same unbounded world from the current seed. Raise sample cost, then switch to worker to compare frame time while moving.',
     });
     const panel = mountControlPanel({ title: 'Provider' });
     panel.addCycle({
       label: 'Provider',
-      options: ['worker', 'sync'],
+      options: ['sync', 'worker'],
       index: 0,
       onChange: (_, mode) => {
         this.providerMode = mode as 'worker' | 'sync';
@@ -221,9 +217,16 @@ class WorkerStreamedTerrainScene extends Scene {
       min: 0,
       max: 500,
       step: 50,
-      value: 200,
+      value: 0,
       onChange: value => {
         this.extraCost = value;
+        this.rebuildStreamer();
+      },
+    });
+    panel.addButton({
+      label: 'New seed',
+      onClick: () => {
+        this.seed = (Math.random() * 0x7fffffff) | 0;
         this.rebuildStreamer();
       },
     });
@@ -250,13 +253,20 @@ class WorkerStreamedTerrainScene extends Scene {
       const tx = Math.floor(this.explorer.x / TILE);
       const ty = Math.floor(this.explorer.y / TILE);
       this.hud.setStatus(
-        `${this.providerMode} · ${this.frameMs.toFixed(1)} ms/frame · ${this.streamer.residentCount} chunks · tile ${tx}, ${ty} · cost ${this.extraCost}`,
+        `${this.providerMode} · ${this.frameMs.toFixed(1)} ms/frame · ${this.streamer.residentCount} chunks · tile ${tx}, ${ty} · seed ${this.seed} · cost ${this.extraCost}`,
       );
     }
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.worldRoot, { view: this.camera });
+  }
+
+  override destroy(): void {
+    this.streamer?.destroy();
+    this.workerSourceHandle?.destroy();
+    this.workerSourceHandle = null;
+    super.destroy();
   }
 }
 

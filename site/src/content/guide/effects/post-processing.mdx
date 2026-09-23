@@ -135,19 +135,15 @@ The cost is in passes. A post-processing chain with 3 RTS and 2 filters costs at
 ## Examples
 
 <a id="bloom-lite"></a>
-<ExamplePreview chapter="render-targets" slug="bloom-lite" />
+<ExamplePreview chapter="filters" slug="bloom-filter" />
 
-A moving bunny with bloom: base pass, glow pass, blur of glow, additive composite.
+A built-in bloom filter that adds a blurred glow around bright content.
 
 <a id="post-processing-chain"></a>
-<ExamplePreview chapter="render-targets" slug="post-processing-chain" />
-
-Two animating circles rendered into a `RenderTexture`, then blurred, then tinted, then displayed.
-
 <a id="render-pipeline"></a>
 <ExamplePreview chapter="render-targets" slug="render-pipeline" />
 
-A composable frame built once from a `RenderPipeline`: world rendered off-screen, a toggleable blur step (`pass.enabled`), a composite, and a nested UI pipeline overlaying a HUD in screen space.
+A composable frame built once from a `RenderPipeline`: the world renders off-screen, a manually toggleable blur pass can be bypassed, a custom callback draws procedural geometry, and a nested UI pipeline overlays a HUD in screen space.
 
 ## Where to go next
 

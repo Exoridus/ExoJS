@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { CHAPTERS } from '../../site/src/lib/chapters';
 import { EXAMPLES_CATALOG } from '../../site/src/lib/examples-catalog';
+import { PLAYGROUND_CATEGORIES } from '../../site/src/lib/playground-categories';
 import { buildPlaygroundNavModel, isExampleRouteActive, normalizeExamplePath } from '../../site/src/lib/playground-nav';
 import type { Example } from '../../site/src/lib/types';
 
@@ -94,22 +94,22 @@ describe('buildPlaygroundNavModel', () => {
     expect(model[0].examples.every(e => typeof e.path === 'string' && !('chapters' in e))).toBe(true);
   });
 
-  it('titles categories from CHAPTERS and orders them by the curated order', () => {
+  it('titles categories from the Playground taxonomy and orders them by the curated order', () => {
     // Deliberately reversed input order.
-    const model = buildPlaygroundNavModel([ex('particles', 'bonfire'), ex('getting-started', 'hello-world')]);
+    const model = buildPlaygroundNavModel([ex('particles', 'bonfire'), ex('start-here', 'hello-world')]);
 
-    expect(model.map(c => c.slug)).toEqual(['getting-started', 'particles']);
-    expect(model[0].title).toBe('Getting Started');
+    expect(model.map(c => c.slug)).toEqual(['start-here', 'particles']);
+    expect(model[0].title).toBe('Start here');
     expect(model[1].title).toBe('Particles');
   });
 
   it('falls back to a humanised title and last-place order for unknown categories', () => {
-    const model = buildPlaygroundNavModel([ex('rendering', 'camera-basic'), ex('getting-started', 'hello-world')]);
+    const model = buildPlaygroundNavModel([ex('rendering', 'camera-basic'), ex('start-here', 'hello-world')]);
 
-    expect(model.map(c => c.slug)).toEqual(['getting-started', 'rendering']);
+    expect(model.map(c => c.slug)).toEqual(['start-here', 'rendering']);
     const rendering = model.find(c => c.slug === 'rendering')!;
     expect(rendering.title).toBe('Rendering');
-    expect(rendering.order).toBeGreaterThan(CHAPTERS.length);
+    expect(rendering.order).toBeGreaterThan(PLAYGROUND_CATEGORIES.length);
   });
 
   it('returns an empty model for empty input', () => {
@@ -119,7 +119,7 @@ describe('buildPlaygroundNavModel', () => {
   it('covers the whole catalog with no example appearing twice', () => {
     const model = buildPlaygroundNavModel(catalogExamples());
 
-    // One category per catalog directory.
+    // One category per catalog section.
     expect(model).toHaveLength(Object.keys(EXAMPLES_CATALOG).length);
 
     const total = model.reduce((sum, category) => sum + category.examples.length, 0);
@@ -132,8 +132,7 @@ describe('buildPlaygroundNavModel', () => {
     const allPaths = model.flatMap(category => category.examples.map(e => e.path));
     expect(new Set(allPaths).size).toBe(allPaths.length);
 
-    // First category is Getting Started (curated order).
-    expect(model[0].slug).toBe('getting-started');
+    expect(model[0].slug).toBe('start-here');
   });
 
   it('keeps a previously-duplicated example in exactly one category', () => {
@@ -141,6 +140,6 @@ describe('buildPlaygroundNavModel', () => {
     const hits = model.filter(category => category.examples.some(e => e.path === 'getting-started/hello-world.js'));
 
     expect(hits).toHaveLength(1);
-    expect(hits[0].slug).toBe('getting-started');
+    expect(hits[0].slug).toBe('start-here');
   });
 });

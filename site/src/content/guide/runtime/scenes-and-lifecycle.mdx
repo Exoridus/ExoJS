@@ -249,26 +249,22 @@ The default `destroy` disposes scene-owned input bindings and graph references. 
 
 <ExamplePreview chapter="application-scenes" slug="multiple-scenes" />
 
-Switching between two scenes — a menu and a game — using `app.scenes.change`.
+Switch between a menu and a game with `app.scenes.change`, then read each scene's lifecycle events on screen.
 
-<ExamplePreview chapter="application-scenes" slug="scene-lifecycle" />
-
-A walkthrough of every hook firing, in order, with on-screen logging.
-
-<ExamplePreview chapter="application-scenes" slug="hud-overlay-scene" />
+<ExamplePreview chapter="ui" slug="hud-and-widgets" />
 
 A screen-fixed HUD on `scene.ui` — a label and a live health bar above the world, no separate overlay scene required.
 
-<ExamplePreview chapter="application-scenes" slug="pause-and-resume" />
+<ExamplePreview chapter="showcase" slug="pause-blur" />
 
 `app.scenes.pause()`/`resume()` gate `update`; `draw` keeps running. A pause overlay on `scene.ui` is toggled in sync so the player sees a menu while the world freezes.
 
-<ExamplePreview chapter="getting-started" slug="game-loop" />
+<ExamplePreview chapter="getting-started" slug="hello-world" />
 
 The minimum lifecycle that produces motion: `init` builds the sprite, `update` rotates it, `draw` renders.
 
 <TryIt
-  examples={['application-scenes/multiple-scenes', 'application-scenes/scene-lifecycle', 'application-scenes/hud-overlay-scene', 'getting-started/game-loop']}
+  examples={['application-scenes/multiple-scenes', 'ui/hud-and-widgets', 'getting-started/hello-world']}
   api={['scene', 'loader']}
 />
 

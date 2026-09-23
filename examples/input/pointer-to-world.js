@@ -68,7 +68,6 @@ class PointerToWorldScene extends Scene {
     const centerY = height / 2 + Math.sin(this.elapsed * 1.0) * 140;
     this.view.setCenter(centerX, centerY);
     this.view.setZoom(this.userZoom * (1 + Math.sin(this.elapsed * 0.35) * 0.25));
-    this.view.update(delta * 1000);
     // Live world coordinate under the cursor - recomputed every frame because
     // the mapping changes as the camera moves.
     this.world = this.view.screenToWorld(this.cursor.x, this.cursor.y);
@@ -77,8 +76,7 @@ class PointerToWorldScene extends Scene {
     );
   }
   draw(context) {
-    context.backend.setView(this.view);
-    context.render(this.grid);
+    context.render(this.grid, { view: this.view });
     // Rebuild markers each frame in their fixed world positions.
     this.markers.clear();
     this.markers.fillColor = new Color(255, 160, 80);
@@ -88,8 +86,7 @@ class PointerToWorldScene extends Scene {
     // Highlight the live cursor→world point.
     this.markers.fillColor = new Color(120, 230, 255);
     this.markers.drawCircle(this.world.x, this.world.y, 5);
-    context.render(this.markers);
-    context.backend.setView(null);
+    context.render(this.markers, { view: this.view });
   }
 }
 const app = new Application({

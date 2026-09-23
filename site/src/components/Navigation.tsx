@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
-import { buildPlaygroundNavModel, isExampleRouteActive, type PlaygroundNavCategory } from '../lib/playground-nav';
+import { buildPlaygroundNavModel, isExampleRouteActive } from '../lib/playground-nav';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, ExamplesMap } from '../lib/types';
 import { buildExampleHref } from '../lib/url-state';
@@ -20,42 +20,30 @@ export interface NavigationProps {
 }
 
 export const Navigation = ({ activeExample, examples, loaded, loadError, onSelectExample, selectedVersion }: NavigationProps): JSX.Element => {
-  const [overriddenCategories, setOverriddenCategories] = useState<Map<string, boolean>>(() => new Map());
-
+  const listRef = useRef<HTMLElement | null>(null);
   const allExamples = useMemo(() => Array.from(examples.values()).flat(), [examples]);
   const categories = useMemo(() => buildPlaygroundNavModel(allExamples), [allExamples]);
 
-  const isCategoryExpanded = (category: PlaygroundNavCategory): boolean => {
-    if (overriddenCategories.has(category.slug)) return overriddenCategories.get(category.slug) === true;
-    return category.examples.some(example => isExampleRouteActive(example.path, activeExample?.path));
-  };
-
-  const toggleCategory = (category: PlaygroundNavCategory): void => {
-    setOverriddenCategories(current => {
-      const next = new Map(current);
-      const expanded = next.get(category.slug) ?? isCategoryExpanded(category);
-      next.set(category.slug, !expanded);
-      return next;
-    });
-  };
+  useEffect(() => {
+    const list = listRef.current;
+    const active = list?.querySelector('[aria-current="page"]');
+    if (!list || !active) return;
+    const listBounds = list.getBoundingClientRect();
+    const activeBounds = active.getBoundingClientRect();
+    if (activeBounds.top < listBounds.top + 36) list.scrollTop -= listBounds.top + 36 - activeBounds.top;
+    else if (activeBounds.bottom > listBounds.bottom) list.scrollTop += activeBounds.bottom - listBounds.bottom;
+  }, [activeExample?.path, loaded]);
 
   return (
     <section className={css(styles, 'root')}>
-      <nav>
+      <nav ref={listRef}>
         {loadError && <p className={css(styles, 'error')}>{loadError}</p>}
         {!loadError &&
           loaded &&
           categories.map(category => {
             const unavailableCount = category.examples.filter(example => !getExampleAvailability(example).available).length;
-            const expanded = isCategoryExpanded(category);
             return (
-              <NavigationSection
-                key={category.slug}
-                headline={category.title}
-                expanded={expanded}
-                unavailableCount={unavailableCount}
-                onToggle={() => toggleCategory(category)}
-              >
+              <NavigationSection key={category.slug} headline={category.title} unavailableCount={unavailableCount}>
                 {category.examples.map(example => {
                   const availability = getExampleAvailability(example);
                   return (

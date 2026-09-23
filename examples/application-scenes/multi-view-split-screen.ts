@@ -2,21 +2,26 @@ import {
   Application,
   Color,
   FixedResolutionCanvasSizing,
+  GamepadAxis,
   Graphics,
   Keyboard,
   type RenderingContext,
   Scene,
   type Seconds,
   Sprite,
+  Text,
   Texture,
   View,
 } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 
 class SplitScreenScene extends Scene {
   private texture!: Texture;
   private leftView!: View;
   private rightView!: View;
   private divider!: Graphics;
+  private grid!: Graphics;
+  private labels!: Text[];
   private leftPlayer!: Sprite;
   private rightPlayer!: Sprite;
   private move = {
@@ -29,6 +34,10 @@ class SplitScreenScene extends Scene {
     up: 0,
     down: 0,
   };
+  private padMove = [
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+  ];
 
   override init(): void {
     const app = this.app;
@@ -42,6 +51,16 @@ class SplitScreenScene extends Scene {
     this.divider = new Graphics();
     this.divider.fillColor = Color.white;
     this.divider.drawRectangle(width / 2 - 1, 0, 2, height);
+    this.grid = new Graphics();
+    this.grid.lineWidth = 2;
+    this.grid.lineColor = new Color(42, 70, 96);
+    for (let x = -1600; x <= 1600; x += 160) this.grid.drawLine(x, -1200, x, 1200);
+    for (let y = -1200; y <= 1200; y += 160) this.grid.drawLine(-1600, y, 1600, y);
+    this.labels = [
+      new Text('P1 · WASD / Pad 1', { fillColor: new Color(120, 190, 255), fontSize: 24 }).setPosition(24, 160),
+      new Text('P2 · Arrows / Pad 2', { fillColor: new Color(255, 180, 120), fontSize: 24 }).setPosition(width / 2 + 24, 160),
+    ];
+    mountControls({ title: 'Local Split Screen', hint: 'Move each player to see its camera follow independently. Controllers are optional.' });
 
     this.leftPlayer = new Sprite(this.texture)
       .setAnchor(0.5)
@@ -100,23 +119,42 @@ class SplitScreenScene extends Scene {
     this.inputs.onStop(Keyboard.Down, () => {
       this.move.down = 0;
     });
+    for (let index = 0; index < 2; index++) {
+      const pad = app.input.gamepads[index];
+      const movement = this.padMove[index];
+      pad.onActive(GamepadAxis.LeftStickX, value => {
+        movement.x = value;
+      });
+      pad.onStop(GamepadAxis.LeftStickX, () => {
+        movement.x = 0;
+      });
+      pad.onActive(GamepadAxis.LeftStickY, value => {
+        movement.y = value;
+      });
+      pad.onStop(GamepadAxis.LeftStickY, () => {
+        movement.y = 0;
+      });
+    }
   }
 
   override update(delta: Seconds): void {
     const speed = 300 * delta;
 
-    this.leftPlayer.move((this.move.d - this.move.a) * speed, (this.move.s - this.move.w) * speed);
-    this.rightPlayer.move((this.move.right - this.move.left) * speed, (this.move.down - this.move.up) * speed);
+    this.leftPlayer.move((this.move.d - this.move.a + this.padMove[0].x) * speed, (this.move.s - this.move.w + this.padMove[0].y) * speed);
+    this.rightPlayer.move((this.move.right - this.move.left + this.padMove[1].x) * speed, (this.move.down - this.move.up + this.padMove[1].y) * speed);
     this.leftView.setCenter(this.leftPlayer.position.x, this.leftPlayer.position.y);
     this.rightView.setCenter(this.rightPlayer.position.x, this.rightPlayer.position.y);
   }
 
   override draw(context: RenderingContext): void {
+    context.render(this.grid, { view: this.leftView });
     context.render(this.leftPlayer, { view: this.leftView });
     context.render(this.rightPlayer, { view: this.leftView });
+    context.render(this.grid, { view: this.rightView });
     context.render(this.leftPlayer, { view: this.rightView });
     context.render(this.rightPlayer, { view: this.rightView });
     context.render(this.divider, { view: context.screenView });
+    for (const label of this.labels) context.render(label, { view: context.screenView });
   }
 }
 

@@ -142,7 +142,7 @@ const streamer = new ChunkStreamer(terrain, source, view);
 
 The noise here is illustrative. Swap `sample` for a Simplex generator, a third-party noise library, or a heightmap lookup — anything pure and deterministic works, because the provider makes no assumptions about it beyond that contract.
 
-<ExamplePreview chapter="tilemap" slug="infinite-terrain" />
+<ExamplePreview chapter="tilemap" slug="worker-streamed-terrain" />
 
 ## Off the main thread with createWorkerSampledChunkSource
 
@@ -209,7 +209,7 @@ If your deployment sets a Content-Security-Policy, it must permit `blob:` in `wo
 Every request must get exactly one reply — a success or an error message — bearing the same `requestId`. A request left unanswered pins its chunk as in-flight forever: there is no timeout and no retry, so the streamer will never ask for that chunk again. The error path matters just as much as the success path: if your sampler throws, catch it and post `{ requestId, error }` rather than letting the exception swallow the reply.
 </Callout>
 
-<ExamplePreview chapter="tilemap" slug="worker-streamed-terrain" />
+The same example lets you switch from synchronous sampling to worker-backed sampling and increase the cost while keeping the world seed fixed.
 
 ## Streaming a Tiled infinite map
 
@@ -250,8 +250,7 @@ From there it is the same `ChunkStreamer` loop as the procedural providers — t
 
 ## Where to go next
 
-- The [Infinite Procedural Terrain](/ExoJS/en/examples/tilemap/infinite-terrain/) example is the sync provider end to end — fly an endless value-noise world and reroll the seed.
-- The [Worker-Streamed Terrain](/ExoJS/en/examples/tilemap/worker-streamed-terrain/) example toggles between the sync and worker providers under a tunable sample cost, so you can watch the main thread hitch or stay smooth.
+- The [Streamed Terrain](/ExoJS/en/examples/tilemap/worker-streamed-terrain/) example explores an endless value-noise world, rerolls the seed, and compares sync and worker providers under a tunable sample cost.
 - The [Tiled Infinite Map Streaming](/ExoJS/en/examples/tilemap/tiled-infinite-map/) example streams a hand-authored Tiled map instead of procedural terrain — a free-flying camera with two independently chunked layers.
 - [Retained containers](/ExoJS/en/guide/rendering/retained-containers/) covers the group-invalidation rule a streamed layer interacts with.
 - [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) covers loading `.tmj` maps and `toTileMap()` in full.

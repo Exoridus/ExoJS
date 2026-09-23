@@ -16,44 +16,49 @@ class MiniMapScene extends Scene {
   worldContainer;
   world;
   player;
+  miniWorld;
+  miniPlayer;
+  miniContent;
   miniRt;
   miniSprite;
   miniFrame;
+  miniMask;
   overlay;
   miniView;
   pipeline;
   time = 0;
   init() {
     const app = this.app;
-    const { width, height } = app;
+    const { width } = app;
     const miniX = width - 220 - 20;
     const miniY = 20;
-    // Grid + player live in one container so the same subtree can be drawn at
-    // full size to the canvas and shrunk into the minimap texture.
     this.worldContainer = new Container();
     this.world = new Graphics();
     this.player = new Graphics();
     this.worldContainer.addChild(this.world);
     this.worldContainer.addChild(this.player);
+    this.miniContent = new Container();
+    this.miniWorld = new Graphics();
+    this.miniPlayer = new Graphics();
+    this.miniContent.addChild(this.miniWorld);
+    this.miniContent.addChild(this.miniPlayer);
     this.miniRt = new RenderTexture(220, 160);
     this.miniSprite = new Sprite(this.miniRt).setPosition(miniX, miniY);
+    this.miniMask = new Graphics();
+    this.miniMask.fillColor = Color.white;
+    this.miniMask.drawCircle(miniX + 110, miniY + 80, 76);
+    this.miniSprite.mask = this.miniMask;
     this.miniFrame = new Graphics();
     this.miniFrame.lineWidth = 2;
     this.miniFrame.lineColor = Color.white;
-    this.miniFrame.drawRectangle(miniX, miniY, 220, 160);
-    // Sprite + frame composited in one pass; draw order is now independent (RT sampling is order-safe).
+    this.miniFrame.drawCircle(miniX + 110, miniY + 80, 76);
     this.overlay = new Container();
     this.overlay.addChild(this.miniSprite);
     this.overlay.addChild(this.miniFrame);
-    // A dedicated view that frames the whole world, scaled down into the
-    // 220×160 minimap texture so the entire grid stays visible.
-    this.miniView = new View(width / 2, height / 2, width, height);
-    // Every stage is a RenderNodePass so the off-screen target redirect and
-    // its clear stay inside the pass machinery - mixing in a manual
-    // `context.backend.clear()` (immediate-mode) here leaks the off-screen
-    // pass's clear onto the canvas and leaves the texture empty.
+    this.miniView = new View(110, 80, 220, 160);
+    // The render-target pass owns its clear; a manual backend clear here would clear the canvas instead.
     this.pipeline = new RenderPipeline()
-      .addPass(new RenderNodePass(this.worldContainer, { target: this.miniRt, view: this.miniView, clear: Color.black }))
+      .addPass(new RenderNodePass(this.miniContent, { target: this.miniRt, view: this.miniView, clear: Color.black }))
       .addPass(new RenderNodePass(this.worldContainer, { clear: Color.black }))
       .addPass(new RenderNodePass(this.overlay));
   }
@@ -64,8 +69,6 @@ class MiniMapScene extends Scene {
     const marginY = 60;
     this.time += delta;
     this.world.clear();
-    // Filled play-area: gives the minimap a recognizable region. Sub-pixel grid
-    // lines alone vanish when the world is shrunk into the 220×160 texture.
     this.world.fillColor = new Color(50, 90, 160);
     this.world.drawRectangle(marginX, marginY, width - 2 * marginX, height - 2 * marginY);
     this.world.lineWidth = 2;
@@ -77,6 +80,19 @@ class MiniMapScene extends Scene {
     this.player.clear();
     this.player.fillColor = new Color(255, 180, 100);
     this.player.drawCircle(px, py, 18);
+    this.miniWorld.clear();
+    this.miniWorld.fillColor = new Color(50, 90, 160);
+    this.miniWorld.drawRectangle(0, 0, 220, 160);
+    this.miniWorld.lineWidth = 1;
+    this.miniWorld.lineColor = new Color(150, 185, 230);
+    for (let x = 0; x <= 220; x += 20) this.miniWorld.drawLine(x, 0, x, 160);
+    for (let y = 0; y <= 160; y += 20) this.miniWorld.drawLine(0, y, 220, y);
+    this.miniPlayer.clear();
+    this.miniPlayer.fillColor = new Color(255, 180, 100);
+    const markerX = (px / width) * 220 - 110;
+    const markerY = (py / height) * 160 - 80;
+    const markerScale = Math.min(1, 65 / Math.hypot(markerX, markerY));
+    this.miniPlayer.drawCircle(110 + markerX * markerScale, 80 + markerY * markerScale, 5);
   }
   draw(context) {
     this.pipeline.execute(context);

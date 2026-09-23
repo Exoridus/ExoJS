@@ -256,17 +256,17 @@ These labels are visible in tools that surface WebGPU pass labels (for example, 
 ## Examples
 
 <a id="bounding-boxes"></a>
-<ExamplePreview chapter="debug-layer" slug="bounding-boxes" />
+<ExamplePreview chapter="debug-layer" slug="pointer-and-hittest" />
 
-Rotating sprites with bounding-box outlines — the fastest way to check that transforms and bounds match.
+Drag overlapping sprites and inspect the bounding-box, pointer-stack, and hit-test overlays. Keys 1, 2, and 3 change which sprite is in front.
 
 <a id="performance-overlay"></a>
-<ExamplePreview chapter="debug-layer" slug="performance-overlay" />
+<ExamplePreview chapter="performance" slug="backend-comparison" />
 
-1600 bouncing sprites with live FPS, frame time, draw-call count, and sparkline.
+A seeded sprite workload with live FPS, frame time, draw-call count, and sparkline.
 
 <TryIt
-  examples={['debug-layer/performance-overlay', 'debug-layer/bounding-boxes']}
+  examples={['performance/backend-comparison', 'debug-layer/pointer-and-hittest']}
   api={['debug-overlay', 'performance-layer', 'render-pass-inspector-layer']}
 />
 

@@ -1,4 +1,5 @@
-import { CHAPTER_BY_SLUG } from './chapters';
+import { resolveExampleAlias } from './example-aliases';
+import { PLAYGROUND_CATEGORY_BY_SLUG } from './playground-categories';
 import { createUniqueRequest } from './request-manager';
 import type { Example, ExampleDefinition, ExamplesMap, ExamplesResponse } from './types';
 import { buildExampleUrl, buildGithubRawExampleUrl } from './url-builder';
@@ -65,8 +66,8 @@ export const getNestedExamples = (versionId: string): ExamplesMap => {
   return new Map(
     Object.entries(response)
       .sort(([a], [b]) => {
-        const orderA = CHAPTER_BY_SLUG.get(a)?.order ?? Number.MAX_SAFE_INTEGER;
-        const orderB = CHAPTER_BY_SLUG.get(b)?.order ?? Number.MAX_SAFE_INTEGER;
+        const orderA = PLAYGROUND_CATEGORY_BY_SLUG.get(a)?.order ?? Number.MAX_SAFE_INTEGER;
+        const orderB = PLAYGROUND_CATEGORY_BY_SLUG.get(b)?.order ?? Number.MAX_SAFE_INTEGER;
         return orderA - orderB || a.localeCompare(b);
       })
       .map(([directory, definitions]) => [
@@ -84,7 +85,8 @@ export const getExamplesList = (versionId: string): Array<Example> => {
 };
 
 export const getExampleByPath = (versionId: string, path: string): Example | null => {
-  return getExamplesList(versionId).find(example => example.path === path) ?? null;
+  const resolvedPath = isCurrentVersion(versionId) ? resolveExampleAlias(path) : path;
+  return getExamplesList(versionId).find(example => example.path === resolvedPath) ?? null;
 };
 
 export const loadExampleSource = async (versionId: string, filePath: string): Promise<string> => {

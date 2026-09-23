@@ -8,11 +8,12 @@ import {
   Graphics,
   type RenderingContext,
   Scene,
+  type Seconds,
   Text,
   Time,
   type Voice,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const PEAK = 0.7;
 const COLOR_A = new Color(120, 200, 255);
@@ -26,10 +27,11 @@ class CrossfadeTracksScene extends Scene {
   private trackB!: AudioStream;
   private trackAVoice!: Voice;
   private trackBVoice!: Voice;
-  private toB = true;
-  // Displayed meter levels, eased toward each voice's target volume.
-  private dispA = PEAK;
-  private dispB = 0;
+  private mix = 0;
+  private fadeFrom = 0;
+  private fadeTo = 0;
+  private fadeElapsed = 2;
+  private readonly fadeDuration = 2;
   private graphics!: Graphics;
   private labelA!: Text;
   private labelB!: Text;
@@ -40,6 +42,7 @@ class CrossfadeTracksScene extends Scene {
   private meterBX = 0;
   private meterBaseY = 0;
   private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof mountControlPanel>;
 
   override async load(): Promise<void> {
     const app = this.app;
@@ -76,29 +79,37 @@ class CrossfadeTracksScene extends Scene {
 
     this.hud = mountControls({
       title: 'Crossfade Tracks',
-      controls: [{ keys: 'Click', action: 'crossfade between Track A and Track B (2s)' }],
+      controls: [{ keys: 'Choose A or B', action: 'crossfade between looping tracks (2s)' }],
       status: 'Click or press any key to start…',
-      hint: 'The brighter meter with the bar above it is the active track; both loop continuously while their volumes ramp.',
+      hint: 'The meter follows the same two-second interval scheduled for the voice gains.',
     });
-
-    app.input.onPointerTap.add(() => {
-      // stopAfter: false keeps both loops alive so we can crossfade back.
-      if (this.toB) {
-        void crossFade(this.trackAVoice, this.trackBVoice, Time.seconds(2), { toVolume: PEAK, stopAfter: false });
-        this.hud.setStatus('Crossfading to Track B…');
-      } else {
-        void crossFade(this.trackBVoice, this.trackAVoice, Time.seconds(2), { toVolume: PEAK, stopAfter: false });
-        this.hud.setStatus('Crossfading to Track A…');
-      }
-      this.toB = !this.toB;
-    });
+    this.panel = mountControlPanel({ title: 'Select track' });
+    this.panel.addButton({ label: 'Track A', onClick: () => this.selectTrack(0) });
+    this.panel.addButton({ label: 'Track B', onClick: () => this.selectTrack(1) });
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - start both loops (B silent) so
     // crossFade only has to ramp gains rather than start playback mid-fade.
     this.trackAVoice = app.audio.play(this.trackA, { loop: true, volume: PEAK });
     this.trackBVoice = app.audio.play(this.trackB, { loop: true, volume: 0 });
-    this.hud.setStatus('Track A active — click to crossfade.');
+    this.hud.setStatus('Track A active - choose a track to crossfade.');
+  }
+
+  private selectTrack(target: 0 | 1): void {
+    if (this.app.audio.locked || this.fadeElapsed < this.fadeDuration || target === this.mix) return;
+    this.fadeFrom = this.mix;
+    this.fadeTo = target;
+    this.fadeElapsed = 0;
+    if (target === 1) void crossFade(this.trackAVoice, this.trackBVoice, Time.seconds(this.fadeDuration), { toVolume: PEAK, stopAfter: false });
+    else void crossFade(this.trackBVoice, this.trackAVoice, Time.seconds(this.fadeDuration), { toVolume: PEAK, stopAfter: false });
+    this.hud.setStatus(`Crossfading to Track ${target === 1 ? 'B' : 'A'}…`);
+  }
+
+  override update(delta: Seconds): void {
+    if (this.fadeElapsed >= this.fadeDuration) return;
+    this.fadeElapsed = Math.min(this.fadeDuration, this.fadeElapsed + delta);
+    this.mix = this.fadeFrom + (this.fadeTo - this.fadeFrom) * (this.fadeElapsed / this.fadeDuration);
+    if (this.fadeElapsed === this.fadeDuration) this.hud.setStatus(`Track ${this.fadeTo === 1 ? 'B' : 'A'} active.`);
   }
 
   private drawMeter(x: number, level: number, active: boolean, color: Color): void {
@@ -128,13 +139,8 @@ class CrossfadeTracksScene extends Scene {
     const app = this.app;
     this.graphics.clear();
 
-    // voice.volume returns the fade TARGET immediately, so ease the
-    // displayed level toward it for a smooth meter during the 2s ramp.
-    this.dispA += (this.trackAVoice.volume - this.dispA) * 0.06;
-    this.dispB += (this.trackBVoice.volume - this.dispB) * 0.06;
-
-    const aLevel = this.dispA;
-    const bLevel = this.dispB;
+    const aLevel = PEAK * (1 - this.mix);
+    const bLevel = PEAK * this.mix;
     const aActive = aLevel >= bLevel;
 
     this.drawMeter(this.meterAX, aLevel, aActive, COLOR_A);
@@ -152,6 +158,19 @@ class CrossfadeTracksScene extends Scene {
     if (app.audio.locked) {
       context.render(this.tapPrompt);
     }
+  }
+
+  override destroy(): void {
+    this.trackAVoice?.stop();
+    this.trackBVoice?.stop();
+    this.panel?.dispose();
+    this.hud?.dispose();
+    this.graphics?.destroy();
+    this.labelA?.destroy();
+    this.labelB?.destroy();
+    this.nowPlaying?.destroy();
+    this.tapPrompt?.destroy();
+    super.destroy();
   }
 }
 

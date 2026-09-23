@@ -8,6 +8,11 @@ import { ExampleBrowser } from '../../../components/ExampleBrowser';
          actually lands on something keyboard-traversable. Focus then tabs into the
          shadow tree of <example-browser> as normal. -->
     <div class="playground-main">
+        <p class="playground-tool-link">Need to inspect available art, sound, or fonts? <a href={`${import.meta.env.BASE_URL}en/tools/asset-browser/`}>Open the Asset Browser</a>.</p>
         <ExampleBrowser client:load baseUrl={import.meta.env.BASE_URL} />
     </div>
 </Layout>
+
+<style>
+    .playground-tool-link { margin: 0; padding: 0.55rem 1rem; font-size: 0.82rem; color: var(--fg-muted); }
+</style>

@@ -1,5 +1,5 @@
 // Auto-generated from easing-curves.ts - edit the .ts source, not this file.
-import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Every built-in Ease function, in source order.
 const EASINGS = [
@@ -35,45 +35,39 @@ const EASINGS = [
   ['elasticOut', Ease.elasticOut],
   ['elasticInOut', Ease.elasticInOut],
 ];
-// 30 easings laid out 10 wide × 3 tall to spread across the wider 16:9 frame.
-const COLS = 10;
-const ROWS = 3;
-const HEADER = 8;
-const SAMPLES = 22;
-// Value range plotted per cell (back/elastic overshoot beyond [0, 1]).
+const SAMPLES = 80;
 const V_MIN = -0.45;
 const V_MAX = 1.45;
 class EasingCurvesScene extends Scene {
   graphics = new Graphics();
-  labels = [];
+  sprite;
+  hud;
+  selected = 0;
   t = 0;
   direction = 1;
-  cellWidth = 0;
-  cellHeight = 0;
+  onTap = pointer => this.select(pointer.x < this.app.width / 2 ? -1 : 1);
   init() {
-    const app = this.app;
-    const { width, height } = app;
-    this.cellWidth = width / COLS;
-    this.cellHeight = (height - HEADER) / ROWS;
-    this.labels = EASINGS.map(([name], index) => {
-      const { x, y } = this.cell(index);
-      const label = new Text(name, { fillColor: new Color(200, 214, 240), fontSize: 11 });
-      label.setPosition(x + 10, y + 4);
-      return label;
+    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2);
+    this.inputs.onTrigger(Keyboard.Left, () => this.select(-1));
+    this.inputs.onTrigger(Keyboard.Right, () => this.select(1));
+    this.app.input.onPointerTap.add(this.onTap);
+    this.hud = mountControls({
+      title: 'Easing Explorer',
+      controls: [
+        { keys: 'Left / Right', action: 'select a curve' },
+        { keys: 'Click left / right half', action: 'select a curve' },
+      ],
+      status: '',
+      hint: 'The ship moves along the selected easing curve. Overshoot remains visible above and below the 0–1 range.',
     });
-    mountControls({
-      title: `Easing Curves — all ${EASINGS.length}`,
-      hint: 'Each cell plots f(t) over 0→1; the dot traces the curve as t sweeps back and forth.',
-    });
+    this.refreshHud();
   }
-  cell(index) {
-    const col = index % COLS;
-    const row = Math.floor(index / COLS);
-    return { x: col * this.cellWidth, y: HEADER + row * this.cellHeight };
+  select(direction) {
+    this.selected = (this.selected + direction + EASINGS.length) % EASINGS.length;
+    this.refreshHud();
   }
-  plotY(value, plotTop, plotHeight) {
-    const norm = (value - V_MIN) / (V_MAX - V_MIN);
-    return plotTop + plotHeight * (1 - Math.max(0, Math.min(1, norm)));
+  refreshHud() {
+    this.hud.setStatus(`${this.selected + 1} / ${EASINGS.length} · ${EASINGS[this.selected][0]}`);
   }
   update(delta) {
     this.t += this.direction * delta * 0.6;
@@ -86,39 +80,35 @@ class EasingCurvesScene extends Scene {
     }
   }
   draw(context) {
+    const { width, height } = this.app;
+    const left = width * 0.12;
+    const right = width * 0.88;
+    const top = height * 0.14;
+    const bottom = height * 0.9;
+    const plotY = value => bottom - ((value - V_MIN) / (V_MAX - V_MIN)) * (bottom - top);
+    const ease = EASINGS[this.selected][1];
     const g = this.graphics;
     g.clear();
-    const plotPadX = 10;
-    const plotW = this.cellWidth - plotPadX * 2;
-    const plotTop = 22;
-    const plotH = this.cellHeight - plotTop - 8;
-    // Plot backgrounds.
-    g.fillColor = new Color(30, 35, 48);
-    for (let i = 0; i < EASINGS.length; i++) {
-      const { x, y } = this.cell(i);
-      g.drawRectangle(x + plotPadX, y + plotTop, plotW, plotH);
+    g.lineWidth = 2;
+    g.lineColor = new Color(72, 86, 110);
+    g.drawLine(left, plotY(0), right, plotY(0));
+    g.drawLine(left, plotY(1), right, plotY(1));
+    g.drawLine(left, top, left, bottom);
+    g.lineWidth = 4;
+    g.lineColor = new Color(90, 210, 255);
+    for (let sample = 1; sample <= SAMPLES; sample++) {
+      const previous = (sample - 1) / SAMPLES;
+      const current = sample / SAMPLES;
+      g.drawLine(left + previous * (right - left), plotY(ease(previous)), left + current * (right - left), plotY(ease(current)));
     }
-    // Curve sample dots.
-    g.fillColor = new Color(96, 120, 160);
-    for (let i = 0; i < EASINGS.length; i++) {
-      const { x, y } = this.cell(i);
-      const easing = EASINGS[i][1];
-      for (let s = 0; s <= SAMPLES; s++) {
-        const t = s / SAMPLES;
-        g.drawCircle(x + plotPadX + t * plotW, this.plotY(easing(t), y + plotTop, plotH), 1.4);
-      }
-    }
-    // Moving dot at the current t.
-    g.fillColor = new Color(90, 210, 255);
-    for (let i = 0; i < EASINGS.length; i++) {
-      const { x, y } = this.cell(i);
-      const easing = EASINGS[i][1];
-      g.drawCircle(x + plotPadX + this.t * plotW, this.plotY(easing(this.t), y + plotTop, plotH), 3);
-    }
+    this.sprite.setPosition(left + this.t * (right - left), plotY(ease(this.t)));
     context.render(g);
-    for (const label of this.labels) {
-      context.render(label);
-    }
+    context.render(this.sprite);
+  }
+  destroy() {
+    this.app.input.onPointerTap.remove(this.onTap);
+    this.hud.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
@@ -130,5 +120,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(18, 21, 30),
+  loader: { basePath: 'assets/' },
 });
 await app.start(EasingCurvesScene);

@@ -3,48 +3,80 @@ import {
   Application,
   CallbackRenderPass,
   Color,
+  ColorMatrixFilter,
+  DisplacementFilter,
   FixedResolutionCanvasSizing,
+  Graphics,
   RenderNodePass,
   RenderPipeline,
   RenderTexture,
+  ScaleModes,
   Scene,
-  ShaderFilter,
   Sprite,
+  Texture,
+  WrapModes,
 } from '@codexo/exojs';
-const glsl = `#version 300 es
-precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor;
-void main(){ vec2 uv=vUv; uv.y += sin(uv.x*18.0+uTime*2.8)*0.025; vec4 c=texture(uTexture,uv); fragColor=vec4(c.rgb*vec3(0.72,0.85,1.0),c.a*0.85); }`;
-const wgsl = `
-@group(0) @binding(1) var uTexture:texture_2d<f32>;
-@group(0) @binding(2) var uSampler:sampler;
-struct Uniforms { uTime:f32 };
-@group(1) @binding(0) var<uniform> uniforms:Uniforms;
-@fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
-    var uv=vUv; uv.y = uv.y + sin(uv.x*18.0+uniforms.uTime*2.8)*0.025;
-    let c=textureSample(uTexture,uSampler,uv); return vec4<f32>(c.rgb*vec3<f32>(0.72,0.85,1.0),c.a*0.85);
-}`;
+import { mountControls } from '@examples/runtime';
+const MAP_SIZE = 256;
+const createRippleMap = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = MAP_SIZE;
+  canvas.height = MAP_SIZE;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('2D canvas context unavailable.');
+  const image = context.createImageData(MAP_SIZE, MAP_SIZE);
+  for (let y = 0; y < MAP_SIZE; y++) {
+    for (let x = 0; x < MAP_SIZE; x++) {
+      const offset = (y * MAP_SIZE + x) * 4;
+      const u = (x / MAP_SIZE) * Math.PI * 2;
+      const v = (y / MAP_SIZE) * Math.PI * 2;
+      image.data[offset] = Math.round((Math.sin(v * 3) * 0.5 + 0.5) * 255);
+      image.data[offset + 1] = Math.round((Math.sin(u * 2) * 0.5 + 0.5) * 255);
+      image.data[offset + 3] = 255;
+    }
+  }
+  context.putImageData(image, 0, 0);
+  return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.Repeat, generateMipMap: false });
+};
 class WaterMirrorScene extends Scene {
-  rt;
+  target;
+  map;
   source;
   mirror;
-  filter;
+  ripple;
+  tint;
+  waterline;
   pipeline;
-  time = 0;
+  hud;
+  dragging = false;
+  onPointerDown = (_pointer, x, y) => {
+    if (y < this.app.height / 2) return;
+    this.dragging = true;
+    this.setRippleStrength(x);
+  };
+  onPointerMove = (_pointer, x) => {
+    if (this.dragging) this.setRippleStrength(x);
+  };
+  onPointerEnd = () => {
+    this.dragging = false;
+  };
   init() {
-    const app = this.app;
-    const { width, height } = app;
+    const { width, height } = this.app;
     const half = height / 2;
-    this.rt = new RenderTexture(width, half);
+    this.target = new RenderTexture(width, half);
+    this.map = createRippleMap();
     this.source = new Sprite(this.loader.get('image/ship-a.png'))
       .setAnchor(0.5)
       .setPosition(width / 2, half / 2)
-      .setScale(2.6);
-    // Flip the captured top half down into the bottom half for the mirrored reflection.
-    this.mirror = new Sprite(this.rt).setPosition(0, height).setScale(1, -1);
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0 } });
-    this.mirror.filters = [this.filter];
-    // Capture the source into a target (camera view → a callback), then composite the source and
-    // its filtered, flipped mirror to the screen.
+      .setScale(5);
+    this.mirror = new Sprite(this.target).setPosition(0, height).setScale(1, -1);
+    this.ripple = new DisplacementFilter({ map: this.map, scale: 24 });
+    this.tint = new ColorMatrixFilter().tint(new Color(130, 195, 235));
+    this.mirror.filters = [this.ripple, this.tint];
+    this.waterline = new Graphics();
+    this.waterline.lineColor = new Color(100, 205, 245);
+    this.waterline.lineWidth = 3;
+    this.waterline.drawLine(0, half, width, half);
     this.pipeline = new RenderPipeline()
       .addPass(
         new CallbackRenderPass(
@@ -52,28 +84,50 @@ class WaterMirrorScene extends Scene {
             context.backend.clear();
             context.render(this.source);
           },
-          { target: this.rt },
+          { target: this.target },
         ),
       )
       .addPass(new RenderNodePass(this.source, { clear: new Color(18, 24, 36) }))
       .addPass(new RenderNodePass(this.mirror));
+    this.hud = mountControls({
+      title: 'Water Reflection and Distortion',
+      controls: [{ keys: 'Drag on water', action: 'change ripple strength' }],
+      status: 'Ripple strength: 24',
+      hint: 'The upper scene is captured into a RenderTexture, flipped, then displaced by a scrolling direction map. Drag across the reflection to change its strength.',
+    });
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onPointerMove.add(this.onPointerMove);
+    this.app.input.onPointerUp.add(this.onPointerEnd);
+    this.app.input.onPointerCancel.add(this.onPointerEnd);
+  }
+  setRippleStrength(x) {
+    const strength = Math.round(Math.max(0, Math.min(1, x / this.app.width)) * 60);
+    this.ripple.setScale(strength);
+    this.hud.setStatus(`Ripple strength: ${strength}`);
   }
   update(delta) {
-    const app = this.app;
-    const { width, height } = app;
+    const { width, height } = this.app;
+    const time = this.app.activeSeconds;
     const quarter = height / 4;
-    this.time += delta;
-    this.source.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.3), quarter + Math.sin(this.time * 1.3) * (quarter * 0.55));
-    this.filter.setUniform('uTime', this.time);
+    this.source.setPosition(width / 2 + Math.cos(time * 1.7) * (width * 0.3), quarter + Math.sin(time * 1.3) * (quarter * 0.55));
+    this.ripple.offsetU += delta * 0.08;
+    this.ripple.offsetV += delta * 0.13;
   }
   draw(context) {
     this.pipeline.execute(context);
+    context.render(this.waterline);
   }
   destroy() {
-    // Pipeline cascades destroy() to its passes; the caller-owned target and shader filter are freed here.
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onPointerMove.remove(this.onPointerMove);
+    this.app.input.onPointerUp.remove(this.onPointerEnd);
+    this.app.input.onPointerCancel.remove(this.onPointerEnd);
+    this.hud.dispose();
     this.pipeline.destroy();
-    this.rt.destroy();
-    this.filter.destroy();
+    this.target.destroy();
+    this.ripple.destroy();
+    this.tint.destroy();
+    this.map.destroy();
     super.destroy();
   }
 }
@@ -86,8 +140,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
+  loader: { basePath: 'assets/' },
 });
 await app.start(WaterMirrorScene);

@@ -25,7 +25,7 @@ const demoCount = getAllExamples().length;
 // (WebGL2, no input or audio gesture needed) so the landing shows the real
 // engine rendering in the page, not a video.
 const heroExample = getExamplesForChapter('lighting').find(entry => entry.slug === 'many-lights');
-const heroExampleTitle = heroExample?.title ?? 'Many Lights';
+const heroExampleTitle = heroExample?.title ?? 'Normal-Mapped Lighting';
 const heroExampleSource = getExampleExecutionSource('lighting', 'many-lights');
 
 const heroSnippet = `import { Application, Color, Scene, Sprite } from '@codexo/exojs';
@@ -92,44 +92,44 @@ const examples = [
         href: `${localeBase}playground/?example=particles/bonfire`,
     },
     {
-        title: 'Chromatic Aberration',
-        description: 'Split the red and blue channels apart with a fragment-shader filter.',
+        title: 'Retro Display',
+        description: 'Tune scanlines, grain, and RGB separation in one display filter.',
         chapter: 'Filters',
         tags: ['filter', 'blend'],
         anim: 'chroma' as const,
-        href: `${localeBase}playground/?example=filters/chromatic-aberration`,
+        href: `${localeBase}playground/?example=filters/crt-scanlines`,
     },
     {
-        title: 'Beat Sync Pulse',
-        description: 'Drive scene scale from FFT bands.',
-        chapter: 'Audio FX',
-        tags: ['audio', 'fft'],
+        title: 'Beat and Tempo',
+        description: 'Pulse a sprite on detected beats and follow the BPM estimate.',
+        chapter: 'Audio',
+        tags: ['audio', 'beat'],
         anim: 'fft' as const,
         href: `${localeBase}playground/?example=beat-detection/beat-sync-pulse`,
     },
     {
-        title: 'Sprite Sheet',
-        description: 'Animate from a strip with frame timing.',
-        chapter: 'Sprites & Textures',
+        title: 'Sprite Animation',
+        description: 'Switch named clips and pause an animated sprite.',
+        chapter: 'Animation',
         tags: ['sprite', 'anim'],
         anim: 'frames' as const,
-        href: `${localeBase}playground/?example=sprites-textures/spritesheet-frames`,
+        href: `${localeBase}playground/?example=tweens-animation/frame-animation`,
     },
     {
-        title: 'Many Lights',
-        description: 'Up to 48 point lights over a normal-mapped floor, still one batch.',
+        title: 'Normal-Mapped Lighting',
+        description: 'Drag one light and vary the count over a normal-mapped floor.',
         chapter: 'Lighting',
         tags: ['lighting', 'normal-map'],
         anim: 'lights' as const,
         href: `${localeBase}playground/?example=lighting/many-lights`,
     },
     {
-        title: 'Camera And View',
-        description: 'Pan and zoom with View; world vs screen coords.',
-        chapter: 'Application & Scenes',
+        title: 'Camera Navigation and Coordinates',
+        description: 'Pan, zoom, and place world-space markers beneath a fixed HUD.',
+        chapter: 'Sprites & Cameras',
         tags: ['scene', 'view'],
         anim: 'camera' as const,
-        href: `${localeBase}playground/?example=application-scenes/camera-and-view`,
+        href: `${localeBase}playground/?example=application-scenes/world-vs-screen-coords`,
     },
 ];
 ---

@@ -76,8 +76,23 @@ class ManyLightsScene extends Scene {
   lighting;
   orbits;
   visibleLights = 24;
+  draggingFirst = false;
+  manualFirst = true;
   elapsed = 0;
   hud;
+  onPointerDown = (_pointer, x, y) => {
+    const marker = this.orbits[0]?.marker;
+    this.draggingFirst = !!marker && Math.hypot(x - marker.x, y - marker.y) < 36;
+    if (this.draggingFirst) this.manualFirst = true;
+  };
+  onPointerMove = (_pointer, x, y) => {
+    if (!this.draggingFirst) return;
+    this.orbits[0].light.setPosition(x, y);
+    this.orbits[0].marker.setPosition(x, y);
+  };
+  onPointerEnd = () => {
+    this.draggingFirst = false;
+  };
   init() {
     const { width, height } = this.app;
     this.floor = new Container();
@@ -96,7 +111,7 @@ class ManyLightsScene extends Scene {
     this.orbits = Array.from({ length: MAX_LIGHTS }, (_, index) => {
       const color = lightColor(index);
       const light = new PointLight({ radius: 190, intensity: 1.6, height: 46, color });
-      const marker = new Sprite(Texture.fromColor(color, 6)).setAnchor(0.5);
+      const marker = new Sprite(Texture.fromColor(color, index === 0 ? 32 : 6)).setAnchor(0.5);
       this.markerLayer.addChild(marker);
       return {
         light,
@@ -107,10 +122,12 @@ class ManyLightsScene extends Scene {
         radiusY: height * (0.16 + ((index % 3) / 3) * 0.3),
       };
     });
+    this.orbits[0].light.setPosition(width * 0.25, height / 2);
+    this.orbits[0].marker.setPosition(width * 0.25, height / 2);
     this.setVisibleLights(this.visibleLights);
     this.hud = mountControls({
-      title: 'Many Lights (forward renderer)',
-      hint: `Up to ${MAX_LIGHTS} point lights over ${this.floor.children.length} tiles, all in one batch. The light list is a data texture, so the count is a loop bound - not a recompile. No shadows and no transport here: this shows what the forward renderer costs, not what the package can do.`,
+      title: 'Normal-Mapped Lighting',
+      hint: `Drag the large light marker across the normal-mapped tiles or change the count. Up to ${MAX_LIGHTS} lights share one material; this forward-lighting scene has no shadows.`,
       status: '',
     });
     const panel = mountControlPanel({ title: 'Lights', corner: 'top-right' });
@@ -122,6 +139,11 @@ class ManyLightsScene extends Scene {
       value: this.visibleLights,
       onChange: value => this.setVisibleLights(value),
     });
+    panel.addButton({ label: 'Resume first orbit', onClick: () => (this.manualFirst = false) });
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onPointerMove.add(this.onPointerMove);
+    this.app.input.onPointerUp.add(this.onPointerEnd);
+    this.app.input.onPointerCancel.add(this.onPointerEnd);
   }
   setVisibleLights(count) {
     this.visibleLights = count;
@@ -137,6 +159,7 @@ class ManyLightsScene extends Scene {
     const { width, height } = this.app;
     this.elapsed += delta;
     for (let index = 0; index < this.visibleLights; index++) {
+      if (index === 0 && this.manualFirst) continue;
       const orbit = this.orbits[index];
       const angle = this.elapsed * orbit.speed + orbit.phase;
       const x = width / 2 + Math.cos(angle) * orbit.radiusX;
@@ -149,6 +172,14 @@ class ManyLightsScene extends Scene {
     context.render(this.floor);
     context.render(this.markerLayer);
     this.hud.setStatus(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
+  }
+  destroy() {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onPointerMove.remove(this.onPointerMove);
+    this.app.input.onPointerUp.remove(this.onPointerEnd);
+    this.app.input.onPointerCancel.remove(this.onPointerEnd);
+    this.hud.dispose();
+    super.destroy();
   }
 }
 const app = new Application({

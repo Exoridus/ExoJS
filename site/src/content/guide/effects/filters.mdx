@@ -307,7 +307,7 @@ The next chapter, [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shad
 <a id="blur-filter"></a>
 <ExamplePreview chapter="filters" slug="blur-filter" />
 
-A single `BlurFilter` with an interactive strength slider — the basic filter pattern.
+A side-by-side comparison of the original sprite, `BlurFilter`, and `DropShadowFilter`, with live controls and bypass.
 
 <a id="bloom-filter"></a>
 <ExamplePreview chapter="filters" slug="bloom-filter" />
@@ -315,14 +315,14 @@ A single `BlurFilter` with an interactive strength slider — the basic filter p
 Six discs of rising luminance under one `BloomFilter`, with live threshold, intensity, strength and level sliders.
 
 <a id="filter-stack"></a>
-<ExamplePreview chapter="filters" slug="filter-stack" />
+<ExamplePreview chapter="filters" slug="metaballs" />
 
-Three filters chained on one sprite — blur, tint, and a custom shader — demonstrating filter ordering and composition.
+Drag a circle into the moving field, then switch between blur → threshold, threshold → blur, and the raw source circles. The different silhouettes show why pass order matters.
 
 <a id="displacement-filter"></a>
-<ExamplePreview chapter="filters" slug="displacement-filter" />
+<ExamplePreview chapter="render-targets" slug="water-mirror" />
 
-A procedural ripple map warping a sprite, with a live scale slider and a scrolling sampling offset.
+The reflection captures the moving scene into a texture, flips it, and applies a scrolling displacement map. Drag across the water to vary ripple strength.
 
 ## Where to go next
 

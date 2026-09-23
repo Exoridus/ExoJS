@@ -3,6 +3,7 @@ import {
   Asset,
   Color,
   FixedResolutionCanvasSizing,
+  Keyboard,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -12,21 +13,14 @@ import {
   SystemOrder,
   Vector,
 } from '@codexo/exojs';
-import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, MouseJoint, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
-
-// The minimal physics binding: `world.attach(node, { ... })` builds a body +
-// collider and binds it to the node in one call. Registering the world as a
-// system (`this.systems.add(this.world, { order: SystemOrder.Physics })`)
-// drives it from the engine's fixed-timestep scheduler - no manual step()
-// call needed. After every fixed step the body's position and rotation are
-// written onto the bound sprite, so the sprite simply "follows the body". A
-// static floor stops the falling actor.
 
 class SpriteFollowsBodyScene extends Scene {
   private world!: PhysicsWorld;
   private actor!: Sprite;
   private actorBody!: PhysicsBody;
+  private dragJoint: MouseJoint | null = null;
   private floor!: Sprite;
   private floorY = 0;
   private settled = 0;
@@ -79,16 +73,45 @@ class SpriteFollowsBodyScene extends Scene {
       restitution: 0.15,
     });
 
-    // A small sideways nudge so the landing is visibly dynamic.
-    this.actorBody.applyImpulse(900, 0);
-
     this.hud = mountControls({
-      title: 'Sprite Follows Body',
-      controls: [{ keys: 'Auto', action: 'actor falls and lands on the floor' }],
+      title: 'Drag and Throw Physics',
+      controls: [
+        { keys: 'Drag', action: 'pull and throw the actor' },
+        { keys: 'R', action: 'reset the actor' },
+      ],
       status: 'Dropping…',
-      hint: 'world.attach(sprite, { … }) creates a body + collider and binds it; the world, registered as a system, writes the body transform onto the sprite every fixed step.',
+      hint: 'world.attach binds the sprite to a body. MouseJoint pulls the body, and the sprite follows the simulated transform.',
     });
+    app.input.onPointerDown.add(this.onDown);
+    app.input.onPointerMove.add(this.onMove);
+    app.input.onPointerUp.add(this.onEnd);
+    app.input.onPointerCancel.add(this.onEnd);
+    this.inputs.onTrigger(Keyboard.R, this.resetActor);
   }
+
+  private readonly onDown = (pointer: { x: number; y: number }): void => {
+    if (Math.abs(pointer.x - this.actorBody.x) > 42 || Math.abs(pointer.y - this.actorBody.y) > 55) return;
+    this.onEnd();
+    this.dragJoint = this.world.addJoint(new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }));
+  };
+
+  private readonly onMove = (pointer: { x: number; y: number }): void => {
+    if (this.dragJoint) this.dragJoint.target = pointer;
+  };
+
+  private readonly onEnd = (): void => {
+    if (!this.dragJoint) return;
+    this.world.removeJoint(this.dragJoint);
+    this.dragJoint = null;
+  };
+
+  private readonly resetActor = (): void => {
+    this.onEnd();
+    this.actorBody.setTransform(new Vector(this.app.width / 2, 140), 0);
+    this.actorBody.linearVelocityX = 0;
+    this.actorBody.linearVelocityY = 0;
+    this.actorBody.angularVelocity = 0;
+  };
 
   override update(delta: Seconds): void {
     const app = this.app;
@@ -103,22 +126,32 @@ class SpriteFollowsBodyScene extends Scene {
       this.settled = 0;
     }
 
-    this.hud.setStatus(this.settled > 0 ? `Resting on the floor (${restingSpeed.toFixed(0)} px/s)` : `Falling… y=${body.y.toFixed(0)} px`);
+    this.hud.setStatus(
+      this.dragJoint
+        ? 'Dragging body with MouseJoint.'
+        : this.settled > 0
+          ? `Resting on the floor (${restingSpeed.toFixed(0)} px/s)`
+          : `Moving at ${restingSpeed.toFixed(0)} px/s.`,
+    );
 
-    // Loop: after a short rest (or if it tumbles off-screen) drop it again.
-    if (this.settled > 1.2 || body.y > height + 200 || Math.abs(body.x - width / 2) > width) {
-      this.settled = 0;
-      body.setTransform(new Vector(width / 2, 140), (Math.random() - 0.5) * 0.6);
-      body.linearVelocityX = 0;
-      body.linearVelocityY = 0;
-      body.angularVelocity = 0;
-      body.applyImpulse((Math.random() - 0.5) * 1800, 0);
-    }
+    if (!this.dragJoint && (body.y > height + 200 || Math.abs(body.x - width / 2) > width)) this.resetActor();
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.floor);
     context.render(this.actor);
+  }
+
+  override destroy(): void {
+    this.onEnd();
+    this.app.input.onPointerDown.remove(this.onDown);
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerUp.remove(this.onEnd);
+    this.app.input.onPointerCancel.remove(this.onEnd);
+    this.hud?.dispose();
+    this.actor?.destroy();
+    this.floor?.destroy();
+    super.destroy();
   }
 }
 

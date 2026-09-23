@@ -361,6 +361,21 @@
           "ellipse": true
         }
       ]
+    },
+    {
+      "id": 3,
+      "name": "Gameplay",
+      "type": "objectgroup",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "draworder": "topdown",
+      "objects": [
+        { "id": 6, "name": "gate-switch", "type": "Switch", "x": 384, "y": 560, "width": 64, "height": 64, "rotation": 0, "visible": true },
+        { "id": 7, "name": "market-gate", "type": "Door", "x": 608, "y": 448, "width": 64, "height": 128, "rotation": 0, "visible": true },
+        { "id": 8, "name": "harbor-gem", "type": "Collectible", "x": 928, "y": 528, "width": 64, "height": 64, "rotation": 0, "visible": true }
+      ]
     }
   ],
   "tilesets": [

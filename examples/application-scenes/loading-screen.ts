@@ -33,6 +33,8 @@ class BootScene extends Scene {
 
   private loaded = 0;
   private total = 0;
+  private failed = false;
+  private loading = false;
   private message = 'Waiting for the first request…';
 
   private onLoadStart!: (key: string, url: string) => void;
@@ -54,19 +56,29 @@ class BootScene extends Scene {
 
     // Every listener is kept in a field so `unload()` can take it off again.
     this.onLoadStart = (key: string) => {
-      this.message = `Loading ${key}…`;
+      this.loading = true;
+      if (!this.failed) {
+        this.message = `Loading ${key}…`;
+      }
     };
     this.onLoadProgress = (loaded: number, total: number, key: string) => {
       this.loaded = loaded;
       this.total = total;
-      this.message = `${loaded} / ${total} — ${key}`;
+      if (!this.failed) {
+        this.message = `${loaded} / ${total} — ${key}`;
+      }
     };
     this.onLoadError = (key: string, error: Error) => {
-      // onLoadComplete still fires once the rest of the batch settles.
+      this.failed = true;
       this.message = `Failed to load "${key}": ${error.message}`;
     };
     this.onLoadComplete = () => {
-      this.enterGame();
+      this.loading = false;
+      if (this.failed) {
+        this.message = 'Load failed. Press Space to retry.';
+      } else {
+        this.enterGame();
+      }
     };
 
     app.loader.onLoadStart.add(this.onLoadStart);
@@ -76,9 +88,26 @@ class BootScene extends Scene {
 
     // Trigger loads from anywhere - the signals above see all of them. The
     // claim goes on the application loader so the assets outlive this scene.
-    app.loader.load(GameAssets);
+    this.inputs.onTrigger(Keyboard.Space, () => {
+      if (this.failed && !this.loading) {
+        this.loadAssets();
+      }
+    });
+    this.loadAssets();
   }
   // #endregion guide:boot-signals
+
+  private loadAssets(): void {
+    this.failed = false;
+    this.loading = true;
+    this.loaded = 0;
+    this.total = 0;
+    this.message = 'Loading assets…';
+    void this.app.loader.load(GameAssets).catch(error => {
+      this.failed = true;
+      this.message = `Load failed: ${String(error)}. Press Space to retry.`;
+    });
+  }
 
   // #region guide:boot-unsubscribe
   override unload(): void {
@@ -144,7 +173,7 @@ class PlayScene extends Scene {
     // loader, so reading the same handles here costs nothing.
     this.ship = new Sprite(GameAssets.ship).setAnchor(0.5).setPosition(width / 2, height / 2);
 
-    this.label = new Text('Loaded — press Space to boot again.', { fillColor: Color.white, fontSize: 22, align: 'center' });
+    this.label = new Text('Loaded — press Space to visit the warm cache.', { fillColor: Color.white, fontSize: 22, align: 'center' });
     this.label.setAnchor(0.5, 0).setPosition(width / 2, height * 0.68);
 
     this.inputs.onTrigger(Keyboard.Space, () => {
@@ -152,9 +181,9 @@ class PlayScene extends Scene {
     });
 
     this.hud = mountControls({
-      title: 'Loading Screen',
+      title: 'Loading Progress and Retry',
       controls: [{ keys: 'Space', action: 'return to the boot scene' }],
-      hint: 'The boot scene drives its bar from the loader-wide signals, then navigates once the shared batch drains.',
+      hint: 'The boot scene follows real loader signals, retries failures, and enters the game after a successful batch.',
     });
   }
 

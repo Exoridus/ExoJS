@@ -1,12 +1,16 @@
 ---
 import PlaygroundExamplePage from '../../../../components/pages/PlaygroundExamplePage.astro';
 import { getAllExamples } from '../../../../lib/examples-catalog';
+import { EXAMPLE_ALIASES } from '../../../../lib/example-aliases';
 
 export async function getStaticPaths() {
-    return getAllExamples().map(entry => ({ params: { path: entry.path.replace(/\.js$/, '') } }));
+    return [...getAllExamples().map(entry => entry.path), ...Object.keys(EXAMPLE_ALIASES)].map(path => ({ params: { path: path.replace(/\.js$/, '') } }));
 }
 
 const routePath = (Astro.params as Record<string, string | undefined>).path ?? '';
+const toolHref = `${import.meta.env.BASE_URL}en/tools/asset-browser/`;
 ---
 
-<PlaygroundExamplePage locale="en" path={`${routePath}.js`} />
+{routePath === 'debug-layer/asset-browser' ? (
+    <html lang="en"><head><meta http-equiv="refresh" content={`0;url=${toolHref}`} /><link rel="canonical" href={toolHref} /></head><body><a href={toolHref}>Open Asset Browser</a></body></html>
+) : <PlaygroundExamplePage locale="en" path={`${routePath}.js`} />}
