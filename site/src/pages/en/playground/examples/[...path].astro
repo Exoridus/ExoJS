@@ -1,16 +1,18 @@
 ---
 import PlaygroundExamplePage from '../../../../components/pages/PlaygroundExamplePage.astro';
 import { getAllExamples } from '../../../../lib/examples-catalog';
-import { EXAMPLE_ALIASES } from '../../../../lib/example-aliases';
+import { CURRENT_VERSION_ID } from '../../../../lib/versions';
+import { EXAMPLE_ALIASES, EXAMPLE_TOOL_RELOCATIONS, resolveExampleToolRelocation } from '../../../../lib/example-aliases';
 
 export async function getStaticPaths() {
-    return [...getAllExamples().map(entry => entry.path), ...Object.keys(EXAMPLE_ALIASES)].map(path => ({ params: { path: path.replace(/\.js$/, '') } }));
+    return [...getAllExamples().map(entry => entry.path), ...Object.keys(EXAMPLE_ALIASES), ...Object.keys(EXAMPLE_TOOL_RELOCATIONS)].map(path => ({ params: { path: path.replace(/\.js$/, '') } }));
 }
 
 const routePath = (Astro.params as Record<string, string | undefined>).path ?? '';
-const toolHref = `${import.meta.env.BASE_URL}en/tools/asset-browser/`;
+const relocation = resolveExampleToolRelocation(CURRENT_VERSION_ID, `${routePath}.js`);
+const toolHref = relocation === null ? null : `${import.meta.env.BASE_URL}en/${relocation}`;
 ---
 
-{routePath === 'debug-layer/asset-browser' ? (
+{toolHref !== null ? (
     <html lang="en"><head><meta http-equiv="refresh" content={`0;url=${toolHref}`} /><link rel="canonical" href={toolHref} /></head><body><a href={toolHref}>Open Asset Browser</a></body></html>
 ) : <PlaygroundExamplePage locale="en" path={`${routePath}.js`} />}
