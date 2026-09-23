@@ -1,4 +1,4 @@
-import { PixelSnapMode, TextureRegion } from '@codexo/exojs';
+import { Container, PixelSnapMode, TextureRegion } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -513,6 +513,40 @@ describe('TileMapNode', () => {
 
     // The map is still fully usable.
     expect(map.getTileAt(1, 0, 0)).not.toBeNull();
+  });
+
+  it('keeps a detached node subscribed to its layers until it is destroyed', () => {
+    const structuralListeners = (map: TileMap): number =>
+      (map.layers[0] as unknown as { _structuralListeners: Set<unknown> | null })._structuralListeners?.size ?? 0;
+    const detached = makeMap().map;
+    const destroyed = makeMap().map;
+    const parent = new Container();
+
+    for (let rebuild = 0; rebuild < 10; rebuild++) {
+      parent.removeChildren();
+      parent.addChild(new TileMapNode(detached));
+    }
+
+    expect(structuralListeners(detached)).toBe(10);
+
+    parent.removeChildren();
+
+    for (let rebuild = 0; rebuild < 10; rebuild++) {
+      const previous = [...parent.children];
+
+      parent.removeChildren();
+
+      for (const child of previous) {
+        child.destroy();
+      }
+
+      parent.addChild(new TileMapNode(destroyed));
+      expect(structuralListeners(destroyed)).toBe(1);
+    }
+
+    parent.children[0]!.destroy();
+
+    expect(structuralListeners(destroyed)).toBe(0);
   });
 });
 
