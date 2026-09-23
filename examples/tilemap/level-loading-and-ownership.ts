@@ -38,7 +38,7 @@ class LevelOwnershipScene extends Scene {
   private runtime!: MapWorldRuntime;
   private node: TileMapNode | null = null;
   private activeId: string | null = null;
-  private pendingId: string | null = null;
+  private pending: { readonly id: string } | null = null;
   private readonly roomLabel = new Text('No room loaded', { fillColor: new Color(31, 49, 54), fontSize: 34 });
   private hud!: ReturnType<typeof mountControls>;
   private panel!: ReturnType<typeof mountControlPanel>;
@@ -78,39 +78,67 @@ class LevelOwnershipScene extends Scene {
   }
 
   private async enter(id: string): Promise<void> {
-    if (this.pendingId) this.cancelPending();
-    if (id === this.activeId) return;
-    this.pendingId = id;
+    this.cancelPending();
+
+    if (id === this.activeId) {
+      return;
+    }
+
+    // A fresh object per request: a cancelled request for the same level id
+    // settles after its replacement started, and must not touch its state.
+    const request = { id };
+
+    this.pending = request;
     this.hud.setStatus(`Loading ${world.getLevel(id)?.name}... ${this.describeResidency()}`);
+
     try {
       const level = await this.runtime.loadLevel(id);
-      if (this.pendingId !== id) return;
+
+      if (this.pending !== request) {
+        return;
+      }
+
       const previousId = this.activeId;
+
       this.node?.destroy();
       this.node = new TileMapNode(level.map);
       this.node.position.set(96, 34);
       this.node.scale.set(0.85);
       this.activeId = id;
       this.roomLabel.text = `${level.level.name} loaded`;
-      if (previousId) this.runtime.unloadLevel(previousId);
+
+      if (previousId) {
+        this.runtime.unloadLevel(previousId);
+      }
+
       this.hud.setStatus(`${level.level.name} ready. ${this.describeResidency()}`);
     } catch (error) {
-      if (this.pendingId === id) this.hud.setStatus(error instanceof Error ? error.message : String(error));
+      if (this.pending === request) {
+        this.hud.setStatus(error instanceof Error ? error.message : String(error));
+      }
     } finally {
-      if (this.pendingId === id) this.pendingId = null;
+      if (this.pending === request) {
+        this.pending = null;
+      }
     }
   }
 
   private cancelPending(): void {
-    if (!this.pendingId) return;
-    const id = this.pendingId;
-    this.pendingId = null;
+    if (!this.pending) {
+      return;
+    }
+
+    const { id } = this.pending;
+
+    this.pending = null;
     this.runtime.unloadLevel(id);
     this.hud.setStatus(`${world.getLevel(id)?.name} cancelled. ${this.describeResidency()}`);
   }
 
   private unloadActive(): void {
-    if (!this.activeId) return;
+    if (!this.activeId) {
+      return;
+    }
     const id = this.activeId;
     this.node?.destroy();
     this.node = null;
@@ -126,7 +154,9 @@ class LevelOwnershipScene extends Scene {
   }
 
   override draw(context: RenderingContext): void {
-    if (this.node) context.render(this.node);
+    if (this.node) {
+      context.render(this.node);
+    }
     context.render(this.roomLabel);
   }
 

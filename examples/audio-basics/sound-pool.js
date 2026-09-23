@@ -78,7 +78,9 @@ class SoundPoolScene extends Scene {
     this.voices = this.voices.filter(end => end > this.clock);
     // A Sound played before the AudioContext unlocks on the first gesture
     // is a no-op, so skip firing while audio is still locked.
-    if (!this.firing || app.audio.locked) return;
+    if (!this.firing || app.audio.locked) {
+      return;
+    }
     this.timer += delta;
     while (this.timer >= FIRE_INTERVAL) {
       this.timer -= FIRE_INTERVAL;

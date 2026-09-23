@@ -2,10 +2,9 @@
 import { Application, Color, FixedResolutionCanvasSizing, RenderBackendType, Scene, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn } from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-// WebGPU runs the whole simulation on a compute shader, so it sustains hundreds
-// of thousands of particles smoothly; WebGL2 falls back to a CPU integrator, so
-// it uses a much smaller budget to stay at a comfortable frame rate. Both stay
-// well within what a modern machine handles without lag.
+// WebGPU runs the whole simulation on a compute shader; WebGL2 falls back to a
+// CPU integrator and therefore starts from a much smaller budget. The slider
+// and the timing readout show where a given machine stops keeping up.
 const budgets = {
   webgpu: { capacity: 320_000, rate: 75_000 },
   webgl2: { capacity: 20_000, rate: 3_000 },
@@ -15,7 +14,7 @@ class GpuParticlesScene extends Scene {
   hud;
   capacity = 0;
   spawnRate;
-  frameMs = 0;
+  frameIntervalMs = 0;
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -57,11 +56,14 @@ class GpuParticlesScene extends Scene {
       },
     });
   }
-  update(delta) {
+  update() {
     const backend = this.system.gpuMode ? 'WebGPU (GPU compute)' : 'WebGL2 (CPU fallback)';
-    this.frameMs = this.frameMs * 0.9 + delta * 1000 * 0.1;
+    // The `update` delta is clamped for simulation stability and would hide a
+    // slow frame; the raw frame-to-frame delta is what the display actually got.
+    const { rawFrameDeltaMs } = this.app.backend.stats;
+    this.frameIntervalMs = this.frameIntervalMs * 0.9 + rawFrameDeltaMs * 0.1;
     this.hud.setStatus(
-      `${this.system.aliveCount.toLocaleString()} live / ${this.capacity.toLocaleString()} cap · ${this.spawnRate.value.toLocaleString()}/s · ${this.frameMs.toFixed(1)} ms/frame · ${backend}`,
+      `${this.system.aliveCount.toLocaleString()} live / ${this.capacity.toLocaleString()} cap · ${this.spawnRate.value.toLocaleString()}/s · ${this.frameIntervalMs.toFixed(1)} ms between frames · ${backend}`,
     );
   }
   draw(context) {

@@ -14,16 +14,20 @@ import { mountControls } from '@examples/runtime';
 
 const UV_GRID = assets.technical.filtering.uvGrid256;
 
-// Neither source declares the uniform: the schema below generates the GLSL
-// block and the WGSL struct from one layout, and both bodies read it through
-// the same `uniforms` instance.
+// Neither source declares the user uniforms: the schema below generates the
+// GLSL block and the WGSL struct from one layout, and both bodies read them
+// through the same `uniforms` instance. `uPointer` is top-down across the
+// filtered sprite; `uOrientation` maps it into `vUv`, whose v axis runs the
+// other way on WebGL2.
 const glsl = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;
+uniform float uOrientation;
 in vec2 vUv;
 out vec4 fragColor;
 void main() {
-  vec2 delta = vUv - uniforms.uPointer;
+  vec2 pointer = vec2(uniforms.uPointer.x, 0.5 + (uniforms.uPointer.y - 0.5) * uOrientation);
+  vec2 delta = vUv - pointer;
   float distanceToPointer = length(delta);
   float ripple = sin(distanceToPointer * 22.0 - uniforms.uTime * 5.0);
   float falloff = exp(-distanceToPointer * 5.0);
@@ -33,8 +37,10 @@ void main() {
 const wgsl = `
 @group(0) @binding(1) var uTexture:texture_2d<f32>;
 @group(0) @binding(2) var uSampler:sampler;
+@group(0) @binding(3) var<uniform> uOrientation: f32;
 @fragment fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
-    let delta = vUv - uniforms.uPointer;
+    let pointer = vec2<f32>(uniforms.uPointer.x, 0.5 + (uniforms.uPointer.y - 0.5) * uOrientation);
+    let delta = vUv - pointer;
     let distanceToPointer = length(delta);
     let ripple = sin(distanceToPointer * 22.0 - uniforms.uTime * 5.0);
     let falloff = exp(-distanceToPointer * 5.0);
@@ -71,8 +77,13 @@ class CustomFragmentShaderScene extends Scene {
     app.input.onPointerMove.add(this.onMove);
   }
 
+  // The filter's input spans the sprite's world bounds, not the canvas, so
+  // the pointer is mapped through the view into that rectangle.
   private readonly onMove = (pointer: { x: number; y: number }): void => {
-    this.filter.uniforms.uPointer.set(pointer.x / this.app.width, pointer.y / this.app.height);
+    const world = this.app.rendering.view.screenToWorld(pointer.x, pointer.y);
+    const bounds = this.sprite.getBounds();
+
+    this.filter.uniforms.uPointer.set((world.x - bounds.x) / bounds.width, (world.y - bounds.y) / bounds.height);
   };
 
   override update(delta: Seconds): void {

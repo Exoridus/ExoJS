@@ -101,7 +101,9 @@ class BossIntroCinematicScene extends Scene {
   private readonly playSequence = (): void => {
     const { width, height } = this;
 
-    for (const tween of this.sequenceTweens) tween.stop();
+    for (const tween of this.sequenceTweens) {
+      tween.stop();
+    }
     this.sequenceTweens.length = 0;
     this.view.reset(width * 0.42, height / 2, width, height);
     this.view.clearShake();
@@ -162,7 +164,9 @@ class BossIntroCinematicScene extends Scene {
   }
 
   override destroy(): void {
-    for (const tween of this.sequenceTweens) tween.stop();
+    for (const tween of this.sequenceTweens) {
+      tween.stop();
+    }
     this.app.audio.onUnlock.remove(this.playSequence);
     this.app.input.onPointerDown.remove(this.replay);
     this.musicVoice?.stop();

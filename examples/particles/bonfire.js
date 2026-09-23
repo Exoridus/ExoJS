@@ -32,7 +32,9 @@ class BonfireScene extends Scene {
     this.ground.fillColor = new Color(255, 143, 59, 0.18);
     this.ground.drawCircle(centerX, fireY + 25, 155);
     this.ground.fillColor = new Color(91, 90, 80);
-    for (const x of [-125, -80, 80, 125]) this.ground.drawCircle(centerX + x, fireY + 28, 25);
+    for (const x of [-125, -80, 80, 125]) {
+      this.ground.drawCircle(centerX + x, fireY + 28, 25);
+    }
     this.ground.fillColor = new Color(92, 54, 35);
     this.ground.drawPolygon([centerX - 110, fireY + 35, centerX - 98, fireY + 4, centerX + 105, fireY + 43, centerX + 95, fireY + 70]);
     this.ground.drawPolygon([centerX - 105, fireY + 45, centerX + 97, fireY + 5, centerX + 110, fireY + 35, centerX - 95, fireY + 72]);

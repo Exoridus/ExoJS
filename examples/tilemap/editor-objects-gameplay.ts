@@ -71,15 +71,21 @@ class EditorObjectsScene extends Scene {
       }
       this.collected = true;
       const gem = this.spawns.get(gemObject.id);
-      if (gem) gem.visible = false;
+      if (gem) {
+        gem.visible = false;
+      }
       this.hud.setStatus(`Gem collected. Its runtime object came from authored map id ${gemObject.id}.`);
     }
   };
 
   override draw(context: RenderingContext): void {
     context.render(this.mapNode);
-    for (const object of this.spawns.objects) context.render(object);
-    for (const label of this.labels) context.render(label);
+    for (const object of this.spawns.objects) {
+      context.render(object);
+    }
+    for (const label of this.labels) {
+      context.render(label);
+    }
   }
 
   override destroy(): void {

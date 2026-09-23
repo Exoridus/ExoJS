@@ -35,13 +35,19 @@ const AGENT_COLOR = new Color(255, 255, 255);
 const isBorder = (x, y) => x === 0 || y === 0 || x === COLUMNS - 1 || y === ROWS - 1;
 /** Deterministic layout: a walled arena with pillars and a band of rough ground. */
 const tileAt = (x, y) => {
-  if (isBorder(x, y) || (x % 6 === 3 && y % 4 !== 2)) return WALL_TILE;
-  if (y >= 4 && y <= 5 && x > 1 && x < COLUMNS - 2) return ROUGH_TILE;
+  if (isBorder(x, y) || (x % 6 === 3 && y % 4 !== 2)) {
+    return WALL_TILE;
+  }
+  if (y >= 4 && y <= 5 && x > 1 && x < COLUMNS - 2) {
+    return ROUGH_TILE;
+  }
   return FLOOR_TILE;
 };
 /** The one place the two packages meet: a tile turns into a traversal cost. */
 const walkCost = tile => {
-  if (tile === null || tile.localTileId === WALL_TILE) return 0;
+  if (tile === null || tile.localTileId === WALL_TILE) {
+    return 0;
+  }
   return tile.localTileId === ROUGH_TILE ? ROUGH_COST : 1;
 };
 class TilemapNavigationScene extends Scene {
@@ -111,7 +117,9 @@ class TilemapNavigationScene extends Scene {
   }
   update(delta) {
     const points = this.result?.points ?? [];
-    if (this.waypoint >= points.length) return;
+    if (this.waypoint >= points.length) {
+      return;
+    }
     let travel = AGENT_SPEED * delta;
     while (travel > 0 && this.waypoint < points.length) {
       const target = points[this.waypoint];
@@ -163,16 +171,22 @@ class TilemapNavigationScene extends Scene {
   onTap = pointer => {
     const x = Math.floor(pointer.x / TILE);
     const y = Math.floor(pointer.y / TILE);
-    if (x < 0 || x >= COLUMNS || y < 0 || y >= ROWS) return;
+    if (x < 0 || x >= COLUMNS || y < 0 || y >= ROWS) {
+      return;
+    }
     if (this.editing) {
-      if (isBorder(x, y)) return;
+      if (isBorder(x, y)) {
+        return;
+      }
       const tile = this.layer.getTileAt(x, y);
       const blocked = tile?.localTileId === WALL_TILE;
       const tileset = this.layer.tilesets[0];
       this.layer.setTileAt(x, y, { tileset, localTileId: blocked ? FLOOR_TILE : WALL_TILE, transform: TILE_TRANSFORM_IDENTITY });
       this.grid.setCost(x, y, blocked ? 1 : 0);
     } else {
-      if (this.grid.nodeAt(x, y) < 0) return;
+      if (this.grid.nodeAt(x, y) < 0) {
+        return;
+      }
       this.goal = { x, y };
     }
     this.replan();

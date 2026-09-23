@@ -101,7 +101,9 @@ class BatchingScene extends Scene {
   }
 }
 const boot = async type => {
-  if (booting) return;
+  if (booting) {
+    return;
+  }
   booting = true;
   try {
     overlay?.destroy();

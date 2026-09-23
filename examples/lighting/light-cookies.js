@@ -18,7 +18,9 @@ const canvasTexture = (size, paint, wrap = WrapModes.ClampToEdge) => {
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
-  if (context === null) throw new Error('2D canvas context unavailable.');
+  if (context === null) {
+    throw new Error('2D canvas context unavailable.');
+  }
   paint(context);
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: wrap, generateMipMap: false });
 };

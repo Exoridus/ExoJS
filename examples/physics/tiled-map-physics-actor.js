@@ -33,7 +33,9 @@ class TiledMapPhysicsActorScene extends Scene {
     this.systems.add(this.world, { order: SystemOrder.Physics });
     this.mapNode = new TileMapNode(this.map);
     const collision = this.map.getObjectLayer('Collision');
-    if (!collision) throw new Error('physics-room.tmj needs a Collision object layer.');
+    if (!collision) {
+      throw new Error('physics-room.tmj needs a Collision object layer.');
+    }
     const colliders = buildObjectLayerColliders(this.world, collision, { friction: 0.7, restitution: 0.05 });
     const characters = new Spritesheet(this.charactersTexture, this.spritesheetData);
     this.actor = characters.getFrameSprite('character_green_front').setAnchor(0.5);
@@ -65,7 +67,9 @@ class TiledMapPhysicsActorScene extends Scene {
     const body = this.actorBody;
     const speed = Math.hypot(body.linearVelocityX, body.linearVelocityY);
     this.settled = speed < 8 && body.y > 300 ? this.settled + delta : 0;
-    if (this.settled < 1.2 && body.y < 900 && body.x > 0 && body.x < 1280) return;
+    if (this.settled < 1.2 && body.y < 900 && body.x > 0 && body.x < 1280) {
+      return;
+    }
     this.settled = 0;
     body.setTransform(new Vector(320, 130), 0);
     body.linearVelocityX = 0;
@@ -76,7 +80,9 @@ class TiledMapPhysicsActorScene extends Scene {
   draw(context) {
     context.render(this.mapNode);
     context.render(this.actor);
-    if (this.showOutlines) this.debug.render(context.backend);
+    if (this.showOutlines) {
+      this.debug.render(context.backend);
+    }
   }
   destroy() {
     this.hud?.dispose();

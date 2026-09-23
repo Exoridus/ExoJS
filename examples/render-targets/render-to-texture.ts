@@ -76,7 +76,9 @@ class RenderToTextureScene extends Scene {
     }
     context.render(this.live);
     context.render(this.snapshot);
-    for (const label of this.labels) context.render(label);
+    for (const label of this.labels) {
+      context.render(label);
+    }
   }
 
   override destroy(): void {

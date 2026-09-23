@@ -52,14 +52,24 @@ const TILE_GRASS = 23; // green center     (row 1, col 6)
 const TILE_ROCK = 28; // gray center      (row 1, col 11)
 const TILE_SNOW = 86; // white center     (row 5, col 1)
 
-function biomeTileId(value: number): number {
-  if (value < 0.34) return TILE_DEEP_WATER;
-  if (value < 0.42) return TILE_WATER;
-  if (value < 0.5) return TILE_SAND;
-  if (value < 0.68) return TILE_GRASS;
-  if (value < 0.8) return TILE_ROCK;
+const biomeTileId = (value: number): number => {
+  if (value < 0.34) {
+    return TILE_DEEP_WATER;
+  }
+  if (value < 0.42) {
+    return TILE_WATER;
+  }
+  if (value < 0.5) {
+    return TILE_SAND;
+  }
+  if (value < 0.68) {
+    return TILE_GRASS;
+  }
+  if (value < 0.8) {
+    return TILE_ROCK;
+  }
   return TILE_SNOW;
-}
+};
 
 class WorkerStreamedTerrainScene extends Scene {
   private camera!: View;
@@ -77,7 +87,8 @@ class WorkerStreamedTerrainScene extends Scene {
   private moveX = 0;
   private moveY = 0;
   private hudTimer = 0;
-  private frameMs = 0;
+  private frameIntervalMs = 0;
+  private streamingMs = 0;
   private hud!: ReturnType<typeof mountControls>;
 
   override async load(): Promise<void> {
@@ -176,19 +187,27 @@ class WorkerStreamedTerrainScene extends Scene {
   private setupInput(): void {
     this.inputs.onActive(Keyboard.A, () => (this.moveX = -1));
     this.inputs.onStop(Keyboard.A, () => {
-      if (this.moveX < 0) this.moveX = 0;
+      if (this.moveX < 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.D, () => (this.moveX = 1));
     this.inputs.onStop(Keyboard.D, () => {
-      if (this.moveX > 0) this.moveX = 0;
+      if (this.moveX > 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.W, () => (this.moveY = -1));
     this.inputs.onStop(Keyboard.W, () => {
-      if (this.moveY < 0) this.moveY = 0;
+      if (this.moveY < 0) {
+        this.moveY = 0;
+      }
     });
     this.inputs.onActive(Keyboard.S, () => (this.moveY = 1));
     this.inputs.onStop(Keyboard.S, () => {
-      if (this.moveY > 0) this.moveY = 0;
+      if (this.moveY > 0) {
+        this.moveY = 0;
+      }
     });
   }
 
@@ -241,19 +260,29 @@ class WorkerStreamedTerrainScene extends Scene {
 
     this.marker.rotation += 2 * delta;
 
+    const streamStart = performance.now();
+
     this.streamer.update();
 
-    // Exponential moving average smooths out single-frame noise so the
-    // readout reflects sustained jank rather than every GC blip.
-    this.frameMs = this.frameMs * 0.9 + delta * 1000 * 0.1;
+    const streamingMs = performance.now() - streamStart;
 
+    // The raw frame-to-frame delta, not the clamped `update` delta, which would
+    // cap exactly the stalls this comparison is about; the streaming time is
+    // what the provider costs the main thread inside it. The moving averages
+    // reflect sustained jank rather than GC blips.
+    const { rawFrameDeltaMs } = this.app.backend.stats;
+
+    this.frameIntervalMs = this.frameIntervalMs * 0.9 + rawFrameDeltaMs * 0.1;
+    this.streamingMs = this.streamingMs * 0.9 + streamingMs * 0.1;
     this.hudTimer += delta;
+
     if (this.hudTimer >= 0.25) {
-      this.hudTimer = 0;
       const tx = Math.floor(this.explorer.x / TILE);
       const ty = Math.floor(this.explorer.y / TILE);
+
+      this.hudTimer = 0;
       this.hud.setStatus(
-        `${this.providerMode} · ${this.frameMs.toFixed(1)} ms/frame · ${this.streamer.residentCount} chunks · tile ${tx}, ${ty} · seed ${this.seed} · cost ${this.extraCost}`,
+        `${this.providerMode} · ${this.frameIntervalMs.toFixed(1)} ms between frames · ${this.streamingMs.toFixed(1)} ms streaming on the main thread · ${this.streamer.residentCount} chunks · tile ${tx}, ${ty} · seed ${this.seed} · cost ${this.extraCost}`,
       );
     }
   }

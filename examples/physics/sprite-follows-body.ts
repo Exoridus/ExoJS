@@ -90,17 +90,23 @@ class SpriteFollowsBodyScene extends Scene {
   }
 
   private readonly onDown = (pointer: { x: number; y: number }): void => {
-    if (Math.abs(pointer.x - this.actorBody.x) > 42 || Math.abs(pointer.y - this.actorBody.y) > 55) return;
+    if (Math.abs(pointer.x - this.actorBody.x) > 42 || Math.abs(pointer.y - this.actorBody.y) > 55) {
+      return;
+    }
     this.onEnd();
     this.dragJoint = this.world.addJoint(new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }));
   };
 
   private readonly onMove = (pointer: { x: number; y: number }): void => {
-    if (this.dragJoint) this.dragJoint.target = pointer;
+    if (this.dragJoint) {
+      this.dragJoint.target = pointer;
+    }
   };
 
   private readonly onEnd = (): void => {
-    if (!this.dragJoint) return;
+    if (!this.dragJoint) {
+      return;
+    }
     this.world.removeJoint(this.dragJoint);
     this.dragJoint = null;
   };
@@ -134,7 +140,9 @@ class SpriteFollowsBodyScene extends Scene {
           : `Moving at ${restingSpeed.toFixed(0)} px/s.`,
     );
 
-    if (!this.dragJoint && (body.y > height + 200 || Math.abs(body.x - width / 2) > width)) this.resetActor();
+    if (!this.dragJoint && (body.y > height + 200 || Math.abs(body.x - width / 2) > width)) {
+      this.resetActor();
+    }
   }
 
   override draw(context: RenderingContext): void {

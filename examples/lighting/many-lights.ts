@@ -33,7 +33,9 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
-  if (context === null) throw new Error('2D canvas context unavailable.');
+  if (context === null) {
+    throw new Error('2D canvas context unavailable.');
+  }
   paint(context);
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
@@ -110,10 +112,14 @@ class ManyLightsScene extends Scene {
   private readonly onPointerDown = (_pointer: unknown, x: number, y: number): void => {
     const marker = this.orbits[0]?.marker;
     this.draggingFirst = !!marker && Math.hypot(x - marker.x, y - marker.y) < 36;
-    if (this.draggingFirst) this.manualFirst = true;
+    if (this.draggingFirst) {
+      this.manualFirst = true;
+    }
   };
   private readonly onPointerMove = (_pointer: unknown, x: number, y: number): void => {
-    if (!this.draggingFirst) return;
+    if (!this.draggingFirst) {
+      return;
+    }
     this.orbits[0]!.light.setPosition(x, y);
     this.orbits[0]!.marker.setPosition(x, y);
   };
@@ -195,7 +201,9 @@ class ManyLightsScene extends Scene {
 
       orbit.marker.visible = active;
 
-      if (active) this.lighting.add(orbit.light);
+      if (active) {
+        this.lighting.add(orbit.light);
+      }
     }
   }
 
@@ -204,7 +212,9 @@ class ManyLightsScene extends Scene {
     this.elapsed += delta;
 
     for (let index = 0; index < this.visibleLights; index++) {
-      if (index === 0 && this.manualFirst) continue;
+      if (index === 0 && this.manualFirst) {
+        continue;
+      }
       const orbit = this.orbits[index]!;
       const angle = this.elapsed * orbit.speed + orbit.phase;
       const x = width / 2 + Math.cos(angle) * orbit.radiusX;

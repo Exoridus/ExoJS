@@ -33,10 +33,15 @@ class CompressorScene extends Scene {
       label: 'Bypass',
       value: false,
       onChange: value => {
-        if (value === this.bypass) return;
+        if (value === this.bypass) {
+          return;
+        }
         this.bypass = value;
-        if (value) audio.music.removeEffect(this.compressor);
-        else audio.music.addEffect(this.compressor);
+        if (value) {
+          audio.music.removeEffect(this.compressor);
+        } else {
+          audio.music.addEffect(this.compressor);
+        }
         this.hud.setStatus(value ? 'Compressor bypassed.' : 'Compressor active. Compare Quiet and Loud input.');
       },
     });
@@ -78,7 +83,9 @@ class CompressorScene extends Scene {
   }
   destroy() {
     this.voice?.stop();
-    if (!this.bypass) this.app.audio.music.removeEffect(this.compressor);
+    if (!this.bypass) {
+      this.app.audio.music.removeEffect(this.compressor);
+    }
     this.compressor?.destroy();
     this.panel?.dispose();
     this.hud?.dispose();

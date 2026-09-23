@@ -54,8 +54,12 @@ class SplitScreenScene extends Scene {
     this.grid = new Graphics();
     this.grid.lineWidth = 2;
     this.grid.lineColor = new Color(42, 70, 96);
-    for (let x = -1600; x <= 1600; x += 160) this.grid.drawLine(x, -1200, x, 1200);
-    for (let y = -1200; y <= 1200; y += 160) this.grid.drawLine(-1600, y, 1600, y);
+    for (let x = -1600; x <= 1600; x += 160) {
+      this.grid.drawLine(x, -1200, x, 1200);
+    }
+    for (let y = -1200; y <= 1200; y += 160) {
+      this.grid.drawLine(-1600, y, 1600, y);
+    }
     this.labels = [
       new Text('P1 · WASD / Pad 1', { fillColor: new Color(120, 190, 255), fontSize: 24 }).setPosition(24, 160),
       new Text('P2 · Arrows / Pad 2', { fillColor: new Color(255, 180, 120), fontSize: 24 }).setPosition(width / 2 + 24, 160),
@@ -154,7 +158,9 @@ class SplitScreenScene extends Scene {
     context.render(this.leftPlayer, { view: this.rightView });
     context.render(this.rightPlayer, { view: this.rightView });
     context.render(this.divider, { view: context.screenView });
-    for (const label of this.labels) context.render(label, { view: context.screenView });
+    for (const label of this.labels) {
+      context.render(label, { view: context.screenView });
+    }
   }
 }
 

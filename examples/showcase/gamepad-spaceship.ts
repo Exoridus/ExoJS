@@ -148,7 +148,9 @@ class GamepadSpaceshipScene extends Scene {
     const thrust = this.actions.move.value;
     const mag = Math.min(1, Math.hypot(thrust.x, thrust.y));
 
-    if (this.actions.fire.pressed) this.fire();
+    if (this.actions.fire.pressed) {
+      this.fire();
+    }
 
     if (mag > 0.05) {
       this.facing = Math.atan2(thrust.y, thrust.x);
@@ -198,11 +200,17 @@ class GamepadSpaceshipScene extends Scene {
   }
 
   private wrap(point: { x: number; y: number }, width: number, height: number): void {
-    if (point.x < -24) point.x = width + 24;
-    else if (point.x > width + 24) point.x = -24;
+    if (point.x < -24) {
+      point.x = width + 24;
+    } else if (point.x > width + 24) {
+      point.x = -24;
+    }
 
-    if (point.y < -24) point.y = height + 24;
-    else if (point.y > height + 24) point.y = -24;
+    if (point.y < -24) {
+      point.y = height + 24;
+    } else if (point.y > height + 24) {
+      point.y = -24;
+    }
   }
 
   override draw(context: RenderingContext): void {

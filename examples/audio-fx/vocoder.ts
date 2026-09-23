@@ -93,7 +93,9 @@ class VocoderScene extends Scene {
       onChange: value => {
         this.processed = value;
         this.vocoder.wet = value ? 1 : 0;
-        if (this.carrierVoice) this.carrierVoice.volume = value ? 0.45 : 0;
+        if (this.carrierVoice) {
+          this.carrierVoice.volume = value ? 0.45 : 0;
+        }
         this.hud.setStatus(value ? 'Processed voice: phrase drives the carrier.' : 'Dry voice: phrase plays directly.');
       },
     });
@@ -140,7 +142,9 @@ class VocoderScene extends Scene {
     const phrase = PHRASES[this.phraseIndex]!;
     const sound = this.phrases.get(phrase.key);
 
-    if (sound) app.audio.play(sound, { bus: this.processed ? this.modulatorBus : app.audio.sound });
+    if (sound) {
+      app.audio.play(sound, { bus: this.processed ? this.modulatorBus : app.audio.sound });
+    }
     this.hud.setStatus(`${this.processed ? 'Processed' : 'Dry'}: "${phrase.label}"`);
     this.phraseLabel.text = `"${phrase.label}"`;
   }

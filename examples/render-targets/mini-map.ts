@@ -1,5 +1,6 @@
 import {
   Application,
+  clamp,
   Color,
   Container,
   FixedResolutionCanvasSizing,
@@ -13,99 +14,115 @@ import {
   Sprite,
   View,
 } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 
+const WORLD_WIDTH = 3200;
+const WORLD_HEIGHT = 1800;
+const MAP_SIZE = 200;
+const MAP_RADIUS = 92;
+const MAP_SPAN = 1600;
+
+const LANDMARKS = [
+  { x: 360, y: 280, width: 420, height: 260, color: new Color(84, 160, 96) },
+  { x: 1300, y: 180, width: 300, height: 520, color: new Color(196, 142, 78) },
+  { x: 2250, y: 360, width: 560, height: 300, color: new Color(152, 96, 186) },
+  { x: 520, y: 1080, width: 380, height: 420, color: new Color(206, 88, 88) },
+  { x: 1620, y: 1150, width: 620, height: 240, color: new Color(70, 170, 190) },
+  { x: 2620, y: 1180, width: 280, height: 380, color: new Color(220, 200, 90) },
+];
+
+const buildWorld = (): Graphics => {
+  const ground = new Graphics();
+
+  ground.fillColor = new Color(38, 58, 92);
+  ground.drawRectangle(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  ground.lineWidth = 2;
+  ground.lineColor = new Color(62, 86, 124);
+
+  for (let x = 0; x <= WORLD_WIDTH; x += 100) {
+    ground.drawLine(x, 0, x, WORLD_HEIGHT);
+  }
+
+  for (let y = 0; y <= WORLD_HEIGHT; y += 100) {
+    ground.drawLine(0, y, WORLD_WIDTH, y);
+  }
+
+  for (const { x, y, width, height, color } of LANDMARKS) {
+    ground.fillColor = color;
+    ground.drawRoundedRectangle(x, y, width, height, 24);
+  }
+
+  return ground;
+};
+
+/**
+ * One world, two cameras. The main pass and the minimap pass render the same
+ * container, each through its own View; nothing in the minimap is drawn or
+ * positioned separately.
+ */
 class MiniMapScene extends Scene {
-  private worldContainer!: Container;
-  private world!: Graphics;
-  private player!: Graphics;
-  private miniWorld!: Graphics;
-  private miniPlayer!: Graphics;
-  private miniContent!: Container;
-  private miniRt!: RenderTexture;
-  private miniSprite!: Sprite;
-  private miniFrame!: Graphics;
-  private miniMask!: Graphics;
-  private overlay!: Container;
-  private miniView!: View;
+  private readonly world = new Container();
+  private readonly player = new Graphics();
+  private readonly overlay = new Container();
+  private readonly mask = new Graphics();
+  private camera!: View;
+  private mapCamera!: View;
+  private mapTexture!: RenderTexture;
   private pipeline!: RenderPipeline;
+  private hud!: ReturnType<typeof mountControls>;
   private time = 0;
 
   override init(): void {
-    const app = this.app;
-    const { width } = app;
-    const miniX = width - 220 - 20;
-    const miniY = 20;
+    const { width, height } = this.app;
+    const mapX = width - MAP_SIZE - 20;
+    const mapY = 20;
 
-    this.worldContainer = new Container();
-    this.world = new Graphics();
-    this.player = new Graphics();
-    this.worldContainer.addChild(this.world);
-    this.worldContainer.addChild(this.player);
-    this.miniContent = new Container();
-    this.miniWorld = new Graphics();
-    this.miniPlayer = new Graphics();
-    this.miniContent.addChild(this.miniWorld);
-    this.miniContent.addChild(this.miniPlayer);
+    this.player.fillColor = new Color(255, 180, 100);
+    this.player.drawCircle(0, 0, 28);
+    this.world.addChild(buildWorld());
+    this.world.addChild(this.player);
 
-    this.miniRt = new RenderTexture(220, 160);
-    this.miniSprite = new Sprite(this.miniRt).setPosition(miniX, miniY);
-    this.miniMask = new Graphics();
-    this.miniMask.fillColor = Color.white;
-    this.miniMask.drawCircle(miniX + 110, miniY + 80, 76);
-    this.miniSprite.mask = this.miniMask;
-    this.miniFrame = new Graphics();
-    this.miniFrame.lineWidth = 2;
-    this.miniFrame.lineColor = Color.white;
-    this.miniFrame.drawCircle(miniX + 110, miniY + 80, 76);
+    this.camera = new View(0, 0, width, height);
+    this.mapCamera = new View(0, 0, MAP_SPAN, MAP_SPAN);
+    this.mapTexture = new RenderTexture(MAP_SIZE, MAP_SIZE);
 
-    this.overlay = new Container();
-    this.overlay.addChild(this.miniSprite);
-    this.overlay.addChild(this.miniFrame);
+    const map = new Sprite(this.mapTexture).setPosition(mapX, mapY);
+    const frame = new Graphics();
 
-    this.miniView = new View(110, 80, 220, 160);
+    this.mask.fillColor = Color.white;
+    this.mask.drawCircle(mapX + MAP_SIZE / 2, mapY + MAP_SIZE / 2, MAP_RADIUS);
+    map.mask = this.mask;
+    frame.lineWidth = 3;
+    frame.lineColor = Color.white;
+    frame.drawCircle(mapX + MAP_SIZE / 2, mapY + MAP_SIZE / 2, MAP_RADIUS);
+    this.overlay.addChild(map);
+    this.overlay.addChild(frame);
 
-    // The render-target pass owns its clear; a manual backend clear here would clear the canvas instead.
+    // Each render-target pass owns its clear; a manual backend clear would
+    // clear the canvas instead.
     this.pipeline = new RenderPipeline()
-      .addPass(new RenderNodePass(this.miniContent, { target: this.miniRt, view: this.miniView, clear: Color.black }))
-      .addPass(new RenderNodePass(this.worldContainer, { clear: Color.black }))
+      .addPass(new RenderNodePass(this.world, { target: this.mapTexture, view: this.mapCamera, clear: Color.black }))
+      .addPass(new RenderNodePass(this.world, { view: this.camera, clear: Color.black }))
       .addPass(new RenderNodePass(this.overlay));
+
+    this.hud = mountControls({
+      title: 'Minimap',
+      status: 'The player wanders a world larger than the screen.',
+      hint: 'Both views follow the same player through the same container; the minimap camera only frames a wider area into a small texture.',
+    });
   }
 
   override update(delta: Seconds): void {
-    const app = this.app;
-    const { width, height } = app;
-    const marginX = 80;
-    const marginY = 60;
+    this.time += delta * 0.35;
 
-    this.time += delta;
+    const x = WORLD_WIDTH / 2 + Math.cos(this.time) * WORLD_WIDTH * 0.4;
+    const y = WORLD_HEIGHT / 2 + Math.sin(this.time * 1.7) * WORLD_HEIGHT * 0.4;
 
-    this.world.clear();
-    this.world.fillColor = new Color(50, 90, 160);
-    this.world.drawRectangle(marginX, marginY, width - 2 * marginX, height - 2 * marginY);
-    this.world.lineWidth = 2;
-    this.world.lineColor = new Color(60, 70, 90);
-    for (let x = marginX; x <= width - marginX; x += 80) this.world.drawLine(x, marginY, x, height - marginY);
-    for (let y = marginY; y <= height - marginY; y += 80) this.world.drawLine(marginX, y, width - marginX, y);
+    const { width, height } = this.app;
 
-    const px = width / 2 + Math.cos(this.time) * (width * 0.4);
-    const py = height / 2 + Math.sin(this.time * 1.3) * (height * 0.4);
-    this.player.clear();
-    this.player.fillColor = new Color(255, 180, 100);
-    this.player.drawCircle(px, py, 18);
-
-    this.miniWorld.clear();
-    this.miniWorld.fillColor = new Color(50, 90, 160);
-    this.miniWorld.drawRectangle(0, 0, 220, 160);
-    this.miniWorld.lineWidth = 1;
-    this.miniWorld.lineColor = new Color(150, 185, 230);
-    for (let x = 0; x <= 220; x += 20) this.miniWorld.drawLine(x, 0, x, 160);
-    for (let y = 0; y <= 160; y += 20) this.miniWorld.drawLine(0, y, 220, y);
-    this.miniPlayer.clear();
-    this.miniPlayer.fillColor = new Color(255, 180, 100);
-    const markerX = (px / width) * 220 - 110;
-    const markerY = (py / height) * 160 - 80;
-    const markerScale = Math.min(1, 65 / Math.hypot(markerX, markerY));
-    this.miniPlayer.drawCircle(110 + markerX * markerScale, 80 + markerY * markerScale, 5);
+    this.player.setPosition(x, y);
+    this.camera.setCenter(clamp(x, width / 2, WORLD_WIDTH - width / 2), clamp(y, height / 2, WORLD_HEIGHT - height / 2));
+    this.mapCamera.setCenter(x, y);
   }
 
   override draw(context: RenderingContext): void {
@@ -113,10 +130,16 @@ class MiniMapScene extends Scene {
   }
 
   override destroy(): void {
-    // Pipeline cascades destroy() to its passes; the caller-owned target/view it created are freed here.
+    // The pipeline destroys its passes; the target, views and nodes they
+    // render stay caller-owned.
     this.pipeline.destroy();
-    this.miniRt.destroy();
-    this.miniView.destroy();
+    this.mapTexture.destroy();
+    this.camera.destroy();
+    this.mapCamera.destroy();
+    this.world.destroy();
+    this.overlay.destroy();
+    this.mask.destroy();
+    this.hud.dispose();
     super.destroy();
   }
 }
@@ -130,9 +153,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(MiniMapScene);

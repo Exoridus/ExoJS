@@ -23,7 +23,9 @@ const createRippleMap = () => {
   canvas.width = MAP_SIZE;
   canvas.height = MAP_SIZE;
   const context = canvas.getContext('2d');
-  if (!context) throw new Error('2D canvas context unavailable.');
+  if (!context) {
+    throw new Error('2D canvas context unavailable.');
+  }
   const image = context.createImageData(MAP_SIZE, MAP_SIZE);
   for (let y = 0; y < MAP_SIZE; y++) {
     for (let x = 0; x < MAP_SIZE; x++) {
@@ -50,12 +52,16 @@ class WaterMirrorScene extends Scene {
   hud;
   dragging = false;
   onPointerDown = (_pointer, x, y) => {
-    if (y < this.app.height / 2) return;
+    if (y < this.app.height / 2) {
+      return;
+    }
     this.dragging = true;
     this.setRippleStrength(x);
   };
   onPointerMove = (_pointer, x) => {
-    if (this.dragging) this.setRippleStrength(x);
+    if (this.dragging) {
+      this.setRippleStrength(x);
+    }
   };
   onPointerEnd = () => {
     this.dragging = false;

@@ -96,20 +96,29 @@ class CrossfadeTracksScene extends Scene {
   }
 
   private selectTrack(target: 0 | 1): void {
-    if (this.app.audio.locked || this.fadeElapsed < this.fadeDuration || target === this.mix) return;
+    if (this.app.audio.locked || this.fadeElapsed < this.fadeDuration || target === this.mix) {
+      return;
+    }
     this.fadeFrom = this.mix;
     this.fadeTo = target;
     this.fadeElapsed = 0;
-    if (target === 1) void crossFade(this.trackAVoice, this.trackBVoice, Time.seconds(this.fadeDuration), { toVolume: PEAK, stopAfter: false });
-    else void crossFade(this.trackBVoice, this.trackAVoice, Time.seconds(this.fadeDuration), { toVolume: PEAK, stopAfter: false });
+    if (target === 1) {
+      void crossFade(this.trackAVoice, this.trackBVoice, Time.seconds(this.fadeDuration), { toVolume: PEAK, stopAfter: false });
+    } else {
+      void crossFade(this.trackBVoice, this.trackAVoice, Time.seconds(this.fadeDuration), { toVolume: PEAK, stopAfter: false });
+    }
     this.hud.setStatus(`Crossfading to Track ${target === 1 ? 'B' : 'A'}…`);
   }
 
   override update(delta: Seconds): void {
-    if (this.fadeElapsed >= this.fadeDuration) return;
+    if (this.fadeElapsed >= this.fadeDuration) {
+      return;
+    }
     this.fadeElapsed = Math.min(this.fadeDuration, this.fadeElapsed + delta);
     this.mix = this.fadeFrom + (this.fadeTo - this.fadeFrom) * (this.fadeElapsed / this.fadeDuration);
-    if (this.fadeElapsed === this.fadeDuration) this.hud.setStatus(`Track ${this.fadeTo === 1 ? 'B' : 'A'} active.`);
+    if (this.fadeElapsed === this.fadeDuration) {
+      this.hud.setStatus(`Track ${this.fadeTo === 1 ? 'B' : 'A'} active.`);
+    }
   }
 
   private drawMeter(x: number, level: number, active: boolean, color: Color): void {

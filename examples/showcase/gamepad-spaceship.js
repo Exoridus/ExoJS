@@ -112,7 +112,9 @@ class GamepadSpaceshipScene extends Scene {
     const { width, height } = app;
     const thrust = this.actions.move.value;
     const mag = Math.min(1, Math.hypot(thrust.x, thrust.y));
-    if (this.actions.fire.pressed) this.fire();
+    if (this.actions.fire.pressed) {
+      this.fire();
+    }
     if (mag > 0.05) {
       this.facing = Math.atan2(thrust.y, thrust.x);
       this.ship.setRotation((this.facing * 180) / Math.PI + 90);
@@ -153,10 +155,16 @@ class GamepadSpaceshipScene extends Scene {
     }
   }
   wrap(point, width, height) {
-    if (point.x < -24) point.x = width + 24;
-    else if (point.x > width + 24) point.x = -24;
-    if (point.y < -24) point.y = height + 24;
-    else if (point.y > height + 24) point.y = -24;
+    if (point.x < -24) {
+      point.x = width + 24;
+    } else if (point.x > width + 24) {
+      point.x = -24;
+    }
+    if (point.y < -24) {
+      point.y = height + 24;
+    } else if (point.y > height + 24) {
+      point.y = -24;
+    }
   }
   draw(context) {
     this.fx.clear();

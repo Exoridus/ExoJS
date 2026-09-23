@@ -129,7 +129,9 @@ class SettingsMenuScene extends Scene {
   }
 
   override update(delta: Seconds): void {
-    if (this.settings.motion) this.angle += delta * 45;
+    if (this.settings.motion) {
+      this.angle += delta * 45;
+    }
     this.preview.setRotation(this.angle);
   }
 

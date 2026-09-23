@@ -112,7 +112,9 @@ class SettingsMenuScene extends Scene {
     }
   }
   update(delta) {
-    if (this.settings.motion) this.angle += delta * 45;
+    if (this.settings.motion) {
+      this.angle += delta * 45;
+    }
     this.preview.setRotation(this.angle);
   }
   draw(context) {

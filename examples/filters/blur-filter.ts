@@ -92,7 +92,9 @@ class BlurAndShadowScene extends Scene {
   override draw(context: RenderingContext): void {
     context.render(this.reference);
     context.render(this.filtered);
-    for (const label of this.labels) context.render(label);
+    for (const label of this.labels) {
+      context.render(label);
+    }
   }
 }
 

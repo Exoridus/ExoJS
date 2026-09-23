@@ -65,15 +65,21 @@ class SpriteFollowsBodyScene extends Scene {
     this.inputs.onTrigger(Keyboard.R, this.resetActor);
   }
   onDown = pointer => {
-    if (Math.abs(pointer.x - this.actorBody.x) > 42 || Math.abs(pointer.y - this.actorBody.y) > 55) return;
+    if (Math.abs(pointer.x - this.actorBody.x) > 42 || Math.abs(pointer.y - this.actorBody.y) > 55) {
+      return;
+    }
     this.onEnd();
     this.dragJoint = this.world.addJoint(new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }));
   };
   onMove = pointer => {
-    if (this.dragJoint) this.dragJoint.target = pointer;
+    if (this.dragJoint) {
+      this.dragJoint.target = pointer;
+    }
   };
   onEnd = () => {
-    if (!this.dragJoint) return;
+    if (!this.dragJoint) {
+      return;
+    }
     this.world.removeJoint(this.dragJoint);
     this.dragJoint = null;
   };
@@ -101,7 +107,9 @@ class SpriteFollowsBodyScene extends Scene {
           ? `Resting on the floor (${restingSpeed.toFixed(0)} px/s)`
           : `Moving at ${restingSpeed.toFixed(0)} px/s.`,
     );
-    if (!this.dragJoint && (body.y > height + 200 || Math.abs(body.x - width / 2) > width)) this.resetActor();
+    if (!this.dragJoint && (body.y > height + 200 || Math.abs(body.x - width / 2) > width)) {
+      this.resetActor();
+    }
   }
   draw(context) {
     context.render(this.floor);

@@ -34,7 +34,9 @@ class MetaballsScene extends Scene {
     this.dragging = Math.hypot(x - this.dragPoint.x, y - this.dragPoint.y) < 58;
   };
   onPointerMove = (_pointer, x, y) => {
-    if (this.dragging) this.dragPoint = { x, y };
+    if (this.dragging) {
+      this.dragPoint = { x, y };
+    }
   };
   onPointerEnd = () => {
     this.dragging = false;

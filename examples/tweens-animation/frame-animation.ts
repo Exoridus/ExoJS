@@ -52,8 +52,11 @@ class FrameAnimationScene extends Scene {
     });
     this.inputs.onTrigger(Keyboard.Space, () => {
       this.playing = !this.playing;
-      if (this.playing) this.sprite.resume();
-      else this.sprite.pause();
+      if (this.playing) {
+        this.sprite.resume();
+      } else {
+        this.sprite.pause();
+      }
       this.updateHud(this.sprite.currentFrame);
     });
     this.inputs.onTrigger(Keyboard.Right, () => this.selectCharacter());
@@ -63,7 +66,9 @@ class FrameAnimationScene extends Scene {
   private selectCharacter(): void {
     this.characterIndex = (this.characterIndex + 1) % CHARACTERS.length;
     this.sprite.play(CHARACTERS[this.characterIndex]);
-    if (!this.playing) this.sprite.pause();
+    if (!this.playing) {
+      this.sprite.pause();
+    }
   }
 
   private updateHud(frame: number): void {

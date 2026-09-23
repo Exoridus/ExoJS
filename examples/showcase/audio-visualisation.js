@@ -130,7 +130,9 @@ class AudioVisualisationScene extends Scene {
       const start = this.bandEdges[band];
       const end = Math.max(start + 1, this.bandEdges[band + 1]);
       let sum = 0;
-      for (let bin = start; bin < end; bin++) sum += freqData[bin];
+      for (let bin = start; bin < end; bin++) {
+        sum += freqData[bin];
+      }
       const level = sum / ((end - start) * 255);
       const x = band * bandWidth + bandWidth / 2;
       this.context.fillStyle = '#283342';

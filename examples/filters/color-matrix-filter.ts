@@ -21,7 +21,9 @@ const makeRamp = (): HTMLCanvasElement => {
   canvas.width = RAMP_SIZE;
   canvas.height = 1;
   const context = canvas.getContext('2d');
-  if (!context) throw new Error('2D canvas context unavailable.');
+  if (!context) {
+    throw new Error('2D canvas context unavailable.');
+  }
   const image = context.createImageData(RAMP_SIZE, 1);
   for (let i = 0; i < RAMP_SIZE; i++) {
     const phase = (i / RAMP_SIZE) * Math.PI * 2;
@@ -41,7 +43,9 @@ const makeCoolLut = (): HTMLCanvasElement => {
   canvas.width = width;
   canvas.height = LUT_SIZE;
   const context = canvas.getContext('2d');
-  if (!context) throw new Error('2D canvas context unavailable.');
+  if (!context) {
+    throw new Error('2D canvas context unavailable.');
+  }
   const image = context.createImageData(width, LUT_SIZE);
   const max = LUT_SIZE - 1;
   for (let b = 0; b < LUT_SIZE; b++) {
@@ -105,11 +109,17 @@ class ColorTransformsScene extends Scene {
   }
 
   private setMode(index: number): void {
-    if (index === 0) this.processed.filters = [this.matrix.reset().grayscale()];
-    else if (index === 1) this.processed.filters = [this.matrix.reset().sepia()];
-    else if (index === 2) this.processed.filters = [this.rampFilter];
-    else if (index === 3) this.processed.filters = [this.cubeFilter];
-    else this.processed.filters = [];
+    if (index === 0) {
+      this.processed.filters = [this.matrix.reset().grayscale()];
+    } else if (index === 1) {
+      this.processed.filters = [this.matrix.reset().sepia()];
+    } else if (index === 2) {
+      this.processed.filters = [this.rampFilter];
+    } else if (index === 3) {
+      this.processed.filters = [this.cubeFilter];
+    } else {
+      this.processed.filters = [];
+    }
     this.hud.setStatus(MODES[index] ?? MODES[4]);
   }
 

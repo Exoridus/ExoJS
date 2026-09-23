@@ -33,7 +33,9 @@ class ReverbAndDelayScene extends Scene {
     this.panel.addButton({
       label: 'Play impact',
       onClick: () => {
-        if (!audio.locked) audio.play(this.sound, { bus: audio.sound });
+        if (!audio.locked) {
+          audio.play(this.sound, { bus: audio.sound });
+        }
       },
     });
     this.panel.addButton({ label: 'Small room', onClick: () => this.setPreset('Small room', 0.3, 1.3, 0.12, 0.18, 0.2) });

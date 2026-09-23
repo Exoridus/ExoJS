@@ -124,7 +124,9 @@ class BatchingScene extends Scene {
 }
 
 const boot = async (type: 'webgl2' | 'webgpu'): Promise<void> => {
-  if (booting) return;
+  if (booting) {
+    return;
+  }
   booting = true;
   try {
     overlay?.destroy();

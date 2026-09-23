@@ -80,14 +80,18 @@ class EffectChainsScene extends Scene {
     this.panel.addButton({
       label: 'Play impact',
       onClick: () => {
-        if (!audio.locked) audio.play(this.impact);
+        if (!audio.locked) {
+          audio.play(this.impact);
+        }
       },
     });
     this.musicVoice = audio.play(this.music, { loop: true, volume: 0.7 });
     this.rebuild();
   }
   select(index) {
-    if (index === this.selected) return;
+    if (index === this.selected) {
+      return;
+    }
     this.selected = index;
     this.rebuild();
   }
@@ -122,10 +126,14 @@ class EffectChainsScene extends Scene {
     this.hud.setStatus(`${chain.name}: preparing ${this.active.length} effects...`);
     void Promise.all(this.active.map(effect => effect.ready)).then(
       () => {
-        if (generation === this.generation) this.hud.setStatus(`${chain.name}: ${this.active.length} effects ready.`);
+        if (generation === this.generation) {
+          this.hud.setStatus(`${chain.name}: ${this.active.length} effects ready.`);
+        }
       },
       error => {
-        if (generation === this.generation) this.hud.setStatus(`${chain.name}: ${error instanceof Error ? error.message : String(error)}`);
+        if (generation === this.generation) {
+          this.hud.setStatus(`${chain.name}: ${error instanceof Error ? error.message : String(error)}`);
+        }
       },
     );
   }
@@ -144,7 +152,11 @@ class EffectChainsScene extends Scene {
     }
     context.render(this.rack);
     context.render(this.title);
-    for (const label of this.stageLabels) if (label.visible) context.render(label);
+    for (const label of this.stageLabels) {
+      if (label.visible) {
+        context.render(label);
+      }
+    }
   }
   destroy() {
     ++this.generation;
@@ -159,7 +171,9 @@ class EffectChainsScene extends Scene {
     this.hud?.dispose();
     this.rack.destroy();
     this.title?.destroy();
-    for (const label of this.stageLabels) label.destroy();
+    for (const label of this.stageLabels) {
+      label.destroy();
+    }
     super.destroy();
   }
 }

@@ -1,17 +1,4 @@
-import {
-  Application,
-  Asset,
-  Assets,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  Keyboard,
-  type RenderingContext,
-  Scene,
-  SceneState,
-  Sprite,
-  Text,
-} from '@codexo/exojs';
+import { Application, Asset, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const GameAssets = Assets.from({
@@ -25,7 +12,8 @@ const GameAssets = Assets.from({
  * One progress bar for everything the loader is doing, then a hand-over to the
  * game scene. Nothing is awaited in `load()`: the bar is driven by the loader's
  * own signals, which see every `load(...)` call from every scene and system -
- * not just this scene's.
+ * not just this scene's. Completion is recorded as state and acted on from
+ * `update()`, which only runs while this scene is active.
  */
 class BootScene extends Scene {
   private bar!: Graphics;
@@ -35,6 +23,8 @@ class BootScene extends Scene {
   private total = 0;
   private failed = false;
   private loading = false;
+  private complete = false;
+  private leaving = false;
   private message = 'Waiting for the first request…';
 
   private onLoadStart!: (key: string, url: string) => void;
@@ -77,7 +67,7 @@ class BootScene extends Scene {
       if (this.failed) {
         this.message = 'Load failed. Press Space to retry.';
       } else {
-        this.enterGame();
+        this.complete = true;
       }
     };
 
@@ -99,6 +89,7 @@ class BootScene extends Scene {
 
   private loadAssets(): void {
     this.failed = false;
+    this.complete = false;
     this.loading = true;
     this.loaded = 0;
     this.total = 0;
@@ -122,17 +113,17 @@ class BootScene extends Scene {
     app.loader.onLoadComplete.remove(this.onLoadComplete);
   }
 
-  /** Leaves for the game - but only while this scene is still the one on screen. */
-  private enterGame(): void {
-    // Check `attached` first: it never throws, unlike `state`, which does
-    // once the scene has been fully detached. `Active` is the only state
-    // allowed to navigate - suspended, unloading, or detached must not.
-    if (!this.attached || this.state !== SceneState.Active) {
+  override update(): void {
+    // A warm cache completes while this scene is still preparing, before it
+    // may navigate. Acting on the recorded completion here instead of inside
+    // the signal handler covers that case, and never navigates away from a
+    // scene that is no longer the active one.
+    if (!this.complete || this.leaving) {
       return;
     }
 
-    const app = this.app;
-    void app.scenes.change(PlayScene);
+    this.leaving = true;
+    void this.app.scenes.change(PlayScene);
   }
   // #endregion guide:boot-unsubscribe
 

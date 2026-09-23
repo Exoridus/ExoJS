@@ -87,7 +87,9 @@ class CachedAssetsScene extends Scene {
   }
 
   private async run(action: 'Warm' | 'Clear', task: () => Promise<unknown>): Promise<void> {
-    if (this.busy) return;
+    if (this.busy) {
+      return;
+    }
     this.busy = true;
     this.result.text = `${action} in progress...`;
     try {
@@ -103,7 +105,9 @@ class CachedAssetsScene extends Scene {
   }
 
   private async request(asset: typeof warmAsset, name: string): Promise<void> {
-    if (this.busy) return;
+    if (this.busy) {
+      return;
+    }
     this.busy = true;
     this.result.text = `Loading ${name}...`;
     const scope = this.loader.createScope({ name: `request:${name}` });

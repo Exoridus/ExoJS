@@ -4,7 +4,9 @@ import { ObjectKind, type TileMapObject } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 
 const contains = (object: TileMapObject, x: number, y: number): boolean => {
-  if (object.kind === ObjectKind.Point) return Math.hypot(x - object.x, y - object.y) <= 20;
+  if (object.kind === ObjectKind.Point) {
+    return Math.hypot(x - object.x, y - object.y) <= 20;
+  }
   if (object.kind === ObjectKind.Ellipse) {
     const nx = (x - object.x - object.width / 2) / (object.width / 2);
     const ny = (y - object.y - object.height / 2) / (object.height / 2);
@@ -64,17 +66,22 @@ class TiledMapImportScene extends Scene {
       this.overlay.lineWidth = selected ? 6 : 3;
       this.overlay.lineColor = selected ? new Color(255, 191, 82) : new Color(48, 166, 184, 0.8);
       this.overlay.fillColor = selected ? new Color(255, 191, 82, 0.28) : new Color(48, 166, 184, 0.14);
-      if (object.kind === ObjectKind.Point) this.overlay.drawCircle(object.x, object.y, selected ? 17 : 12);
-      else if (object.kind === ObjectKind.Ellipse)
+      if (object.kind === ObjectKind.Point) {
+        this.overlay.drawCircle(object.x, object.y, selected ? 17 : 12);
+      } else if (object.kind === ObjectKind.Ellipse) {
         this.overlay.drawEllipse(object.x + object.width / 2, object.y + object.height / 2, object.width / 2, object.height / 2);
-      else this.overlay.drawRectangle(object.x, object.y, object.width, object.height);
+      } else {
+        this.overlay.drawRectangle(object.x, object.y, object.width, object.height);
+      }
     }
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.mapNode);
     context.render(this.overlay);
-    for (const label of this.labels) context.render(label);
+    for (const label of this.labels) {
+      context.render(label);
+    }
   }
 
   override destroy(): void {

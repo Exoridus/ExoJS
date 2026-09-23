@@ -81,7 +81,9 @@ class CachedAssetsScene extends Scene {
     });
   }
   async run(action, task) {
-    if (this.busy) return;
+    if (this.busy) {
+      return;
+    }
     this.busy = true;
     this.result.text = `${action} in progress...`;
     try {
@@ -96,7 +98,9 @@ class CachedAssetsScene extends Scene {
     }
   }
   async request(asset, name) {
-    if (this.busy) return;
+    if (this.busy) {
+      return;
+    }
     this.busy = true;
     this.result.text = `Loading ${name}...`;
     const scope = this.loader.createScope({ name: `request:${name}` });

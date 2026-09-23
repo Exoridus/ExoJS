@@ -174,7 +174,7 @@
       "path": "input/key-rebinding.js",
       "language": "typescript",
       "title": "Key Rebinding",
-      "description": "Let players reassign key bindings at runtime and persist the new mapping through a serialisable InputProfile.",
+      "description": "Let players reassign key bindings at runtime and persist the new mapping through a serialisable BindingProfile.",
       "backend": "core",
       "tags": ["input", "keyboard"],
       "capabilities": ["keyboard"],
@@ -347,7 +347,7 @@
       "path": "render-targets/mini-map.js",
       "language": "typescript",
       "title": "Minimap",
-      "description": "Render a second view of the world into a texture and clip its HUD overlay to a circle.",
+      "description": "Render the same world through a second, wider View into a texture and clip it to a round HUD minimap.",
       "backend": "core",
       "tags": ["rendering", "camera", "advanced"],
       "level": "intermediate"
@@ -362,6 +362,7 @@
       "description": "Play named spritesheet clips with AnimatedSprite, press Right to switch characters, and press Space to pause or resume.",
       "backend": "core",
       "tags": ["animation", "sprite"],
+      "capabilities": ["keyboard"],
       "level": "intermediate"
     },
     {
@@ -581,7 +582,7 @@
       "path": "render-targets/trail-feedback.js",
       "language": "typescript",
       "title": "Trail Feedback",
-      "description": "Create motion trails by feeding the previous frame back into the current frame with slight fade and blur.",
+      "description": "Create motion trails by feeding the previous frame back into the current frame with a slight fade.",
       "backend": "core",
       "tags": ["fx", "rendering", "advanced"],
       "level": "intermediate"
@@ -602,10 +603,10 @@
       "path": "sprites-textures/video-drawable.js",
       "language": "typescript",
       "title": "Video Drawable",
-      "description": "Stream a video element as a live GPU texture and composite it with sprites and filters.",
+      "description": "Stream a video element as a live GPU texture, composite a sprite over it, and switch between clips at runtime.",
       "backend": "core",
       "tags": ["sprite", "rendering"],
-      "capabilities": ["pointer", "keyboard", "audio"],
+      "capabilities": ["pointer", "keyboard"],
       "level": "advanced"
     },
     {
@@ -672,7 +673,7 @@
       "path": "lighting/lightmap-normals.js",
       "language": "typescript",
       "title": "Normals under the Lightmap Renderer",
-      "description": "Forty-five cobbles that nobody authored a normal map for: each one hands the lighting system its own silhouette, a prepass draws the derived normals where the stone sits, and the light field shades against them. Switching the normals off leaves the light exactly as bright.",
+      "description": "Forty-five cobbles that nobody authored a normal map for: each one hands the lighting system its own silhouette, a prepass draws the derived normals where the stone sits, and the light field shades against them. Switching the normals off flattens the relief and leaves the stones slightly brighter: normals redistribute light across a surface, they never add any.",
       "backend": "core",
       "featured": false,
       "tags": ["lighting", "material", "shader"],
@@ -852,7 +853,7 @@
       "path": "audio-fx/ducking.js",
       "language": "typescript",
       "title": "Ducking",
-      "description": "Automatically lower music volume when a sound effect plays — classic game audio ducking via the DuckingFilter.",
+      "description": "Automatically lower music volume when a sound effect plays — classic game audio ducking via the DuckingEffect.",
       "backend": "core",
       "tags": ["audio", "fx", "ducking"],
       "capabilities": ["pointer", "audio"],

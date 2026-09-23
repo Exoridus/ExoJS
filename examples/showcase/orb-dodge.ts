@@ -107,8 +107,11 @@ class PlayScene extends Scene {
 
     const gfx = new Graphics();
     gfx.fillColor = danger ? new Color(255, 80, 80) : new Color(80, 220, 120);
-    if (danger) gfx.drawStar(0, 0, 4, ORB_RADIUS * 1.25, ORB_RADIUS * 0.68, Math.PI / 4);
-    else gfx.drawCircle(0, 0, ORB_RADIUS);
+    if (danger) {
+      gfx.drawStar(0, 0, 4, ORB_RADIUS * 1.25, ORB_RADIUS * 0.68, Math.PI / 4);
+    } else {
+      gfx.drawCircle(0, 0, ORB_RADIUS);
+    }
     gfx.setPosition(ox, oy);
     this.world.addChild(gfx);
     this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });

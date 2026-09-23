@@ -79,7 +79,9 @@ class GamepadScene extends Scene {
   }
 
   override destroy(): void {
-    for (const entry of [...this.axes, ...this.buttons]) entry.binding.unbind();
+    for (const entry of [...this.axes, ...this.buttons]) {
+      entry.binding.unbind();
+    }
     this.hud?.dispose();
     this.status?.destroy();
     this.axisText?.destroy();

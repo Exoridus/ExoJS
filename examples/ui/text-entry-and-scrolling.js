@@ -1,6 +1,7 @@
 // Auto-generated from text-entry-and-scrolling.ts - edit the .ts source, not this file.
 import {
   Application,
+  Button,
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
@@ -31,11 +32,7 @@ class TextEntryScene extends Scene {
     fields.addItem(new Label('Note', { fontSize: 20, fillColor: Color.white }));
     this.note = new TextArea({ width: 350, height: 110, placeholder: 'Write a short note', maxLength: 80 });
     fields.addItem(this.note);
-    const add = new Panel({ width: 350, height: 48, color: new Color(54, 120, 220), cornerRadius: 8 });
-    add.interactive = true;
-    add.focusable = true;
-    add.cursor = 'pointer';
-    add.addChild(new Label('Add to list', { fontSize: 20, fillColor: Color.white }).setPosition(127, 10));
+    const add = new Button({ width: 350, height: 48, label: 'Add to list', fontSize: 20, color: new Color(54, 120, 220), cornerRadius: 8 });
     fields.addItem(add);
     this.status = new Label('Tab between fields; wheel to scroll the list.', { fontSize: 17, fillColor: new Color(180, 205, 230) });
     fields.addItem(this.status);
@@ -59,10 +56,11 @@ class TextEntryScene extends Scene {
       ['Jules', 'Drag the scrollbar thumb.'],
       ['Ari', 'The list grows as notes are added.'],
       ['Nia', 'Click a field to edit it.'],
-    ])
+    ]) {
       this.addNote(name, note);
+    }
     this.name.onSubmit.add(() => this.note.focus());
-    const submit = () => {
+    add.onClick.add(() => {
       const name = this.name.value.trim();
       const note = this.note.value.trim();
       if (!name || !note) {
@@ -73,19 +71,6 @@ class TextEntryScene extends Scene {
       this.name.value = '';
       this.note.value = '';
       this.status.text = 'Note added.';
-    };
-    add.onPointerTap.add(submit);
-    add.onKeyDown.add(event => {
-      if (event.channel === Number(Keyboard.Enter)) {
-        event.preventDefault();
-        submit();
-      }
-    });
-    add.onFocus.add(() => {
-      add.setFill({ borderColor: Color.white, borderWidth: 3 });
-    });
-    add.onBlur.add(() => {
-      add.setFill({ borderWidth: 0 });
     });
     // Claim Tab so browser focus stays on the canvas while UI focus moves.
     this.inputs.onTrigger(Keyboard.Tab, () => {

@@ -87,7 +87,9 @@ class BlurAndShadowScene extends Scene {
   draw(context) {
     context.render(this.reference);
     context.render(this.filtered);
-    for (const label of this.labels) context.render(label);
+    for (const label of this.labels) {
+      context.render(label);
+    }
   }
 }
 const app = new Application({
