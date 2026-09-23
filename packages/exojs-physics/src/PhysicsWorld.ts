@@ -184,11 +184,11 @@ const worldPositionOf = (node: SceneNode): Readonly<PointLike> => {
 };
 
 /**
- * {@link PhysicsWorld.attach}'s default `angle` (radians): `node`'s current
- * WORLD rotation, decomposed from `getWorldTransform()`'s linear part
- * (`atan2(-c, a)` - `SceneNode.updateTransform` builds its rotation block as
- * `[[cosθ, sinθ], [-sinθ, cosθ]]`, i.e. `b = sinθ`/`c = -sinθ`, matching the
- * radians ⇄ degrees round-trip `PhysicsBinding.sync` already relies on).
+ * {@link PhysicsWorld.attach}'s default `angle` (radians): the body angle whose
+ * colliders line up with `node`'s current WORLD rotation. `SceneNode` builds its
+ * rotation block as `[[cosθ, sinθ], [-sinθ, cosθ]]`, which turns counter-clockwise
+ * on the Y-down screen while a body angle turns clockwise, so the angle is
+ * `atan2(c, a)` = `-θ` - the inverse of the negation `PhysicsBinding.sync` applies.
  * Falls back to `0` for a duck-typed node without `getWorldTransform`.
  */
 const worldAngleOf = (node: SceneNode): number => {
@@ -197,7 +197,7 @@ const worldAngleOf = (node: SceneNode): number => {
   if (typeof asNode.getWorldTransform === 'function') {
     const world = asNode.getWorldTransform();
 
-    return Math.atan2(-world.c, world.a);
+    return Math.atan2(world.c, world.a);
   }
 
   return 0;
@@ -266,7 +266,7 @@ export interface AttachOptions {
   type?: BodyType;
   /** Initial world position of the body. Default the node's current WORLD position ({@link SceneNode.getWorldTransform}) at attach time. */
   position?: Readonly<PointLike>;
-  /** Initial rotation (radians) of the body. Default the node's current WORLD rotation at attach time. */
+  /** Initial rotation (radians) of the body. Default the angle matching the node's current WORLD rotation at attach time, so the node keeps its orientation once the body syncs it. */
   angle?: number;
   /** Per-body multiplier on world gravity. Default `1`. */
   gravityScale?: number;

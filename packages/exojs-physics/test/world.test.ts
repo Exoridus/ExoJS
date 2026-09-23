@@ -649,7 +649,7 @@ describe("PhysicsWorld.attach: defaults to the node's world position (P2f)", () 
     parent.destroy();
   });
 
-  it("defaults the body angle to the node's current world rotation when no angle option is given", () => {
+  it("defaults the body angle to the one matching the node's current world rotation when no angle option is given", () => {
     const world = new PhysicsWorld();
     const node = new Drawable();
 
@@ -657,7 +657,20 @@ describe("PhysicsWorld.attach: defaults to the node's world position (P2f)", () 
 
     const body = world.attach(node, { shape: new CircleShape(5) });
 
-    expect(body.angle).toBeCloseTo(Math.PI / 2, 6);
+    expect(body.angle).toBeCloseTo(-Math.PI / 2, 6);
+
+    node.destroy();
+  });
+
+  it("keeps an attached node's rotation when the body syncs it back", () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const node = new Drawable();
+
+    node.setRotation(40);
+    world.attach(node, { shape: new CircleShape(5) });
+    world.step(1 / 60);
+
+    expect(node.rotation).toBeCloseTo(40, 6);
 
     node.destroy();
   });
@@ -686,7 +699,7 @@ describe("PhysicsWorld.attach: defaults to the node's world position (P2f)", () 
 
     const body = world.attach(node, { shape: new CircleShape(5) });
 
-    expect(body.angle).toBeCloseTo((45 * Math.PI) / 180, 6);
+    expect(body.angle).toBeCloseTo(-(45 * Math.PI) / 180, 6);
 
     parent.destroy();
   });

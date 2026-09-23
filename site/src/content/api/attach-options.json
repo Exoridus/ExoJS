@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial rotation (radians) of the body. Default the node's current WORLD rotation at attach time."
+          "description": "Initial rotation (radians) of the body. Default the angle matching the node's current WORLD rotation at attach time, so the node keeps its orientation once the body syncs it."
         },
         {
           "name": "density",
