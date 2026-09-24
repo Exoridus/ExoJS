@@ -441,19 +441,19 @@ export default defineConfig({
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
+          // `--use-angle=swiftshader` renders on the CPU, so several Chromium
+          // instances racing for the same cores contend rather than gain
+          // anything: 78 files at default (parallel) concurrency measured no
+          // faster than sequential on an otherwise-loaded machine (~72s vs
+          // ~80s), and under that same load one file's timing-sensitive test
+          // missed its 15s timeout at 4x its isolated run time - reproduced
+          // twice, and the file passed clean every time run alone or as part
+          // of the sequential suite. `fileParallelism: false` trades the
+          // (near-zero) parallel speedup for not flaking under load.
+          fileParallelism: false,
           browser: {
             enabled: true,
             headless: webgl2Headless,
-            // `--use-angle=swiftshader` renders on the CPU, so several Chromium
-            // instances racing for the same cores contend rather than gain
-            // anything: 78 files at default (parallel) concurrency measured no
-            // faster than sequential on an otherwise-loaded machine (~72s vs
-            // ~80s), and under that same load one file's timing-sensitive test
-            // missed its 15s timeout at 4x its isolated run time - reproduced
-            // twice, and the file passed clean every time run alone or as part
-            // of the sequential suite. `fileParallelism: false` trades the
-            // (near-zero) parallel speedup for not flaking under load.
-            fileParallelism: false,
             provider: playwright({
               launchOptions: { channel: 'chromium', args: ['--enable-webgl', '--use-angle=swiftshader'] },
             }),
@@ -486,6 +486,12 @@ export default defineConfig({
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
+          // Software WebRender contends for the same cores the way SwiftShader
+          // does for Chromium. On a 4-core machine, three parallel files took
+          // as long end to end as the sequential suite (~620s vs ~610s) while
+          // every file ran ~3x slower, pushing 16 tests past their 15s
+          // timeout; sequentially only one did.
+          fileParallelism: false,
           browser: {
             enabled: true,
             headless: !firefoxCiHeaded,
