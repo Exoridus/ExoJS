@@ -19,6 +19,10 @@ jobs:
     if: github.ref == 'refs/heads/docs/documentation-refresh-d0538029'
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      # CI executes the declared checks below; workstation hooks would repeat them.
+      # No repository hook, test, baseline, or gate is changed by this workflow.
+      HUSKY: '0'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -27,20 +31,32 @@ jobs:
       - name: Materialize learning navigation and canonical links
         run: |
           pnpm exec tsx _migration/rewrite-navigation.ts
-          pnpm exec prettier --write site/src/lib/guide-structure.ts examples/guides/physics-basics/falling-box.ts examples/guides/particles/basic-emitter.ts examples/guides/lighting/basic-lightmap.ts examples/guides/ui/basic-hud.ts examples/guides/coordinates-and-views/split-views.ts examples/guides/audio-reactive-visualization/spectrum-scene.ts examples/guides/audio-reactive-visualization/spectrum-history.ts
-      - name: Commit only generated documentation changes to the review branch
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          source = json.loads(Path('_migration/source.json').read_text())['sourceCommit']
+          changed = subprocess.check_output(['git', 'diff', '--name-only', source, '--', 'examples/guides'], text=True).splitlines()
+          fresh = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard', '--', 'examples/guides'], text=True).splitlines()
+          files = sorted({p for p in changed + fresh if p.endswith('.ts') and Path(p).is_file()})
+          if files:
+              subprocess.run(['pnpm', 'exec', 'eslint', '--fix', '--max-warnings=0', *files], check=True)
+              subprocess.run(['pnpm', 'exec', 'prettier', '--write', *files], check=True)
+          subprocess.run(['pnpm', 'exec', 'prettier', '--write', 'site/src/lib/guide-structure.ts'], check=True)
+          PY
+      - name: Commit documentation materialization only to the review branch
         shell: bash
         run: |
           test "$GITHUB_REF" = refs/heads/docs/documentation-refresh-d0538029
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- README.md CONTRIBUTING.md AGENTS.md site/src/content/guide site/src/lib/guide-structure.ts site/src/components site/src/pages packages/*/README.md examples/guides _migration/navigation-map.json
+          git diff --cached --check
           if ! git diff --cached --quiet; then
             git commit -m 'docs: implement learning taxonomy and canonical example navigation'
             git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
           fi
           echo "TESTED_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-      - name: Reproduce documented lifecycle boundaries
+      - name: Reproduce scope ownership boundary
         id: probes
         continue-on-error: true
         run: NODE_OPTIONS='--conditions=@codexo/exojs-source' pnpm exec tsx --tsconfig tsconfig.json _migration/probe-loader-scope.ts
@@ -48,6 +64,10 @@ jobs:
         id: guide_types
         continue-on-error: true
         run: pnpm typecheck:guides
+      - name: Typecheck educational source files
+        id: example_types
+        continue-on-error: true
+        run: pnpm typecheck:examples
       - name: Guide and snippet regression tests
         id: guide_tests
         continue-on-error: true
@@ -58,6 +78,7 @@ jobs:
         env:
           PROBES: ${{ steps.probes.outcome }}
           GUIDE_TYPES: ${{ steps.guide_types.outcome }}
+          EXAMPLE_TYPES: ${{ steps.example_types.outcome }}
           GUIDE_TESTS: ${{ steps.guide_tests.outcome }}
         run: |
           python3 - <<'PY'
@@ -67,12 +88,17 @@ jobs:
               'sourceCommit': json.loads(Path('_migration/source.json').read_text())['sourceCommit'],
               'testedCommit': os.environ.get('TESTED_COMMIT', os.environ['GITHUB_SHA']),
               'runId': os.environ['GITHUB_RUN_ID'],
-              'checks': {name: os.environ[name] for name in ['PROBES', 'GUIDE_TYPES', 'GUIDE_TESTS']},
+              'checks': {name: os.environ[name] for name in ['PROBES', 'GUIDE_TYPES', 'EXAMPLE_TYPES', 'GUIDE_TESTS']},
               'stage': 'intermediate navigation and content validation'
           }
           print(json.dumps(report, indent=2))
           Path('_migration/intermediate-validation.json').write_text(json.dumps(report, indent=2) + '\n')
           PY
+          git add _migration/intermediate-validation.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: record observed documentation validation results'
+            git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -80,4 +106,4 @@ jobs:
           path: _migration/intermediate-validation.json
       - name: Require successful checks
         if: always()
-        run: test '${{ steps.probes.outcome }}' = success && test '${{ steps.guide_types.outcome }}' = success && test '${{ steps.guide_tests.outcome }}' = success
+        run: test '${{ steps.probes.outcome }}' = success && test '${{ steps.guide_types.outcome }}' = success && test '${{ steps.example_types.outcome }}' = success && test '${{ steps.guide_tests.outcome }}' = success
