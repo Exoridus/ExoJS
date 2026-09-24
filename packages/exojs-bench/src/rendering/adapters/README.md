@@ -1,46 +1,33 @@
 # Rendering benchmark adapters
 
-Each file here is one **arm** of the rendering benchmark: an object implementing the neutral `EngineAdapter` contract (see `../EngineAdapter.ts`) that the harness drives identically. The committed arms are:
+An adapter hosts one rendering library inside the same controlled harness. Its job is to represent a declared scenario faithfully, not to make every library appear to support every workload. Competitor libraries are pinned in the private benchmark competitor workspace; do not add them as public ExoJS runtime dependencies.
 
-- **`exojs.ts`** — the ExoJS engine, exposed as two configs: `current` (the default per-frame path) and `retained` (the RetainedContainer instruction set). Always present.
-- **`pixi.ts`** — Pixi.js v8, the direct renderer comparison and the only other 2D library that ships WebGPU. An **official, committed arm**: `pixi.js` is a pinned exact devDependency (no `^`/`~`) of `@codexo/exojs-bench`, and its version + resolution path are stamped into every report header.
-- **`phaser.ts`** — Phaser 4.2, WebGL-only in this harness (Phaser 4 ships no WebGPU renderer). Measured as a **stock Phaser 4 app**: Phaser 4's `WebGLRenderer` requests a plain `webgl` (WebGL1) context by default (`canvas.getContext('webgl')`, WebGLRenderer.js:709; GLSL ES 1.00 shaders, extension-polyfilled instancing/VAO — an evolution of the Phaser 3.85+ renderer, **not** a from-scratch WebGL2 one). It runs under the `webgl2` backend request but renders **WebGL** — disclosed in every Phaser cell's `note` and the report Methodology. The WebGL2 structural probe cannot attach to a WebGL context, so the Phaser arm reports no draw-call counters (omitted, never faked); its CPU time is measured identically to the other arms and **is** cross-arm comparable. Committed pinned devDependency.
-- **`excalibur.ts`** — Excalibur 0.32, a real WebGL2 arm (structural probe + GPU timer attach exactly as for the ExoJS/Pixi WebGL2 arms). Committed pinned devDependency.
+## Adapter boundary
 
-Arms are registered in `../page/harness.ts` (`resolveAdapter`) and included in the driver's cell matrix (`../driver.ts` `ADAPTER_CAPABILITIES`), with each competitor's version stamped into the report header via `readLibraryProvenance`. Each competitor module is imported lazily on first use, so an ExoJS-only run never loads one and a competitor left unlinked fails only its own cells.
+Use the provided canvas, backend choice, dimensions, and deterministic scenario input. The harness owns scheduling, warm-up, measurement, and presentation of results. Do not create another requestAnimationFrame loop or resize the shared canvas independently.
 
-> The former gitignored `reference.local.ts` slot (a local-only, never-committed reference arm) has been **retired**: the comparison is now openly reproducible — anyone can `pnpm --filter @codexo/exojs-bench bench` and re-derive the numbers against the exact pinned competitor build, which is what makes an "ExoJS vs X" statement auditable rather than unverifiable.
+Initialization prepares the renderer. Scene construction creates the requested workload. The update path applies the canonical mutations. Rendering submits that scene. Teardown releases adapter-owned state without deleting the harness's canvas or leaving a timer, observer, application ticker, or event listener alive.
 
-## Adding a new committed arm
+Declare unsupported scenarios or backend paths explicitly. An adapter that produces a different image or simulates a smaller workload does not become comparable by returning a timing. Phaser's WebGL path must be described by the API it actually uses; a group labelled by the harness's requested backend is not proof that every library created a WebGL2 context.
 
-To add another library (e.g. Phaser, Excalibur, Konva — a separate follow-on, gated on confirming the arm set):
+## Equivalent work
 
-1. Add the library as a **pinned exact-version** devDependency of `@codexo/exojs-bench` (never a `^`/`~` range, never vendored source).
-2. Add an `adapters/<lib>.ts` exporting a `create<Lib>Adapter()` factory that implements the `EngineAdapter` contract and follows the fairness rules below.
-3. Register it in `resolveAdapter` (harness) and, if the driver should schedule its cells, in `ADAPTER_CAPABILITIES` and `readLibraryProvenance` (driver).
+Use the scenario's object count, texture set, geometry, tree shape, masks, filters, mutation selection, and visibility policy. Disable library-side culling only through a setting or path that actually controls it. An inert option with the right name is not evidence of equivalent traversal.
 
-It runs **in the browser page**, not in the Node driver, so it may freely use `document`, WebGL2/WebGPU and the library's browser runtime.
+Use the shared deterministic mutation-selection helper and its expected signature. Do not substitute a similarly seeded random loop: a different consumption order can change which leaves update and how much work an implementation performs. Preserve the canonical ordering when it is part of the scenario.
 
-### The `EngineAdapter` contract
+Compare each library through its supported API. A no-op filter, flattened hierarchy, missing mask, or cheaper substitute belongs in a different scenario or an explicit exclusion. Do not add special cases after seeing which implementation wins.
 
-Every arm implements (full JSDoc in `../EngineAdapter.ts`):
+## Measurements and counters
 
-- `engine: string` — arm label, e.g. `'pixi'`. Reported verbatim.
-- `config: string` — configuration label, e.g. `'current'` / `'retained'` / `'default'`.
-- `supports(backend): boolean` — `true` for each backend (`'webgl2'` / `'webgpu'`) this arm can run. Unsupported backends are skipped, not failed.
-- `init(canvas, backend): Promise<void>` — create the engine against the given canvas and backend. Pin the backend explicitly; never auto-select, and refuse a silent fallback to a different backend.
-- `buildScene(spec, nodeCount, seed): void` — build the scene for the archetype (see fairness rules below).
-- `mutate(frame): void` — apply the archetype's per-frame mutation.
-- `renderFrame(): void` — render exactly one frame (the harness owns cadence; do not start the engine's own `requestAnimationFrame` loop).
-- `teardown(): void` — release the scene and engine instance. The harness owns the `#stage` canvas and gives each cell a fresh one, so never detach it from the DOM (e.g. Pixi's `destroy` is called with `removeView: false`).
-- `gpuDevice?(): GPUDevice | null` — optional; return the live `GPUDevice` when initialised on `'webgpu'` so the harness can attach its structural probe (a WebGL2 context is instead recovered from the canvas). Return `null` otherwise. (Pixi exposes it as `renderer.gpu.device`.) If an arm genuinely cannot surface the device, the harness degrades gracefully — it keeps timing and skips the structural counters for that cell rather than failing the run.
-- `mutationSignature?(): string` — optional but **strongly recommended**; return `mutationSignature(selectedIndices)` (from `../../shared/mutation.ts`) for the set your most recent `buildScene` selected. The harness asserts it against the canonical selection and **fails the run loudly** if it diverges, so the cross-arm comparison rests on a check rather than prose. An arm that omits it runs, but prints a warning that its determinism is unverified.
+CPU-side timing covers the region defined by the harness. It does not automatically include GPU completion, presentation, or every application task. Structural probes observe draw calls and resource operations only where the underlying API is available; absent counters are unknown, not zero.
 
-### Cross-arm fairness contract (MANDATORY)
+WebGPU instrumentation must attach to the device that the adapter actually uses. WebGL probes must instrument the actual context. A second device or a requested context version that the library did not adopt cannot measure the library's work.
 
-Every arm must render the _same_ scene and mutate the _same_ nodes, or the comparison is meaningless. `exojs.ts` follows these rules and any new adapter **must** follow them identically (`pixi.ts` is a faithful transcription):
+Counters support a mechanism hypothesis. They do not prove that one counter caused a measured timing difference. Keep a causal explanation qualified unless a controlled change isolates it.
 
-1. **Same node set.** Build exactly `nodeCount` leaves for the archetype, laid out and nested as `spec` describes (`nestingDepth`, `textureCount`, `cullingEnabled`, the `overdraw` stacking). `cullingEnabled` is currently `false` on every archetype: ExoJS's `.cullable` drives a real per-node bounds check in the render walk, but Pixi's `.cullable` is inert unless the app registers `CullerPlugin` — an identically-set flag does NOT cost the same on both arms. A new adapter that wants culling on must give Pixi (or whichever arm is inert) an equivalent culling mechanism first, or the comparison is asymmetric again.
-2. **Same mutation selection.** Use `selectMutationIndices(nodeCount, spec.mutationFraction, seed)` (from `../../shared/mutation.ts`) — the shared, canonical selection — to pick the leaves you mutate, and expose the result through `mutationSignature()`. The helper seeds a fresh `createRng(seed)` and draws **exactly one** `rng()` value **per leaf, in ascending index order**, selecting the leaf when `rng() < mutationFraction` (drawing for _every_ leaf even when the fraction is `0`). Both arms, sharing this one code path, therefore select the byte-for-byte identical index set, and the harness verifies it. Do not re-implement the draw loop, batch, reorder, or draw more than one value per leaf.
-3. **Same per-frame work.** `mutate(frame)` must disturb only that selected set, with a displacement small enough to never cross the viewport edge (so culling never changes the visible set mid-run).
-4. **Same cadence.** One `renderFrame()` produces one frame; let the harness time it. Do not run the engine's internal render loop.
+## Adding or changing an adapter
+
+Read an existing adapter with the same backend boundary and the canonical scenario types. Implement initialization, scene construction, updates, rendering, capability exclusions, and teardown. Then test the declared image/workload invariants before recording performance.
+
+Exercise repeated initialization and destruction, unsupported backend handling, zero or small counts, and the canonical mutation signature. Acquire complete reference runs only after the implementation is stable. The [harness methodology](../../../docs/harness.md) governs measurement and comparison; [result instructions](../../../results/README.md) govern publication and provenance.
