@@ -8,7 +8,7 @@ on:
       - .github/workflows/documentation-refresh-review.yml
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: documentation-refresh-review
@@ -16,39 +16,35 @@ concurrency:
 
 jobs:
   review:
+    if: github.ref == 'refs/heads/docs/documentation-refresh-d0538029'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          persist-credentials: false
       - uses: ./.github/actions/setup
-      - name: Canonical catalog and documentation checks
+      - name: Materialize learning navigation and canonical links
+        run: |
+          pnpm exec tsx _migration/rewrite-navigation.ts
+          pnpm exec prettier --write site/src/lib/guide-structure.ts examples/guides/physics-basics/falling-box.ts examples/guides/particles/basic-emitter.ts examples/guides/lighting/basic-lightmap.ts examples/guides/ui/basic-hud.ts examples/guides/coordinates-and-views/split-views.ts examples/guides/audio-reactive-visualization/spectrum-scene.ts examples/guides/audio-reactive-visualization/spectrum-history.ts
+      - name: Commit only generated documentation changes to the review branch
         shell: bash
         run: |
-          python3 - <<'PY'
-          import json, subprocess
-          from pathlib import Path
-          source = json.loads(Path('_migration/source.json').read_text())['sourceCommit']
-          print('AUDITED_COMMIT', source)
-          paths = subprocess.check_output(['git', 'ls-tree', '-r', '--name-only', source], text=True).splitlines()
-          docs = [p for p in paths if p.endswith(('.md', '.mdx'))]
-          print('MARKDOWN_FILES', len(docs), 'GUIDES', sum(p.startswith('site/src/content/guide/') for p in docs))
-          catalog = json.loads(Path('examples/examples.json').read_text())
-          for entries in catalog.values():
-              for entry in entries:
-                  print('CANONICAL_EXAMPLE', entry['path'], '|', entry['title'], '|', entry['description'])
-          print('SITE_TESTS')
-          for path in paths:
-              if path.startswith('test/site/') and path.endswith('.test.ts'):
-                  print(path)
-          PY
+          test "$GITHUB_REF" = refs/heads/docs/documentation-refresh-d0538029
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- README.md CONTRIBUTING.md AGENTS.md site/src/content/guide site/src/lib/guide-structure.ts site/src/components site/src/pages packages/*/README.md examples/guides _migration/navigation-map.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'docs: implement learning taxonomy and canonical example navigation'
+            git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
+          fi
+          echo "TESTED_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - name: Reproduce documented lifecycle boundaries
         id: probes
         continue-on-error: true
-        run: pnpm exec tsx --tsconfig tsconfig.json _migration/probe-loader-scope.ts
-      - name: Typecheck Guide snippets
+        run: NODE_OPTIONS='--conditions=@codexo/exojs-source' pnpm exec tsx --tsconfig tsconfig.json _migration/probe-loader-scope.ts
+      - name: Typecheck Guide code blocks
         id: guide_types
         continue-on-error: true
         run: pnpm typecheck:guides
@@ -69,10 +65,10 @@ jobs:
           from pathlib import Path
           report = {
               'sourceCommit': json.loads(Path('_migration/source.json').read_text())['sourceCommit'],
-              'testedCommit': os.environ['GITHUB_SHA'],
+              'testedCommit': os.environ.get('TESTED_COMMIT', os.environ['GITHUB_SHA']),
               'runId': os.environ['GITHUB_RUN_ID'],
               'checks': {name: os.environ[name] for name in ['PROBES', 'GUIDE_TYPES', 'GUIDE_TESTS']},
-              'stage': 'intermediate; navigation consolidation not yet applied'
+              'stage': 'intermediate navigation and content validation'
           }
           print(json.dumps(report, indent=2))
           Path('_migration/intermediate-validation.json').write_text(json.dumps(report, indent=2) + '\n')
