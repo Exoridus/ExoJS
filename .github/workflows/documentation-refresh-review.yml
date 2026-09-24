@@ -1,0 +1,62 @@
+name: Documentation refresh review (temporary)
+
+on:
+  push:
+    branches: [docs/documentation-refresh-d0538029]
+    paths:
+      - _migration/validation-request.json
+      - .github/workflows/documentation-refresh-review.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-refresh-review
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Inventory audited documentation and snippet dependencies
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import collections
+          import json
+          import re
+          import subprocess
+          from pathlib import Path
+
+          source = json.loads(Path('_migration/source.json').read_text())['sourceCommit']
+          def git(*args):
+              return subprocess.check_output(['git', *args]).decode('utf-8')
+          paths = git('ls-tree', '-r', '--name-only', source).splitlines()
+          docs = [p for p in paths if p.endswith(('.md', '.mdx'))]
+          guides = [p for p in docs if p.startswith('site/src/content/guide/')]
+          print('AUDITED_COMMIT', source)
+          print('MARKDOWN_FILES', len(docs), 'GUIDES', len(guides))
+          dependencies = collections.defaultdict(list)
+          for path in docs:
+              text = git('show', source + ':' + path)
+              print('DOCUMENT', path, 'WORDS', len(text.split()))
+              if path in guides:
+                  for tag in re.findall(r'<SourceSnippet\b[\s\S]*?/>', text):
+                      filename = re.search(r'\bsource="([^"]+)"', tag)
+                      region = re.search(r'\bregion="([^"]+)"', tag)
+                      if filename:
+                          dependencies[filename.group(1)].append({'guide': path, 'region': region.group(1) if region else None})
+          print('SNIPPET_DEPENDENCIES_BEGIN')
+          print(json.dumps(dependencies, indent=2))
+          print('SNIPPET_DEPENDENCIES_END')
+          print('DOCUMENTATION_TESTS_BEGIN')
+          for path in paths:
+              if any(part in path.lower() for part in ['guide', 'snippet', 'api-doc', 'example', 'site']) and ('test' in path or 'check' in path):
+                  print(path)
+          print('DOCUMENTATION_TESTS_END')
+          PY
