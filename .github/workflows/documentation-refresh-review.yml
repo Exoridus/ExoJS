@@ -15,48 +15,73 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  inventory:
+  review:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Inventory audited documentation and snippet dependencies
+      - uses: ./.github/actions/setup
+      - name: Canonical catalog and documentation checks
         shell: bash
         run: |
           python3 - <<'PY'
-          import collections
-          import json
-          import re
-          import subprocess
+          import json, subprocess
           from pathlib import Path
-
           source = json.loads(Path('_migration/source.json').read_text())['sourceCommit']
-          def git(*args):
-              return subprocess.check_output(['git', *args]).decode('utf-8')
-          paths = git('ls-tree', '-r', '--name-only', source).splitlines()
-          docs = [p for p in paths if p.endswith(('.md', '.mdx'))]
-          guides = [p for p in docs if p.startswith('site/src/content/guide/')]
           print('AUDITED_COMMIT', source)
-          print('MARKDOWN_FILES', len(docs), 'GUIDES', len(guides))
-          dependencies = collections.defaultdict(list)
-          for path in docs:
-              text = git('show', source + ':' + path)
-              print('DOCUMENT', path, 'WORDS', len(text.split()))
-              if path in guides:
-                  for tag in re.findall(r'<SourceSnippet\b[\s\S]*?/>', text):
-                      filename = re.search(r'\bsource="([^"]+)"', tag)
-                      region = re.search(r'\bregion="([^"]+)"', tag)
-                      if filename:
-                          dependencies[filename.group(1)].append({'guide': path, 'region': region.group(1) if region else None})
-          print('SNIPPET_DEPENDENCIES_BEGIN')
-          print(json.dumps(dependencies, indent=2))
-          print('SNIPPET_DEPENDENCIES_END')
-          print('DOCUMENTATION_TESTS_BEGIN')
+          paths = subprocess.check_output(['git', 'ls-tree', '-r', '--name-only', source], text=True).splitlines()
+          docs = [p for p in paths if p.endswith(('.md', '.mdx'))]
+          print('MARKDOWN_FILES', len(docs), 'GUIDES', sum(p.startswith('site/src/content/guide/') for p in docs))
+          catalog = json.loads(Path('examples/examples.json').read_text())
+          for entries in catalog.values():
+              for entry in entries:
+                  print('CANONICAL_EXAMPLE', entry['path'], '|', entry['title'], '|', entry['description'])
+          print('SITE_TESTS')
           for path in paths:
-              if any(part in path.lower() for part in ['guide', 'snippet', 'api-doc', 'example', 'site']) and ('test' in path or 'check' in path):
+              if path.startswith('test/site/') and path.endswith('.test.ts'):
                   print(path)
-          print('DOCUMENTATION_TESTS_END')
           PY
+      - name: Reproduce documented lifecycle boundaries
+        id: probes
+        continue-on-error: true
+        run: pnpm exec tsx --tsconfig tsconfig.json _migration/probe-loader-scope.ts
+      - name: Typecheck Guide snippets
+        id: guide_types
+        continue-on-error: true
+        run: pnpm typecheck:guides
+      - name: Guide and snippet regression tests
+        id: guide_tests
+        continue-on-error: true
+        run: pnpm exec vitest run test/site/guide-structure.test.ts test/site/guide-runtime-contracts.test.ts test/site/guide-prose-links.test.ts test/site/source-snippets.test.ts
+      - name: Record observed outcomes
+        if: always()
+        shell: bash
+        env:
+          PROBES: ${{ steps.probes.outcome }}
+          GUIDE_TYPES: ${{ steps.guide_types.outcome }}
+          GUIDE_TESTS: ${{ steps.guide_tests.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = {
+              'sourceCommit': json.loads(Path('_migration/source.json').read_text())['sourceCommit'],
+              'testedCommit': os.environ['GITHUB_SHA'],
+              'runId': os.environ['GITHUB_RUN_ID'],
+              'checks': {name: os.environ[name] for name in ['PROBES', 'GUIDE_TYPES', 'GUIDE_TESTS']},
+              'stage': 'intermediate; navigation consolidation not yet applied'
+          }
+          print(json.dumps(report, indent=2))
+          Path('_migration/intermediate-validation.json').write_text(json.dumps(report, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: documentation-intermediate-validation
+          path: _migration/intermediate-validation.json
+      - name: Require successful checks
+        if: always()
+        run: test '${{ steps.probes.outcome }}' = success && test '${{ steps.guide_types.outcome }}' = success && test '${{ steps.guide_tests.outcome }}' = success
