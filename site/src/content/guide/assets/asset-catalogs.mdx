@@ -1,0 +1,52 @@
+---
+title: 'Asset catalogs'
+description: 'Name a group of assets, compose shared definitions, and distinguish deferred catalog leaves from resolved load results.'
+---
+
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+
+# Asset catalogs
+
+A catalog names the resources used by a feature without deciding when they are loaded or how long they stay resident. A loader scope supplies that lifetime. This separation lets two levels share a definition without making either level responsible for the other's cleanup.
+
+Read [Loading and resource lifetimes](/ExoJS/en/guide/assets/loading-and-resources/) first. For one asset, an individual descriptor is sufficient; a catalog becomes useful when a feature has several named inputs.
+
+## Declare once, acquire through an owner
+
+<SourceSnippet source="examples/guides/loading-and-resources/catalogs.ts" region="catalog-definition" language="ts" title="A reusable definition with a texture and decoded data" />
+
+Creating `SharedAssets` does not fetch files. Its texture property is a deferred resource handle; its JSON property is an `AssetRef`. Acquiring the catalog through a scope starts the work and gives that scope claims on its assets.
+
+The generic annotation on `Asset.type<Settings>('json', ...)` expresses an expected TypeScript shape. **It does not validate the downloaded JSON.** Use a synchronous `parse` transform or validate the decoded `unknown` value when the document is not fully controlled by your build pipeline. Do not let a type annotation stand in for validation of a save file, server response, or user-supplied document.
+
+## Two ways to use the completed load
+
+<SourceSnippet source="examples/guides/loading-and-resources/catalogs.ts" region="catalog-result" language="ts" title="Resolved values and the original deferred leaves" />
+
+The returned object contains finished values: `loaded.settings` is `Settings`, not `AssetRef<Settings>`. The original catalog still exposes `SharedAssets.settings`, whose `.value` is now usable. `loaded` is a newly created values map, not the catalog instance.
+
+Code that needs values immediately can use the returned map. Code that binds a texture handle before the load completes can retain the catalog leaf and observe its readiness. Do not replace every catalog leaf after loading; filling existing leaves is part of their purpose.
+
+A failed catalog load rejects its queue. Individual leaves retain their own status, so an error UI can identify the failing asset. A successful sibling is not proof that the catalog as a whole succeeded.
+
+## Compose shared definitions
+
+<SourceSnippet source="examples/guides/loading-and-resources/catalogs.ts" region="catalog-composition" language="ts" title="Share a catalog, then derive a deliberate variant" />
+
+`compose` combines catalogs and preserves their shared leaves. `extend` derives a catalog with explicitly redeclared or additional keys instead of mutating its base. Use descriptive keys and avoid accidental collisions when composing independent features; consult the [`Assets` contract](/ExoJS/en/api/assets/) for collision handling.
+
+A catalog is not a global asset lifetime. Loading the same composed definition through two scopes creates two owners of the shared payload. Destroying one scope does not invalidate the other owner's claim. Once no owner keeps an asset resident, keeping a catalog object in a module is not a promise that its payload remains ready forever.
+
+## Parallel loads and progress
+
+Start independent queues before awaiting them, then use `Promise.all` when both are required. Each queue's progress describes that acquisition group. Aggregate loader signals describe wider activity and can include work started elsewhere.
+
+Background priority belongs to a catalog or catalog leaf load. Per-resource decode options belong in `Asset.type(...)`. Those two option bags solve different problems and are not interchangeable.
+
+## Keep definitions close to the feature
+
+Place a small shared catalog beside the code that consumes it, then compose it into the level or UI definition that needs it. Avoid one application-wide catalog that eagerly loads every possible screen. For streaming, make the level runtime own its scope and let its catalog describe only its inputs.
+
+Streamed music, video, browser fonts, and other types without placeholder leaves are normally loaded with explicit awaited descriptors. Do not assume that an arbitrary resource can participate in every catalog or `get()` form just because it has an asset type.
+
+Continue with [Worlds and level streaming](/ExoJS/en/guide/assets/worlds-and-spawning/) for independently unloadable content, or the [`Assets`](/ExoJS/en/api/assets/), [`LoaderScope`](/ExoJS/en/api/loader-scope/), and [`AssetRef`](/ExoJS/en/api/asset-ref/) references for exact contracts.

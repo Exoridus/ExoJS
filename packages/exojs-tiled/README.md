@@ -1,163 +1,61 @@
 # @codexo/exojs-tiled
 
-Official ExoJS extension for loading [Tiled](https://mapeditor.org) maps (`.tmj` JSON format) into a generic runtime `TileMap` or a typed parsed source model.
+Load Tiled JSON maps into ExoJS's format-neutral tilemap runtime. Use this adapter for `.tmj` maps and their tilesets; use `@codexo/exojs-tilemap` alone for maps created directly in code.
 
-## Installation
-
-```sh
-npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-tiled
-```
-
-Both `@codexo/exojs` and `@codexo/exojs-tilemap` are **peer** dependencies, so install them explicitly alongside the adapter. Nothing is pulled in transitively: strict package managers (pnpm, Yarn PnP) will not resolve an unlisted peer, and npm's auto-install of peers still leaves the versions outside your control. Keep the engine and every adapter on the same version.
-
-If you want the generic tilemap runtime without the Tiled adapter:
+## Install
 
 ```sh
-npm install @codexo/exojs @codexo/exojs-tilemap
+npm install --save-exact @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-tiled
 ```
 
-## What this package provides
+Core and the tilemap runtime are peer dependencies. Install them explicitly and keep them on the adapter's compatible release line.
 
-- `TileMap` (re-exported from `@codexo/exojs-tilemap`) — generic runtime tilemap; the common-case result of `loader.load(Asset.type('tileMap', url))`
-- `TileMapNode` / `TileLayerNode` (re-exported from `@codexo/exojs-tilemap`) — scene nodes that render a loaded `TileMap` on WebGL2/WebGPU
-- `TileMapView` / `TileMapBand` (re-exported from `@codexo/exojs-tilemap`) — group a map's layers into independently placeable bands for interleaving actors between tile layers; same class identity, so `instanceof` holds across both import paths (the canonical view/band docs live in the [`@codexo/exojs-tilemap` README](https://www.npmjs.com/package/@codexo/exojs-tilemap))
-- `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(Asset.type('tiledSource', url))`
-- `TiledTileset` — parsed tileset (atlas-image or collection-of-images); holds resolved textures
-- `TiledLayer` hierarchy — `TiledTileLayer`, `TiledObjectLayer`, `TiledImageLayer`, `TiledGroupLayer`
-- `TiledObject` — parsed object (point, ellipse, polygon, polyline, text, tile-ref, rectangle)
-- `TiledFormatError` — typed error thrown on any structural problem in `.tmj`/`.tsj` data
-- `tiledExtension` — extension descriptor; depends on `tilemapExtension` automatically
+## Load and render a map
 
-## Usage — common case
-
-Register the extension, load a `.tmj` map into a generic runtime `TileMap`, and render it. One extension enables **both** loading and rendering — `tiledExtension` depends on `tilemapExtension`, so the tile chunk renderer bindings are materialised automatically (no manual `tilemapExtension` registration):
+`tiledExtension` installs the map loader and depends on `tilemapExtension`, which supplies rendering. Importing the package alone does not activate it.
 
 ```ts
-import { Application, Asset } from '@codexo/exojs';
-import { TileMap, TileMapNode, tiledExtension } from '@codexo/exojs-tiled';
+import { Application, Asset, Scene, type RenderingContext } from '@codexo/exojs';
+import { TileMapNode, tiledExtension } from '@codexo/exojs-tiled';
 
-const app = new Application({ extensions: [tiledExtension] });
+class MapScene extends Scene {
+  override async load(): Promise<void> {
+    const map = await this.loader.load(Asset.type('tileMap', 'maps/world.tmj'));
 
-const map = await app.loader.load(Asset.type('tileMap', 'maps/world.tmj'));
-// map is a @codexo/exojs-tilemap TileMap
+    this.root.addChild(new TileMapNode(map));
+  }
 
-app.scenes.root.addChild(new TileMapNode(map));
+  override draw(context: RenderingContext): void {
+    context.render(this.root);
+  }
+}
+
+const app = new Application({
+  scenes: { MapScene },
+  extensions: [tiledExtension],
+  canvas: { width: 800, height: 600, mount: 'body' },
+  loader: { basePath: new URL('assets/', document.baseURI).href },
+});
+
+await app.start(MapScene);
 ```
 
-`TileMapNode` and `TileLayerNode` are the same classes exported by `@codexo/exojs-tilemap` (see its [README](https://www.npmjs.com/package/@codexo/exojs-tilemap) for the rendering/culling model and actor interleaving). `instanceof TileMap` holds across both import paths.
+Serve `maps/world.tmj` and the files it references below the configured asset base URL. The ordinary `tileMap` load produces a generic `TileMap`; `tiledSource` instead produces the parsed `TiledMap` for inspection or explicit `toTileMap()` conversion.
 
-## Usage — advanced parsed-source case
+## Before using an authored map
 
-Load the fully resolved Tiled source model and convert it manually:
+The adapter reads JSON (`.tmj` / `.tsj`), not Tiled's XML export. Loading validates known fields and resolves referenced tilesets and images. A parsed source feature is not automatically a rendered gameplay feature: object layers contain data until your code spawns objects or creates colliders. Infinite maps require a chunk-streaming policy; loading the source document alone does not keep every tile resident.
 
-```ts
-import { Asset } from '@codexo/exojs';
+Tileset resources acquired through the loader have loader-managed claims and dependencies. Do not manually destroy a shared tileset texture to unload one map. Give the map a scene or shorter-lived loader scope, and clean up the scene nodes that display it before releasing their required resources.
 
-const source = await app.loader.load(Asset.type('tiledSource', 'maps/world.tmj'));
-const map = source.toTileMap();
-```
+`TileMap`, `TileMapNode`, `TileMapView`, and the other runtime re-exports are the same bindings as in `@codexo/exojs-tilemap`, not independent adapter-specific classes.
 
-Both paths are semantically equivalent. The runtime binding (`TileMap`) uses the Loader-managed source-model sub-load internally, so concurrent or duplicate loads are deduplicated.
+## Learn more
 
-## Extension dependency
-
-`tiledExtension.dependencies` includes `tilemapExtension` from `@codexo/exojs-tilemap`. Passing `tiledExtension` to `ApplicationOptions.extensions` is sufficient — `buildSnapshot` traverses the dependency graph automatically.
-
-## Asset loading
-
-`loader.load(Asset.type('tileMap', url))` (common path) and `loader.load(Asset.type('tiledSource', url))` (advanced path) both:
-
-1. Fetch and validate the `.tmj` file.
-2. Resolve each tileset entry (fetches external `.tsj` files via the Loader cache).
-3. Load atlas images (`tileset.image`) and per-tile images (collection-of-images tilesets) via `loader.load(imageUrl)` — the Loader deduplicates identical URLs.
-4. Validate GID ranges (no duplicates, no overlaps, all layer GIDs covered) — throws `TiledFormatError` on any inconsistency.
-
-The runtime binding additionally calls `TiledMap.toTileMap()` to produce the generic `TileMap`.
-
-### Load options
-
-```ts
-// `.tmj`/`.tsj` are recognised by extension; a format hint is only needed for
-// Tiled data served from a generic `.json` path:
-await loader.load(Asset.type('tileMap', 'maps/world.json', { format: 'tiled' }));
-```
-
-| Option   | Type      | Default   | Description                                                                                                                                                                                             |
-| -------- | --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `format` | `'tiled'` | `'tiled'` | Format hint for ambiguous `.json` paths. `.tmj`/`.tsj` are recognised by extension. `'tiled'` is the only accepted value (a foreign format is a compile error). Participates in the asset identity key. |
-
-Options are optional. Parsing is always strict: `validateTiledMapData` throws a `TiledFormatError` on any malformed _known_ field, and silently preserves _unknown_ fields (so real-world Tiled files using features ExoJS does not model still load).
-
-## Parsed API overview
-
-### `TiledMap`
-
-```ts
-map.source; // resolved URL this map was loaded from
-map.width; // map width in tiles
-map.height; // map height in tiles
-map.tileWidth; // tile grid cell width in pixels
-map.tileHeight; // tile grid cell height in pixels
-map.orientation; // 'orthogonal' | 'isometric' | 'staggered' | 'hexagonal'
-map.renderOrder; // 'right-down' | 'right-up' | 'left-down' | 'left-up' | undefined
-map.infinite; // true for infinite maps (layers use chunks, not flat data)
-map.backgroundColor; // optional CSS color string
-map.layers; // TiledLayer[] — parsed layer hierarchy
-map.tilesets; // TiledTileset[] — sorted by firstGid ascending
-map.properties; // TiledPropertyData[] — custom properties
-map.findTilesetForGid(gid); // → TiledTileset | undefined (masks flip bits automatically)
-map.getProperty(name); // → TiledPropertyData | undefined
-map.toTileMap(); // → TileMap — synchronous runtime conversion
-map.destroy(); // no-op; textures are Loader-owned
-```
-
-### `TiledTileset`
-
-```ts
-tileset.firstGid; // first GID in this tileset's range (inclusive)
-tileset.lastGid; // last GID in this tileset's range (inclusive)
-tileset.name;
-tileset.tileWidth / tileHeight;
-tileset.tileCount / columns / spacing / margin;
-tileset.source; // resolved .tsj URL (undefined for embedded tilesets)
-tileset.imageUrl; // resolved atlas image URL (undefined for collection-of-images)
-tileset.texture; // Texture loaded for imageUrl (Loader-owned)
-tileset.tileTextures; // Map<localId, Texture> for collection-of-images tilesets (Loader-owned)
-tileset.tiles; // TiledTileData[] — per-tile animation/property/collision data
-tileset.getTile(localId); // → TiledTileData | undefined
-tileset.getProperty(name); // → TiledPropertyData | undefined
-```
-
-### `TiledLayer` subclasses
-
-All layers extend `TiledLayer` (base: `id`, `name`, `class`, `visible`, `opacity`, `x`, `y`, `offsetX/Y`, `parallaxX/Y`, `tintColor`, `properties`, `getProperty(name)`).
-
-| Subclass           | `type`          | Extra fields                                                        |
-| ------------------ | --------------- | ------------------------------------------------------------------- |
-| `TiledTileLayer`   | `'tilelayer'`   | `width`, `height`, `data?: number[]` (finite), `chunks?` (infinite) |
-| `TiledObjectLayer` | `'objectgroup'` | `drawOrder`, `objects: TiledObject[]`                               |
-| `TiledImageLayer`  | `'imagelayer'`  | `image`, `repeatX`, `repeatY`                                       |
-| `TiledGroupLayer`  | `'group'`       | `layers: TiledLayer[]`                                              |
-
-### `TiledObject`
-
-Shape discriminants: `point` (boolean), `ellipse` (boolean), `polygon`, `polyline`, `text`, `gid` (tile object). If none are set, the object is a plain rectangle.
-
-`TiledObject.type` is the object's **class**, normalised across Tiled versions: 1.9 wrote it as `class` in the JSON, every other version as `type`. A file carries one of the two, so `class` wins when present and non-empty. That string is also the dispatch key a [`MapObjectSpawner`](https://www.npmjs.com/package/@codexo/exojs-tilemap) sees.
-
-## Texture ownership
-
-Textures for tileset images are loaded via the Loader and remain in the Loader cache. `TiledMap.destroy()` releases the parsed source model's reference but does **not** unload textures. The Loader handles texture lifecycle (including deduplication across maps that share tilesets).
-
-## Core compatibility
-
-This package follows the Core lockstep release line. Its `@codexo/exojs` and `@codexo/exojs-tilemap` peer dependencies require the matching minor release.
-
-## Links
-
-- [Tiled maps guide](https://exoridus.github.io/ExoJS/en/guide/assets/tiled-maps/)
-- [API reference](https://exoridus.github.io/ExoJS/en/api/)
-- [Tiled map editor](https://mapeditor.org)
+- [Tiled maps guide](https://exoridus.github.io/ExoJS/en/guide/assets/tiled-maps/) explains the normal import workflow and format boundaries.
+- [Infinite maps](https://exoridus.github.io/ExoJS/en/guide/rendering/infinite-maps/) explains chunk sources and residency.
+- [Worlds and spawning](https://exoridus.github.io/ExoJS/en/guide/assets/worlds-and-spawning/) turns authored objects into owned game objects.
+- [API reference](https://exoridus.github.io/ExoJS/en/api/tiled-map/) documents the parsed model; [TileMap](https://exoridus.github.io/ExoJS/en/api/tile-map/) documents the runtime model.
 
 ## License
 

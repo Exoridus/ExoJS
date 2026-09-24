@@ -1,273 +1,91 @@
 ---
-title: 'Scenes & lifecycle'
-description: 'How scenes split runtime work, switch with transitions, layer a UI on top, and the order their lifecycle hooks run in.'
+title: 'Scenes and lifecycle'
+description: 'Place loading, simulation, rendering, pause, and cleanup in the right part of a scene lifetime.'
 ---
 
-import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
-import Callout from '../../../components/Callout.astro';
 
-# Scenes & lifecycle
+# Scenes and lifecycle
 
-A [`Scene`](/ExoJS/en/api/scene/) is the unit of runtime work. It loads the resources it needs, builds the objects it draws, advances state each frame, and renders the result. Most game code lives inside scene subclasses.
+An application is the long-lived host. A [`Scene`](/ExoJS/en/api/scene/) is a changeable activity inside it: a menu, level, cutscene, or editor view. Scene navigation keeps the application and canvas alive while changing the work they perform.
 
-The split between application and scene matters: the application is the long-lived host that owns the canvas, the renderer, the input system, and the frame loop. Scenes are the changeable layer on top — menus, levels, cutscenes. The application keeps running as you switch between scenes.
+Start with one scene. Split scenes when activities need distinct activation or teardown, not merely because a class has become long. Ordinary helper objects and containers are sufficient for organizing work within an activity.
 
-## Defining a scene
+## From construction to activation
 
-A scene is a class that extends `Scene`. Override the hooks you need; leave the rest at their defaults:
+Register scene classes in `ApplicationOptions.scenes` and await `app.start(YourScene)`. The director constructs scene instances; do not pass a constructed instance in place of its class.
 
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/title-scene.ts"
-  region="scene-hooks"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/title-scene.ts"
-/>
+| Phase | Put this work here |
+| --- | --- |
+| Constructor and field initializers | Local state and objects that do not need the application or scene services. |
+| `async load(data)` | Await the resources and other prerequisites required for activation. |
+| `init(data)` | Synchronous setup using the attached scene services and loaded resources. |
+| `fixedUpdate(delta)` | Fixed-step simulation, when the scene owns that simulation loop. |
+| `update(delta)` | Variable-step state changes, input-dependent movement, and visual updates. |
+| `draw(context)` | Submit existing state for rendering. |
+| `async unload()` | Await scene-specific shutdown work after a successfully activated scene ends permanently. |
+| `destroy()` | Synchronous cleanup of objects or external subscriptions owned by your code. |
 
-The application calls these hooks for you. You don't wire up `requestAnimationFrame` or manage your own loop — the scene tells the engine what to do at each phase, the engine schedules it.
+`this.app`, `this.loader`, `this.inputs`, `this.systems`, and the other scene-bound services are unavailable during construction. They are available after attachment, including in `load`, `init`, and teardown hooks. A scene's activation-data type is the first `Scene` generic; the same activation data reaches `load` and `init`.
 
-Scene structure stays in your code. State lives on `this`, organized however your project prefers — fields on the scene class for top-level state, helper objects for subsystems, or composition with your own classes. ExoJS does not impose a particular pattern.
+`load` and `unload` are awaitable. `init`, the frame hooks, and `destroy` must remain synchronous. Returning a promise from a synchronous hook does not turn it into another loading phase.
 
-## Running a scene
+## Load before using required resources
 
-Register the scene's constructor and hand it to `app.start`; the application takes over:
+Await essential assets in `load`, then build the scene in `init`. An acquisition through `this.loader` belongs to this scene's lifetime. An acquisition through `this.app.loader` belongs to the application's lifetime instead.
 
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/title-scene.ts"
-  region="run-a-scene"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/title-scene.ts"
-/>
+<SourceSnippet source="examples/guides/loading-and-resources/basic-loading.ts" region="required-scene" language="ts" title="A scene with one required texture" />
 
-From this point on, the application runs the scene's `update` and `draw` once per frame.
+The sample expects `image/hero.png` below the loader's configured asset base path. See [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) for the distinction between an awaited resource and a placeholder.
 
-## Switching scenes
+## Rendering is explicit
 
-Most non-trivial projects have more than one scene. The application owns a scene director (`app.scenes`) that drives the active scene. Use `change` to swap in a new scene, and register scene constructors up front so `change` knows which classes are valid targets:
+Adding nodes to `this.root` creates a hierarchy; it does not submit that hierarchy automatically. Render it from `draw` with `context.render(this.root)`. You can render a different root or several objects when the scene needs separate passes.
 
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/scene-switching.ts"
-  region="scene-switching"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/scene-switching.ts"
-/>
+`this.ui` is different: the scene's screen-fixed UI layer is rendered automatically above its world content. Do not render it again from `draw`. Use [UI and widgets](/ExoJS/en/guide/runtime/ui-and-widgets/) for HUDs, forms, and focus handling.
 
-`change` ends the current scene — running `unload` and `destroy` — and starts a fresh instance of the target. The optional `transition` option (a `SceneTransition` instance, e.g. `FadeSceneTransition`) adds a brief cross-fade so the cut is not jarring.
+Keep loading, object construction, and event binding out of `draw`. Repeating those operations every frame creates work and lifetimes unrelated to the scene's actual changes.
 
-For a typical app: a `MenuScene` calls `this.app.scenes.change(GameScene)` when the player clicks Start. `app.scenes.currentScene` always reflects the currently active scene.
+## Fixed steps and smooth presentation
 
-## Scene UI layer
+Both update hooks receive **seconds**. `fixedUpdate` runs zero or more times before the variable update as the accumulated time permits. The default step is `1 / 60` second; `ApplicationOptions.fixedTimeStep` changes it. Catch-up is bounded, so a long stall is not a promise that every elapsed simulation step will eventually execute.
 
-Every scene has a built-in `scene.ui` layer that sits screen-fixed above the scene's world content. Nodes added to `scene.ui` are always rendered on top — no explicit render call in `draw` required — and they are anchored relative to the canvas, not the world.
+A constant timestep makes simulation timing consistent; it does not by itself guarantee deterministic results across machines, inputs, or physics implementations. For an automatically registered physics system, let that system step its world. Do not also call `world.step()` from `fixedUpdate`.
 
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/hud-layer.ts"
-  region="scene-ui"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/hud-layer.ts"
-/>
+`app.frameAlpha` exposes the fractional remainder between fixed steps. The scene graph does not interpolate automatically. Keep previous and current simulation state and interpolate the rendered representation when you need smooth presentation between steps:
 
-`anchorIn(this.ui, anchor, offsetX, offsetY)` positions a node relative to a named corner or edge of the UI container. Available anchors: `'top-left'`, `'top'`, `'top-right'`, `'left'`, `'center'`, `'right'`, `'bottom-left'`, `'bottom'`, `'bottom-right'`. The offsets are in pixels.
+<SourceSnippet source="examples/guides/scenes-and-lifecycle/frame-alpha.ts" region="frame-alpha" language="ts" title="Interpolate presentation, not simulation state" />
 
-Available UI widgets: `Panel`, `Button`, `Label`, `ProgressBar`, `Stack`. Wire up button interactions with `button.onClick.add(callback)`.
+## Navigate, pause, or retain?
 
-## Pausing and overlays
+These are different operations:
 
-To freeze a scene without leaving it — the canonical pause menu — call `app.scenes.pause()`. It stops `update()` and the scene's systems, but the scene keeps drawing. Call `app.scenes.resume()` to resume.
+| Intent | Mechanism |
+| --- | --- |
+| Leave an activity and start a fresh one | `app.scenes.change(TargetScene, options)` |
+| Stop gameplay updates while keeping the current scene visible | `app.scenes.pause()` and `resume()` |
+| Preserve a scene instance for later use | The director's retention and restoration API |
+| Animate the visual handoff | A scene transition supplied to navigation |
 
-A pause overlay is just nodes on `scene.ui` that you show and hide in response to the state change:
+Await navigation when subsequent work depends on its result, and handle a rejected navigation promise at the initiating boundary. A transition changes the presentation of the handoff; it does not remove loading or failure semantics. [Custom transitions](/ExoJS/en/guide/runtime/writing-your-own-transition/) explains the definition/session boundary when the built-in transitions are insufficient.
 
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/pause-overlay.ts"
-  region="pause-overlay"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/pause-overlay.ts"
-/>
+Ordinary pause stops scene updates and scene systems while allowing the scene to draw. Scene-bound services also have availability policies. In particular, `this.tweens` is **scene-owned**, but its default `when: 'always'` continues during ordinary pause. Choose an active-only policy for gameplay motion and an always or paused policy deliberately for a pause interface.
 
-Because `draw` still runs while paused, the world stays visible behind the overlay. Tweens and app-level systems that do not belong to the scene (for example, a blur tween running on `this.tweens`) continue animating while the scene is frozen.
+At this revision, tween availability is applied at pause/resume transitions rather than being re-evaluated when a tween is created. Do not assume that creating an active-only tween after the scene is already paused immediately freezes it. Retention suspension is a separate boundary: it suspends scene-bound activity until restoration.
 
-## The lifecycle hooks, in order
+## Ownership and teardown
 
-A scene has a small set of hooks the engine calls in a defined order. Knowing which hook runs when keeps state setup clean and avoids subtle "this object is undefined here" bugs.
+The engine cleans up the scene graph, UI, and scene-bound services independently of your `destroy()` override. You do **not** need `super.destroy()` to preserve that internal cleanup. Scene-owned loader claims release automatically; manually unloading every texture in `unload` is neither necessary nor a substitute for choosing the correct owner.
 
-The first time a scene starts:
+Use `this.track(resource)` for a `Destroyable` your scene creates outside those automatically owned facilities. Tracked resources are destroyed in reverse registration order. External DOM listeners, timers, observers, and resources acquired directly at application scope still need an explicit ownership decision.
 
-1. `async load()` — declare assets you need via `this.loader`. Resolves before `init`.
-2. `init(data)` — build state. Must be synchronous. Loaded assets are available via `this.loader.get(...)`; activation data (if the scene declares a data type) arrives here.
+Do not make `unload` the only place that releases partially initialized work: it is not the successful-shutdown hook of a scene that never completed activation. Register ownership when acquiring resources, and use `lifecycleSignal` for cancellable asynchronous work. Scene teardown aborts that signal before unloading. An unrelated promise that ignores cancellation can still finish later; it must not then mutate a scene that has ended.
 
-Then, every frame while the scene is active:
+When a helper owns a shorter-lived scope, destroy the helper before its parent scene ends. Create child scopes only while their parent is live. [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) covers independent claims and nested lifetimes.
 
-3. `fixedUpdate(delta)` — zero or more deterministic steps with a constant `delta`, run before `update`.
-4. `update(delta)` — advance state. `delta` is the elapsed time since the last frame.
-5. `draw(context)` — render the current state.
+## Check the boundary first
 
-Two signals bracket activation from the outside rather than being hooks you override: `Scene.onActivate` fires every time the scene becomes `Active` (fresh start, a consumed preload, or a restore from retention); `Scene.onSuspend` fires when the scene is suspended for retention instead of ended permanently.
+An empty canvas often means the root was never rendered or the canvas was never mounted. An undefined service usually means it was accessed during construction. A surviving sound, request, or tween often means it was created at application scope rather than scene scope. Inspect those boundaries before adding manual cleanup throughout the code.
 
-When the scene is replaced or the application shuts down:
-
-6. `async unload()` — release scene-private assets that aren't needed by the next scene.
-7. `destroy()` — drop scene-graph references and cancel input bindings.
-
-You override the hooks you need. Empty hooks like `update` and `draw` do nothing by default, so there is no setup ceremony for scenes that only need one or two phases. Cleanup hooks are different: if you override `destroy`, keep the built-in cleanup path intact unless the API reference for your version says otherwise.
-
-## load: declare assets
-
-The `load` hook is the async setup hook. Use it to register everything the scene needs and await the loader:
-
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/load-assets.ts"
-  region="load-hook"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/load-assets.ts"
-/>
-
-The application doesn't call `init` until this promise resolves, so by the time you reach `init` everything you declared is ready.
-
-## init: build state
-
-The `init` hook is where you create the scene's actual objects. Read a previously-loaded asset via `this.loader`:
-
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
-  region="init-hook"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
-/>
-
-The `init` hook runs once per scene-start. If you start the scene again later it runs again on the new instance, not on the old one.
-
-## fixedUpdate: deterministic steps
-
-`update` runs once per real frame, so its `delta` varies with the display's refresh rate and any hitches. `fixedUpdate` is the other logic hook: the engine runs it a constant number of times per second — independent of frame rate — before `update`:
-
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
-  region="fixed-update"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
-/>
-
-Behind the scenes, the application accumulates each frame's elapsed time and drains it in fixed-size chunks — `1 / 60` s by default, configurable via `fixedTimeStep` (seconds) on the `Application` constructor options:
-
-```ts
-import { Application } from '@codexo/exojs';
-
-const app = new Application({ fixedTimeStep: 1 / 30 });
-```
-
-At 60 fps, that is one `fixedUpdate` call per frame, tracking `update` one-to-one. At 144 fps, some frames get zero calls and others get one, averaging out to the configured rate. On a stalled frame (a GC pause, a dropped tab), it can run several calls back-to-back so simulation time is never silently lost — capped at an internal maximum so a single long freeze cannot spiral into minutes of catch-up.
-
-Because the step size never changes, `fixedUpdate` is the right place for anything that must behave identically regardless of frame rate — physics stepping is the headline case; see [Physics basics](/ExoJS/en/guide/physics/physics-basics/) for a full `world.step(delta)` walkthrough. Leave camera movement, UI, and anything purely visual in `update`: running those at a fixed rate would make them look choppy on high-refresh-rate displays instead of smoother.
-
-<Callout type="info" title="Which hook for what">
-Deterministic simulation — physics, anything that must behave identically across frame rates — belongs in `fixedUpdate`. Keep camera, UI and purely visual motion in `update`; a fixed rate makes those look choppy on high-refresh displays.
-</Callout>
-
-### frameAlpha: smoothing between steps
-
-Because `fixedUpdate` calls don't line up one-to-one with rendered frames, there is always a small unrendered remainder — the fraction of the current fixed step already elapsed since the last one ran. The application exposes it as `app.frameAlpha`, a value in `[0, 1)`.
-
-**`frameAlpha` is not applied automatically** — the scene graph never interpolates itself. It exists for you to read and use if you want smooth visual motion between fixed steps: keep the previous and current fixed-step positions and lerp between them by `frameAlpha` when you draw.
-
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/frame-alpha.ts"
-  region="frame-alpha"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/frame-alpha.ts"
-/>
-
-If you don't need buttery-smooth motion, ignore `frameAlpha` — most scenes never touch it. It matters once the fixed step is coarser than the display's frame rate (say `fixedTimeStep: 1 / 30` on a 144 Hz screen), where skipping interpolation shows up as visible stutter on fast-moving objects.
-
-## update: per-frame logic
-
-The `update` hook runs once per frame, before `draw`. The argument carries the elapsed time since the previous frame:
-
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
-  region="update-hook"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
-/>
-
-Multiplying by `delta` keeps motion frame-rate independent. The same code runs identically at 60 fps and 144 fps.
-
-## draw: explicit rendering
-
-This is the hook with the most surprising default: **`draw` does nothing if you don't override it.** The engine never auto-traverses the scene graph for you.
-
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
-  region="draw-hook"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
-/>
-
-The `this.root` container is the scene's structural anchor — every node you add via `this.addChild(...)` is reachable from there. Calling `context.render(this.root)` walks the tree and draws every visible node in order.
-
-<Callout type="pitfall" title="An empty draw draws nothing">
-ExoJS never auto-renders the tree. If `draw` is missing or omits `context.render(this.root)`, the frame clears to a blank canvas — with no error to point you at the cause.
-</Callout>
-
-The trade-off is that you can render selectively when you need to:
-
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/selective-draw.ts"
-  region="selective-draw"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/selective-draw.ts"
-/>
-
-For most scenes, one `context.render(this.root)` after `clear` is the right pattern. Reach for selective rendering when you have a reason — debug overlays you toggle, layers that sometimes skip a frame, render-to-texture targets.
-
-When a frame grows into a sequence of distinct phases — render the world, capture it off-screen, composite lighting, draw a HUD, layer in a debug overlay — you can keep that order as data instead of imperative `draw` code. A [`RenderPipeline`](/ExoJS/en/api/render-pipeline/) holds an ordered, individually toggleable (`pass.enabled`), freely nestable list of passes and runs them with a single `pipeline.execute(context)` call from `draw`. It is general frame composition, not only a post-processing tool; the [Post-processing](/ExoJS/en/guide/effects/post-processing/) chapter introduces it in depth.
-
-## Input
-
-Scenes receive input through `this.inputs`, which proxies to the application's input system. Register bindings in `init`:
-
-<SourceSnippet
-  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
-  region="scene-input"
-  language="ts"
-  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
-/>
-
-Bindings created on `this.inputs` are automatically disposed when the scene is destroyed — no manual cleanup required.
-
-## unload and destroy
-
-The `unload` hook runs when the scene ends permanently — replaced by `change`/`restore`, discarded via `unload(Target)`, or the application shuts down (not when the scene is only suspended for retention). Use it to release assets the scene was holding that no other scene needs.
-
-The `destroy` hook is the synchronous final step after `unload`. The default cleanup path disposes scene-owned bindings and graph references. Override only when you have additional cleanup, and keep the built-in cleanup behavior intact.
-
-<Callout type="warning" title="Keep the built-in cleanup when you override destroy">
-The default `destroy` disposes scene-owned input bindings and graph references. Override it without running that built-in path and those bindings and references leak. Add your own cleanup, but keep the default.
-</Callout>
-
-## Examples
-
-<ExamplePreview chapter="application-scenes" slug="multiple-scenes" />
-
-Switch between a menu and a game with `app.scenes.change`, then read each scene's lifecycle events on screen.
-
-<ExamplePreview chapter="ui" slug="hud-and-widgets" />
-
-A screen-fixed HUD on `scene.ui` — a label and a live health bar above the world, no separate overlay scene required.
-
-<ExamplePreview chapter="showcase" slug="pause-blur" />
-
-`app.scenes.pause()`/`resume()` gate `update`; `draw` keeps running. A pause overlay on `scene.ui` is toggled in sync so the player sees a menu while the world freezes.
-
-<ExamplePreview chapter="getting-started" slug="hello-world" />
-
-The minimum lifecycle that produces motion: `init` builds the sprite, `update` rotates it, `draw` renders.
-
-<TryIt
-  examples={['application-scenes/multiple-scenes', 'ui/hud-and-widgets', 'getting-started/hello-world']}
-  api={['scene', 'loader']}
-/>
-
-## Where to go next
-
-The next chapter, [Scene graph](/ExoJS/en/guide/runtime/scene-graph/), covers how parent-child relationships work — what `this.addChild(...)` actually does, how transforms cascade, and how to keep the tree composable.
+<TryIt examples={['application-scenes/multiple-scenes', 'showcase/pause-blur']} api={['scene', 'scene-director', 'loader-scope', 'scene-tweens']} />
