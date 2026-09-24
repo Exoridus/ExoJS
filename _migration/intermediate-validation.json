@@ -1,0 +1,12 @@
+{
+  "sourceCommit": "d0538029bc81095cbc969a702a343fd382da79bb",
+  "testedCommit": "43de85919ba994ac5ac6830bf0744d24fdb8c817",
+  "runId": "35958614606",
+  "checks": {
+    "PROBES": "success",
+    "GUIDE_TYPES": "success",
+    "EXAMPLE_TYPES": "success",
+    "GUIDE_TESTS": "success"
+  },
+  "stage": "intermediate navigation and content validation"
+}
