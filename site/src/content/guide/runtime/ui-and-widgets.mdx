@@ -1,318 +1,79 @@
 ---
-title: 'UI & widgets'
-description: 'Build HUDs and menus on scene.ui with Panel, Button, Label, and ProgressBar widgets — anchoring, layout, clicks, and keyboard focus.'
+title: 'HUDs, menus, and widgets'
+description: 'Build screen-fixed UI, choose layout and input behavior, and keep canvas widgets distinct from DOM accessibility.'
 ---
 
-import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
-import TryIt from '../../../components/TryIt.astro';
-import Callout from '../../../components/Callout.astro';
+import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# UI & widgets
+# HUDs, menus, and widgets
 
-Every scene owns a screen-fixed UI layer, [`scene.ui`](/ExoJS/en/api/uiroot/), that is rendered automatically on top of the world. It lives in screen space (origin top-left, `0..width` × `0..height`), so its contents never scroll or zoom with the camera. Add anything to it with `scene.ui.addChild(...)`.
+A scene has two drawing surfaces with different responsibilities. `scene.root` contains the world you render explicitly. `scene.ui` contains screen-fixed UI that the engine renders automatically above that world. Put a score, health bar, or menu on `ui` so camera movement does not move the interface.
 
-On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), a [`Stack`](/ExoJS/en/api/stack/) layout container, a [`ScrollContainer`](/ExoJS/en/api/scroll-container/) with [`Scrollbar`](/ExoJS/en/api/scrollbar/)s for overflowing content, the form controls [`Checkbox`](/ExoJS/en/api/checkbox/), [`Toggle`](/ExoJS/en/api/toggle/), [`Slider`](/ExoJS/en/api/slider/), [`Dropdown`](/ExoJS/en/api/dropdown/), [`TextInput`](/ExoJS/en/api/text-input/) and [`TextArea`](/ExoJS/en/api/text-area/), and a hover [`Tooltip`](/ExoJS/en/api/tooltip/) helper — for HUDs, menus, and pause screens without hand-built hit-tests.
+Core includes retained UI widgets. You do not need an extra package for buttons, panels, text inputs, sliders, or dropdowns. Use DOM UI instead when the surrounding application, accessibility requirements, browser-native controls, or document layout make it the better host.
 
-## Building blocks
+## Build a small HUD
 
-Each widget takes an options object and exposes the handful of properties you tend to change at runtime:
+This complete scene renders only UI, so it does not need a world `draw` hook:
 
-```ts
-import { Button, Label, Panel, ProgressBar } from '@codexo/exojs';
+<SourceSnippet source="examples/guides/ui/basic-hud.ts" region="basic-hud" language="ts" title="Screen-fixed labels, a health bar, and a button" />
 
-const score = new Label('Score: 0', { fontSize: 24 });
-score.text = 'Score: 120';
+The root owns the widgets and releases them with the scene. The button's signal belongs to that button. A subscription to an external application event or DOM object is a different lifetime and must be released explicitly.
 
-const health = new ProgressBar({ width: 240, height: 14, value: 1 });
-health.value = 0.6; // fill fraction, clamped to [0, 1]
+Do not render `scene.ui` again from `draw`; that would duplicate the automatic overlay. Add world content to `root` and render that root normally when the scene also has gameplay.
 
-const panel = new Panel({ width: 280, height: 160, cornerRadius: 16 });
+## Layout relative to the host
 
-const start = new Button({ label: 'Start', width: 160, height: 44 });
-start.onClick.add(() => console.log('clicked'));
-```
+`anchorIn` positions a widget relative to a UI box. Use edge anchors and margins for screen-fixed controls rather than hardcoded positions based on the initial canvas size. Layout follows logical canvas units, not backing-store pixels.
 
-A `Label` wraps a runtime [`Text`](/ExoJS/en/api/text/), so it accepts the same style options (`fontSize`, `fillColor`, `align`, …). A `Panel` is a rounded background you can add children to. A `Button` is a clickable panel with a centered label and hover / pressed / disabled states.
+Use a `Stack` for a row or column and a `Panel` for its visual grouping. Keep the content's measured size and the panel's intended size consistent. An anchor is not a general flexbox engine: complex forms still need an intentional layout policy for small screens, long translations, and changing content.
 
-## Form controls
+A widget's UI dimensions, drawable bounds, origin, and text ink bounds are related but different. For example, rotating a panel around its center needs an appropriate origin; changing a sprite-style normalized anchor is not a substitute for understanding a container's content box.
 
-Four widgets cover settings screens and in-game options: a [`Checkbox`](/ExoJS/en/api/checkbox/), a [`Toggle`](/ExoJS/en/api/toggle/), a [`Slider`](/ExoJS/en/api/slider/) and a [`Dropdown`](/ExoJS/en/api/dropdown/). All four are focusable, usable from the keyboard alone, and report changes through an `onChange` signal:
+## Choose widgets by task
 
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="controls"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
+| Task | Core building blocks |
+| --- | --- |
+| Read-only status | `Label`, `ProgressBar`, and optional icons. |
+| A command | `Button` with a clear label and activation behavior. |
+| A setting | `Checkbox`, `Slider`, or `Dropdown` as appropriate. |
+| Text entry | `TextInput` or `TextArea`. |
+| Grouped or overflowing content | `Panel`, `Stack`, and `ScrollView`. |
 
-`Checkbox` and `Toggle` are the same two-state control with a different look — `checked`, `toggle()`, `Enter` / `Space` to flip — and both size themselves to their control plus their optional label until you call `setSize()`. A `Slider` clamps its value into `[min, max]` and rounds it to `step` (`0`, the default, is continuous); the arrow keys step it, `Home` / `End` jump to the ends, and dragging the thumb or clicking the groove works everywhere the pointer goes, not only inside the widget.
+The API reference owns each widget's exact options, defaults, and events. The normal workflow is to create the widget, place it in a layout, subscribe to a meaningful user action, and update the displayed value when application state changes. Do not duplicate authoritative game state inside several unrelated widget callbacks.
 
-A `Dropdown` is generic over the value type: `items` pairs each label with the value `onChange` reports, so `selectedValue` comes back typed. With the list open the arrows move the highlight and `Enter` picks it; with it closed they change the selection directly, so a value can be changed without ever opening the list.
+`ProgressBar.value` represents normalized progress. Feed it actual health or loading state. A decorative timer that fills a bar is not evidence that an asset batch succeeded; [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) explains settled, ready, and failed loads.
 
-<Callout type="note">
-A `Dropdown`'s open list is a child of the dropdown, so it draws above whatever the dropdown draws above — and is clipped by the same ancestors. Inside a `ScrollContainer`, put the dropdown where its list has room, or it will be cut off at the clip edge.
-</Callout>
+<ExamplePreview chapter="ui" slug="hud-and-widgets" />
 
-## Text fields
+## Focus and modal interaction
 
-A [`TextInput`](/ExoJS/en/api/text-input/) is a single-line text field drawn on the canvas like every other widget, with a real caret, selection, word jumps, undo and clipboard support:
+Buttons can be operated through pointer input and keyboard focus. Test Tab navigation and Enter or Space activation as well as clicks. Disabling a widget should have an intentional effect on its appearance and interaction; hiding a container is not automatically a complete modal policy.
 
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="text-input"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
+A modal interaction scope limits which nodes can receive interaction. Use one for a dialog that must block the underlying scene, retain its handle, and release it when the dialog closes. Restore the prior focus deliberately. An application-level keyboard listener can still bypass widget focus if your code routes it independently, so coordinate gameplay actions with the modal boundary.
 
-Keyboard input does not come from key codes. The field owns a hidden transport element supplied by the platform adapter, and edits arrive as intents from the browser's own editing pipeline (`beforeinput`), so dead keys, IME composition, autocorrect and paste behave the way they do in any other field on the page. `Enter` fires `onSubmit`, every edit fires `onChange`, and `Escape` and `Tab` release focus without being consumed.
+Pause is a separate concern. A menu can be interactive while gameplay is paused only when its action availability permits that state. See [Pause menus](/ExoJS/en/guide/recipes/pause-menu/) rather than disabling all input globally.
 
-`maxLength`, `filter` and `maskChar` are enforced in the editing model rather than in the key handler, so a paste cannot slip past them: `filter` sees the value the edit *would* produce and refuses the whole edit, never a truncated part of it. A masked field keeps the plain value in `value` and renders one mask character per grapheme; copy and cut are refused while a mask is set, so the transport can never hand the clipboard a password.
+## Text entry and scrolling
 
-`inputMode` and `enterKeyHint` are passed to the transport, which is what decides the on-screen keyboard layout and the label on its confirm key on a phone.
+Text-input widgets use a DOM bridge for browser editing and composition. They are not equivalent to mapping gameplay key codes into characters. Test IME composition, selection, paste, focus transfer, and the host environment's DOM availability.
 
-A [`TextArea`](/ExoJS/en/api/text-area/) is the multi-line field on the same core. `Enter` inserts a line break instead of confirming, `Up` / `Down` move by line and keep the column the caret last chose, `PageUp` / `PageDown` move by as many lines as the field shows, and `Home` / `End` go to the ends of the current line. The content scrolls in both axes to keep the caret visible and is clipped to the field. Its lines are the ones the value states - a long line scrolls sideways rather than wrapping.
+`TextArea` provides its supported text-entry model, not a browser word processor. Dropdown content follows its canvas hierarchy and clipping; do not assume a browser-style portal automatically escapes a clipped scroll view. Choose layout and clipping that leave the menu usable.
 
-<Callout type="note">
-A host with no text-input transport — the offscreen-canvas adapter, for instance — makes the field render and take focus but reject every edit. It is a capability, not a guarantee: check that the field is reachable before making it the only way to enter something.
-</Callout>
+<ExamplePreview chapter="ui" slug="text-entry-and-scrolling" />
 
-## Theming
+<ExamplePreview chapter="ui" slug="settings-menu" />
 
-A widget does not carry its own colours: it paints a **skin** it resolves from the theme of the nearest themed ancestor — the layer's [`UIRoot`](/ExoJS/en/api/uiroot/), or any widget above it that set overrides. A [`UITheme`](/ExoJS/en/api/uitheme/) holds one [`UISkinSet`](/ExoJS/en/api/uiskin-set/) per role (`panel`, `button`, `label`, `progressBarTrack`, `progressBarFill`, `scrollbarTrack`, `scrollbarThumb`, `checkbox`, `checkboxMark`, `toggleTrack`, `toggleKnob`, `sliderTrack`, `sliderFill`, `sliderThumb`, `dropdownList`, `dropdownItem`, `textFieldSurface`, `placeholder`, `selection`, `caret`), and each skin carries a [`UIBackground`](/ExoJS/en/api/uibackground/) descriptor, a text style, and insets. Insets are layout input, so a theme change re-lays out as well as repaints.
+## World labels, minimaps, and DOM overlays
 
-`createUITheme` resolves a patch against the built-in default, which reproduces the widgets' stock look. Assign the result to `scene.ui.theme` to restyle a whole layer, or call `widget.setTheme(patch)` to restyle one subtree:
+A world-space nameplate belongs with its world object or must be projected through the active view each frame. A screen-fixed quest panel belongs on `ui`. [Coordinates and views](/ExoJS/en/guide/runtime/coordinates-and-views/) explains that mapping and multi-view layouts.
 
-```ts
-import { Color, createUITheme, Panel } from '@codexo/exojs';
+A minimap is another rendering of world content, often into a smaller viewport or render texture. It is not a special health-bar widget. Use [Render targets](/ExoJS/en/guide/rendering/render-targets/) for its texture lifetime and [the minimap example](/ExoJS/en/playground/?example=render-targets/mini-map) for a complete composition.
 
-const dark = createUITheme({
-  panel: {
-    normal: {
-      background: { kind: 'fill', color: new Color(18, 20, 28, 1), borderColor: new Color(255, 255, 255, 0.08), borderWidth: 1, cornerRadius: 12 },
-    },
-  },
-  button: {
-    hover: {
-      background: { kind: 'fill', color: new Color(90, 160, 250, 1), borderColor: Color.transparent, borderWidth: 0, cornerRadius: 8 },
-    },
-  },
-});
+A DOM overlay can provide native document semantics and controls while ExoJS renders the world. Define which layer owns pointer and keyboard input. Applying `pointer-events: none` to all DOM UI makes it noninteractive; use that only for genuinely display-only content.
 
-const dialog = new Panel({ width: 280, height: 160 });
+## Accessibility is a product responsibility
 
-dialog.setTheme({ panel: { normal: { background: dark.panel.normal.background } } });
-dialog.setFill({ color: new Color(40, 44, 60, 1) }); // this panel only, on top of its skin
-```
+Canvas drawing does not automatically create a semantic DOM tree for assistive technology. Provide appropriate DOM alternatives, labels, focus behavior, and input routes for the application's requirements. Test readable contrast, text scaling, touch targets, localization, and reduced-motion preferences rather than assuming that a rendered button supplies every browser-native affordance.
 
-A background descriptor is either a fill (the rounded rectangle above), `{ kind: 'none' }`, a nine-slice that stretches a texture without distorting its corners, or a sprite that stretches or tiles flat art.
-
-## Textured skins
-
-Anywhere a background is taken you can state it the way you have it - a colour, a texture, an atlas region, or a full descriptor. A texture becomes a nine-slice; a colour becomes a fill override on top of the skin, so the skin's corner radius and border survive it:
-
-```ts
-import { Button, Color, Panel, ProgressBar, type Texture } from '@codexo/exojs';
-
-declare const frame: Texture;
-declare const idle: Texture;
-declare const hot: Texture;
-
-const panel = new Panel({ width: 280, height: 160, background: frame });
-const start = new Button({ label: 'Start', skin: { normal: idle, hover: hot, disabled: new Color(70, 76, 90, 1) } });
-```
-
-Without `slices`, a texture is sliced at a third of its source size per axis - a usable starting point, not a substitute for stating the slices a skin was drawn for. Pass them (and, where the corners should be drawn at a different scale, `border`) alongside the background: `panel.setBackground(frame, { slices: 8, border: 16 })`. For flat art that has no frame to preserve, pass `fit` instead: `{ fit: 'stretch' }` or `{ fit: 'tile' }`.
-
-A [`ProgressBar`](/ExoJS/en/api/progress-bar/) decides how its bar follows the value with `fillMode`. The default `'clip'` paints the bar's art at full width and shows the leading fraction of it, which is what keeps a textured bar undistorted; `'scale'` paints it at the value's width instead. A fill has no art to distort and is always painted at the value's width:
-
-```ts
-import { ProgressBar, type Texture } from '@codexo/exojs';
-
-declare const barArt: Texture;
-
-const health = new ProgressBar({ width: 240, height: 14, value: 0.6, barBackground: barArt, slices: 6 });
-health.fillMode = 'scale'; // squash the art with the value instead of cutting it
-```
-
-Per-widget style always goes through a setter — `setFill`, `setBackground`, `setTextStyle` — so a change repaints (and re-lays out where it can move something) immediately. Reading `panel.color` gives the value in effect, including the theme's; `panel.fillOverrides` gives only what this panel overrides.
-
-## Anchoring to the screen
-
-Widgets extend [`Widget`](/ExoJS/en/api/widget/), which adds an explicit layout size and screen-edge anchoring. `widget.anchorIn(scene.ui, anchor, offsetX, offsetY)` pins a widget to a corner or edge and re-applies the position whenever the canvas resizes:
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="anchoring"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
-
-The anchor accepts `'top-left'`, `'top'`, `'top-right'`, `'left'`, `'center'`, `'right'`, `'bottom-left'`, `'bottom'`, and `'bottom-right'`.
-
-<Callout type="hint" title="Anchored widgets need no resize handler">
-`anchorIn` re-pins the widget every time the canvas resizes, so a HUD laid out with it never needs a resize handler of your own — set the anchor once and the position tracks the viewport for you.
-</Callout>
-
-## Stacking widgets
-
-A `Stack` flows its children in a row or column with even spacing and sizes itself to fit. Use it for menus and button groups:
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="stack"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
-
-`Stack` re-flows on its own: adding, removing or resizing a child, and setting `direction`, `spacing`, `padding` or `align`, all re-place the items immediately. `align` decides the cross axis - `'start'`, `'center'`, `'end'`, or `'stretch'`, which resizes the items to the stack's cross extent.
-
-A stack sizes itself to its content until you give it a box with `setSize`. From then on it keeps that box, and `stack.setGrow(child, factor)` hands the leftover space along the flow direction to the growing children, split by factor:
-
-```ts
-import { Button, Stack } from '@codexo/exojs';
-
-const sidebar = new Stack({ direction: 'column', spacing: 8, align: 'stretch' });
-const list = new Button({ label: 'Inventory' });
-
-sidebar.addChild(list, new Button({ label: 'Close' }));
-sidebar.setSize(220, 400); // an explicit box is what leaves space to distribute
-sidebar.setGrow(list, 1); // the list takes everything the other items leave
-```
-
-## Docking to the edges
-
-A `DockContainer` pins children to `'top'`, `'right'`, `'bottom'` or `'left'` and gives what is left to `'center'`. Each edge child is sized across its band and keeps its own extent along the other axis, so a docked HUD survives a resize with one `setSize` call:
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="dock"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
-
-Bands are taken in docking order: docking `'top'` before `'left'` gives the top band the full width and the left band only what is left below it. Reverse the two calls and the left band runs the full height instead.
-
-## Scrolling content
-
-A `ScrollContainer` clips its content to a fixed `width` × `height` and scrolls it with the mouse wheel — useful for inventories, logs, or any list longer than its box. Add children to `scroll.content`, not to the container itself:
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="scrolling"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
-
-`scroll.scrollTo(x, y)` and `scroll.scrollBy(dx, dy)` move the content programmatically, clamped so it never scrolls past its edges; `direction` restricts the wheel to `'vertical'`, `'horizontal'`, or `'both'`.
-
-A container paints a [`Scrollbar`](/ExoJS/en/api/scrollbar/) per scrollable axis, themed through the `scrollbarTrack` and `scrollbarThumb` roles. The bars overlay the content instead of shrinking it, so the visible box stays the size you declared. `scrollbars` decides when they show:
-
-- `'auto'` (the default) shows a bar only while its axis actually overflows,
-- `'always'` keeps it visible as a permanent affordance,
-- `'never'` builds none at all, leaving the wheel and `scrollTo` as the only way to move.
-
-Dragging a thumb scrolls the content, and scrolling by any other means moves the thumb. The range follows what `scroll.content` holds — adding or removing an item updates it. A child that resized *itself* is the one change the container cannot observe; call `scroll.refresh()` after it.
-
-<Callout type="pitfall" title="Items go on scroll.content, not the container">
-Parent scrollable items to `scroll.content`, never to the `ScrollContainer` itself. Children added straight to the container sit outside the clipped, scrolling region — they render at a fixed spot and ignore the wheel.
-</Callout>
-
-## Scaling the UI
-
-A HUD authored at one size is not automatically readable on every screen. `scene.ui.uiScale` is one factor over the whole layer, default `1`: raise it and every widget, its text and its touch target grow together.
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="ui-scale"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
-
-The factor is applied as the layer's transform, so hit-testing follows it for free — pointer routing already goes through that transform, and a widget's own `uiWidth`/`uiHeight` never change. `scene.ui.screenWidth` and `screenHeight` report the box in the scaled units widgets lay out in, and `onResize` fires when the factor changes, so anchored widgets re-place themselves.
-
-`uiScaleStep` snaps the factor — set it to `0.25` before wiring a slider to it. An arbitrary factor resamples nine-slice corners and pixel art; a handful of discrete sizes usually looks better. Text is SDF and stays crisp either way.
-
-<Callout type="note" title="Scale and adaptation are two different mechanisms">
-`uiScale` is a readability and touch-size control. It is **not** a resolution policy: which logical coordinate system the game is authored in — and so how much of the world is visible — belongs to the application's [`CanvasSizing`](/ExoJS/en/api/canvas-sizing/), and a HUD authored against the base resolution therefore does not shrink on a 4K display to begin with. Adapting to a *different shape* of screen is layout's job: anchors, `DockContainer` and a reactive `Stack`. A phone usually wants both — reflow for the aspect ratio, a factor for the finger.
-</Callout>
-
-`UIRoot.scaleForTouchTarget(sizePixels, millimeters)` turns "a 24-pixel button should be at least 9mm across" into a factor. It converts through the CSS reference pixel (96 per inch), which is all a browser exposes — there is no API for the display's real physical size, and `devicePixelRatio` describes the backing store, not how large a pixel is. Treat it as a starting point for a density heuristic, not a measurement.
-
-## Clicks and keyboard focus
-
-UI nodes are hit-tested in screen space *before* the world, so a `Button` on `scene.ui` is clickable even under a panned or zoomed camera. Listen to `button.onClick`:
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/clicks.ts"
-  region="clicks"
-  language="ts"
-  title="examples/guides/ui-and-widgets/clicks.ts"
-/>
-
-Widgets are also keyboard-focusable. Mark any node `focusable` and give it a `tabIndex`; it then receives focus and routed key events:
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="focus"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
-
-RenderNode focus lives on [`app.interaction`](/ExoJS/en/api/interaction-system/) alongside pointer routing: it tracks the focused node (`app.interaction.focused`), moves focus with `Tab` / `Shift+Tab` or with `focusNext()` / `focusPrevious()`, activates a focused button on `Enter` / `Space`, and exposes `app.interaction.focus(node)` / `app.interaction.blur()` to focus programmatically — `focus(node)` is a no-op if `node` sits outside an active interaction scope (see below), not only Tab traversal.
-
-Key events bubble from the focused node up through its entire ancestor chain, same as pointer events: a container can listen on `onKeyDown` for a key pressed anywhere inside it, without every descendant needing its own handler, and call `event.stopPropagation()` to halt the bubble early. `event.currentTarget` tracks whichever ancestor is dispatching; `event.target` stays pinned to the actually-focused node throughout.
-
-Do not confuse this with canvas focus — whether the browser is sending the page's keyboard input to the ExoJS canvas at all — which lives on `app.input.canvasFocused` and `app.input.onCanvasFocusChange`.
-
-### Arrow keys and the D-pad
-
-Beyond `Tab`, focus also moves spatially: the arrow keys and a gamepad D-pad move it to the nearest focusable node in that direction, comparing the centres of their global bounds and weighing sideways offset heavier than distance along the direction. Navigation does not wrap — at the edge of the layout nothing moves — and with nothing focused yet, the first candidate takes focus, which is how a controller enters a menu.
-
-`app.interaction.focusNavigation` decides what that reaches: `'ui'` (the default) stays inside the UI layer so the game keeps the arrow keys, `'always'` navigates the world layer too — the same set `Tab` traverses — and `'never'` turns it off. An active interaction scope replaces the candidate set with its own subtree either way, so a modal stays navigable whatever the policy says. `app.interaction.focusInDirection('down')` performs one step directly, for binding navigation to anything else:
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="focus-navigation"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
-
-A focused widget that wants an arrow key for itself calls `event.preventDefault()` on its `onKeyDown` event, exactly as it would to keep `Tab`. `Slider` and `Dropdown` do this, so the arrows adjust the focused control instead of leaving it.
-
-Every interactive widget also paints a `focused` state while it holds focus, resolved from its theme like every other state — so keyboard and controller users can see where they are without any extra wiring.
-
-## Tooltips
-
-A `Tooltip` attaches to any `interactive` node and shows a small text label near the pointer after a short delay, hiding again as soon as the pointer leaves. It parents itself to the nearest `UIRoot` ancestor of its target, so it always renders above other content — the target just needs to already be in the scene tree:
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/widgets.ts"
-  region="tooltip"
-  language="ts"
-  title="examples/guides/ui-and-widgets/widgets.ts"
-/>
-
-Options cover the delay before showing (`delay`, in seconds), the offset from the pointer (`offsetX` / `offsetY`), and basic styling (`background`, `textColor`, `padding`, `fontSize`). Call `tooltip.destroy()` to remove the listeners it attached to its target — e.g. when the target itself is destroyed.
-
-## Pause overlays
-
-A pause menu is the canonical combination: freeze the world with `app.scenes.pause()` — which stops `update` and the scene's systems while it keeps drawing — and show an overlay built from widgets on `scene.ui`. Call `app.scenes.resume()` to unfreeze:
-
-<SourceSnippet
-  source="examples/guides/ui-and-widgets/pause-overlay.ts"
-  region="pause-overlay"
-  language="ts"
-  title="examples/guides/ui-and-widgets/pause-overlay.ts"
-/>
-
-<ExamplePreview slug="ui/hud-and-widgets" />
-
-<ExamplePreview slug="ui/settings-menu" />
-
-<ExamplePreview slug="ui/text-entry-and-scrolling" />
-
-<TryIt
-    examples={['ui/hud-and-widgets', 'ui/settings-menu', 'ui/text-entry-and-scrolling']}
-    api={['uiroot', 'button', 'panel', 'label', 'progress-bar', 'slider', 'toggle', 'dropdown', 'scroll-container', 'tooltip']}
-/>
+For a practical narrative interface, continue with [Dialogue and choices](/ExoJS/en/guide/recipes/ui-patterns/). Use the [UIRoot API](/ExoJS/en/api/uiroot/) and linked widget contracts for exact behavior instead of reproducing their full option tables in this Guide.
