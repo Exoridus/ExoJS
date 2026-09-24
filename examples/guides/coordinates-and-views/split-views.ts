@@ -1,5 +1,5 @@
 // #region guide:split-views
-import { type RenderNode, type RenderingContext, View } from '@codexo/exojs';
+import { type RenderingContext, type RenderNode, View } from '@codexo/exojs';
 
 export const createSplitViews = (width: number, height: number): { left: View; right: View } => ({
   left: new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1),
@@ -15,6 +15,5 @@ export const drawSplitWorld = (context: RenderingContext, world: RenderNode, lef
 // #region guide:pointer-world
 import type { PointLike } from '@codexo/exojs';
 
-export const pointerInWorld = (view: View, pointer: PointLike): PointLike =>
-  view.screenToWorld(pointer.x, pointer.y);
+export const pointerInWorld = (view: View, pointer: PointLike): PointLike => view.screenToWorld(pointer.x, pointer.y);
 // #endregion guide:pointer-world

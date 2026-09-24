@@ -1,55 +1,21 @@
-/**
- * Guide information architecture - the single source of truth for guide
- * ordering, grouping, learning metadata, and cross-references (playground
- * examples and API pages).
- *
- * Per-chapter prose (title, description) lives in the MDX frontmatter so it
- * stays next to the content it describes. This module owns everything that the
- * navigation, landing page, and learning path need without parsing MDX:
- *   - part grouping and order
- *   - chapter order within a part (chapter numbers are positional)
- *   - level, learning goals, and prerequisites
- *   - related playground examples ("<category>/<slug>")
- *   - related API pages (API slugs, resolved against site/src/content/api)
- *
- * Chapter numbers are derived from array position, so reordering a part never
- * requires renumbering titles by hand. A node test reconciles this module with
- * the MDX files (every chapter has a file, no orphans) and validates every
- * cross-reference, so a typo fails the test suite rather than shipping a dead
- * link.
- */
-
+/** Learning-oriented Guide navigation. URLs remain independent of the topic grouping. */
 export type GuideLevel = 'intro' | 'intermediate' | 'advanced';
-
 export const GUIDE_LEVELS: ReadonlyArray<GuideLevel> = ['intro', 'intermediate', 'advanced'];
-
-export const GUIDE_LEVEL_LABEL: Record<GuideLevel, string> = {
-  intro: 'Intro',
-  intermediate: 'Intermediate',
-  advanced: 'Advanced',
-};
-
-/** Authoring shape - only the fields a chapter actually sets. */
+export const GUIDE_LEVEL_LABEL: Record<GuideLevel, string> = { intro: 'Intro', intermediate: 'Intermediate', advanced: 'Advanced' };
 interface RawChapter {
-  slug: string;
+  path: string;
   level: GuideLevel;
-  /** Concrete, scannable outcomes. Set on the core onboarding chapters. */
-  learningGoals?: ReadonlyArray<string>;
-  /** Guide paths ("<partSlug>/<chapterSlug>") the reader should do first. */
-  prerequisites?: ReadonlyArray<string>;
-  /** Related playground examples as "<category>/<slug>". */
-  examples?: ReadonlyArray<string>;
-  /** Related API pages as content slugs under site/src/content/api. */
-  apiLinks?: ReadonlyArray<string>;
+  learningGoals: ReadonlyArray<string>;
+  prerequisites: ReadonlyArray<string>;
+  examples: ReadonlyArray<string>;
+  apiLinks: ReadonlyArray<string>;
 }
-
 interface RawPart {
   slug: string;
   title: string;
   description: string;
   chapters: ReadonlyArray<RawChapter>;
 }
-
 export interface GuideChapterMeta {
   part: number;
   chapter: number;
@@ -63,7 +29,6 @@ export interface GuideChapterMeta {
   examples: ReadonlyArray<string>;
   apiLinks: ReadonlyArray<string>;
 }
-
 export interface GuidePartMeta {
   part: number;
   slug: string;
@@ -75,57 +40,39 @@ export interface GuidePartMeta {
 const RAW_PARTS: ReadonlyArray<RawPart> = [
   {
     slug: 'getting-started',
-    title: 'Getting Started',
-    description: 'Understand what ExoJS is, create a project, and render your first scene.',
+    title: 'Start here',
+    description: 'Create a working scene and understand the canvas you are building on.',
     chapters: [
       {
-        slug: 'what-is-exojs',
+        path: 'getting-started/what-is-exojs',
         level: 'intro',
-        learningGoals: [
-          'know what ExoJS is and the kind of projects it targets',
-          'recognise where ExoJS fits next to your UI framework',
-          'know how the guide, playground, and API reference work together',
-        ],
+        learningGoals: ['Decide whether a code-first canvas runtime fits the project', 'Distinguish the Guide, Playground, package README, and API reference'],
+        prerequisites: [],
+        examples: [],
         apiLinks: ['application', 'scene'],
       },
       {
-        slug: 'setup',
+        path: 'getting-started/setup',
         level: 'intro',
-        learningGoals: [
-          'create a typed project with create-exo-app',
-          'choose between the minimal, game-starter, and audio-reactive templates',
-          'run the dev server and a production build',
-        ],
+        learningGoals: ['Run a starter and choose among the current templates', 'Locate startup, scene code, public assets, and production output'],
         prerequisites: ['getting-started/what-is-exojs'],
+        examples: [],
         apiLinks: ['application'],
       },
       {
-        slug: 'project-structure',
+        path: 'getting-started/your-first-scene',
         level: 'intro',
-        learningGoals: [
-          'find your way around a create-exo-app project',
-          'know where the entry point, scenes, and assets live',
-          'understand how main.ts wires an Application to a Scene',
-        ],
-        prerequisites: ['getting-started/setup'],
-        examples: ['getting-started/hello-world'],
-        apiLinks: ['application', 'scene'],
-      },
-      {
-        slug: 'your-first-scene',
-        level: 'intro',
-        learningGoals: ['load a texture and draw a sprite', 'center a sprite with an anchor', 'animate state each frame with delta time'],
+        learningGoals: ['Draw a visible object without external assets', 'Separate scene setup, time-based updates, and explicit world rendering'],
         prerequisites: ['getting-started/setup'],
         examples: ['getting-started/hello-world'],
         apiLinks: ['application', 'scene', 'sprite', 'texture', 'loader'],
       },
       {
-        slug: 'resize-dpr-and-canvas',
+        path: 'getting-started/resize-dpr-and-canvas',
         level: 'intro',
         learningGoals: [
-          'fit the canvas to its container with app.resize',
-          'render crisply on high-DPI displays with pixelRatio',
-          're-lay-out content when the size changes',
+          'Distinguish logical canvas size from CSS and backing pixels',
+          'Choose a sizing policy and handle resize without moving every object manually',
         ],
         prerequisites: ['getting-started/your-first-scene'],
         examples: ['getting-started/resize-and-dpr'],
@@ -135,184 +82,198 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
   },
   {
     slug: 'runtime',
-    title: 'Runtime',
-    description: 'The runtime model most ExoJS projects rely on: applications, scenes, the frame loop, and coordinates.',
+    title: 'Runtime and interaction',
+    description: 'Own scene lifetimes, compose objects, and route input into a usable interface.',
     chapters: [
       {
-        slug: 'application',
+        path: 'runtime/application',
         level: 'intro',
-        learningGoals: ['create and configure an Application', 'understand how the application owns canvas, sizing, and the frame loop'],
+        learningGoals: ['Give the canvas and application services a clear host lifetime', 'Await startup and distinguish stop from permanent teardown'],
         prerequisites: ['getting-started/your-first-scene'],
         examples: ['getting-started/hello-world', 'getting-started/resize-and-dpr'],
         apiLinks: ['application'],
       },
       {
-        slug: 'scenes-and-lifecycle',
+        path: 'runtime/scenes-and-lifecycle',
         level: 'intro',
         learningGoals: [
-          'split a project into focused scenes and switch between them at runtime',
-          'order work across load, init, update, and draw',
-          'separate state updates from rendering',
-          'release resources in destroy',
+          'Place asynchronous loading and synchronous updates in the correct hooks',
+          'Distinguish ownership, ordinary pause, retention, and final teardown',
         ],
         prerequisites: ['getting-started/your-first-scene'],
         examples: ['application-scenes/multiple-scenes', 'showcase/pause-blur', 'getting-started/hello-world'],
         apiLinks: ['scene', 'loader', 'time'],
       },
       {
-        slug: 'writing-your-own-transition',
-        level: 'advanced',
-        learningGoals: [
-          'implement the SceneTransition definition/session split',
-          'order commit, committed and done the way the director requires',
-          'survive an abort and release session resources exactly once',
-        ],
-        prerequisites: ['runtime/scenes-and-lifecycle'],
-        examples: ['application-scenes/custom-transition', 'application-scenes/multiple-scenes'],
-        apiLinks: ['scene-transition', 'phased-scene-transition', 'scene-transition-session', 'scene-transition-lifecycle-error', 'scene-director'],
-      },
-      {
-        slug: 'scene-graph',
+        path: 'runtime/scene-graph',
         level: 'intermediate',
-        learningGoals: ['compose drawables with containers', 'reason about transforms, draw order, and masks'],
+        learningGoals: ['Compose local transforms through a parent hierarchy', 'Separate hierarchy, rendering order, and resource ownership'],
         prerequisites: ['runtime/scenes-and-lifecycle'],
         examples: ['scene-graph/nested-transforms', 'scene-graph/pivot-and-anchor', 'debug-layer/pointer-and-hittest', 'scene-graph/masks'],
         apiLinks: ['container', 'drawable'],
       },
       {
-        slug: 'coordinates-and-views',
+        path: 'runtime/coordinates-and-views',
         level: 'intermediate',
-        learningGoals: ['map world space to screen space', 'move and zoom a camera view'],
+        learningGoals: [
+          'Convert between local, world, and logical canvas coordinates',
+          'Render one world through independent views without duplicating simulation',
+        ],
         prerequisites: ['runtime/scene-graph'],
-        examples: ['application-scenes/multi-view-split-screen', 'application-scenes/picture-in-picture', 'application-scenes/world-vs-screen-coords'],
+        examples: ['application-scenes/world-vs-screen-coords', 'application-scenes/multi-view-split-screen', 'application-scenes/picture-in-picture'],
         apiLinks: ['view', 'pass-context'],
       },
       {
-        slug: 'ui-and-widgets',
-        level: 'intermediate',
-        learningGoals: [
-          'build a screen-fixed HUD and menus on scene.ui',
-          'compose Panel, Button, Label, and ProgressBar widgets',
-          'anchor and stack widgets, and route clicks and keyboard focus',
-        ],
+        path: 'input/keyboard-and-actions',
+        level: 'intro',
+        learningGoals: ['Bind physical controls to named gameplay actions', 'Use held values and transition signals with scene availability'],
         prerequisites: ['runtime/scenes-and-lifecycle'],
-        examples: ['ui/hud-and-widgets', 'ui/settings-menu', 'ui/text-entry-and-scrolling'],
-        apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'interaction-system'],
+        examples: ['input/keyboard', 'input/key-rebinding', 'input/action-mapping'],
+        apiLinks: ['keyboard', 'input-system'],
       },
       {
-        slug: 'serialization-and-prefabs',
-        level: 'advanced',
-        learningGoals: [
-          'serialize a scene to JSON and restore it',
-          'capture reusable prefabs and instantiate many independent copies',
-          'persist save slots with a key-value store and register serializers for custom node types',
-        ],
-        prerequisites: ['runtime/scene-graph'],
-        apiLinks: ['scene', 'prefab', 'web-storage-store', 'serialization-registry', 'scene-node'],
+        path: 'input/mouse-and-pointer',
+        level: 'intro',
+        learningGoals: ['Convert pointer coordinates through the intended view', 'Handle capture, gestures, cancellation, and pointer lifetime'],
+        prerequisites: ['runtime/coordinates-and-views', 'input/keyboard-and-actions'],
+        examples: ['input/mouse-and-pointer', 'input/multitouch', 'application-scenes/world-vs-screen-coords'],
+        apiLinks: ['pointer', 'input-system'],
+      },
+      {
+        path: 'input/gamepad',
+        level: 'intermediate',
+        learningGoals: ['Assign a connected controller and bind its controls', 'Handle disconnection, analog values, and optional haptics'],
+        prerequisites: ['input/keyboard-and-actions'],
+        examples: ['input/gamepad', 'application-scenes/multi-view-split-screen'],
+        apiLinks: ['gamepad', 'input-system'],
+      },
+      {
+        path: 'input/chords-and-sequences',
+        level: 'intermediate',
+        learningGoals: ['Choose simultaneous chords or ordered input sequences', 'Handle sequence timing, cancellation, and progress correctly'],
+        prerequisites: ['input/keyboard-and-actions'],
+        examples: ['input/action-mapping', 'input/key-rebinding'],
+        apiLinks: ['chord-action', 'sequence-action', 'action-map'],
+      },
+      {
+        path: 'runtime/ui-and-widgets',
+        level: 'intermediate',
+        learningGoals: ['Build a screen-fixed HUD using owned widgets', 'Coordinate layout, focus, modal interaction, and DOM accessibility'],
+        prerequisites: ['runtime/scenes-and-lifecycle', 'input/keyboard-and-actions'],
+        examples: ['ui/hud-and-widgets', 'ui/settings-menu', 'ui/text-entry-and-scrolling'],
+        apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'interaction-system'],
       },
     ],
   },
   {
     slug: 'assets',
-    title: 'Assets',
-    description: 'Declare, load, and access textures, audio, and data with a predictable resource pipeline.',
+    title: 'Assets and worlds',
+    description: 'Acquire resources through an owner and turn authored data into streamable content.',
     chapters: [
       {
-        slug: 'loading-and-resources',
+        path: 'assets/loading-and-resources',
         level: 'intermediate',
-        learningGoals: ['declare and load assets predictably', 'access loaded resources by name'],
+        learningGoals: ['Choose awaited loading or a deliberate placeholder', 'Release independent resource claims through their owning scope'],
         prerequisites: ['runtime/scenes-and-lifecycle'],
         examples: ['application-scenes/loading-screen'],
         apiLinks: ['loader', 'texture'],
       },
       {
-        slug: 'device-variants',
-        level: 'advanced',
+        path: 'assets/asset-catalogs',
+        level: 'intermediate',
         learningGoals: [
-          'read which compressed texture formats the running device implements',
-          'declare one logical source that resolves to a file per GPU family and density',
-          'know what a compressed payload does not honour, and why',
+          'Compose named asset definitions without eagerly fetching them',
+          'Distinguish deferred catalog leaves from resolved values and validated data',
         ],
         prerequisites: ['assets/loading-and-resources'],
+        examples: ['sprites-textures/asset-catalogs'],
+        apiLinks: ['assets', 'asset', 'loader-scope', 'asset-ref'],
+      },
+      {
+        path: 'assets/device-variants',
+        level: 'advanced',
+        learningGoals: ['Select an asset source using actual capabilities', 'Keep a usable fallback and distinguish compression format from container'],
+        prerequisites: ['assets/loading-and-resources'],
+        examples: [],
         apiLinks: ['loader', 'texture', 'compressed-texture', 'compressed-texture-format', 'asset-variant-set'],
       },
       {
-        slug: 'offline',
+        path: 'assets/offline',
         level: 'advanced',
         learningGoals: [
-          'warm a persistent cache with loader.cacheSource before the connection is gone',
-          'tell what the environment provides apart from what the application allows',
-          'let a missing asset fail as a cache miss instead of a timed-out fetch',
+          'Separate resident resources from persistent source caching',
+          'Handle connectivity without assuming the entire application is offline-ready',
         ],
         prerequisites: ['assets/loading-and-resources'],
+        examples: [],
         apiLinks: ['loader', 'connectivity', 'asset-cache', 'connectivity-policy-resolver'],
       },
       {
-        slug: 'tiled-maps',
+        path: 'assets/aseprite',
         level: 'intermediate',
-        learningGoals: [
-          'activate the official Tiled extension via ApplicationOptions.extensions',
-          'load a .tmj map through the loader and read its layers and tilesets',
-          'understand tileset texture ownership and the supported format scope',
-        ],
-        prerequisites: ['assets/loading-and-resources'],
-        apiLinks: ['loader'],
-      },
-      {
-        slug: 'aseprite',
-        level: 'intermediate',
-        learningGoals: [
-          'activate the Aseprite extension via ApplicationOptions.extensions',
-          'load an Aseprite JSON sheet as an AsepriteSheet',
-          'play tag animations with createAnimatedSprite',
-        ],
-        prerequisites: ['assets/loading-and-resources'],
+        learningGoals: ['Load an Aseprite export and choose an authored animation tag', 'Handle frame timing, atlas layout, and resource lifetime'],
+        prerequisites: ['assets/loading-and-resources', 'rendering/sprites'],
+        examples: [],
         apiLinks: ['aseprite-sheet', 'animated-sprite', 'loader'],
       },
       {
-        slug: 'ldtk',
+        path: 'assets/tiled-maps',
         level: 'intermediate',
         learningGoals: [
-          'activate the LDtk extension via ApplicationOptions.extensions',
-          'load a .ldtk world and render each level as a TileMap',
-          'understand tileset texture ownership and absolute-URL resolution',
+          'Load and render a Tiled JSON map through the generic tilemap runtime',
+          'Distinguish visible tiles, authored objects, collision, and streaming',
         ],
         prerequisites: ['assets/loading-and-resources'],
+        examples: [],
+        apiLinks: ['loader'],
+      },
+      {
+        path: 'assets/ldtk',
+        level: 'intermediate',
+        learningGoals: ['Choose eager map loading or project-driven level loading', 'Resolve external levels and keep level resources independently owned'],
+        prerequisites: ['assets/loading-and-resources'],
+        examples: [],
         apiLinks: ['ldtk-map', 'tile-map', 'tile-map-node', 'loader'],
       },
       {
-        slug: 'worlds-and-spawning',
+        path: 'assets/worlds-and-spawning',
         level: 'advanced',
-        learningGoals: [
-          'read level identity, bounds and neighbours from a MapWorld',
-          'load and unload levels explicitly, each with its own LoaderScope',
-          'turn authored map objects into game objects with a local MapObjectSpawner',
-          'rely on deterministic spawn order, atomic rollback and cancellation',
-        ],
-        prerequisites: ['assets/ldtk'],
+        learningGoals: ['Spawn owned game objects from authored level data', 'Unload a level and handle failed or cancelled acquisition safely'],
+        prerequisites: ['assets/tiled-maps', 'assets/loading-and-resources'],
         examples: ['tilemap/editor-objects-gameplay', 'tilemap/level-loading-and-ownership'],
         apiLinks: ['map-world', 'map-world-runtime', 'map-level-runtime', 'map-object-spawner', 'map-spawn-session', 'ldtk-project', 'loader-scope'],
+      },
+      {
+        path: 'rendering/infinite-maps',
+        level: 'advanced',
+        learningGoals: ['Separate a map source from resident rendered chunks', 'Budget streaming work and clean up a chunk source at the owner boundary'],
+        prerequisites: ['assets/tiled-maps'],
+        examples: ['tilemap/worker-streamed-terrain', 'tilemap/tiled-infinite-map'],
+        apiLinks: ['tile-map', 'tile-layer', 'chunk-streamer', 'chunk-source', 'tilemap-functions', 'tiled-map'],
       },
     ],
   },
   {
     slug: 'rendering',
-    title: 'Rendering',
-    description: 'Build a scene with shapes, sprites, text, animation, and render targets.',
+    title: 'Drawing and composition',
+    description: 'Choose a drawable, understand its coordinate space, and compose targets without losing ownership.',
     chapters: [
       {
-        slug: 'graphics',
+        path: 'rendering/graphics',
         level: 'intro',
-        learningGoals: ['draw procedural shapes with Graphics', 'fill, stroke, and position drawn geometry'],
+        learningGoals: ['Create reusable geometry in local coordinates', 'Change geometry deliberately instead of rebuilding unchanged shapes every frame'],
         prerequisites: ['getting-started/your-first-scene'],
         examples: ['geometry-graphics/graphics-gradient', 'geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
         apiLinks: ['graphics', 'color'],
       },
       {
-        slug: 'sprites',
+        path: 'rendering/sprites',
         level: 'intro',
-        learningGoals: ['render textures, sheets, SVG, and video as sprites', 'control anchor, blend mode, and frames'],
-        prerequisites: ['getting-started/your-first-scene'],
+        learningGoals: [
+          'Place a texture-backed drawable with intentional anchor and sampling',
+          'Distinguish image data, atlas frames, and shared texture lifetime',
+        ],
+        prerequisites: ['assets/loading-and-resources'],
         examples: [
           'sprites-textures/sprite-basics',
           'sprites-textures/texture-sampling',
@@ -323,97 +284,84 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['sprite', 'spritesheet', 'texture'],
       },
       {
-        slug: 'text',
+        path: 'rendering/text',
         level: 'intro',
-        learningGoals: ['render and style runtime text', 'lay out multiline and wrapped text'],
+        learningGoals: ['Choose text rendering and load the required font', 'Distinguish layout, ink bounds, wrapping, and shaping constraints'],
+        prerequisites: ['assets/loading-and-resources', 'runtime/scene-graph'],
         examples: ['text-fonts/typographic-styling', 'text-fonts/multiline-and-wrap'],
         apiLinks: ['text', 'bitmap-text', 'text-style'],
       },
       {
-        slug: 'animation',
+        path: 'rendering/pixel-snapping',
         level: 'intermediate',
-        learningGoals: ['tween transforms and values over time', 'chain, yoyo, and interrupt tweens'],
-        examples: ['tweens-animation/easing-curves', 'tweens-animation/frame-animation', 'tweens-animation/tween-basics', 'tweens-animation/tween-chains'],
-        apiLinks: ['tween', 'tween-system', 'animated-sprite'],
-      },
-      {
-        slug: 'render-targets',
-        level: 'advanced',
-        learningGoals: [
-          'render a scene into an intermediate texture',
-          'reuse render-target output in composition',
-          'fill several colour attachments from one pass',
-        ],
-        prerequisites: ['rendering/sprites'],
-        examples: ['render-targets/render-to-texture', 'render-targets/mini-map'],
-        apiLinks: ['render-target', 'render-texture', 'multi-render-target', 'mesh-material'],
-      },
-      {
-        slug: 'pixel-snapping',
-        level: 'intermediate',
-        learningGoals: [
-          'snap rendered sprites, panels, and tilemaps to the device-pixel grid',
-          'choose between position and geometry snapping',
-          'rely on the render-only contract: logical state never changes',
-        ],
-        prerequisites: ['rendering/sprites'],
+        learningGoals: ['Choose position or geometry snapping for the intended image', 'Keep rendering alignment separate from simulation coordinates'],
+        prerequisites: ['rendering/sprites', 'getting-started/resize-dpr-and-canvas'],
         examples: ['sprites-textures/texture-sampling'],
         apiLinks: ['drawable', 'sprite', 'view'],
       },
       {
-        slug: 'immediate-mode',
+        path: 'rendering/render-targets',
         level: 'advanced',
-        learningGoals: [
-          'draw procedural geometry without a scene node via drawGeometry',
-          'instance thousands of like items as one draw call with RenderBatch',
-          'drive a batch with a custom material and your own per-instance attributes',
-          'pick an index width, and know which one the engine picks for you',
-          'know when immediate rendering beats the retained scene graph',
-        ],
-        prerequisites: ['rendering/graphics'],
-        examples: ['geometry-graphics/immediate-mode-rendering'],
-        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh', 'mesh-material', 'shader', 'matrix', 'color'],
+        learningGoals: ['Render into an owned texture with scoped target state', 'Handle resizing, feedback, and borrowed output textures safely'],
+        prerequisites: ['runtime/coordinates-and-views', 'rendering/sprites'],
+        examples: ['render-targets/render-to-texture', 'render-targets/mini-map'],
+        apiLinks: ['render-target', 'render-texture', 'multi-render-target', 'mesh-material'],
       },
       {
-        slug: 'retained-containers',
+        path: 'rendering/retained-containers',
         level: 'advanced',
         learningGoals: [
-          'declare a large, mostly-static subtree as a RetainedContainer',
-          'pan the whole group as one GPU-matrix update instead of touching every child',
-          'recognise the group-local space, lifecycle, and invalidation rules the tier trades for that speed',
+          'Choose retained recording instead of texture caching for the right workload',
+          'Understand structural invalidation, row updates, and reuse limits',
         ],
-        prerequisites: ['runtime/scene-graph'],
+        prerequisites: ['runtime/scene-graph', 'debugging/performance'],
         examples: ['scene-graph/retained-container'],
         apiLinks: ['retained-container', 'container', 'scene-node', 'view'],
       },
       {
-        slug: 'infinite-maps',
+        path: 'rendering/immediate-mode',
         level: 'advanced',
-        learningGoals: [
-          'create unbounded tile maps and stream chunks near the camera with ChunkStreamer',
-          'generate deterministic procedural terrain with createSampledChunkSource',
-          'move expensive sampling off the main thread with createWorkerSampledChunkSource',
-        ],
-        prerequisites: ['assets/tiled-maps'],
-        examples: ['tilemap/worker-streamed-terrain', 'tilemap/tiled-infinite-map'],
-        apiLinks: ['tile-map', 'tile-layer', 'chunk-streamer', 'chunk-source', 'tilemap-functions', 'tiled-map'],
+        learningGoals: ['Submit procedural drawing through a reusable immediate-mode path', 'Keep packed buffers, transforms, and their lifetimes explicit'],
+        prerequisites: ['rendering/graphics'],
+        examples: ['geometry-graphics/immediate-mode-rendering'],
+        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh', 'mesh-material', 'shader', 'matrix', 'color'],
       },
     ],
   },
   {
     slug: 'effects',
-    title: 'Effects',
-    description: 'Layer filters, particles, post-processing, and custom shaders for mood and motion.',
+    title: 'Animation and visual effects',
+    description: 'Animate existing state and choose effects with explicit capability and cost boundaries.',
     chapters: [
       {
-        slug: 'filters',
+        path: 'rendering/animation',
         level: 'intermediate',
+        learningGoals: ['Choose frame animation or property interpolation', 'Handle repeat semantics, pause policy, and competing animations'],
+        prerequisites: ['runtime/scenes-and-lifecycle', 'rendering/sprites'],
+        examples: ['tweens-animation/easing-curves', 'tweens-animation/frame-animation', 'tweens-animation/tween-basics', 'tweens-animation/tween-chains'],
+        apiLinks: ['tween', 'tween-system', 'animated-sprite'],
+      },
+      {
+        path: 'effects/filters',
+        level: 'intermediate',
+        learningGoals: ['Choose a node, group, or frame effect boundary', 'Own filter resources and distinguish logical effects from hardware passes'],
+        prerequisites: ['rendering/sprites'],
         examples: ['filters/blur-filter', 'filters/color-matrix-filter', 'filters/crt-scanlines', 'filters/custom-fragment-shader', 'filters/metaballs'],
         apiLinks: ['filter', 'color-matrix-filter', 'blur-filter'],
       },
       {
-        slug: 'particles',
+        path: 'effects/post-processing',
+        level: 'advanced',
+        learningGoals: ['Compose frame passes and filters in an explicit order', 'Avoid read-write feedback and restore scoped rendering state'],
+        prerequisites: ['effects/filters', 'rendering/render-targets'],
+        examples: ['filters/bloom-filter', 'render-targets/render-pipeline', 'render-targets/trail-feedback', 'render-targets/water-mirror'],
+        apiLinks: ['render-target', 'filter'],
+      },
+      {
+        path: 'effects/particles',
         level: 'intermediate',
+        learningGoals: ['Build a bounded scene-owned emitter in local space', 'Inspect CPU/GPU routing and handle changes that restart live particles'],
+        prerequisites: ['runtime/scenes-and-lifecycle'],
         examples: [
           'particles/emitter-basics',
           'particles/bonfire',
@@ -425,92 +373,33 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: [],
       },
       {
-        slug: 'lighting',
+        path: 'effects/lighting',
         level: 'intermediate',
-        learningGoals: [
-          'light a scene with lights that are scene nodes',
-          'get normals out of art nobody authored a normal map for',
-          'read shadows out of colliders, tile layers and silhouettes',
-          'choose between the two renderers by the property you need',
-        ],
-        prerequisites: ['rendering/sprites'],
-        examples: ['lighting/shadow-casters', 'lighting/radiance-rooms', 'lighting/light-cookies', 'lighting/lightmap-normals', 'lighting/many-lights'],
+        learningGoals: ['Choose a lighting model rather than an assumed quality tier', 'Register lights, shadows, and normal sources with correct ownership'],
+        prerequisites: ['runtime/scenes-and-lifecycle', 'rendering/sprites'],
+        examples: ['lighting/shadow-casters', 'lighting/lightmap-normals', 'lighting/radiance-rooms'],
         apiLinks: ['lighting', 'point-light', 'spot-light', 'line-light', 'sun-light', 'lit-material'],
       },
       {
-        slug: 'post-processing',
+        path: 'effects/custom-mesh-shaders',
         level: 'advanced',
-        prerequisites: ['rendering/render-targets'],
-        examples: ['filters/bloom-filter', 'render-targets/render-pipeline', 'render-targets/trail-feedback', 'render-targets/water-mirror'],
-        apiLinks: ['render-target', 'filter'],
-      },
-      {
-        slug: 'custom-mesh-shaders',
-        level: 'advanced',
-        prerequisites: ['rendering/graphics'],
+        learningGoals: ['Use material schemas and backend shader counterparts', 'Separate host-side types from shader compilation and visual validation'],
+        prerequisites: ['rendering/graphics', 'rendering/sprites'],
         examples: ['geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
         apiLinks: ['mesh'],
       },
     ],
   },
   {
-    slug: 'input',
-    title: 'Input',
-    description: 'Handle keyboard, pointer, touch, and gamepad with predictable input flow.',
-    chapters: [
-      {
-        slug: 'keyboard-and-actions',
-        level: 'intro',
-        learningGoals: [
-          'capture keys with scene-scoped bindings',
-          'handle taps, holds, and rebinding',
-          'map several devices to one intent',
-          'keep gameplay code device-agnostic',
-        ],
-        prerequisites: ['getting-started/your-first-scene'],
-        examples: ['input/keyboard', 'input/key-rebinding', 'input/action-mapping'],
-        apiLinks: ['keyboard', 'input-system'],
-      },
-      {
-        slug: 'mouse-and-pointer',
-        level: 'intro',
-        learningGoals: ['read unified pointer events across mouse and touch', 'translate pointer position into world space'],
-        prerequisites: ['input/keyboard-and-actions'],
-        examples: ['input/mouse-and-pointer', 'input/multitouch', 'application-scenes/world-vs-screen-coords'],
-        apiLinks: ['pointer', 'input-system'],
-      },
-      {
-        slug: 'gamepad',
-        level: 'intermediate',
-        learningGoals: ['read controller buttons and axes', 'support multiple connected gamepads'],
-        prerequisites: ['input/keyboard-and-actions'],
-        examples: ['input/gamepad', 'application-scenes/multi-view-split-screen'],
-        apiLinks: ['gamepad', 'input-system'],
-      },
-      {
-        slug: 'chords-and-sequences',
-        level: 'intermediate',
-        learningGoals: [
-          'require several channels held at once with ChordAction',
-          'recognize ordered command patterns with SequenceAction',
-          'tune maxGap/timeout and restart-on-mismatch behavior',
-        ],
-        prerequisites: ['input/keyboard-and-actions'],
-        examples: ['input/action-mapping', 'input/key-rebinding'],
-        apiLinks: ['chord-action', 'sequence-action', 'action-map'],
-      },
-    ],
-  },
-  {
     slug: 'audio',
-    title: 'Audio',
-    description: 'Play sound and music, place it in space, shape it with effects, and react to it.',
+    title: 'Audio and timing',
+    description: 'Play owned voices, route effects, and connect audio analysis to presentation.',
     chapters: [
       {
-        slug: 'audio-basics',
+        path: 'audio/audio-basics',
         level: 'intro',
-        learningGoals: ['load and play Sound and AudioStream', 'control volume, looping, and fades', 'handle the browser autoplay gesture'],
-        prerequisites: ['getting-started/your-first-scene'],
+        learningGoals: ['Distinguish a loaded audio asset from a playing voice', 'Unlock playback and choose the voice and bus lifetime'],
+        prerequisites: ['assets/loading-and-resources'],
         examples: [
           'audio-basics/play-sound',
           'audio-basics/music-loop',
@@ -521,376 +410,444 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['sound', 'audio-stream', 'audio-system'],
       },
       {
-        slug: 'spatial-audio',
+        path: 'audio/spatial-audio',
         level: 'intermediate',
-        learningGoals: [
-          'place a listener and sources in space',
-          'tune directional falloff',
-          'lift a source off the world plane with elevation',
-          'muffle an obstructed source with occlusion',
-          'feed one shared reverb from many voices, and gate it on a zone',
-        ],
-        prerequisites: ['audio/audio-basics'],
+        learningGoals: ['Map world positions into a consistent audio space', 'Own listener and source updates without conflating pan with volume'],
+        prerequisites: ['audio/audio-basics', 'runtime/coordinates-and-views'],
         examples: ['spatial-audio/listener-and-source'],
         apiLinks: ['audio-listener', 'audio-system', 'audio-send', 'audio-zone', 'spatial-zones'],
       },
       {
-        slug: 'audio-effects',
+        path: 'audio/audio-effects',
         level: 'intermediate',
-        learningGoals: ['shape sound with bus and per-voice effects', 'apply reverb, delay, and ducking'],
+        learningGoals: [
+          'Route an effect chain without duplicating the dry signal accidentally',
+          'Own effect nodes and handle asynchronous worklet or impulse loading',
+        ],
         prerequisites: ['audio/audio-basics'],
         examples: ['audio-fx/compressor', 'audio-fx/ducking', 'audio-fx/reverb-and-delay', 'audio-fx/vocoder'],
         apiLinks: ['audio-bus', 'audio-effect'],
       },
       {
-        slug: 'beat-detection',
+        path: 'audio/beat-detection',
         level: 'intermediate',
-        learningGoals: ['read beat and frequency information', 'drive timing from audio analysis'],
+        learningGoals: [
+          'Tap live audio and distinguish acquisition from a locked estimate',
+          'Use timing and confidence without treating detection as an authoritative beatmap',
+        ],
         prerequisites: ['audio/audio-basics'],
         examples: ['beat-detection/beat-sync-pulse', 'showcase/audio-visualisation'],
         apiLinks: ['beat-detector', 'audio-analyser'],
       },
       {
-        slug: 'audio-reactive-visualization',
+        path: 'audio/audio-reactive-visualization',
         level: 'intermediate',
-        learningGoals: ['map audio analysis to visuals', 'build a responsive audio-reactive scene'],
-        prerequisites: ['audio/beat-detection'],
-        examples: ['showcase/audio-visualisation', 'showcase/audio-reactive-particles'],
+        learningGoals: ['Map one live analysis stream into bounded visual changes', 'Correlate audio time with presentation and own spectrum-history textures'],
+        prerequisites: ['audio/audio-basics', 'audio/beat-detection'],
+        examples: ['showcase/audio-visualisation', 'beat-detection/beat-sync-pulse', 'showcase/audio-reactive-particles'],
         apiLinks: ['audio-analyser', 'beat-detector'],
       },
     ],
   },
   {
-    slug: 'physics',
-    title: 'Physics',
-    description: 'Add 2D rigid-body physics with the @codexo/exojs-physics library: worlds, bodies, colliders, joints, sleeping, and continuous collision.',
+    slug: 'gameplay',
+    title: 'Gameplay systems',
+    description: 'Choose geometry queries, simulation, navigation, or serialization for the task at hand.',
     chapters: [
       {
-        slug: 'physics-basics',
+        path: 'recipes/gameplay-collision',
+        level: 'advanced',
+        learningGoals: ['Choose hit tests, overlaps, sweeps, or a physics world', 'Keep coordinate space and continuous-motion limitations explicit'],
+        prerequisites: ['runtime/scene-graph'],
+        examples: ['showcase/rectangles-collision'],
+        apiLinks: ['bounds', 'circle'],
+      },
+      {
+        path: 'physics/physics-basics',
         level: 'intermediate',
-        learningGoals: [
-          'build a PhysicsWorld and add static and dynamic bodies',
-          'step the simulation from Scene.fixedUpdate',
-          'bind bodies to sprites so visuals follow the simulation',
-        ],
+        learningGoals: ['Bind visible nodes to a scene-owned physics world', 'Choose exactly one clock and preserve rotation and interpolation conventions'],
         prerequisites: ['runtime/scenes-and-lifecycle'],
+        examples: [],
         apiLinks: ['physics-world', 'physics-body', 'collider', 'box-shape', 'circle-shape', 'physics-binding'],
       },
       {
-        slug: 'joints-and-dynamics',
+        path: 'physics/joints-and-dynamics',
         level: 'advanced',
-        learningGoals: [
-          'connect bodies with distance, revolute, weld, prismatic, wheel, and mouse joints',
-          'let resting bodies sleep to save CPU',
-          'stop fast projectiles tunnelling with continuous collision',
-        ],
+        learningGoals: ['Choose a joint or contact policy for the intended motion', 'Understand fast-body, shape, event, and solver limitations'],
         prerequisites: ['physics/physics-basics'],
+        examples: [],
         apiLinks: ['joint', 'distance-joint', 'revolute-joint', 'weld-joint', 'prismatic-joint', 'wheel-joint', 'mouse-joint', 'physics-world'],
       },
-    ],
-  },
-  {
-    slug: 'pathfinding',
-    title: 'Pathfinding',
-    description:
-      'Route agents through a world with @codexo/exojs-pathfinding: weighted grids, jump-point search, path smoothing, reachable-area queries, and waypoint graphs for traversal a grid cannot express.',
-    chapters: [
       {
-        slug: 'grid-pathfinding',
+        path: 'pathfinding/grid-pathfinding',
         level: 'intermediate',
-        learningGoals: [
-          'build a GridSpace from your own map data and query it',
-          'read a PathResult status instead of catching an exception',
-          'use costs, diagonals, clearance and smoothing to shape a route',
-        ],
-        prerequisites: ['runtime/scenes-and-lifecycle'],
+        learningGoals: ['Build a weighted navigation grid and interpret query results', 'Separate path search budgets from movement and collision'],
+        prerequisites: ['runtime/coordinates-and-views'],
         examples: ['pathfinding/grid-navigation', 'pathfinding/tilemap-navigation'],
         apiLinks: ['pathfinder', 'grid-space', 'grid-space-options', 'path-result', 'find-path-options'],
       },
       {
-        slug: 'waypoint-graphs',
+        path: 'pathfinding/waypoint-graphs',
         level: 'advanced',
         learningGoals: [
-          'model jump and fall links a grid cannot express',
-          'read traversal kinds and payloads off a path',
-          'implement NavigationSpace for a world of your own',
+          'Represent authored routes and directed traversal edges',
+          'Invalidate stale handles and implement domain-specific traversal separately',
         ],
         prerequisites: ['pathfinding/grid-pathfinding'],
+        examples: [],
         apiLinks: ['waypoint-graph', 'waypoint-edge-options', 'path-edge', 'navigation-space'],
+      },
+      {
+        path: 'runtime/serialization-and-prefabs',
+        level: 'advanced',
+        learningGoals: ['Separate persistent state from a live scene graph', 'Load referenced assets and validate authored or saved data before instantiation'],
+        prerequisites: ['runtime/scene-graph', 'assets/loading-and-resources'],
+        examples: [],
+        apiLinks: ['scene', 'prefab', 'web-storage-store', 'serialization-registry', 'scene-node'],
       },
     ],
   },
   {
     slug: 'recipes',
-    title: 'Recipes',
-    description: 'Practical scene patterns you can adapt directly, ending with a complete small game.',
+    title: 'Build a complete interaction',
+    description: 'Combine established concepts without inventing a second runtime model.',
     chapters: [
       {
-        slug: 'hud-overlay',
-        level: 'intermediate',
-        examples: ['ui/hud-and-widgets', 'render-targets/mini-map'],
-      },
-      {
-        slug: 'camera-follow-and-parallax',
-        level: 'intermediate',
-        examples: ['scene-graph/parallax-starfield'],
-      },
-      {
-        slug: 'pause-menu',
-        level: 'intermediate',
-        examples: ['showcase/pause-blur'],
-      },
-      {
-        slug: 'split-screen',
-        level: 'intermediate',
-        examples: ['application-scenes/multi-view-split-screen'],
-      },
-      {
-        slug: 'audio-reactive-scene',
-        level: 'intermediate',
-        examples: ['showcase/audio-reactive-particles', 'showcase/audio-visualisation'],
-      },
-      {
-        slug: 'game-feel',
-        level: 'intermediate',
-        examples: ['showcase/screen-shake-on-explosion', 'showcase/gamepad-spaceship'],
-      },
-      {
-        slug: 'ui-patterns',
-        level: 'intermediate',
-        examples: ['showcase/dialog-system'],
-      },
-      {
-        slug: 'cinematics',
-        level: 'intermediate',
-        examples: ['showcase/boss-intro-cinematic'],
-      },
-      {
-        slug: 'gameplay-collision',
-        level: 'advanced',
-        examples: ['showcase/rectangles-collision'],
-        apiLinks: ['bounds', 'circle'],
-      },
-      {
-        slug: 'build-orb-dodge',
+        path: 'recipes/camera-follow-and-parallax',
         level: 'intermediate',
         learningGoals: [
-          'wire a complete game from scenes, input, and graphics',
-          'spawn, move, and collide objects each frame',
-          'transition to a game-over scene and restart',
+          'Smooth a world-space camera target without frame-dependent overshoot',
+          'Compose parallax layers without moving authoritative gameplay state',
         ],
-        prerequisites: ['runtime/scenes-and-lifecycle', 'input/keyboard-and-actions', 'rendering/graphics'],
+        prerequisites: ['runtime/coordinates-and-views'],
+        examples: ['scene-graph/parallax-starfield'],
+        apiLinks: [],
+      },
+      {
+        path: 'recipes/pause-menu',
+        level: 'intermediate',
+        learningGoals: [
+          'Pause gameplay while keeping the intended controls usable',
+          'Release the modal UI and its owned effects without changing unrelated state',
+        ],
+        prerequisites: ['runtime/scenes-and-lifecycle', 'runtime/ui-and-widgets'],
+        examples: ['showcase/pause-blur'],
+        apiLinks: [],
+      },
+      {
+        path: 'recipes/game-feel',
+        level: 'intermediate',
+        learningGoals: ['Combine bounded visual and audio feedback for a gameplay event', 'Prevent overlapping effects from fighting over shared properties'],
+        prerequisites: ['rendering/animation', 'audio/audio-basics'],
+        examples: ['showcase/screen-shake-on-explosion', 'showcase/gamepad-spaceship'],
+        apiLinks: [],
+      },
+      {
+        path: 'recipes/ui-patterns',
+        level: 'intermediate',
+        learningGoals: ['Implement dialogue reveal and deliberate advance behavior', 'Keep choices, focus, text boundaries, and cancellation explicit'],
+        prerequisites: ['runtime/ui-and-widgets', 'input/keyboard-and-actions'],
+        examples: ['showcase/dialog-system'],
+        apiLinks: [],
+      },
+      {
+        path: 'recipes/cinematics',
+        level: 'intermediate',
+        learningGoals: [
+          'Coordinate a skippable sequence with one terminal state',
+          'Cancel only the sequence-owned work and preserve the intended gameplay lifetime',
+        ],
+        prerequisites: ['rendering/animation', 'runtime/scenes-and-lifecycle'],
+        examples: ['showcase/boss-intro-cinematic'],
+        apiLinks: [],
+      },
+      {
+        path: 'recipes/build-orb-dodge',
+        level: 'intermediate',
+        learningGoals: [
+          'Connect input, spawning, overlap checks, and score into a complete game',
+          'Read the maintained example as a composition of the Guide concepts',
+        ],
+        prerequisites: ['input/keyboard-and-actions', 'rendering/sprites', 'recipes/gameplay-collision'],
         examples: ['showcase/orb-dodge'],
         apiLinks: ['scene', 'graphics', 'keyboard', 'text', 'color'],
       },
     ],
   },
   {
-    slug: 'debugging',
-    title: 'Debugging & Performance',
-    description: 'Inspect a running scene, profile it, debug the render pipeline, choose a backend, and extend the renderer.',
+    slug: 'shipping',
+    title: 'Diagnose and ship',
+    description: 'Find the failing boundary, measure the right work, and verify the deployed build.',
     chapters: [
       {
-        slug: 'debugging-and-inspection',
+        path: 'shipping/troubleshooting',
+        level: 'intro',
+        learningGoals: ['Trace a visible failure to its first observable cause', 'Produce a minimal reproduction with versions and backend context'],
+        prerequisites: ['getting-started/setup'],
+        examples: ['performance/backend-comparison', 'input/keyboard', 'input/gamepad', 'audio-basics/play-sound'],
+        apiLinks: [],
+      },
+      {
+        path: 'debugging/debugging-and-inspection',
         level: 'intermediate',
-        learningGoals: [
-          'overlay performance, bounds, and hit-test layers',
-          'toggle debug layers without changing scene code',
-          'inspect filter chains and render-pass counts',
-        ],
+        learningGoals: ['Inspect drawing, interaction, and filter structure', 'Distinguish diagnostic estimates from GPU measurements'],
         prerequisites: ['getting-started/your-first-scene'],
         examples: ['performance/backend-comparison', 'debug-layer/pointer-and-hittest', 'render-targets/render-pipeline'],
         apiLinks: ['debug-overlay', 'performance-layer', 'bounding-boxes-layer', 'hit-test-layer', 'render-pass-inspector-layer'],
       },
       {
-        slug: 'performance',
+        path: 'debugging/performance',
         level: 'intermediate',
-        learningGoals: ['measure scene limits with stress examples', 'read the performance overlay to find bottlenecks'],
+        learningGoals: ['Separate simulation, submission, pixel work, and memory', 'Measure a controlled production workload before keeping an optimization'],
         prerequisites: ['debugging/debugging-and-inspection'],
         examples: ['performance/backend-comparison', 'particles/gpu-particles'],
         apiLinks: ['performance-layer'],
       },
       {
-        slug: 'backend-comparison',
+        path: 'debugging/backend-comparison',
         level: 'advanced',
+        learningGoals: [
+          'Understand automatic selection and explicit backend requirements',
+          'Read parity evidence without turning it into a universal support guarantee',
+        ],
+        prerequisites: ['getting-started/your-first-scene'],
         examples: ['performance/backend-comparison'],
         apiLinks: ['capabilities'],
       },
       {
-        slug: 'custom-renderers',
-        level: 'advanced',
-        examples: ['render-targets/render-pipeline', 'custom-renderers/custom-triangle-renderer'],
+        path: 'shipping/deployment',
+        level: 'intermediate',
+        learningGoals: [
+          'Build and host static output with the correct asset base',
+          'Verify production headers, capabilities, and failure paths on target devices',
+        ],
+        prerequisites: ['getting-started/setup'],
+        examples: [],
+        apiLinks: [],
       },
       {
-        slug: 'authoring-extensions',
+        path: 'shipping/typed-worklets-and-workers',
         level: 'advanced',
-        prerequisites: ['debugging/custom-renderers'],
+        learningGoals: ['Keep worker and worklet code in the correct execution environment', 'Own asynchronous startup, messages, and teardown'],
+        prerequisites: ['getting-started/setup'],
+        examples: [],
+        apiLinks: [],
+      },
+      {
+        path: 'shipping/typed-shaders',
+        level: 'advanced',
+        learningGoals: ['Import shader files through the build pipeline', 'Separate typed source imports from actual GPU program validation'],
+        prerequisites: ['effects/custom-mesh-shaders'],
+        examples: [],
+        apiLinks: [],
+      },
+    ],
+  },
+  {
+    slug: 'extending',
+    title: 'Integrate and extend',
+    description: 'Embed ExoJS or add a supported extension point only when the existing workflow is insufficient.',
+    chapters: [
+      {
+        path: 'integrations/react',
+        level: 'intermediate',
+        learningGoals: [
+          'Let React own the host and ExoJS own the canvas runtime',
+          'Handle reactive options and teardown without recreating the engine per render',
+        ],
+        prerequisites: ['runtime/scenes-and-lifecycle'],
+        examples: [],
+        apiLinks: ['application', 'scene'],
+      },
+      {
+        path: 'debugging/authoring-extensions',
+        level: 'advanced',
+        learningGoals: [
+          'Package explicit renderer, asset, and serializer contributions',
+          'Handle installation, rollback, disposal, and compatible peer versions',
+        ],
+        prerequisites: ['runtime/application'],
         examples: ['custom-renderers/custom-triangle-renderer', 'particles/emitter-basics'],
         apiLinks: ['extension', 'application', 'application-options'],
       },
       {
-        slug: 'renderer-sdk-contract',
+        path: 'debugging/custom-renderers',
+        level: 'advanced',
+        learningGoals: ['Choose the smallest rendering extension point that fits', 'Respect composed pass state and recover caller-owned GPU resources'],
+        prerequisites: ['rendering/render-targets', 'effects/custom-mesh-shaders'],
+        examples: ['render-targets/render-pipeline', 'custom-renderers/custom-triangle-renderer'],
+        apiLinks: [],
+      },
+      {
+        path: 'debugging/renderer-sdk-contract',
         level: 'advanced',
         learningGoals: [
-          'keep a renderer correct inside a retained capture and on replay',
-          'opt into batch recording without promising more than the renderer can honour',
-          'own a bundle generation, a render pass and the shared transform rows correctly',
+          'Implement recording and recovery against the supported renderer SDK',
+          'Honor retained generations, borrowed buffers, and pass coordination',
         ],
-        prerequisites: ['debugging/authoring-extensions'],
+        prerequisites: ['debugging/custom-renderers'],
+        examples: [],
+        apiLinks: [],
       },
-    ],
-  },
-  {
-    slug: 'integrations',
-    title: 'Integrations',
-    description: 'Embed ExoJS in other ecosystems — starting with hosting an Application inside a React component tree.',
-    chapters: [
       {
-        slug: 'react',
-        level: 'intermediate',
+        path: 'runtime/writing-your-own-transition',
+        level: 'advanced',
         learningGoals: [
-          'mount an ExoJS Application in a React tree with useExoApplication or ExoCanvas',
-          'switch scenes declaratively with <Scenes>',
-          'read the running app and active scene from React overlays',
+          'Separate a reusable transition definition from per-navigation state',
+          'Handle commit, abort, borrowed frames, and cleanup exactly once',
         ],
-        prerequisites: ['runtime/scenes-and-lifecycle'],
-        apiLinks: ['application', 'scene'],
-      },
-    ],
-  },
-  {
-    slug: 'shipping',
-    title: 'Shipping',
-    description: 'Ship an ExoJS app to production, diagnose common problems, and upgrade across versions.',
-    chapters: [
-      {
-        slug: 'troubleshooting',
-        level: 'intro',
-        examples: ['performance/backend-comparison', 'input/keyboard', 'input/gamepad', 'audio-basics/play-sound'],
-      },
-      {
-        slug: 'deployment',
-        level: 'intermediate',
-        prerequisites: ['recipes/build-orb-dodge'],
-      },
-      {
-        slug: 'typed-worklets-and-workers',
-        level: 'advanced',
-        prerequisites: ['shipping/deployment'],
-      },
-      {
-        slug: 'typed-shaders',
-        level: 'advanced',
-        prerequisites: ['effects/filters'],
+        prerequisites: ['runtime/scenes-and-lifecycle', 'rendering/render-targets'],
+        examples: ['application-scenes/custom-transition', 'application-scenes/multiple-scenes'],
+        apiLinks: ['scene-transition', 'phased-scene-transition', 'scene-transition-session', 'scene-transition-lifecycle-error', 'scene-director'],
       },
     ],
   },
 ];
 
-const PARTS: ReadonlyArray<GuidePartMeta> = RAW_PARTS.map((rawPart, partIndex) => {
-  const part = partIndex + 1;
-  const partMeta: GuidePartMeta = {
-    part,
-    slug: rawPart.slug,
-    title: rawPart.title,
-    description: rawPart.description,
-    chapters: rawPart.chapters.map((rawChapter, chapterIndex) => ({
-      part,
-      chapter: chapterIndex + 1,
-      partSlug: rawPart.slug,
-      partTitle: rawPart.title,
-      slug: rawChapter.slug,
-      path: `${rawPart.slug}/${rawChapter.slug}`,
-      level: rawChapter.level,
-      learningGoals: rawChapter.learningGoals ?? [],
-      prerequisites: rawChapter.prerequisites ?? [],
-      examples: rawChapter.examples ?? [],
-      apiLinks: rawChapter.apiLinks ?? [],
-    })),
-  };
-  return partMeta;
-});
-
-export const GUIDE_PARTS: ReadonlyArray<GuidePartMeta> = PARTS;
-
-export const GUIDE_CHAPTERS: ReadonlyArray<GuideChapterMeta> = PARTS.flatMap(part => part.chapters);
-
-export const GUIDE_CHAPTER_BY_PATH = new Map(GUIDE_CHAPTERS.map(chapter => [chapter.path, chapter]));
-
-export const GUIDE_PART_BY_SLUG = new Map(GUIDE_PARTS.map(part => [part.slug, part]));
-
+export const GUIDE_PARTS: ReadonlyArray<GuidePartMeta> = RAW_PARTS.map((part, partIndex) => ({
+  part: partIndex + 1,
+  slug: part.slug,
+  title: part.title,
+  description: part.description,
+  chapters: part.chapters.map((chapter, chapterIndex) => ({
+    ...chapter,
+    part: partIndex + 1,
+    chapter: chapterIndex + 1,
+    partSlug: part.slug,
+    partTitle: part.title,
+    slug: chapter.path.split('/').at(-1)!,
+  })),
+}));
+export const GUIDE_CHAPTERS: ReadonlyArray<GuideChapterMeta> = GUIDE_PARTS.flatMap(part => part.chapters);
+export const GUIDE_CHAPTER_BY_PATH: ReadonlyMap<string, GuideChapterMeta> = new Map(GUIDE_CHAPTERS.map(chapter => [chapter.path, chapter]));
+export const GUIDE_PART_BY_SLUG: ReadonlyMap<string, GuidePartMeta> = new Map(GUIDE_PARTS.map(part => [part.slug, part]));
 export interface LearningPathStep {
-  /** Guide chapter path ("<partSlug>/<chapterSlug>"). */
   path: string;
-  /** One concrete outcome for this step. */
   goal: string;
-  /** Optional related playground example ("<category>/<slug>"). */
   example?: string;
 }
-
-/**
- * The recommended onboarding journey, shown on the guide landing page. Each step
- * links to a real chapter; the landing reconciliation test keeps every path and
- * example valid.
- */
-export const GUIDE_LEARNING_PATH: ReadonlyArray<LearningPathStep> = [
-  { path: 'getting-started/what-is-exojs', goal: 'See what ExoJS is and how its pieces fit together.' },
-  { path: 'getting-started/setup', goal: 'Scaffold a typed project and run the dev server.' },
-  { path: 'getting-started/project-structure', goal: 'Find your way around a create-exo-app project.', example: 'getting-started/hello-world' },
-  { path: 'getting-started/your-first-scene', goal: 'Load a texture, draw a sprite, and animate it.', example: 'getting-started/hello-world' },
-  { path: 'runtime/scenes-and-lifecycle', goal: 'Update state and render each frame.', example: 'getting-started/hello-world' },
-  { path: 'input/keyboard-and-actions', goal: 'Move something in response to key presses.', example: 'input/keyboard' },
-  { path: 'audio/audio-basics', goal: 'Play sound and music with reliable controls.', example: 'audio-basics/play-sound' },
-  { path: 'recipes/build-orb-dodge', goal: 'Combine it all into a complete small game.', example: 'showcase/orb-dodge' },
-  { path: 'shipping/deployment', goal: 'Build and host the finished project.' },
-];
-
 export interface GuideTopic {
   title: string;
   description: string;
-  /** Guide chapter path the topic opens. */
   path: string;
 }
+export const getAdjacentChapters = (path: string): { previous: GuideChapterMeta | null; next: GuideChapterMeta | null } => {
+  const index = GUIDE_CHAPTERS.findIndex(chapter => chapter.path === path);
+  return index < 0 ? { previous: null, next: null } : { previous: GUIDE_CHAPTERS[index - 1] ?? null, next: GUIDE_CHAPTERS[index + 1] ?? null };
+};
+export const isGuidePath = (path: string): boolean => GUIDE_CHAPTER_BY_PATH.has(path);
 
-/** Topic-based entry points on the guide landing page. */
-export const GUIDE_TOPICS: ReadonlyArray<GuideTopic> = [
-  { title: 'Build games', description: 'Scenes, input, collision, and a full game walkthrough.', path: 'recipes/build-orb-dodge' },
-  { title: 'Create visuals', description: 'Graphics, sprites, text, filters, and particles.', path: 'rendering/graphics' },
-  { title: 'Work with audio', description: 'Playback, spatial audio, effects, and beat detection.', path: 'audio/audio-basics' },
-  { title: 'Load assets', description: 'Declare, load, and cache textures, audio, and data.', path: 'assets/loading-and-resources' },
-  { title: 'Build UI', description: 'HUDs, dialog systems, pause menus, and typewriter text.', path: 'recipes/ui-patterns' },
-  { title: 'Debug & optimize', description: 'Overlays, profiling, and render-pipeline inspection.', path: 'debugging/debugging-and-inspection' },
-  { title: 'Ship your game', description: 'Build, troubleshoot, and deploy to production.', path: 'shipping/deployment' },
+export const GUIDE_LEARNING_PATH: ReadonlyArray<LearningPathStep> = [
+  {
+    path: 'getting-started/what-is-exojs',
+    goal: 'Understand the runtime and choose the right documentation surface.',
+    example: 'getting-started/hello-world',
+  },
+  {
+    path: 'getting-started/setup',
+    goal: 'Create a typed starter and locate its entry point and scene.',
+  },
+  {
+    path: 'getting-started/your-first-scene',
+    goal: 'Draw and animate an object before introducing external assets.',
+    example: 'getting-started/hello-world',
+  },
+  {
+    path: 'runtime/scenes-and-lifecycle',
+    goal: 'Place loading, updates, pause, and cleanup at the right lifetime.',
+    example: 'application-scenes/multiple-scenes',
+  },
+  {
+    path: 'input/keyboard-and-actions',
+    goal: 'Connect physical controls to gameplay actions.',
+    example: 'input/action-mapping',
+  },
+  {
+    path: 'assets/loading-and-resources',
+    goal: 'Load required resources and give them an explicit owner.',
+    example: 'application-scenes/loading-screen',
+  },
+  {
+    path: 'rendering/sprites',
+    goal: 'Place and render texture-backed content.',
+    example: 'sprites-textures/sprite-basics',
+  },
+  {
+    path: 'audio/audio-basics',
+    goal: 'Start audio from a user gesture and own its voices.',
+    example: 'audio-basics/play-sound',
+  },
+  {
+    path: 'debugging/debugging-and-inspection',
+    goal: 'Inspect a failing drawing or interaction boundary.',
+    example: 'debug-layer/pointer-and-hittest',
+  },
+  {
+    path: 'shipping/deployment',
+    goal: 'Build and verify the hosted production application.',
+  },
 ];
-
-/** The core onboarding chapters that must carry full pedagogical metadata. */
+export const GUIDE_TOPICS: ReadonlyArray<GuideTopic> = [
+  {
+    title: 'Understand scene ownership',
+    description: 'Translate familiar engine concepts into ExoJS loading, pause, retention, and teardown.',
+    path: 'runtime/scenes-and-lifecycle',
+  },
+  {
+    title: 'Build a complete game',
+    description: 'Combine input, spawning, collision, and score in the maintained Orb Dodge example.',
+    path: 'recipes/build-orb-dodge',
+  },
+  {
+    title: 'Build a HUD or menu',
+    description: 'Use retained widgets, layout, focus, and deliberate DOM integration.',
+    path: 'runtime/ui-and-widgets',
+  },
+  {
+    title: 'Load and stream worlds',
+    description: 'Turn authored maps and objects into independently owned levels.',
+    path: 'assets/worlds-and-spawning',
+  },
+  {
+    title: 'Create visual effects',
+    description: 'Choose materials, filters, particles, or lighting without starting from raw GPU code.',
+    path: 'effects/filters',
+  },
+  {
+    title: 'Build audio-reactive visuals',
+    description: 'Map live analysis and beat estimates into bounded visual changes.',
+    path: 'audio/audio-reactive-visualization',
+  },
+  {
+    title: 'Find a failure',
+    description: 'Start with the observed symptom and inspect the relevant runtime boundary.',
+    path: 'shipping/troubleshooting',
+  },
+  {
+    title: 'Measure performance',
+    description: 'Separate CPU, GPU, memory, and frame pacing before optimizing.',
+    path: 'debugging/performance',
+  },
+  {
+    title: 'Embed in React',
+    description: 'Keep React hosting and ExoJS runtime ownership distinct.',
+    path: 'integrations/react',
+  },
+  {
+    title: 'Ship the application',
+    description: 'Check the production build, asset URLs, policies, and target devices.',
+    path: 'shipping/deployment',
+  },
+];
 export const CORE_ONBOARDING_PATHS: ReadonlyArray<string> = [
   'getting-started/what-is-exojs',
   'getting-started/setup',
-  'getting-started/project-structure',
   'getting-started/your-first-scene',
   'runtime/scenes-and-lifecycle',
   'input/keyboard-and-actions',
+  'assets/loading-and-resources',
+  'rendering/sprites',
   'audio/audio-basics',
-  'recipes/build-orb-dodge',
+  'debugging/debugging-and-inspection',
+  'shipping/deployment',
 ];
-
-/** Returns the chapters immediately before and after the given guide path. */
-export const getAdjacentChapters = (
-  path: string,
-): {
-  previous: GuideChapterMeta | null;
-  next: GuideChapterMeta | null;
-} => {
-  const index = GUIDE_CHAPTERS.findIndex(chapter => chapter.path === path);
-  if (index === -1) return { previous: null, next: null };
-  return {
-    previous: index > 0 ? GUIDE_CHAPTERS[index - 1] : null,
-    next: index < GUIDE_CHAPTERS.length - 1 ? GUIDE_CHAPTERS[index + 1] : null,
-  };
-};
-
-/** True when the value matches a known guide chapter path. */
-export const isGuidePath = (path: string): boolean => {
-  return GUIDE_CHAPTER_BY_PATH.has(path);
-};

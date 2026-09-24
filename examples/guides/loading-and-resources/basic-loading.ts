@@ -1,5 +1,5 @@
 // #region guide:required-scene
-import { Scene, Sprite, type RenderingContext, type Texture } from '@codexo/exojs';
+import { type RenderingContext, Scene, Sprite, type Texture } from '@codexo/exojs';
 
 export class HeroScene extends Scene {
   private texture!: Texture;
