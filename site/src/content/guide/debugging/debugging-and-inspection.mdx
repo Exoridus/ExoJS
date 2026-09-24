@@ -1,275 +1,85 @@
 ---
-title: 'Debugging & inspection'
-description: 'Inspect scene state and runtime behavior with overlay layers, and trace filter chains and render passes with the in-engine inspector.'
+title: 'Debugging and inspection'
+description: 'Inspect visibility, hit testing, frame behavior, and filter structure while keeping diagnostic estimates separate from GPU measurements.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
-import SourceSnippet from '../../../components/SourceSnippet.astro';
-import TryIt from '../../../components/TryIt.astro';
-import Callout from '../../../components/Callout.astro';
 
-# Debugging & inspection
+# Debugging and inspection
 
-ExoJS ships five diagnostic layers in the `@codexo/exojs/debug` optional entrypoint, all managed by `DebugOverlay`: performance, bounding boxes, hit-test, pointer stack, and the render-pass inspector covered below. These tools render as overlays on top of your running scene — no scene-logic changes, no special draw-call instrumentation, no build flags.
+Start with the smallest failing scene and one question. Is the object outside the view? Does the pointer reach the intended node? Did loading finish? Is a filter attached twice? The optional `@codexo/exojs/debug` entry point provides overlays for inspecting a running application without moving debugging logic into the scene.
 
-## DebugOverlay
+For an empty canvas or failed startup, begin with [Troubleshooting](/ExoJS/en/guide/shipping/troubleshooting/). The overlay itself needs a usable application and is not a replacement for handling initialization errors.
 
-The [`DebugOverlay`](/ExoJS/en/api/debug-overlay/) is the entry point. Create one against your application, toggle individual layers by setting their `visible` flag:
+## Attach an owned overlay
 
 ```ts
-import { Application } from '@codexo/exojs';
+import type { Application } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
-const app = new Application();
-const debug = new DebugOverlay(app);
+export const attachDebugTools = (app: Application): (() => void) => {
+  const debug = new DebugOverlay(app);
 
-// During development — just flip a flag
-debug.layers.performance.visible = true;
-debug.layers.boundingBoxes.visible = true;
+  debug.layers.performance.visible = true;
+  debug.layers.boundingBoxes.visible = true;
 
-// Toggle with keyboard shortcuts (F1–F4 and F6, while canvas has focus)
+  return () => {
+    debug.destroy();
+  };
+};
 ```
 
-The overlay subscribes to `app.onFrame` and renders each visible layer. World-space layers (`boundingBoxes`, `hitTest`) render first under screen-space panels (`performance`, `pointerStack`, `renderPassInspector`). The overlay's `visible` flag suppresses all layers without changing individual visibility.
+Call the returned disposer when the development host no longer needs the tools. Hiding a layer skips that layer's drawing and collection, but a constructed overlay still owns subscriptions and shortcuts. Destroy it before final performance measurements rather than treating hidden diagnostics as a zero-cost guarantee.
 
-| Layer | Property | Shortcut |
-|-------|----------|----------|
-| Performance | `layers.performance` | F1 |
-| Bounding boxes | `layers.boundingBoxes` | F2 |
-| Hit-test | `layers.hitTest` | F3 |
-| Pointer stack | `layers.pointerStack` | F4 |
-| Render-pass inspector | `layers.renderPassInspector` | F6 |
+| Tool | Use it to inspect | Shortcut |
+| --- | --- | --- |
+| Performance | Frame behavior and renderer counters. | F1 |
+| Bounding boxes | The bounds the engine associates with visible content. | F2 |
+| Hit test | Interactive, hovered, and captured nodes. | F3 |
+| Pointer stack | Candidate nodes under the pointer and their ordering. | F4 |
+| Render-pass inspector | Attached filters, masks, cache flags, and an optional logical pipeline. | F6 |
 
-F5 is deliberately unbound — browsers reload the page on it, which would tear down the very session you are inspecting.
+Shortcuts apply while the canvas has focus. F5 remains available for the browser's reload action. The overlay releases its shortcut claims on destruction.
 
-While the overlay exists it claims these keys as engine input, so the browser's own defaults for them (F1's help window, F3's find bar) stay suppressed. `debug.destroy()` releases them again.
+## Visibility and input
 
-## Performance layer
+Use bounding boxes to check placement, anchor, scale, and the active camera before changing the renderer. A missing or surprising box narrows the investigation; it does not identify every possible cause of an invisible object. Also check loading state, opacity, masking, clipping, and whether the object is submitted from `draw`.
 
-The [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) shows four real-time metrics in a compact panel (top-left):
+For pointer problems, enable both the hit-test and pointer-stack layers. Check which node is on top, whether a modal interaction scope limits the candidates, and whether a previous press still owns pointer capture. Screen coordinates and world coordinates are different: use the view that rendered the interactive object when converting between them.
 
-| Metric | Source |
-|--------|--------|
-| **FPS** | Rolling 60-sample average of frame times |
-| **Frame** | Current frame duration in milliseconds |
-| **Draws** | GPU draw calls issued this frame (`backend.stats.drawCalls`) |
-| **Nodes** | Total `RenderNode` count in the scene |
+<ExamplePreview chapter="debug-layer" slug="pointer-and-hittest" />
 
-A sparkline below the text shows the last 120 frames of frame-time history — a quick visual of frame-rate stability. The sparkline maxes out at 33ms (~30 FPS), so any frame that hits the top boundary is below 30 FPS.
+## Inspect filter structure, not imaginary GPU timings
 
-Press F1 or set `debug.layers.performance.visible = true` to enable it.
+The render-pass inspector walks visible nodes beneath the current scene's `root` and collects nodes that have at least one filter. Each entry contains the filter sequence, bounds, a mask flag, and a texture-cache flag. A node with only a mask and no filter is not included in that list.
 
-## Bounding-boxes layer
+At this revision, `totalPasses` is a **structural count**: the number of attached filters in the collected entries, plus one for each entry with a mask. It is not a measured hardware-pass count. It does not expand a multi-step blur or bloom, subtract cached work, or inventory all application-level passes. A `[cached]` flag describes configuration, not proof that no cache rebuild happened in the current frame.
 
-The [`BoundingBoxesLayer`](/ExoJS/en/api/bounding-boxes-layer/) draws colored rectangle outlines around every visible `RenderNode` with non-zero bounds. Each node's outline hue cycles by its `zIndex` — adjacent z-indices get visually distinct colors. This layer renders in world space, so boxes move and rotate with the scene:
+Use the panel to find unexpected attachments or large filtered bounds. Confirm actual work with renderer counters or a GPU capture before claiming a pass reduction. To inspect an explicit `RenderPipeline`, set it on the inspector; the resulting rows describe enabled state and nesting, not execution time.
 
-```ts
-import { DebugOverlay } from '@codexo/exojs/debug';
+The `entries` array is reused on update. Copy the values you need before retaining a history, and remember that filter objects in an entry are live objects rather than immutable serialized state.
 
-declare const debug: DebugOverlay;
-debug.layers.boundingBoxes.visible = true;  // or F2
-```
+## Log a useful failure
 
-Use this to debug layout issues, verify sprite bounds match expectations, or spot invisible nodes taking up space. It is the fastest way to answer "where does the engine think this node is?"
-
-<Callout type="debug" title="Read the boxes as a diagnosis">
-A node that's in the tree but invisible tells you which way to look: no box means its bounds are zero (nothing to draw), while a box off in a corner means it's mis-anchored or off-screen. F2 tells the two apart instantly.
-</Callout>
-
-## Hit-test layer
-
-The [`HitTestLayer`](/ExoJS/en/api/hit-test-layer/) color-codes interactive nodes based on their pointer state:
-
-- **Magenta**: interactive but idle (not hovered)
-- **Yellow**: currently hovered
-- **Cyan**: pointer-captured (being dragged or pressed)
-
-This layer renders in world space. Combined with `debug.layers.pointerStack.visible` (F4), which lists which nodes are under the cursor in a screen-space panel, you can trace the full hit-test path from pointer position to interactive node:
-
-```ts
-import { DebugOverlay } from '@codexo/exojs/debug';
-
-declare const debug: DebugOverlay;
-debug.layers.hitTest.visible = true;       // or F3
-debug.layers.pointerStack.visible = true;  // or F4
-```
-
-The pointer-stack panel shows up to 10 nodes under the cursor sorted by `zIndex` (topmost first), with canvas coordinates, constructor names, and an `— interactive` flag for nodes that participate in hit testing.
-
-## Overlay lifecycle
-
-All debug layers live on `DebugOverlay.layers`. The overlay subscribes to application events (`onFrame`, `onKeyDown`, `onResize`) and drives layer updates and rendering. Call `debug.destroy()` when you no longer need the overlay — it unsubscribes from all events and destroys every layer.
-
-Debug layers have zero overhead when their `visible` flag is `false` — `DebugOverlay._onFrame` skips invisible layers entirely. You can leave the overlay constructed for a full development session without worrying about perf impact on profiling.
-
-## Logging
-
-Separately from the visual overlays above, ExoJS ships a message-first [`Logger`](/ExoJS/en/api/logger/) in the core module — no special entrypoint required. The engine uses it internally (for example, `Application` logs unexpected failures with `source: 'Application'`), and it's available for your own code too. A ready-to-use default instance, `logger`, is exported alongside the class:
+The Core logger accepts a message and optional structured context:
 
 ```ts
 import { logger } from '@codexo/exojs';
 
-logger.debug('Bundle "level-1" queued', { source: 'assets' });
-logger.info('Entered gameplay scene', { source: 'scene' });
-logger.warn('AudioContext resumed after a user gesture', { source: 'audio' });
-logger.error('Simulation step threw', { source: 'physics', error: new Error('physics step failed') });
+export const reportStartupFailure = (error: unknown): void => {
+  logger.error('Application startup failed', {
+    source: 'game',
+    error: error instanceof Error ? error : new Error(String(error)),
+  });
+};
 ```
 
-Each call takes a `message` plus an optional options bag: `source` (rendered as `[ExoJS][source]`, or a bare `[ExoJS]` when omitted), `data` for structured context, and `error` for `error()` calls. Use `source` to identify the subsystem or class emitting the entry so your own tooling can filter by it.
+Keep logging at the boundary that can add meaningful context: which scene, asset, or user action failed. Avoid repeating the same message every frame. Production severity filtering does not make expensive argument construction free; guard costly diagnostic work instead of assuming a JavaScript minifier removes it.
 
-Severity follows `LogSeverity`: `Debug < Info < Warning < Error`. In production builds, `Debug`/`Info`/`Warning` calls never reach a sink — `Logger` checks severity at runtime and returns early — but only `Error` calls are unconditionally guaranteed to survive. The build does *not* compile the lower-severity calls out of the bundle: the `logger.debug(...)` call itself, its message string, and any `data` object you pass are still constructed and executed every time, and only discarded afterward. In development builds, a console sink is registered by default and prefixes every line with a styled `[ExoJS]` (or `[ExoJS][source]`) badge.
+A logger sink is an external subscription. Retain and call its unsubscribe function when its owner ends. Do not log private save data, access tokens, or full user documents merely to identify a decoding failure.
 
-<Callout type="info" title="Debug logs are dropped at runtime, not stripped from the bundle">
-Only `Error` reaches a sink in a production build — `Debug`, `Info`, and `Warning` calls are discarded by an early return inside `Logger`, not removed from the shipped code. The call and its arguments still run, so if a message or `data` object is expensive to build, construct it lazily (e.g. behind a function or your own guard) rather than assuming it gets stripped.
-</Callout>
+## Turn the observation into a regression test
 
-To capture log entries yourself — for an in-game console, telemetry, or a custom debug panel — register a sink with `addSink`. It returns an unsubscribe function:
+Once the failure is understood, capture the smallest useful contract: a resource releases when its scope ends, a scene navigation rejects cleanly, an interaction scope traps focus, or a render tree contains the intended filter. A structural assertion catches structural drift; a visual or GPU claim still needs the corresponding rendering evidence.
 
-```ts
-import { logger, LogSeverity } from '@codexo/exojs';
-
-const unsubscribe = logger.addSink((entry) => {
-    if (entry.severity >= LogSeverity.Warning) {
-        console.warn(entry.source, entry.message, entry.data ?? entry.error);
-    }
-});
-
-// later
-unsubscribe();
-```
-
-For warnings that could otherwise repeat every frame (a stale asset reference checked in `update`, say), pass `once` — the entry is dropped after the first call for a given key, at any severity:
-
-<SourceSnippet
-  source="examples/guides/debugging-and-inspection/logging.ts"
-  region="log-once"
-  language="ts"
-  title="examples/guides/debugging-and-inspection/logging.ts"
-/>
-
-## Inspecting the render pipeline
-
-Every filter attached to a drawable costs at least one extra render pass. A stack of three filters on a container means the container renders to an off-screen target, the first filter reads and writes a target, the second does the same, and the third composites the result — four passes for one element. When your frame budget tightens, knowing who is adding passes and why matters.
-
-[`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) (added in v0.8.3) shows you that information live, in a compact text panel overlaid on the canvas. It ships in the `@codexo/exojs/debug` optional entrypoint alongside the other debug layers.
-
-### What the layer reveals
-
-Each frame, `RenderPassInspectorLayer` walks the scene graph and collects an entry for every `RenderNode` that has at least one filter. The panel displays:
-
-- **Total pass count** across all filtered drawables (one pass per filter, plus one per mask).
-- **Per-drawable rows** showing the constructor name (`Sprite`, `Container`, `Mesh`, `Graphics`) and the drawable's bounding-box dimensions.
-- **Filter sequence** indented under each drawable, in execution order, by constructor name (`BlurFilter`, `ColorMatrixFilter`, `LutFilter`, `ShaderFilter`, …).
-- **Flags** — `[mask]` when the drawable has an active mask (mask passes add to the total), `[cached]` when `cacheAsTexture` is set (cached drawables apply filters once, not per frame).
-
-The panel does not show drawables with zero filters — they are invisible to the render-pipeline inspector because they contribute no extra passes beyond the main batch draw.
-
-### Enabling the layer
-
-`DebugOverlay` manages the inspector alongside the other layers, so the usual route is a flag or the F6 shortcut:
-
-```ts
-import { DebugOverlay } from '@codexo/exojs/debug';
-
-declare const debug: DebugOverlay;
-debug.layers.renderPassInspector.visible = true;  // or F6
-```
-
-The inspector walks `app.scenes.currentScene?.root` each frame, so it sees whichever scene is currently active. It is never added to the scene graph.
-
-### Driving the layer without the overlay
-
-`RenderPassInspectorLayer` extends `DebugLayer` and can also be driven directly from `app.onFrame` — useful when you want the inspector without constructing an overlay, or when you need it on a view of your own. Import it from the debug entrypoint, construct it against the application, and render it yourself:
-
-<SourceSnippet
-  source="examples/guides/debugging-and-inspection/pass-inspector.ts"
-  region="pass-inspector"
-  language="ts"
-  title="examples/guides/debugging-and-inspection/pass-inspector.ts"
-/>
-
-The screen-space view swap is necessary because `RenderPassInspectorLayer` returns `'screen'` for `viewMode` and positions its text panel at absolute pixel coordinates. Without the view swap, the panel would render in the scene's coordinate system.
-
-If you only need the data and not the built-in panel, read `inspector.entries` and `inspector.totalPasses` directly — the `update` call is still required to populate the entry snapshot:
-
-<SourceSnippet
-  source="examples/guides/debugging-and-inspection/logging.ts"
-  region="inspector-dump"
-  language="ts"
-  title="examples/guides/debugging-and-inspection/logging.ts"
-/>
-
-The `entries` array is replaced each frame during the inspector's `update`. Keep a copy if you need to retain frame history.
-
-### Reading the panel
-
-The panel renders in the top-left corner of the screen (at x=200 to avoid overlapping the `PerformanceLayer` panel). The header line shows the total pass count for the current frame. Below it, each filtered drawable gets a row with its dimensions and flags, followed by an indented list of filters:
-
-```
-Render Passes: 7
-Sprite 512x256 [cached]
-  0. BlurFilter
-  1. ColorMatrixFilter
-Container 800x600
-  0. ShaderFilter
-  1. BlurFilter
-Graphics 128x64 [mask]
-  0. LutFilter
-```
-
-This tells you: the Sprite has two filters and is bitmap-cached (filters are baked once, not re-composited each frame — no ongoing pass cost). The Container has two active filters costing two passes per frame. The Graphics has a mask (adds one pass) plus a `LutFilter` (adds another). Total: 2 + 1 + 1 + 1 = 5, plus 2 for the Container = 7.
-
-### Understanding pass counts
-
-A filter pass means the GPU renders some geometry into a temporary render target, then a second shader reads that target and produces the filtered result. The engine reuses render target memory across filter steps (the pool keeps a steady state of two allocations regardless of filter count), but each pass still consumes GPU time proportional to the drawable's bounding-box area.
-
-Common pass-reduction strategies, in order of impact:
-
-1. **Remove filters you don't need.** Every filter the panel lists is active. If a `BlurFilter` on a background element is invisible under a solid overlay, removing it saves a pass.
-2. **Enable `cacheAsTexture`** on filtered drawables that don't change every frame. The inspector shows `[cached]` when active. Cached drawables bake their filters once and skip per-frame re-application.
-3. **Consolidate filter stacks.** Two `ColorMatrixFilter` instances on the same drawable cost two passes. Most color adjustments (brightness, contrast, saturation) can be combined into a single `ColorMatrixFilter` or replaced with a custom `ShaderFilter` that applies both in one pass.
-4. **Reduce drawable size.** Filter passes render at the drawable's bounding-box resolution (ceil). A 2048×2048 sprite with a blur costs far more than a 256×256 one with the same blur strength. The panel shows the resolution each drawable renders at.
-
-### External GPU capture tools
-
-`RenderPassInspectorLayer` tells you *what* is being drawn and *how many* passes it costs. It does not show intermediate render-target contents, shader source, or exact GPU timings.
-
-For that level of detail, use external capture tools:
-
-- **[Spector.js](https://spector.babylonjs.com/)** — WebGL2 frame capture. Shows every draw call, shader source, uniform values, and render-target contents for a captured frame.
-- **Chrome DevTools WebGPU panel** — WebGPU frame capture. Shows compute and render passes, pipeline state, bind groups, and buffer contents.
-
-On WebGPU, ExoJS emits labels on key passes so capture tools display meaningful names rather than generic calls. Look for labels such as:
-
-- `ShaderFilter pass` — a `ShaderFilter` executing
-- `MeshMaterial (custom)` — a `Mesh` with an attached `MeshMaterial` drawing inside the main render pass
-- `WebGpuMaskCompositor pass` — mask composition for a drawable with an active `mask`
-
-These labels are visible in tools that surface WebGPU pass labels (for example, Chrome's WebGPU tooling).
-
-### When to reach for the inspector
-
-- **During development** — keep the inspector on while building filter stacks. You see immediately when adding a filter to a container increases the pass count.
-- **During profiling** — when a scene's frame time is higher than expected, enable the inspector to rule out (or confirm) filter pass overhead as the cause.
-- **In CI** — snapshot `inspector.entries` and `inspector.totalPasses` on a known scene to catch regressions. A PR that accidentally enables `cacheAsTexture: false` or adds an unintended filter won't change visual output but will show up as a pass-count increase.
-
-## Examples
-
-<a id="bounding-boxes"></a>
-<ExamplePreview chapter="debug-layer" slug="pointer-and-hittest" />
-
-Drag overlapping sprites and inspect the bounding-box, pointer-stack, and hit-test overlays. Keys 1, 2, and 3 change which sprite is in front.
-
-<a id="performance-overlay"></a>
-<ExamplePreview chapter="performance" slug="backend-comparison" />
-
-A seeded sprite workload with live FPS, frame time, draw-call count, and sparkline.
-
-<TryIt
-  examples={['performance/backend-comparison', 'debug-layer/pointer-and-hittest']}
-  api={['debug-overlay', 'performance-layer', 'render-pass-inspector-layer']}
-/>
-
-## Where to go next
-
-The next chapter, [Performance](/ExoJS/en/guide/debugging/performance/), covers scene measurement — sprite stress tests, particle throughput, and how to use the performance layer to identify bottlenecks.
+Use [Performance](/ExoJS/en/guide/debugging/performance/) for measurement and [Backend selection](/ExoJS/en/guide/debugging/backend-comparison/) for capability and parity questions. Keep the test tied to the behavior rather than to the prose that happened to describe it.

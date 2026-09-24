@@ -1,219 +1,86 @@
 ---
-title: 'Deployment'
-description: 'Build and host an ExoJS app: local production build, Vite base path, static hosting, assets, CDN bundles, and browser support.'
+title: 'Build and deploy'
+description: 'Ship the static production output with correct asset bases, versioned dependencies, capability handling, and host-side checks.'
 ---
 
-import Callout from '../../../components/Callout.astro';
+# Build and deploy
 
-# Deployment
+A `create-exo-app` project produces static HTML, JavaScript, and assets. Deploy the production output, not the source tree or the development server. No ExoJS server process is required for a client-only application; any backend services your game uses remain a separate concern.
 
-ExoJS apps built with `create-exo-app` use Vite and produce a fully static output. The build step compiles, bundles, and copies all required files into a `dist/` directory. That directory is everything you need to host.
+## Verify the production output
 
-## Local production build
-
-Run the standard Vite build from your project root:
-
-```bash
+```sh
 npm run build
-```
-
-This produces `dist/index.html`, the bundled JavaScript, and any assets from `public/`. To test the production build locally before deploying:
-
-```bash
 npm run preview
 ```
 
-`preview` runs a small HTTP server that serves `dist/` exactly as a real host would. Use it to catch any path or MIME-type issues that only appear outside the dev server.
+The build writes `dist/`. Preview serves that output locally so you can check compilation and asset paths. It does not reproduce every production header, cache rule, MIME mapping, or cross-origin policy. Check the deployed URL as well.
 
-Do not open `dist/index.html` directly with `file://`. Browsers apply strict origin restrictions to `file://` requests that break module loading and asset fetching. Always use a proper HTTP server.
+Use the lockfile and pinned compatible package versions in CI. Run the project's typecheck and tests before publishing. Serve the result over HTTP or HTTPS rather than opening `index.html` with `file://`.
 
-## Vite base path
+## Configure a subdirectory deployment
 
-<Callout type="pitfall" title="Subpath deploys need a base or every asset 404s">
-Deploying under a subpath — GitHub Pages at `https://username.github.io/repo-name/`, for instance — without setting Vite's `base` makes every bundled asset resolve against the domain root and 404, leaving a blank canvas. Set `base: '/repo-name/'` in `vite.config.ts` and rebuild.
-</Callout>
+Vite's `base` controls generated bundle URLs. A site hosted at `/my-game/` needs a matching base before building:
 
-By default Vite assumes your app is hosted at the root of a domain (`/`). If you deploy to a subpath — for example GitHub Pages at `https://username.github.io/repo-name/` — you must set the `base` option in `vite.config.ts`:
-
-```ts no-check -- a vite config; vite is not part of the guide typecheck program
+```ts no-check -- this is the consumer project's Vite configuration, not the engine TypeScript program
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-    base: '/repo-name/',
+  base: '/my-game/',
 });
 ```
 
-After setting `base`, all asset paths in the HTML output are prefixed accordingly. Rebuild after changing `base`; the dev server does not require it but the production output does.
+Vite does **not** rewrite every arbitrary string passed to an asset loader. Resolve the loader's base from the deployment base as well:
 
-If you deploy to the root of a custom domain, leave `base` at its default (`'/'`) or omit it entirely.
+```ts no-check -- import.meta.env.BASE_URL is supplied and typed by Vite in the consumer project
+import { Application } from '@codexo/exojs';
 
-## Static hosting
-
-An ExoJS app is a static site: plain HTML, JavaScript, and assets. Any host that serves static files works.
-
-**Netlify** — Drop your `dist/` directory into Netlify Drop, or connect your repository. Set the build command to `npm run build` and the publish directory to `dist`.
-
-**Vercel** — Import your repository. Vercel detects Vite automatically and sets the correct build settings. The publish directory is `dist`.
-
-**GitHub Pages** — Build locally or via GitHub Actions and push the `dist/` contents to a `gh-pages` branch. Remember to set `base` in `vite.config.ts` if your repository is not deployed to a custom domain at root (see above).
-
-**itch.io** — Build with `npm run build`, then zip the contents of `dist/` (not the folder itself) and upload as an HTML game. Set the frame dimensions in the itch.io project settings to match your canvas size.
-
-**Any static web server** — Copy `dist/` to the server's document root. Apache, Nginx, Caddy, and S3-compatible object storage all work without additional configuration.
-
-For all targets: make sure the server is reachable over HTTPS if you need clipboard access, Web Crypto, or other APIs that require a secure context. Modern hosting providers enable HTTPS by default.
-
-## GitHub Pages with GitHub Actions
-
-For a hands-off GitHub Pages deploy, let an Actions workflow build and publish on every push. Add `.github/workflows/deploy.yml`:
-
-```yaml
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [main]
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npm run build
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+const deploymentBase = new URL(import.meta.env.BASE_URL, document.baseURI);
+const assetBase = new URL('assets/', deploymentBase).href;
+const app = new Application({ loader: { basePath: assetBase } });
 ```
 
-Two one-time settings make this work:
+Add the scene and canvas options from your application entry point; the fragment above isolates URL configuration. A descriptor such as `image/hero.png` then resolves below that asset base. Do not prefix it again with `assets/` or `public/`.
 
-1. In the repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
-2. Set `base: '/repo-name/'` in `vite.config.ts` (see [Vite base path](#vite-base-path) above) so asset URLs resolve under the project subpath. A project site is served from `https://username.github.io/repo-name/`, not the domain root.
+Files under `public/` are copied unchanged. Imported assets follow the bundler's asset pipeline. Check exact filename casing and ensure that a missing asset returns a real failure rather than the host's HTML application fallback.
 
-After the first successful run, every push to `main` rebuilds and republishes automatically.
+## Choose a host
 
-## Assets in production
+Use a static host that can serve the entire output with correct relative paths and headers. For an embedded HTML game, package the contents of `dist/` at the archive root and configure the embedding surface to match the application's sizing policy.
 
-Files placed in `public/` are copied verbatim to `dist/` during the build. A file at `public/assets/bunny.png` appears at `dist/assets/bunny.png` and is served at `/assets/bunny.png` (or `/<base>/assets/bunny.png` when `base` is set).
+For GitHub Pages or another CI-based host, use its maintained deployment workflow and publish only after the build succeeds. Keep hosting credentials in the host's secret store, not in application JavaScript. A browser bundle cannot keep a secret from its user.
 
-Reference assets without the `public/` prefix:
+Verify JavaScript MIME types, font and media responses, HTTPS, and any required CORS headers. Both `text/javascript` and other standards-compatible JavaScript MIME types can be valid; an HTML fallback or `text/plain` response for a module is a common failure.
 
-```ts
-await loader.load('assets/bunny.png'); // correct
-```
+## Using a release bundle without a bundler
 
-**Case-sensitivity.** Development on Windows or macOS is case-insensitive, but most Linux hosting is not. A mismatch between `Bunny.png` on disk and `bunny.png` in code works locally and fails in production. Use consistent lowercase names.
+Core provides ESM and classic-script bundles. Prefer a bundler-based project for dependency resolution and tree shaking; importing selected names from an already bundled browser module does not make the browser download only those exports.
 
-**Absolute local paths.** Never use paths like `C:\Users\...` or `/home/user/...` in asset references. All paths must be relative to the server root and portable across machines.
-
-## CDN and release bundle usage
-
-If you want to use ExoJS from a CDN or include the release bundle directly (without npm), there are two bundle formats to choose from: an ES module bundle for use with `<script type="module">`, or a plain-script IIFE bundle for use with a regular `<script>` tag. Both are published with the npm package and available from any CDN that mirrors it (unpkg, jsDelivr).
-
-### ES module bundle
-
-For the core engine bundle:
+For a classic script, copy a specific release's Core bundle into your deployed files:
 
 ```html
-<script type="module">
-    import { Application, Scene } from './dist/exo.esm.js';
-
-    const app = new Application({ canvas: { width: 800, height: 600 } });
-</script>
-```
-
-For the debug bundle (`exo.debug.esm.js`), note that it is an **external-core** bundle: it imports `@codexo/exojs` from outside itself. You must map that specifier to the core bundle using an import map:
-
-```html
-<script type="importmap">
-    {
-        "imports": {
-            "@codexo/exojs": "./dist/exo.esm.js"
-        }
-    }
-</script>
-
-<script type="module">
-    import { DebugOverlay } from './dist/exo.debug.esm.js';
-
-    const debug = new DebugOverlay(app);
-    debug.layers.performance.visible = true;
-</script>
-```
-
-Without the import map, `exo.debug.esm.js` cannot resolve `@codexo/exojs` and will fail with a module not found error. The debug bundle is not a standalone engine; it extends the core bundle.
-
-Import maps are supported in all modern browsers. If you need to support older environments, use the npm + Vite workflow instead.
-
-### Script-tag (IIFE) bundle
-
-If you don't have any module-aware setup — no bundler, no import maps, just a plain HTML file with `<script>` tags — use the IIFE bundle instead. It is a classic (non-module) script that attaches every export as a property of a single global variable, `Exo`:
-
-```html
-<script src="./dist/exo.iife.js"></script>
+<script src="./vendor/exo.iife.min.js"></script>
 <script>
-    const { Application, Scene } = Exo;
-
-    const app = new Application({ canvas: { width: 800, height: 600 } });
+  const { Application, Scene } = Exo;
 </script>
 ```
 
-There is no `import` statement anywhere in this path — `Exo` is already in scope by the time the second `<script>` block runs, as long as it comes after the bundle's `<script>` tag. A minified build for production is available at `dist/exo.iife.min.js`; swap the `src` to use it.
+The Core-only bundle is `exo.iife.min.js`. `exo.full.iife.min.js` contains Core and the official runtime packages except React on the same `Exo` global. Choose one; do not load separate independent Core copies together. The full bundle includes APIs, but package-specific systems and application configuration still need to be used correctly.
 
-The IIFE above is the core alone. Extensions are not available as separate script tags; the zero-build path to them is the full bundle, `dist/exo.full.iife.js` (minified: `dist/exo.full.iife.min.js`), which carries the core and every extension except React on the same `Exo` global. It is a single, considerably larger file, so use it when you actually reach for an extension, and the core bundle otherwise:
+For browser ESM, the debug bundle is external-Core and needs `@codexo/exojs` resolved to the same Core module, for example through an import map. Keep the map, engine, debug module, and optional packages version-aligned. Avoid unversioned CDN URLs in a reproducible production deployment.
 
-```html
-<script src="https://cdn.jsdelivr.net/npm/@codexo/exojs/dist/exo.full.iife.min.js"></script>
-<script>
-    const { Application, ParticleSystem, PointLight } = Exo;
-</script>
-```
+## Policies and optional features
 
-Prefer the ES module bundle when your host supports import maps and you want the browser to load only what you use. Prefer the IIFE bundle when you need a true zero-build setup — for example a single static HTML file, a CMS or forum post that only allows pasting a `<script>` tag, or any environment without import-map support.
+Test the application's actual capability requirements. Automatic backend selection does not supply a missing shader language, unsupported target format, or raw WebGPU implementation of your own code. Surface a useful startup or feature-disabled state instead of leaving a blank canvas.
 
-## MIME types
+A Content Security Policy must permit the resources the application actually uses. Blob-backed workers and worklets require particular policy allowances; use [Typed worklets and workers](/ExoJS/en/guide/shipping/typed-worklets-and-workers/) for that boundary rather than adding broad allowances speculatively.
 
-<Callout type="broken" title="file:// and wrong MIME both kill module loading">
-Opening `dist/index.html` over `file://`, or hosting where `.js` is sent as `text/plain`, makes the browser refuse the module scripts — you get a blank page and a MIME error in the console, not an ExoJS error. Serve `dist/` over HTTP with `.js` typed as `application/javascript`.
-</Callout>
+Audio needs a user-gesture path. Fonts and cross-origin media need successful requests and appropriate access. Persistent asset storage is not an application-shell service worker; [Offline and caching](/ExoJS/en/guide/assets/offline/) explains what the loader does and does not make available offline.
 
-JavaScript files (`.js`, `.mjs`) must be served with the `application/javascript` content type. Most web servers do this automatically. If you're using a custom server configuration or object storage, verify the content type header.
+## Final smoke test
 
-If you encounter errors like `Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of "text/plain"`, check your server's MIME type mapping for `.js` files.
+Check the deployed production URL on representative devices: first load, refresh on the intended route, resize, input focus, audio unlock, scene navigation, and return from a hidden tab. Exercise a failed asset and unsupported optional capability deliberately. Inspect the Network panel for missing or unexpectedly repeated requests.
 
-## Browser support
+When embedding in a framework, let the host own its DOM and destroy the application when the host is permanently removed. Await asynchronous application teardown where the hosting API permits it, and handle its rejection at that boundary. See [React integration](/ExoJS/en/guide/integrations/react/) for the maintained React host.
 
-ExoJS targets modern browsers. The minimum supported environments are those with full ES2022 support, `WebGL2`, and `requestAnimationFrame`.
-
-**WebGPU** is used when available and provides higher throughput for particle compute and certain rendering paths. It is not required — ExoJS falls back to WebGL2 automatically. See [Backend comparison](/ExoJS/en/guide/debugging/backend-comparison/) for the feature-parity breakdown.
-
-**HTTPS** is required by some browser APIs. The Web Crypto API, certain sensor APIs, and clipboard access all require a secure context. Standard hosting on any modern provider (Netlify, Vercel, GitHub Pages) includes HTTPS by default.
-
-**Mobile browsers** work with ExoJS, but be aware:
-- Autoplay audio restrictions apply on all mobile browsers (see [Audio does not start](/ExoJS/en/guide/shipping/troubleshooting/#audio-does-not-start) in the Troubleshooting guide).
-- WebGPU is available on Safari on iOS 17+ but not on Android Chrome as of 2025.
-- Canvas performance on low-end devices varies; test on representative hardware.
-
-## Where to go next
-
-If something is not working after deployment, the [Troubleshooting](/ExoJS/en/guide/shipping/troubleshooting/) guide covers the most common runtime and setup problems. For performance analysis tools, see [Performance](/ExoJS/en/guide/debugging/performance/) and [Debug layer](/ExoJS/en/guide/debugging/debugging-and-inspection/).
+Use [Troubleshooting](/ExoJS/en/guide/shipping/troubleshooting/) for failures and [Performance](/ExoJS/en/guide/debugging/performance/) for measurements. Deployment is complete when the real hosted application works, not merely when a local build command exits successfully.

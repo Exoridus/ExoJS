@@ -1,210 +1,89 @@
 ---
 title: 'Troubleshooting'
-description: 'Diagnose and fix the most common ExoJS problems: blank canvas, API errors, missing assets, audio, input, and performance.'
+description: 'Trace blank output, loading failures, input, audio, text, and performance problems from the first observable failure.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
-import Callout from '../../../components/Callout.astro';
 
 # Troubleshooting
 
-This chapter covers the issues that come up most often when starting with ExoJS or upgrading from an older snippet. Work through the relevant section, check the linked guides for more detail, and open the playground examples to see the correct pattern in action.
+Start with the first error in the console or failed network request, not the last visible symptom. Reproduce the issue in a minimal scene and compare it with the current Playground. Match the Guide and package versions before copying code: `next` can describe work that an older npm release does not contain.
 
-## Symptom → cause → fix
-
-Start here. Find the symptom that matches what you see, then jump to the section with the full explanation and fix.
-
-| Symptom | Likely cause | Section |
-|---|---|---|
-| Blank or black canvas | App not started, missing `context.render`, or content off-screen | [Canvas shows nothing](#canvas-shows-nothing) |
-| `… is not a function` from copied code | Pre-0.9 API in an old snippet | [Old API errors](#old-api-errors-from-older-snippets) |
-| Runs on WebGL2, never WebGPU | WebGPU unavailable in this browser/OS/GPU | [WebGPU unavailable](#webgpu-unavailable) |
-| Asset 404s or never appears | Wrong path, `public/` prefix, or case mismatch | [Assets not loading](#assets-not-loading) |
-| Code runs but no sound | Audio started before a user gesture | [Audio does not start](#audio-does-not-start) |
-| Keys or gamepad ignored | Canvas not focused, or input read outside `update` | [Input does not respond](#input-does-not-respond) |
-| Text blurry, missing, or unstyled | Font not loaded, wrong style key, or DPR scaling | [Text or fonts look wrong](#text-or-fonts-look-wrong) |
-| Low FPS or stutter | Too many drawables, filters, or per-frame allocations | [Performance problems](#performance-problems) |
+| Symptom | First checks |
+| --- | --- |
+| Empty canvas | Await startup; check mounting, size, scene activation, and the draw call. |
+| Missing API or unexpected type error | Check installed versions, public import paths, and duplicate Core copies. |
+| Missing texture or data | Inspect the actual request URL, response, decoder error, and owner scope. |
+| No sound | Check a real user gesture, audio state, bus volume, and voice lifetime. |
+| Ignored input | Check focus, scene availability, modal scopes, and the binding. |
+| Wrong text or density | Check the loaded font, layout, and logical versus backing size. |
+| Stalls or low throughput | Profile the production workload before changing the renderer. |
 
 ## Canvas shows nothing
 
-<Callout type="broken" title="Rule this out first">
-A blank canvas is most often a missing `context.render(this.root)` in `draw` — the frame clears, but nothing is drawn. Check that before working down the list below.
-</Callout>
+Await `app.start(YourScene)` and surface its rejection. Calling `app.start()` without a target starts the application but does not activate a scene. Register scene classes in `ApplicationOptions.scenes`; do not register preconstructed instances.
 
-A blank or black canvas usually means one of the following:
+Check that the canvas is mounted and that its element and container have nonzero visible dimensions. An application can perform work on a canvas that the page never displays.
 
-**The application is not started.** Register the scene in `ApplicationOptions.scenes`, then call `app.start(SceneConstructor)` after creating the application.
+The normal scene graph is rendered explicitly:
 
-**The scene is not active.** `app.start()` without a target starts the frame loop but does not activate a scene. Pass a registered scene constructor or key, or navigate later with `app.scenes.change(...)`.
+<SourceSnippet source="examples/guides/troubleshooting/draw-hook.ts" region="draw-root" language="ts" title="Submit the scene root" />
 
-**The canvas is not visible.** Check that `app.element` is mounted in the DOM and has non-zero dimensions. If the canvas element is in a `display: none` container or has zero width/height via CSS, nothing renders.
+The application clears the frame by default. If `draw` never submits content, a flat clear color is expected. Also check whether the object belongs to the submitted tree, is inside the current view, has usable dimensions, and is hidden by opacity, clipping, or masking. A custom pipeline can submit different roots; do not add a second root draw blindly to a pipeline that already renders it.
 
-**`context.render()` is missing from `draw`.** The engine clears the frame for you, but it never renders your scene graph for you — `draw` has to say what to draw:
+The scene's `ui` layer is automatic and separate from `root`. A visible HUD with an empty world is a useful clue that startup succeeded but the world draw or camera is wrong.
 
-<SourceSnippet
-  source="examples/guides/troubleshooting/draw-hook.ts"
-  region="draw-root"
-  language="ts"
-  title="examples/guides/troubleshooting/draw-hook.ts"
-/>
+## API or lifecycle errors
 
-Without `context.render(this.root)`, the frame is cleared and nothing else happens, so the canvas stays a flat `clearColor`.
+Inspect the installed dependency tree and use the public package entry points. A package's README states its peers; importing a second Core copy or mismatched runtime packages can break identity-based registration.
 
-**Objects are not added to the root.** Sprites and containers only appear if they are part of the rendered tree. Add them to `this.root` or to a container that is itself in the root.
+Scene-bound services are unavailable in constructors and field initializers. Move `this.app`, `this.loader`, or `this.inputs` access into the appropriate attached lifecycle hook. Await asynchronous prerequisites in `load`; keep `init`, update hooks, and `destroy` synchronous. See [Scenes and lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/).
 
-**Objects are outside the visible area.** The default view maps world coordinates to the canvas. A sprite at `(10000, 10000)` on a 800×600 canvas is off-screen. Check position, scale, and anchor values.
-
-See [Your first scene](/ExoJS/en/guide/getting-started/your-first-scene/) for a minimal working example.
-
-## Old API errors from older snippets
-
-Pre-0.9 ExoJS snippets commonly use an older draw signature. If you copied code from an older tutorial or GitHub issue, it may look like this:
-
-```ts no-check -- deliberately shows the removed 0.8.x renderer API
-// old (0.8.x and earlier) — do not use
-draw(backend) {
-    backend.clear();
-    sprite.render(backend);
-}
-```
-
-The current API passes a render context, not a bare backend, and renders nodes through the context rather than calling `render` on the node itself. The manual clear is gone too — the engine clears each frame before `draw` runs:
-
-<SourceSnippet
-  source="examples/guides/troubleshooting/draw-hook.ts"
-  region="draw-root"
-  language="ts"
-  title="examples/guides/troubleshooting/draw-hook.ts"
-/>
-
-Current constructor options are grouped under `canvas`, `loader`, `rendering`, and `input`; see the [Application guide](/ExoJS/en/guide/runtime/application/#construction) for the supported shape.
-
-## WebGPU unavailable
-
-<Callout type="invalid" title="This is expected, not a bug">
-Running on WebGL2 instead of WebGPU is normal — ExoJS falls back automatically and the visuals are identical. Only particle GPU compute actually needs WebGPU.
-</Callout>
-
-WebGPU is not available in all environments. Availability depends on the browser, OS, GPU driver, and whether the hardware accelerated path is enabled.
-
-Current availability (as of 2025):
-- **Chrome / Edge 113+ on Windows and macOS**: Generally available on hardware with recent GPU drivers.
-- **Firefox**: Behind a flag as of 2025; not shipped by default.
-- **Safari**: Available on macOS 14+ and iOS 17+, with some API gaps.
-- **Linux**: Requires Vulkan support; coverage varies widely.
-
-If WebGPU is unavailable, ExoJS falls back to WebGL2. Most visual features work identically across both backends; particle GPU compute requires WebGPU. See [Backend comparison](/ExoJS/en/guide/debugging/backend-comparison/) for a full feature-parity table.
-
-To check which backend is active at runtime, enable the performance overlay from `@codexo/exojs/debug` — it displays the active backend in the overlay header. You can also inspect `app.backend.backendType` directly: it returns `RenderBackendType.WebGpu` or `RenderBackendType.WebGl2`.
-
-If you need WebGPU specifically:
-1. Test in a recent Chrome or Edge release.
-2. Make sure hardware acceleration is enabled in browser settings.
-3. Update your GPU driver.
-4. Open `chrome://gpu` (Chrome) or `about:support` (Firefox) to see the active graphics backend.
+A missing method is not a reason to add an old alias to the application. Check the current API reference and release notes for the installed version.
 
 ## Assets not loading
 
-<Callout type="pitfall" title="Works locally, breaks on deploy">
-Two traps pass every local test and then fail in production: a leftover `public/` prefix in the path, and filename casing — Linux hosts read `Bunny.png` and `bunny.png` as different files.
-</Callout>
+Inspect the requested URL in the Network panel. `loader.basePath` and the descriptor path together determine that URL; it is not necessarily relative to the TypeScript file or the page directory you expected.
 
-Asset load failures typically produce network errors in the browser's developer console. Common causes:
+Files in a Vite project's `public/` directory are served without the `public/` prefix. Do not repeat an `assets/` directory that is already in `basePath`. Check exact filename casing, deployed files, redirects, HTTP status, and cross-origin response headers. A successful HTTP response containing an HTML fallback is not a valid image or JSON asset.
 
-**Wrong relative path.** Paths are resolved relative to the page URL, not the source file. If your page is at `http://localhost:5173/` and you load `'assets/image.png'`, the browser requests `http://localhost:5173/assets/image.png`.
+`get()` can return before a resource is ready. Await required resources with `load`, or observe the placeholder's readiness and failure. A loader completion signal means the batch settled, not that every item succeeded. A destroyed scene scope no longer keeps its resources resident.
 
-**Vite `public/` path confusion.** Files in `public/` are served from the site root. A file at `public/assets/bunny.png` is available at `/assets/bunny.png`, not `public/assets/bunny.png`. Reference it without the `public/` prefix:
-
-```ts
-await loader.load('assets/bunny.png'); // correct
-await loader.load('public/assets/bunny.png'); // wrong
-```
-
-**Files not included in the build.** Only files in `public/` or explicitly imported by source code are copied to `dist/`. Assets referenced by path string (not `import`) must live in `public/`.
-
-**Case-sensitivity.** Linux servers and most hosting providers are case-sensitive. `bunny.PNG` and `bunny.png` are different files. Match the exact casing on disk.
-
-**`file://` execution.** Never open `index.html` directly in the browser with `file://`. Use `npm run dev` or `npm run preview` to serve through a local HTTP server. Many browser security restrictions block resource loads from `file://` origins.
-
-**CORS on a different origin.** If assets are on a different domain, the server must send appropriate `Access-Control-Allow-Origin` headers.
-
-See [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) for the full loader API.
+Use a local HTTP server, not `file://`. For deployment under a subdirectory, follow [Deployment](/ExoJS/en/guide/shipping/deployment/) rather than assuming that Vite rewrites arbitrary strings passed to the loader.
 
 ## Audio does not start
 
-Modern browsers require a user gesture before audio can play. Any attempt to start an `AudioContext` before the first user interaction is silently blocked.
+Start or unlock audio from an actual click, tap, or supported keyboard gesture. A loaded audio asset is not a playing voice, and a playing voice may still be routed through a muted bus. Inspect both playback and the browser audio context state.
 
-The symptom: audio code runs without errors, but nothing is audible. Often the browser console shows a warning about `AudioContext` being suspended.
+Use the current `AudioSystem` or scene-audio playback API from [Audio basics](/ExoJS/en/guide/audio/audio-basics/). Do not assume a `Sound` asset has a playback method merely because another library used that shape. Repeatedly constructing a sound or retrying playback every frame does not replace a user-gesture boundary.
 
-The fix: start audio in response to a click, tap, or keypress:
-
-```ts no-check -- DOM listener fragment; mySound is the reader's own
-button.addEventListener('click', () => {
-    mySound.play(); // the engine resumes the AudioContext on the first user gesture
-});
-```
-
-If you're using the `audio-reactive` template from `create-exo-app`, it already handles this with a start button. The [Audio basics](/ExoJS/en/guide/audio/audio-basics/) guide has a full walkthrough.
+For a cross-origin stream, verify the server's CORS behavior as well as audibility: analysis and effects may need access that an ordinary media element's playback does not prove.
 
 <ExamplePreview chapter="audio-basics" slug="play-sound" />
 
 ## Input does not respond
 
-**Canvas focus.** ExoJS keyboard and gamepad input requires the canvas to have focus. Click the canvas once to give it focus. If your page has other focusable elements that steal focus, keyboard input stops until the canvas is clicked again.
+Give the canvas focus and inspect whether another element, modal interaction scope, or scene availability policy owns the input. Scene bindings normally follow active gameplay; a pause toggle must deliberately remain available while paused.
 
-**Key name mismatch.** ExoJS uses the `Keyboard` enum — `Keyboard.Space`, `Keyboard.A`, `Keyboard.Left`. Each member is a physical key position resolved from the Web `KeyboardEvent.code`, mapped to a numeric channel; the arrow keys are `Left`/`Up`/`Right`/`Down`, not `ArrowLeft`. Check the [Keyboard guide](/ExoJS/en/guide/input/keyboard-and-actions/) for the full enum.
+`Keyboard` names physical key positions, not typed characters. Its arrow keys are `Left`, `Up`, `Right`, and `Down`. For text entry and IME composition, use the appropriate text-input widget or DOM input rather than reconstructing text from gameplay channels.
 
-**A key produces a different character than its name.** That is intended: the enum names a *position* by its US-QWERTY legend, so `Keyboard.Z` is the key printed "Y" on a German QWERTZ keyboard and `Keyboard.Semicolon` the one printed "ö". Bindings stay physically where the player expects them. Never use the channel system to read typed text — use a DOM text input for characters, dead keys, and IME composition.
+Use action signals for transitions and read held values during the frame loop. A one-time read in `init` cannot track later movement. For a gamepad, press a button to make it visible to the browser, then check connection state and the selected slot. A slot is not a persistent physical-controller identity.
 
-**Input not polled in `update`.** Keyboard held-key state (`isActive`) and gamepad axis values are sampled per-frame inside `update`. Reading them in `init` or outside the frame loop gives stale results.
-
-**Gamepad requires a button press to activate.** Browsers only expose a connected gamepad after the user presses at least one button. Plug in and press any button once; then the gamepad appears in the `Gamepad` API and ExoJS can read it.
-
-<ExamplePreview chapter="input" slug="keyboard" />
-
-<ExamplePreview chapter="input" slug="gamepad" />
+<ExamplePreview chapter="input" slug="action-mapping" />
 
 ## Text or fonts look wrong
 
-**Font not loaded.** Fonts loaded via `@font-face` or a web font URL must finish loading before ExoJS renders text using them. Load the font explicitly (e.g., via the FontFace API or CSS) and wait for the promise before starting the scene, or load it through ExoJS's asset loader if supported.
+Load the intended font before depending on its metrics. A fallback font can change line breaks and measured bounds. Use the current `TextStyle` properties, including `fillColor`, and distinguish layout bounds from visible ink bounds when aligning text.
 
-**Wrong font path.** The same path rules as assets apply. Check case, public/ prefix rules, and whether the font file is in `public/`.
+Check the canvas sizing policy and pixel ratio. CSS size, logical game coordinates, and backing-store pixels are different quantities. Do not compensate for a DPR issue by multiplying every world position. See [Text](/ExoJS/en/guide/rendering/text/) and [Resize, DPR and the canvas](/ExoJS/en/guide/getting-started/resize-dpr-and-canvas/).
 
-**Wrong style property name.** The current `TextStyle` API uses:
-- `fillColor` — not `fill`, not `color`
+## Backend or performance problems
 
-Using an old property name silently produces no error but the style is ignored. Check the [Text guide](/ExoJS/en/guide/rendering/text/) for the current `TextStyle` keys.
+WebGPU availability depends on the actual browser, device, driver, context, and engine selection policy. Falling back to WebGL2 is not itself a failure. Inspect the selected backend after startup and consult [Backend selection](/ExoJS/en/guide/debugging/backend-comparison/) for measured parity and feature boundaries.
 
-**DPI / DevicePixelRatio scaling.** At high DPI (e.g., Retina displays), text and sprites look soft if the canvas backing store matches the CSS size. By default `pixelRatio` is the display's `devicePixelRatio` clamped to `2`, so output is crisp out of the box — if it looks soft, check you haven't set `pixelRatio: 1`. On a DPR-3 device that needs full native density, set `pixelRatio: window.devicePixelRatio` explicitly to bypass the cap. See [Resize, DPR & the canvas](/ExoJS/en/guide/getting-started/resize-dpr-and-canvas/) for the full pattern.
+For slow output, separate simulation, submission, pixel work, and memory. A filter is not necessarily one GPU pass, and hiding a node does not automatically stop its game logic. [Debugging and inspection](/ExoJS/en/guide/debugging/debugging-and-inspection/) helps locate the problem; [Performance](/ExoJS/en/guide/debugging/performance/) explains how to measure it.
 
-## Performance problems
+## Report a reproducible issue
 
-If your scene runs slowly, measure first before guessing. The [`DebugOverlay`](/ExoJS/en/api/debug-overlay/) from `@codexo/exojs/debug` shows FPS, frame time, and draw-call count in real time:
-
-```ts
-import { Application } from '@codexo/exojs';
-import { DebugOverlay } from '@codexo/exojs/debug';
-
-const app = new Application();
-const debug = new DebugOverlay(app);
-debug.layers.performance.visible = true;
-```
-
-Common causes of poor performance:
-
-**Too many drawables.** Each sprite, container, and text node that is visible adds render work. For large counts, use a sprite atlas (single texture, many frames) so the renderer can batch them into fewer draw calls.
-
-**Expensive filters.** Each filter on a node adds a GPU render pass. A container with three filters costs three extra passes every frame. Remove filters you aren't using, or set `cacheAsTexture = true` on filtered content that doesn't change.
-
-**Large or unnecessary render targets.** `RenderTexture` allocates GPU memory proportional to its dimensions. Keep sizes matched to their actual use.
-
-**Per-frame allocations.** Creating objects inside `update` or `draw` (e.g., `new Color(...)`, `new Vec2(...)`) each frame causes garbage collector pressure. Allocate once in `init` and mutate in-place.
-
-See [Performance](/ExoJS/en/guide/debugging/performance/) and [Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspection/) for detailed analysis strategies.
-
-<ExamplePreview chapter="performance" slug="backend-comparison" />
-
-## Where to go next
-
-The next chapter, [Deployment](/ExoJS/en/guide/shipping/deployment/), covers building and hosting an ExoJS app for production.
+Include the ExoJS and package versions, browser and operating system, selected backend, canvas size and DPR, exact error, and the smallest source that reproduces it. State whether it also occurs in a production build and on the other supported backend. Remove credentials and private assets before sharing the reproduction.

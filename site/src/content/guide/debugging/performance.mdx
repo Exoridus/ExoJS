@@ -1,137 +1,71 @@
 ---
-title: 'Performance'
-description: 'Measure scene limits with focused stress examples.'
+title: 'Measure and improve performance'
+description: 'Separate frame pacing, CPU submission, GPU work, and memory before changing a scene.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
-import TryIt from '../../../components/TryIt.astro';
-import Callout from '../../../components/Callout.astro';
 
-# Performance
+# Measure and improve performance
 
-Performance in ExoJS is about three things: how many drawables you push per frame, how many render passes they cost, and how much state change happens between draws. The engine does a lot automatically — batching sprites that share a texture, reusing render-target memory across filter passes, culling nodes outside the view — but the decisions that matter most are yours: how many sprites, how many textures, how many filters, how many particle systems.
+A slow frame may come from simulation, input handling, asset decoding, layout, rendering submission, GPU work, or garbage collection. Reducing the number of sprites is not a diagnosis. Start with a reproducible scene and a concrete symptom: sustained low throughput, occasional stalls, growing memory, or uneven frame pacing.
 
-## Measuring with the performance layer
+## Establish a baseline
 
-Before making changes, measure. The [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) from `@codexo/exojs/debug` gives you FPS, frame time, draw-call count, and node count in real time:
+Run the production build on a representative target. Record the browser, device, backend, canvas resolution, pixel ratio, and workload. Warm up the scene before comparing steady-state measurements, and measure loading separately when startup is the concern.
 
-```ts
-import { Application } from '@codexo/exojs';
-import { DebugOverlay } from '@codexo/exojs/debug';
+The [debug overlay](/ExoJS/en/guide/debugging/debugging-and-inspection/) is useful for finding a suspect subsystem. Its frame time and draw count are not a hardware GPU timer. Disable or destroy diagnostic tools before taking the final comparison, because their subscriptions, data collection, text, and drawing are additional work.
 
-const app = new Application();
-const debug = new DebugOverlay(app);
-debug.layers.performance.visible = true;
-```
+Change one variable at a time and repeat the same interaction. Keep a change when it improves the measured problem without breaking behavior or making a different target worse. Use a browser profile to locate expensive JavaScript or long tasks; use backend-specific GPU instrumentation for GPU questions.
 
-Watch the FPS number while you add sprites, enable filters, or spawn particles. The sparkline shows frame-time stability — a flat line is good, spikes indicate intermittent work. The draw-call count tells you how many GPU-level draw calls the renderer issued this frame.
+## Read the right measurement
 
-<Callout type="debug" title="Change one thing, then measure again">
-Isolate a single change per measurement — stacking several optimizations at once hides which one actually helped, or masks one that made things worse. Reach for the overlay before you edit, not after a hunch.
-</Callout>
+| Observation | What to investigate |
+| --- | --- |
+| JavaScript time rises with active actors | Update logic, physics, allocations, input processing, or layout. |
+| Submission time rises while the visible image hardly changes | Scene traversal, state changes, uploads, sorting, or missed retained reuse. |
+| Lowering render resolution helps substantially | Pixel work, target bandwidth, filters, lighting, or overdraw. |
+| Periodic long frames | Allocation bursts, decoding, synchronous work, shader compilation, or garbage collection. |
+| Memory grows across repeated scene changes | Ownership, unreleased scopes, external listeners, pools, or caches that never become bounded. |
 
-## Sprite batching
+CPU submission time, GPU timer queries, queue-completion wall time, and presentation frame time are different instruments. Do not subtract or rank them as though they measured the same interval. The [benchmark pages](/ExoJS/en/benchmarks/) preserve the repository's methodology and result provenance rather than copying volatile numbers into this Guide.
 
-Sprites that share the same texture are batched into a single draw call on WebGPU backends. On WebGL2, single-texture batching also applies. The practical consequence: 600 sprites all using one texture atlas cost far less than 600 sprites each using a different texture.
+## Keep draw work compatible
 
-The [Sprite Batching Laboratory](/ExoJS/en/playground/?example=performance/backend-comparison) switches between one and four otherwise identical textures while keeping positions and motion fixed. The performance layer shows how the draw-call count changes.
+Both backends batch compatible sprites, including multiple textures within the batch's capacity. An atlas can reduce texture changes, but one atlas is not a guarantee of one draw. Material changes, blending, clips, masks, targets, view changes, ordering, and buffer capacity can introduce boundaries.
 
-For texture-atlas workflows, use a single `Spritesheet`-sliced `Texture` and select frames via `sprite.setTextureFrame()` rather than loading separate images per sprite.
+Group compatible work when that preserves the intended image. Do not reorder transparent content simply to improve a draw counter. For a large, stable subtree, [Retained containers](/ExoJS/en/guide/rendering/retained-containers/) may avoid rebuilding work; texture caching solves a different problem by caching pixels.
 
-## Render passes
+## Budget pixels as well as objects
 
-Every filter on a drawable adds one render pass for that drawable. A container with three filters costs three passes beyond the main batch draw. The cost scales with the drawable's bounding-box area (in pixels), not the canvas size, so occluding a filtered sprite behind a solid overlay doesn't prevent the filter passes from running.
+A filter is a logical operation, not necessarily one hardware pass. Blur, bloom, masking, normal prepasses, and lighting can require intermediate targets or multiple steps. Their cost depends on covered area, resolution, format, and the work inside each shader.
 
-The [`RenderPassInspectorLayer`](/ExoJS/en/api/render-pass-inspector-layer/) shows exactly who is adding passes. Enable it during development when frame time rises and you suspect filter overhead:
+Start by removing work whose result is not used. Reduce an effect's working resolution where the image permits it. Cache truly stable output when that avoids repeated work, remembering that content changes invalidate the cache. Avoid keeping a large offscreen target merely because it was convenient during prototyping.
 
-```ts
-import { Application } from '@codexo/exojs';
-import { RenderPassInspectorLayer } from '@codexo/exojs/debug';
+Changing DPR changes backing-store area quadratically. Set a deliberate quality policy instead of assuming maximum native density is free. [Resize, DPR and the canvas](/ExoJS/en/guide/getting-started/resize-dpr-and-canvas/) distinguishes logical size from backing resolution.
 
-const app = new Application();
-const inspector = new RenderPassInspectorLayer(app);
-inspector.visible = true;
-```
+## Bound simulation and allocation
 
-The two highest-impact reductions: remove filters you don't need, and set `cacheAsTexture = true` on filtered containers that don't change every frame. For the full set of strategies with examples, see [Render pipeline debugging](/ExoJS/en/guide/debugging/debugging-and-inspection/).
+For particles, inspect the active execution path and live occupancy. A GPU-eligible system can still be expensive because of spawning, module complexity, readback, or pixel coverage. Size capacity using spawn rate, lifetime, bursts, and peak concurrency; a rate alone cannot establish that a system is safe.
 
-## Particle system throughput
+Reuse frequently mutated vectors, colors, and arrays on measured hot paths. Pool short-lived objects when allocation is a real bottleneck, but keep the pool bounded and reset all relevant state. `visible = false` suppresses drawing; it does not automatically stop your update loop, release a texture claim, or disable every external interaction.
 
-The `ParticleSystem` (from `@codexo/exojs-particles`) is designed for throughput — SoA storage, no per-particle allocations, instanced rendering. The practical limits depend on whether you're on CPU or GPU path:
+For dynamic textures, reuse the resource. Upload changed regions where that reduces transferred data, then measure the upload overhead. Repeatedly resizing a render texture can reallocate GPU resources even when the final visible size changes only slightly.
 
-- **CPU path** (WebGL2, or any non-GPU-eligible update module): Suitable for moderate particle counts — performance drops roughly linearly with particle count. The per-frame update cost is proportional to `aliveCount` × number of update modules.
-- **GPU path** (WebGPU, all modules GPU-eligible): The composite WGSL compute shader runs update logic on the GPU in one dispatch, writing directly into the renderer's instance buffer — no CPU readback. This path becomes attractive for large systems with many particles and GPU-eligible modules.
+## Cull with valid bounds
 
-Check `system.gpuMode` at runtime to know which path is active. Measure with the [`PerformanceLayer`](/ExoJS/en/api/performance-layer/) to find the right capacity target for your scene — the optimal number depends on your module count, particle lifetime, and target frame rate.
+Culling skips drawing outside the active view; it does not stop unrelated simulation. Organize large worlds into meaningful regions instead of assuming that a single huge container makes every child cheap.
 
-## Scene-graph churn
+A `cullArea` replaces the bounds used for the visibility check. It is a world-space rectangle, not a local rectangle automatically transformed with the node:
 
-<Callout type="hint" title="Pool and toggle instead of rebuilding">
-For scenes that spawn and retire objects constantly — bullets, hit sparks, floating damage numbers — keep a fixed pool sized to your peak concurrent count and recycle nodes by flipping `visible`, rather than constructing and destroying them each frame.
-</Callout>
+<SourceSnippet source="examples/guides/performance/cull-area.ts" region="cull-area" language="ts" title="Provide a deliberate world-space culling area" />
 
-Adding and removing many children from a container each frame triggers transform-dirty propagation and bounds recomputation. For dynamic scenes where objects appear and disappear frequently, prefer:
+Keep it current when the object moves or reserve it for fixed placement. It does not replace collision or hit-test geometry. An undersized culling area can improve a counter by incorrectly hiding content.
 
-- `sprite.visible = false` over `container.removeChild(sprite)` — keeps the node in the tree, skips rendering.
-- Pre-allocate a pool of sprites and recycle them by toggling visibility rather than constructing/destroying.
-- Use `zIndex` only where layering is required. Mixed `zIndex` values add per-group sorting work during render-plan optimization.
+## Reproduce the result
 
-## Texture updates
-
-Updating a texture source (e.g. a canvas, video frame, or `DataTexture` buffer) incurs GPU upload work each frame, and may also trigger GPU re-allocation when dimensions/format change. For per-frame updates:
-- Use `DataTexture.commitRect()` for partial uploads (cheaper than full `commit()`).
-- Avoid creating new `Texture` instances per frame — reuse one texture and update its source.
-- Keep `RenderTexture` dimensions stable — `resize()` triggers framebuffer recreation.
-
-<Callout type="pitfall" title="Per-frame new Color() / new Vector() feeds the GC">
-Allocating a fresh `Color`, `Vector`, or `Matrix` inside `update` or `draw` runs every frame and hands the garbage collector a steady stream of short-lived objects, which surfaces as periodic frame-time spikes. Allocate once and mutate in place (`color.set(...)`, `vec.set(...)`) on hot paths.
-</Callout>
-
-## View culling
-
-Nodes that fall entirely outside the current `View`'s viewport are skipped by the renderer. This is automatic and per-node. The culling check is AABB-based rather than exact shape, so nodes near the viewport edge may still be rendered even if partially outside. For large scrolling worlds, this is a significant performance multiplier — only the visible subset of your scene graph incurs draw cost.
-
-### Overriding the cull check with `cullArea`
-
-The automatic check calls `getBounds()`, which for a `Container` walks every visible child and unions their bounds — for a complex `Graphics` node or a container with hundreds of children, that walk runs every frame even when the node's on-screen footprint is trivial to reason about. Set `cullArea` to a `Rectangle` and the cull check uses it directly instead of computing bounds:
-
-<SourceSnippet
-  source="examples/guides/performance/cull-area.ts"
-  region="cull-area"
-  language="ts"
-  title="examples/guides/performance/cull-area.ts"
-/>
-
-Two things to keep in mind:
-
-- `cullable` and `cullArea` live on `RenderNode`, so every node that draws something has them; a bare `SceneNode` is structural only, never reaches the renderer, and carries neither.
-- `cullArea` replaces `getBounds()` only in the `inView()` check — it has no effect on hit-testing, collision, or rendering, and it's ignored entirely when `cullable = false`.
-- Because the rectangle is used as-is (not transformed), a `cullArea` on a node that moves, rotates, or scales after it's set will go stale. Either recompute it when the node's position changes, or reserve it for nodes whose world placement is fixed once configured — e.g. static level decoration, or particle-heavy effects anchored to a known spawn point.
-
-## Not a checklist
-
-The most useful performance practice is measurement. Turn on the performance layer, watch the numbers, change one thing, measure again. The engine's behavior under your specific scene — your sprite counts, your texture layout, your filter stacks — matters more than any general guideline.
-
-The engine's own reproducible stress benchmarks live with [`@codexo/exojs-bench`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-bench/README.md), whose README documents the methodology behind them — median vs. p95, warmup and timed frames, what each metric does and does not cover. Useful as a reference for measuring honestly; the numbers that decide your game still come from the `PerformanceLayer` on your own scene.
-
-## Examples
-
-<a id="sprite-stress"></a>
 <ExamplePreview chapter="performance" slug="backend-comparison" />
 
-Change the sprite count and texture diversity in a seeded workload, then read the resulting frame time and draw-call count.
-
-<a id="particle-stress"></a>
 <ExamplePreview chapter="particles" slug="gpu-particles" />
 
-Adjust the spawn rate and watch live occupancy, frame time, and the active execution path. WebGPU uses GPU compute simulation; WebGL2 uses a smaller CPU fallback budget.
-
-<TryIt
-  examples={['performance/backend-comparison', 'particles/gpu-particles']}
-  api={['performance-layer']}
-/>
-
-## Where to go next
-
-The next chapter, [Backend comparison](/ExoJS/en/guide/debugging/backend-comparison/), covers the WebGL2 vs. WebGPU decision — how backends are selected, where feature parity exists, and where backend-specific differences remain.
+Use these demonstrations to understand a mechanism, then profile the application that will ship. Record the changed workload and environment alongside any performance claim; a faster benchmark cell is not evidence for unrelated gameplay.
