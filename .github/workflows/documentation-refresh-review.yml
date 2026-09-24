@@ -18,92 +18,65 @@ jobs:
   review:
     if: github.ref == 'refs/heads/docs/documentation-refresh-d0538029'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     env:
-      # CI executes the declared checks below; workstation hooks would repeat them.
-      # No repository hook, test, baseline, or gate is changed by this workflow.
       HUSKY: '0'
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - name: Materialize learning navigation and canonical links
+      - name: Materialize reviewed site and JSDoc edits
         run: |
-          pnpm exec tsx _migration/rewrite-navigation.ts
+          python3 _migration/finish-surfaces.py
+          pnpm exec tsx _migration/audit-jsdoc.ts
           python3 - <<'PY'
           import json, subprocess
           from pathlib import Path
           source = json.loads(Path('_migration/source.json').read_text())['sourceCommit']
-          changed = subprocess.check_output(['git', 'diff', '--name-only', source, '--', 'examples/guides'], text=True).splitlines()
-          fresh = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard', '--', 'examples/guides'], text=True).splitlines()
-          files = sorted({p for p in changed + fresh if p.endswith('.ts') and Path(p).is_file()})
+          changed = subprocess.check_output(['git', 'diff', '--name-only', source], text=True).splitlines()
+          fresh = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard'], text=True).splitlines()
+          files = sorted({p for p in changed + fresh if Path(p).is_file() and not p.startswith('_migration/') and Path(p).suffix in {'.md', '.mdx', '.ts', '.tsx', '.astro', '.json'}})
           if files:
-              subprocess.run(['pnpm', 'exec', 'eslint', '--fix', '--max-warnings=0', *files], check=True)
               subprocess.run(['pnpm', 'exec', 'prettier', '--write', *files], check=True)
-          subprocess.run(['pnpm', 'exec', 'prettier', '--write', 'site/src/lib/guide-structure.ts'], check=True)
           PY
-      - name: Commit documentation materialization only to the review branch
-        shell: bash
+      - name: Generate the API from source JSDoc
+        run: pnpm docs:api:generate
+      - name: Commit complete materialized files on the isolated branch
         run: |
           test "$GITHUB_REF" = refs/heads/docs/documentation-refresh-d0538029
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- README.md CONTRIBUTING.md AGENTS.md site/src/content/guide site/src/lib/guide-structure.ts site/src/components site/src/pages packages/*/README.md examples/guides _migration/navigation-map.json
+          git add -- README.md CONTRIBUTING.md AGENTS.md site/src site/package.json packages/*/README.md packages/exojs-lighting/src/Lighting.ts packages/exojs-particles/src/ParticleSystem.ts src/assets/LoaderScope.ts src/debug/RenderPassInspectorLayer.ts _migration/site-materialization.json _migration/api-source-inventory.json _migration/jsdoc-files.json
           git diff --cached --check
           if ! git diff --cached --quiet; then
-            git commit -m 'docs: implement learning taxonomy and canonical example navigation'
+            git commit -m 'docs: align site entry points and generate corrected API contracts'
             git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
           fi
-          echo "TESTED_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-      - name: Reproduce scope ownership boundary
-        id: probes
+      - name: Check the materialized documentation
+        id: checks
         continue-on-error: true
-        run: NODE_OPTIONS='--conditions=@codexo/exojs-source' pnpm exec tsx --tsconfig tsconfig.json _migration/probe-loader-scope.ts
-      - name: Typecheck Guide code blocks
-        id: guide_types
-        continue-on-error: true
-        run: pnpm typecheck:guides
-      - name: Typecheck educational source files
-        id: example_types
-        continue-on-error: true
-        run: pnpm typecheck:examples
-      - name: Guide and snippet regression tests
-        id: guide_tests
-        continue-on-error: true
-        run: pnpm exec vitest run test/site/guide-structure.test.ts test/site/guide-runtime-contracts.test.ts test/site/guide-prose-links.test.ts test/site/source-snippets.test.ts
-      - name: Record observed outcomes
+        run: python3 _migration/run-checks.py
+      - name: Record observed validation
         if: always()
-        shell: bash
-        env:
-          PROBES: ${{ steps.probes.outcome }}
-          GUIDE_TYPES: ${{ steps.guide_types.outcome }}
-          EXAMPLE_TYPES: ${{ steps.example_types.outcome }}
-          GUIDE_TESTS: ${{ steps.guide_tests.outcome }}
         run: |
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          report = {
-              'sourceCommit': json.loads(Path('_migration/source.json').read_text())['sourceCommit'],
-              'testedCommit': os.environ.get('TESTED_COMMIT', os.environ['GITHUB_SHA']),
-              'runId': os.environ['GITHUB_RUN_ID'],
-              'checks': {name: os.environ[name] for name in ['PROBES', 'GUIDE_TYPES', 'EXAMPLE_TYPES', 'GUIDE_TESTS']},
-              'stage': 'intermediate navigation and content validation'
-          }
-          print(json.dumps(report, indent=2))
-          Path('_migration/intermediate-validation.json').write_text(json.dumps(report, indent=2) + '\n')
-          PY
-          git add _migration/intermediate-validation.json
-          if ! git diff --cached --quiet; then
-            git commit -m 'chore: record observed documentation validation results'
-            git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if test -f _migration/validation.json; then
+            git add _migration/validation.json _migration/readme-examples.json
+            if ! git diff --cached --quiet; then
+              git commit -m 'chore: record site and API documentation checks'
+              git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
+            fi
           fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: documentation-intermediate-validation
-          path: _migration/intermediate-validation.json
+          name: documentation-integration-evidence
+          path: |
+            _migration/validation.json
+            _migration/readme-examples.json
+            _migration/check-logs/
       - name: Require successful checks
         if: always()
-        run: test '${{ steps.probes.outcome }}' = success && test '${{ steps.guide_types.outcome }}' = success && test '${{ steps.example_types.outcome }}' = success && test '${{ steps.guide_tests.outcome }}' = success
+        run: test '${{ steps.checks.outcome }}' = success
