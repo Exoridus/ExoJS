@@ -484,6 +484,9 @@ describe('CoroutineSystem', () => {
   });
 
   test('defaults minSlice to a 64th of the bound frame target', () => {
+    // The slice is ~130 us of wall clock; a stalled runner would spend it
+    // before the coroutine reads it, so the clock is frozen.
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1000);
     const system = new CoroutineSystem({ budget: seconds(0) });
     const seen: number[] = [];
 
@@ -494,8 +497,8 @@ describe('CoroutineSystem', () => {
     });
 
     frame(system, frameBudget(0));
+    now.mockRestore();
 
-    expect(seen[0]).toBeGreaterThan(0);
-    expect(seen[0]).toBeLessThanOrEqual(1 / 120 / 64);
+    expect(seen[0]).toBeCloseTo(1 / 120 / 64, 12);
   });
 });
