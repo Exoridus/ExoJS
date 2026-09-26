@@ -10,6 +10,8 @@ npm install --save-exact @codexo/exojs @codexo/exojs-particles
 
 Core is a peer dependency. Add `particlesExtension` to the application that renders the systems; importing the package has no global registration side effect.
 
+## Minimal working example
+
 ```ts
 import { Application, Color, type RenderingContext, Scene } from '@codexo/exojs';
 import { ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs-particles';
