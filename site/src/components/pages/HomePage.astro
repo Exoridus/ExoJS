@@ -1,5 +1,6 @@
 ---
 import AppShell from '../../layouts/AppShell.astro';
+import { extractSnippetRegion } from '../../lib/source-snippets';
 import { Code } from 'astro:components';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import ExampleThumb from '../../components/ExampleThumb.astro';
@@ -21,66 +22,19 @@ const localeBase = `${import.meta.env.BASE_URL}${locale}/`;
 const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
 const demoCount = getAllExamples().length;
 
-// Live hero example - an ambient lighting showcase that runs everywhere
+// Live hero example - an ambient lighting showcase that uses the supported backend path
 // (WebGL2, no input or audio gesture needed) so the landing shows the real
 // engine rendering in the page, not a video.
 const heroExample = getExamplesForChapter('lighting').find(entry => entry.slug === 'many-lights');
 const heroExampleTitle = heroExample?.title ?? 'Normal-Mapped Lighting';
 const heroExampleSource = getExampleExecutionSource('lighting', 'many-lights');
 
-const heroSnippet = `import { Application, Color, Scene, Sprite } from '@codexo/exojs';
-import { Lighting, LitMaterial, Normals, PointLight } from '@codexo/exojs-lighting';
+const heroSnippet = extractSnippetRegion('examples/guides/lighting/basic-lightmap.ts', 'basic-lightmap');
 
-const lighting = new Lighting();
-const lights = Array.from({ length: 24 }, (_, i) => {
-  const color = Color.fromCss(\`hsl(\${i * 15} 80% 60%)\`);
-  return new PointLight({ radius: 190, color });
-});
-
-class LitScene extends Scene {
-  async load(loader) {
-    const stone = await loader.load('stone.png');
-    const normalMap = await loader.load('stone-normal.png');
-    const material = new LitMaterial({ lighting, normals: Normals.map(normalMap) });
-
-    for (let i = 0; i < 112; i++) {
-      const tile = new Sprite(stone);
-      tile.setPosition((i % 14) * 96, Math.floor(i / 14) * 96);
-      tile.material = material;
-      this.root.addChild(tile);
-    }
-  }
-
-  init() {
-    this.systems.add(lighting);
-    lights.forEach(light => lighting.add(light));
-  }
-
-  update() {
-    const t = this.app.activeSeconds;
-    lights.forEach((light, i) => {
-      const angle = t * (0.25 + i * 0.08) + i;
-      light.setPosition(640 + Math.cos(angle) * 420, 360 + Math.sin(angle * 1.37) * 260);
-    });
-  }
-
-  draw(context) {
-    context.render(this.root);
-  }
-}
-
-new Application({ canvas: { width: 1280, height: 720 } }).start(new LitScene());`;
-
-const quickstartSnippet = `import { Application, Scene } from '@codexo/exojs';
-
-class HelloScene extends Scene {
-  draw(context) {
-    context.render(this.root);
-  }
-}
-
-const app = new Application({ canvas: { width: 800, height: 600 } });
-app.start(new HelloScene());`;
+const quickstartSnippet = `npm create exo-app@latest my-game -- --template minimal
+cd my-game
+npm install
+npm run dev`;
 
 const examples = [
     {
@@ -145,9 +99,7 @@ const examples = [
             <div class="hero-inner">
                 <div class="hero-copy">
                     <h1><span class="nowrap">A TypeScript-first</span><br />2D runtime for<br /><span class="hero-token-wrap"><span class="hero-token" id="hero-token">arcade games</span></span></h1>
-                    <p class="lead">
-                        ExoJS gives you scenes, sprites, graphics, input, audio, effects, assets, and rendering primitives — without turning your project into a full game-engine workflow.
-                    </p>
+                    <p class="lead">Build a game, visualization, or interactive canvas with scenes, rendering, input, audio, and explicit resource lifetimes. Keep the surrounding web application in the tools you already use.</p>
                     <div class="hero-cta">
                         <a class="btn btn-primary" href={`${localeBase}guide/`}>Read the Guide</a>
                         <a class="btn btn-ghost" href={`${localeBase}playground/`}>Open Playground</a>
@@ -157,14 +109,14 @@ const examples = [
                         <InstallCommand />
                         <a class="hero-download" href={`${appInfo.repositoryUrl}/releases/latest/download/exojs-full.zip`} rel="noopener">
                             <span class="hero-download-label">Or download the latest release</span>
-                            <span class="hero-download-note">Full ZIP, no build step</span>
+                            <span class="hero-download-note">Full ZIP, built runtime, examples, and documentation</span>
                         </a>
                     </div>
                 </div>
                 <div class="hero-snippet">
                     <div class="head">
                         <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
-                        <span class="file">game.ts</span>
+                        <span class="file">basic-lightmap.ts</span>
                         <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">lighting</span></span>
                     </div>
                     <Code code={heroSnippet} lang="ts" themes={SHIKI_THEMES} />
@@ -223,15 +175,12 @@ const examples = [
             <article class="cap">
                 <span class="cap-icon">FX</span>
                 <h4>Filters & particles</h4>
-                <p>Post-processing, bloom, blur, particles — composable and GPU-accelerated.</p>
+                <p>Compose filters and optional particles; simulation uses a CPU or eligible WebGPU compute path.</p>
             </article>
         </div>
 
         <div class="bench-teaser">
-            <p>
-                Measured against Pixi, Phaser, Excalibur, matter.js, planck and Rapier on one reference machine — roughly 2x ahead of Pixi on WebGPU filter
-                chains, and about 7x behind it on masked clipping, both published with the counters behind them.
-            </p>
+            <p>Inspect named rendering and physics workloads, the machine and browser behind each result, and the measurement limits. The benchmark pages publish the evidence without an overall engine score.</p>
             <a class="btn btn-ghost" href={`${localeBase}benchmarks/`}>See the benchmarks</a>
         </div>
 
@@ -265,14 +214,14 @@ const examples = [
         <section class="quickstart">
             <div class="quickstart-inner">
                 <div>
-                    <h3>Install once, use anywhere.</h3>
-                    <p>ExoJS ships as plain ES modules. Drop it into Vite, esbuild, or whatever you already use.</p>
+                    <h3>Start small. Add the systems you need.</h3>
+                    <p>Create a Vite and TypeScript starter, or add the ESM package to an existing application. The Guide explains both paths.</p>
                     <a class="btn btn-ghost" href={`${localeBase}guide/getting-started/setup/`}>Open Getting Started</a>
                 </div>
                 <div>
                     <InstallCommand />
                     <div class="snippet">
-                        <Code code={quickstartSnippet} lang="ts" themes={SHIKI_THEMES} />
+                        <Code code={quickstartSnippet} lang="bash" themes={SHIKI_THEMES} />
                     </div>
                 </div>
             </div>

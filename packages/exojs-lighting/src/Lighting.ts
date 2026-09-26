@@ -72,37 +72,11 @@ export interface LightingOptions {
 const scratchPosition = { x: 0, y: 0 };
 
 /**
- * What a lighting system does with lights, materials and occluders, whichever
- * renderer turns them into pixels.
+ * Coordinates registered light nodes and occluder sources for a concrete lighting model.
  *
- * ```ts
- * const lighting = new LightmapLighting(app, { ambient: new Color(11, 16, 32) });
+ * Forward lighting shades materials; lightmap lighting shades a composed frame and can use a registered normal prepass; radiance lighting samples a propagation field. These models have distinct capabilities and cost, not a shared quality scale.
  *
- * scene.systems.add(lighting);
- * lighting.add(player.addChild(new PointLight({ radius: 260 })));
- * lighting.occludeFrom(new PhysicsOccluder(world));
- * ```
- *
- * Construct one of {@link ForwardLighting}, {@link LightmapLighting} or
- * {@link RadianceLighting}. They are alternatives rather than layers, and a
- * frame is shaded by exactly one of them. This class is what they share: the
- * registries, the collection of occluders, and the update and destroy
- * contracts. It links no renderer of its own, which is what keeps a project
- * using one of them from carrying the others.
- *
- * # What it owns
- *
- * The renderer and its GPU resources. Lights are scene nodes owned by the tree
- * they hang in - registering one does not transfer ownership, and destroying a
- * registered light unregisters it. Occluder sources, filters passed as `post`,
- * and the host are the caller's too.
- *
- * # Ordering
- *
- * Register it with the registry that ticks AFTER the code moving the lights, so
- * the frame it shades is the frame that was drawn. `app.systems` runs its update
- * phase before the active scene's, so a system registered there sees lights the
- * scene has not moved yet; `scene.systems` is usually what you want.
+ * The system owns its renderer resources, not the host, registered scene nodes, supplied occluder or normal sources, or caller-supplied post filters. Register host-bound systems after scene attachment and give them an explicit system-registry lifetime.
  */
 export abstract class Lighting {
   /** Baseline colour applied to every lit fragment. Mutable; re-read every frame. */

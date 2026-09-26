@@ -15,7 +15,7 @@ This is a directly used library. It has no application extension descriptor or g
 ```ts
 import { GridSpace, Pathfinder } from '@codexo/exojs-pathfinding';
 
-const grid = GridSpace.from(12, 8, (x, y) => x === 5 && y !== 4 ? 0 : 1, {
+const grid = GridSpace.from(12, 8, (x, y) => (x === 5 && y !== 4 ? 0 : 1), {
   cellSize: 32,
 });
 const pathfinder = new Pathfinder(grid);

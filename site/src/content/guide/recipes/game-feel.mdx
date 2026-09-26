@@ -52,7 +52,7 @@ Tweens are the workhorse of game feel. A few reusable patterns:
   title="examples/guides/game-feel/damage-flash.ts"
 />
 
-Each pattern is fire-and-forget — call `.start()` inside an event handler and the tween runs to completion. No per-frame tracking, no cleanup. The existing tween system handles all active tweens each frame.
+Call `.start()` inside an event handler and the tween system advances the animation each frame. Lifetime still matters: use scene-scoped tweens for scene-owned targets, or retain and stop application-level tweens before their targets are destroyed. Repeated triggers also need an explicit interrupt-or-replace policy.
 
 ## Continuous feedback: particles + audio
 

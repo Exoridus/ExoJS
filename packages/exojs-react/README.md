@@ -20,14 +20,16 @@ This package is intentionally layered:
 ## Quick start — `<ExoCanvas>`
 
 ```tsx
-import { Color } from '@codexo/exojs';
+import { Color, FadeSceneTransition, Time } from '@codexo/exojs';
 import { ExoCanvas, Scenes, Scene, useExoApp } from '@codexo/exojs-react';
 import { TitleScene, GameScene } from './scenes';
+
+const transition = new FadeSceneTransition({ duration: Time.seconds(0.3) });
 
 function Game() {
   return (
     <ExoCanvas options={{ canvas: { width: 1280, height: 720 }, clearColor: Color.black }} style={{ width: 1280, height: 720 }}>
-      <Scenes active="game" transition={{ type: 'fade', duration: 300 }}>
+      <Scenes active="game" transition={transition}>
         <Scene name="title" component={TitleScene} />
         <Scene name="game" component={GameScene}>
           <Hud /> {/* absolutely-positioned React overlay, over the canvas */}
@@ -43,7 +45,7 @@ function Hud() {
 }
 ```
 
-Layout props (`style`, `className`, …) apply to the **wrapper**; size it to drive `'fill'`/`'letterbox'` sizing. Style the canvas itself via `canvasProps`.
+Layout props (`style`, `className`, …) apply to the **wrapper**; size it for the configured canvas sizing policy. Style the canvas itself via `canvasProps`.
 
 ## Quick start — headless hook (full control)
 

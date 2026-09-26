@@ -40,11 +40,11 @@ Register and start `LitScene` in an `Application`. Construct host-bound lighting
 
 ## Choose deliberately
 
-| Model | Main use | Constraint |
-| --- | --- | --- |
-| `ForwardLighting` | A `LitMaterial` shades individual sprites. | Capacity-bounded lights; no lightmap shadows or cookies. |
-| `LightmapLighting` | Lights, shadows, and optional normal prepass over the composed frame. | Additional targets and passes; normal surfaces must be registered. |
-| `RadianceLighting` | Sampled propagation and source-sized penumbrae. | Requires a renderable float target; different image and sampling costs, not a drop-in higher-quality lightmap. |
+| Model              | Main use                                                              | Constraint                                                                                                     |
+| ------------------ | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `ForwardLighting`  | A `LitMaterial` shades individual sprites.                            | Capacity-bounded lights; no lightmap shadows or cookies.                                                       |
+| `LightmapLighting` | Lights, shadows, and optional normal prepass over the composed frame. | Additional targets and passes; normal surfaces must be registered.                                             |
+| `RadianceLighting` | Sampled propagation and source-sized penumbrae.                       | Requires a renderable float target; different image and sampling costs, not a drop-in higher-quality lightmap. |
 
 Authored `NormalMap` sources default to the OpenGL tangent-space convention. Set `{ convention: 'directx' }` for the opposite green-channel convention. A normal map changes shading, not the shadow silhouette.
 

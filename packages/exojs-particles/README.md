@@ -21,11 +21,13 @@ class ParticleScene extends Scene {
     this.particles = new ParticleSystem({ capacity: 512 });
     this.particles.setPosition(400, 300);
     this.particles.setScale(4);
-    this.particles.addSpawnModule(new RateSpawn({
-      rate: new Constant(40),
-      lifetime: new Constant(2),
-      velocity: new ConeDirection(-Math.PI / 2, Math.PI / 4, 10, 30),
-    }));
+    this.particles.addSpawnModule(
+      new RateSpawn({
+        rate: new Constant(40),
+        lifetime: new Constant(2),
+        velocity: new ConeDirection(-Math.PI / 2, Math.PI / 4, 10, 30),
+      }),
+    );
     this.systems.add(this.particles);
   }
 

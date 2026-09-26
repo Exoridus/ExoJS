@@ -23,16 +23,20 @@ export class GameScene extends Scene {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 980 } });
 
     this.systems.add(world, { order: SystemOrder.Physics });
-    world.add(new PhysicsBody({
-      type: 'static',
-      position: { x: 400, y: 560 },
-      colliders: [new Collider({ shape: new BoxShape(700, 32) })],
-    }));
-    world.add(new PhysicsBody({
-      type: 'dynamic',
-      position: { x: 400, y: 100 },
-      colliders: [new Collider({ shape: new BoxShape(40, 40) })],
-    }));
+    world.add(
+      new PhysicsBody({
+        type: 'static',
+        position: { x: 400, y: 560 },
+        colliders: [new Collider({ shape: new BoxShape(700, 32) })],
+      }),
+    );
+    world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 400, y: 100 },
+        colliders: [new Collider({ shape: new BoxShape(40, 40) })],
+      }),
+    );
   }
 }
 ```
