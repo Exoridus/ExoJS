@@ -1,7 +1,7 @@
 {
   "sourceCommit": "d0538029bc81095cbc969a702a343fd382da79bb",
-  "testedCommit": "fed6ae1a15120bfa8c12b2886800e03583cc95b1",
-  "runId": "36219068562",
+  "testedCommit": "fd76b2109efb578abc9a5560a7afb0f24fd79baa",
+  "runId": "36219356119",
   "checks": [
     {
       "name": "scope-lifetime-probe",
@@ -15,7 +15,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 0.72
+      "seconds": 0.7
     },
     {
       "name": "guide-code-blocks",
@@ -25,7 +25,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 8.37
+      "seconds": 8.43
     },
     {
       "name": "educational-sources",
@@ -35,7 +35,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 8.16
+      "seconds": 8.2
     },
     {
       "name": "readme-code",
@@ -43,9 +43,9 @@
         "python3",
         "_migration/check-readme-examples.py"
       ],
-      "exitCode": 2,
-      "status": "FAIL",
-      "seconds": 6.89
+      "exitCode": 0,
+      "status": "PASS",
+      "seconds": 6.84
     },
     {
       "name": "site-typecheck",
@@ -53,9 +53,9 @@
         "pnpm",
         "typecheck:site"
       ],
-      "exitCode": 1,
-      "status": "FAIL",
-      "seconds": 11.11
+      "exitCode": 0,
+      "status": "PASS",
+      "seconds": 14.36
     },
     {
       "name": "site-tests",
@@ -68,7 +68,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 11.04
+      "seconds": 11.1
     },
     {
       "name": "whitespace",
