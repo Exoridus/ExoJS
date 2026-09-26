@@ -1828,7 +1828,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `outgoingFrame: 'snapshot'` is deliberately never resized: the
    * same snapshot texture is used for the entire session and never reallocated.
    */
-  private _provisionTransitionResources(context: SceneTransitionContext, requirements: SceneTransitionRequirements): TransitionResources {
+  private _provisionTransitionResources(_context: SceneTransitionContext, requirements: SceneTransitionRequirements): TransitionResources {
     const width = this._app.canvas.width;
     const height = this._app.canvas.height;
 
@@ -1853,7 +1853,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._app.onResize.add(onResize);
 
-    void context; // reserved for future requirement-dependent provisioning (none needed yet)
+    // _context reserved for future requirement-dependent provisioning (none needed yet)
 
     return {
       outgoingSnapshot,

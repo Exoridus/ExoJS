@@ -28,8 +28,11 @@ export abstract class AudioEffect {
  */
 export const isEffectReady = (effect: AudioEffect): boolean => {
   try {
+    // Reading the getters is the probe itself; there is no call to discard.
+    /* eslint-disable @typescript-eslint/no-meaningless-void-operator */
     void effect.inputNode;
     void effect.outputNode;
+    /* eslint-enable @typescript-eslint/no-meaningless-void-operator */
     return true;
   } catch {
     return false;

@@ -37,8 +37,8 @@
     "url": "git+https://github.com/Exoridus/ExoJS.git"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0",
-    "tsx": "^4.23.12",
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   }
 }

@@ -57,16 +57,14 @@ export const caretRectAt = (layout: TextLayoutResult, index: number, lineHeight:
 /**
  * The glyph index a point selects: the glyph whose advance box contains `x`,
  * snapped to its nearer edge, so a click on a character's right half places
- * the caret after it. `x` and `y` are in the layout's own space; `y` is
+ * the caret after it. `x` and `_y` are in the layout's own space; `_y` is
  * accepted for signature symmetry with future multi-line geometry and does
  * not affect the answer today.
  *
  * Hit testing runs over the advance boxes rather than the ink quads, so the
  * boundaries it reports are the ones {@link caretRectAt} paints.
  */
-export const indexAtPoint = (layout: TextLayoutResult, x: number, y: number): number => {
-  void y;
-
+export const indexAtPoint = (layout: TextLayoutResult, x: number, _y: number): number => {
   const placements = layout.placements;
 
   if (placements.length === 0) {

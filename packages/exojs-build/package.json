@@ -69,8 +69,8 @@
     "esbuild": "^0.28.2"
   },
   "devDependencies": {
-    "rollup": "^4.63.1",
-    "vite": "^7.3.5"
+    "rollup": "^4.63.4",
+    "vite": "^8.3.0"
   },
   "license": "MIT",
   "publishConfig": {

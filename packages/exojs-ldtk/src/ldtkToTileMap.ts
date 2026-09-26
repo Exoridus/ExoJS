@@ -536,8 +536,7 @@ const convertField = (field: LdtkFieldInstance): TilePropertyValue | undefined =
 
   // Exhaustiveness check: if LDtk ever adds a new field type, `field` will
   // fail to narrow to `never` here and tsc will error.
-  const _exhaustive: never = field;
-  void _exhaustive;
+  field satisfies never;
   throw new Error(`convertFieldInstances: unrecognised LDtk field type "${(field as LdtkFieldInstance).__type}".`);
 };
 

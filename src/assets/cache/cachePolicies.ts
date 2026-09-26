@@ -133,6 +133,6 @@ const isNetworkFailure = (error: unknown): boolean => error instanceof AssetNetw
 const degradedRead = <T>(): CacheReadResult<T> => cacheMiss;
 
 /** Continue as though the representation had been written. See {@link degradedRead}. */
-const degradedWrite = (error: unknown): void => {
-  void error;
+const degradedWrite = (_error: unknown): void => {
+  // Continue as though the write succeeded.
 };
