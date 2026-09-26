@@ -363,7 +363,11 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       this._createBufferRuntime(gl, buffers),
       backend.accountant,
     );
-    const dynamicVertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
+    // Only the vertex stream is orphaned per upload (see _createBufferRuntime):
+    // that alone keeps every per-draw stream of a flush intact on Firefox's
+    // native-GL path, while orphaning the index and instance streams as well
+    // measurably slows that path down for no further gain.
+    const dynamicVertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.StreamDraw).connect(
       this._createBufferRuntime(gl, buffers),
       backend.accountant,
     );
@@ -1185,11 +1189,24 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
         const state = buffers.get(buffer);
         gl.bindBuffer(buffer.type, handle);
 
-        if (state && state.dataByteLength >= buffer.uploadByteLength) {
+        // A stream buffer is fully rewritten before every draw. Re-specifying the
+        // store (orphaning) instead of overwriting it in place lets the draw that
+        // still reads the previous contents keep them: an in-place bufferSubData
+        // needs an implicit sync with pending draws, which Firefox's native-GL
+        // WebGL path does not honor, so earlier draws of the same flush render
+        // the later draw's geometry.
+        if (buffer.usage !== BufferUsage.StreamDraw && state && state.dataByteLength >= buffer.uploadByteLength) {
           uploadBufferRange(gl, buffer, offset);
         } else {
           uploadBufferStore(gl, buffer);
-          buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
+
+          // Stream buffers take this branch on every draw, so reuse the entry
+          // rather than allocating one per upload.
+          if (state) {
+            state.dataByteLength = buffer.uploadByteLength;
+          } else {
+            buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
+          }
         }
       },
       destroy: (buffer: WebGl2RenderBuffer): void => {

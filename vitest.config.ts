@@ -441,19 +441,19 @@ export default defineConfig({
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
+          // `--use-angle=swiftshader` renders on the CPU, so several Chromium
+          // instances racing for the same cores contend rather than gain
+          // anything: 78 files at default (parallel) concurrency measured no
+          // faster than sequential on an otherwise-loaded machine (~72s vs
+          // ~80s), and under that same load one file's timing-sensitive test
+          // missed its 15s timeout at 4x its isolated run time - reproduced
+          // twice, and the file passed clean every time run alone or as part
+          // of the sequential suite. `fileParallelism: false` trades the
+          // (near-zero) parallel speedup for not flaking under load.
+          fileParallelism: false,
           browser: {
             enabled: true,
             headless: webgl2Headless,
-            // `--use-angle=swiftshader` renders on the CPU, so several Chromium
-            // instances racing for the same cores contend rather than gain
-            // anything: 78 files at default (parallel) concurrency measured no
-            // faster than sequential on an otherwise-loaded machine (~72s vs
-            // ~80s), and under that same load one file's timing-sensitive test
-            // missed its 15s timeout at 4x its isolated run time - reproduced
-            // twice, and the file passed clean every time run alone or as part
-            // of the sequential suite. `fileParallelism: false` trades the
-            // (near-zero) parallel speedup for not flaking under load.
-            fileParallelism: false,
             provider: playwright({
               launchOptions: { channel: 'chromium', args: ['--enable-webgl', '--use-angle=swiftshader'] },
             }),
@@ -479,6 +479,14 @@ export default defineConfig({
       // `gfx.webrender.software` selects the software backend - the counterpart
       // to Chromium's `--use-angle=swiftshader`. (`webgl.out-of-process: false`
       // was tried and rejected: it kills the browser connection mid-run.)
+      //
+      // `webgl.disable-angle` only matters on Windows, the one platform where
+      // Firefox translates WebGL to Direct3D through ANGLE; Linux and macOS
+      // run native OpenGL either way. Through ANGLE, every new context spends
+      // ~5s compiling the lighting shaders, which pushes the tests that build
+      // several contexts past their timeout, and its WARP rasterizer has no
+      // MSAA for the antialiasing cases to observe. Native OpenGL is also what
+      // the Linux runner uses, so a local run compares like with like.
       {
         ...browserBase,
         test: {
@@ -486,6 +494,13 @@ export default defineConfig({
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
+          // Firefox serves WebGL for every file from one GPU process, so
+          // parallel files queue behind each other's GPU work there: a worker's
+          // first synchronous WebGL query stalled for ~10s behind its
+          // neighbours. The whole lane took twice as long in parallel as it
+          // does sequentially (~330s vs ~160s) and ran 32 tests past their
+          // 15s timeout; sequentially none.
+          fileParallelism: false,
           browser: {
             enabled: true,
             headless: !firefoxCiHeaded,
@@ -495,7 +510,7 @@ export default defineConfig({
                   'webgl.force-enabled': true,
                   'webgl.disabled': false,
                   'gfx.webrender.software': true,
-                  'webgl.angle.force-warp': true,
+                  'webgl.disable-angle': true,
                 },
               },
             }),
