@@ -72,7 +72,7 @@ Await navigation when subsequent work depends on its result, and handle a reject
 
 Ordinary pause stops scene updates and scene systems while allowing the scene to draw. Scene-bound services also have availability policies. In particular, `this.tweens` is **scene-owned**, but its default `when: 'always'` continues during ordinary pause. Choose an active-only policy for gameplay motion and an always or paused policy deliberately for a pause interface.
 
-At this revision, tween availability is applied at pause/resume transitions rather than being re-evaluated when a tween is created. Do not assume that creating an active-only tween after the scene is already paused immediately freezes it. Retention suspension is a separate boundary: it suspends scene-bound activity until restoration.
+Tween availability is applied at pause/resume transitions rather than being re-evaluated when a tween is created. Do not assume that creating an active-only tween after the scene is already paused immediately freezes it. Retention suspension is a separate boundary: it suspends scene-bound activity until restoration.
 
 ## Ownership and teardown
 

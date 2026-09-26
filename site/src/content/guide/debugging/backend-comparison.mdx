@@ -12,7 +12,7 @@ ExoJS has WebGL2 and WebGPU backends behind the same high-level drawing API. Bac
 
 ## Start with automatic selection
 
-The default `backend.type` is `auto`. At this revision, automatic selection considers WebGPU availability and deliberately selects WebGL2 for detected WebKit user agents. Explicitly requesting WebGPU bypasses that selection policy; it does not make an unavailable or failing adapter usable.
+The default `backend.type` is `auto`. Automatic selection considers WebGPU availability and deliberately selects WebGL2 for detected WebKit user agents. Explicitly requesting WebGPU bypasses that selection policy; it does not make an unavailable or failing adapter usable.
 
 ```ts
 import { Application, RenderBackendType } from '@codexo/exojs';

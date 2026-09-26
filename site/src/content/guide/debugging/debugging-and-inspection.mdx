@@ -53,7 +53,7 @@ For pointer problems, enable both the hit-test and pointer-stack layers. Check w
 
 The render-pass inspector walks visible nodes beneath the current scene's `root` and collects nodes that have at least one filter. Each entry contains the filter sequence, bounds, a mask flag, and a texture-cache flag. A node with only a mask and no filter is not included in that list.
 
-At this revision, `totalPasses` is a **structural count**: the number of attached filters in the collected entries, plus one for each entry with a mask. It is not a measured hardware-pass count. It does not expand a multi-step blur or bloom, subtract cached work, or inventory all application-level passes. A `[cached]` flag describes configuration, not proof that no cache rebuild happened in the current frame.
+`totalPasses` is a **structural count**: the number of attached filters in the collected entries, plus one for each entry with a mask. It is not a measured hardware-pass count. It does not expand a multi-step blur or bloom, subtract cached work, or inventory all application-level passes. A `[cached]` flag describes configuration, not proof that no cache rebuild happened in the current frame.
 
 Use the panel to find unexpected attachments or large filtered bounds. Confirm actual work with renderer counters or a GPU capture before claiming a pass reduction. To inspect an explicit `RenderPipeline`, set it on the inspector; the resulting rows describe enabled state and nesting, not execution time.
 

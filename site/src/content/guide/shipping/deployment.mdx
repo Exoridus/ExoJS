@@ -65,7 +65,7 @@ For a classic script, copy a specific release's Core bundle into your deployed f
 </script>
 ```
 
-The Core-only bundle is `exo.iife.min.js`. `exo.full.iife.min.js` contains Core and the official runtime packages except React on the same `Exo` global. Choose one; do not load separate independent Core copies together. The full bundle includes APIs, but package-specific systems and application configuration still need to be used correctly.
+The Core-only bundle is `exo.iife.min.js`. `exo.full.iife.min.js` contains Core and the official runtime packages except React and tilemap physics on the same `Exo` global. Choose one; do not load separate independent Core copies together. The full bundle includes APIs, but package-specific systems and application configuration still need to be used correctly.
 
 For browser ESM, the debug bundle is external-Core and needs `@codexo/exojs` resolved to the same Core module, for example through an import map. Keep the map, engine, debug module, and optional packages version-aligned. Avoid unversioned CDN URLs in a reproducible production deployment.
 

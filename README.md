@@ -126,10 +126,10 @@ npm install --save-exact @codexo/exojs
 
 The package provides ESM and TypeScript declarations. It also includes script-tag bundles:
 
-| Bundle                  | Contents                                                                         |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| `dist/exo.iife.js`      | Core runtime on the `Exo` global                                                 |
-| `dist/exo.full.iife.js` | Core plus the official runtime extensions except React, on the same `Exo` global |
+| Bundle                  | Contents                                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `dist/exo.iife.js`      | Core runtime on the `Exo` global                                                                     |
+| `dist/exo.full.iife.js` | Core plus the official runtime extensions except React and tilemap physics, on the same `Exo` global |
 
 Minified variants are provided alongside them. Use one Core instance per application; do not load both bundles into the same page.
 
