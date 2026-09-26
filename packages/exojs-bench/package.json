@@ -25,11 +25,11 @@
     "@codexo/exojs-particles": "workspace:*",
     "@codexo/exojs-physics": "workspace:*",
     "@codexo/exojs-tilemap": "workspace:*",
-    "@types/node": "^26.4.0",
-    "@webgpu/types": "^0.1.69",
-    "playwright": "^1.62.1",
-    "tsx": "^4.23.12",
-    "vitest": "^4.1.7"
+    "@types/node": "^26.6.2",
+    "@webgpu/types": "^0.1.74",
+    "playwright": "^1.63.0",
+    "tsx": "^4.23.15",
+    "vitest": "^4.1.11"
   },
   "license": "MIT"
 }

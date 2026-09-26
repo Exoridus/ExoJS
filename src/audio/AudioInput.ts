@@ -65,7 +65,7 @@ export class AudioInput implements Destroyable {
     if (options.noiseSuppression !== undefined) constraints.noiseSuppression = options.noiseSuppression;
     if (options.autoGainControl !== undefined) constraints.autoGainControl = options.autoGainControl;
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: Object.keys(constraints).length > 0 ? constraints : true });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: Object.keys(constraints).length === 0 || constraints });
     return new AudioInput(stream);
   }
 

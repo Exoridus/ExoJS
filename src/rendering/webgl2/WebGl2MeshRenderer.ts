@@ -182,7 +182,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const blendMode = resolveBlendMode(mesh.blendMode, material);
     const texture = mesh.texture ?? Texture.white;
     const command = backend.activeDrawCommand;
-    const supportsInstancing = material === null ? true : this._isInstancingCompatible(shader);
+    const supportsInstancing = material === null || this._isInstancingCompatible(shader);
 
     // Reuse a pooled slot if one exists at the cursor, otherwise grow the pool.
     // Overwrite every field (see PendingMeshDraw): a forgotten field leaks the

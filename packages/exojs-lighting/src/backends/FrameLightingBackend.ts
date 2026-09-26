@@ -603,7 +603,7 @@ ${sunQuadWgsl}`,
     this._followCamera();
     this._ambient.copy(ambient);
 
-    const marching = this._cascading ? false : this._writeLights(lights, occluders);
+    const marching = !this._cascading && this._writeLights(lights, occluders);
 
     this._publishSources(lights);
     this._writeWalk(lights, occluders);

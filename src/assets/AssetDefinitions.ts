@@ -312,5 +312,4 @@ export type InferLoadedEntry<E extends CatalogEntry> = E extends string
 
 // Compile-time guard: every ExtensionKindMap value is a real AssetDefinitions type.
 type AssertKindMapValid = ExtensionKindMap[keyof ExtensionKindMap] extends keyof AssetDefinitions ? true : never;
-const _extensionKindMapIsValid: AssertKindMapValid = true;
-void _extensionKindMapIsValid;
+true satisfies AssertKindMapValid;

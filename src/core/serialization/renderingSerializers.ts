@@ -360,9 +360,9 @@ const videoSerializer: NodeSerializer<Video> = {
       element,
       compact({
         volume: num(data.volume),
-        loop: data.loop === true ? true : undefined,
+        loop: data.loop === true || undefined,
         playbackRate: num(data.playbackRate),
-        muted: data.muted === true ? true : undefined,
+        muted: data.muted === true || undefined,
         time: num(data.time),
       }),
     );

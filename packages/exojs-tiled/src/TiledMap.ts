@@ -805,8 +805,7 @@ const convertPropertyValue = (property: TiledPropertyData): TilePropertyValue | 
     default: {
       // Exhaustiveness check: if a new TiledPropertyType is ever added,
       // `property.type` will fail to narrow to `never` here and tsc will error.
-      const _exhaustive: never = property.type;
-      void _exhaustive;
+      property.type satisfies never;
       throw new Error(`convertProperties: unrecognised Tiled property type "${property.type as string}".`);
     }
   }
