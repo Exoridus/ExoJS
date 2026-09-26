@@ -1,8 +1,8 @@
 {
-  "commit": "fd76b2109efb578abc9a5560a7afb0f24fd79baa",
+  "commit": "73c20b1a79312d30693fd228ec6fdb6abffcb814",
   "next": "d0538029bc81095cbc969a702a343fd382da79bb",
-  "runId": "36219356119",
+  "runId": "36219665685",
   "checks": "success",
   "siteBuild": "success",
-  "builtLinks": "failure"
+  "builtLinks": "success"
 }

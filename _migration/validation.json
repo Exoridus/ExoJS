@@ -1,7 +1,7 @@
 {
   "sourceCommit": "d0538029bc81095cbc969a702a343fd382da79bb",
-  "testedCommit": "fd76b2109efb578abc9a5560a7afb0f24fd79baa",
-  "runId": "36219356119",
+  "testedCommit": "73c20b1a79312d30693fd228ec6fdb6abffcb814",
+  "runId": "36219665685",
   "checks": [
     {
       "name": "scope-lifetime-probe",
@@ -15,7 +15,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 0.7
+      "seconds": 0.55
     },
     {
       "name": "guide-code-blocks",
@@ -25,7 +25,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 8.43
+      "seconds": 6.39
     },
     {
       "name": "educational-sources",
@@ -35,7 +35,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 8.2
+      "seconds": 6.05
     },
     {
       "name": "readme-code",
@@ -45,7 +45,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 6.84
+      "seconds": 4.99
     },
     {
       "name": "site-typecheck",
@@ -55,7 +55,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 14.36
+      "seconds": 11.26
     },
     {
       "name": "site-tests",
@@ -68,7 +68,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 11.1
+      "seconds": 12.25
     },
     {
       "name": "whitespace",
@@ -79,7 +79,7 @@
       ],
       "exitCode": 0,
       "status": "PASS",
-      "seconds": 0.01
+      "seconds": 0.02
     }
   ],
   "stage": "site and source documentation integration"
