@@ -43,7 +43,7 @@ A radial progress ring using a custom shader filter and a tween. The shader draw
   title="examples/showcase/loading-progress-with-shader.ts"
 />
 
-The tween interpolates `{ v: 0 }` → `{ v: 1 }` over 2.4 seconds. Each frame, `update` reads `this.progress.v` and pushes it into the shader uniform. The text label updates to show a percentage. When progress reaches 1, the tween completes.
+The tween interpolates `{ v: 0 }` → `{ v: 1 }` over 2.4 seconds. Each frame, `update` reads `this.progress.v` and pushes it into the shader uniform. The text label updates to show a percentage. When progress reaches 1, the tween completes. This is animated progress, not evidence that loading succeeded; a real loading screen must derive completion and errors from its loading queue.
 
 This pattern generalises: any uniform-driven visual can be tweened by creating a plain object as the tween target and forwarding its values to the shader in `update`.
 
@@ -55,11 +55,11 @@ In-canvas UI is right for:
 
 DOM UI (HTML/CSS rendered as overlays on top of the canvas) is better for:
 - Complex layouts with CSS grid/flexbox (inventory grids, settings panels).
-- Form elements (text inputs, dropdowns, sliders) — these don't exist in ExoJS's canvas rendering.
+- Browser-native forms and document semantics. Core also provides `TextInput`, `TextArea`, `Dropdown`, and `Slider`; choose DOM controls when native accessibility and integration with the surrounding page are required.
 - Text-heavy content with accessibility requirements (screen readers, selection, copy-paste).
 - Static UI that doesn't need per-frame updates.
 
-The two can coexist: the canvas handles the game, a DOM layer on top handles menus. Coordinate the two by listening to `app.input.onCanvasFocusChange` and toggling `pointer-events: none` on the DOM overlay when the game needs the pointer. For a purely in-canvas overlay (score bar, health ring, mini-map) that avoids DOM coordination entirely, see [HUD overlay](/ExoJS/en/guide/runtime/ui-and-widgets/).
+The two can coexist: the canvas handles the game, a DOM layer on top handles menus. Coordinate focus and gameplay action availability explicitly. Use `pointer-events: none` only on display-only overlays; interactive DOM controls must retain their own pointer and keyboard input. For a purely in-canvas overlay (score bar, health ring, mini-map) that avoids DOM coordination entirely, see [HUD overlay](/ExoJS/en/guide/runtime/ui-and-widgets/).
 
 ## Examples
 
@@ -73,4 +73,4 @@ The same example also shows the typewriter pattern; finish the current line with
 
 ## Where to go next
 
-The next recipe, [Cinematics](/ExoJS/en/guide/recipes/cinematics/), covers scripted sequences — how to choreograph tweens, camera moves, audio, and overlays into a cutscene using the tween chain and timer primitives.
+Continue with [Cinematics](/ExoJS/en/guide/recipes/cinematics/), which covers scripted sequences — how to choreograph tweens, camera moves, audio, and overlays into a cutscene using the tween chain and timer primitives.

@@ -19,7 +19,7 @@ for name in paths:
         file.write_text(block + '\nexport {};\n')
         records.append({'source': name, 'block': index, 'file': str(file.relative_to(root))})
 config = folder / 'tsconfig.json'
-config.write_text(json.dumps({'extends': '../../tsconfig.examples.json', 'compilerOptions': {'noEmit': True}, 'include': ['*.ts'], 'exclude': []}, indent=2))
+config.write_text(json.dumps({'extends': '../../tsconfig.examples.json', 'compilerOptions': {'noEmit': True}, 'include': ['*.ts', '../../src/typings.d.ts'], 'exclude': []}, indent=2))
 print(json.dumps(records, indent=2))
 result = subprocess.run(['pnpm', 'exec', 'tsc', '--noEmit', '--pretty', 'false', '-p', str(config)], cwd=root)
 (root / '_migration' / 'readme-examples.json').write_text(json.dumps({'sourceCommit': json.loads((root / '_migration/source.json').read_text())['sourceCommit'], 'examples': records, 'exitCode': result.returncode}, indent=2) + '\n')

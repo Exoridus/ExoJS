@@ -12,7 +12,8 @@ Core and the tilemap runtime are peer dependencies. `ldtkExtension` depends on `
 
 ```ts
 import { Application, type RenderingContext, Scene } from '@codexo/exojs';
-import { ldtkExtension, TileMapNode } from '@codexo/exojs-ldtk';
+import { ldtkExtension } from '@codexo/exojs-ldtk';
+import { TileMapNode } from '@codexo/exojs-tilemap';
 
 class LevelScene extends Scene {
   override async load(): Promise<void> {
@@ -52,7 +53,7 @@ The project runtime supplies level ownership, not the game's streaming policy. C
 
 Tile rendering, entity spawning, IntGrid collision, and pathfinding are separate uses of authored data. A visible layer does not create a physics body automatically. `createLdtkIntGridCellSource` exposes cell data for the tilemap-physics bridge when that is the intended collision source.
 
-A loader-acquired map and its texture dependencies remain claim-owned. `LdtkMap.destroy()` releases its owned runtime maps, not arbitrary scene nodes or shared loader textures. Remove displaying nodes at their owner boundary and release asset claims through their scope. Runtime classes re-exported by the adapter are the same bindings as in `@codexo/exojs-tilemap`.
+A loader-acquired map and its texture dependencies remain claim-owned. `LdtkMap.destroy()` releases its owned runtime maps, not arbitrary scene nodes or shared loader textures. Remove displaying nodes at their owner boundary and release asset claims through their scope. Import the format-neutral rendering nodes, including `TileMapNode`, from `@codexo/exojs-tilemap`; the adapter owns LDtk loading and conversion.
 
 ## Documentation
 

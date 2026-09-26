@@ -18,15 +18,15 @@ import { GridSpace, Pathfinder } from '@codexo/exojs-pathfinding';
 const grid = GridSpace.from(12, 8, (x, y) => (x === 5 && y !== 4 ? 0 : 1), {
   cellSize: 32,
 });
-const pathfinder = new Pathfinder(grid);
-const route = pathfinder.findPathBetween({ x: 16, y: 16 }, { x: 336, y: 208 });
+const pathfinder = new Pathfinder();
+const route = pathfinder.findPathBetween(grid, 16, 16, 336, 208);
 
 if (route.status === 'found') {
-  console.log(route.waypoints);
+  console.log(route.points);
 }
 ```
 
-Zero-cost cells are blocked; positive costs describe traversal weight. `findPathBetween` uses world points, whereas node-oriented queries use navigation-node identifiers. Handle an unreachable or budget-limited result explicitly instead of moving along an assumed route.
+Zero-cost cells are blocked; positive costs describe traversal weight. `findPathBetween` takes the navigation space followed by the start and goal world coordinates, whereas node-oriented queries use navigation-node identifiers. Handle an unreachable or budget-limited result explicitly instead of moving along an assumed route.
 
 ## Choose the navigation model
 
@@ -34,7 +34,7 @@ A grid is useful when occupancy and costs follow regular cells. A waypoint graph
 
 A path is valid for the navigation revision it was computed from. Update or rebuild the appropriate navigation data when obstacles or costs change, then invalidate stale results and in-flight searches. Repeated deterministic inputs in one controlled environment are useful for testing; do not infer cross-build or cross-machine lockstep guarantees from a fixed traversal order.
 
-Incremental query budgets bound search work, not a guaranteed number of milliseconds. Keep planning separate from the controller that follows a path, and include the agent's clearance and collision policy in the navigation model rather than treating a line through walkable cells as a complete movement solution.
+Query budgets bound search work, not a guaranteed number of milliseconds. Keep planning separate from the controller that follows a path, and include the agent's clearance and collision policy in the navigation model rather than treating a line through walkable cells as a complete movement solution.
 
 ## Documentation
 
