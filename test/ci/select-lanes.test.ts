@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
+import { CHECKED_README_PATHS, effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
 
 // Deterministic coverage for the CI path-to-lane policy. The logic under test is
 // scripts/ci/select-lanes.ts - the SAME module the "Detect changes" job in
@@ -155,7 +155,8 @@ describe('CI lane selection — engine/site areas', () => {
     const { areas, lanes } = decide('README.md');
     expect(areas).toMatchObject({ engine: false, site: false, audioFx: false, tilemapWorker: false });
     expect(lanes.browserAudio).toBe(false);
-    expect(lanes.unit).toBe(false);
+    // The unit lane runs only for the README-example suite (see the site-data block).
+    expect(lanes.coverage).toBe(false);
     expect(lanes.browserWebgpu).toBe(false);
     expect(lanes.packageVerify).toBe(false);
     expect(lanes.siteBuild).toBe(false);
@@ -507,6 +508,22 @@ describe('CI lane selection — site data gates the unit lane', () => {
     expect(areas.siteData).toBe(true);
     expect(lanes.unit).toBe(true);
     expect(lanes.exampleSmoke).toBe(true);
+  });
+
+  it('a README with checked examples runs the unit lane that typechecks them', () => {
+    for (const file of CHECKED_README_PATHS) {
+      const { areas, lanes } = decide(file);
+      expect({ file, siteData: areas.siteData, engine: areas.engine, ...lanes }).toMatchObject({
+        file,
+        siteData: true,
+        engine: false,
+        unit: true,
+        coverage: false,
+        packageVerify: false,
+        browserWebgl2: false,
+      });
+    }
+    expect(decide('packages/exojs-tilemap/README.md').lanes.unit).toBe(false);
   });
 
   it('site pages and components stay out of the area: no suite reads them', () => {

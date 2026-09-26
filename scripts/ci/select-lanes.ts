@@ -261,6 +261,18 @@ const isBenchStructuralPath = (file: string): boolean => {
 const isGuidesPath = (file: string): boolean => file.startsWith('site/src/content/');
 
 /**
+ * READMEs that promise complete, typechecked TypeScript examples rather than
+ * caller-owned fragments. `test/site/readme-examples.test.ts` reads this list,
+ * so adding a README there also routes its changes to the unit lane.
+ */
+export const CHECKED_README_PATHS: readonly string[] = [
+  'README.md',
+  ...['exojs-physics', 'exojs-particles', 'exojs-lighting', 'exojs-tiled', 'exojs-ldtk', 'exojs-aseprite', 'exojs-audio-fx', 'exojs-pathfinding'].map(
+    name => `packages/${name}/README.md`,
+  ),
+];
+
+/**
  * Site-data area: the sources the remaining `test/site/**` suites read. Same
  * reasoning as `isGuidesPath` - those suites live under `test/`, so they run on
  * every engine change and would otherwise never run on the change they exist to
@@ -284,10 +296,18 @@ const isGuidesPath = (file: string): boolean => file.startsWith('site/src/conten
  *                                        profile-only commit reaches no other
  *                                        area that runs a test.
  *
+ *   - `CHECKED_README_PATHS`             the READMEs whose complete examples
+ *                                        `test/site/readme-examples` typechecks.
+ *                                        Read before the prose exemption, or a
+ *                                        README-only change - the one that can
+ *                                        break those examples - would never run
+ *                                        the suite that guards them.
+ *
  * Deliberately not `site/src/pages/` or `site/src/components/`: no suite reads
  * them, and the site build already gates on the wider `site` area.
  */
 const isSiteDataPath = (file: string): boolean => {
+  if (CHECKED_README_PATHS.includes(file)) return true;
   if (isDocPath(file)) return false;
   if (file.startsWith('site/src/lib/')) return true;
   if (file.startsWith('examples/')) return true;

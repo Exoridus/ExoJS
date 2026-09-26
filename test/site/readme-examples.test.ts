@@ -4,19 +4,13 @@ import { join, resolve } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
-// These entry points promise complete TypeScript examples, not caller-owned fragments.
-const readmes = [
-  'README.md',
-  ...['exojs-physics', 'exojs-particles', 'exojs-lighting', 'exojs-tiled', 'exojs-ldtk', 'exojs-aseprite', 'exojs-audio-fx', 'exojs-pathfinding'].map(
-    name => `packages/${name}/README.md`,
-  ),
-];
+import { CHECKED_README_PATHS } from '../../scripts/ci/select-lanes.ts';
 
 describe('complete README examples', () => {
   it('typechecks every listing against the public package entry points', () => {
     const root = process.cwd();
     const virtual = new Map<string, string>();
-    for (const path of readmes) {
+    for (const path of CHECKED_README_PATHS) {
       const blocks = [...readFileSync(join(root, path), 'utf8').matchAll(/^```ts[ \t]*\r?\n([\s\S]*?)^```/gm)];
       expect(blocks.length, `${path} must retain its complete example`).toBeGreaterThan(0);
       for (const [index, block] of blocks.entries()) {
