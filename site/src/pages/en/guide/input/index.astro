@@ -1,15 +1,5 @@
 ---
-const target = `${import.meta.env.BASE_URL}en/guide/input/keyboard-and-actions/`;
+import GuideChapterRedirect from '../../../../components/pages/GuideChapterRedirect.astro';
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="robots" content="noindex" />
-    <link rel="canonical" href={target} />
-    <meta http-equiv="refresh" content={`0;url=${target}`} />
-    <title>ExoJS Guide</title>
-  </head>
-  <body><p><a href={target}>Continue to the guide</a></p></body>
-</html>
+<GuideChapterRedirect locale="en" chapterPath="input/keyboard-and-actions" />

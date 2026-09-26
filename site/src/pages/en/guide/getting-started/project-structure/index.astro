@@ -1,5 +1,5 @@
 ---
-const target = `${import.meta.env.BASE_URL}en/guide/getting-started/setup/`;
+import GuideChapterRedirect from '../../../../../components/pages/GuideChapterRedirect.astro';
 ---
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8" /><meta name="robots" content="noindex" /><link rel="canonical" href={target} /><meta http-equiv="refresh" content={`0;url=${target}`} /><title>Guide page moved</title></head><body><p>This topic is now part of <a href={target}>the consolidated Guide chapter</a>.</p></body></html>
+
+<GuideChapterRedirect locale="en" chapterPath="getting-started/setup" />
