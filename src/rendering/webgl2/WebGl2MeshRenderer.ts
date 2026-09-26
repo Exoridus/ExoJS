@@ -1199,7 +1199,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
           uploadBufferRange(gl, buffer, offset);
         } else {
           uploadBufferStore(gl, buffer);
-          buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
+
+          // Stream buffers take this branch on every draw, so reuse the entry
+          // rather than allocating one per upload.
+          if (state) {
+            state.dataByteLength = buffer.uploadByteLength;
+          } else {
+            buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
+          }
         }
       },
       destroy: (buffer: WebGl2RenderBuffer): void => {
