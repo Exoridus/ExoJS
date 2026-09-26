@@ -1,198 +1,81 @@
 ---
-title: 'Audio-reactive visualization'
-description: 'Bridge audio analysis and beat-detection state into the render pipeline via DataTexture and BeatDetector polling.'
+title: 'Audio-reactive visuals'
+description: 'Map live audio analysis to bounded visual effects, preserve resource ownership, and distinguish the audio and display clocks.'
 ---
 
-import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
-import Callout from '../../../components/Callout.astro';
+import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# Audio-reactive visualization
+# Audio-reactive visuals
 
-An audio-reactive scene is one where visuals move, change color, or trigger effects in response to the music or sound currently playing. ExoJS gives you two building blocks for this: [`AudioAnalyser`](/ExoJS/en/api/audio-analyser/) for per-frame spectrum data, and [`BeatDetector`](/ExoJS/en/api/beat-detector/) for rhythmic timing. You combine them inside `update` — sample what you need, map it to visual properties, and let the renderer handle the rest.
+An audio-reactive scene maps a live signal to a visual property. Use an `AudioAnalyser` for amplitude and spectrum, and a `BeatDetector` when the visual needs an estimated rhythmic grid. Start with a sound that already plays reliably through the intended bus or voice; analysis does not replace loading, playback, or audio unlock.
 
-## The pipeline
+The analyser and detector tap a live bus, voice, node, or supported stream. They do not analyse a `Sound` or `AudioStream` asset descriptor merely because that asset has loaded. A bus tap sees the signals routed through that bus; a voice tap isolates one playback.
 
-The flow is the same for any audio-reactive setup:
+## Read once and update existing visuals
 
-1. Tap a live audio source (an `AudioBus` such as `app.audio.music`, or a `Voice`) with an `AudioAnalyser` and/or a `BeatDetector`.
-2. In `update`, read spectrum values, beat envelopes, or subdivision phase.
-3. Apply those readings to drawable properties — scale, position, tint, shader uniforms, particle spawns.
+The following scene expects audio already playing on the application's music bus. Without that source it correctly draws a silent spectrum; it does not start a track itself:
 
-Both the analyser and the beat detector connect as parallel taps. They never affect the source's main audio routing, so you can attach them to anything that's already playing. They take a live source (bus, voice, `AudioNode`, or `MediaStream`) — not a `Sound`/`AudioStream` descriptor.
+<SourceSnippet source="examples/guides/audio-reactive-visualization/spectrum-scene.ts" region="spectrum-scene" language="ts" title="A scene-owned analyser driving an existing graphics object" />
 
-## Building an analyser
+`this.track` releases the analyser with the scene. The scene root owns the graphics. Playback may have a different lifetime: application-owned music can continue after this visualizer ends, while a scene-owned voice should stop with its own scene.
 
-An `AudioAnalyser` wraps a Web Audio `AnalyserNode` and exposes frequency and time-domain data. You point it at a source, then call its getters each frame:
+Read the required analysis data once per update and use it for several visual properties. Recreating an analyser, texture, filter, or particle system every frame obscures the mapping and creates unrelated work.
 
-<SourceSnippet
-  source="examples/guides/audio-reactive-visualization/visualizer-scene.ts"
-  region="visualizer-scene"
-  language="ts"
-  title="examples/guides/audio-reactive-visualization/visualizer-scene.ts"
-/>
+## Choose a useful analysis scale
 
-You can also pass `source` as a constructor option: `new AudioAnalyser({ source: app.audio.music, fftSize: 1024 })`. Either form works; the setter is useful when you need to switch sources at runtime. To analyse a single track in isolation, keep the `Voice` from `play()` and pass that instead of the bus.
+Raw FFT bins are linearly spaced in frequency. Logarithmic or mel-spaced bands are often more useful for a display because low-frequency structure remains visible without dedicating most bars to high frequencies.
 
-## Spectrum sampling strategies
+Byte-valued spectrum data is convenient for a normalized visual intensity. Floating-point spectrum values describe the analyser's decibel-domain output; they are not calibrated acoustic loudness or an exact physical amplitude measurement. Choose a transfer function, floor, and smoothing that suit the image rather than treating every sample as an absolute meter.
 
-The raw FFT returns N bins linearly spaced from 0 Hz to the Nyquist frequency (half the sample rate). For most visualizations this spacing is awkward — bass gets a handful of bins, treble gets hundreds.
+Map a normalized intensity into a bounded range: a small scale change, a limited blur radius, or a capped spawn rate. Keep a base value separate from the animated offset so camera shake or pulse animation does not accumulate drift. Rate, particle lifetime, bursts, and system capacity must agree; a maximum rate alone does not establish a safe occupancy.
 
-`AudioAnalyser` gives you four ways to read the spectrum, each with a byte and a float variant:
+## Rhythmic envelopes and one-shot events
 
-| Method | Output | Use case |
-|--------|--------|----------|
-| `getSpectrum()` | `Uint8Array` (0–255 per bin) | Direct bar-graph visualizations |
-| `getSpectrumFloat()` | `Float32Array` (dBFS per bin) | Precise amplitude measurement |
-| `getSpectrumMel()` | `Uint8Array` (0–255 per band) | Perceptually-weighted display bands |
-| `getSpectrumLog()` | `Uint8Array` (0–255 per band) | Octave-uniform display (each octave gets equal visual width) |
+Use `pulse`, `barPulse`, or a subdivision phase for continuous motion. Use beat signals for one-shot visual requests such as a burst or a color change. If several messages arrive between visual frames, decide whether to aggregate, coalesce, or bound them rather than spawning an unbounded backlog.
 
-The mel and log methods accept an optional `bands` parameter (default 32) and frequency range (`fMin`/`fMax`, default 20 Hz to 20 kHz, clamped to Nyquist). The filterbanks are built once per `(bands, fMin, fMax, fftSize)` combination and cached on the analyser instance — subsequent calls at the same parameters are just a weighted sum.
+`justBeat` is a time-window predicate. Depending on frame timing, that window can be observed by zero, one, or several frames. It is not an edge-triggered event and must not directly repeat a one-shot action on every frame that sees `true`.
 
-<SourceSnippet
-  source="examples/guides/audio-reactive-visualization/spectrum-bands.ts"
-  region="spectrum-bands"
-  language="ts"
-  title="examples/guides/audio-reactive-visualization/spectrum-bands.ts"
-/>
+Beat messages are asynchronous worklet-to-main-thread notifications. They preserve a different boundary from polling, but do not promise zero latency, hard real-time delivery, or a perfect beat grid. A detector's estimate is suitable for reactive presentation; rhythm-game scoring needs an explicit authoritative timing and calibration design, not an arbitrary confidence threshold.
 
-## Beat-driven animation: polling vs. events
+Tempo confidence and phase confidence answer different questions. A stable estimated BPM can coexist with uncertain beat placement. Use that distinction to soften or disable a visual response while tracking is uncertain. See [Beat detection](/ExoJS/en/guide/audio/beat-detection/) for the detector's acquisition and event lifecycle.
 
-`BeatDetector` gives you both event-style signals and per-frame polling getters. Which one you use depends on what kind of visual you are driving.
+## Upload a bounded spectrum history
 
-The event signals — `onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange` — fire when the worklet processor detects a beat and dispatches a message to the main thread. Use them for one-shot side effects: spawning a particle burst, triggering a screen flash, advancing a sequencer:
+A `DataTexture` can store a fixed-size history without reconstructing an image every frame:
 
-<SourceSnippet
-  source="examples/guides/audio-reactive-visualization/beat-reactive.ts"
-  region="beat-reactive"
-  language="ts"
-  title="examples/guides/audio-reactive-visualization/beat-reactive.ts"
-/>
+<SourceSnippet source="examples/guides/audio-reactive-visualization/spectrum-history.ts" region="spectrum-history" language="ts" title="Write one column into an owned ring-buffer texture" />
 
-For continuous animation — something that smoothly decays between beats rather than snapping — use the polling getters inside `update`:
+Pass 64 byte-valued bands, for example from `getSpectrumMel(undefined, { bands: 64 })`. The texture stores the value in its red channel. A material or filter can map that value to a color. Track the `SpectrumHistory` instance or call its `destroy` method when its owner ends.
 
-| Getter | Returns | Description |
-|--------|---------|-------------|
-| `pulse` | `number` (0–1) | Decaying envelope. Peaks at 1 on every beat, then halves every `pulseHalfLife` seconds (default 0.15). |
-| `barPulse` | `number` (0–1) | Same shape, but resets only on downbeats and decays per `barPulseHalfLife` (default 0.3). |
-| `justBeat` | `boolean` | `true` for the visual frame(s) within `justBeatWindow` seconds of a beat onset (default 0.03). |
-| `secondsSinceLastBeat` | `number` | Elapsed time in seconds since the most recent beat. Returns 0 before the detector locks. |
-| `subdivisionPhase(n)` | `number` (0–1) | Phase within an N-subdivision of the current beat. `subdivisionPhase(4)` gives 16th-note phase. |
+This is a ring buffer: column positions wrap. It does not automatically present time from oldest to newest. Use `nextColumn` when sampling or rearranging the display if chronological scrolling is required.
 
-These are all pure derivations from the detector's internal state — they do not allocate, do not fire events, and are safe to call every frame:
+`commitRect` transfers the changed region rather than the entire texture. That reduces uploaded data; the actual performance benefit depends on update size and upload overhead. Keep the texture dimensions and history length bounded, and measure before treating many tiny uploads as universally cheaper.
 
-<SourceSnippet
-  source="examples/guides/audio-reactive-visualization/beat-visuals.ts"
-  region="beat-visuals"
-  language="ts"
-  title="examples/guides/audio-reactive-visualization/beat-visuals.ts"
-/>
+## Audio time is not frame time
 
-Tune the envelope shapes with the mutable public fields `pulseHalfLife`, `barPulseHalfLife`, and `justBeatWindow`. Smaller values give snappier responses; larger values give longer afterglow.
-
-<Callout type="pitfall" title="justBeat can slip through at low frame rates">
-`justBeat` is only `true` for a frame or two per beat (a ~30 ms window), so a frame-rate dip below ~30fps can skip the window entirely. For effects that must never drop a beat — a sound cue, a scored hit — drive them from the `onBeat` signal, which is dispatched once per beat regardless of frame rate.
-</Callout>
-
-## Spectrograms with DataTexture
-
-When you want a scrolling spectrogram — a 2D texture that updates each frame with a new column of frequency data — use [`DataTexture`](/ExoJS/en/api/data-texture/). Its pixels live in a CPU-side typed array that you mutate directly, then upload to the GPU with `commit()` or `commitRect()`.
-
-`DataTexture` defaults to nearest-neighbor filtering with clamp-to-edge wrapping, which is what you want for spectrum data where bilinear filtering would corrupt sampled values.
-
-<Callout type="hint" title="Upload only the column that changed">
-A scrolling spectrogram rewrites just one column per frame. `commitRect(x, y, width, height)` re-uploads that single region to the GPU — far cheaper than `commit()`, which re-uploads the entire texture every frame.
-</Callout>
-
-A simple scrolling spectrogram:
-
-<SourceSnippet
-  source="examples/guides/audio-reactive-visualization/spectrogram.ts"
-  region="spectrogram"
-  language="ts"
-  title="examples/guides/audio-reactive-visualization/spectrogram.ts"
-/>
-
-For ring-buffer patterns where only the newest column changes, `commitRect(col, 0, 1, 64)` uploads just that one-pixel-wide column — cheaper than uploading the whole texture every frame.
-
-## A compact practical scene
-
-Here is a complete scene that combines an analyser-driven bar graph with beat-triggered background color changes:
-
-<SourceSnippet
-  source="examples/guides/audio-reactive-visualization/full-visualizer.ts"
-  region="full-visualizer"
-  language="ts"
-  title="examples/guides/audio-reactive-visualization/full-visualizer.ts"
-/>
-
-## Timing semantics
-
-A few things to keep in mind when working with audio-driven visuals:
-
-- The analyser spectrum reflects the current frame's audio buffer. You sample it once per `update` call; the `AnalyserNode`'s `smoothingTimeConstant` (default 0.8) smooths between consecutive analyses.
-- Beat detector events are dispatched from the worklet processor to the main thread. They arrive asynchronously and may be arbitrarily close to or slightly behind the visual frame; the worklet's internal temporal resolution is finer than `requestAnimationFrame` cadence. The polling getters (`pulse`, `justBeat`, `subdivisionPhase`) sample the detector's most recent cached state on the main thread.
-- `justBeat` is `true` for at most one or two visual frames per beat (with the default 30ms window at 60fps). If your frame rate drops below ~30fps, you may miss a `justBeat` window. For critical beat-triggered effects, prefer the `onBeat` signal — it is dispatched per beat and delivered on the main thread.
-- Every timestamp the detector reports — `BeatInfo.audioTime`, `nextBeatTime`, the `lookahead` entries and `analysisTime` — is an `AudioContext.currentTime` value, so [`AudioOutputClock`](/ExoJS/en/api/audio-output-clock/) converts any of them straight onto the `performance.now()` timeline.
-- `analysisTime` names the newest audio the current state describes, and `analysisLatency` is how far behind the context clock that state already was when the main thread received it. The figure is measured rather than assumed and covers the analysis hop together with the worklet-to-main-thread delivery, so it is a budget rather than an exact age.
-
-### Tempo confidence is not phase confidence
-
-`confidence` says how sure the detector is of the **tempo**; `phaseConfidence` says how well recent onsets support the **position** of the beat grid. They come apart more often than they look like they should — a passage with a rock-solid pulse played with heavy rubato reads high confidence and low phase confidence, and so does anything the detector has had to free-run through because no onset arrived where it predicted one.
-
-Gate anything that has to land exactly on the beat — a scored hit, a quantised trigger, a flash meant to be felt rather than seen — on `phaseConfidence`, and keep `confidence` for decisions about the tempo itself, such as whether to display a BPM readout at all:
-
-```ts
-import { BeatDetector } from '@codexo/exojs-audio-fx';
-
-const detector = new BeatDetector();
-
-const shouldScoreHits = (): boolean => detector.phaseConfidence > 0.6;
-const shouldShowBpm = (): boolean => detector.confidence > 0.5;
-```
-
-## Lining audio up with the frame clock
-
-Web Audio schedules in `AudioContext.currentTime` and your frame loop measures in `performance.now()`. The two are different clocks with different origins, and `currentTime` runs ahead of what the listener actually hears by the length of the output path. Subtracting one from the other gives a number that looks plausible and is wrong by tens of milliseconds - enough to visibly desynchronise a rhythm game.
-
-`AudioOutputClock` correlates them:
+Beat timestamps are expressed on the `AudioContext.currentTime` timeline. Frame callbacks use a different clock. Do not subtract an audio timestamp directly from `performance.now()`.
 
 ```ts
 import { AudioOutputClock } from '@codexo/exojs';
 
 const clock = new AudioOutputClock();
-
-/** How long from now until the listener hears the sample scheduled for `contextTime`. */
-const msUntilHeard = (contextTime: number): number => clock.contextToPerformanceTime(contextTime) - performance.now();
+const millisecondsUntilOutput = (contextTime: number): number =>
+  clock.contextToPerformanceTime(contextTime) - performance.now();
 ```
 
-Where the browser supports `AudioContext.getOutputTimestamp()`, the correlation names the sample the device is playing at this instant, so the converted time already accounts for the output path and needs no latency arithmetic of your own. Where it does not, the clock pairs `currentTime` with `performance.now()` and marks the snapshot `'estimated'` so you can tell the two cases apart:
+Where an output timestamp is available, the clock correlates the audio sample being presented with performance time. Its fallback is marked as estimated. Inspect that source instead of adding guessed latency compensation to both paths. Display latency and the application's choice of presentation frame remain outside the correlation.
 
-```ts
-import { AudioOutputClock } from '@codexo/exojs';
+The analyser reflects an audio analysis window, not a buffer synchronized exactly to the current visual frame. Detector `analysisTime` and latency information describe the received analysis state; they do not eliminate main-thread scheduling delays.
 
-const snapshot = new AudioOutputClock().snapshot();
+## Put the scene together
 
-if (snapshot.source === 'estimated') {
-    // No output timestamp here: the correlation leads the true output by roughly
-    // `outputLatency`, which this environment may not report either.
-}
-```
+Keep playback ownership, analysis ownership, and rendering ownership explicit. Start from [Audio basics](/ExoJS/en/guide/audio/audio-basics/), add one analyser, then map one bounded visual property. Add beat-driven bursts only after the continuous response and its timing are understood.
 
-Display latency is deliberately outside this: only your code knows how far ahead of the photons its render loop runs, so the decision of which frame to draw a beat on stays yours.
-
-## Examples
-
-<a id="audio-visualisation"></a>
 <ExamplePreview chapter="showcase" slug="audio-visualisation" />
 
-A full audio visualisation: frequency-domain bars, time-domain waveform overlay, and per-band energy meters drawn on a 2D canvas then uploaded as a texture.
-
-<a id="beat-sync-pulse"></a>
 <ExamplePreview chapter="beat-detection" slug="beat-sync-pulse" />
 
-A sprite pulses and particles burst on the `onBeat` signal while the BPM estimate updates.
+<ExamplePreview chapter="showcase" slug="audio-reactive-particles" />
 
-## Where to go next
-
-For color-oriented effects driven by audio — palette cycling, noise overlays, shader filters — see [Filters](/ExoJS/en/guide/effects/filters/). To write a custom shader that samples a spectrogram `DataTexture`, see [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/). If you came here before reading [Beat detection](/ExoJS/en/guide/audio/beat-detection/), that chapter covers the full event API, tempo tracking, and frequency band state in detail.
+The examples demonstrate display and effect mappings. They are not calibrated loudness meters, authoritative rhythm timelines, or equal-work CPU/GPU benchmarks. Continue with [Particles](/ExoJS/en/guide/effects/particles/) or [Filters](/ExoJS/en/guide/effects/filters/) for the visual mechanism rather than duplicating its setup inside every audio recipe.

@@ -1,53 +1,43 @@
 # create-exo-app
 
-Official starter for [ExoJS](https://github.com/Exoridus/ExoJS).
+Create an ExoJS application with Vite, TypeScript, and a working scene. Use `minimal` to learn the runtime before adding optional systems.
 
-## Usage
-
-```bash
-npm create exo-app@latest my-game
-```
-
-Or pick a template:
-
-```bash
+```sh
 npm create exo-app@latest my-game -- --template minimal
-npm create exo-app@latest my-game -- --template game-starter
-npm create exo-app@latest my-game -- --template platformer
-npm create exo-app@latest my-game -- --template top-down
-npm create exo-app@latest my-game -- --template ui-app
-npm create exo-app@latest my-game -- --template audio-reactive
-```
-
-Then:
-
-```bash
 cd my-game
 npm install
 npm run dev
 ```
 
+Omit `--template` to choose interactively. The generated project belongs to you: edit its source, commit its lockfile, and keep compatible ExoJS package versions pinned.
+
 ## Templates
 
-| Template         | Description                                                                            |
-| ---------------- | -------------------------------------------------------------------------------------- |
-| `minimal`        | Smallest TypeScript ExoJS app — one `Scene`, one rotating box                          |
-| `game-starter`   | Keyboard-controlled player, `GameScene` + `GameOverScene`, score HUD                   |
-| `platformer`     | Side-scroller on `@codexo/exojs-physics`: coyote time, jump buffer, camera follow      |
-| `top-down`       | Tilemap + physics + click-to-move pathfinding, procedurally built or loaded from Tiled |
-| `ui-app`         | Settings screen built from the core UI widgets                                         |
-| `audio-reactive` | `AudioAnalyser`-driven frequency bar visualiser; click-to-start gesture                |
+| Template         | Starting point                                                                 |
+| ---------------- | ------------------------------------------------------------------------------ |
+| `minimal`        | One visible animated object in one scene.                                      |
+| `game-starter`   | Keyboard-controlled gameplay and a game-over scene.                            |
+| `platformer`     | Side-scrolling physics, camera follow, and jump handling.                      |
+| `top-down`       | Tilemaps, collision, and click-to-move pathfinding; procedural or Tiled input. |
+| `ui-app`         | A settings interface built from Core UI widgets.                               |
+| `audio-reactive` | Shapes driven by live audio analysis.                                          |
 
-## CLI options
+Availability follows the scaffolder version you run. The repository's `next` branch can contain a template that is not yet in an older npm release. A specialized template includes more systems; it is not a prerequisite for using the engine.
 
+## Locate the application code
+
+`src/main.ts` creates the application, registers scene classes, mounts the canvas, and awaits startup. Scene behavior lives in `src/scenes/`. Files under `public/assets/` are served unchanged; `public/` is not part of their request URL.
+
+```sh
+npm run build
+npm run preview
 ```
-create-exo-app <project-name> [--template <name>] [--force]
 
-  --template  minimal | game-starter | platformer | top-down | ui-app | audio-reactive  (default: minimal)
-  --force     overwrite an existing non-empty directory
-```
+The build writes the static application to `dist/`. Preview checks that output locally; verify the actual hosted output as well, especially loader base paths and optional browser capabilities.
 
-When run interactively (TTY) without `--template`, the CLI prompts for a template choice. In non-TTY / CI environments it defaults to `minimal` automatically.
+## Documentation
+
+[Setup and project layout](https://exoridus.github.io/ExoJS/en/guide/getting-started/setup/) · [Your first scene](https://exoridus.github.io/ExoJS/en/guide/getting-started/your-first-scene/) · [Build and deploy](https://exoridus.github.io/ExoJS/en/guide/shipping/deployment/)
 
 ## License
 

@@ -1,111 +1,62 @@
 ---
 title: 'Your first scene'
-description: 'Build a working scene from scratch — load a texture, position a sprite, draw it, and animate it across frames.'
+description: 'Draw and animate one object, register its scene, and understand the boundary between state updates and rendering.'
 ---
 
-import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
-import Callout from '../../../components/Callout.astro';
-import TryIt from '../../../components/TryIt.astro';
 import NextStep from '../../../components/NextStep.astro';
+import TryIt from '../../../components/TryIt.astro';
 
 # Your first scene
 
-A scene drives one render context. It owns the data you load, the state that updates each frame, and the calls that go to the backend during draw. Most ExoJS work happens inside scenes.
+Start with the `minimal` project from [Setup](/ExoJS/en/guide/getting-started/setup/). It draws a rotating square without downloading textures or audio. A visible object gives you a working baseline before you need to reason about loading and network failures.
 
-This chapter builds one from scratch: a single sprite, centered on the canvas, rotating at a fixed rate.
+## Define the scene
 
-## A minimal scene
-
-The smallest viable scene has just a `draw` method. The application calls it every frame; the scene tells the backend what to put on screen:
+The maintained starter's scene contains one graphics object:
 
 <SourceSnippet
-  source="examples/guides/your-first-scene/minimal-scene.ts"
+  source="packages/create-exo-app/templates/minimal/src/scenes/MainScene.ts"
   region="minimal-scene"
   language="ts"
-  title="examples/guides/your-first-scene/minimal-scene.ts"
+  title="src/scenes/MainScene.ts"
 />
 
-The canvas is already painted with the application's `clearColor` before `draw` runs — the engine clears every frame, so a scene never has to open with a clear of its own. Pass `autoClear: false` to `Application` if you want the previous frame to remain instead.
+`Graphics` stores the rectangle. The rectangle is centered around the object's local origin, then placed at `(400, 300)` in the starter's 800 by 600 canvas. `addChild` attaches it to the scene's root container.
 
-There's nothing visible yet because the scene's root is still empty. Add a sprite next.
+The constructor only creates local objects. Application-bound services such as `this.app`, `this.loader`, and `this.inputs` are not available there. Use `init()` for setup that needs those services; use the awaitable `load()` hook for asynchronous prerequisites. The [lifecycle chapter](/ExoJS/en/guide/runtime/scenes-and-lifecycle/) explains their order and cleanup.
 
-## Loading and drawing a sprite
+## Update state, then draw it
 
-Scenes have four lifecycle hooks. You override the ones you need:
+`update(delta)` receives elapsed time in **seconds**. The starter rotates the square by `90 * delta`, giving a rate of 90 degrees per second. Changing `90` changes the speed; omitting `delta` makes the motion depend on the number of frames rendered.
 
-- `async load()` — declare assets upfront. Resolves before `init` runs.
-- `init()` — set up state. Assets are available via `this.loader.get(...)`.
-- `update(delta)` — per-frame logic.
-- `draw(context)` — per-frame rendering.
+`draw(context)` chooses what to render. `context.render(this.root)` draws the scene hierarchy. Adding an object to `root` does not by itself make the scene draw it: the explicit draw call is required. Avoid creating objects or starting asset requests in `draw`; it should use state that already exists.
 
-This scene skips `load` entirely. `Texture` is a *seamless* asset type: `this.loader.get(...)` never throws, even for a path nothing has fetched yet — it hands back a placeholder immediately and heals it in place once the network request resolves. That's enough to build and position a sprite directly in `init`:
+The application clears its output each frame by default. Persistent-frame effects are a separate rendering workflow, not something this scene needs.
+
+## Register and start the scene
+
+The starter's entry point creates the application after defining or importing the scene:
 
 <SourceSnippet
-  source="examples/getting-started/hello-world.ts"
-  region="first-scene"
+  source="packages/create-exo-app/templates/minimal/src/main.ts"
+  region="minimal-main"
   language="ts"
-  title="examples/getting-started/hello-world.ts"
+  title="src/main.ts"
 />
 
-A few things worth pointing out:
+`scenes` registers scene **classes**, not constructed scene instances. `app.start(MainScene)` lets the director construct and activate the scene, then starts the runtime. Await startup so a loading or activation failure is visible to the caller.
 
-- `this.loader.get('image/ship-a.png')` returns a `Texture` synchronously — the path is a literal string, so its `.png` extension tells the loader what type to produce, and there's no need to import `Texture` just to ask for one. Nothing declared this path in `load`; the `get()` call in `init` is what kicks off the fetch.
-- Building the `Sprite` in `init` means `draw` only ever reads state — it never creates it. If the texture is still loading when the first frame renders, the sprite shows a "missing" placeholder that heals in place once the fetch resolves; see [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) for the full status-channel contract.
-- The default sprite anchor is `(0, 0)` — the top-left. With `setAnchor(0.5)`, the sprite's center becomes its pivot point, so `setPosition(width / 2, height / 2)` places the sprite at the canvas center rather than offset to one corner.
+`canvas.mount: 'body'` attaches the canvas to the page. An unmounted canvas can still receive rendering work while the page appears empty. In an existing layout, mount it into the element that owns your interactive surface instead.
 
-<Callout type="hint" title="Prefer load() once a scene has more than a placeholder">
-Getting away without `load` works because `Texture` heals in place — fine for a one-sprite demo. Once a scene has several assets, or you don't want a visible pop-in while the texture arrives, declare them upfront with `async load() { await this.loader.load(...); }` instead — see [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/).
-</Callout>
+## Make three small changes
 
-<Callout type="pitfall" title="A sprite that won't center">
-A sprite's default anchor is its top-left corner. `setPosition(width / 2, height / 2)` then places the corner — not the center — at the middle of the canvas. Call `setAnchor(0.5)` first.
-</Callout>
+Change the rotation rate, the rectangle size, and the clear color. Each edit should affect one visible property. Then move the object by changing its position. This is the basic loop of an ExoJS scene: create state, change it during updates, and render it explicitly.
 
-## Adding motion
+The [Hello World playground example](/ExoJS/en/playground/?example=getting-started/hello-world.js) extends the idea with a texture-backed sprite. Its tap control pauses the rotation and changes the tint. Loading is deliberately not required for this first tutorial; [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) teaches when to await an asset and when a placeholder is appropriate.
 
-Override `update` to advance state once per frame. The `delta` argument carries the elapsed time since the previous frame; multiplying transforms by `delta` makes motion frame-rate independent:
-
-```ts
-update(delta: Seconds) {
-    this.sprite.rotate(120 * delta);
-}
-```
-
-This rotates the sprite at 120 degrees per second regardless of whether the browser ticks at 60 fps, 144 fps, or stutters under load. The `rotate` call adds to the current rotation; `setRotation` would replace it.
-
-## Where the canvas lives
-
-The `canvas.mount` option puts the canvas wherever your layout needs it:
-
-```ts
-import { Application } from '@codexo/exojs';
-
-const mount = document.getElementById('scene');
-if (mount === null) throw new Error('Missing #scene mount element.');
-
-const app = new Application({ canvas: { mount } });
-```
-
-For the smallest possible test page, appending to `document.body` is fine. Either way, the canvas needs to be mounted somewhere in the DOM before frames become visible.
-
-<Callout type="broken" title="A canvas outside the DOM shows nothing">
-If the canvas is never appended to the page, the scene still loads, updates, and draws — you just see a blank page with no error to explain why. Mount it before you expect a frame.
-</Callout>
-
-## The full thing running
-
-<ExamplePreview chapter="getting-started" slug="hello-world" />
-
-<TryIt
-  examples={['getting-started/hello-world']}
-  api={['scene', 'sprite', 'texture', 'loader']}
-/>
-
-## Where to go next
-
-The pieces shown here — `Application`, `Scene`, `Loader`, `Sprite`, `Texture` — each have their own chapter. [Runtime](/ExoJS/en/guide/runtime/application/) walks through the runtime model in order: how applications and scenes fit together, how the scene graph composes drawables, and how the view transform handles cameras and resolutions.
+<TryIt examples={['getting-started/hello-world']} api={['application', 'scene', 'graphics']} />
 
 <NextStep href="/ExoJS/en/guide/runtime/scenes-and-lifecycle/" label="Understand the scene lifecycle">
-See how load, init, update, and draw work together as one repeatable loop.
+Learn where asynchronous loading, scene-bound services, pause, and cleanup belong.
 </NextStep>

@@ -125,9 +125,9 @@ A common pattern is to pause gameplay on focus loss and resume on return. The en
 
 ## When to use which listener
 
-- `onTrigger` for one-shot actions: jump, shoot, menu open/close, toggle.
+- `onTrigger` for release-time taps: menu toggles or actions that deliberately wait for a short press to finish.
 - `onActive`/`onStop` pair for held-state actions: movement, charge attacks, UI scrolling.
-- `onStart` for actions that fire once on press and don't care about release timing: inventory open, screenshot.
+- `onStart` for immediate press-time actions: jump, shoot, inventory open, or screenshot.
 - `app.input.onKeyDown` for global shortcuts and rebinding UIs that need to see every raw key event.
 
 All scene-scoped bindings are cleaned up when the scene's `destroy` hook runs — no manual `.unbind()` calls needed unless you want to detach a binding mid-scene.
@@ -136,7 +136,7 @@ All scene-scoped bindings are cleaned up when the scene's `destroy` hook runs �
 
 Hard-coding `Keyboard.Space` for jump works until someone picks up a controller. Hard-coding `GamepadButton.South` works until someone prefers the keyboard. Action mapping means naming what the player intends to do — "jump", "move right", "pause" — and binding each intent to one or more input channels regardless of device.
 
-ExoJS does not ship a dedicated action-map abstraction layer. Instead, the existing binding API supports multi-channel arrays and the scene-scoped `this.inputs` registry gives you automatic cleanup. You structure the mapping yourself, but the pieces are already in place.
+Use `ActionMap` with typed `ButtonAction`, `AxisAction`, or `VectorAction` values to name gameplay intent. Attach the map through `this.inputs.attach(actions)` so its bindings follow the scene lifetime, then read its values in `update`. The lower-level multi-channel bindings below remain useful for individual shortcuts; they are not a replacement for the action-map API.
 
 ### Multi-channel bindings
 
@@ -303,4 +303,4 @@ A scope is not a `preventDefault()`: it decides which of your actions sees a con
 
 ## Where to go next
 
-The next chapter, [Mouse and pointer](/ExoJS/en/guide/input/mouse-and-pointer/), covers the unified pointer system — mouse, touch, and pen input with multi-touch slot management and gesture recognition.
+Continue with [Mouse and pointer](/ExoJS/en/guide/input/mouse-and-pointer/), which covers the unified pointer system — mouse, touch, and pen input with multi-touch slot management and gesture recognition.

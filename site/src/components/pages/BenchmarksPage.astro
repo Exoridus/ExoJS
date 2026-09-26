@@ -86,6 +86,13 @@ const leading = browsers[0];
             <p class="lede">Rendering and physics, compared.</p>
         </header>
 
+        <details class="scope">
+            <summary>What these measurements cover</summary>
+            <p>Rendering records the declared CPU-side frame region; physics records one simulation step. Neither is GPU execution time, display latency, memory use, or a complete game loop. Compare equal scenario loads within the selected profile, not ratios across different machines.</p>
+            <p>Equivalent supported workloads are compared; an unsupported arm is absent rather than assigned zero. Published values pool independent runs. A pooled p95 is the median of the run p95 values, not a percentile of concatenated samples. Reporting bands are policy, not statistical confidence intervals.</p>
+            <p>The <a href="https://github.com/Exoridus/ExoJS/blob/next/packages/exojs-bench/docs/harness.md">methodology</a> defines the measurement regions and fairness rules. The <a href="https://github.com/Exoridus/ExoJS/blob/next/packages/exojs-bench/results/README.md">reproduction instructions</a> describe acquisition and provenance. Hashes detect content inconsistency; they do not independently attest to the hardware or execution.</p>
+        </details>
+
         {leading === undefined ? (
             <p class="empty">
                 No measurements are published yet. The reference measurement is {REPRODUCTION_RUNS} separate runs on one machine after a release is tagged,
@@ -141,7 +148,7 @@ const leading = browsers[0];
                   * figure had already been read as a warning.
                   */}
                 <p class="legend">
-                    <b>Orange</b> marks a time over the 16.7 ms frame budget at 60 fps. The measurement is valid. The scene does not fit in one frame.
+                    <b>Orange</b> marks a time over the 16.7 ms frame budget at 60 fps. The measured region alone exceeds that interval; this is not a whole-application frame-rate measurement.
                 </p>
 
                 {browsers.map((entry, index) => (
@@ -150,7 +157,7 @@ const leading = browsers[0];
                             <div class="domain-head">
                                 <div class="domain-title">
                                     <h2>Rendering</h2>
-                                    <p class="unit">CPU time per frame · Lower is better</p>
+                                    <p class="unit">CPU-side frame work · milliseconds · Lower is better</p>
                                 </div>
                                 {entry.rendering.length > 1 && (
                                     <div class="backends" role="group" aria-label="Rendering backend">
@@ -198,7 +205,7 @@ const leading = browsers[0];
                             <div class="domain-head">
                                 <div class="domain-title">
                                     <h2>Physics</h2>
-                                    <p class="unit">CPU time per step · Lower is better</p>
+                                    <p class="unit">CPU time per step · milliseconds · Lower is better</p>
                                 </div>
                             </div>
 
@@ -240,7 +247,7 @@ const leading = browsers[0];
                   */}
                 <p class="scope">
                     A library appears in a scenario where its own API covers it and its arm does the same work as the others. One that sits a scenario out, or that would
-                    render something else in it, is left out of that card rather than compared on unequal terms. Nothing measured is discarded. <a
+                    render something else in it, is left out of that card rather than compared on unequal terms. The full report retains the measured rows and explains exclusions; headline cards select declared comparable rows. <a
                         href={`${base}${locale}/benchmarks/full/`}>All measurements</a
                     > lists every arm and every load.
                 </p>

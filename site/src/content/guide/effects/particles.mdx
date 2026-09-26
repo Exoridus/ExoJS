@@ -1,277 +1,75 @@
 ---
 title: 'Particles'
-description: 'Spawn and tune particle systems for environmental and reactive effects.'
+description: 'Build a bounded emitter, understand local-space simulation and CPU/GPU routing, and give the system a clear lifetime.'
 ---
 
-import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
-import Callout from '../../../components/Callout.astro';
+import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Particles
 
-`ParticleSystem` is a `Drawable` that manages thousands of animated sprites with data-oriented performance. Instead of creating and destroying individual `Sprite` instances per particle, the system stores particle state in parallel typed arrays (Struct-of-Arrays) and mutates them in bulk. This keeps the work per-particle extremely lean — no allocations, no GC pressure, no per-sprite transform tree overhead.
+Use a `ParticleSystem` for many short-lived elements that share an emission and simulation model: sparks, smoke, rain, trails, or decorative motion. Use ordinary sprites when each object needs independent gameplay identity and behavior.
 
-> **Note:** `ParticleSystem` ships as an official ExoJS extension package. Install `@codexo/exojs-particles` alongside `@codexo/exojs`:
-> ```sh
-> npm install @codexo/exojs @codexo/exojs-particles
-> ```
+`@codexo/exojs-particles` supplies the simulation and rendering integration. Add `particlesExtension` to the application; importing the classes alone does not install their renderer.
 
-The mental model: you register modules that describe how particles *spawn*, what they *do over their lifetime*, and what happens when they *die*. The system calls those modules each frame against its channel storage. You never write a per-particle `update` loop.
-
-## Setup
-
-Register the extension when creating your Application:
-
-```ts
-import { Application } from '@codexo/exojs';
-import { particlesExtension } from '@codexo/exojs-particles';
-
-const app = new Application({ extensions: [particlesExtension] });
+```sh
+npm install --save-exact @codexo/exojs @codexo/exojs-particles
 ```
 
-## Construction
+## Start with a bounded emitter
 
-A particle system needs a texture and a capacity:
+This complete example uses the built-in white texture rather than an external asset:
 
-```ts
-import { Texture } from '@codexo/exojs';
-import { ParticleSystem } from '@codexo/exojs-particles';
+<SourceSnippet source="examples/guides/particles/basic-emitter.ts" region="basic-emitter" language="ts" title="A scene-owned fountain" />
 
-function createParticles(particleTexture: Texture): ParticleSystem {
-    return new ParticleSystem(particleTexture, { capacity: 4000 });
-}
-```
+The scene's system registry advances and destroys the particle system. `draw` submits it explicitly. Do not also call `update` manually when the registry already advances it.
 
-`capacity` (default 4096) is the maximum number of particles the system can have alive at once. It's fixed at construction — the backing typed arrays are allocated immediately.
+`RateSpawn` creates particles over time. Spawn modules establish initial attributes; update modules change live particles in registration order. The example gives each particle a two-second lifetime, launches it upward, applies downward acceleration, and reduces its scale over its lifetime.
 
-The system is a `Drawable`, so it has a position, rotation, scale, tint, blend mode, and participates in the scene graph like any sprite:
+The normal emitter produces about 160 concurrent particles at steady state before considering bursts or timing effects. Capacity is 512, so this example leaves headroom. That calculation is specific to its rate and lifetime, not a general capacity recommendation.
 
-```ts
-import { BlendModes } from '@codexo/exojs';
-import { ParticleSystem } from '@codexo/exojs-particles';
+## Choose a space and units
 
-declare const system: ParticleSystem;
+Particle positions are local to the system. Position the system in the scene, then emit relative to its origin. Supplying world coordinates for every particle while also translating the system applies that placement twice.
 
-system.setPosition(400, 500);
-system.setBlendMode(BlendModes.Additive);
-```
+Velocity and acceleration follow your scene's coordinate units per second and per second squared. Direction modules such as `ConeDirection` use radians; do not pass a scene node's degree rotation without converting it. In a y-down scene, an angle of `-Math.PI / 2` points upward.
 
-Particle positions are local to the system — setting the system's position moves the whole emitter.
+A system's ordinary bounds do not describe the whole moving cloud, so particle culling is disabled by default. Enable it only when you can maintain a valid world-space `cullArea` that covers the effect. Pixel snapping on the system does not snap each independently simulated particle.
 
-## Spawn modules
+## CPU and GPU are execution paths
 
-A spawn module creates new particles each frame. Two built-in spawners cover the common cases:
+On WebGL2, simulation uses the CPU path. On WebGPU, GPU routing also depends on the update modules, render mode, and backend/device attachment. Inspect `gpuMode` after the system has been attached and updated; selecting WebGPU alone is not proof that this particular effect is using compute.
 
-**`RateSpawn`** — continuous emission at a configurable rate (particles per second):
+The GPU path keeps integrated state on the device. Do not treat a retained CPU-side position array as authoritative for a live GPU simulation. A custom CPU-only update module makes the system ineligible for that path. A custom render mode can also require CPU execution.
 
-```ts
-import { Vector } from '@codexo/exojs';
-import { ConeDirection, Constant, RateSpawn, Range } from '@codexo/exojs-particles';
+The default render mode is shared by the implementation. A custom render mode supplied to a system is owned by that system; do not give the same owned mode instance to two independently destroyed systems.
 
-system.addSpawnModule(new RateSpawn({
-    rate: new Constant(180),                            // 180 particles / second
-    lifetime: new Range(0.6, 1.4),                      // random lifetime in seconds
-    velocity: new ConeDirection(-Math.PI / 2, Math.PI / 5, 70, 180),
-    scale: new Constant(new Vector(0.35, 0.35)),
-}));
-```
+## Change modules deliberately
 
-**`BurstSpawn`** — named bursts at scheduled times, with optional looping:
+Modules can be added and removed after the first update. On an eligible GPU path, changing the module set rebuilds the relevant compute program. A change that forces an already running GPU system onto the CPU cannot reconstruct its integrated state from stale CPU values: live particles are cleared instead.
 
-```ts
-import { Vector } from '@codexo/exojs';
-import { BurstSpawn, ConeDirection, Constant, Range } from '@codexo/exojs-particles';
+Treat that transition as a visible effect restart, not a seamless backend migration. Prefer stable module composition with parameter changes for continuously running effects, and exercise editor or quality-setting changes that alter eligibility.
 
-const burst = new BurstSpawn({
-    schedule: [{ time: 0, count: 100 }],  // 100 particles at t=0
-    lifetime: new Range(0.5, 1.2),
-    velocity: ConeDirection.omni(80, 240),  // full 360° spread
-    scale: new Constant(new Vector(0.4, 0.4)),
-});
-system.addSpawnModule(burst);
+A module order is part of the effect. A later absolute scale or color module can overwrite an earlier value; adding another module is not always equivalent to multiplying another influence into the result.
 
-// Re-trigger the burst schedule from t=0
-burst.reset();
-```
+## Death hooks and gameplay
 
-Every spawn config property that takes a value — `lifetime`, `position`, `velocity`, `scale`, `rotation`, `rotationSpeed`, `tint`, `textureIndex` — accepts a `Distribution<T>` rather than a fixed value. Distributions are sampled per-particle at spawn time.
+Death modules are useful for secondary visual effects. CPU and GPU death reporting have different timing and buffering costs. GPU reporting involves bounded asynchronous data transfer; do not use it as an unqualified, same-frame gameplay authority.
 
-## Distributions
+Bound secondary emissions so one burst cannot recursively create an unbounded effect. Setting a spawn rate to zero stops future rate-based spawning; existing particles continue until they expire or are explicitly cleared. Destroying the system ends its lifetime rather than merely fading its current population.
 
-Distributions let each spawned particle get a different value. The most commonly used:
+## Own textures and systems separately
 
-| Distribution | What it produces |
-|---|---|
-| `Constant(value)` | The same value every time |
-| `Range(min, max)` | Uniform random number in `[min, max]` |
-| `VectorRange(xMin, xMax, yMin, yMax)` | Independent uniform random per axis |
-| `ConeDirection(angle, halfAngle, minSpeed, maxSpeed)` | Velocity vector within a directional cone |
-| `ConeDirection.omni(minSpeed, maxSpeed)` | Full 360° omnidirectional velocity |
-| `BoxArea(minX, maxX, minY, maxY, mode)` | Random point in an axis-aligned box — `'volume'` (default) fills the area, `'edge'` sticks to the perimeter |
-| `CircleArea(centerX, centerY, radius, mode)` | Random point in a circle — `'volume'` (default) fills the disk with uniform area density, `'edge'` sticks to the circumference |
-| `LineSegment(x0, y0, x1, y1)` | Random point uniformly distributed along a line segment |
-| `Curve(keys)` | Piecewise-linear spline evaluated over a particle's lifetime normalised progress (0..1) |
-| `ColorGradient(keys)` | Same as `Curve` but interpolates `Color` values |
+A texture acquired through `this.loader` remains scene-loader-owned. The particle system uses it but is not permission to destroy a resource shared by another scope. Conversely, destroying a texture claim does not stand in for releasing a caller-owned system or custom render mode.
 
-`Curve` and `ColorGradient` are `LifetimeFunction<T>` rather than `Distribution<T>` — they're evaluated with a normalised lifetime `t` in 0..1, not sampled at spawn. They're typically used with update modules, not spawn modules.
+Register the system with the scope that should update it. A scene-owned registry follows scene pause and teardown; an application-owned registry outlives an individual scene. Keep that choice explicit for effects that span navigation.
 
-## Update modules
+## Measure the complete effect
 
-Update modules mutate particle state each frame. Every built-in update module that works on both backends declares a `wgsl()` contribution — when a WebGPU backend is active and every registered update module is GPU-eligible, the system auto-compiles a composite WGSL compute shader and runs the full update pipeline on the GPU in a single dispatch. When any module lacks a `wgsl()` contribution, or when running on WebGL2, the system falls back to CPU. You don't configure this — it's automatic.
+Count, lifetime, module complexity, fill area, blend mode, readback, and target resolution all contribute to cost. `liveCount` is a slot-range high-water mark on the GPU path and can include holes; use `aliveCount` when you need actual live occupancy, accounting for the work of reading it.
 
-<Callout type="warning" title="Register every update module before the first `update()`">
-GPU mode compiles all modules into one composite shader on the first `update()`, which locks the list. Add every force, drag, fade and color module up front — you cannot append one once the system has stepped.
-</Callout>
-
-<Callout type="info" title="Each system picks GPU or CPU on its own">
-A system takes the WGSL compute path when the backend is WebGPU and every update module is GPU-eligible; otherwise it runs the identical API on the CPU. Read `system.gpuMode` to confirm which path it took.
-</Callout>
-
-The frequently-used update modules:
-
-```ts
-import { Color } from '@codexo/exojs';
-import {
-    AlphaFadeOverLifetime,
-    ApplyForce,
-    ColorOverLifetime,
-    ColorGradient,
-    Curve,
-    Drag,
-    ScaleOverLifetime,
-    Turbulence,
-} from '@codexo/exojs-particles';
-
-// Constant acceleration (gravity, wind)
-system.addUpdateModule(new ApplyForce(0, 240));
-
-// Speed-based drag
-system.addUpdateModule(new Drag(0.1));
-
-// Fade alpha over lifetime (requires a Curve)
-system.addUpdateModule(new AlphaFadeOverLifetime(
-    new Curve([{ t: 0, v: 1 }, { t: 1, v: 0 }])
-));
-
-// Full color interpolation over lifetime
-system.addUpdateModule(new ColorOverLifetime(
-    new ColorGradient([
-        { t: 0, color: new Color(255, 200, 100, 1) },
-        { t: 1, color: new Color(0, 0, 0, 0) },
-    ])
-));
-
-// Animated scale
-system.addUpdateModule(new ScaleOverLifetime(
-    new Curve([{ t: 0, v: 0.5 }, { t: 0.3, v: 1.2 }, { t: 1, v: 0.1 }])
-));
-
-// Procedural noise-based motion
-system.addUpdateModule(new Turbulence(30, 0.01));
-```
-
-Modules can be added and removed at any time, including while particles are in flight — the next `update()` rebuilds whatever the change invalidated. On the GPU path that is the compute program alone: the particles keep the state the device has been integrating, so live tuning does not restart the effect.
-
-The one change that cannot preserve them is adding a module without a `wgsl()` implementation to a running GPU system. That moves the simulation to the CPU, which holds no copy of what the device computed, so the system clears its live particles rather than continuing from stale values.
-
-Other available update modules: `RotateOverLifetime`, `VelocityOverLifetime`, `AttractToPoint`, `RepelFromPoint`, `OrbitalForce`, `ColorOverSpeed`. The API reference documents each one's constructor options and GPU eligibility.
-
-## Death modules
-
-A death module fires once per particle when its lifetime expires. The only built-in death module is `SpawnOnDeath`:
-
-<SourceSnippet
-  source="examples/guides/particles/spawn-on-death.ts"
-  region="spawn-on-death"
-  language="ts"
-  title="examples/guides/particles/spawn-on-death.ts"
-/>
-
-`SpawnOnDeath` forwards the dying particle's position to the child system's spawn, so each child burst appears at the parent's death location.
-
-A custom death module receives that same information as a `ParticleDeathContext` — position, velocity, rotation, scale, colour and timing at the moment of death:
-
-<SourceSnippet
-  source="examples/guides/particles/death-module.ts"
-  region="splash-on-death"
-  language="ts"
-  title="examples/guides/particles/death-module.ts"
-/>
-
-The context is a snapshot, not a view into the system: it is the same on both backends, stays valid for the whole callback, and carries no slot index because the slot may already hold a different particle by the time the callback runs. Delivery is exactly once per expired particle, but not necessarily in the frame it expired — a GPU-simulated death arrives with its readback, typically one frame later. Readbacks overlap, so frames that each report deaths do not queue behind one another; when the device falls far enough behind, deaths wait on the GPU and arrive with a later batch, still in the order they happened. Exactly-once holds while those waiting deaths fit the system's capacity; past that the excess is dropped instead of stalling the frame, and a development build warns once per system.
-
-## Per-frame loop
-
-`ParticleSystem` is a `Drawable` — it renders itself when you call `context.render(system)` in `draw`. Call `system.update(delta)` in your scene's `update`:
-
-<SourceSnippet
-  source="examples/guides/particles/particle-scene.ts"
-  region="particle-scene"
-  language="ts"
-  title="examples/guides/particles/particle-scene.ts"
-/>
-
-The update loop runs spawn modules, advances particle state (velocity integration, elapsed time), runs update modules, compacts dead particles, and — in GPU mode — uploads dirty slots and dispatches the compute shader. `render()` draws the system as a single instanced draw call, regardless of particle count.
-
-## Channels and manual emission
-
-Particles are addressed by named channel, never by raw slot. A module receives the channels it needs and indexes them itself:
-
-<SourceSnippet
-  source="examples/guides/particles/update-module.ts"
-  region="sway-module"
-  language="ts"
-  title="examples/guides/particles/update-module.ts"
-/>
-
-The channels are `position`, `velocity`, `scale` (each `.x` / `.y`), `rotation` (`.angle` / `.speed`), `timing` (`.elapsed` / `.lifetime`), `color` (packed `0xAABBGGRR`) and `frame`. Each is the simulation's own storage, so writing moves the particle. Indices `[0, particles.count)` are the range worth visiting; `particles.isAlive(i)` skips the holes a GPU-mode system can leave behind.
-
-To emit a particle yourself, ask the system for one:
-
-```ts
-import { ParticleSystem } from '@codexo/exojs-particles';
-
-declare const system: ParticleSystem;
-
-const particle = system.emit();
-
-if (particle) {
-    particle.position.set(120, 40);
-    particle.velocity.set(0, -80);
-    particle.lifetime = 2;
-}
-```
-
-`emit()` returns `null` at capacity. Every field starts at its default — origin, no velocity, unit scale, no rotation, opaque white, frame 0, one second of life — so you write only what you vary. The returned writer is a cursor onto the emitted particle: the next `emit()` rebinds it, so fill it before emitting again.
-
-`system.clearParticles()` resets the system to zero live particles, `system.liveCount` is the range that can hold them, `system.aliveCount` counts the live ones, and `system.gpuMode` reports whether the compute path is active.
-
-<Callout type="pitfall" title="There is no read-back of a running simulation">
-  Channel values are true where the simulation runs. On the GPU path only the compute shader advances them, so outside an update module or a render mode the CPU copy still holds the spawn values. That is why emission, not mutation, is the supported way in — and why a death module receives a snapshot rather than a slot.
-</Callout>
-
-## GPU auto-routing
-
-The decision is per-system and automatic. When:
-1. A `WebGpuBackend` is active
-2. Every registered update module implements `wgsl()`
-
-...the system compiles a composite WGSL compute shader that integrates position, velocity, rotation, and every module's dynamic behavior in one dispatch, writing directly into the renderer's instance vertex buffer. No CPU readback in the steady state. The `gpu-particles` example lets you vary the emission rate and observe the live count and execution path.
-
-If conditions aren't met (WebGL2 backend, or any module without `wgsl()`), the system runs on CPU with the same API. Your scene code is identical — no branching, no backend checks.
-
-## Examples
-
-<a id="emitter-basics"></a>
 <ExamplePreview chapter="particles" slug="emitter-basics" />
 
-A single upward emitter with gravity and fade — `RateSpawn` + `ApplyForce` + `AlphaFadeOverLifetime`.
+<ExamplePreview chapter="particles" slug="gpu-particles" />
 
-<a id="bonfire"></a>
-<ExamplePreview chapter="particles" slug="bonfire" />
-
-A bonfire effect with additive blending — `RateSpawn` with random position and upward velocity, plus `ColorOverLifetime` from ember-orange to transparent black.
-
-## Where to go next
-
-The next chapter, [Post-processing](/ExoJS/en/guide/effects/post-processing/), covers scene-wide multi-pass rendering — how to combine `RenderTexture` targets with filter chains for bloom, trails, and composited color grading.
+The GPU demonstration uses a different fallback budget on WebGL2; it is a capability demonstration, not an equal-work benchmark. See [Performance](/ExoJS/en/guide/debugging/performance/) for controlled comparisons and the [`ParticleSystem` reference](/ExoJS/en/api/particle-system/) for exact module and lifetime contracts.

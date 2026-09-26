@@ -61,7 +61,7 @@ const parseIndexedLabel = (value: string) => {
     {isGuideSidebar &&
         parts.map(part => {
             const partLabel = parseIndexedLabel(part.title);
-            const partActive = currentPath.startsWith(part.baseHref ?? part.href);
+            const partActive = currentPath === part.baseHref || part.chapters.some(chapter => currentPath === chapter.href);
             return (
                 <section class="side-section" data-open={partActive ? 'true' : 'false'}>
                     <h6>

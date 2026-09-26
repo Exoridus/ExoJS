@@ -1,57 +1,59 @@
 # @codexo/exojs-aseprite
 
-Official ExoJS extension for loading [Aseprite](https://www.aseprite.org) JSON sprite-sheet exports into a ready-to-animate sprite, with one animation clip per Aseprite frame tag.
+Load Aseprite JSON sprite-sheet exports as typed ExoJS assets, preserving tagged animation sequences, frame timing, and trimmed-frame offsets.
 
-## Installation
+## Install and activate
 
 ```sh
-npm install @codexo/exojs @codexo/exojs-aseprite
+npm install --save-exact @codexo/exojs @codexo/exojs-aseprite
 ```
 
-`@codexo/exojs` is a peer dependency. This package has no other runtime dependencies.
-
-> Export your sprite sheet from Aseprite as a **JSON + PNG** pair (`File → Export Sprite Sheet`, _Output → JSON Data_). Either array or hash frame mode works; frame tags become animation clips.
-
-## What this package provides
-
-- `AsepriteSheet` — parsed sprite sheet; the result of `loader.load(Asset.type('asepriteSheet', url))`. Exposes the underlying `spritesheet`, a `clips` map (one `AnimatedSpriteClipDefinition` per frame tag), the `slices` and `layers` metadata maps, and `createAnimatedSprite()` for a ready-to-play `AnimatedSprite`
-- `asepriteExtension` — extension descriptor registering the Aseprite asset binding
-- `asepriteBinding` — the underlying `AssetBinding` (advanced/custom wiring)
-- `AsepriteFormatError` — typed error thrown on malformed Aseprite JSON
-- `AsepriteData` and related types (`AsepriteFrameData`, `AsepriteFrameTag`, `AsepriteMeta`, `AsepriteSlice`, …) plus the `isAsepriteArrayData` guard
-
-## Usage
-
-Register the extension, load an Aseprite JSON export, and create an animated sprite. The extension fetches the JSON, resolves and loads the packed texture, and builds one clip per frame tag:
+Core is a peer dependency. Add `asepriteExtension` to the application; importing the package alone does not install a loader.
 
 ```ts
-import { Application, Asset } from '@codexo/exojs';
+import { Application, Asset, type RenderingContext, Scene } from '@codexo/exojs';
 import { asepriteExtension } from '@codexo/exojs-aseprite';
 
-const app = new Application({ extensions: [asepriteExtension] });
+class CharacterScene extends Scene {
+  override async load(): Promise<void> {
+    const sheet = await this.loader.load(Asset.type('asepriteSheet', 'sprites/hero.json'));
+    const character = sheet.createAnimatedSprite();
 
-const sheet = await app.loader.load(Asset.type('asepriteSheet', 'sprites/hero.aseprite.json'));
+    if (sheet.clips.has('walk')) {
+      character.play('walk');
+    }
+    character.setPosition(100, 100);
+    this.root.addChild(character);
+  }
 
-const sprite = sheet.createAnimatedSprite();
-sprite.play('run'); // 'run' is an Aseprite frame-tag name
-app.scenes.root.addChild(sprite);
+  override draw(context: RenderingContext): void {
+    context.render(this.root);
+  }
+}
+
+const app = new Application({
+  scenes: { CharacterScene },
+  extensions: [asepriteExtension],
+  canvas: { width: 800, height: 600, mount: 'body' },
+  loader: { basePath: new URL('assets/', document.baseURI).href },
+});
+
+await app.start(CharacterScene);
 ```
 
-Clip frame rate is derived from each frame's Aseprite `duration` (falling back to 12 fps). Frame indices in a tag are resolved against the ordered frame array; out-of-range indices are skipped.
+Provide `sprites/hero.json` and its referenced image beneath the configured asset base. Aseprite's export can use Array or Hash frame layout. The animation system advances an attached `AnimatedSprite`; do not also advance it manually every frame.
 
-## Texture ownership
+## Before using an export
 
-The packed texture is loaded via the Loader and stays in the Loader cache. `AsepriteSheet.destroy()` releases the parsed sprite sheet; the Loader handles texture lifecycle and deduplication.
+Always name the `asepriteSheet` type explicitly. The adapter does not claim all `.json` files, so loading the same URL as a bare JSON path does not parse an Aseprite sheet.
 
-## Core compatibility
+Tag names must exist in the export. Direction expands the tag's frame sequence; per-frame hold durations take precedence over the display-average FPS. Clip repeat counts describe complete cycles, not the additional-repeat convention of a property tween.
 
-This package follows the Core lockstep release line and declares the compatible `@codexo/exojs` minor as a peer dependency. Install matching package versions.
+A loader scope owns its asset claims, including the referenced image dependency. Scene teardown releases scene claims; manually destroying a shared texture is not the way to unload one character. The sheet's metadata does not automatically create gameplay colliders or UI behavior from slices.
 
-## Links
+## Documentation
 
-- [Aseprite guide](https://exoridus.github.io/ExoJS/en/guide/assets/aseprite/)
-- [API reference](https://exoridus.github.io/ExoJS/en/api/)
-- [Aseprite](https://www.aseprite.org)
+[Aseprite guide](https://exoridus.github.io/ExoJS/en/guide/assets/aseprite/) · [Animation guide](https://exoridus.github.io/ExoJS/en/guide/rendering/animation/) · [AsepriteSheet API](https://exoridus.github.io/ExoJS/en/api/aseprite-sheet/) · [Aseprite playground](https://exoridus.github.io/ExoJS/en/playground/?example=assets/aseprite-spritesheet)
 
 ## License
 

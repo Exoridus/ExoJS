@@ -5,7 +5,7 @@ React 18 / 19 bindings for [ExoJS](https://exoridus.github.io/ExoJS/) - mount an
 ## Installation
 
 ```sh
-npm install @codexo/exojs @codexo/exojs-react react
+npm install --save-exact @codexo/exojs @codexo/exojs-react react react-dom
 ```
 
 `@codexo/exojs` and `react` (>= 18) are peer dependencies; `react-dom` is an optional peer. The package ships pre-built ESM (`dist/esm`) with type declarations and works on both `@types/react` 18 and 19.
@@ -19,43 +19,72 @@ This package is intentionally layered:
 
 ## Quick start — `<ExoCanvas>`
 
-```tsx
-import { Color } from '@codexo/exojs';
-import { ExoCanvas, Scenes, Scene, useExoApp } from '@codexo/exojs-react';
-import { TitleScene, GameScene } from './scenes';
+The scene classes in `./scenes` are ordinary ExoJS scenes. Register their constructors in the application options; the React `<Scene>` declarations select from that registry rather than registering engine scenes themselves.
 
-function Game() {
+```tsx
+import { Color, FadeSceneTransition, FixedResolutionCanvasSizing, Time } from '@codexo/exojs';
+import { ExoCanvas, Scene, Scenes } from '@codexo/exojs-react';
+import { useState } from 'react';
+
+import { GameScene, TitleScene } from './scenes';
+
+const options = {
+  scenes: { TitleScene, GameScene },
+  canvas: { width: 1280, height: 720, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: Color.black,
+};
+const transition = new FadeSceneTransition({ duration: Time.seconds(0.3) });
+
+export function Game() {
+  const [active, setActive] = useState('title');
+
   return (
-    <ExoCanvas options={{ canvas: { width: 1280, height: 720 }, clearColor: Color.black }} style={{ width: 1280, height: 720 }}>
-      <Scenes active="game" transition={{ type: 'fade', duration: 300 }}>
+    <ExoCanvas options={options} style={{ width: '100%', height: 480 }} onError={console.error}>
+      <Scenes active={active} transition={transition}>
         <Scene name="title" component={TitleScene} />
-        <Scene name="game" component={GameScene}>
-          <Hud /> {/* absolutely-positioned React overlay, over the canvas */}
-        </Scene>
+        <Scene name="game" component={GameScene} />
       </Scenes>
+      <nav aria-label="Game screens" style={{ position: 'absolute', top: 8, left: 8 }}>
+        <button type="button" onClick={() => setActive('title')}>
+          Title
+        </button>
+        <button type="button" onClick={() => setActive('game')}>
+          Play
+        </button>
+      </nav>
     </ExoCanvas>
   );
 }
-
-function Hud() {
-  const app = useExoApp();
-  return <div style={{ position: 'absolute', top: 8, left: 8 }}>FPS overlay…</div>;
-}
 ```
 
-Layout props (`style`, `className`, …) apply to the **wrapper**; size it to drive `'fill'`/`'letterbox'` sizing. Style the canvas itself via `canvasProps`.
+The first activation starts the engine; the transition applies to subsequent scene switches. Scene-load failures reach `onError`. For a production application, replace the console handler with the error presentation your interface needs.
 
-## Quick start — headless hook (full control)
+Layout props (`style`, `className`, and other div attributes) apply to the **wrapper**. Give it a non-zero size and let the `FixedResolutionCanvasSizing` policy fit the logical canvas inside it. Use `canvasProps` for canvas attributes, but do not override the dimensions or styles owned by a sizing policy.
+
+### Headless hook: your own canvas
+
+The hook owns the application and its teardown, but does not choose a scene. Start a registered scene in `onReady`:
 
 ```tsx
 import { useExoApplication } from '@codexo/exojs-react';
 
-function Game() {
-  const { app, canvasRef } = useExoApplication({ canvas: { width: 800, height: 600 } });
-  // Render the canvas however and wherever you want.
-  return <canvas ref={canvasRef} className="my-canvas" />;
+import { GameScene } from './scenes';
+
+const options = { scenes: { GameScene }, canvas: { width: 800, height: 600 } };
+
+export function Game() {
+  const { canvasRef } = useExoApplication(
+    options,
+    app => {
+      void app.start(GameScene).catch(console.error);
+    },
+    console.error,
+  );
+  return <canvas ref={canvasRef} className="game-canvas" />;
 }
 ```
+
+These are alternative hosting patterns, not two components to mount for one application. Use `<ExoCanvas>` for context and React overlays; use the hook for direct control over the canvas element.
 
 ## API
 
@@ -81,6 +110,11 @@ The `Application` is recreated only when an **identity** option changes — the 
 Options without a live setter (`canvas.pixelRatio`, `seed`, `extensions`, …) are captured at creation; change the `backend` or remount to apply them.
 
 `canvas.sizing` is captured at creation as well: a sizing policy is an object, so a fresh instance on every render would detach and re-attach the previous one each time. Assign `app.sizing` yourself to switch strategies at runtime.
+
+## Learn more
+
+- [React integration guide](https://exoridus.github.io/ExoJS/en/guide/integrations/react/)
+- [Scene lifetimes and navigation](https://exoridus.github.io/ExoJS/en/guide/runtime/scenes-and-lifecycle/)
 
 ## License
 

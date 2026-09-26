@@ -1,57 +1,52 @@
 ---
 title: 'What is ExoJS?'
-description: 'A short tour of what ExoJS is, where it fits, how a project is shaped, and how to read this guide.'
+description: 'Decide whether ExoJS fits your project and learn the application, scene, and documentation model.'
 ---
 
-import Callout from '../../../components/Callout.astro';
-import SourceSnippet from '../../../components/SourceSnippet.astro';
 import NextStep from '../../../components/NextStep.astro';
 
 # What is ExoJS?
 
-ExoJS is a TypeScript-first, zero-dependency 2D runtime for browser games and interactive apps.
+ExoJS is a TypeScript-first 2D runtime for browser games and interactive applications. It provides rendering, scenes, input, audio, UI, and asset loading; optional packages add systems such as physics, tilemaps, particles, lighting, and pathfinding.
 
-It gives you the core pieces of a small engine — scenes, sprites, graphics, input, audio, effects, render targets, and a frame loop — while staying close to regular web development. You can use it from JavaScript or TypeScript, render into a canvas, and keep project structure in code.
+Use it for a canvas-based game, visualization, tool, or interactive surface. It is code-first, not a visual game editor. A mostly DOM-based application can keep its existing UI framework and let ExoJS own only the canvas. The [React integration](/ExoJS/en/guide/integrations/react/) provides that boundary for React applications.
 
-## Where ExoJS fits
+## The model in one minute
 
-Use ExoJS when you want to build a browser-based 2D game, visualization, toy, editor, or interactive scene with code.
+An [`Application`](/ExoJS/en/api/application/) owns the canvas, rendering backend, frame loop, and application-level services. A [`Scene`](/ExoJS/en/api/scene/) organizes one screen or activity: it loads resources, sets up objects, updates state, and chooses what to draw.
 
-It gives you engine-level building blocks without forcing a particular app framework or editor workflow. If you're building a mostly DOM-based interface, keep using your UI framework of choice. If you're building an interactive canvas surface, ExoJS can own that part.
+The scene's `root` is a hierarchy of drawable objects. Adding a child establishes hierarchy; `draw(context)` explicitly renders it. The separate `scene.ui` layer is a screen-fixed overlay and is rendered automatically. Scene-scoped services follow the scene's lifetime; application-scoped services can be shared across scenes.
 
-## How a project is shaped
+You do not need custom renderers, an entity-component framework, or an extension to draw your first object. Begin with one application and one scene, then add structure when the project needs it.
 
-A typical ExoJS project starts with two pieces: an [`Application`](/ExoJS/en/api/application/) and a [`Scene`](/ExoJS/en/api/scene/).
+## Coming from another engine?
 
-The application owns the runtime configuration — render backend, canvas size, asset path, frame loop. The scene loads resources, updates state, and draws each frame.
+Treat an ExoJS scene as a lifecycle host, not as a complete saved project. Containers compose transforms and drawing order. Scene navigation manages activation, pause, retention, and teardown. Physics bodies, rendered objects, and serialized data are separate concepts even when a helper connects them.
 
-<SourceSnippet
-  source="examples/guides/what-is-exojs/minimal-app.ts"
-  region="minimal-app"
-  language="ts"
-  title="examples/guides/what-is-exojs/minimal-app.ts"
-/>
+Those boundaries are useful when embedding a canvas in a web application: the browser page still owns its routing, DOM, and accessibility. ExoJS owns the runtime you put inside it.
 
-From there, the same shape scales up: add sprites, split logic across multiple scenes, attach input, play audio, render effects, and move code into reusable objects as the project grows.
+## Distribution and maturity
 
-## Distribution
+ExoJS provides ESM, TypeScript declarations, and prebuilt script-tag bundles. `exo.iife.js` contains Core; `exo.full.iife.js` also includes the official runtime extensions except React and tilemap physics. Both expose `Exo`. The [Setup guide](/ExoJS/en/guide/getting-started/setup/) starts with ESM and a bundler.
 
-ExoJS ships as ESM with TypeScript declarations. JavaScript projects can use the runtime directly; TypeScript users get typed APIs out of the box. A standalone browser bundle for `<script>`-tag use is on the roadmap.
+The project is pre-1.0. Pin exact package versions and read release notes before upgrading. Match documentation to your installed release: the `next` branch can describe features not yet published on npm.
 
-## Browser support
+## Browser capabilities
 
-ExoJS targets evergreen browsers: current Chrome, Firefox, Edge, and Safari. Some examples in this guide need browser features beyond rendering — audio playback, gamepad APIs, or multi-touch input. Capability badges above each example list what it expects; when a feature is missing, the embedded preview shows a clear overlay instead of failing silently.
+Automatic backend selection tries WebGPU and falls back to WebGL2. A shared scene API does not make every device or optional feature equivalent: custom shader paths, GPU-compute particles, audio, gamepads, and worker features have their own requirements. Consult [Backend selection](/ExoJS/en/guide/debugging/backend-comparison/) and test the devices you intend to support rather than assuming that a browser name guarantees a capability.
 
-<Callout type="info">
-On startup the runtime auto-selects the strongest available backend — WebGPU when present, WebGL2 otherwise. You write the same scene code either way.
-</Callout>
+## Find the right surface
 
-## How to read this guide
+| You need to… | Start here |
+| --- | --- |
+| Learn a mental model or complete a task | This Guide |
+| Run and change a focused demonstration | [Playground](/ExoJS/en/playground/) |
+| Check exact parameters, units, defaults, or ownership | [API reference](/ExoJS/en/api/) |
+| Install an optional package and understand its constraints | Its package README |
+| Understand a measured comparison | [Benchmarks](/ExoJS/en/benchmarks/) |
 
-Read Getting Started and Core Concepts in order — they build the mental model the rest of the guide assumes. After that, jump by topic.
-
-Three resources work together: the **guide** explains concepts and workflows, the [**playground**](/ExoJS/en/playground/) runs and edits every example live, and the [**API reference**](/ExoJS/en/api/) documents exact constructor options, method signatures, and return types.
+Read Getting Started and the scene lifecycle first. After that, use the topic shortcuts instead of reading every advanced chapter in order.
 
 <NextStep href="/ExoJS/en/guide/getting-started/setup/" label="Create a project">
-Scaffold a typed project with create-exo-app and run it in the browser.
+Run a typed starter and locate the files you will edit.
 </NextStep>

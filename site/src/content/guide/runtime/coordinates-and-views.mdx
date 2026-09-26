@@ -1,118 +1,74 @@
 ---
-title: 'Coordinates and views'
-description: 'World space, canvas space, and how the active view maps between them — plus camera movement, zoom, and split rendering.'
+title: 'Coordinates, cameras, and split views'
+description: 'Distinguish local, world, logical canvas, and backing-pixel coordinates, then render and interact through the intended view.'
 ---
 
-import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
-import Callout from '../../../components/Callout.astro';
+import ExamplePreview from '../../../components/ExamplePreview.astro';
 
-# Coordinates and views
+# Coordinates, cameras, and split views
 
-ExoJS keeps two coordinate systems in mind at once. Drawables are positioned in **world space** — the coordinate system you write game logic in. Input and view APIs use logical **canvas space**, also called design or screen space. A [`View`](/ExoJS/en/api/view/) sits between the two and handles the mapping.
+A position needs a coordinate space. Most placement and camera bugs come from passing a valid number to an API that expects a different space, not from an inaccurate transform.
 
-Understanding this split makes camera follow, zoom, split-screen, and HUD overlays straightforward. Confusing them is the source of most "the position is wrong" bugs.
+| Space | Meaning |
+| --- | --- |
+| Local | Coordinates relative to a node's parent or an object's own geometry. |
+| World | Coordinates after the parent transform chain. |
+| Logical canvas | The application's design space, from `(0, 0)` to `(app.width, app.height)`. |
+| Backing pixels | The actual render-surface resolution after sizing and pixel ratio. |
 
-## World space
+`node.setPosition(...)` sets a **local** position. It coincides with world position only when the parent transform makes that true. A sprite's anchor or a container's origin affects where its geometry lies relative to that position; neither removes the parent transform.
 
-When you call `sprite.setPosition(400, 300)`, you're setting a position in world space. The numbers you choose are the same numbers your game logic operates on — distances, velocities, hit boxes. They have nothing to do with the user's screen.
+## A view maps world to canvas
 
-In a typical 2D project, world space has the X axis pointing right and the Y axis pointing down (matching browser conventions). The origin is wherever you put it; many projects use `(0, 0)` as the world's center, others put it at the top-left of the playable area.
+A [`View`](/ExoJS/en/api/view/) chooses the world region to show and the part of the canvas to paint. Its center is a world-space point, its size describes the visible world extent, its rotation turns the camera, and its viewport selects a normalized canvas region.
 
-## Canvas space
+With center `(400, 300)` and size `(800, 600)`, an unrotated, unzoomed full-canvas view shows world coordinates from `(0, 0)` to `(800, 600)`. Move its center to scroll; change its zoom to show more or less world. `setZoom(2)` shows half the world extent at twice the apparent scale.
 
-Canvas space runs from `(0, 0)` at the top-left to `(app.width, app.height)` at the bottom-right. Pointer events arrive in these logical design pixels, independent of CSS size and device pixel ratio. The surface's `app.canvas.width` and `app.canvas.height` are physical backing-store dimensions and are normally only relevant to low-level rendering code.
+Use `context.view` for the scene's normal view or pass a dedicated view to a draw. `context.screenView` supplies a screen-fixed view for explicit overlays. `scene.ui` already uses the automatic UI path and should not be rendered again manually.
 
-If you placed every sprite at its world position and the camera never moved, world space and canvas space would line up exactly. The moment you move the camera, scale the canvas, or render to a sub-region, the two diverge.
+## Follow a world-space target
 
-<Callout type="pitfall" title="Clicks go wrong once the camera moves">
-Pointer events always arrive in logical canvas space. Once the camera has panned or zoomed, convert them to world space before hit-testing — otherwise a click lands on the wrong object. The world-vs-screen-coords example below shows the conversion.
-</Callout>
+A view can follow an object with `x` and `y` coordinates. Those values must describe the intended world point. Following a deeply parented node's local position as though it were world position produces an incorrect camera target.
 
-## The active view
+For smoothing, keep a separate world-space camera target and move it toward the subject in `update`. A frame-rate-aware exponential weight is `1 - Math.exp(-response * delta)`; unlike an unbounded `response * delta` weight, it does not overshoot simply because one frame was long. The [camera-follow recipe](/ExoJS/en/guide/recipes/camera-follow-and-parallax/) combines follow and parallax without changing the subject's simulated position.
 
-Every render backend exposes a `view` property. The view defines how world space maps onto the canvas:
+## Convert input using the same view
 
-- `view.center` — the world-space point at the center of the canvas.
-- `view.size` — how much world space fits inside the canvas.
-- `view.rotation` — the camera's rotation in degrees.
-- `view.viewport` — which sub-region of the canvas the view paints into (default: the whole canvas).
+Pointer coordinates arrive in logical canvas units. Convert them through the view that rendered the world object:
 
-Set the center to `(400, 300)` and the size to `(800, 600)`, and the canvas shows the world from `(0, 0)` to `(800, 600)`. Move the center to `(400, 600)` and the camera scrolls down by 300 pixels' worth of world.
+<SourceSnippet source="examples/guides/coordinates-and-views/split-views.ts" region="pointer-world" language="ts" title="Logical pointer coordinates to world coordinates" />
 
-<SourceSnippet
-  source="examples/guides/coordinates-and-views/views.ts"
-  region="fixed-view"
-  language="ts"
-  title="examples/guides/coordinates-and-views/views.ts"
-/>
+In split-screen, first choose the viewport under the pointer, then use that viewport's view. Converting with the other player's camera can yield a plausible point in the wrong part of the world. If hit testing needs a child's local coordinates, apply the appropriate world-to-local conversion afterward.
 
-You don't usually configure the view by hand — it tracks the canvas size automatically. Reach for `setCenter`, `move`, `setZoom`, and `setRotation` when you need to script view behavior. Access the active view through the `context` passed to `draw`, using `context.view`.
-
-## Following an object
-
-The view supports following a target. The target can be any object with `x` and `y` properties — typically a scene node, but a plain `{x, y}` object works too:
-
-<SourceSnippet
-  source="examples/guides/coordinates-and-views/views.ts"
-  region="follow-view"
-  language="ts"
-  title="examples/guides/coordinates-and-views/views.ts"
-/>
-
-Following keeps the view centered on the target while the scene renders. Call `context.view.clearFollow()` to detach. If you want smoothing, keep a small camera target object and move it toward the player in `update`, then follow that target instead of the player directly.
-
-## Zooming
-
-The `setZoom(z)` method scales how much world fits inside the view. `setZoom(2)` means the view shows half as much world as it normally would (everything looks twice as big). `setZoom(0.5)` does the opposite (everything looks zoomed out). The `zoomIn(amount)` and `zoomOut(amount)` helpers adjust relative to the current zoom.
-
-<SourceSnippet
-  source="examples/guides/coordinates-and-views/views.ts"
-  region="zoom-view"
-  language="ts"
-  title="examples/guides/coordinates-and-views/views.ts"
-/>
-
-## Common pitfalls
-
-A handful of misalignments come up regularly:
-
-- **Hardcoded canvas-relative positions.** Setting a sprite to `(400, 300)` because that "looks centered for an 800×600 canvas" breaks the moment the canvas resizes. Use the active view's center, the canvas size at runtime, or anchor-aware containers instead.
-- **Anchor confusion.** A sprite's position is the world-space location of its anchor. The default anchor is the top-left, so `setPosition(400, 300)` puts the top-left of the sprite at `(400, 300)`, not its middle. Call `setAnchor(0.5)` to pivot at the center.
-- **Pointer events without view conversion.** Pointer events arrive in logical canvas space. If your camera has moved, you need to convert them back to world space before testing whether the click hit a world-space object. The world-vs-screen-coords example below shows the conversion.
-- **HUD inside the world.** A health bar should not move when the camera moves. Add HUD elements to `scene.ui`; it stays in logical canvas space and renders above the world automatically.
-
-## Multiple views
-
-The active view can be swapped on every frame. Used together with viewports, this gives you split-screen, picture-in-picture, and minimap rendering — render the world once with one view configuration into one viewport, then again with a different configuration into another:
-
-<SourceSnippet
-  source="examples/guides/coordinates-and-views/views.ts"
-  region="split-viewport"
-  language="ts"
-  title="examples/guides/coordinates-and-views/views.ts"
-/>
-
-The same scene graph rendered with two different view configurations, into two halves of the canvas — one tree, two views. The viewport fractions are normalized (0–1 of canvas size), so `setViewport(0, 0, 0.5, 1)` covers the left half and `setViewport(0.5, 0, 0.5, 1)` covers the right. If you continue rendering HUD elements or additional scenes afterward, reset the viewport before those passes so later rendering does not inherit the split-screen configuration.
-
-<Callout type="warning" title="Reset the viewport when the split pass ends">
-Any rendering after a split-screen or picture-in-picture pass — a HUD, another scene — inherits the last viewport you set. Call `context.view.setViewport(0, 0, 1, 1)` before those passes to paint to the full canvas again.
-</Callout>
-
-## Examples
+Do not multiply pointer coordinates by DPR to repair a camera mismatch. The input system already supplies logical canvas coordinates; backing pixels are a rendering detail.
 
 <ExamplePreview chapter="application-scenes" slug="world-vs-screen-coords" />
 
-Pan and zoom a view, convert pointer coordinates, and place world-space markers.
+The example pans with WASD or arrows, zooms with the wheel, and places markers at converted world points while its readout stays fixed on screen.
+
+## Draw one world through multiple views
+
+Keep one world state and give each player a separate `View`. Advance the world once, then submit it through each view:
+
+<SourceSnippet source="examples/guides/coordinates-and-views/split-views.ts" region="split-views" language="ts" title="Two independent viewports without mutating shared view state" />
+
+Create the views during setup, update their centers from the players' world positions, and call `drawSplitWorld` from the scene's `draw`. The left viewport covers `[0, 0, 0.5, 1]`; the right covers `[0.5, 0, 0.5, 1]`. Viewport values are normalized fractions of the render surface, not world distances.
+
+The helper receives existing world content. It does not create players, bindings, or a second simulation. On resize, update each view's world size to match the intended aspect ratio while keeping its normalized viewport. Let the application's sizing policy determine the logical dimensions.
+
+Passing `{ view }` per draw keeps the choice explicit. If advanced code mutates raw backend state instead, it must restore the relevant view, viewport, target, and clipping boundaries before later work. Do not add manual viewport resets to normal scoped draws merely because an older raw-state example needed them.
 
 <ExamplePreview chapter="application-scenes" slug="multi-view-split-screen" />
 
-Two players, one world, two viewports.
+The canonical example assigns WASD or the first controller to one player, and arrows or the second controller to the other. Controller slots are runtime input assignments, not permanent physical-controller identities.
+
+## HUDs, minimaps, and picture-in-picture
+
+For a global HUD, use `scene.ui` or render explicitly with `context.screenView`. For player-local HUDs, define each player's UI region deliberately instead of letting the last world viewport leak into the overlay.
+
+A minimap or picture-in-picture view follows the same model: choose a second camera and a smaller viewport, or render into an owned texture for later composition. A render texture adds a lifetime, resize policy, and sampling boundary; see [Render targets](/ExoJS/en/guide/rendering/render-targets/).
 
 <ExamplePreview chapter="application-scenes" slug="picture-in-picture" />
 
-A second view rendered into a small region of the canvas — useful for minimaps and replay overlays.
-
-## Where to go next
-
-The next chapter, [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/), covers the asset pipeline — how the loader gets textures, audio, and JSON into your scene before `init` runs.
+Multiple views repeat relevant rendering work and may cover different objects or pixel areas. They do not necessarily double total frame time. Measure traversal, culling, effects, and fill cost for the actual composition while keeping simulation independent of the number of views.

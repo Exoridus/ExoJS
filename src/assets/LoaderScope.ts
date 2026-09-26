@@ -46,18 +46,15 @@ let nextScopeId = 1;
  * share a single fetch and a single resident payload, and one scope releasing
  * never invalidates another.
  *
- * Create a scope with {@link Loader.createScope} whenever an asset's lifetime is
- * shorter than the application's - a level, a streamed chunk, a UI panel, a
- * prefetch. Assets acquired directly on the {@link Loader} are held for the
- * application's lifetime instead and are freed only when the loader is
+ * Use the scene's scope for scene assets, and a child scope from
+ * {@link createScope} for anything shorter-lived - a level, a streamed chunk, a
+ * preview, a prefetch. Assets acquired directly on the {@link Loader} are held
+ * for the application's lifetime instead and are freed only when the loader is
  * destroyed.
  *
  * A scope describes a lifetime, never a set of assets: what to acquire comes
  * from an {@link Assets} catalog or an {@link Asset} descriptor passed to
  * {@link get} / {@link load}, and typed access stays on that catalog.
- *
- * Scopes nest: {@link createScope} makes a child whose claims are independent
- * but whose lifetime cannot outlive its parent's.
  *
  * @example
  * ```ts
@@ -85,7 +82,11 @@ export class LoaderScope implements Destroyable {
   public readonly onLoadStart = new Signal<[key: string, url: string]>();
   /** Fired after each asset of this scope's batch settles. `loaded` = resolved count, `total` = batch size. */
   public readonly onLoadProgress = new Signal<[loaded: number, total: number, key: string]>();
-  /** Fired once every asset in this scope's batch has settled. */
+  /**
+   * Fires after every foreground item in this scope's current batch has
+   * settled, including failures. It does not imply that every asset succeeded;
+   * await the returned loading queue to observe success or failure.
+   */
   public readonly onLoadComplete = new Signal();
   /** Fired when an asset acquired through this scope fails to load. Does not prevent {@link onLoadComplete}. */
   public readonly onLoadError = new Signal<[key: string, error: Error]>();
@@ -119,15 +120,17 @@ export class LoaderScope implements Destroyable {
    * Creates a child scope: an independent claim owner that cannot outlive this
    * one.
    *
-   * The child claims, shares and releases assets exactly like any other scope -
-   * one fetch, one resident payload, one claim per owner - and holding the same
-   * asset as its parent means two claims, not one. Destroying the child frees
-   * only the child's claims; destroying the parent destroys every child it still
-   * has first, recursively, so a scene or level teardown reaches the scopes
-   * created underneath it without extra bookkeeping.
+   * The child claims, shares and releases assets exactly like any other scope,
+   * and holding the same asset as its parent means two claims, not one.
+   * Destroying the child frees only the child's claims; destroying the parent
+   * destroys every child it still has first, recursively, so a scene or level
+   * teardown reaches the scopes created underneath it.
    *
    * The hierarchy is a lifetime hierarchy only. It never affects asset identity,
    * ownership or what a release frees.
+   *
+   * @throws If this scope is destroyed: a child created then would never be
+   *   reached by its parent's teardown.
    *
    * @example
    * ```ts
@@ -139,6 +142,8 @@ export class LoaderScope implements Destroyable {
    * ```
    */
   public createScope(options?: LoaderScopeOptions): LoaderScope {
+    this._assertLive('createScope');
+
     const child = new LoaderScope(this._loader, 'scope', options?.name, this);
 
     this._children ??= new Set<LoaderScope>();
@@ -148,6 +153,18 @@ export class LoaderScope implements Destroyable {
   }
 
   // Bare path: a resource suffix yields its heal-in-place handle, a value suffix a stable AssetRef.
+  /**
+   * Claims an asset for this scope and returns synchronously: a handle that
+   * fills in place, a value reference, or a catalog's leaves.
+   *
+   * Starts loading if the asset is not resident; it is not a passive cache
+   * lookup. Await {@link load} when the finished value is required. A bare path
+   * reuses its source-keyed handle, while each new descriptor can produce a
+   * distinct leaf sharing the same resident payload.
+   *
+   * @throws If this scope is destroyed, or the input has no synchronous leaf
+   *   form.
+   */
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
   // A value-kind descriptor (or a materialized value leaf) resolves to a value leaf.
   public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): CatalogValueLeaf<T>;
@@ -161,6 +178,17 @@ export class LoaderScope implements Destroyable {
     return this._loader._getClaimed(this, input, options);
   }
 
+  /**
+   * Claims assets for this scope and returns an awaitable loading queue.
+   *
+   * A catalog resolves to a new map of finished values, while the catalog's own
+   * leaves also become ready in place; the returned map is not the catalog
+   * object. Fetch and decode failures reject the queue, and the claim still
+   * belongs to this scope. Background priority is available on the catalog and
+   * catalog-leaf overloads.
+   *
+   * @throws If this scope is destroyed.
+   */
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, CatalogEntry>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   public load<T>(leaf: CatalogValueLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
@@ -227,8 +255,8 @@ export class LoaderScope implements Destroyable {
    * already-destroyed scope is a no-op.
    *
    * Acquiring through the scope afterwards - {@link get}, {@link load},
-   * {@link loadContainer} - throws, because the claim it would register has no
-   * owner left to release it.
+   * {@link loadContainer}, {@link createScope} - throws, because what it would
+   * register has no owner left to release it.
    */
   public destroy(): void {
     if (this._destroyed) {

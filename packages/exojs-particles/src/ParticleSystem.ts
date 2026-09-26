@@ -132,14 +132,19 @@ export interface ParticleSystemOptions {
  *   implementing `wgsl()`.
  * - **Death modules** - fire once per dying particle, before its slot is
  *   recycled (sub-emitters, event hooks).
+ * - **An explicitly supplied render mode** - destroyed with the system. The
+ *   default mode and the texture are shared and stay the caller's.
  *
- * **Auto-routing CPU vs GPU:** at first {@link update}, the system checks:
- * if a `WebGpuBackend` was supplied AND every registered update module has
- * `wgsl()` AND the render mode is GPU-eligible, the GPU path engages - a
- * composite compute pipeline runs
- * integration plus all module bodies in one dispatch and writes directly
- * into the renderer's instance buffer (no CPU readback). Otherwise the CPU
- * path runs the existing per-module `apply()` loops.
+ * **Auto-routing CPU vs GPU:** on the first {@link update}, and again after
+ * any module change, the system checks whether a WebGPU device is available
+ * (the attached backend's or one passed in the options), every registered
+ * update module has `wgsl()`, and the render mode is GPU-eligible. If so, a
+ * composite compute pipeline runs integration plus all module bodies in one
+ * dispatch and writes directly into the renderer's instance buffer (no CPU
+ * readback). Otherwise the CPU path runs the per-module `apply()` loops; on
+ * WebGL2 that is always the case. A module change that forces a running GPU
+ * simulation back onto the CPU clears the live particles, because the CPU
+ * holds no copy of the state the device integrated.
  *
  * **Per-frame order in {@link update} (CPU mode):**
  * 1. Run every spawn module.
@@ -151,47 +156,48 @@ export interface ParticleSystemOptions {
  * **Per-frame order in {@link update} (GPU mode):**
  * 1. Run every spawn module (CPU writes initial values into the spawn slot).
  * 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules;
- *    set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU
- *    shader skips them. **No compaction** - slots are recycled on next spawn.
- * 3. Dispatch the composite compute pipeline. Integration + update modules
- *    + pack-instances run in one pass; the instance buffer is written
- *    directly. CPU SoA stays as-is for spawn writes.
+ *    mark the slot dead so the GPU shader skips it. **No compaction** - slots
+ *    are recycled on the next spawn.
+ * 3. Dispatch the composite compute pipeline. Integration, update modules and
+ *    instance packing run in one pass; the instance buffer is written
+ *    directly.
+ *
+ * Tick a system from exactly one place: register it with one system registry,
+ * or call {@link update} yourself, never both.
  *
  * **Coordinate space:** particle positions are LOCAL to the system. The
- * system's `getGlobalTransform()` is applied on top during rendering - both
- * the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`.
- * Setting world-space positions on individual particles double-translates.
+ * system's `getGlobalTransform()` is applied on top during rendering, so
+ * setting world-space positions on individual particles double-translates.
  * Position the system itself via `system.setPosition(...)` and emit relative
  * to `(0, 0)`.
  *
- * **View culling:** a system is created with `cullable = false`. Its local
- * bounds cover one texture frame at the local origin, because the particles
- * themselves are simulated on the GPU in half the configurations and no
- * emitted extent is tracked in either - so culling against those bounds would
- * remove the entire cloud as soon as the emitter's own origin left the view.
- * For a system whose reach is known, set the node's `cullArea` to a rectangle
- * in local space covering where its particles travel and set `cullable = true`
- * again; the viewport check then uses that rectangle instead of the bounds.
- * `getBounds()` still reports the one-frame box, not an extent of the live
- * particles.
+ * **View culling:** a system is created with `cullable = false`. Its bounds
+ * cover one texture frame at the local origin, because no emitted extent is
+ * tracked - so culling against them would remove the entire cloud as soon as
+ * the emitter's own origin left the view. For a system whose reach is known,
+ * set the node's `cullArea` to a world-space rectangle covering where its
+ * particles travel and set `cullable = true` again; the viewport check then
+ * uses that rectangle instead of the bounds. `getBounds()` still reports the
+ * one-frame box, not an extent of the live particles.
  *
- * **Pixel snapping:** {@link Drawable.pixelSnapMode} is intentionally ignored
- * for particle systems. Particle instances bake their own per-particle
- * transforms in the emitter/compute path rather than reading the shared
- * pixel-snap transform row, so a snap mode set on the system has no effect on
- * rendered output - snapping thousands of independently-moving sub-pixel
- * particles to the device grid is neither meaningful nor desirable.
+ * **Pixel snapping:** {@link Drawable.pixelSnapMode} has no effect on particle
+ * systems. Particle instances bake their own per-particle transforms rather
+ * than reading the shared pixel-snap transform, and snapping thousands of
+ * independently moving sub-pixel particles to the device grid is not
+ * meaningful.
  *
  * @example
- * // Backend-agnostic - runs CPU on WebGL2, GPU on WebGPU automatically.
+ * ```ts
+ * // Backend-agnostic - runs on the CPU on WebGL2, on the GPU on WebGPU when eligible.
  * const system = new ParticleSystem(loader.get('spark.png'), {
- *     capacity: 8192,
+ *   capacity: 8192,
  * });
  *
  * system.addSpawnModule(new RateSpawn({ rate: new Constant(60), ... }));
- * system.addUpdateModule(new ApplyForce(0, 980));     // gravity, GPU-eligible
+ * system.addUpdateModule(new ApplyForce(0, 980)); // gravity, GPU-eligible
  * system.addUpdateModule(new ColorOverLifetime(fireGradient));
- * scene.addChild(system);
+ * scene.root.addChild(system);
+ * ```
  */
 export class ParticleSystem extends Drawable implements ParticleEmitter {
   /** Maximum particle count this system will store. Fixed at construction. */

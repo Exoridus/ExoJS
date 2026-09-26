@@ -76,16 +76,20 @@ const scratchPosition = { x: 0, y: 0 };
  * renderer turns them into pixels.
  *
  * ```ts
- * const lighting = new LightmapLighting(app, { ambient: new Color(11, 16, 32) });
+ * // In Scene.init(), where the scene's application is attached:
+ * const lighting = new LightmapLighting(this.app, { ambient: new Color(11, 16, 32) });
  *
- * scene.systems.add(lighting);
+ * this.systems.add(lighting);
  * lighting.add(player.addChild(new PointLight({ radius: 260 })));
  * lighting.occludeFrom(new PhysicsOccluder(world));
  * ```
  *
  * Construct one of {@link ForwardLighting}, {@link LightmapLighting} or
- * {@link RadianceLighting}. They are alternatives rather than layers, and a
- * frame is shaded by exactly one of them. This class is what they share: the
+ * {@link RadianceLighting}. They are alternative lighting models rather than
+ * layers or quality levels, and a frame is shaded by exactly one of them:
+ * forward lighting shades materials as they draw, lightmap lighting shades the
+ * composed frame and can use a registered normal prepass, and radiance lighting
+ * samples a propagated light field. This class is what they share: the
  * registries, the collection of occluders, and the update and destroy
  * contracts. It links no renderer of its own, which is what keeps a project
  * using one of them from carrying the others.
@@ -94,8 +98,8 @@ const scratchPosition = { x: 0, y: 0 };
  *
  * The renderer and its GPU resources. Lights are scene nodes owned by the tree
  * they hang in - registering one does not transfer ownership, and destroying a
- * registered light unregisters it. Occluder sources, filters passed as `post`,
- * and the host are the caller's too.
+ * registered light unregisters it. Occluder and normal sources, filters passed
+ * as `post`, and the host are the caller's too.
  *
  * # Ordering
  *

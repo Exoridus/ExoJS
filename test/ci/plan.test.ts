@@ -91,7 +91,7 @@ describe('plan for a push with a resolved diff', () => {
   });
 
   it('runs only the gates for a docs-only change', () => {
-    const plan = push(['README.md']);
+    const plan = push(['CONTRIBUTING.md']);
     expect(ids(plan.gates)).toEqual(['typecheck', 'lint', 'sync']);
     expect(plan.test).toEqual([]);
     expect(plan.verify).toEqual([]);
@@ -127,11 +127,18 @@ describe('plan for a pull request', () => {
   });
 
   it('runs only the gates for a docs-only change', () => {
-    const plan = pullRequest(['README.md']);
+    const plan = pullRequest(['CONTRIBUTING.md']);
     expect(ids(plan.gates)).toEqual(['typecheck', 'lint', 'sync']);
     expect(plan.test).toEqual([]);
     expect(plan.verify).toEqual([]);
     expect(plan).toMatchObject({ build: false, site: false, smoke: false, skipBudget: false });
+  });
+
+  it('runs the unit lane for a README whose examples are typechecked', () => {
+    const plan = pullRequest(['README.md']);
+    expect(ids(plan.test)).toEqual(['unit']);
+    expect(plan.verify).toEqual([]);
+    expect(plan).toMatchObject({ site: false, smoke: false });
   });
 
   it('adds the audio lane for an audio-fx change and the tilemap lane for a tilemap change', () => {
