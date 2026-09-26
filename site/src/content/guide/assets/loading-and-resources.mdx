@@ -68,7 +68,7 @@ Two scopes can claim one resource. They share the acquisition and resident paylo
 
 <SourceSnippet source="examples/guides/loading-and-resources/basic-loading.ts" region="scope-ownership" language="ts" title="Independent claims with deterministic cleanup" />
 
-A scope name is a diagnostic label, not a lookup key. Creating two scopes with the same name still creates two independent owners. Child scopes have independent claims but are torn down with their parent. Create them only while the parent is live; do not acquire new work after teardown.
+A scope name is a diagnostic label, not a lookup key. Creating two scopes with the same name still creates two independent owners. Child scopes have independent claims but are torn down with their parent. A destroyed scope rejects new work: `get`, `load`, `loadContainer`, and `createScope` throw instead of registering a claim that nothing could release.
 
 `scope.release(descriptorOrLeaf)` releases a particular claim; `scope.destroy()` releases all remaining claims and child scopes. Releasing an unclaimed asset is a no-op. A resolved object without claim identity is not necessarily a valid release argument: retain its descriptor or the owning scope instead of guessing ownership from the value.
 

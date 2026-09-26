@@ -239,6 +239,7 @@ describe('child scopes', () => {
     expect(() => level.get('level.json')).toThrow(/destroyed scope "level-1"/);
     expect(() => level.load('level.json')).toThrow(/destroyed scope "level-1"/);
     expect(() => level.loadContainer('pack.exoa')).toThrow(/destroyed scope "level-1"/);
+    expect(() => level.createScope({ name: 'late' })).toThrow(/destroyed scope "level-1"/);
     expect(loader.inspect()).toHaveLength(0);
   });
 

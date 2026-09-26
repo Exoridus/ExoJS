@@ -1,6 +1,6 @@
 {
   "title": "LoaderScope",
-  "description": "Owns asset claims for one lifetime. Owners share resident payloads without sharing release authority. Destroying a live parent releases its existing children; create child scopes only while the parent is live. This revision does not reject createScope() after parent destruction, and such a late child is not released by a repeated parent destroy(). Use a scene scope for scene assets and a child scope for shorter-lived levels, previews, or prefetch work. Direct Loader acquisitions instead belong to its application-lifetime scope.",
+  "description": "An owner of asset claims with an explicit lifetime. Assets acquired through a scope stay resident for as long as that scope holds them, and are freed when it releases them - but only if no other scope still holds the same asset. Several scopes can own one asset independently: they share a single fetch and a single resident payload, and one scope releasing never invalidates another. Use the scene's scope for scene assets, and a child scope from createScope for anything shorter-lived - a level, a streamed chunk, a preview, a prefetch. Assets acquired directly on the Loader are held for the application's lifetime instead and are freed only when the loader is destroyed. A scope describes a lifetime, never a set of assets: what to acquire comes from an Assets catalog or an Asset descriptor passed to get / load, and typed access stays on that catalog.",
   "symbol": "LoaderScope",
   "kind": "class",
   "subsystem": "assets",
@@ -19,9 +19,10 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Owns asset claims for one lifetime.",
-        "Owners share resident payloads without sharing release authority. Destroying a live parent releases its existing children; create child scopes only while the parent is live. This revision does not reject createScope() after parent destruction, and such a late child is not released by a repeated parent destroy().",
-        "Use a scene scope for scene assets and a child scope for shorter-lived levels, previews, or prefetch work. Direct Loader acquisitions instead belong to its application-lifetime scope."
+        "An owner of asset claims with an explicit lifetime.",
+        "Assets acquired through a scope stay resident for as long as that scope holds them, and are freed when it releases them - but only if no other scope still holds the same asset. Several scopes can own one asset independently: they share a single fetch and a single resident payload, and one scope releasing never invalidates another.",
+        "Use the scene's scope for scene assets, and a child scope from createScope for anything shorter-lived - a level, a streamed chunk, a preview, a prefetch. Assets acquired directly on the Loader are held for the application's lifetime instead and are freed only when the loader is destroyed.",
+        "A scope describes a lifetime, never a set of assets: what to acquire comes from an Assets catalog or an Asset descriptor passed to get / load, and typed access stays on that catalog."
       ],
       "importLine": "import { LoaderScope } from '@codexo/exojs'",
       "sourceLink": null
@@ -79,7 +80,7 @@
             }
           ],
           "returnType": "LoaderScope",
-          "description": "Creates an independent child claim owner under a live parent. Destroying the child releases only its claims. Destroying the parent releases its current children first. Names are diagnostic labels and do not identify or reuse a scope. Call this only before parent teardown. Unlike get(), load(), and loadContainer(), this revision does not reject creation after destruction; that late child must be explicitly destroyed by its caller."
+          "description": "Creates a child scope: an independent claim owner that cannot outlive this one. The child claims, shares and releases assets exactly like any other scope, and holding the same asset as its parent means two claims, not one. Destroying the child frees only the child's claims; destroying the parent destroys every child it still has first, recursively, so a scene or level teardown reaches the scopes created underneath it. The hierarchy is a lifetime hierarchy only. It never affects asset identity, ownership or what a release frees."
         },
         {
           "name": "destroy",
@@ -108,7 +109,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Releases every claim this scope still holds and destroys any child scope it still has. Assets another scope also holds stay resident, and destroying an already-destroyed scope is a no-op. Acquiring through the scope afterwards - get, load, loadContainer - throws, because the claim it would register has no owner left to release it."
+          "description": "Releases every claim this scope still holds and destroys any child scope it still has. Assets another scope also holds stay resident, and destroying an already-destroyed scope is a no-op. Acquiring through the scope afterwards - get, load, loadContainer, createScope - throws, because what it would register has no owner left to release it."
         },
         {
           "name": "get",
@@ -252,7 +253,7 @@
             }
           ],
           "returnType": "LeafForPath<S>",
-          "description": "Acquires this scope's claim and returns a synchronous deferred handle, value reference, or catalog leaves. This can start loading; it is not a passive cache lookup. Await load() for a required finished value. Bare-path acquisition reuses a source-keyed handle; a new descriptor can produce a distinct leaf sharing the same resident payload."
+          "description": "Claims an asset for this scope and returns synchronously: a handle that fills in place, a value reference, or a catalog's leaves. Starts loading if the asset is not resident; it is not a passive cache lookup. Await load when the finished value is required. A bare path reuses its source-keyed handle, while each new descriptor can produce a distinct leaf sharing the same resident payload."
         },
         {
           "name": "get",
@@ -343,7 +344,7 @@
             }
           ],
           "returnType": "CatalogValueLeaf<T>",
-          "description": "Acquires this scope's claim and returns a synchronous deferred handle, value reference, or catalog leaves. This can start loading; it is not a passive cache lookup. Await load() for a required finished value. Bare-path acquisition reuses a source-keyed handle; a new descriptor can produce a distinct leaf sharing the same resident payload."
+          "description": "Claims an asset for this scope and returns synchronously: a handle that fills in place, a value reference, or a catalog's leaves. Starts loading if the asset is not resident; it is not a passive cache lookup. Await load when the finished value is required. A bare path reuses its source-keyed handle, while each new descriptor can produce a distinct leaf sharing the same resident payload."
         },
         {
           "name": "get",
@@ -414,7 +415,7 @@
             }
           ],
           "returnType": "CatalogResourceLeaf<T>",
-          "description": "Acquires this scope's claim and returns a synchronous deferred handle, value reference, or catalog leaves. This can start loading; it is not a passive cache lookup. Await load() for a required finished value. Bare-path acquisition reuses a source-keyed handle; a new descriptor can produce a distinct leaf sharing the same resident payload."
+          "description": "Claims an asset for this scope and returns synchronously: a handle that fills in place, a value reference, or a catalog's leaves. Starts loading if the asset is not resident; it is not a passive cache lookup. Await load when the finished value is required. A bare path reuses its source-keyed handle, while each new descriptor can produce a distinct leaf sharing the same resident payload."
         },
         {
           "name": "get",
@@ -485,7 +486,7 @@
             }
           ],
           "returnType": "InferAssetsProperties<M>",
-          "description": "Acquires this scope's claim and returns a synchronous deferred handle, value reference, or catalog leaves. This can start loading; it is not a passive cache lookup. Await load() for a required finished value. Bare-path acquisition reuses a source-keyed handle; a new descriptor can produce a distinct leaf sharing the same resident payload."
+          "description": "Claims an asset for this scope and returns synchronously: a handle that fills in place, a value reference, or a catalog's leaves. Starts loading if the asset is not resident; it is not a passive cache lookup. Await load when the finished value is required. A bare path reuses its source-keyed handle, while each new descriptor can produce a distinct leaf sharing the same resident payload."
         },
         {
           "name": "get",
@@ -556,7 +557,7 @@
             }
           ],
           "returnType": "CatalogResourceLeaf<T>",
-          "description": "Acquires this scope's claim and returns a synchronous deferred handle, value reference, or catalog leaves. This can start loading; it is not a passive cache lookup. Await load() for a required finished value. Bare-path acquisition reuses a source-keyed handle; a new descriptor can produce a distinct leaf sharing the same resident payload."
+          "description": "Claims an asset for this scope and returns synchronously: a handle that fills in place, a value reference, or a catalog's leaves. Starts loading if the asset is not resident; it is not a passive cache lookup. Await load when the finished value is required. A bare path reuses its source-keyed handle, while each new descriptor can produce a distinct leaf sharing the same resident payload."
         },
         {
           "name": "load",
@@ -627,7 +628,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Acquires required resources for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while its original deferred leaves also become ready in place. The returned map is not the catalog object. Decode and fetch failures reject the queue; ownership still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
+          "description": "Claims assets for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while the catalog's own leaves also become ready in place; the returned map is not the catalog object. Fetch and decode failures reject the queue, and the claim still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
         },
         {
           "name": "load",
@@ -735,7 +736,7 @@
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
-          "description": "Acquires required resources for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while its original deferred leaves also become ready in place. The returned map is not the catalog object. Decode and fetch failures reject the queue; ownership still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
+          "description": "Claims assets for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while the catalog's own leaves also become ready in place; the returned map is not the catalog object. Fetch and decode failures reject the queue, and the claim still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
         },
         {
           "name": "load",
@@ -831,7 +832,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Acquires required resources for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while its original deferred leaves also become ready in place. The returned map is not the catalog object. Decode and fetch failures reject the queue; ownership still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
+          "description": "Claims assets for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while the catalog's own leaves also become ready in place; the returned map is not the catalog object. Fetch and decode failures reject the queue, and the claim still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
         },
         {
           "name": "load",
@@ -927,7 +928,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Acquires required resources for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while its original deferred leaves also become ready in place. The returned map is not the catalog object. Decode and fetch failures reject the queue; ownership still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
+          "description": "Claims assets for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while the catalog's own leaves also become ready in place; the returned map is not the catalog object. Fetch and decode failures reject the queue, and the claim still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
         },
         {
           "name": "load",
@@ -1070,7 +1071,7 @@
             }
           ],
           "returnType": "LoadingQueue<ResourceForKind<KindByPath<S>>>",
-          "description": "Acquires required resources for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while its original deferred leaves also become ready in place. The returned map is not the catalog object. Decode and fetch failures reject the queue; ownership still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
+          "description": "Claims assets for this scope and returns an awaitable loading queue. A catalog resolves to a new map of finished values, while the catalog's own leaves also become ready in place; the returned map is not the catalog object. Fetch and decode failures reject the queue, and the claim still belongs to this scope. Background priority is available on the catalog and catalog-leaf overloads."
         },
         {
           "name": "loadContainer",
@@ -1517,7 +1518,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires after every foreground item in this scope's current batch has settled, including failures. It does not imply that all resources succeeded; await the relevant queue for success or failure."
+          "description": "Fires after every foreground item in this scope's current batch has settled, including failures. It does not imply that every asset succeeded; await the returned loading queue to observe success or failure."
         },
         {
           "name": "onLoadError",
