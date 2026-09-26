@@ -26,31 +26,41 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - name: Apply observed documentation corrections
+      - name: Finalize public navigation and its regression test
         run: |
-          python3 _migration/repair-polish.py
-          python3 _migration/polish-check.py
+          python3 _migration/final-polish.py
+          pnpm exec prettier --write test/site/readme-examples.test.ts site/src/content/guide/rendering/infinite-maps.mdx
+          pnpm exec eslint --fix --max-warnings=0 test/site/readme-examples.test.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add test/site/readme-examples.test.ts site/src/content/guide/rendering/infinite-maps.mdx site/src/pages
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m 'docs: preserve guide entry points and guard README examples'
+            git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
+          fi
+      - name: Build dependencies
+        run: pnpm build:all
+      - name: Prove the README regression test detects the original errors
+        run: |
           python3 - <<'PY'
           import subprocess
           from pathlib import Path
-          paths = subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines()
-          files = [p for p in paths if Path(p).is_file() and not p.startswith('_migration/') and Path(p).suffix in {'.md', '.mdx', '.ts', '.tsx', '.json'}]
-          if files:
-              subprocess.run(['pnpm', 'exec', 'prettier', '--write', *files], check=True)
+          paths = [Path('packages/exojs-ldtk/README.md'), Path('packages/exojs-pathfinding/README.md')]
+          saved = {path: path.read_bytes() for path in paths}
+          try:
+              for path in paths:
+                  path.write_bytes(subprocess.check_output(['git', 'show', f'fed6ae1a15120bfa8c12b2886800e03583cc95b1:{path}']))
+              result = subprocess.run(['pnpm', 'exec', 'vitest', 'run', 'test/site/readme-examples.test.ts'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+              Path('_migration/readme-regression.log').write_text(result.stdout)
+              print(result.stdout[-7000:])
+              assert result.returncode != 0, 'Broken baseline unexpectedly passed'
+              assert 'waypoints' in result.stdout and 'TileMapNode' in result.stdout, 'Failure did not reproduce the expected API errors'
+          finally:
+              for path, content in saved.items():
+                  path.write_bytes(content)
           PY
-      - name: Commit corrected documentation
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- packages/exojs-ldtk/README.md packages/exojs-pathfinding/README.md site/src/content/guide _migration/check-readme-examples.py
-          git diff --cached --check
-          if ! git diff --cached --quiet; then
-            git commit -m 'docs: correct package examples and contextual guide navigation'
-            git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
-          fi
-      - name: Build the dependencies consumed by the site
-        run: pnpm build:all
-      - name: Check documentation integration
+      - name: Validate corrected documentation
         id: checks
         continue-on-error: true
         run: python3 _migration/run-checks.py
@@ -58,15 +68,12 @@ jobs:
         id: build
         continue-on-error: true
         run: pnpm site:build > _migration/site-build.log 2>&1 || { tail -n 100 _migration/site-build.log; exit 1; }
-      - name: Check generated links and fragments
+      - name: Verify built navigation
         if: steps.build.outcome == 'success'
         id: links
         continue-on-error: true
         run: python3 _migration/check-built-links.py
-      - name: Record lane selection
-        if: always()
-        run: pnpm lanes --base origin/next > _migration/selected-lanes.txt
-      - name: Preserve actual outcomes
+      - name: Record exact evidence
         if: always()
         env:
           CHECKS_RESULT: ${{ steps.checks.outcome }}
@@ -80,29 +87,36 @@ jobs:
           Path('_migration/polish-validation.json').write_text(json.dumps(report, indent=2) + '\n')
           print(json.dumps(report, indent=2))
           PY
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add _migration/polish-validation.json
-          for file in _migration/validation.json _migration/readme-examples.json _migration/selected-lanes.txt _migration/built-links.json; do
+          for file in _migration/validation.json _migration/readme-examples.json _migration/built-links.json; do
             if test -f "$file"; then git add "$file"; fi
           done
           if ! git diff --cached --quiet; then
-            git commit -m 'chore: record built documentation checks'
+            git commit -m 'chore: record final documentation verification'
             git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
           fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: documentation-polish-evidence
+          name: documentation-final-evidence
           path: |
             _migration/polish-validation.json
             _migration/validation.json
             _migration/readme-examples.json
             _migration/built-links.json
-            _migration/selected-lanes.txt
             _migration/check-logs/
             _migration/site-build.log
+            _migration/readme-regression.log
           include-hidden-files: true
       - name: Require successful integration
         if: always()
         run: test '${{ steps.checks.outcome }}' = success && test '${{ steps.build.outcome }}' = success && test '${{ steps.links.outcome }}' = success
+      - name: Remove temporary migration machinery from the merge candidate
+        run: |
+          git rm -r -- _migration .github/workflows/documentation-refresh-review.yml
+          git commit -m 'chore: remove temporary documentation migration tooling'
+          git fetch origin next
+          git rebase origin/next
+          git diff --check origin/next...HEAD
+          git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
+          git rev-parse HEAD
