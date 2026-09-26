@@ -1,0 +1,51 @@
+{
+  "sourceCommit": "d0538029bc81095cbc969a702a343fd382da79bb",
+  "examples": [
+    {
+      "source": "README.md",
+      "block": 0,
+      "file": "_migration/.readme-snippets/000.ts"
+    },
+    {
+      "source": "packages/exojs-physics/README.md",
+      "block": 0,
+      "file": "_migration/.readme-snippets/001.ts"
+    },
+    {
+      "source": "packages/exojs-particles/README.md",
+      "block": 0,
+      "file": "_migration/.readme-snippets/002.ts"
+    },
+    {
+      "source": "packages/exojs-lighting/README.md",
+      "block": 0,
+      "file": "_migration/.readme-snippets/003.ts"
+    },
+    {
+      "source": "packages/exojs-tiled/README.md",
+      "block": 0,
+      "file": "_migration/.readme-snippets/004.ts"
+    },
+    {
+      "source": "packages/exojs-ldtk/README.md",
+      "block": 0,
+      "file": "_migration/.readme-snippets/005.ts"
+    },
+    {
+      "source": "packages/exojs-aseprite/README.md",
+      "block": 0,
+      "file": "_migration/.readme-snippets/006.ts"
+    },
+    {
+      "source": "packages/exojs-audio-fx/README.md",
+      "block": 0,
+      "file": "_migration/.readme-snippets/007.ts"
+    },
+    {
+      "source": "packages/exojs-pathfinding/README.md",
+      "block": 0,
+      "file": "_migration/.readme-snippets/008.ts"
+    }
+  ],
+  "exitCode": 2
+}

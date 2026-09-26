@@ -1,0 +1,86 @@
+{
+  "sourceCommit": "d0538029bc81095cbc969a702a343fd382da79bb",
+  "testedCommit": "fed6ae1a15120bfa8c12b2886800e03583cc95b1",
+  "runId": "36219068562",
+  "checks": [
+    {
+      "name": "scope-lifetime-probe",
+      "command": [
+        "pnpm",
+        "exec",
+        "tsx",
+        "--tsconfig",
+        "tsconfig.json",
+        "_migration/probe-loader-scope.ts"
+      ],
+      "exitCode": 0,
+      "status": "PASS",
+      "seconds": 0.72
+    },
+    {
+      "name": "guide-code-blocks",
+      "command": [
+        "pnpm",
+        "typecheck:guides"
+      ],
+      "exitCode": 0,
+      "status": "PASS",
+      "seconds": 8.37
+    },
+    {
+      "name": "educational-sources",
+      "command": [
+        "pnpm",
+        "typecheck:examples"
+      ],
+      "exitCode": 0,
+      "status": "PASS",
+      "seconds": 8.16
+    },
+    {
+      "name": "readme-code",
+      "command": [
+        "python3",
+        "_migration/check-readme-examples.py"
+      ],
+      "exitCode": 2,
+      "status": "FAIL",
+      "seconds": 6.89
+    },
+    {
+      "name": "site-typecheck",
+      "command": [
+        "pnpm",
+        "typecheck:site"
+      ],
+      "exitCode": 1,
+      "status": "FAIL",
+      "seconds": 11.11
+    },
+    {
+      "name": "site-tests",
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "test/site"
+      ],
+      "exitCode": 0,
+      "status": "PASS",
+      "seconds": 11.04
+    },
+    {
+      "name": "whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exitCode": 0,
+      "status": "PASS",
+      "seconds": 0.01
+    }
+  ],
+  "stage": "site and source documentation integration"
+}

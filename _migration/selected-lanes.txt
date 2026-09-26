@@ -1,0 +1,16 @@
+lanes: 107 changed file(s) since origin/next
+lanes: engine=true site=true audioFx=true tilemapWorker=true exampleCatalog=true benchStructural=true
+
+  pnpm gates typecheck
+  pnpm gates lint
+  pnpm gates sync
+  pnpm test && pnpm test:alloc && pnpm test:physics-perf
+  pnpm test:browser:webgl && pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core   (browser)
+  pnpm test:browser:webgpu   (browser)
+  pnpm test:browser:audio   (browser)
+  pnpm test:browser:tilemap   (browser)
+  pnpm typecheck:bench && pnpm gate:bench:structural   (browser)
+  pnpm gates site
+  pnpm site:build && pnpm test:examples:smoke --sample   (browser)
+
+lanes: pass --run to execute these.
