@@ -26,44 +26,30 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - name: Reproduce entry-point regressions and check their replacement
+      - name: Apply observed documentation corrections
         run: |
-          python3 _migration/polish-check.py --baseline
+          python3 _migration/repair-polish.py
           python3 _migration/polish-check.py
-      - name: Materialize reviewed documentation
-        run: |
-          python3 _migration/finish-surfaces.py
-          pnpm exec tsx _migration/audit-jsdoc.ts
-          python3 _migration/polish-surfaces.py
           python3 - <<'PY'
-          import json, subprocess
+          import subprocess
           from pathlib import Path
-          source = json.loads(Path('_migration/source.json').read_text())['sourceCommit']
-          paths = subprocess.check_output(['git', 'diff', '--name-only', source], text=True).splitlines()
-          paths += subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard'], text=True).splitlines()
-          # Root Prettier has no Astro parser. Astro files are parsed by astro check and the site build.
-          files = sorted({p for p in paths if Path(p).is_file() and not p.startswith('_migration/') and Path(p).suffix in {'.md', '.mdx', '.ts', '.tsx', '.json'}})
+          paths = subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines()
+          files = [p for p in paths if Path(p).is_file() and not p.startswith('_migration/') and Path(p).suffix in {'.md', '.mdx', '.ts', '.tsx', '.json'}]
           if files:
               subprocess.run(['pnpm', 'exec', 'prettier', '--write', *files], check=True)
-          educational = [p for p in files if p.startswith('examples/guides/') and p.endswith('.ts')]
-          if educational:
-              subprocess.run(['pnpm', 'exec', 'eslint', '--fix', '--max-warnings=0', *educational], check=True)
           PY
-      - name: Generate API documentation from source
-        run: pnpm docs:api:generate
-      - name: Commit materialized documentation and rebase onto next
+      - name: Commit corrected documentation
         run: |
-          test "$GITHUB_REF" = refs/heads/docs/documentation-refresh-d0538029
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- README.md site/src site/README.md site/package.json packages/*/README.md examples/guides packages/exojs-lighting/src/Lighting.ts packages/exojs-particles/src/ParticleSystem.ts src/assets/LoaderScope.ts src/debug/RenderPassInspectorLayer.ts
+          git add -- packages/exojs-ldtk/README.md packages/exojs-pathfinding/README.md site/src/content/guide _migration/check-readme-examples.py
           git diff --cached --check
           if ! git diff --cached --quiet; then
-            git commit -m 'docs: polish entry points and materialize guide navigation'
+            git commit -m 'docs: correct package examples and contextual guide navigation'
+            git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
           fi
-          git fetch origin next
-          git rebase origin/next
-          git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
+      - name: Build the dependencies consumed by the site
+        run: pnpm build:all
       - name: Check documentation integration
         id: checks
         continue-on-error: true
@@ -71,31 +57,37 @@ jobs:
       - name: Build the complete site
         id: build
         continue-on-error: true
-        run: pnpm site:build
+        run: pnpm site:build > _migration/site-build.log 2>&1 || { tail -n 100 _migration/site-build.log; exit 1; }
+      - name: Check generated links and fragments
+        if: steps.build.outcome == 'success'
+        id: links
+        continue-on-error: true
+        run: python3 _migration/check-built-links.py
       - name: Record lane selection
         if: always()
         run: pnpm lanes --base origin/next > _migration/selected-lanes.txt
-      - name: Preserve observed results
+      - name: Preserve actual outcomes
         if: always()
         env:
           CHECKS_RESULT: ${{ steps.checks.outcome }}
           BUILD_RESULT: ${{ steps.build.outcome }}
+          LINKS_RESULT: ${{ steps.links.outcome }}
         run: |
           python3 - <<'PY'
           import json, os, subprocess
           from pathlib import Path
-          report = {'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(), 'next': subprocess.check_output(['git', 'rev-parse', 'origin/next'], text=True).strip(), 'runId': os.environ['GITHUB_RUN_ID'], 'checks': os.environ['CHECKS_RESULT'], 'siteBuild': os.environ['BUILD_RESULT']}
+          report = {'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(), 'next': subprocess.check_output(['git', 'rev-parse', 'origin/next'], text=True).strip(), 'runId': os.environ['GITHUB_RUN_ID'], 'checks': os.environ['CHECKS_RESULT'], 'siteBuild': os.environ['BUILD_RESULT'], 'builtLinks': os.environ['LINKS_RESULT']}
           Path('_migration/polish-validation.json').write_text(json.dumps(report, indent=2) + '\n')
           print(json.dumps(report, indent=2))
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add _migration/polish-validation.json
-          for file in _migration/validation.json _migration/readme-examples.json _migration/selected-lanes.txt; do
+          for file in _migration/validation.json _migration/readme-examples.json _migration/selected-lanes.txt _migration/built-links.json; do
             if test -f "$file"; then git add "$file"; fi
           done
           if ! git diff --cached --quiet; then
-            git commit -m 'chore: record documentation integration evidence'
+            git commit -m 'chore: record built documentation checks'
             git push origin HEAD:refs/heads/docs/documentation-refresh-d0538029
           fi
       - uses: actions/upload-artifact@v4
@@ -106,10 +98,11 @@ jobs:
             _migration/polish-validation.json
             _migration/validation.json
             _migration/readme-examples.json
+            _migration/built-links.json
             _migration/selected-lanes.txt
             _migration/check-logs/
-            .workspace/logs/
+            _migration/site-build.log
           include-hidden-files: true
       - name: Require successful integration
         if: always()
-        run: test '${{ steps.checks.outcome }}' = success && test '${{ steps.build.outcome }}' = success
+        run: test '${{ steps.checks.outcome }}' = success && test '${{ steps.build.outcome }}' = success && test '${{ steps.links.outcome }}' = success
