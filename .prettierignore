@@ -2,7 +2,7 @@ dist
 node_modules
 coverage
 
-# Vendored third-party asset data and its notices - copied in, not authored here.
+# Asset data stays compact via pnpm assets:compact; licenses retain their original layout.
 examples/assets/**
 
 # Generated Monaco type shims; their exact shape is pinned by a drift test.
