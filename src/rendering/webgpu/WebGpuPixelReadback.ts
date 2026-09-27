@@ -1,4 +1,5 @@
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import { createPixelArray, type PixelArrayFor, type PixelDataType, pixelTransferBytes } from '#rendering/pixelPayload';
 import type { PixelReadback } from '#rendering/PixelReadback';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
@@ -15,6 +16,8 @@ export interface WebGpuPixelReadbackHost {
   forgetPixelReadback(readback: WebGpuPixelReadback): void;
 }
 
+import { unpackPixelRows } from './unpackPixelRows';
+
 const enum SlotState {
   Free,
   Pending,
@@ -22,12 +25,12 @@ const enum SlotState {
   Failed,
 }
 
-interface Slot {
+interface Slot<T extends PixelDataType> {
   buffer: GPUBuffer | null;
   state: SlotState;
   /** Bumped per request so a map that settles after its slot moved on is ignored. */
   generation: number;
-  readonly data: Uint8ClampedArray;
+  readonly data: PixelArrayFor<T>;
 }
 
 /**
@@ -40,10 +43,10 @@ interface Slot {
  * slot's array as they land.
  * @internal
  */
-export class WebGpuPixelReadback implements PixelReadback {
+export class WebGpuPixelReadback<T extends PixelDataType = PixelDataType> implements PixelReadback<PixelArrayFor<T>> {
   public readonly slots: number;
 
-  private readonly _slots: Slot[] = [];
+  private readonly _slots: Array<Slot<T>> = [];
   /** Slot indices with a map outstanding, oldest first. */
   private readonly _queue: number[] = [];
   private readonly _bytesPerRow: number;
@@ -58,13 +61,14 @@ export class WebGpuPixelReadback implements PixelReadback {
     private readonly _width: number,
     private readonly _height: number,
     slots: number,
+    _dataType: T = 'uint8' as T,
   ) {
     this.slots = slots;
-    this._stride = _width * 4;
+    this._stride = _width * pixelTransferBytes(_source.format);
     this._bytesPerRow = Math.ceil(this._stride / 256) * 256;
 
     for (let i = 0; i < slots; i++) {
-      this._slots.push({ buffer: null, state: SlotState.Free, generation: 0, data: new Uint8ClampedArray(this._stride * _height) });
+      this._slots.push({ buffer: null, state: SlotState.Free, generation: 0, data: createPixelArray(_width * _height * 4, _dataType) });
     }
   }
 
@@ -137,16 +141,12 @@ export class WebGpuPixelReadback implements PixelReadback {
         return;
       }
 
-      const padded = new Uint8Array(slot.buffer.getMappedRange());
-
-      for (let row = 0; row < this._height; row++) {
-        slot.data.set(padded.subarray(row * this._bytesPerRow, row * this._bytesPerRow + this._stride), row * this._stride);
-      }
+      unpackPixelRows(slot.buffer.getMappedRange(), slot.data, this._width, this._height, this._bytesPerRow, this._source.format);
 
       slot.buffer.unmap();
       slot.state = SlotState.Ready;
       this._queue.shift();
-      this._host.accountant.recordDownload(slot.data.byteLength);
+      this._host.accountant.recordDownload(this._stride * this._height);
     }
   }
 
@@ -158,7 +158,7 @@ export class WebGpuPixelReadback implements PixelReadback {
     return this._slots[slot]!.state === SlotState.Failed;
   }
 
-  public data(slot: number): Uint8ClampedArray {
+  public data(slot: number): PixelArrayFor<T> {
     return this._slots[slot]!.data;
   }
 

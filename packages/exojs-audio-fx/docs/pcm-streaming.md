@@ -32,7 +32,9 @@ The runnable [PCM streaming example](../../../examples/audio-fx/pcm-stream.ts) s
 
 The boolean enqueue result accepts or refuses the whole block; no partial writes, retries or hidden backlog. Capacity overflow increments `overflowCount` and `droppedFrames`, leaves queued audio intact, and does not detach caller data. Empty input succeeds without sending a message. Invalid layouts or nonfinite samples in an otherwise admissible block throw `RangeError`. Writes before readiness, during a pending clear, or after closing/failure/destruction return `false` without counting as overflow.
 
-`bufferedFrames` is submitted minus acknowledged consumed/discarded frames. It includes transport and may conservatively overstate actual occupancy. `bufferedSeconds` divides that value by the context sample rate; it excludes device latency. `playedFrames`, `underrunFrames` and `underruns` are cumulative worklet reports. Ordinary telemetry has at most one message outstanding until acknowledgment, so a stalled main thread cannot accumulate unbounded reports. There is no fixed telemetry freshness guarantee; a producer must tolerate refused writes and delivery jitter.
+`bufferedFrames` is submitted minus acknowledged consumed/discarded frames. It includes transport and may conservatively overstate actual occupancy. `bufferedSeconds` divides that value by the context sample rate; it excludes device latency. `enqueuedFrames` counts lifetime accepted frames. `highWaterFrames` records the largest transport-inclusive `bufferedFrames` after an accepted write, never exceeding `capacityFrames`; it is a conservative producer-side peak, not a measurement of the worklet ring alone. Refused, invalid, empty or failed-transfer writes do not increase either counter. Both remain available after clear, close, failure or destroy.
+
+`playedFrames`, `underrunFrames` and `underruns` are cumulative worklet reports. Ordinary telemetry has at most one message outstanding until acknowledgment, so a stalled main thread cannot accumulate unbounded reports. There is no fixed telemetry freshness guarantee; a producer must tolerate refused writes and delivery jitter.
 
 ## Scheduling and lifecycle
 
@@ -50,6 +52,8 @@ The source has its own lifetime. Destroy it before its owning scene/application 
 
 ## Realtime AV and readback boundary
 
-Core `PixelReader` and `RenderingContext.readPixels` currently return top-row-first RGBA bytes from `rgba8` targets on WebGL2 and WebGPU. Float render targets are explicitly rejected; float renderability is not a promise of typed float readback. No working BlinkFX shader-to-PCM consumer is present in this repository, so this change adds no float-readback API or new format/backend capability claims.
+Core `PixelReader` and `RenderingContext.readPixels` return top-row-first RGBA data on WebGL2 and WebGPU. The default mode returns `Uint8ClampedArray` from `rgba8` targets. Explicit `{ dataType: 'float32' }` reads `rgba32f` or `rgba16f` targets into `Float32Array`, preserving signed values and values outside the display range. Half-float targets retain their stored precision even though the returned array is Float32. Byte mode rejects float targets; float mode rejects byte targets. No implicit normalization or fallback occurs.
+
+Check `app.rendering.supportsReadbackFormat(format)` before selecting a target. Renderability alone is not the readback capability contract. A one-shot read owns its result; a standing reader owns its pooled array until the consumer releases the slot. The [GPU PCM example](../../../examples/audio-fx/gpu-pcm-stream.ts) demonstrates both float formats and an explicit consumer-side stereo byte-packing path.
 
 A consumer can unpack its byte readback into Float32 PCM and enqueue it before releasing the readback slot. Shader ABI, sample packing, sound graph, resampling and lookahead policy remain consumer responsibilities. GPU completion and MessagePort delivery are asynchronous; the queue and output clock expose information for an application policy, not an end-to-end latency guarantee.

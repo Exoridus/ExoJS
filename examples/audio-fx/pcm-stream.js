@@ -85,6 +85,7 @@ class PcmStreamScene extends Scene {
       `State: ${stream.state}  |  ${stream.sampleRate} Hz stereo`,
       `Queued: ${stream.bufferedFrames} / ${stream.capacityFrames} frames (${(stream.bufferedSeconds * 1000).toFixed(1)} ms)`,
       `Played: ${stream.playedFrames} frames`,
+      `Accepted: ${stream.enqueuedFrames} frames  |  Queue peak: ${stream.highWaterFrames} frames`,
       `Starvation: ${stream.underruns} episodes / ${stream.underrunFrames} silent frames`,
       `Overflow: ${stream.overflowCount} blocks / ${stream.droppedFrames} frames`,
     ].join('\n');

@@ -1,3 +1,5 @@
+import type { PixelArray } from '#rendering/pixelPayload';
+
 /**
  * Turn the bottom-up rows `gl.readPixels` writes into top-down ones, in place.
  *
@@ -6,12 +8,12 @@
  * capture is the difference between kilobytes and megabytes.
  * @internal
  */
-export const flipRowsInPlace = (
-  pixels: Uint8ClampedArray,
+export const flipRowsInPlace = <T extends PixelArray>(
+  pixels: T,
   width: number,
   height: number,
-  scratch: Uint8ClampedArray = new Uint8ClampedArray(width * 4),
-): Uint8ClampedArray => {
+  scratch: PixelArray = pixels instanceof Float32Array ? new Float32Array(width * 4) : new Uint8ClampedArray(width * 4),
+): T => {
   const stride = width * 4;
 
   for (let row = 0; row < height >> 1; row++) {

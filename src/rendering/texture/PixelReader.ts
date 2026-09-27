@@ -1,6 +1,7 @@
 import { logger } from '#core/Logger';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { assertLiveTexture } from '#rendering/assertLiveResource';
+import type { PixelArray, PixelDataType } from '#rendering/pixelPayload';
 import type { PixelReadback } from '#rendering/PixelReadback';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { PixelData } from '#rendering/RenderingContext';
@@ -9,13 +10,16 @@ import { TextureFormat } from '#rendering/types';
 import type { RenderTexture } from './RenderTexture';
 
 /** Options for {@link RenderingContext.createPixelReader}. */
-export interface PixelReaderOptions {
+export interface PixelReaderOptions<T extends PixelDataType = 'uint8'> {
+  /** Defaults to `uint8` for rgba8. Float textures require `float32` and preserve their values. */
+  dataType?: T;
   /** Sub-rectangle to read, in pixels from the texture's top-left corner. Defaults to the whole texture. */
   region?: ReadonlyRectangle;
   /**
    * Staging slots, each holding one read's pixels until it is released.
    * Defaults to `2`: one read in flight while the previous result is still
-   * held. Every slot costs `width * height * 4` bytes for the reader's
+   * held. Every slot owns `width * height * 4` components (one byte for uint8,
+   * four bytes for float32) plus backend staging storage for the reader's
    * lifetime, so size this from how many reads the consumer keeps outstanding,
    * not generously.
    */
@@ -36,9 +40,18 @@ export interface PixelRegion {
  * the same inputs with the same words.
  * @internal
  */
-export const resolvePixelRegion = (method: string, source: RenderTexture, region: ReadonlyRectangle | undefined): PixelRegion => {
-  if (source.format !== TextureFormat.Rgba8) {
-    throw new Error(`${method} reads 'rgba8' targets, and this one is '${source.format}'. A float target's values do not fit the byte payload this returns.`);
+export const resolvePixelRegion = (
+  method: string,
+  source: RenderTexture,
+  region: ReadonlyRectangle | undefined,
+  dataType: PixelDataType = 'uint8',
+): PixelRegion => {
+  const valid =
+    dataType === 'uint8'
+      ? source.format === TextureFormat.Rgba8
+      : dataType === 'float32' && (source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F);
+  if (!valid) {
+    throw new Error(`${method} cannot read '${source.format}' as '${dataType}'. Use uint8 for rgba8 or float32 for rgba16f/rgba32f.`);
   }
 
   const x = region !== undefined ? Math.trunc(region.left) : 0;
@@ -65,13 +78,13 @@ export const resolvePixelRegion = (method: string, source: RenderTexture, region
  * Handles are pooled per slot: after `release()` the same object is handed
  * out again by a later request, so keep no reference past the release.
  */
-export class PixelRead {
+export class PixelRead<T extends PixelArray = Uint8ClampedArray> {
   /** @internal */
   public constructor(
-    private readonly _reader: PixelReader,
+    private readonly _reader: PixelReader<T>,
     /** @internal */
     public readonly _slot: number,
-    private readonly _data: PixelData,
+    private readonly _data: PixelData<T>,
     /** @internal */
     public _generation: number,
   ) {}
@@ -87,12 +100,12 @@ export class PixelRead {
   }
 
   /**
-   * The pixels, laid out as `ImageData` wants them, or `null` until ready.
+   * RGBA pixels with the top row first, or `null` until ready.
    *
    * The array belongs to the slot and stays valid until {@link release};
    * after that a later read overwrites it. Copy it out to keep it longer.
    */
-  public get data(): PixelData | null {
+  public get data(): PixelData<T> | null {
     return this.ready ? this._data : null;
   }
 
@@ -145,7 +158,7 @@ let nextReaderId = 0;
  * and the reader recovers on its own; resizing the source fails them too, and
  * a whole-texture reader follows the new size.
  */
-export class PixelReader {
+export class PixelReader<T extends PixelArray = Uint8ClampedArray> {
   /** The texture this reader reads. */
   public readonly source: RenderTexture;
   /** Number of staging slots. */
@@ -154,8 +167,9 @@ export class PixelReader {
   private readonly _backend: RenderBackend;
   private readonly _region: ReadonlyRectangle | undefined;
   private readonly _id = nextReaderId++;
-  private _readback: PixelReadback;
-  private _reads: PixelRead[] = [];
+  private _readback: PixelReadback<PixelArray>;
+  private readonly _dataType: PixelDataType;
+  private _reads: Array<PixelRead<T>> = [];
   /** Per slot, whether a read over it has been handed out and not released. */
   private _heldSlots: boolean[] = [];
   private _generation = 0;
@@ -169,17 +183,30 @@ export class PixelReader {
   /**
    * Prefer {@link RenderingContext.createPixelReader}, which resolves the
    * backend. Constructing one directly is for code that already holds a
-   * {@link RenderBackend}, such as an extension package.
+   * {@link RenderBackend}, such as an extension package. For float output,
+   * use `new PixelReader<Float32Array>(backend, source, { dataType: 'float32' })`.
    */
-  public constructor(backend: RenderBackend, source: RenderTexture, options: PixelReaderOptions = {}) {
+  public constructor(
+    backend: RenderBackend,
+    source: RenderTexture,
+    ...options: [T] extends [Float32Array]
+      ? [options: PixelReaderOptions<'float32'> & { dataType: 'float32' }]
+      : [options?: PixelReaderOptions<T extends Uint8ClampedArray ? 'uint8' : PixelDataType>]
+  );
+  public constructor(backend: RenderBackend, source: RenderTexture, options: PixelReaderOptions<PixelDataType> = {}) {
     const slots = options.slots ?? 2;
 
     if (!Number.isInteger(slots) || slots < 1) {
       throw new Error(`PixelReader needs at least one slot, got ${slots}.`);
     }
 
-    const { x, y, width, height } = resolvePixelRegion('PixelReader', source, options.region);
+    const { x, y, width, height } = resolvePixelRegion('PixelReader', source, options.region, options.dataType);
 
+    if (!backend.supportsReadbackFormat(source.format)) {
+      throw new Error(`PixelReader cannot read '${source.format}' on this backend.`);
+    }
+
+    this._dataType = options.dataType ?? 'uint8';
     this._backend = backend;
     this.source = source;
     this.slots = slots;
@@ -188,7 +215,7 @@ export class PixelReader {
     this._height = height;
     this._sourceWidth = source.width;
     this._sourceHeight = source.height;
-    this._readback = backend.createPixelReadback(source, x, y, width, height, slots);
+    this._readback = backend.createPixelReadback(source, x, y, width, height, slots, this._dataType);
     this._bindReads();
   }
 
@@ -219,7 +246,7 @@ export class PixelReader {
    * Throws once the reader or its source is destroyed, and when a region
    * reader's rectangle no longer fits a resized source.
    */
-  public request(): PixelRead | null {
+  public request(): PixelRead<T> | null {
     if (this._destroyed) {
       throw new Error('PixelReader.request() on a destroyed reader.');
     }
@@ -257,17 +284,17 @@ export class PixelReader {
   }
 
   /** @internal */
-  public _isReady(read: PixelRead): boolean {
+  public _isReady(read: PixelRead<T>): boolean {
     return read._generation === this._generation && !this._destroyed && this._readback.isReady(read._slot);
   }
 
   /** @internal */
-  public _isFailed(read: PixelRead): boolean {
+  public _isFailed(read: PixelRead<T>): boolean {
     return read._generation !== this._generation || this._destroyed || this._readback.isFailed(read._slot);
   }
 
   /** @internal */
-  public _release(read: PixelRead): void {
+  public _release(read: PixelRead<T>): void {
     if (read._generation !== this._generation || this._destroyed) {
       return;
     }
@@ -289,7 +316,7 @@ export class PixelReader {
       return;
     }
 
-    const { x, y, width, height } = resolvePixelRegion('PixelReader', this.source, this._region);
+    const { x, y, width, height } = resolvePixelRegion('PixelReader', this.source, this._region, this._dataType);
 
     this._sourceWidth = this.source.width;
     this._sourceHeight = this.source.height;
@@ -299,7 +326,7 @@ export class PixelReader {
     }
 
     this._readback.destroy();
-    this._readback = this._backend.createPixelReadback(this.source, x, y, width, height, this.slots);
+    this._readback = this._backend.createPixelReadback(this.source, x, y, width, height, this.slots, this._dataType);
     this._width = width;
     this._height = height;
     this._generation++;
@@ -312,7 +339,7 @@ export class PixelReader {
     this._heldSlots = [];
 
     for (let slot = 0; slot < this.slots; slot++) {
-      this._reads.push(new PixelRead(this, slot, { width: this._width, height: this._height, data: this._readback.data(slot) }, this._generation));
+      this._reads.push(new PixelRead(this, slot, { width: this._width, height: this._height, data: this._readback.data(slot) as T }, this._generation));
       this._heldSlots.push(false);
     }
   }

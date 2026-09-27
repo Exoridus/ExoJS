@@ -28,6 +28,7 @@ import {
   assertSingleAttachmentCompose,
 } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
+import { createPixelArray, type PixelArray, type PixelDataType } from '#rendering/pixelPayload';
 import type { PixelReadback } from '#rendering/PixelReadback';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
@@ -1292,16 +1293,23 @@ export class WebGl2Backend implements RenderBackend {
     return format === TextureFormat.Rgba8 || this._floatRenderable;
   }
 
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray> {
+  public supportsReadbackFormat(format: ColorTextureFormat): boolean {
+    return this.supportsColorFormat(format);
+  }
+
+  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType?: 'uint8'): Promise<Uint8ClampedArray>;
+  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: 'float32'): Promise<Float32Array>;
+  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
+  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType = 'uint8'): Promise<PixelArray> {
     this.flush();
 
     const gl = this._context;
-    const rows = new Uint8ClampedArray(width * height * 4);
+    const rows = createPixelArray(width * height * 4, dataType);
 
     this._withReadFramebuffer(source, () => {
       // GL addresses pixels from the bottom-left, so the requested top-down
       // rectangle starts this far up, and the rows arrive in reverse order.
-      gl.readPixels(x, source.height - (y + height), width, height, gl.RGBA, gl.UNSIGNED_BYTE, rows);
+      gl.readPixels(x, source.height - (y + height), width, height, gl.RGBA, dataType === 'float32' ? gl.FLOAT : gl.UNSIGNED_BYTE, rows);
     });
 
     this._accountant.recordDownload(rows.byteLength);
@@ -1309,8 +1317,35 @@ export class WebGl2Backend implements RenderBackend {
     return Promise.resolve(flipRowsInPlace(rows, width, height));
   }
 
-  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback {
-    const readback = new WebGl2PixelReadback(this._pixelReadbackHost(), source, x, y, width, height, slots);
+  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: 'float32',
+  ): PixelReadback<Float32Array>;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: PixelDataType,
+  ): PixelReadback<PixelArray>;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: PixelDataType = 'uint8',
+  ): PixelReadback<PixelArray> {
+    const readback = new WebGl2PixelReadback(this._pixelReadbackHost(), source, x, y, width, height, slots, dataType);
 
     this._pixelReadbacks.add(readback);
 

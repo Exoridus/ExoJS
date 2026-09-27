@@ -1,5 +1,6 @@
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
+import { createPixelArray, type PixelDataType } from '#rendering/pixelPayload';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RendererRegistry } from '#rendering/RendererRegistry';
@@ -107,15 +108,33 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     popStencilClip() {
       return this;
     },
+    supportsReadbackFormat() {
+      return true;
+    },
     supportsColorFormat() {
       return true;
     },
-    readPixels(_source: RenderTexture, _x: number, _y: number, width: number, height: number) {
-      return Promise.resolve(new Uint8ClampedArray(width * height * 4));
-    },
-    createPixelReadback(_source: RenderTexture, _x: number, _y: number, width: number, height: number, slots: number) {
-      return createPixelReadbackDouble(width, height, slots);
-    },
+    readPixels: (<T extends PixelDataType = 'uint8'>(
+      _source: RenderTexture,
+      _x: number,
+      _y: number,
+      width: number,
+      height: number,
+      dataType: T = 'uint8' as T,
+    ) => {
+      return Promise.resolve(createPixelArray(width * height * 4, dataType));
+    }) as RenderBackend['readPixels'],
+    createPixelReadback: (<T extends PixelDataType = 'uint8'>(
+      _source: RenderTexture,
+      _x: number,
+      _y: number,
+      width: number,
+      height: number,
+      slots: number,
+      dataType: T = 'uint8' as T,
+    ) => {
+      return createPixelReadbackDouble(width, height, slots, dataType);
+    }) as RenderBackend['createPixelReadback'],
     acquireRenderTexture(width: number, height: number) {
       return new RenderTexture(width, height);
     },

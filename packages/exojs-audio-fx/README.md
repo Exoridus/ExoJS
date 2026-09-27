@@ -34,6 +34,8 @@ Call `read` from the owner's update path and destroy the helper when that owner 
 
 Use `PcmStreamSource` for bounded mono/stereo Float32 streaming into an `AudioBus`. Await readiness, enqueue at the source's sample rate, then explicitly start playback; caller-owned arrays are copied and remain reusable. See [the PCM contract and lifecycle guide](docs/pcm-streaming.md) and [the runnable streaming example](../../examples/audio-fx/pcm-stream.ts) for scheduling, overflow, underrun telemetry, clear and drain.
 
+For GPU-generated samples, the [GPU stereo PCM guide](docs/gpu-pcm.md) and [example](../../examples/audio-fx/gpu-pcm-stream.ts) connect bounded readback slots to the source, with explicit byte packing or typed float readback on both rendering backends.
+
 ## Important boundaries
 
 Browser audio needs a real user-gesture path. Worklet-backed processors can have asynchronous initialization and capability requirements; handle failure and teardown rather than assuming construction means readiness.

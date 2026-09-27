@@ -1,3 +1,4 @@
+import { createPixelArray, type PixelArray, type PixelArrayFor, type PixelDataType } from '#rendering/pixelPayload';
 import type { PixelReadback } from '#rendering/PixelReadback';
 
 /**
@@ -5,7 +6,7 @@ import type { PixelReadback } from '#rendering/PixelReadback';
  * `settle()`, which stands in for the backend's frame-start drain. `fail()`
  * plays the device going away under a pending read.
  */
-export interface PixelReadbackDouble extends PixelReadback {
+export interface PixelReadbackDouble<T extends PixelArray = Uint8ClampedArray> extends PixelReadback<T> {
   /** Mark the oldest pending slot ready, filling its array with `fill`. Returns the slot, or -1 when nothing was pending. */
   settle(fill?: number): number;
   /** Mark every pending slot failed. */
@@ -14,9 +15,14 @@ export interface PixelReadbackDouble extends PixelReadback {
   readonly destroyed: boolean;
 }
 
-export const createPixelReadbackDouble = (width: number, height: number, slots: number): PixelReadbackDouble => {
+export const createPixelReadbackDouble = <T extends PixelDataType = 'uint8'>(
+  width: number,
+  height: number,
+  slots: number,
+  dataType: T = 'uint8' as T,
+): PixelReadbackDouble<PixelArrayFor<T>> => {
   const state: Array<'free' | 'pending' | 'ready' | 'failed'> = Array.from({ length: slots }, () => 'free');
-  const data = Array.from({ length: slots }, () => new Uint8ClampedArray(width * height * 4));
+  const data = Array.from({ length: slots }, () => createPixelArray(width * height * 4, dataType));
   const pending: number[] = [];
   let destroyed = false;
 

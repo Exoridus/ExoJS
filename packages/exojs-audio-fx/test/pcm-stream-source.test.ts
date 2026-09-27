@@ -86,6 +86,51 @@ describe('PcmStreamSource', () => {
     expect(source.bufferedSeconds).toBe(8 / source.sampleRate);
   });
 
+  it('counts only accepted frames and retains the transport-inclusive high-water mark across clear and destroy', async () => {
+    const source = create();
+    expect(source.enqueuedFrames).toBe(0);
+    expect(source.highWaterFrames).toBe(0);
+    expect(source.enqueueInterleaved(new Float32Array(2))).toBe(false);
+    await source.ready;
+    const node = WorkletNodeDouble.latest;
+    expect(source.enqueueInterleaved(new Float32Array(12))).toBe(true);
+    expect(source.enqueuedFrames).toBe(6);
+    expect(source.highWaterFrames).toBe(6);
+    expect(source.enqueueInterleaved(new Float32Array(6))).toBe(false);
+    expect(() => source.enqueueInterleaved(new Float32Array([NaN, 0]))).toThrow();
+    expect(source.enqueueInterleaved(new Float32Array(0))).toBe(true);
+    expect(source.enqueuedFrames).toBe(6);
+    expect(source.highWaterFrames).toBe(6);
+    node.report('status', 4);
+    expect(source.enqueuePlanar([new Float32Array(6), new Float32Array(6)])).toBe(true);
+    expect(source.enqueuedFrames).toBe(12);
+    expect(source.highWaterFrames).toBe(8);
+    source.clear();
+    expect(source.enqueueInterleaved(new Float32Array(2))).toBe(false);
+    node.report('cleared', 12, 4);
+    expect(source.bufferedFrames).toBe(0);
+    expect(source.enqueuedFrames).toBe(12);
+    expect(source.highWaterFrames).toBe(8);
+    expect(source.enqueueInterleaved(new Float32Array(2))).toBe(true);
+    source.destroy();
+    expect(source.enqueueInterleaved(new Float32Array(2))).toBe(false);
+    expect(source.bufferedFrames).toBe(0);
+    expect(source.enqueuedFrames).toBe(13);
+    expect(source.highWaterFrames).toBe(8);
+  });
+
+  it('does not count a transfer that throws as enqueued', async () => {
+    const source = create();
+    await source.ready;
+    WorkletNodeDouble.latest.port.postMessage.mockImplementationOnce(() => {
+      throw new DOMException('Transfer failed', 'DataCloneError');
+    });
+    expect(() => source.enqueueInterleaved(new Float32Array(4))).toThrow('Transfer failed');
+    expect(source.enqueuedFrames).toBe(0);
+    expect(source.highWaterFrames).toBe(0);
+    expect(source.bufferedFrames).toBe(0);
+  });
+
   it('deinterleaves stereo and preserves finite samples without clipping', async () => {
     const source = create();
     await source.ready;
@@ -190,6 +235,8 @@ describe('PcmStreamSource', () => {
     expect(source.state).toBe('closed');
     expect(source.bufferedFrames).toBe(0);
     expect(source.playedFrames).toBe(4);
+    expect(source.enqueuedFrames).toBe(4);
+    expect(source.highWaterFrames).toBe(4);
     expect(source.underrunFrames).toBe(128);
     expect(source.underruns).toBe(1);
     expect(end).toHaveBeenCalledOnce();
@@ -228,8 +275,11 @@ describe('PcmStreamSource', () => {
     await source.ready;
     const onError = vi.fn();
     source.onError.add(onError);
+    source.enqueueInterleaved(new Float32Array(6));
     WorkletNodeDouble.latest.onprocessorerror?.();
     expect(source.state).toBe('failed');
+    expect(source.enqueuedFrames).toBe(3);
+    expect(source.highWaterFrames).toBe(3);
     expect(onError).toHaveBeenCalledOnce();
     expect(source.enqueueInterleaved(new Float32Array(2))).toBe(false);
   });

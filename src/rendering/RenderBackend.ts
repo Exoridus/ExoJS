@@ -12,6 +12,7 @@ import type { ColorTextureFormat } from '#rendering/types';
 
 import type { BackendRenderPass } from './BackendRenderPass';
 import type { Drawable } from './Drawable';
+import type { PixelArray, PixelDataType } from './pixelPayload';
 import type { PixelReadback } from './PixelReadback';
 import type { RenderBackendType } from './RenderBackendType';
 import type { RendererRegistry } from './RendererRegistry';
@@ -184,8 +185,11 @@ export interface RenderBackend {
    */
   supportsColorFormat(format: ColorTextureFormat): boolean;
 
+  /** Whether the format supports lossless typed readback on this backend. */
+  supportsReadbackFormat(format: ColorTextureFormat): boolean;
+
   /**
-   * Read back `width × height` RGBA bytes from `source`, starting at `x`, `y`
+   * Read back `width × height` RGBA components from `source`, starting at `x`, `y`
    * measured from its top-left corner, with the top row first.
    *
    * Pending work is submitted first, so the pixels are those of everything
@@ -193,11 +197,14 @@ export interface RenderBackend {
    * schedule rather than blocking, which is why this is asynchronous even where
    * the platform call is not.
    *
-   * The caller is expected to have validated the format and the rectangle;
+   * `uint8` accepts rgba8; `float32` accepts rgba16f/rgba32f and expands
+   * half-floats without normalization. The caller must validate the format and rectangle;
    * {@link RenderingContext.readPixels} is the checked entry point.
    * @advanced
    */
-  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray>;
+  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType?: 'uint8'): Promise<Uint8ClampedArray>;
+  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: 'float32'): Promise<Float32Array>;
+  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
 
   /**
    * Open a standing, non-blocking readback over `width × height` pixels of
@@ -207,7 +214,25 @@ export interface RenderBackend {
    * caller-facing wrapper and the way application code should reach this.
    * @advanced
    */
-  createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback;
+  createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: 'float32',
+  ): PixelReadback<Float32Array>;
+  createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: PixelDataType,
+  ): PixelReadback<PixelArray>;
 
   /**
    * Borrow a temporary {@link RenderTexture} of exactly `width × height` from

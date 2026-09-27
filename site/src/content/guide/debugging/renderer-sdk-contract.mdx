@@ -116,6 +116,12 @@ describeRendererConformance('Confetti', confettiBinding(), {
 
 It checks the lifecycle rules above, that a second `connect` acquires nothing further, that every GL object is released, that a foreign renderer drawing in between does not break you, that your retained verdict is stable for the same drawable, and that a frame drawn inside a capture window records a replayable batch.
 
+## Implementing typed readback in a backend
+
+Typed float readback extends the `RenderBackend` implementation contract. Existing application calls that read bytes, and custom renderers using the built-in backends, keep their default byte return types. A complete custom backend or a test double implementing `RenderBackend` must add `supportsReadbackFormat(format)` and support the payload-discriminated overloads of `readPixels` and `createPixelReadback`.
+
+Report readback capabilities separately from renderability. The `uint8` mode returns `Uint8ClampedArray` for `rgba8`; explicit `float32` mode returns `Float32Array` for `rgba16f` or `rgba32f`, expanding half-floats without normalization. Preserve top-left RGBA ordering and book the bytes actually transferred, which can differ from the expanded array size. A standing reader keeps its destination arrays until destruction and lends them to callers only until slot release. An unsupported format must be reported as unsupported rather than silently converted. `RenderingContext` and `PixelReader` validate format and region before invoking these backend hooks.
+
 ## The underscore
 
 A member with a leading underscore is engine plumbing and may change without notice. A member without one, exported from `@codexo/exojs/renderer-sdk`, is a contract you can build on — even where its documentation also marks it internal, which only means it is not ordinary application API. Everything named in this chapter is the second kind.

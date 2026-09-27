@@ -61,6 +61,7 @@ export class PcmStreamSource {
   private _busNode: AudioNode | null = null;
   private _cancelBusSetup: (() => void) | null = null;
   private _submittedFrames = 0;
+  private _highWaterFrames = 0;
   private _releasedFrames = 0;
   private _playedFrames = 0;
   private _underrunFrames = 0;
@@ -117,6 +118,16 @@ export class PcmStreamSource {
   /** Queue occupancy in seconds, excluding output-device latency. */
   public get bufferedSeconds(): Seconds {
     return (this.bufferedFrames / this.sampleRate) as Seconds;
+  }
+
+  /** Lifetime accepted frames. Refused, invalid and empty writes do not increase this count; clear and teardown preserve it. */
+  public get enqueuedFrames(): number {
+    return this._submittedFrames;
+  }
+
+  /** Lifetime maximum bufferedFrames after an accepted write, including transport and unacknowledged consumption. Never exceeds capacityFrames; clear and teardown preserve it. */
+  public get highWaterFrames(): number {
+    return this._highWaterFrames;
   }
 
   /** True until the worklet acknowledges clear; writes are refused during this interval. */
@@ -277,6 +288,7 @@ export class PcmStreamSource {
   private _submit(data: Float32Array, frames: number): boolean {
     this._node!.port.postMessage({ type: 'write', data }, [data.buffer]);
     this._submittedFrames += frames;
+    this._highWaterFrames = Math.max(this._highWaterFrames, this.bufferedFrames);
     return true;
   }
 

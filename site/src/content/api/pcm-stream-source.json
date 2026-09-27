@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 26,
   "counts": {
     "constructors": 1,
     "methods": 6,
-    "properties": 15,
+    "properties": 17,
     "events": 2
   },
   "sections": [
@@ -585,6 +585,48 @@
           "params": [],
           "returnType": null,
           "description": "Lifetime frames refused for insufficient capacity; not frames discarded by clear or destroy."
+        },
+        {
+          "name": "enqueuedFrames",
+          "signature": "enqueuedFrames: number",
+          "signatureTokens": [
+            {
+              "text": "enqueuedFrames",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lifetime accepted frames. Refused, invalid and empty writes do not increase this count; clear and teardown preserve it."
+        },
+        {
+          "name": "highWaterFrames",
+          "signature": "highWaterFrames: number",
+          "signatureTokens": [
+            {
+              "text": "highWaterFrames",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lifetime maximum bufferedFrames after an accepted write, including transport and unacknowledged consumption. Never exceeds capacityFrames; clear and teardown preserve it."
         },
         {
           "name": "overflowCount",

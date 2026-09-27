@@ -37,7 +37,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(backend: RenderBackend, source: RenderTexture, options: PixelReaderOptions): PixelReader",
+          "signature": "new(backend: RenderBackend, source: RenderTexture, options: [T] extends [Float32Array<ArrayBufferLike>] ? [options] : [options]): PixelReader<T>",
           "signatureTokens": [
             {
               "text": "new",
@@ -88,8 +88,84 @@
               "kind": "punctuation"
             },
             {
-              "text": "PixelReaderOptions",
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
               "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBufferLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -102,6 +178,18 @@
             {
               "text": "PixelReader",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -117,12 +205,12 @@
             },
             {
               "name": "options",
-              "type": "PixelReaderOptions",
+              "type": "[T] extends [Float32Array<ArrayBufferLike>] ? [options] : [options]",
               "optional": false
             }
           ],
-          "returnType": "PixelReader",
-          "description": "Prefer RenderingContext.createPixelReader, which resolves the backend. Constructing one directly is for code that already holds a RenderBackend, such as an extension package."
+          "returnType": "PixelReader<T>",
+          "description": "Prefer RenderingContext.createPixelReader, which resolves the backend. Constructing one directly is for code that already holds a RenderBackend, such as an extension package. For float output, use new PixelReader<Float32Array>(backend, source, { dataType: 'float32' })."
         }
       ],
       "paragraphs": [],
@@ -164,7 +252,7 @@
         },
         {
           "name": "request",
-          "signature": "request(): PixelRead | null",
+          "signature": "request(): PixelRead<T> | null",
           "signatureTokens": [
             {
               "text": "request",
@@ -187,6 +275,18 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": " | ",
               "kind": "punctuation"
             },
@@ -196,7 +296,7 @@
             }
           ],
           "params": [],
-          "returnType": "PixelRead | null",
+          "returnType": "PixelRead<T> | null",
           "description": "Copy the rectangle as drawn so far and hand back the read to poll, or null when every slot is still held. Everything drawn into the source before this call is included; pending work is submitted first. Throws once the reader or its source is destroyed, and when a region reader's rectangle no longer fits a resized source."
         }
       ],

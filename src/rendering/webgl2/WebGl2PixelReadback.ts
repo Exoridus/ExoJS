@@ -1,4 +1,5 @@
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import { createPixelArray, type PixelArray, type PixelArrayFor, type PixelDataType } from '#rendering/pixelPayload';
 import type { PixelReadback } from '#rendering/PixelReadback';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
@@ -24,13 +25,13 @@ const enum SlotState {
   Failed,
 }
 
-interface Slot {
+interface Slot<T extends PixelDataType> {
   buffer: WebGLBuffer | null;
   sync: WebGLSync | null;
   /** Whether `clientWaitSync` has run on `sync` yet; the first poll must flush (see `poll`). */
   polled: boolean;
   state: SlotState;
-  readonly data: Uint8ClampedArray;
+  readonly data: PixelArrayFor<T>;
 }
 
 /**
@@ -43,13 +44,13 @@ interface Slot {
  * stopping the drain at the first unsignalled fence loses nothing.
  * @internal
  */
-export class WebGl2PixelReadback implements PixelReadback {
+export class WebGl2PixelReadback<T extends PixelDataType = PixelDataType> implements PixelReadback<PixelArrayFor<T>> {
   public readonly slots: number;
 
-  private readonly _slots: Slot[] = [];
+  private readonly _slots: Array<Slot<T>> = [];
   /** Slot indices with a fence outstanding, oldest first. */
   private readonly _queue: number[] = [];
-  private readonly _scratchRow: Uint8ClampedArray;
+  private readonly _scratchRow: PixelArray;
   private readonly _bytes: number;
   private _destroyed = false;
 
@@ -61,13 +62,14 @@ export class WebGl2PixelReadback implements PixelReadback {
     private readonly _width: number,
     private readonly _height: number,
     slots: number,
+    private readonly _dataType: T = 'uint8' as T,
   ) {
     this.slots = slots;
-    this._bytes = _width * _height * 4;
-    this._scratchRow = new Uint8ClampedArray(_width * 4);
+    this._bytes = _width * _height * (_dataType === 'float32' ? 16 : 4);
+    this._scratchRow = createPixelArray(_width * 4, _dataType);
 
     for (let i = 0; i < slots; i++) {
-      this._slots.push({ buffer: null, sync: null, polled: false, state: SlotState.Free, data: new Uint8ClampedArray(this._bytes) });
+      this._slots.push({ buffer: null, sync: null, polled: false, state: SlotState.Free, data: createPixelArray(_width * _height * 4, _dataType) });
     }
   }
 
@@ -100,7 +102,15 @@ export class WebGl2PixelReadback implements PixelReadback {
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, slot.buffer);
       // GL addresses pixels from the bottom-left, so the requested top-down
       // rectangle starts this far up; the rows are flipped once they land.
-      gl.readPixels(this._x, this._source.height - (this._y + this._height), this._width, this._height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+      gl.readPixels(
+        this._x,
+        this._source.height - (this._y + this._height),
+        this._width,
+        this._height,
+        gl.RGBA,
+        this._dataType === 'float32' ? gl.FLOAT : gl.UNSIGNED_BYTE,
+        0,
+      );
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     });
 
@@ -171,7 +181,7 @@ export class WebGl2PixelReadback implements PixelReadback {
     return this._slots[slot]!.state === SlotState.Failed;
   }
 
-  public data(slot: number): Uint8ClampedArray {
+  public data(slot: number): PixelArrayFor<T> {
     return this._slots[slot]!.data;
   }
 

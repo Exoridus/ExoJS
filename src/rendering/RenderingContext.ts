@@ -13,6 +13,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { ColorTextureFormat } from '#rendering/types';
 
 import type { DrawContext, RenderToOptions } from './DrawContext';
+import type { PixelArray, PixelDataType } from './pixelPayload';
 import { type RenderBackend } from './RenderBackend';
 import { type RenderBatch } from './RenderBatch';
 import { type RenderNode } from './RenderNode';
@@ -33,17 +34,19 @@ export interface CaptureOptions {
 }
 
 /** Options for {@link RenderingContext.readPixels}. */
-export interface ReadPixelsOptions {
+export interface ReadPixelsOptions<T extends PixelDataType = 'uint8'> {
+  /** Defaults to `uint8` for rgba8. Use `float32` for rgba16f or rgba32f; values are never normalized or clamped. */
+  dataType?: T;
   /** Sub-rectangle to read, in pixels from the texture's top-left corner. Defaults to the whole texture. */
   region?: ReadonlyRectangle;
 }
 
-/** The pixels {@link RenderingContext.readPixels} read, shaped for `ImageData`. */
-export interface PixelData {
+/** RGBA pixels returned by a read, with the top row first. */
+export interface PixelData<T extends PixelArray = Uint8ClampedArray> {
   readonly width: number;
   readonly height: number;
-  /** RGBA bytes, four per pixel, row-major with the top row first. */
-  readonly data: Uint8ClampedArray;
+  /** Four RGBA components per pixel, row-major with the top row first. */
+  readonly data: T;
 }
 
 export interface RenderOptions {
@@ -259,6 +262,11 @@ export class RenderingContext implements DrawContext {
     return this._backend.supportsColorFormat(format);
   }
 
+  /** Whether this backend can read the format without normalization or clamping. */
+  public supportsReadbackFormat(format: ColorTextureFormat): boolean {
+    return this._backend.supportsReadbackFormat(format);
+  }
+
   /**
    * Renders `node` into a freshly allocated {@link RenderTexture} and returns it.
    *
@@ -329,7 +337,7 @@ export class RenderingContext implements DrawContext {
    * const image = new ImageData(frame.data, frame.width, frame.height);
    * ```
    *
-   * The payload is laid out exactly as `ImageData` wants it - RGBA bytes, four
+   * The default payload is laid out exactly as `ImageData` wants it - RGBA bytes, four
    * per pixel, top row first - so a screenshot, an export or a colour picked
    * off the frame is the two lines above and nothing more. Both backends agree
    * on that layout even though only one of them produces it natively.
@@ -351,14 +359,22 @@ export class RenderingContext implements DrawContext {
    *
    * # Formats
    *
-   * `'rgba8'` only. A float target holds values a byte per channel cannot carry,
-   * and no lossless byte answer exists for one; reading those needs a typed
-   * payload this does not have.
+   * The default `uint8` payload accepts only `rgba8`. With `dataType: 'float32'`,
+   * `rgba16f` and `rgba32f` return Float32Array values without normalization or
+   * clamping. Half-float values are expanded to float32. Mismatches throw.
    */
-  public async readPixels(source: RenderTexture, options: ReadPixelsOptions = {}): Promise<PixelData> {
-    const { x, y, width, height } = resolvePixelRegion('RenderingContext.readPixels', source, options.region);
+  public readPixels(source: RenderTexture, options: ReadPixelsOptions<'float32'> & { dataType: 'float32' }): Promise<PixelData<Float32Array>>;
+  public readPixels(source: RenderTexture, options?: ReadPixelsOptions): Promise<PixelData>;
+  public readPixels(source: RenderTexture, options: ReadPixelsOptions<PixelDataType>): Promise<PixelData<PixelArray>>;
+  public async readPixels(source: RenderTexture, options: ReadPixelsOptions<PixelDataType> = {}): Promise<PixelData<PixelArray>> {
+    const dataType = options.dataType ?? 'uint8';
+    const { x, y, width, height } = resolvePixelRegion('RenderingContext.readPixels', source, options.region, dataType);
 
-    return { width, height, data: await this._backend.readPixels(source, x, y, width, height) };
+    if (!this.supportsReadbackFormat(source.format)) {
+      throw new Error(`RenderingContext.readPixels cannot read '${source.format}' on this backend.`);
+    }
+
+    return { width, height, data: await this._backend.readPixels(source, x, y, width, height, dataType) };
   }
 
   /**
@@ -374,12 +390,16 @@ export class RenderingContext implements DrawContext {
    * ```
    *
    * The reader is yours: destroy it when the reads stop. Its slots cost
-   * `slots * width * height * 4` bytes for as long as it lives, which is why
+   * `slots * width * height * 4` components plus backend staging storage for
+   * as long as it lives (one byte per uint8 component, four per float32), so
    * a reader is created for a purpose rather than kept around just in case.
    * Formats and regions are checked as for {@link readPixels}.
    */
-  public createPixelReader(source: RenderTexture, options: PixelReaderOptions = {}): PixelReader {
-    return new PixelReader(this._backend, source, options);
+  public createPixelReader(source: RenderTexture, options: PixelReaderOptions<'float32'> & { dataType: 'float32' }): PixelReader<Float32Array>;
+  public createPixelReader(source: RenderTexture, options?: PixelReaderOptions): PixelReader;
+  public createPixelReader(source: RenderTexture, options: PixelReaderOptions<PixelDataType>): PixelReader<PixelArray>;
+  public createPixelReader(source: RenderTexture, options: PixelReaderOptions<PixelDataType> = {}): PixelReader<PixelArray> {
+    return new PixelReader<PixelArray>(this._backend, source, options);
   }
 
   /**
