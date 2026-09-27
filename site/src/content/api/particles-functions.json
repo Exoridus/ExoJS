@@ -77,7 +77,7 @@
         },
         {
           "name": "getWgslFieldLayout",
-          "signature": "getWgslFieldLayout(type: WgslPrimitive): { align: number; size: number }",
+          "signature": "getWgslFieldLayout(type: ParticleUniformPrimitive): { align: number; size: number }",
           "signatureTokens": [
             {
               "text": "getWgslFieldLayout",
@@ -96,7 +96,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "WgslPrimitive",
+              "text": "ParticleUniformPrimitive",
               "kind": "type"
             },
             {
@@ -147,7 +147,7 @@
           "params": [
             {
               "name": "type",
-              "type": "WgslPrimitive",
+              "type": "ParticleUniformPrimitive",
               "optional": false
             }
           ],
@@ -156,7 +156,7 @@
         },
         {
           "name": "getWgslUniformByteSize",
-          "signature": "getWgslUniformByteSize(fields: readonly WgslUniformField[]): number",
+          "signature": "getWgslUniformByteSize(fields: readonly ParticleUniformField[]): number",
           "signatureTokens": [
             {
               "text": "getWgslUniformByteSize",
@@ -183,7 +183,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "WgslUniformField",
+              "text": "ParticleUniformField",
               "kind": "type"
             },
             {
@@ -206,7 +206,7 @@
           "params": [
             {
               "name": "fields",
-              "type": "readonly WgslUniformField[]",
+              "type": "readonly ParticleUniformField[]",
               "optional": false
             }
           ],
