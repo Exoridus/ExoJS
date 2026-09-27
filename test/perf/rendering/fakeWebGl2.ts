@@ -324,6 +324,7 @@ const C = {
   TEXTURE0: constantFor('TEXTURE0'),
   MAX_TEXTURE_SIZE: constantFor('MAX_TEXTURE_SIZE'),
   RGBA32F: constantFor('RGBA32F'),
+  FRAMEBUFFER_COMPLETE: constantFor('FRAMEBUFFER_COMPLETE'),
   NO_ERROR: 0,
 };
 
@@ -453,6 +454,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder, extensions: Readon
     getExtension: (name: string): object | null => extensions[name] ?? null,
     getParameter: (pname: number): number => (pname === C.MAX_TEXTURE_SIZE ? fakeMaxTextureSize : 16),
     getError: (): number => C.NO_ERROR,
+    checkFramebufferStatus: (): number => C.FRAMEBUFFER_COMPLETE,
     isContextLost: (): boolean => false,
 
     // ── recorded draw / state ───────────────────────────────────────────
@@ -688,7 +690,7 @@ export const installFakeWebGl2Globals = (): void => {
   // Every constant the backend's format table reads - it builds all five format
   // descriptors in one go, so a missing name would put `undefined` in an entry
   // rather than only failing if that format were ever requested.
-  for (const name of ['R8', 'R32F', 'RGBA8', 'RGBA16F', 'RGBA32F', 'RED', 'RGBA', 'UNSIGNED_BYTE', 'HALF_FLOAT', 'FLOAT']) {
+  for (const name of ['R8', 'R32F', 'RGBA8', 'SRGB8_ALPHA8', 'RGBA16F', 'RGBA32F', 'RED', 'RGBA', 'UNSIGNED_BYTE', 'HALF_FLOAT', 'FLOAT']) {
     stub[name] = constantFor(name);
   }
 

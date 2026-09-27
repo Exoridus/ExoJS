@@ -72,6 +72,48 @@ describe('TextureFactory', () => {
       expect(texture.height).toBe(8);
     });
 
+    test('create() keeps default browser color on the legacy linear storage path before color-pipeline activation', async () => {
+      const createBitmap = vi.fn(async () => ({ width: 8, height: 8 }));
+
+      vi.stubGlobal('createImageBitmap', createBitmap);
+
+      const texture = await new TextureFactory().create(PNG_HEADER, factoryContext());
+
+      expect(createBitmap).toHaveBeenCalledWith(expect.any(Blob), {
+        colorSpaceConversion: 'default',
+        premultiplyAlpha: 'none',
+      });
+      expect(texture.colorSpace).toBe('linear-srgb');
+      expect(texture.alphaMode).toBe('straight');
+    });
+
+    test('create() keeps an explicit sRGB texture request on the exact color path', async () => {
+      vi.stubGlobal(
+        'createImageBitmap',
+        vi.fn(async () => ({ width: 8, height: 8 })),
+      );
+
+      const texture = await new TextureFactory().create(PNG_HEADER, factoryContext({ textureOptions: { colorSpace: 'srgb' } }));
+
+      expect(texture.colorSpace).toBe('srgb');
+      expect(texture.resolvedMetadata.storageFormat).toBe('rgba8-srgb');
+    });
+
+    test('create() decodes a numeric request through the no-conversion ImageBitmap path', async () => {
+      const createBitmap = vi.fn(async () => ({ width: 8, height: 8 }));
+
+      vi.stubGlobal('createImageBitmap', createBitmap);
+
+      const texture = await new TextureFactory().create(PNG_HEADER, factoryContext({ textureOptions: { colorSpace: 'none' } }));
+
+      expect(createBitmap).toHaveBeenCalledWith(expect.any(Blob), {
+        colorSpaceConversion: 'none',
+        premultiplyAlpha: 'none',
+      });
+      expect(texture.colorSpace).toBe('none');
+      expect(texture.alphaMode).toBe('straight');
+    });
+
     test('create() forwards textureOptions to the constructed Texture', async () => {
       vi.stubGlobal(
         'createImageBitmap',
@@ -131,6 +173,13 @@ describe('TextureFactory', () => {
       await promise;
 
       expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('create() rejects numeric requests instead of using the color-managed image fallback', async () => {
+      const factory = new TextureFactory();
+
+      await expect(factory.create(PNG_HEADER, factoryContext({ textureOptions: { colorSpace: 'none' } }))).rejects.toThrow('Texture.fromPixels() or KTX2');
+      expect(capturedImages).toHaveLength(0);
     });
   });
 });

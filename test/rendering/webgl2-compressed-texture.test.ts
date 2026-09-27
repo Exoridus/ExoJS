@@ -35,8 +35,11 @@ interface CompressedHarness {
 
 /** Internal formats of the extensions the engine probes, for asserting the mapping. */
 const GL_COMPRESSED_RGBA_BPTC_UNORM = 0x8e8c;
+const GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM = 0x8e8d;
 const GL_COMPRESSED_RGBA8_ETC2_EAC = 0x9278;
+const GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC = 0x9279;
 const GL_COMPRESSED_RGBA_S3TC_DXT5 = 0x83f3;
+const GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5 = 0x8c4f;
 
 const createHarness = (extensions: readonly string[]): CompressedHarness => {
   installFakeWebGl2Globals();
@@ -107,6 +110,7 @@ describe('WebGl2Backend.supportedTextureFormats', () => {
 
     expect(harness.backend.supportedTextureFormats).toEqual([
       CompressedTextureFormat.Bc7RgbaUnorm,
+      CompressedTextureFormat.Bc7RgbaUnormSrgb,
       CompressedTextureFormat.Bc3RgbaUnorm,
       CompressedTextureFormat.Bc2RgbaUnorm,
       CompressedTextureFormat.Bc1RgbaUnorm,
@@ -118,7 +122,7 @@ describe('WebGl2Backend.supportedTextureFormats', () => {
   test('one ASTC extension carries every block size, and RGTC carries both signednesses', () => {
     harness = createHarness(['WEBGL_compressed_texture_astc']);
 
-    expect(harness.backend.supportedTextureFormats.filter(format => format.startsWith('astc-'))).toHaveLength(14);
+    expect(harness.backend.supportedTextureFormats.filter(format => format.startsWith('astc-'))).toHaveLength(28);
 
     harness.destroy();
     harness = createHarness(['EXT_texture_compression_rgtc']);
@@ -140,6 +144,17 @@ describe('WebGl2Backend.supportedTextureFormats', () => {
     harness = createHarness([]);
 
     expect(harness.backend.supportedTextureFormats).not.toContain(CompressedTextureFormat.Etc2Rgba8Unorm);
+  });
+
+  test('exposes sRGB formats only when their exact extension is enabled', () => {
+    harness = createHarness(['WEBGL_compressed_texture_s3tc']);
+
+    expect(harness.backend.supportedTextureFormats).not.toContain(CompressedTextureFormat.Bc3RgbaUnormSrgb);
+
+    harness.destroy();
+    harness = createHarness(['WEBGL_compressed_texture_s3tc', 'WEBGL_compressed_texture_s3tc_srgb']);
+
+    expect(harness.backend.supportedTextureFormats).toContain(CompressedTextureFormat.Bc3RgbaUnormSrgb);
   });
 });
 
@@ -200,6 +215,42 @@ describe('WebGl2Backend compressed upload', () => {
 
     bc3.destroy();
     etc2.destroy();
+  });
+
+  test('maps sRGB compressed payloads to their exact sRGB internal formats', () => {
+    harness = createHarness([
+      'EXT_texture_compression_bptc',
+      'WEBGL_compressed_texture_etc',
+      'WEBGL_compressed_texture_s3tc',
+      'WEBGL_compressed_texture_s3tc_srgb',
+    ]);
+
+    const bc7 = new CompressedTexture({
+      format: CompressedTextureFormat.Bc7RgbaUnormSrgb,
+      levels: chain(CompressedTextureFormat.Bc7RgbaUnormSrgb, 8, 8, 1),
+    });
+    const etc2 = new CompressedTexture({
+      format: CompressedTextureFormat.Etc2Rgba8Srgb,
+      levels: chain(CompressedTextureFormat.Etc2Rgba8Srgb, 8, 8, 1),
+    });
+    const bc3 = new CompressedTexture({
+      format: CompressedTextureFormat.Bc3RgbaUnormSrgb,
+      levels: chain(CompressedTextureFormat.Bc3RgbaUnormSrgb, 8, 8, 1),
+    });
+
+    harness.backend.bindTexture(bc7, 0);
+    harness.backend.bindTexture(etc2, 1);
+    harness.backend.bindTexture(bc3, 2);
+
+    expect(harness.uploads.map(({ internalFormat }) => internalFormat)).toEqual([
+      GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM,
+      GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,
+      GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5,
+    ]);
+
+    bc7.destroy();
+    etc2.destroy();
+    bc3.destroy();
   });
 
   test('does not re-upload an unchanged texture on a second bind', () => {

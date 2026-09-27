@@ -262,6 +262,11 @@ export class RenderingContext implements DrawContext {
     return this._backend.supportsColorFormat(format);
   }
 
+  /** Independent render-target capabilities for the requested color format. */
+  public getColorFormatCapabilities(format: ColorTextureFormat): import('./RenderBackend').ColorFormatCapabilities {
+    return this._backend.getColorFormatCapabilities(format);
+  }
+
   /** Whether this backend can read the format without normalization or clamping. */
   public supportsReadbackFormat(format: ColorTextureFormat): boolean {
     return this._backend.supportsReadbackFormat(format);

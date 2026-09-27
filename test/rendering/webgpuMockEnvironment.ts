@@ -41,6 +41,8 @@ export interface MockWebGpuEnvironment {
   renderPassAttachmentCounts(): readonly number[];
   /** Fragment-target count of every synchronously created render pipeline, in call order. */
   pipelineTargetCounts(): readonly number[];
+  /** Format of every fragment target of each synchronously created pipeline, in call order. */
+  pipelineTargetFormats(): ReadonlyArray<readonly string[]>;
   /** Blend state of each fragment target of every synchronously created pipeline, in call order. */
   pipelineTargetBlends(): ReadonlyArray<ReadonlyArray<GPUBlendState | undefined>>;
   /** How many `beginRenderPass` descriptors carried a depth/stencil attachment. */
@@ -75,6 +77,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const indexBufferBindings: Array<{ format: string; offset: number }> = [];
   const renderPassAttachmentCounts: number[] = [];
   const pipelineTargetCounts: number[] = [];
+  const pipelineTargetFormats: string[][] = [];
   const pipelineTargetBlends: Array<Array<GPUBlendState | undefined>> = [];
   const pipelineDepthWrites: boolean[] = [];
   const depthLoadOps: string[] = [];
@@ -144,6 +147,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
       const targets = [...(descriptor.fragment?.targets ?? [])];
 
       pipelineTargetCounts.push(targets.length);
+      pipelineTargetFormats.push(targets.flatMap(target => (target === null ? [] : [target.format])));
       pipelineTargetBlends.push(targets.map(target => target?.blend));
 
       if (descriptor.depthStencil !== undefined) {
@@ -218,6 +222,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     indexBufferBindings: () => indexBufferBindings,
     renderPassAttachmentCounts: () => renderPassAttachmentCounts,
     pipelineTargetCounts: () => pipelineTargetCounts,
+    pipelineTargetFormats: () => pipelineTargetFormats,
     pipelineTargetBlends: () => pipelineTargetBlends,
     depthAttachmentPasses: () => depthAttachmentPasses,
     depthLoadOps: () => depthLoadOps,

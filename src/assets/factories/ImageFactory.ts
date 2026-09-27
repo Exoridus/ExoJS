@@ -11,6 +11,8 @@ export type DecodedImage = HTMLImageElement | ImageBitmap;
 export interface ImageAssetOptions {
   /** MIME type for the intermediate blob. Inferred from the magic bytes when omitted. */
   mimeType?: string;
+  /** Decode without browser color conversion or alpha premultiplication. Requires ImageBitmap support. */
+  colorSpace?: 'none';
 }
 
 /**
@@ -26,7 +28,7 @@ export class ImageFactory implements AssetFactory<ArrayBuffer, DecodedImage, Ima
 
   public async create(source: ArrayBuffer, context: AssetFactoryContext<ImageAssetOptions>): Promise<DecodedImage> {
     const blob = new Blob([source], { type: context.options?.mimeType ?? determineMimeType(source) });
-    const image = await decodeImageBlob(blob, this._objectUrls);
+    const image = await decodeImageBlob(blob, this._objectUrls, context.options?.colorSpace === 'none' ? 'data' : 'color');
 
     if (isClosable(image)) {
       this._decoded.add(image);

@@ -1,5 +1,11 @@
 import type { ScaleModes, WrapModes } from '#rendering/types';
 
+/** Meaning assigned to RGB samples independently of their storage format. */
+export type TextureColorSpace = 'srgb' | 'linear-srgb' | 'none';
+
+/** Association of RGB with the alpha channel in the source samples. */
+export type TextureAlphaMode = 'straight' | 'premultiplied';
+
 /**
  * GPU sampling state: how a texture is filtered and how UV coordinates
  * outside `[0, 1]` are resolved.
@@ -25,6 +31,10 @@ export interface SamplerOptions {
 export interface TextureUploadOptions {
   /** Whether pixel values are premultiplied by their alpha before uploading to the GPU. */
   premultiplyAlpha: boolean;
+  /** Interpretation of RGB values. Omit when the source or exact format determines it. */
+  colorSpace?: TextureColorSpace;
+  /** Association of RGB with source alpha. Omit when the payload determines it. */
+  alphaMode?: TextureAlphaMode;
   /** Whether to generate a full mipmap chain after upload. */
   generateMipMap: boolean;
   /**

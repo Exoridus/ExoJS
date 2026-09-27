@@ -42,7 +42,13 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
 
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
 
-    return new Texture(await decodeImageBlob(blob, this._objectUrls), textureOptions);
+    const mode = textureOptions?.colorSpace === 'none' ? 'data' : 'color';
+    const image = await decodeImageBlob(blob, this._objectUrls, mode);
+    const texture = new Texture(null, textureOptions);
+
+    texture._setDecodedImageSource(image, mode === 'data' ? 'none' : 'srgb');
+
+    return texture;
   }
 
   public destroy(): void {
@@ -69,15 +75,25 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
         samplerOptions.wrapMode = textureOptions.wrapMode;
       }
 
-      return new CompressedTexture({ format: payload.format, levels: payload.levels, samplerOptions });
+      return new CompressedTexture({
+        format: payload.format,
+        levels: payload.levels,
+        colorSpace: payload.colorSpace,
+        alphaMode: payload.alphaMode,
+        samplerOptions,
+      });
     }
 
-    // An uncompressed container is turned into an ordinary image source rather
-    // than kept as raw bytes: that way it takes exactly the same upload,
-    // premultiplication and seamless-fill path as a PNG, instead of becoming a
-    // third payload kind every backend would have to special-case.
-    const bitmap = await createImageBitmap(new ImageData(new Uint8ClampedArray(payload.data), payload.width, payload.height));
+    const samplerOptions: Partial<SamplerOptions> = {};
 
-    return new Texture(bitmap, textureOptions);
+    if (textureOptions?.scaleMode !== undefined) {
+      samplerOptions.scaleMode = textureOptions.scaleMode;
+    }
+
+    if (textureOptions?.wrapMode !== undefined) {
+      samplerOptions.wrapMode = textureOptions.wrapMode;
+    }
+
+    return Texture.fromPixels({ levels: payload.levels, colorSpace: payload.colorSpace, alphaMode: payload.alphaMode }, samplerOptions);
   }
 }

@@ -22,6 +22,18 @@ import type { RenderTarget } from './RenderTarget';
 import type { BlendModes } from './types';
 import type { View } from './View';
 
+/** Independent support properties of one render-target color format. */
+export interface ColorFormatCapabilities {
+  /** Whether the format can be used as a color attachment. */
+  readonly renderable: boolean;
+  /** Whether the format accepts linear sampling. */
+  readonly filterable: boolean;
+  /** Whether fixed-function blending can write the format. */
+  readonly blendable: boolean;
+  /** Render-target sample counts this backend currently supports for the format. */
+  readonly sampleCounts: readonly number[];
+}
+
 /**
  * Common interface implemented by both rendering backends
  * ({@link WebGl2Backend}, {@link WebGpuBackend}). Owns the canvas root
@@ -178,11 +190,10 @@ export interface RenderBackend {
    */
   popStencilClip(): this;
 
-  /**
-   * Whether a {@link RenderTexture} of the given color format can be rendered
-   * into on this backend/context. `'rgba8'` is always supported; float formats
-   * depend on hardware/extension support. Check before allocating a float target.
-   */
+  /** Independent render-target capabilities for the requested color format. */
+  getColorFormatCapabilities(format: ColorTextureFormat): ColorFormatCapabilities;
+
+  /** Whether a {@link RenderTexture} of the given color format can be rendered into on this backend/context. */
   supportsColorFormat(format: ColorTextureFormat): boolean;
 
   /** Whether the format supports lossless typed readback on this backend. */

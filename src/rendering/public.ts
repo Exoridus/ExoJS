@@ -20,6 +20,7 @@ export { MultiRenderTarget } from './MultiRenderTarget';
 export { PassContext } from './PassContext';
 export type { PixelArray, PixelArrayFor, PixelDataType } from './pixelPayload';
 export { PixelSnapMode } from './pixelSnap';
+export type { ColorFormatCapabilities } from './RenderBackend';
 export { RenderBackendType } from './RenderBackendType';
 export { RenderBatch } from './RenderBatch';
 export type { RenderErrorCode, RenderErrorOptions } from './RenderError';
@@ -37,6 +38,7 @@ export type { RenderStats } from './RenderStats';
 export { createRenderStats, resetRenderStats } from './RenderStats';
 export { RenderTarget } from './RenderTarget';
 export { RetainedContainer } from './RetainedContainer';
+export type { TextureAlphaMode, TextureColorSpace } from './texture/TextureOptions';
 export type { ColorTextureFormat } from './types';
 export {
   BlendModes,
@@ -166,11 +168,13 @@ export {
 export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
 export { DataTexture } from '#rendering/texture/DataTexture';
 export { DepthTexture } from '#rendering/texture/DepthTexture';
+export type { Rgba8TextureLevel, Rgba8TexturePayload } from '#rendering/texture/pixelPayload';
 export type { PixelReaderOptions } from '#rendering/texture/PixelReader';
 export { PixelRead, PixelReader } from '#rendering/texture/PixelReader';
 export type { RenderTextureOptions } from '#rendering/texture/RenderTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';
 export type { RepeatFit, RepeatMode, RepeatPlan, RepeatSegment } from '#rendering/texture/repeat';
+export type { ResolvedTextureMetadata } from '#rendering/texture/Texture';
 export { Texture } from '#rendering/texture/Texture';
 export type { SamplerOptions, TextureOptions, TextureUploadOptions } from '#rendering/texture/TextureOptions';
 export type { TextureRegionInsets, TextureRegionOptions } from '#rendering/texture/TextureRegion';

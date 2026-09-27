@@ -31,7 +31,7 @@ import {
   type RetainedInstructionSet,
   stampRetainedBatchGeneration,
 } from '#rendering/plan/RetainedInstructionSet';
-import type { RenderBackend } from '#rendering/RenderBackend';
+import type { ColorFormatCapabilities, RenderBackend } from '#rendering/RenderBackend';
 import { sanitizeSurfacePixelRatio } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { InstanceDataView } from '#rendering/RenderBatch';
@@ -322,11 +322,8 @@ export class WebGpuBackend implements RenderBackend {
   private _maskCompositorConnected = false;
   private readonly _backdropBlendCompositor: WebGpuBackdropBlendCompositor = new WebGpuBackdropBlendCompositor();
   private _backdropBlendCompositorConnected = false;
-  private _mipmapShaderModule: GPUShaderModule | null = null;
-  private _mipmapBindGroupLayout: GPUBindGroupLayout | null = null;
-  private _mipmapPipelineLayout: GPUPipelineLayout | null = null;
-  private _mipmapPipeline: GPURenderPipeline | null = null;
-  private _mipmapSampler: GPUSampler | null = null;
+  /** Mipmap resources are format-specific because the render pipeline target is. */
+  private readonly _mipmapResources: Map<GPUTextureFormat, MipmapResources> = new Map<GPUTextureFormat, MipmapResources>();
   private _context: GPUCanvasContext | null = null;
   private _device: GPUDevice | null = null;
   /**
@@ -1069,10 +1066,14 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
-  public setBlendMode(_blendMode: BlendModes | null): this {
+  public setBlendMode(blendMode: BlendModes | null): this {
     // Blend mode is baked into WebGPU render pipelines at creation time.
-    // This method is a no-op; renderers use the blend mode directly when
-    // selecting or creating their pipelines.
+    // Renderers use the mode directly when selecting or creating their
+    // pipelines, but the backend still rejects a target that cannot carry it.
+    if (blendMode !== null) {
+      this._assertTargetBlendable(this._renderTarget);
+    }
+
     return this;
   }
 
@@ -1278,12 +1279,19 @@ export class WebGpuBackend implements RenderBackend {
     };
   }
 
-  public supportsColorFormat(_format: ColorTextureFormat): boolean {
-    // rgba8, rgba16float and rgba32float are all core color-renderable in WebGPU.
-    // (Linear filtering / blending of float32 targets needs the optional
-    // float32-filterable / float32-blendable features, requested at init when
-    // available; float RenderTextures default to nearest, unblended feedback.)
-    return true;
+  public getColorFormatCapabilities(format: ColorTextureFormat): ColorFormatCapabilities {
+    switch (format) {
+      case TextureFormat.Rgba8:
+      case TextureFormat.Rgba8Srgb:
+      case TextureFormat.Rgba16F:
+        return colorFormatCapabilities(true, true, true);
+      case TextureFormat.Rgba32F:
+        return colorFormatCapabilities(true, this._deviceFeatureEnabled('float32-filterable'), this._deviceFeatureEnabled('float32-blendable'));
+    }
+  }
+
+  public supportsColorFormat(format: ColorTextureFormat): boolean {
+    return this.getColorFormatCapabilities(format).renderable;
   }
 
   public supportsReadbackFormat(_format: ColorTextureFormat): boolean {
@@ -1543,11 +1551,7 @@ export class WebGpuBackend implements RenderBackend {
     this._hasPresentedFrame = false;
     this._deviceLost = false;
     this._texture = null;
-    this._mipmapShaderModule = null;
-    this._mipmapBindGroupLayout = null;
-    this._mipmapPipelineLayout = null;
-    this._mipmapPipeline = null;
-    this._mipmapSampler = null;
+    this._mipmapResources.clear();
     this._renderTarget = this._rootRenderTarget;
     this._clearColor.destroy();
     this._rootRenderTarget.destroy();
@@ -1671,7 +1675,7 @@ export class WebGpuBackend implements RenderBackend {
     state.hasContent = true;
 
     if (state.mipLevelCount > 1) {
-      this._generateMipmaps(state.texture, state.mipLevelCount);
+      this._generateMipmaps(state.texture, state.mipLevelCount, state.format);
     }
   }
 
@@ -1738,6 +1742,10 @@ export class WebGpuBackend implements RenderBackend {
     readonly view: GPUTextureView;
     readonly sampler: GPUSampler;
   } {
+    if (samplerOverride !== null) {
+      this._assertTextureFilterable(texture, samplerOverride.scaleMode);
+    }
+
     const state = this._syncTexture(texture);
 
     if (samplerOverride !== null) {
@@ -1768,6 +1776,8 @@ export class WebGpuBackend implements RenderBackend {
    * sampling state and safe to hold across frames as long as the device lives.
    */
   public getTextureSampler(texture: Texture | RenderTexture): GPUSampler {
+    this._assertTextureFilterable(texture, texture.scaleMode);
+
     return this._getSampler(texture.scaleMode, texture.wrapMode, this.isNonFilterableTexture(texture));
   }
 
@@ -2720,11 +2730,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Mipmap pipeline cache is keyed to the dead device - drop it.
-    this._mipmapShaderModule = null;
-    this._mipmapBindGroupLayout = null;
-    this._mipmapPipelineLayout = null;
-    this._mipmapPipeline = null;
-    this._mipmapSampler = null;
+    this._mipmapResources.clear();
     this._transformStorage?.destroy();
     this._transformStorage = null;
     this._activeDrawCommand = null;
@@ -3320,9 +3326,11 @@ export class WebGpuBackend implements RenderBackend {
     // geometry (a `Mesh`, unlike a `Sprite` that measures 0x0 and is never
     // submitted) reaches this on every one of them. WebGl2Backend skips the
     // upload the same way.
+    const rawPayload = texture instanceof Texture ? texture.pixels : null;
     const awaitingSource =
       !(texture instanceof RenderTexture) &&
       !(texture instanceof DataTexture) &&
+      rawPayload === null &&
       texture.compressed === null &&
       (texture.source === null || texture.width === 0 || texture.height === 0);
 
@@ -3330,6 +3338,7 @@ export class WebGpuBackend implements RenderBackend {
     const compressedPayload = compressedPayloadOf(texture);
     const textureVersion = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
     const mipLevelCount = this._getMipLevelCount(texture);
+    this._assertTextureFilterable(texture, texture.scaleMode);
     const nonFilterable = this.isNonFilterableTexture(texture);
     const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
 
@@ -3357,6 +3366,7 @@ export class WebGpuBackend implements RenderBackend {
 
         state.texture = resizedTexture;
         state.view = resizedTexture.createView();
+        state.binding.view = state.view;
         state.width = texture.width;
         state.height = texture.height;
         state.mipLevelCount = mipLevelCount;
@@ -3425,6 +3435,18 @@ export class WebGpuBackend implements RenderBackend {
             { width: region.width, height: region.height },
           );
           this._accountant.recordTextureUpload(region.width * region.height * bytesPerPixel);
+        }
+
+        state.hasContent = true;
+      } else if (rawPayload !== null) {
+        for (const [mipLevel, level] of rawPayload.levels.entries()) {
+          this.device.queue.writeTexture(
+            { texture: state.texture, mipLevel },
+            level.data,
+            { bytesPerRow: level.width * MANAGED_TEXTURE_BYTES_PER_PIXEL, rowsPerImage: level.height },
+            { width: level.width, height: level.height },
+          );
+          this._accountant.recordTextureUpload(level.data.byteLength);
         }
 
         state.hasContent = true;
@@ -3500,6 +3522,7 @@ export class WebGpuBackend implements RenderBackend {
             },
             {
               texture: state.texture,
+              ...(texture.colorSpace === 'srgb' ? { colorSpace: 'srgb' } : {}),
             },
             {
               width: texture.width,
@@ -3511,7 +3534,7 @@ export class WebGpuBackend implements RenderBackend {
         this._accountant.recordTextureUpload(texture.width * texture.height * MANAGED_TEXTURE_BYTES_PER_PIXEL);
 
         if (state.mipLevelCount > 1) {
-          this._generateMipmaps(state.texture, state.mipLevelCount);
+          this._generateMipmaps(state.texture, state.mipLevelCount, state.format);
         }
       }
 
@@ -3641,7 +3664,7 @@ export class WebGpuBackend implements RenderBackend {
    * Float32 textures (r32float, rgba32float) are non-filterable by default in
    * WebGPU, so a linear sampler on one is a validation error. Apps that need
    * linear filtering on floats can opt into the 'float32-filterable' device
-   * feature, which this backend does not expose yet. A bind group layout that
+   * feature when the active device was granted it. A bind group layout that
    * declares such a texture has to agree with the sampler this decides on, so
    * the answer is shared rather than restated per call site.
    * @internal
@@ -3651,7 +3674,51 @@ export class WebGpuBackend implements RenderBackend {
       return true;
     }
 
-    return texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
+    if (texture instanceof RenderTexture) {
+      return texture.format === TextureFormat.Rgba32F && !this.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable;
+    }
+
+    return (
+      texture instanceof DataTexture &&
+      (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F) &&
+      !this.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable
+    );
+  }
+
+  private _deviceFeatureEnabled(feature: GPUFeatureName): boolean {
+    return (this._device as { features?: GPUSupportedFeatures } | null)?.features?.has(feature) === true;
+  }
+
+  private _assertTextureFilterable(texture: Texture | RenderTexture, scaleMode: ScaleModes): void {
+    if (!scaleModeRequiresLinearFiltering(scaleMode) || !isFloat32Texture(texture) || this.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable) {
+      return;
+    }
+
+    const format = floatTextureFormat(texture);
+
+    throw new RenderError({
+      code: 'unsupported-format',
+      backendType: RenderBackendType.WebGpu,
+      message: `Texture format '${format}' requires the granted WebGPU feature 'float32-filterable' for linear sampling. Use nearest sampling or check backend.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable.`,
+    });
+  }
+
+  private _assertTargetBlendable(target: RenderTarget): void {
+    if (target.root) {
+      return;
+    }
+
+    const attachments = target instanceof MultiRenderTarget ? target.attachments : [target as RenderTexture];
+
+    for (const attachment of attachments) {
+      if (!this.getColorFormatCapabilities(attachment.format).blendable) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGpu,
+          message: `Render target format '${attachment.format}' requires the granted WebGPU feature 'float32-blendable' for fixed-function blending. Check backend.getColorFormatCapabilities(format).blendable.`,
+        });
+      }
+    }
   }
 
   /**
@@ -3721,7 +3788,7 @@ export class WebGpuBackend implements RenderBackend {
       }
       return gpuFormat;
     }
-    return managedTextureFormat;
+    return texture.colorSpace === 'srgb' ? 'rgba8unorm-srgb' : managedTextureFormat;
   }
 
   private _getTextureUsage(texture: Texture | RenderTexture): number {
@@ -3826,12 +3893,12 @@ export class WebGpuBackend implements RenderBackend {
     return Math.floor(Math.log2(maxSize)) + 1;
   }
 
-  private _generateMipmaps(texture: GPUTexture, mipLevelCount: number): void {
+  private _generateMipmaps(texture: GPUTexture, mipLevelCount: number, format: GPUTextureFormat): void {
     if (mipLevelCount <= 1) {
       return;
     }
 
-    const resources = this._getMipmapResources();
+    const resources = this._getMipmapResources(format);
     const encoder = this.device.createCommandEncoder({ label: 'backend:command-encoder' });
 
     for (let mipLevel = 1; mipLevel < mipLevelCount; mipLevel++) {
@@ -3876,80 +3943,79 @@ export class WebGpuBackend implements RenderBackend {
     this.device.queue.submit([encoder.finish()]);
   }
 
-  private _getMipmapResources(): {
-    readonly bindGroupLayout: GPUBindGroupLayout;
-    readonly pipeline: GPURenderPipeline;
-    readonly sampler: GPUSampler;
-  } {
-    if (
-      this._mipmapShaderModule === null ||
-      this._mipmapBindGroupLayout === null ||
-      this._mipmapPipelineLayout === null ||
-      this._mipmapPipeline === null ||
-      this._mipmapSampler === null
-    ) {
-      this._mipmapShaderModule = this.device.createShaderModule({
-        label: 'backend:mipmap-shader',
-        code: mipmapWgsl,
-      });
-      this._mipmapBindGroupLayout = this.device.createBindGroupLayout({
-        label: 'backend:mipmap-bind-group-layout',
-        entries: [
-          {
-            binding: 0,
-            visibility: GPUShaderStage.FRAGMENT,
-            texture: {
-              sampleType: 'float',
-            },
-          },
-          {
-            binding: 1,
-            visibility: GPUShaderStage.FRAGMENT,
-            sampler: {
-              type: 'filtering',
-            },
-          },
-        ],
-      });
-      this._mipmapPipelineLayout = this.device.createPipelineLayout({
-        label: 'backend:mipmap-pipeline-layout',
-        bindGroupLayouts: [this._mipmapBindGroupLayout],
-      });
-      this._mipmapPipeline = this.device.createRenderPipeline({
-        label: 'backend:mipmap-pipeline',
-        layout: this._mipmapPipelineLayout,
-        vertex: {
-          module: this._mipmapShaderModule,
-          entryPoint: 'vertexMain',
-        },
-        fragment: {
-          module: this._mipmapShaderModule,
-          entryPoint: 'fragmentMain',
-          targets: [
-            {
-              format: managedTextureFormat,
-              writeMask: GPUColorWrite.ALL,
-            },
-          ],
-        },
-        primitive: {
-          topology: 'triangle-list',
-        },
-      });
-      this._mipmapSampler = this.device.createSampler({
-        label: 'backend:mipmap-sampler',
-        minFilter: 'linear',
-        magFilter: 'linear',
-        mipmapFilter: 'nearest',
-      });
+  private _getMipmapResources(format: GPUTextureFormat): MipmapResources {
+    const existing = this._mipmapResources.get(format);
+
+    if (existing !== undefined) {
+      return existing;
     }
 
-    return {
-      bindGroupLayout: this._mipmapBindGroupLayout,
-      pipeline: this._mipmapPipeline,
-      sampler: this._mipmapSampler,
-    };
+    const shaderModule = this.device.createShaderModule({
+      label: 'backend:mipmap-shader',
+      code: mipmapWgsl,
+    });
+    const bindGroupLayout = this.device.createBindGroupLayout({
+      label: 'backend:mipmap-bind-group-layout',
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {
+            sampleType: 'float',
+          },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {
+            type: 'filtering',
+          },
+        },
+      ],
+    });
+    const pipelineLayout = this.device.createPipelineLayout({
+      label: 'backend:mipmap-pipeline-layout',
+      bindGroupLayouts: [bindGroupLayout],
+    });
+    const pipeline = this.device.createRenderPipeline({
+      label: 'backend:mipmap-pipeline',
+      layout: pipelineLayout,
+      vertex: {
+        module: shaderModule,
+        entryPoint: 'vertexMain',
+      },
+      fragment: {
+        module: shaderModule,
+        entryPoint: 'fragmentMain',
+        targets: [
+          {
+            format,
+            writeMask: GPUColorWrite.ALL,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+      },
+    });
+    const sampler = this.device.createSampler({
+      label: 'backend:mipmap-sampler',
+      minFilter: 'linear',
+      magFilter: 'linear',
+      mipmapFilter: 'nearest',
+    });
+    const resources: MipmapResources = { bindGroupLayout, pipeline, sampler };
+
+    this._mipmapResources.set(format, resources);
+
+    return resources;
   }
+}
+
+interface MipmapResources {
+  readonly bindGroupLayout: GPUBindGroupLayout;
+  readonly pipeline: GPURenderPipeline;
+  readonly sampler: GPUSampler;
 }
 
 interface WebGpuDataTextureFormatInfo {
@@ -3976,6 +4042,8 @@ const webgpuColorTextureFormat = (format: ColorTextureFormat): GPUTextureFormat 
       return 'rgba16float';
     case TextureFormat.Rgba32F:
       return 'rgba32float';
+    case TextureFormat.Rgba8Srgb:
+      return 'rgba8unorm-srgb';
   }
 };
 
@@ -3990,4 +4058,30 @@ const webgpuDataTextureFormat = (format: DataTextureFormat): WebGpuDataTextureFo
     case TextureFormat.Rgba32F:
       return { gpuFormat: 'rgba32float', bytesPerPixel: 16, channels: 4 };
   }
+};
+
+const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blendable: boolean): ColorFormatCapabilities => ({
+  renderable,
+  filterable,
+  blendable,
+  sampleCounts: [1],
+});
+
+const scaleModeRequiresLinearFiltering = (scaleMode: ScaleModes): boolean =>
+  scaleMode === ScaleModes.Linear ||
+  scaleMode === ScaleModes.LinearMipmapNearest ||
+  scaleMode === ScaleModes.NearestMipmapLinear ||
+  scaleMode === ScaleModes.LinearMipmapLinear;
+
+const isFloat32Texture = (texture: Texture | RenderTexture): boolean =>
+  texture instanceof RenderTexture
+    ? texture.format === TextureFormat.Rgba32F
+    : texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
+
+const floatTextureFormat = (texture: Texture | RenderTexture): string => {
+  if (texture instanceof RenderTexture || texture instanceof DataTexture) {
+    return String(texture.format);
+  }
+
+  return 'unknown';
 };

@@ -4,12 +4,29 @@ import type { TextureSource } from '#core/types';
 import { getTextureSourceSize } from '#core/utils';
 import { Size } from '#math/Size';
 import { isPowerOfTwo } from '#math/utils';
-import { ScaleModes, WrapModes } from '#rendering/types';
+import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
+import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 import { createCanvas, createCheckerCanvas } from '#rendering/utils';
 
 import type { CompressedTexturePayload } from './compressedPayload';
 import { validateCompressedPayload } from './compressedPayload';
-import type { TextureOptions } from './TextureOptions';
+import type { CompressedTextureFormat } from './CompressedTextureFormat';
+import type { Rgba8TexturePayload } from './pixelPayload';
+import { validateRgba8Payload } from './pixelPayload';
+import { resolveTextureFormat } from './textureFormatInfo';
+import type { TextureAlphaMode, TextureColorSpace, TextureOptions } from './TextureOptions';
+
+/** Resolved source interpretation retained while a texture handle changes payloads. */
+export interface ResolvedTextureMetadata {
+  readonly storageFormat: TextureFormat | CompressedTextureFormat | null;
+  readonly colorSpace: TextureColorSpace;
+  readonly alphaMode: TextureAlphaMode;
+  readonly mipLevelCount: number;
+}
+
+type DecodedImageMetadata = Readonly<{ colorSpace: TextureColorSpace; alphaMode: TextureAlphaMode }>;
+
+const browserImageMetadata: DecodedImageMetadata = Object.freeze({ colorSpace: 'srgb', alphaMode: 'straight' });
 
 /**
  * A static GPU texture sourced from an image, canvas, or video element.
@@ -38,6 +55,19 @@ export class Texture {
   };
 
   public static readonly empty = new Texture(null);
+
+  /**
+   * Create a texture from RGBA8 bytes without converting through a browser
+   * image source. The payload declares the meaning and alpha association of
+   * its bytes; supplied handle metadata must agree with it.
+   */
+  public static fromPixels(payload: Rgba8TexturePayload, options?: Partial<TextureOptions>): Texture {
+    const texture = new Texture(null, options);
+
+    texture.setPixels(payload);
+
+    return texture;
+  }
 
   public static get black(): Texture {
     if (Texture._black === null) {
@@ -90,6 +120,8 @@ export class Texture {
 
   private _version = 0;
   private _source: TextureSource = null;
+  private _sourceMetadata: DecodedImageMetadata | null = null;
+  private _pixels: Rgba8TexturePayload | null = null;
   private _compressed: CompressedTexturePayload | null = null;
   private _size: Size = new Size(0, 0);
   private _isDestroyed = false;
@@ -100,8 +132,17 @@ export class Texture {
   private _scaleMode: ScaleModes;
   private _wrapMode: WrapModes;
   private _premultiplyAlpha = false;
+  private _premultiplyAlphaExplicit = false;
   private _generateMipMap = false;
   private _flipY = false;
+  private _requestedColorSpace: TextureColorSpace | undefined;
+  private _requestedAlphaMode: TextureAlphaMode | undefined;
+  private _resolvedMetadata: ResolvedTextureMetadata = Object.freeze({
+    storageFormat: null,
+    colorSpace: 'srgb',
+    alphaMode: 'straight',
+    mipLevelCount: 0,
+  });
 
   public constructor(source: TextureSource = null, options?: Partial<TextureOptions>) {
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
@@ -112,8 +153,12 @@ export class Texture {
     this._scaleMode = scaleMode;
     this._wrapMode = wrapMode;
     this._premultiplyAlpha = premultiplyAlpha;
+    this._premultiplyAlphaExplicit = options?.premultiplyAlpha !== undefined;
     this._generateMipMap = generateMipMap;
     this._flipY = flipY;
+    this._requestedColorSpace = options?.colorSpace;
+    this._requestedAlphaMode = options?.alphaMode;
+    this._applyResolvedMetadata(this._resolveMetadata(null, null, null), false);
 
     if (source !== null) {
       this.setSource(source);
@@ -128,22 +173,56 @@ export class Texture {
     this.setSource(source);
   }
 
+  /** RGBA8 payload this texture uploads instead of a browser source, or `null`. */
+  public get pixels(): Rgba8TexturePayload | null {
+    return this._pixels;
+  }
+
   /**
    * Hardware-compressed payload this texture uploads instead of a pixel source,
    * or `null` for the ordinary case.
    *
-   * Mutually exclusive with {@link source}: installing one clears the other, so a
-   * texture is never ambiguous about what it uploads. A handle that arrives
-   * empty from the loader can become either, which is what lets an asset variant
-   * swap a PNG for a KTX2 file without changing what a caller holds.
+   * Mutually exclusive with {@link source} and {@link pixels}: installing one
+   * clears the others, so a texture is never ambiguous about what it uploads.
+   * A handle that arrives empty from the loader can become either, which is what
+   * lets an asset variant swap a PNG for a KTX2 file without changing what a
+   * caller holds.
    */
   public get compressed(): CompressedTexturePayload | null {
     return this._compressed;
   }
 
+  /** Resolved interpretation for the active payload. The record is immutable. */
+  public get resolvedMetadata(): ResolvedTextureMetadata {
+    return this._resolvedMetadata;
+  }
+
+  /** Meaning of the active texture samples. */
+  public get colorSpace(): TextureColorSpace {
+    return this._resolvedMetadata.colorSpace;
+  }
+
+  public set colorSpace(colorSpace: TextureColorSpace | undefined) {
+    this.setColorSpace(colorSpace);
+  }
+
+  /** Source association of RGB with alpha for the active payload. */
+  public get alphaMode(): TextureAlphaMode {
+    return this._resolvedMetadata.alphaMode;
+  }
+
+  public set alphaMode(alphaMode: TextureAlphaMode | undefined) {
+    this.setAlphaMode(alphaMode);
+  }
+
+  /** Number of supplied levels; browser sources report one until realized. */
+  public get mipLevelCount(): number {
+    return this._resolvedMetadata.mipLevelCount;
+  }
+
   /**
-   * Install a compressed payload, replacing any pixel source, and resize to its
-   * base level.
+   * Install a compressed payload, replacing any browser or raw pixel source,
+   * and resize to its base level.
    *
    * Pass `null` to drop it. Bumps {@link version}, so backends re-create their
    * GPU texture - a format change cannot be patched into an existing one.
@@ -153,7 +232,14 @@ export class Texture {
   public setCompressed(payload: CompressedTexturePayload | null): this {
     if (payload === null) {
       if (this._compressed !== null) {
+        const metadata = this._resolveMetadata(null, null, null);
+
+        this._validateResolvedMetadata(metadata);
+
+        this.releaseGpu();
         this._compressed = null;
+        this._applyResolvedMetadata(metadata);
+        this.setSize(0, 0);
         this._touch();
       }
 
@@ -161,9 +247,17 @@ export class Texture {
     }
 
     const base = validateCompressedPayload(payload);
+    const compressed = freezeCompressedPayload(payload);
+    const metadata = this._resolveMetadata(null, null, compressed);
 
-    this._compressed = payload;
+    this._validateResolvedMetadata(metadata);
+
+    this.releaseGpu();
+    this._compressed = compressed;
     this._source = null;
+    this._sourceMetadata = null;
+    this._pixels = null;
+    this._applyResolvedMetadata(metadata);
     this.setSize(base.width, base.height);
     this._touch();
 
@@ -356,6 +450,12 @@ export class Texture {
   }
 
   public setPremultiplyAlpha(premultiplyAlpha: boolean): this {
+    if (premultiplyAlpha && this.colorSpace === 'none') {
+      throw new TypeError('Premultiply-alpha normalization is not valid for numeric texture data.');
+    }
+
+    this._premultiplyAlphaExplicit = true;
+
     if (this._premultiplyAlpha !== premultiplyAlpha) {
       this._premultiplyAlpha = premultiplyAlpha;
       this._touch();
@@ -364,13 +464,52 @@ export class Texture {
     return this;
   }
 
+  /**
+   * Installs a browser-managed image source. Direct sources use the browser's
+   * sRGB, straight-alpha interpretation.
+   */
   public setSource(source: TextureSource): this {
-    if (this._source !== source) {
+    return this._setSource(source, browserImageMetadata);
+  }
+
+  /** Installs a factory-decoded source whose conversion and alpha behavior were selected before decoding. @internal */
+  public _setDecodedImageSource(source: TextureSource, colorSpace: TextureColorSpace): this {
+    return this._setSource(source, { colorSpace, alphaMode: 'straight' });
+  }
+
+  /** Installs a visible failure source without changing the handle's declared interpretation. @internal */
+  public _setFailureSource(source: TextureSource): this {
+    return this._setSource(source, { colorSpace: this._requestedColorSpace ?? 'srgb', alphaMode: this._requestedAlphaMode ?? 'straight' });
+  }
+
+  /** Copies only payload data and source interpretation. Handle-local options remain unchanged. @internal */
+  public _copyPayloadFrom(donor: Texture): this {
+    if (donor.pixels !== null) {
+      return this.setPixels(donor.pixels);
+    }
+
+    if (donor.compressed !== null) {
+      return this.setCompressed(donor.compressed);
+    }
+
+    return this._setSource(donor.source, donor._sourceMetadata ?? browserImageMetadata);
+  }
+
+  private _setSource(source: TextureSource, sourceMetadata: DecodedImageMetadata): this {
+    if (this._source !== source || this._pixels !== null || this._compressed !== null) {
+      const metadata = this._resolveMetadata(source, null, null, sourceMetadata);
+
+      this._validateResolvedMetadata(metadata);
+
+      this.releaseGpu();
       this._source = source;
+      this._sourceMetadata = source === null ? null : sourceMetadata;
       // A pixel source and a compressed payload are two answers to the same
       // question, and the backends pick the compressed one - so leaving a stale
       // payload in place would make this call silently do nothing.
+      this._pixels = null;
       this._compressed = null;
+      this._applyResolvedMetadata(metadata);
       this.updateSource();
     }
 
@@ -423,6 +562,8 @@ export class Texture {
     this._releaseListeners.clear();
     this._size.destroy();
     this._source = null;
+    this._sourceMetadata = null;
+    this._pixels = null;
     this._compressed = null;
   }
 
@@ -446,4 +587,187 @@ export class Texture {
   private _touch(): void {
     this._version++;
   }
+
+  /** Install RGBA8 bytes, replacing a browser or compressed source. */
+  public setPixels(payload: Rgba8TexturePayload | null): this {
+    if (payload === null) {
+      if (this._pixels !== null) {
+        const metadata = this._resolveMetadata(null, null, null);
+
+        this._validateResolvedMetadata(metadata);
+
+        this.releaseGpu();
+        this._pixels = null;
+        this._applyResolvedMetadata(metadata);
+        this.setSize(0, 0);
+        this._touch();
+      }
+
+      return this;
+    }
+
+    const base = validateRgba8Payload(payload);
+    const pixels = freezeRgba8Payload(payload);
+    const metadata = this._resolveMetadata(null, pixels, null);
+
+    this._validateResolvedMetadata(metadata);
+
+    this.releaseGpu();
+    this._source = null;
+    this._sourceMetadata = null;
+    this._pixels = pixels;
+    this._compressed = null;
+    this._applyResolvedMetadata(metadata);
+    this.setSize(base.width, base.height);
+    this._touch();
+
+    return this;
+  }
+
+  /** Change the caller-selected interpretation where the active payload permits it. */
+  public setColorSpace(colorSpace: TextureColorSpace | undefined): this {
+    if (this._requestedColorSpace === colorSpace) {
+      return this;
+    }
+
+    const previous = this._requestedColorSpace;
+    this._requestedColorSpace = colorSpace;
+
+    let metadata: ResolvedTextureMetadata;
+
+    try {
+      metadata = this._resolveMetadata(this._source, this._pixels, this._compressed, this._sourceMetadata ?? browserImageMetadata);
+      this._validateResolvedMetadata(metadata);
+    } catch (error) {
+      this._requestedColorSpace = previous;
+      throw error;
+    }
+
+    this.releaseGpu();
+    this._applyResolvedMetadata(metadata);
+    this._touch();
+
+    return this;
+  }
+
+  /** Change the caller-selected alpha association where the active payload permits it. */
+  public setAlphaMode(alphaMode: TextureAlphaMode | undefined): this {
+    if (this._requestedAlphaMode === alphaMode) {
+      return this;
+    }
+
+    const previous = this._requestedAlphaMode;
+    this._requestedAlphaMode = alphaMode;
+
+    let metadata: ResolvedTextureMetadata;
+
+    try {
+      metadata = this._resolveMetadata(this._source, this._pixels, this._compressed, this._sourceMetadata ?? browserImageMetadata);
+      this._validateResolvedMetadata(metadata);
+    } catch (error) {
+      this._requestedAlphaMode = previous;
+      throw error;
+    }
+
+    this.releaseGpu();
+    this._applyResolvedMetadata(metadata);
+    this._touch();
+
+    return this;
+  }
+
+  private _resolveMetadata(
+    source: TextureSource | null,
+    pixels: Rgba8TexturePayload | null,
+    compressed: CompressedTexturePayload | null,
+    sourceMetadata: DecodedImageMetadata = browserImageMetadata,
+  ): ResolvedTextureMetadata {
+    if (source !== null) {
+      const useExactSourceColor = COLOR_PIPELINE_ENABLED || this._requestedColorSpace === 'srgb';
+      const payloadColorSpace = !useExactSourceColor && sourceMetadata.colorSpace !== 'none' ? 'linear-srgb' : sourceMetadata.colorSpace;
+      const resolved = resolveTextureFormat(useExactSourceColor && sourceMetadata.colorSpace === 'srgb' ? TextureFormat.Rgba8Srgb : TextureFormat.Rgba8, {
+        ...(this._requestedColorSpace === undefined ? {} : { colorSpace: this._requestedColorSpace }),
+        ...(this._requestedAlphaMode === undefined ? {} : { alphaMode: this._requestedAlphaMode }),
+        payloadColorSpace,
+        payloadAlphaMode: sourceMetadata.alphaMode,
+      });
+
+      return Object.freeze({ storageFormat: resolved.storageFormat, colorSpace: resolved.colorSpace, alphaMode: resolved.alphaMode, mipLevelCount: 1 });
+    }
+
+    if (pixels !== null) {
+      const resolved = resolveTextureFormat(TextureFormat.Rgba8, {
+        ...(this._requestedColorSpace === undefined ? {} : { colorSpace: this._requestedColorSpace }),
+        ...(this._requestedAlphaMode === undefined ? {} : { alphaMode: this._requestedAlphaMode }),
+        payloadColorSpace: pixels.colorSpace,
+        payloadAlphaMode: pixels.alphaMode,
+      });
+
+      return Object.freeze({
+        storageFormat: resolved.storageFormat,
+        colorSpace: resolved.colorSpace,
+        alphaMode: resolved.alphaMode,
+        mipLevelCount: pixels.levels.length,
+      });
+    }
+
+    if (compressed !== null) {
+      const resolved = resolveTextureFormat(compressed.format, {
+        ...(this._requestedColorSpace === undefined ? {} : { colorSpace: this._requestedColorSpace }),
+        ...(this._requestedAlphaMode === undefined ? {} : { alphaMode: this._requestedAlphaMode }),
+        ...(compressed.colorSpace === undefined ? {} : { payloadColorSpace: compressed.colorSpace }),
+        ...(compressed.alphaMode === undefined ? {} : { payloadAlphaMode: compressed.alphaMode }),
+      });
+
+      return Object.freeze({
+        storageFormat: resolved.storageFormat,
+        colorSpace: resolved.colorSpace,
+        alphaMode: resolved.alphaMode,
+        mipLevelCount: compressed.levels.length,
+      });
+    }
+
+    return Object.freeze({
+      storageFormat: null,
+      colorSpace: this._requestedColorSpace ?? 'srgb',
+      alphaMode: this._requestedAlphaMode ?? 'straight',
+      mipLevelCount: 0,
+    });
+  }
+
+  private _applyResolvedMetadata(metadata: ResolvedTextureMetadata, touch = true): void {
+    this._validateResolvedMetadata(metadata);
+
+    const nextPremultiplyAlpha = this._premultiplyAlphaExplicit ? this._premultiplyAlpha : metadata.colorSpace !== 'none';
+    const metadataChanged =
+      this._resolvedMetadata.colorSpace !== metadata.colorSpace ||
+      this._resolvedMetadata.alphaMode !== metadata.alphaMode ||
+      this._resolvedMetadata.storageFormat !== metadata.storageFormat ||
+      this._resolvedMetadata.mipLevelCount !== metadata.mipLevelCount;
+    const premultiplyChanged = this._premultiplyAlpha !== nextPremultiplyAlpha;
+
+    this._resolvedMetadata = metadata;
+    this._premultiplyAlpha = nextPremultiplyAlpha;
+
+    if (touch && (metadataChanged || premultiplyChanged)) {
+      this._touch();
+    }
+  }
+
+  private _validateResolvedMetadata(metadata: ResolvedTextureMetadata): void {
+    if (metadata.colorSpace === 'none' && this._premultiplyAlphaExplicit && this._premultiplyAlpha) {
+      throw new TypeError('Premultiply-alpha normalization is not valid for numeric texture data.');
+    }
+  }
 }
+
+const freezeRgba8Payload = (payload: Rgba8TexturePayload): Rgba8TexturePayload =>
+  Object.freeze({ levels: Object.freeze([...payload.levels]), colorSpace: payload.colorSpace, alphaMode: payload.alphaMode });
+
+const freezeCompressedPayload = (payload: CompressedTexturePayload): CompressedTexturePayload =>
+  Object.freeze({
+    format: payload.format,
+    levels: Object.freeze([...payload.levels]),
+    ...(payload.colorSpace === undefined ? {} : { colorSpace: payload.colorSpace }),
+    ...(payload.alphaMode === undefined ? {} : { alphaMode: payload.alphaMode }),
+  });

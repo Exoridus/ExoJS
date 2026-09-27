@@ -161,6 +161,24 @@ describe('CompressedTexture', () => {
         }),
     ).toThrow(/must be a multiple of that on both axes/);
   });
+
+  test('rejects a chain whose levels do not follow the base extent', () => {
+    const format = CompressedTextureFormat.Bc7RgbaUnorm;
+
+    expect(() => new CompressedTexture({ format, levels: [level(format, 8, 8), level(format, 8, 4)] })).toThrow(/mip level 1.*4x4/i);
+  });
+
+  test('preserves payload interpretation and alpha association', () => {
+    const texture = new CompressedTexture({
+      format: CompressedTextureFormat.Bc7RgbaUnormSrgb,
+      colorSpace: 'srgb',
+      alphaMode: 'premultiplied',
+      levels: [level(CompressedTextureFormat.Bc7RgbaUnormSrgb, 4, 4)],
+    });
+
+    expect(texture.colorSpace).toBe('srgb');
+    expect(texture.alphaMode).toBe('premultiplied');
+  });
 });
 
 describe('Texture payload exclusivity', () => {

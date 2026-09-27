@@ -101,6 +101,8 @@ export enum TextureFormat {
   R32F = 'r32f',
   /** 4-channel 8-bit unsigned - the universally supported default. */
   Rgba8 = 'rgba8',
+  /** 4-channel 8-bit unsigned with sRGB transfer on RGB channels. */
+  Rgba8Srgb = 'rgba8-srgb',
   /** 4-channel half-float. Stores values outside `[0, 1]` at reduced precision; usually enough for feedback/state buffers. */
   Rgba16F = 'rgba16f',
   /** 4-channel full-float. Highest precision, 16 bytes per pixel. */
@@ -116,7 +118,7 @@ export enum TextureFormat {
  * render-target preparation. Float render targets default to `nearest`
  * sampling; linear filtering additionally requires `OES_texture_float_linear`.
  */
-export type ColorTextureFormat = TextureFormat.Rgba8 | TextureFormat.Rgba16F | TextureFormat.Rgba32F;
+export type ColorTextureFormat = TextureFormat.Rgba8 | TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F | TextureFormat.Rgba32F;
 
 /**
  * Resolution an internal render target is rasterized at, in device pixels per

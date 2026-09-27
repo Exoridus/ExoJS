@@ -16,12 +16,22 @@
  * @stable
  */
 export enum CompressedTextureFormat {
+  /** BC1 / DXT1: RGB without alpha, 4:1 ratio. */
+  Bc1RgbUnorm = 'bc1-rgb-unorm',
+  /** BC1 / DXT1: RGB without alpha and sRGB transfer. */
+  Bc1RgbUnormSrgb = 'bc1-rgb-unorm-srgb',
   /** BC1 / DXT1: RGB, 1-bit alpha cutout, 4:1 ratio. The cheapest BC format. */
   Bc1RgbaUnorm = 'bc1-rgba-unorm',
+  /** BC1 / DXT1: RGB with 1-bit alpha cutout and sRGB transfer. */
+  Bc1RgbaUnormSrgb = 'bc1-rgba-unorm-srgb',
   /** BC2 / DXT3: RGB with 4-bit explicit alpha. Rarely worth choosing over BC3. */
   Bc2RgbaUnorm = 'bc2-rgba-unorm',
+  /** BC2 / DXT3: RGB with 4-bit alpha and sRGB transfer. */
+  Bc2RgbaUnormSrgb = 'bc2-rgba-unorm-srgb',
   /** BC3 / DXT5: RGB with interpolated alpha, 4:1 ratio. The classic RGBA workhorse. */
   Bc3RgbaUnorm = 'bc3-rgba-unorm',
+  /** BC3 / DXT5: RGB with interpolated alpha and sRGB transfer. */
+  Bc3RgbaUnormSrgb = 'bc3-rgba-unorm-srgb',
   /** BC4: single channel, 2:1 ratio. Masks, height and occlusion maps. */
   Bc4RUnorm = 'bc4-r-unorm',
   /** BC4, signed: the same blocks read as `[-1, 1]`. */
@@ -36,44 +46,80 @@ export enum CompressedTextureFormat {
   Bc6hRgbFloat = 'bc6h-rgb-float',
   /** BC7: RGBA, 2:1 ratio, the highest BC quality. Preferred wherever BC exists. */
   Bc7RgbaUnorm = 'bc7-rgba-unorm',
+  /** BC7: RGBA with sRGB transfer. */
+  Bc7RgbaUnormSrgb = 'bc7-rgba-unorm-srgb',
   /** ETC2: RGB, no alpha, 4:1 ratio. Mandatory in OpenGL ES 3.0. */
   Etc2Rgb8Unorm = 'etc2-rgb8unorm',
+  /** ETC2: RGB without alpha and sRGB transfer. */
+  Etc2Rgb8Srgb = 'etc2-rgb8srgb',
   /** ETC2: RGB with a 1-bit alpha cutout, 4:1 ratio. */
   Etc2Rgb8A1Unorm = 'etc2-rgb8a1unorm',
+  /** ETC2: RGB with 1-bit alpha cutout and sRGB transfer. */
+  Etc2Rgb8A1Srgb = 'etc2-rgb8a1srgb',
   /** ETC2 + EAC: RGB with 8-bit alpha, 2:1 ratio. */
   Etc2Rgba8Unorm = 'etc2-rgba8unorm',
+  /** ETC2 + EAC: RGB with 8-bit alpha and sRGB transfer. */
+  Etc2Rgba8Srgb = 'etc2-rgba8srgb',
   /** EAC: single channel, 2:1 ratio. */
   EacR11Unorm = 'eac-r11unorm',
   /** EAC: two channels, 1:1 ratio. */
   EacRg11Unorm = 'eac-rg11unorm',
   /** ASTC 4x4: RGBA at 8 bits per pixel. Highest ASTC quality. */
   Astc4x4Unorm = 'astc-4x4-unorm',
+  /** ASTC 4x4: RGBA with sRGB transfer. */
+  Astc4x4Srgb = 'astc-4x4-srgb',
   /** ASTC 5x4: RGBA at 6.4 bits per pixel. */
   Astc5x4Unorm = 'astc-5x4-unorm',
+  /** ASTC 5x4: RGBA with sRGB transfer. */
+  Astc5x4Srgb = 'astc-5x4-srgb',
   /** ASTC 5x5: RGBA at ~5.12 bits per pixel. */
   Astc5x5Unorm = 'astc-5x5-unorm',
+  /** ASTC 5x5: RGBA with sRGB transfer. */
+  Astc5x5Srgb = 'astc-5x5-srgb',
   /** ASTC 6x5: RGBA at ~4.27 bits per pixel. */
   Astc6x5Unorm = 'astc-6x5-unorm',
+  /** ASTC 6x5: RGBA with sRGB transfer. */
+  Astc6x5Srgb = 'astc-6x5-srgb',
   /** ASTC 6x6: RGBA at ~3.56 bits per pixel. */
   Astc6x6Unorm = 'astc-6x6-unorm',
+  /** ASTC 6x6: RGBA with sRGB transfer. */
+  Astc6x6Srgb = 'astc-6x6-srgb',
   /** ASTC 8x5: RGBA at 3.2 bits per pixel. */
   Astc8x5Unorm = 'astc-8x5-unorm',
+  /** ASTC 8x5: RGBA with sRGB transfer. */
+  Astc8x5Srgb = 'astc-8x5-srgb',
   /** ASTC 8x6: RGBA at ~2.67 bits per pixel. */
   Astc8x6Unorm = 'astc-8x6-unorm',
+  /** ASTC 8x6: RGBA with sRGB transfer. */
+  Astc8x6Srgb = 'astc-8x6-srgb',
   /** ASTC 8x8: RGBA at 2 bits per pixel. */
   Astc8x8Unorm = 'astc-8x8-unorm',
+  /** ASTC 8x8: RGBA with sRGB transfer. */
+  Astc8x8Srgb = 'astc-8x8-srgb',
   /** ASTC 10x5: RGBA at 2.56 bits per pixel. */
   Astc10x5Unorm = 'astc-10x5-unorm',
+  /** ASTC 10x5: RGBA with sRGB transfer. */
+  Astc10x5Srgb = 'astc-10x5-srgb',
   /** ASTC 10x6: RGBA at ~2.13 bits per pixel. */
   Astc10x6Unorm = 'astc-10x6-unorm',
+  /** ASTC 10x6: RGBA with sRGB transfer. */
+  Astc10x6Srgb = 'astc-10x6-srgb',
   /** ASTC 10x8: RGBA at 1.6 bits per pixel. */
   Astc10x8Unorm = 'astc-10x8-unorm',
+  /** ASTC 10x8: RGBA with sRGB transfer. */
+  Astc10x8Srgb = 'astc-10x8-srgb',
   /** ASTC 10x10: RGBA at 1.28 bits per pixel. */
   Astc10x10Unorm = 'astc-10x10-unorm',
+  /** ASTC 10x10: RGBA with sRGB transfer. */
+  Astc10x10Srgb = 'astc-10x10-srgb',
   /** ASTC 12x10: RGBA at ~1.07 bits per pixel. */
   Astc12x10Unorm = 'astc-12x10-unorm',
+  /** ASTC 12x10: RGBA with sRGB transfer. */
+  Astc12x10Srgb = 'astc-12x10-srgb',
   /** ASTC 12x12: RGBA at ~0.89 bits per pixel. Highest ASTC compression. */
   Astc12x12Unorm = 'astc-12x12-unorm',
+  /** ASTC 12x12: RGBA with sRGB transfer. */
+  Astc12x12Srgb = 'astc-12x12-srgb',
 }
 
 /**
@@ -92,9 +138,14 @@ export interface CompressedBlockLayout {
 }
 
 const blockLayouts: Readonly<Record<CompressedTextureFormat, CompressedBlockLayout>> = Object.freeze({
+  [CompressedTextureFormat.Bc1RgbUnorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
+  [CompressedTextureFormat.Bc1RgbUnormSrgb]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
   [CompressedTextureFormat.Bc1RgbaUnorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
+  [CompressedTextureFormat.Bc1RgbaUnormSrgb]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
   [CompressedTextureFormat.Bc2RgbaUnorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Bc2RgbaUnormSrgb]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
   [CompressedTextureFormat.Bc3RgbaUnorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Bc3RgbaUnormSrgb]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
   [CompressedTextureFormat.Bc4RUnorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
   [CompressedTextureFormat.Bc4RSnorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
   [CompressedTextureFormat.Bc5RgUnorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
@@ -102,25 +153,43 @@ const blockLayouts: Readonly<Record<CompressedTextureFormat, CompressedBlockLayo
   [CompressedTextureFormat.Bc6hRgbUfloat]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
   [CompressedTextureFormat.Bc6hRgbFloat]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
   [CompressedTextureFormat.Bc7RgbaUnorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Bc7RgbaUnormSrgb]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
   [CompressedTextureFormat.Etc2Rgb8Unorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
+  [CompressedTextureFormat.Etc2Rgb8Srgb]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
   [CompressedTextureFormat.Etc2Rgb8A1Unorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
+  [CompressedTextureFormat.Etc2Rgb8A1Srgb]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
   [CompressedTextureFormat.Etc2Rgba8Unorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Etc2Rgba8Srgb]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
   [CompressedTextureFormat.EacR11Unorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 8 },
   [CompressedTextureFormat.EacRg11Unorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc4x4Unorm]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc4x4Srgb]: { blockWidth: 4, blockHeight: 4, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc5x4Unorm]: { blockWidth: 5, blockHeight: 4, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc5x4Srgb]: { blockWidth: 5, blockHeight: 4, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc5x5Unorm]: { blockWidth: 5, blockHeight: 5, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc5x5Srgb]: { blockWidth: 5, blockHeight: 5, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc6x5Unorm]: { blockWidth: 6, blockHeight: 5, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc6x5Srgb]: { blockWidth: 6, blockHeight: 5, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc6x6Unorm]: { blockWidth: 6, blockHeight: 6, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc6x6Srgb]: { blockWidth: 6, blockHeight: 6, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc8x5Unorm]: { blockWidth: 8, blockHeight: 5, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc8x5Srgb]: { blockWidth: 8, blockHeight: 5, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc8x6Unorm]: { blockWidth: 8, blockHeight: 6, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc8x6Srgb]: { blockWidth: 8, blockHeight: 6, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc8x8Unorm]: { blockWidth: 8, blockHeight: 8, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc8x8Srgb]: { blockWidth: 8, blockHeight: 8, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc10x5Unorm]: { blockWidth: 10, blockHeight: 5, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc10x5Srgb]: { blockWidth: 10, blockHeight: 5, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc10x6Unorm]: { blockWidth: 10, blockHeight: 6, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc10x6Srgb]: { blockWidth: 10, blockHeight: 6, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc10x8Unorm]: { blockWidth: 10, blockHeight: 8, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc10x8Srgb]: { blockWidth: 10, blockHeight: 8, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc10x10Unorm]: { blockWidth: 10, blockHeight: 10, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc10x10Srgb]: { blockWidth: 10, blockHeight: 10, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc12x10Unorm]: { blockWidth: 12, blockHeight: 10, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc12x10Srgb]: { blockWidth: 12, blockHeight: 10, bytesPerBlock: 16 },
   [CompressedTextureFormat.Astc12x12Unorm]: { blockWidth: 12, blockHeight: 12, bytesPerBlock: 16 },
+  [CompressedTextureFormat.Astc12x12Srgb]: { blockWidth: 12, blockHeight: 12, bytesPerBlock: 16 },
 });
 
 /** Block geometry of `format`. */
@@ -162,26 +231,49 @@ export const compressedLevelByteLength = (format: CompressedTextureFormat, width
  */
 export const compressedFormatPreference: readonly CompressedTextureFormat[] = Object.freeze([
   CompressedTextureFormat.Bc7RgbaUnorm,
+  CompressedTextureFormat.Bc7RgbaUnormSrgb,
   CompressedTextureFormat.Astc4x4Unorm,
+  CompressedTextureFormat.Astc4x4Srgb,
   CompressedTextureFormat.Astc5x4Unorm,
+  CompressedTextureFormat.Astc5x4Srgb,
   CompressedTextureFormat.Astc5x5Unorm,
+  CompressedTextureFormat.Astc5x5Srgb,
   CompressedTextureFormat.Astc6x5Unorm,
+  CompressedTextureFormat.Astc6x5Srgb,
   CompressedTextureFormat.Astc6x6Unorm,
+  CompressedTextureFormat.Astc6x6Srgb,
   CompressedTextureFormat.Astc8x5Unorm,
+  CompressedTextureFormat.Astc8x5Srgb,
   CompressedTextureFormat.Astc8x6Unorm,
+  CompressedTextureFormat.Astc8x6Srgb,
   CompressedTextureFormat.Astc8x8Unorm,
+  CompressedTextureFormat.Astc8x8Srgb,
   CompressedTextureFormat.Astc10x5Unorm,
+  CompressedTextureFormat.Astc10x5Srgb,
   CompressedTextureFormat.Astc10x6Unorm,
+  CompressedTextureFormat.Astc10x6Srgb,
   CompressedTextureFormat.Astc10x8Unorm,
+  CompressedTextureFormat.Astc10x8Srgb,
   CompressedTextureFormat.Astc10x10Unorm,
+  CompressedTextureFormat.Astc10x10Srgb,
   CompressedTextureFormat.Astc12x10Unorm,
+  CompressedTextureFormat.Astc12x10Srgb,
   CompressedTextureFormat.Astc12x12Unorm,
+  CompressedTextureFormat.Astc12x12Srgb,
   CompressedTextureFormat.Etc2Rgba8Unorm,
+  CompressedTextureFormat.Etc2Rgba8Srgb,
   CompressedTextureFormat.Bc3RgbaUnorm,
+  CompressedTextureFormat.Bc3RgbaUnormSrgb,
   CompressedTextureFormat.Bc2RgbaUnorm,
+  CompressedTextureFormat.Bc2RgbaUnormSrgb,
   CompressedTextureFormat.Etc2Rgb8A1Unorm,
+  CompressedTextureFormat.Etc2Rgb8A1Srgb,
   CompressedTextureFormat.Etc2Rgb8Unorm,
+  CompressedTextureFormat.Etc2Rgb8Srgb,
+  CompressedTextureFormat.Bc1RgbUnorm,
+  CompressedTextureFormat.Bc1RgbUnormSrgb,
   CompressedTextureFormat.Bc1RgbaUnorm,
+  CompressedTextureFormat.Bc1RgbaUnormSrgb,
   CompressedTextureFormat.Bc6hRgbUfloat,
   CompressedTextureFormat.Bc6hRgbFloat,
   CompressedTextureFormat.Bc5RgUnorm,

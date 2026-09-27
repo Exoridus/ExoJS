@@ -114,6 +114,9 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     supportsColorFormat() {
       return true;
     },
+    getColorFormatCapabilities() {
+      return { renderable: true, filterable: true, blendable: true, sampleCounts: [1] };
+    },
     readPixels: (<T extends PixelDataType = 'uint8'>(
       _source: RenderTexture,
       _x: number,

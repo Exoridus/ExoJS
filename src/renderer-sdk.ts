@@ -23,7 +23,7 @@ export { PixelSnapMode } from '#rendering/pixelSnap';
 export type { DrawCommand, SharedTransformRenderer } from '#rendering/plan/renderCommand';
 export type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 export type { RetainedBatchCapableRenderer, RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
-export type { RenderBackend } from '#rendering/RenderBackend';
+export type { ColorFormatCapabilities, RenderBackend } from '#rendering/RenderBackend';
 export { RenderBackendType } from '#rendering/RenderBackendType';
 export type { InstanceAttributeBinding, InstanceDataView } from '#rendering/RenderBatch';
 export type { DrawableConstructor, Renderer } from '#rendering/Renderer';

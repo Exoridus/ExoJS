@@ -1,5 +1,6 @@
 import { clamp } from '#math/utils';
 
+import { SRGB_BYTE_TO_LINEAR } from './colorTransfer';
 import { resolveCssColor } from './cssColor';
 import { assert } from './dev';
 import type { Cloneable } from './types';
@@ -250,6 +251,18 @@ export class Color implements Cloneable<Color> {
     }
 
     return this._array;
+  }
+
+  /**
+   * Write linear-light RGBA components into `out`, beginning at `offset`.
+   * RGB is decoded from the sRGB authoring channels and alpha is copied
+   * unchanged. The destination must have room for four values.
+   */
+  public writeLinear(out: Float32Array, offset = 0): void {
+    out[offset] = SRGB_BYTE_TO_LINEAR[this._r]!;
+    out[offset + 1] = SRGB_BYTE_TO_LINEAR[this._g]!;
+    out[offset + 2] = SRGB_BYTE_TO_LINEAR[this._b]!;
+    out[offset + 3] = this._a;
   }
 
   /**

@@ -42,7 +42,7 @@ import {
   type RetainedInstructionSet,
   stampRetainedBatchGeneration,
 } from '#rendering/plan/RetainedInstructionSet';
-import type { RenderBackend } from '#rendering/RenderBackend';
+import type { ColorFormatCapabilities, RenderBackend } from '#rendering/RenderBackend';
 import { sanitizeSurfacePixelRatio } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { InstanceDataView } from '#rendering/RenderBatch';
@@ -68,7 +68,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import { TransformBuffer } from '#rendering/TransformBuffer';
-import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
+import { BlendModes, type ColorTextureFormat, ScaleModes, TextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
 import type { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
@@ -364,6 +364,10 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _loseContextExtension: WEBGL_lose_context | null;
   /** Whether `EXT_color_buffer_float` is available (float RenderTexture targets are renderable). */
   private _floatRenderable = false;
+  /** Whether float32 textures can use linear sampler state. */
+  private _float32Filterable = false;
+  /** Whether float32 color attachments can use fixed-function blending. */
+  private _float32Blendable = false;
   // This context's `gl.MAX_TEXTURE_SIZE`. Caps both dimensions of the shared
   // transform/tint textures, so the transform store's layout consults it to
   // reject an impossible capacity up front instead of letting `texImage2D` fail
@@ -483,6 +487,8 @@ export class WebGl2Backend implements RenderBackend {
     // Enable + cache float color-buffer renderability. getExtension() is the
     // enable call; without it, RGBA16F/RGBA32F are not color-renderable in WebGL2.
     this._floatRenderable = this._context.getExtension('EXT_color_buffer_float') !== null;
+    this._float32Filterable = this._context.getExtension('OES_texture_float_linear') !== null;
+    this._float32Blendable = this._context.getExtension('EXT_float_blend') !== null;
     this._maxTextureSize = this._context.getParameter(this._context.MAX_TEXTURE_SIZE) as number;
     this._compressedFormats = probeWebgl2CompressedFormats(this._context);
     this._maxColorAttachments = readMaxColorAttachments(this._context);
@@ -1289,8 +1295,20 @@ export class WebGl2Backend implements RenderBackend {
    * the `EXT_color_buffer_float` WebGL2 extension. Callers should check this
    * before allocating a float target and fall back to `'rgba8'` themselves.
    */
+  public getColorFormatCapabilities(format: ColorTextureFormat): ColorFormatCapabilities {
+    switch (format) {
+      case TextureFormat.Rgba8:
+      case TextureFormat.Rgba8Srgb:
+        return colorFormatCapabilities(true, true, true);
+      case TextureFormat.Rgba16F:
+        return colorFormatCapabilities(this._floatRenderable, true, this._floatRenderable);
+      case TextureFormat.Rgba32F:
+        return colorFormatCapabilities(this._floatRenderable, this._float32Filterable, this._floatRenderable && this._float32Blendable);
+    }
+  }
+
   public supportsColorFormat(format: ColorTextureFormat): boolean {
-    return format === TextureFormat.Rgba8 || this._floatRenderable;
+    return this.getColorFormatCapabilities(format).renderable;
   }
 
   public supportsReadbackFormat(format: ColorTextureFormat): boolean {
@@ -1653,6 +1671,10 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public setBlendMode(blendMode: BlendModes | null): this {
+    if (blendMode !== null) {
+      this._assertTargetBlendable(this._renderTarget);
+    }
+
     if (blendMode !== this._blendMode) {
       this._blendMode = blendMode;
       this._applyBlendMode(blendMode, null, 0);
@@ -1681,6 +1703,8 @@ export class WebGl2Backend implements RenderBackend {
    * Part of the renderer SDK contract for extension renderers.
    */
   public setAttachmentBlendModes(modes: readonly BlendModes[] | null, fallback: BlendModes): this {
+    this._assertTargetBlendable(this._renderTarget);
+
     if (modes === null) {
       // `fallback` and not only the cached mode: a renderer that set indexed
       // state without a whole-draw `setBlendMode` first leaves the cache at
@@ -2577,6 +2601,8 @@ export class WebGl2Backend implements RenderBackend {
     // not survive a context loss, so RGBA16F/RGBA32F render targets would stop
     // being color-renderable until this is re-fetched on the fresh context.
     this._floatRenderable = gl.getExtension('EXT_color_buffer_float') !== null;
+    this._float32Filterable = gl.getExtension('OES_texture_float_linear') !== null;
+    this._float32Blendable = gl.getExtension('EXT_float_blend') !== null;
 
     // Same reason: the timer's extension and its queries died with the context.
     if (this._gpuTimingRequested) {
@@ -2984,7 +3010,7 @@ export class WebGl2Backend implements RenderBackend {
 
   /** Reject a colour format this context cannot render into. */
   private _assertColorFormatRenderable(format: ColorTextureFormat): void {
-    if (format !== TextureFormat.Rgba8 && !this._floatRenderable) {
+    if (format !== TextureFormat.Rgba8 && format !== TextureFormat.Rgba8Srgb && !this._floatRenderable) {
       throw new Error(
         `Render target: format '${format}' requires the WebGL2 extension 'EXT_color_buffer_float', which this context does not support. Check backend.supportsColorFormat() and fall back to TextureFormat.Rgba8.`,
       );
@@ -3041,6 +3067,8 @@ export class WebGl2Backend implements RenderBackend {
     if (handles.length > 1 || attached.length > 1) {
       gl.drawBuffers(buffers);
     }
+
+    this._assertFramebufferComplete();
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
 
@@ -3101,6 +3129,7 @@ export class WebGl2Backend implements RenderBackend {
 
           gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
           gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureState.handle, 0);
+          this._assertFramebufferComplete();
           gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
 
           state.attachedTextures.length = 1;
@@ -3195,6 +3224,7 @@ export class WebGl2Backend implements RenderBackend {
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, state.depthStencilTexture, 0);
+      this._assertFramebufferComplete();
       gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
     } else {
       if (state.stencilRenderbuffer === null) {
@@ -3207,6 +3237,7 @@ export class WebGl2Backend implements RenderBackend {
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, state.stencilRenderbuffer);
+      this._assertFramebufferComplete();
       gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
     }
 
@@ -3356,6 +3387,7 @@ export class WebGl2Backend implements RenderBackend {
    * never land on a steady-state frame.
    */
   private _applySamplerParameters(texture: Texture | RenderTexture, state: ManagedTextureState, samplerKey: number): void {
+    this._assertTextureFilterable(texture);
     const gl = this._context;
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
@@ -3366,6 +3398,38 @@ export class WebGl2Backend implements RenderBackend {
     state.samplerKey = samplerKey;
   }
 
+  private _assertTextureFilterable(texture: Texture | RenderTexture): void {
+    if (!scaleModeRequiresLinearFiltering(texture.scaleMode) || !isFloat32Texture(texture) || this._float32Filterable) {
+      return;
+    }
+
+    const format = floatTextureFormat(texture);
+
+    throw new RenderError({
+      code: 'unsupported-format',
+      backendType: RenderBackendType.WebGl2,
+      message: `Texture format '${format}' requires 'OES_texture_float_linear' for linear sampling on this context. Use nearest sampling or check backend.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable.`,
+    });
+  }
+
+  private _assertTargetBlendable(target: RenderTarget): void {
+    if (target.root) {
+      return;
+    }
+
+    const attachments = target instanceof MultiRenderTarget ? target.attachments : [target as RenderTexture];
+
+    for (const attachment of attachments) {
+      if (!this.getColorFormatCapabilities(attachment.format).blendable) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGl2,
+          message: `Render target format '${attachment.format}' does not support fixed-function blending on this context. Check backend.getColorFormatCapabilities(format).blendable.`,
+        });
+      }
+    }
+  }
+
   /**
    * Upload `texture`'s current contents into its already-bound GL texture and
    * re-stamp `state`. Split out of {@link _syncTexture}; never called for a
@@ -3374,8 +3438,6 @@ export class WebGl2Backend implements RenderBackend {
   private _syncTextureUpload(texture: Texture | RenderTexture, state: ManagedTextureState, version: number): ManagedTextureState {
     const gl = this._context;
     const compressedPayload = compressedPayloadOf(texture);
-
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
 
     if (texture instanceof DataTexture) {
       // `instanceof DataTexture` narrows to `DataTexture<any>` (the generic is
@@ -3475,6 +3537,17 @@ export class WebGl2Backend implements RenderBackend {
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, info.format, info.type, texture.source);
         this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
       }
+    } else if (texture.pixels !== null) {
+      const internalFormat = texture.colorSpace === 'srgb' ? gl.SRGB8_ALPHA8 : gl.RGBA8;
+      let uploadedBytes = 0;
+
+      for (const [level, { data, width, height }] of texture.pixels.levels.entries()) {
+        gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+        uploadedBytes += data.byteLength;
+      }
+
+      state.accountedBytes = this._accountant.reallocate(state.accountedBytes, uploadedBytes);
+      this._accountant.recordTextureUpload(uploadedBytes);
     } else if (compressedPayload !== null) {
       const { format, levels } = compressedPayload;
       const internalFormat = this._compressedFormats.internalFormats.get(format);
@@ -3500,30 +3573,27 @@ export class WebGl2Backend implements RenderBackend {
       state.accountedBytes = this._accountant.reallocate(state.accountedBytes, uploadedBytes);
       this._accountant.recordTextureUpload(uploadedBytes);
     } else if (texture.source) {
-      if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-        this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
-      } else {
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+      const internalFormat = texture.colorSpace === 'srgb' ? gl.SRGB8_ALPHA8 : gl.RGBA8;
+
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
+
+      try {
+        if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+          this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
+        } else {
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+        }
+
+        this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
+      } finally {
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
       }
-
-      this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
     }
 
-    // Pixel-store state is upload-local, never inherited - the same discipline
-    // the UNPACK_ALIGNMENT restore above follows. GL keeps
-    // UNPACK_PREMULTIPLY_ALPHA_WEBGL globally, so leaving it set lets the NEXT
-    // upload multiply its RGB channels by its alpha channel. A renderer-private
-    // raw upload that never calls pixelStorei itself - the text renderer's
-    // RGBA32F node-data texture is the only one today - then inherits it, and
-    // in a float payload the "alpha" slot carries real data (a transform's
-    // `ty`, an ink-bounds height), so the result is arbitrary geometry rather
-    // than merely darker pixels.
-    if (texture.premultiplyAlpha) {
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    }
-
-    if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {
+    if (texture.generateMipMap && (texture instanceof RenderTexture || (texture.pixels === null && texture.source !== null))) {
       gl.generateMipmap(gl.TEXTURE_2D);
     }
 
@@ -3532,6 +3602,19 @@ export class WebGl2Backend implements RenderBackend {
     state.height = texture.height;
 
     return state;
+  }
+
+  private _assertFramebufferComplete(): void {
+    const gl = this._context;
+    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      throw new RenderError({
+        code: 'unsupported-format',
+        backendType: RenderBackendType.WebGl2,
+        message: `WebGL framebuffer is incomplete (status ${status}).`,
+      });
+    }
   }
 
   /** Writes into `out` and returns it - see {@link _clipPixelStack} for why nothing here allocates. */
@@ -3598,6 +3681,31 @@ export class WebGl2Backend implements RenderBackend {
 
 // Content + render textures upload as gl.RGBA / gl.UNSIGNED_BYTE = 4 bytes/px.
 const RGBA8_BYTES_PER_PIXEL = 4;
+const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blendable: boolean): ColorFormatCapabilities => ({
+  renderable,
+  filterable,
+  blendable,
+  sampleCounts: [1],
+});
+
+const scaleModeRequiresLinearFiltering = (scaleMode: ScaleModes): boolean =>
+  scaleMode === ScaleModes.Linear ||
+  scaleMode === ScaleModes.LinearMipmapNearest ||
+  scaleMode === ScaleModes.NearestMipmapLinear ||
+  scaleMode === ScaleModes.LinearMipmapLinear;
+
+const isFloat32Texture = (texture: Texture | RenderTexture): boolean =>
+  texture instanceof RenderTexture
+    ? texture.format === TextureFormat.Rgba32F
+    : texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
+
+const floatTextureFormat = (texture: Texture | RenderTexture): string => {
+  if (texture instanceof RenderTexture || texture instanceof DataTexture) {
+    return String(texture.format);
+  }
+
+  return 'unknown';
+};
 
 interface WebGl2DataTextureFormatInfo {
   readonly internalFormat: number; // gl.R8 / gl.R32F / gl.RGBA8 / gl.RGBA16F / gl.RGBA32F
@@ -3632,6 +3740,7 @@ const buildWebgl2DataTextureFormatTable = (gl: typeof WebGL2RenderingContext): W
   [TextureFormat.R8]: Object.freeze({ internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1, bytesPerPixel: 1 }),
   [TextureFormat.R32F]: Object.freeze({ internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1, bytesPerPixel: 4 }),
   [TextureFormat.Rgba8]: Object.freeze({ internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 }),
+  [TextureFormat.Rgba8Srgb]: Object.freeze({ internalFormat: gl.SRGB8_ALPHA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 }),
   [TextureFormat.Rgba16F]: Object.freeze({ internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT, channels: 4, bytesPerPixel: 8 }),
   [TextureFormat.Rgba32F]: Object.freeze({ internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4, bytesPerPixel: 16 }),
 });
