@@ -16,7 +16,16 @@
 import { describe, expect, it } from 'vitest';
 
 import { openingLoad, physicsCards, renderingCards } from '../../site/src/lib/bench-cards';
-import { benchProfiles, formatMs, isQuantitative, outcomeOf, type ProfileCell, publishedMs, type TimerCheck } from '../../site/src/lib/bench-profiles';
+import {
+  benchProfiles,
+  formatMs,
+  isQuantitative,
+  outcomeOf,
+  type ProfileCell,
+  publishedMs,
+  type TimerCheck,
+  withheldScenario,
+} from '../../site/src/lib/bench-profiles';
 
 /** A cell whose competitor arm reported `ms` under the given timer verdict. */
 const cellOf = (ms: number, timer: TimerCheck, comparable = true): ProfileCell => ({
@@ -152,5 +161,9 @@ describe('every published profile', () => {
     for (const card of benchProfiles.flatMap(document => (['webgl2', 'webgpu'] as const).flatMap(backend => renderingCards(document, backend)))) {
       expect(openingLoad(card)).toBeDefined();
     }
+  });
+
+  it('publishes the aligned joint-chain workload as a normal comparison', () => {
+    expect(withheldScenario('joints')).toBeUndefined();
   });
 });
