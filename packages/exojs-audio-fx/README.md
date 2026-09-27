@@ -52,6 +52,8 @@ Beat detection estimates tempo and phase. Polling windows such as `justBeat` are
 
 [The synthetic MIR evaluation](docs/mir-evaluation.md) documents reproducible quality and posting-latency measurements, adversarial fixtures, provisional-versus-locked comparisons, and their limits. Run the named evaluation test from the repository root; no external audio dataset is required.
 
+[The recorded music corpus](test/fixtures/music/README.md) complements it with five committed CC0 excerpts. Its tests run offline and distinguish unreviewed beat proposals from reviewed references; passing integration checks alone does not establish accuracy on music.
+
 ## License
 
 MIT

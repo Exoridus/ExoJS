@@ -1,5 +1,7 @@
 # Synthetic beat evaluation
 
+The companion [recorded music corpus](../test/fixtures/music/README.md) adds five pinned CC0 excerpts and an annotation-review contract. Three click-overlay references are accepted by auditory review and have descriptive quality measurements. ChillMenu and Cave Theme retain rejected proposals with no accuracy scores until corrected and reviewed. It does not change the synthetic reference data or the production detector.
+
 The MIR harness evaluates the production beat worklet with reproducible mono PCM and annotated beat times. It reuses `test/harness/beat-sandbox.ts`, `test/harness/beat-metrics.ts`, and `test/fixtures/beat-fixtures.ts`. No audio download, external dataset, network connection, or detector tuning is required.
 
 From the repository root:
