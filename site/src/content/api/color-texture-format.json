@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "ColorTextureFormat",
-          "signature": "TextureFormat.Rgba16F | TextureFormat.Rgba32F | TextureFormat.Rgba8",
+          "signature": "TextureFormat.Rgba16F | TextureFormat.Rgba32F | TextureFormat.Rgba8 | TextureFormat.Rgba8Srgb",
           "signatureTokens": [
             {
               "text": "TextureFormat.Rgba16F",
@@ -51,6 +51,14 @@
             },
             {
               "text": "TextureFormat.Rgba8",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFormat.Rgba8Srgb",
               "kind": "type"
             }
           ],

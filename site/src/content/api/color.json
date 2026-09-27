@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 31,
+  "memberCount": 32,
   "counts": {
     "constructors": 2,
-    "methods": 14,
+    "methods": 15,
     "properties": 15,
     "events": 0
   },
@@ -784,6 +784,74 @@
           "params": [],
           "returnType": "string",
           "description": "The six-digit hex form, so a color can be handed straight to a CSS or canvas property."
+        },
+        {
+          "name": "writeLinear",
+          "signature": "writeLinear(out: Float32Array, offset: number): void",
+          "signatureTokens": [
+            {
+              "text": "writeLinear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "offset",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "out",
+              "type": "Float32Array",
+              "optional": false
+            },
+            {
+              "name": "offset",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Write linear-light RGBA components into out, beginning at offset. RGB is decoded from the sRGB authoring channels and alpha is copied unchanged. The destination must have room for four values."
         },
         {
           "name": "from",

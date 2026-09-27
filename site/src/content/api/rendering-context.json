@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
-    "methods": 18,
+    "methods": 19,
     "properties": 4,
     "events": 0
   },
@@ -660,6 +660,53 @@
           ],
           "returnType": "void",
           "description": "Immediately draw a single Geometry with transform as its world matrix - no retained RenderNode required. Useful for procedural or data-driven shapes that would be wasteful to wrap in a node. The draw is submitted through the mesh renderer and flushed at once, so it lands in call order relative to the surrounding render calls: a drawGeometry issued after a layer's render draws on top of it. All output is presented at the frame-end backend flush, as usual. transform is taken as the raw world matrix (a, b, c, d, tx, ty), bypassing the position / rotation / scale / origin composition a node would apply - build it with Matrix directly. The geometry must use the triangle-list topology and the standard mesh attribute layout (position, optional texcoord and color); custom per-vertex attributes are dropped. This is the single-draw convenience of the immediate API: each call is its own flush and draw call, and the geometry is repacked every call, so it is best for a handful of draws. An instanced batch path for drawing many like items as one upload + one draw follows in a later release."
+        },
+        {
+          "name": "getColorFormatCapabilities",
+          "signature": "getColorFormatCapabilities(format: ColorTextureFormat): ColorFormatCapabilities",
+          "signatureTokens": [
+            {
+              "text": "getColorFormatCapabilities",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorFormatCapabilities",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "format",
+              "type": "ColorTextureFormat",
+              "optional": false
+            }
+          ],
+          "returnType": "ColorFormatCapabilities",
+          "description": "Independent render-target capabilities for the requested color format."
         },
         {
           "name": "preFrame",

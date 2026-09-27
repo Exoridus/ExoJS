@@ -267,7 +267,7 @@
             }
           ],
           "returnType": "string",
-          "description": "Only the MIME type is identity. Sampler and upload state belong to the individual handle - two handles for one image share a single decode and keep independent samplers - so folding it in would decode the same bytes twice."
+          "description": "MIME type and no-conversion data decoding are identity. Sampler and upload state belong to the individual handle - two handles for one image share a single decode and keep independent samplers - so folding them in would decode the same bytes twice."
         },
         {
           "name": "sourceIdentity",
