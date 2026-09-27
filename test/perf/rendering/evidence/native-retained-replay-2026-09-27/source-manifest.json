@@ -1,0 +1,13 @@
+{
+  "base": "07d5ea5496381a24b82d491edf763578448574c5",
+  "normalization": "LF before SHA-256",
+  "files": {
+    "src/rendering/webgpu/WebGpuNativeRetainedReplay.ts": "dfe40210af1985526438d28671f89d9b785e912474a39d8daacfdad57e977ece",
+    "src/rendering/webgpu/WebGpuBackend.ts": "f43cdbba21d884339e51d8dae1e56f41c12f5b15c9b5940121462c56db355502",
+    "src/rendering/webgpu/WebGpuRetainedGroupBundle.ts": "6ad9f0efe469d095a57c4a39cd096e57d97fc1c5a837a0f3cbbb6ec8138d64f4",
+    "src/rendering/webgpu/WebGpuSpriteRenderer.ts": "827c27ba8bfa195b7f91335fab9a3789621bf7994fe72e33e78713e5a8d05431",
+    "src/rendering/webgpu/WebGpuTextRenderer.ts": "aeba99f0c01a5cd91f47baa0b6f94f1d97b1d762ec6353fc3c988cc3ccf44ea4",
+    "src/rendering/webgpu/WebGpuScalableSpriteRenderer.ts": "c8dd18a6312795405ef6945b6778d56b8c9f1594f5a1a88761b08940cea67b5f",
+    "packages/exojs-tilemap/src/webgpu/WebGpuTileChunkRenderer.ts": "a17633980f6a911641548e2140738f4be953961bb9b6058dfd6713b4b30e30a0"
+  }
+}

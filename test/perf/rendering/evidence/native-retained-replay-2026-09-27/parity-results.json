@@ -1,0 +1,277 @@
+{
+  "revision": "07d5ea5496381a24b82d491edf763578448574c5",
+  "tree": "c57d4ada609cb74bf0a227ecd4e2b72cb6b9e94f",
+  "date": "2026-09-27T04:28:31.960Z",
+  "results": [
+    {
+      "run": 0,
+      "browser": "153.0.8010.12",
+      "cell": {
+        "id": "10k",
+        "count": 10000,
+        "runLength": 64,
+        "parityOnly": true
+      },
+      "batches": 157,
+      "rendererCounts": {
+        "WebGpuSpriteRenderer": 157
+      },
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "isolated": true,
+      "cold": [],
+      "samples": [],
+      "parity": {
+        "captureCounts": [0, 157, 157],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 800955
+      },
+      "errors": []
+    },
+    {
+      "run": 0,
+      "browser": "153.0.8010.12",
+      "cell": {
+        "id": "50k",
+        "count": 50000,
+        "runLength": 64,
+        "parityOnly": true
+      },
+      "batches": 782,
+      "rendererCounts": {
+        "WebGpuSpriteRenderer": 782
+      },
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "isolated": true,
+      "cold": [],
+      "samples": [],
+      "parity": {
+        "captureCounts": [0, 782, 782],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 1897594
+      },
+      "errors": []
+    },
+    {
+      "run": 0,
+      "browser": "153.0.8010.12",
+      "cell": {
+        "id": "100k",
+        "count": 100000,
+        "runLength": 64,
+        "parityOnly": true
+      },
+      "batches": 1563,
+      "rendererCounts": {
+        "WebGpuSpriteRenderer": 1563
+      },
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "isolated": true,
+      "cold": [],
+      "samples": [],
+      "parity": {
+        "captureCounts": [0, 1563, 1563],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 3032547
+      },
+      "errors": []
+    },
+    {
+      "run": 1,
+      "browser": "153.0.8010.12",
+      "cell": {
+        "id": "10k",
+        "count": 10000,
+        "runLength": 64,
+        "parityOnly": true
+      },
+      "batches": 157,
+      "rendererCounts": {
+        "WebGpuSpriteRenderer": 157
+      },
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "isolated": true,
+      "cold": [],
+      "samples": [],
+      "parity": {
+        "captureCounts": [0, 157, 157],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 800955
+      },
+      "errors": []
+    },
+    {
+      "run": 1,
+      "browser": "153.0.8010.12",
+      "cell": {
+        "id": "50k",
+        "count": 50000,
+        "runLength": 64,
+        "parityOnly": true
+      },
+      "batches": 782,
+      "rendererCounts": {
+        "WebGpuSpriteRenderer": 782
+      },
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "isolated": true,
+      "cold": [],
+      "samples": [],
+      "parity": {
+        "captureCounts": [0, 782, 782],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 1897594
+      },
+      "errors": []
+    },
+    {
+      "run": 1,
+      "browser": "153.0.8010.12",
+      "cell": {
+        "id": "100k",
+        "count": 100000,
+        "runLength": 64,
+        "parityOnly": true
+      },
+      "batches": 1563,
+      "rendererCounts": {
+        "WebGpuSpriteRenderer": 1563
+      },
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "isolated": true,
+      "cold": [],
+      "samples": [],
+      "parity": {
+        "captureCounts": [0, 1563, 1563],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 3032547
+      },
+      "errors": []
+    },
+    {
+      "run": 2,
+      "browser": "153.0.8010.12",
+      "cell": {
+        "id": "10k",
+        "count": 10000,
+        "runLength": 64,
+        "parityOnly": true
+      },
+      "batches": 157,
+      "rendererCounts": {
+        "WebGpuSpriteRenderer": 157
+      },
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "isolated": true,
+      "cold": [],
+      "samples": [],
+      "parity": {
+        "captureCounts": [0, 157, 157],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 800955
+      },
+      "errors": []
+    },
+    {
+      "run": 2,
+      "browser": "153.0.8010.12",
+      "cell": {
+        "id": "50k",
+        "count": 50000,
+        "runLength": 64,
+        "parityOnly": true
+      },
+      "batches": 782,
+      "rendererCounts": {
+        "WebGpuSpriteRenderer": 782
+      },
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "isolated": true,
+      "cold": [],
+      "samples": [],
+      "parity": {
+        "captureCounts": [0, 782, 782],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 1897594
+      },
+      "errors": []
+    },
+    {
+      "run": 2,
+      "browser": "153.0.8010.12",
+      "cell": {
+        "id": "100k",
+        "count": 100000,
+        "runLength": 64,
+        "parityOnly": true
+      },
+      "batches": 1563,
+      "rendererCounts": {
+        "WebGpuSpriteRenderer": 1563
+      },
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "isolated": true,
+      "cold": [],
+      "samples": [],
+      "parity": {
+        "captureCounts": [0, 1563, 1563],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 3032547
+      },
+      "errors": []
+    }
+  ]
+}
