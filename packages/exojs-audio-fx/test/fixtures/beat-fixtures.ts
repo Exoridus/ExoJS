@@ -573,3 +573,51 @@ export const allFixtures = (durationSec = DEFAULT_DURATION_SEC): BeatFixture[] =
     softOnset(90, durationSec),
   ];
 };
+
+/** Fixed adversarial signals; beat annotations exclude distractors and silent gaps. */
+export const adversarialFixtures = (): BeatFixture[] => {
+  const durationSec = 12;
+  const source = clicktrack(120, 10);
+  const delayedSamples = new Float32Array(durationSec * SAMPLE_RATE);
+  delayedSamples.set(source.samples, Math.round(1.137 * SAMPLE_RATE));
+  const delayed: BeatFixture = {
+    samples: delayedSamples,
+    beatTimesSec: source.beatTimesSec.map(time => time + 1.137),
+    bpm: 120,
+    label: 'delayed-clicks',
+  };
+  const quiet: BeatFixture = { ...delayed, samples: delayed.samples.map(value => value * 0.01), label: 'quiet-clicks' };
+  const gap = clicktrack(120, durationSec);
+  gap.label = 'missing-beats';
+  gap.samples.fill(0, 4 * SAMPLE_RATE, 6 * SAMPLE_RATE);
+  gap.beatTimesSec = gap.beatTimesSec.filter(time => time < 4 || time >= 6);
+
+  const distractors = clicktrack(120, durationSec);
+  distractors.label = 'offbeat-distractors';
+  const burst = makeNoiseBurst(xorshift32(0x4d495231));
+  for (const time of distractors.beatTimesSec) {
+    const offset = Math.round((time + 0.25) * SAMPLE_RATE);
+    for (let i = 0; i < burst.length && offset + i < distractors.samples.length; i++) {
+      distractors.samples[offset + i] += burst[i] * 0.65;
+    }
+  }
+
+  const tone = new Float32Array(durationSec * SAMPLE_RATE);
+  const noise = new Float32Array(tone.length);
+  const random = xorshift32(0x4d495232);
+  for (let i = 0; i < tone.length; i++) {
+    const time = i / SAMPLE_RATE;
+    const fade = Math.min(1, time / 0.2, (durationSec - time) / 0.2);
+    tone[i] = Math.sin(2 * Math.PI * 440 * time) * 0.2 * fade;
+    noise[i] = (random() * 2 - 1) * 0.1 * fade;
+  }
+  return [
+    delayed,
+    quiet,
+    gap,
+    distractors,
+    { samples: new Float32Array(tone.length), beatTimesSec: [], bpm: 0, label: 'silence' },
+    { samples: tone, beatTimesSec: [], bpm: 0, label: 'sustained-tone' },
+    { samples: noise, beatTimesSec: [], bpm: 0, label: 'seeded-noise' },
+  ];
+};

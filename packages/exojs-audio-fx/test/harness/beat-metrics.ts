@@ -461,3 +461,143 @@ export const formatMetrics = (m: BeatMetrics): string => {
 
   return lines.join('\n');
 };
+
+export interface MirEventMetrics {
+  emittedCount: number;
+  referenceCount: number;
+  matchedCount: number;
+  falsePositiveCount: number;
+  missCount: number;
+  precision: number | null;
+  recall: number | null;
+  f1: number | null;
+  falsePositivesPerMinute: number;
+  firstPostedSec: number | null;
+  timestampErrorMs: { signedMean: number; meanAbs: number; p90Abs: number } | null;
+  postingLatencyMs: { medianLower: number; medianUpper: number; p90Lower: number; p90Upper: number } | null;
+}
+
+export interface MirMetrics {
+  label: string;
+  toleranceMs: number;
+  all: MirEventMetrics;
+  provisional: MirEventMetrics;
+  locked: MirEventMetrics;
+  tempo: { sampleCount: number; accuracy: number | null; octaveTolerantAccuracy: number | null };
+}
+
+const matchMirEvents = (beats: BeatMessage[], reference: number[], toleranceSec: number, contextStartSec: number): { beat: BeatMessage; time: number }[] => {
+  const columns = reference.length + 1;
+  const size = (beats.length + 1) * columns;
+  const counts = new Uint32Array(size);
+  const errors = new Float64Array(size);
+  const moves = new Uint8Array(size);
+
+  // Nearest-first matching can consume the only reference available to a later beat.
+  // Optimize match count first, then total absolute error, over ordered sequences.
+  for (let i = beats.length - 1; i >= 0; i--) {
+    for (let j = reference.length - 1; j >= 0; j--) {
+      const cell = i * columns + j;
+      const skipBeat = cell + columns;
+      const skipReference = cell + 1;
+      counts[cell] = counts[skipBeat];
+      errors[cell] = errors[skipBeat];
+      moves[cell] = 1;
+      if (counts[skipReference] > counts[cell] || (counts[skipReference] === counts[cell] && errors[skipReference] < errors[cell])) {
+        counts[cell] = counts[skipReference];
+        errors[cell] = errors[skipReference];
+        moves[cell] = 2;
+      }
+      const error = Math.abs(beats[i].audioTime - contextStartSec - reference[j]);
+      const diagonal = cell + columns + 1;
+      // Timestamp subtraction must not exclude an event exactly on the tolerance boundary.
+      if (
+        error <= toleranceSec + 1e-9 &&
+        (counts[diagonal] + 1 > counts[cell] || (counts[diagonal] + 1 === counts[cell] && errors[diagonal] + error <= errors[cell]))
+      ) {
+        counts[cell] = counts[diagonal] + 1;
+        errors[cell] = errors[diagonal] + error;
+        moves[cell] = 3;
+      }
+    }
+  }
+
+  const matches: { beat: BeatMessage; time: number }[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < beats.length && j < reference.length) {
+    const move = moves[i * columns + j];
+    if (move === 3) matches.push({ beat: beats[i], time: reference[j] });
+    if (move !== 2) i++;
+    if (move !== 1) j++;
+  }
+  return matches;
+};
+
+/**
+ * Scores annotated beat timestamps with fixed-tolerance one-to-one matching.
+ * Posting latency bounds describe the sandbox's audio block, not main-thread delivery.
+ * Empty denominators and distributions are null; startup misses remain in the score.
+ */
+export const computeMirMetrics = (
+  messages: WorkletMessage[],
+  fixture: BeatFixture,
+  options: { toleranceMs?: number; blockSize?: number; contextStartSec?: number } = {},
+): MirMetrics => {
+  const { toleranceMs = 70, blockSize = 128, contextStartSec = 0 } = options;
+  const reference = [...fixture.beatTimesSec].sort((a, b) => a - b);
+  const beats = extractBeatMessages(messages).sort((a, b) => a.audioTime - b.audioTime || a._audioTimeSec - b._audioTimeSec);
+  const durationSec = fixture.samples.length / 48000;
+  const blockMs = blockSize / 48;
+  const score = (events: BeatMessage[]): MirEventMetrics => {
+    const matches = matchMirEvents(events, reference, toleranceMs / 1000, contextStartSec);
+    const signedErrors = matches.map(({ beat, time }) => (beat.audioTime - contextStartSec - time) * 1000);
+    const absoluteErrors = signedErrors.map(Math.abs).sort((a, b) => a - b);
+    const latencies = matches.map(({ beat, time }) => (beat._audioTimeSec - time) * 1000).sort((a, b) => a - b);
+    const matchedCount = matches.length;
+    const falsePositiveCount = events.length - matchedCount;
+    return {
+      emittedCount: events.length,
+      referenceCount: reference.length,
+      matchedCount,
+      falsePositiveCount,
+      missCount: reference.length - matchedCount,
+      precision: events.length ? matchedCount / events.length : null,
+      recall: reference.length ? matchedCount / reference.length : null,
+      f1: events.length + reference.length ? (2 * matchedCount) / (events.length + reference.length) : null,
+      falsePositivesPerMinute: durationSec > 0 ? (falsePositiveCount * 60) / durationSec : 0,
+      firstPostedSec: events.length ? Math.min(...events.map(event => event._audioTimeSec)) : null,
+      timestampErrorMs: matchedCount
+        ? {
+            signedMean: signedErrors.reduce((sum, value) => sum + value, 0) / matchedCount,
+            meanAbs: absoluteErrors.reduce((sum, value) => sum + value, 0) / matchedCount,
+            p90Abs: percentile(absoluteErrors, 0.9),
+          }
+        : null,
+      postingLatencyMs: matchedCount
+        ? {
+            medianLower: median(latencies),
+            medianUpper: median(latencies) + blockMs,
+            p90Lower: percentile(latencies, 0.9),
+            p90Upper: percentile(latencies, 0.9) + blockMs,
+          }
+        : null,
+    };
+  };
+  const states = extractStateMessages(messages).filter(state => resolveBpmAt(fixture, state._audioTimeSec) > 0);
+  const accuracy = (ratios: number[]): number | null =>
+    states.length
+      ? states.filter(state => {
+          const truth = resolveBpmAt(fixture, state._audioTimeSec);
+          return ratios.some(ratio => Math.abs(state.tempo / (truth * ratio) - 1) <= 0.03);
+        }).length / states.length
+      : null;
+  return {
+    label: fixture.label,
+    toleranceMs,
+    all: score(beats),
+    provisional: score(beats.filter(beat => beat.status === 'provisional')),
+    locked: score(beats.filter(beat => beat.status === 'locked')),
+    tempo: { sampleCount: states.length, accuracy: accuracy([1]), octaveTolerantAccuracy: accuracy([0.5, 1, 2]) },
+  };
+};

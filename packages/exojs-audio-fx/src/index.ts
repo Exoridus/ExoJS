@@ -25,3 +25,4 @@ export { ReverbEffect, type ReverbEffectOptions } from './effects/ReverbEffect';
 export { RingModulatorEffect, type RingModulatorEffectOptions } from './effects/RingModulatorEffect';
 export { TremoloEffect, type TremoloEffectOptions } from './effects/TremoloEffect';
 export { VocoderEffect, type VocoderEffectOptions } from './effects/VocoderEffect';
+export { PcmStreamSource, type PcmStreamSourceOptions, type PcmStreamState } from './PcmStreamSource';

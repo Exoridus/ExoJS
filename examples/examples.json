@@ -838,6 +838,17 @@
       "level": "intro"
     },
     {
+      "slug": "pcm-stream",
+      "path": "audio-fx/pcm-stream.js",
+      "language": "typescript",
+      "title": "Streaming PCM",
+      "description": "Feed stereo PCM through the music bus, inspect the bounded queue, and compare producer starvation, clear and drain.",
+      "backend": "core",
+      "tags": ["audio", "pcm", "streaming", "synthesis"],
+      "capabilities": ["pointer", "audio"],
+      "level": "intermediate"
+    },
+    {
       "slug": "compressor",
       "path": "audio-fx/compressor.js",
       "language": "typescript",
