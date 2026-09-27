@@ -1,5 +1,6 @@
 ﻿import type { ParticleBatch } from '#ParticleStorage';
 
+import type { GlslContribution } from './GlslContribution';
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
@@ -45,6 +46,16 @@ export class OrbitalForce extends UpdateModule {
       velX[i] = (velX[i] ?? 0) + -dy * omega;
       velY[i] = (velY[i] ?? 0) + dx * omega;
     }
+  }
+
+  public override glsl(): GlslContribution {
+    return {
+      ...this.wgsl(),
+      body: `
+vec2 orbitDelta = position - u_OrbitalForce.center;
+velocity += vec2(-orbitDelta.y, orbitDelta.x) * (u_OrbitalForce.angularSpeed * dt);
+      `,
+    };
   }
 
   public override wgsl(): WgslContribution {

@@ -5,14 +5,10 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     let dt = sim.dt;
 
-    // Skip dead particles (lifetime sentinel < 0). Write zero-scale instance
-    // so the renderer doesn't accidentally draw them. A sentinel of exactly -1
-    // is a death the CPU has just marked and nobody has captured yet; the
-    // death-report block (present only when the system has death modules)
-    // snapshots it here, where the particle's last integrated state still
-    // stands, and moves the sentinel to -2 so it reports once.
-    if (timing[idx].y < 0.0) {
-{{deathReport}}
+    // The reserved rotation lane carries terminal state without replacing the
+    // lifetime that modules still need during the final simulation step.
+    let expires = rotInfo[idx].w == -1.0 || rotInfo[idx].w == -3.0;
+    if (rotInfo[idx].w == -2.0 || (!expires && timing[idx].y <= 0.0)) {
         let outBaseDead = idx * 10u;
         for (var k: u32 = 0u; k < 10u; k++) { instanceOutput[outBaseDead + k] = 0u; }
         return;
@@ -25,6 +21,16 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     // Module bodies (in registration order).
 {{moduleBodies}}
+
+    if (expires) {
+        if (rotInfo[idx].w == -1.0) {
+{{deathReport}}
+        }
+        rotInfo[idx].w = -2.0;
+        let outBaseDead = idx * 10u;
+        for (var k: u32 = 0u; k < 10u; k++) { instanceOutput[outBaseDead + k] = 0u; }
+        return;
+    }
 
     // Resolve frame UVs. Anything that is not a valid explicit index shows
     // frame 0, which is what the CPU packer does and what a slot whose index

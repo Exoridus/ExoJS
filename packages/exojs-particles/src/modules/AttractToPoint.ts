@@ -1,5 +1,6 @@
 ﻿import type { ParticleBatch } from '#ParticleStorage';
 
+import type { GlslContribution } from './GlslContribution';
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
@@ -53,6 +54,20 @@ export class AttractToPoint extends UpdateModule {
     }
   }
 
+  public override glsl(): GlslContribution {
+    return {
+      ...this.wgsl(),
+      body: `
+vec2 attractDelta = u_AttractToPoint.point - position;
+float attractDist = length(attractDelta);
+if (attractDist >= 0.00001) {
+    float attractK = u_AttractToPoint.falloff > 0.0 ? min(1.0, attractDist / u_AttractToPoint.falloff) : 1.0;
+    velocity += attractDelta * ((u_AttractToPoint.strength * attractK * dt) / attractDist);
+}
+      `,
+    };
+  }
+
   public override wgsl(): WgslContribution {
     return {
       key: 'AttractToPoint',
@@ -64,7 +79,7 @@ export class AttractToPoint extends UpdateModule {
       body: `
                 let attractDelta = modules.u_AttractToPoint.point - positions[idx];
                 let attractDist = length(attractDelta);
-                if (attractDist > 0.00001) {
+                if (attractDist >= 0.00001) {
                     let attractK = select(1.0, min(1.0, attractDist / max(modules.u_AttractToPoint.falloff, 0.000001)), modules.u_AttractToPoint.falloff > 0.0);
                     let attractAccel = (modules.u_AttractToPoint.strength * attractK * dt) / attractDist;
                     velocities[idx] = velocities[idx] + attractDelta * attractAccel;

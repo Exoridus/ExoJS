@@ -38,7 +38,13 @@ A system's ordinary bounds do not describe the whole moving cloud, so particle c
 
 ## CPU and GPU are execution paths
 
-On WebGL2, simulation uses the CPU path. On WebGPU, GPU routing also depends on the update modules, render mode, and backend/device attachment. Inspect `gpuMode` after the system has been attached and updated; selecting WebGPU alone is not proof that this particular effect is using compute.
+Quad particles can run on WebGL2 transform feedback or WebGPU compute. GPU routing depends on module implementations, render mode, capabilities and backend attachment. Inspect `simulationBackend` after attachment and update: `cpu`, `webgl2` or `webgpu`. `gpuMode` includes both GPU paths. Set `simulation: 'cpu'` in the constructor when you need CPU execution, such as custom JavaScript modules or synchronous death callbacks.
+
+Custom update modules always implement `apply()` and can add explicit `glsl()` and `wgsl()` contributions. Uniform declarations and `writeUniforms()` are shared, and `textureData()` provides the lookup bytes. CPU, GLSL and WGSL bodies run after integration in registration order. Shader bodies treat lifetime and elapsed as read-only because expiry and slot reuse belong to the host. The custom module example below shows all three implementations.
+
+Built-in curve and gradient modules use 256-sample tables with explicit linear interpolation on every backend. Curves use Float32 values; gradient samples use RGBA8 and round interpolated channels to the nearest byte. Features narrower than one table interval are approximated. Changing a table requires clearing and re-registering the modules; uniform parameters update every frame. Turbulence shares an integer lattice hash, but floating-point results need not be bit-identical.
+
+Mesh particles retain their existing WebGPU compute path and use CPU simulation on WebGL2. Ribbon and trail simulation remains on the CPU.
 
 The GPU path keeps integrated state on the device. Do not treat a retained CPU-side position array as authoritative for a live GPU simulation. A custom CPU-only update module makes the system ineligible for that path. A custom render mode can also require CPU execution.
 
@@ -54,7 +60,7 @@ A module order is part of the effect. A later absolute scale or color module can
 
 ## Death hooks and gameplay
 
-Death modules are useful for secondary visual effects. CPU and GPU death reporting have different timing and buffering costs. GPU reporting involves bounded asynchronous data transfer; do not use it as an unqualified, same-frame gameplay authority.
+Death records contain the result of the final integration step and every update module, including final velocity, scale and color. Death modules are useful for secondary visual effects. CPU and GPU death reporting have different timing and buffering costs. GPU reporting uses three asynchronous readback slots and a capacity-sized backlog, delivering batches in submission order and records within each batch in slot order. Overflow drops excess callbacks with a development warning. Clearing or destroying a system cancels pending callbacks; do not use it as an unqualified, same-frame gameplay authority.
 
 Bound secondary emissions so one burst cannot recursively create an unbounded effect. Setting a spawn rate to zero stops future rate-based spawning; existing particles continue until they expire or are explicitly cleared. Destroying the system ends its lifetime rather than merely fading its current population.
 
@@ -72,4 +78,6 @@ Count, lifetime, module complexity, fill area, blend mode, readback, and target 
 
 <ExamplePreview chapter="particles" slug="gpu-particles" />
 
-The GPU demonstration uses a different fallback budget on WebGL2; it is a capability demonstration, not an equal-work benchmark. See [Performance](/ExoJS/en/guide/debugging/performance/) for controlled comparisons and the [`ParticleSystem` reference](/ExoJS/en/api/particle-system/) for exact module and lifetime contracts.
+The GPU demonstration reports the selected simulation backend and frame interval. Its chosen particle budgets are illustrative, not benchmark results. See [Performance](/ExoJS/en/guide/debugging/performance/) for controlled comparisons and the [`ParticleSystem` reference](/ExoJS/en/api/particle-system/) for exact module and lifetime contracts.
+
+<ExamplePreview chapter="particles" slug="custom-wgsl-module" />

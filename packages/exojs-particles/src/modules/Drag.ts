@@ -1,5 +1,6 @@
 ﻿import type { ParticleBatch } from '#ParticleStorage';
 
+import type { GlslContribution } from './GlslContribution';
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
@@ -30,6 +31,15 @@ export class Drag extends UpdateModule {
       velX[i] = (velX[i] ?? 0) * factor;
       velY[i] = (velY[i] ?? 0) * factor;
     }
+  }
+
+  public override glsl(): GlslContribution {
+    return {
+      ...this.wgsl(),
+      body: `
+velocity *= 1.0 - u_Drag.drag * dt;
+      `,
+    };
   }
 
   public override wgsl(): WgslContribution {

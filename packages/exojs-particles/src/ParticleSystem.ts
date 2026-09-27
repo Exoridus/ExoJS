@@ -1,6 +1,7 @@
 ﻿/// <reference types="@webgpu/types" />
 
 import type { Seconds } from '@codexo/exojs';
+import type { Signal } from '@codexo/exojs';
 import { Rectangle } from '@codexo/exojs';
 import { Drawable } from '@codexo/exojs';
 import { logger } from '@codexo/exojs';
@@ -9,6 +10,7 @@ import { Texture } from '@codexo/exojs';
 import type { RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
 import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
 
+import { ParticleGlState } from '#gpu/ParticleGlState';
 import { ParticleGpuState } from '#gpu/ParticleGpuState';
 import type { DeathModule } from '#modules/DeathModule';
 import type { SpawnModule } from '#modules/SpawnModule';
@@ -85,20 +87,23 @@ const getDefaultRenderMode = (): ParticleRenderMode => {
  * level (you can't pass both a texture and a spritesheet by accident).
  */
 export interface ParticleSystemOptions {
+  /** `auto` selects an eligible GPU path after attachment. `cpu` always runs CPU simulation. */
+  readonly simulation?: 'auto' | 'cpu';
   /** Maximum particle count. Fixed at construction. Default 4096. */
   capacity?: number;
   /**
    * Direct GPU device. Lets advanced consumers wire a `GPUDevice` owned
    * outside an `Application` (or a mock device in tests). When omitted,
    * the backend reference is captured automatically on the first
-   * {@link ParticleSystem.render} call - `WebGpuBackend` ⇒ GPU mode,
-   * anything else (incl. WebGL2) ⇒ CPU mode.
+   * {@link ParticleSystem.render} call - `WebGpuBackend` selects compute and eligible WebGL2 quad systems select
+   * transform feedback. An explicitly supplied device is for unattached
+   * simulation; do not render its state through an unrelated backend.
    */
   device?: GPUDevice;
   /**
    * How this system's particles become vertices. Fixed at construction. A mode
    * with `gpuEligible === false` forces the system onto the CPU path -
-   * silently, exactly like an update module without a `wgsl()` implementation,
+   * like an update module without the selected backend's shader implementation,
    * and observable through {@link ParticleSystem.gpuMode}.
    *
    * **Ownership.** A mode passed here belongs to the system: the system
@@ -127,24 +132,25 @@ export interface ParticleSystemOptions {
  *   {@link emit}.
  * - **Spawn modules** - fill freshly emitted particles.
  * - **Update modules** - mutate the live range each frame (forces, color
- *   blends, scale curves, drag, ...). Built-in modules ship both CPU and
- *   WGSL implementations; custom modules can opt into GPU acceleration by
- *   implementing `wgsl()`.
+ *   blends, scale curves, drag, ...). Built-in modules ship CPU, WGSL and GLSL implementations; custom modules
+ *   opt into each GPU backend explicitly.
  * - **Death modules** - fire once per dying particle, before its slot is
  *   recycled (sub-emitters, event hooks).
  * - **An explicitly supplied render mode** - destroyed with the system. The
  *   default mode and the texture are shared and stay the caller's.
  *
- * **Auto-routing CPU vs GPU:** on the first {@link update}, and again after
- * any module change, the system checks whether a WebGPU device is available
- * (the attached backend's or one passed in the options), every registered
- * update module has `wgsl()`, and the render mode is GPU-eligible. If so, a
- * composite compute pipeline runs integration plus all module bodies in one
- * dispatch and writes directly into the renderer's instance buffer (no CPU
- * readback). Otherwise the CPU path runs the per-module `apply()` loops; on
- * WebGL2 that is always the case. A module change that forces a running GPU
- * simulation back onto the CPU clears the live particles, because the CPU
- * holds no copy of the state the device integrated.
+ * **Execution selection:** `simulation: 'cpu'` always uses CPU simulation.
+ * Otherwise WebGPU requires `wgsl()` from every update module and an eligible
+ * render mode; WebGL2 requires `glsl()` from every module and `QuadParticles`.
+ * Missing shader implementations, an unavailable backend, or insufficient
+ * WebGL2 texture capabilities select CPU. Invalid shader source throws and
+ * the next update retries compilation. Inspect {@link simulationBackend} after
+ * attachment and update. Built-in modules support all three paths.
+ *
+ * GPU state stays on the device and is rendered without a full readback.
+ * Module changes that remain eligible preserve live particles. Switching away
+ * from a GPU backend, losing its context/device, or adding an incompatible
+ * module clears particles because CPU storage contains only spawn values.
  *
  * **Per-frame order in {@link update} (CPU mode):**
  * 1. Run every spawn module.
@@ -153,51 +159,11 @@ export interface ParticleSystemOptions {
  * 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired
  *    slots, copy survivors down. `liveCount` shrinks to the survivor count.
  *
- * **Per-frame order in {@link update} (GPU mode):**
- * 1. Run every spawn module (CPU writes initial values into the spawn slot).
- * 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules;
- *    mark the slot dead so the GPU shader skips it. **No compaction** - slots
- *    are recycled on the next spawn.
- * 3. Dispatch the composite compute pipeline. Integration, update modules and
- *    instance packing run in one pass; the instance buffer is written
- *    directly.
- *
- * Tick a system from exactly one place: register it with one system registry,
- * or call {@link update} yourself, never both.
- *
- * **Coordinate space:** particle positions are LOCAL to the system. The
- * system's `getGlobalTransform()` is applied on top during rendering, so
- * setting world-space positions on individual particles double-translates.
- * Position the system itself via `system.setPosition(...)` and emit relative
- * to `(0, 0)`.
- *
- * **View culling:** a system is created with `cullable = false`. Its bounds
- * cover one texture frame at the local origin, because no emitted extent is
- * tracked - so culling against them would remove the entire cloud as soon as
- * the emitter's own origin left the view. For a system whose reach is known,
- * set the node's `cullArea` to a world-space rectangle covering where its
- * particles travel and set `cullable = true` again; the viewport check then
- * uses that rectangle instead of the bounds. `getBounds()` still reports the
- * one-frame box, not an extent of the live particles.
- *
- * **Pixel snapping:** {@link Drawable.pixelSnapMode} has no effect on particle
- * systems. Particle instances bake their own per-particle transforms rather
- * than reading the shared pixel-snap transform, and snapping thousands of
- * independently moving sub-pixel particles to the device grid is not
- * meaningful.
- *
- * @example
- * ```ts
- * // Backend-agnostic - runs on the CPU on WebGL2, on the GPU on WebGPU when eligible.
- * const system = new ParticleSystem(loader.get('spark.png'), {
- *   capacity: 8192,
- * });
- *
- * system.addSpawnModule(new RateSpawn({ rate: new Constant(60), ... }));
- * system.addUpdateModule(new ApplyForce(0, 980)); // gravity, GPU-eligible
- * system.addUpdateModule(new ColorOverLifetime(fireGradient));
- * scene.root.addChild(system);
- * ```
+ * **GPU update order:** spawn and upload initial values, advance CPU expiry
+ * clocks, mark terminal slots, then integrate and apply modules on the GPU.
+ * Terminal snapshots include that step's module results. Death callbacks are
+ * asynchronous and bounded; see {@link ParticleDeathContext}. Clearing or
+ * destroying the system cancels pending callbacks.
  */
 export class ParticleSystem extends Drawable implements ParticleEmitter {
   /** Maximum particle count this system will store. Fixed at construction. */
@@ -220,7 +186,15 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
   private _backend: RenderBackend | null = null;
   private readonly _device: GPUDevice | null = null;
+  private readonly _simulation: 'auto' | 'cpu';
+  private _deathGeneration = 0;
   private _gpuState: ParticleGpuState | null = null;
+  private _glState: ParticleGlState | null = null;
+  private readonly _backendSignals: Signal[] = [];
+  private readonly _onBackendReset = (): void => {
+    if (this._gpuMode) this._releaseSimulation();
+    this._compiled = false;
+  };
   private _gpuMode = false;
   private _compiled = false;
   private _spawnHint = 0; // round-robin pointer for first-dead lookup in GPU mode
@@ -316,6 +290,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     this._writer = new ParticleSlotWriter(this._storage);
 
     this._device = options.device ?? null;
+    this._simulation = options.simulation ?? 'auto';
     // A mode the caller supplied is this system's to destroy; the default is
     // shared with every other system that did not supply one, so it is not.
     this._ownsRenderMode = options.render !== undefined;
@@ -426,12 +401,27 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     return this._texCoords;
   }
 
-  /** `true` when the system is running on the GPU compute pipeline. */
+  /** `true` for WebGPU compute or WebGL2 transform-feedback simulation. */
   public get gpuMode(): boolean {
     return this._gpuMode;
   }
 
-  /** GPU-side state, or `null` in CPU mode. */
+  /** Actual simulation path after the most recent update; CPU until an eligible backend is attached. */
+  public get simulationBackend(): 'cpu' | 'webgl2' | 'webgpu' {
+    if (this._glState !== null) return 'webgl2';
+    return this._gpuMode ? 'webgpu' : 'cpu';
+  }
+
+  /** @internal */
+  public get glState(): ParticleGlState | null {
+    return this._glState;
+  }
+
+  private get _simulationState(): ParticleGlState | ParticleGpuState | null {
+    return this._glState ?? this._gpuState;
+  }
+
+  /** WebGPU state, or `null` for CPU and WebGL2 simulation. @internal */
   public get gpuState(): ParticleGpuState | null {
     return this._gpuState;
   }
@@ -539,7 +529,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
    * backends sample different rects until this runs.
    */
   private _refreshGpuFrames(): void {
-    this._gpuState?.refreshFrames(this._frames, this._texture, this._textureFrame);
+    this._simulationState?.refreshFrames(this._frames, this._texture, this._textureFrame);
   }
 
   public resetTextureFrame(): this {
@@ -559,7 +549,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
    * Modules may be added and removed at any time, including mid-flight: the
    * next update rebuilds whatever the change invalidated. On the GPU path that
    * is the compute program alone - live particles keep the state the device has
-   * been integrating. Adding a module without a `wgsl()` implementation to a
+   * been integrating. Adding a module without the selected shader implementation to a
    * running GPU system is the one change that cannot preserve them: the
    * simulation moves to the CPU, which has no copy of the integrated state, so
    * the system clears its live particles rather than continuing from stale
@@ -604,6 +594,9 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   }
 
   public clearDeathModules(): this {
+    this._deathGeneration++;
+    this._resetPendingDeaths();
+    this._simulationState?.discardDeaths();
     for (const mod of this._deathModules) mod.destroy();
 
     this._deathModules.length = 0;
@@ -726,8 +719,12 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     }
   }
 
-  /** Resets the system to zero live particles without destroying it. */
+  /** Clears particles and pending death callbacks while retaining allocated simulation resources. */
   public clearParticles(): this {
+    this._deathGeneration++;
+    this._gpuDirtySlots.clear();
+    this._resetPendingDeaths();
+    this._simulationState?.discardDeaths();
     const storage = this._storage;
 
     storage.count = 0;
@@ -737,6 +734,15 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     storage.elapsed.fill(0);
 
     return this;
+  }
+
+  private _releaseSimulation(): void {
+    this._simulationState?.destroy();
+    this._gpuState = null;
+    this._glState = null;
+    this._gpuMode = false;
+    this._compiled = false;
+    this.clearParticles();
   }
 
   /**
@@ -752,12 +758,19 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     const backend = builder.backend;
 
     if (this._backend !== backend) {
+      for (const signal of this._backendSignals) signal.remove(this._onBackendReset);
+      this._backendSignals.length = 0;
       this._backend = backend;
+      const events = backend as unknown as { onContextLost?: Signal; onContextRestored?: Signal; onDeviceLost?: Signal; onDeviceRestored?: Signal };
+      for (const signal of [events.onContextLost, events.onContextRestored, events.onDeviceLost, events.onDeviceRestored]) {
+        if (signal !== undefined) {
+          signal.add(this._onBackendReset);
+          this._backendSignals.push(signal);
+        }
+      }
 
-      if (this._gpuState !== null) {
-        this._gpuState.destroy();
-        this._gpuState = null;
-        this._resetPendingDeaths();
+      if (this._simulationState !== null) {
+        this._releaseSimulation();
       }
 
       this._gpuMode = false;
@@ -769,8 +782,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
   /** Per-frame entry point. Routes to CPU or GPU pipeline based on auto-detection at first call. */
   public update(delta: Seconds): this {
+    if (this.destroyed) return this;
+    if (this._glState?.destroyed === true) this._releaseSimulation();
     if (!this._compiled) {
       this._compile();
+      this._compiled = true;
     }
 
     const dt = delta;
@@ -790,6 +806,10 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   }
 
   public override destroy(): void {
+    if (this.destroyed) return;
+    this._deathGeneration++;
+    for (const signal of this._backendSignals) signal.remove(this._onBackendReset);
+    this._backendSignals.length = 0;
     super.destroy();
 
     this.clearSpawnModules();
@@ -804,9 +824,10 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       this._renderMode.destroy();
     }
 
-    if (this._gpuState !== null) {
-      this._gpuState.destroy();
+    if (this._simulationState !== null) {
+      this._simulationState.destroy();
       this._gpuState = null;
+      this._glState = null;
       this._resetPendingDeaths();
     }
 
@@ -832,9 +853,13 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   }
 
   private _compile(): void {
-    this._compiled = true;
+    const gl = (this._backend as unknown as { context?: WebGL2RenderingContext } | null)?.context;
+    if (gl !== undefined && typeof gl.createTransformFeedback === 'function' && this._device === null) {
+      this._compileGl(gl);
+      return;
+    }
 
-    const eligible = this._updateModules.every(m => typeof m.wgsl === 'function') && this._renderMode.gpuEligible;
+    const eligible = this._simulation !== 'cpu' && this._updateModules.every(m => typeof m.wgsl === 'function') && this._renderMode.gpuEligible;
 
     // Already running on the GPU: keep the buffers the device has been
     // integrating and swap the program, or - when the change made the system
@@ -847,12 +872,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
         return;
       }
 
-      this._gpuState.destroy();
-      this._gpuState = null;
-      this._resetPendingDeaths();
-      this._gpuMode = false;
-      this._gpuDirtySlots.clear();
-      this.clearParticles();
+      this._releaseSimulation();
 
       return;
     }
@@ -889,6 +909,30 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
     for (let i = 0; i < count; i++) {
       if (alive[i] === 1) this._gpuDirtySlots.add(i);
+    }
+  }
+
+  private _compileGl(gl: WebGL2RenderingContext): void {
+    const eligible = this._simulation !== 'cpu' && this._renderMode instanceof QuadParticles && this._updateModules.every(m => typeof m.glsl === 'function');
+    if (!eligible || gl.isContextLost()) {
+      if (this._glState !== null) this._releaseSimulation();
+      return;
+    }
+    const textureCount = 1 + this._updateModules.reduce((count, mod) => count + (mod.glsl!().textures?.length ?? 0), 0);
+    if (textureCount > gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) || Math.max(1, this._frames.length) > gl.getParameter(gl.MAX_TEXTURE_SIZE)) {
+      if (this._glState !== null) this._releaseSimulation();
+      return;
+    }
+    if (this._glState !== null) {
+      this._glState.setProgram(this._updateModules, this._deathModules.length > 0);
+      return;
+    }
+    this._glState = new ParticleGlState(gl, this.capacity, this._updateModules, this._frames, this._texture, this._textureFrame, this._deathModules.length > 0);
+    const renderer = this._backend?.rendererRegistry.resolve(this) as unknown as { _trackSimulation?: (state: ParticleGlState) => void } | undefined;
+    renderer?._trackSimulation?.(this._glState);
+    this._gpuMode = true;
+    for (let i = 0; i < this._storage.count; i++) {
+      if (this._storage.alive[i] === 1) this._gpuDirtySlots.add(i);
     }
   }
 
@@ -1000,6 +1044,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   }
 
   private _updateGpu(dt: number): void {
+    const state = this._simulationState!;
     // CPU advances its own copy of `elapsed` for expire detection only.
     // GPU's `timing[idx].x` is advanced independently inside the compute
     // shader; the two are never synced after spawn. They tick at the
@@ -1009,6 +1054,14 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     const { elapsed, lifetime, alive } = storage;
     const liveCount = storage.count;
     const reportsDeaths = this._deathModules.length > 0;
+    let overflow = false;
+
+    // Upload spawn time before advancing the CPU clock. Even a particle that
+    // expires immediately must reach the device before its expiry marker.
+    if (this._gpuDirtySlots.size > 0) {
+      state.uploadDirty(this, this._gpuDirtySlots);
+      this._gpuDirtySlots.clear();
+    }
 
     for (let i = 0; i < liveCount; i++) {
       if (alive[i] === 0) continue;
@@ -1016,10 +1069,12 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       elapsed[i] = elapsed[i]! + dt;
 
       if (elapsed[i]! >= lifetime[i]!) {
+        const report = reportsDeaths && this._pendingDeathCount < this.capacity;
+        overflow ||= reportsDeaths && !report;
         // The lifetime is about to become the expiry sentinel, so keep the one
         // the particle was spawned with: it is the CPU's own value, and the
         // record the device appends carries only what the device integrated.
-        if (reportsDeaths) {
+        if (report) {
           const queued = this._pendingDeathLifetimes.get(i);
 
           if (queued === undefined) {
@@ -1038,23 +1093,14 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
         // position and velocity the device integrated with the CPU's spawn-time
         // copy, which is precisely the staleness the death record avoids.
         this._gpuDirtySlots.delete(i);
-        this._gpuState!.uploadExpiry(i);
+        state.uploadExpiry(i, report);
       }
     }
 
-    // Push dirty slots (new spawns + just-expired) to GPU. CPU is NOT
-    // the source of truth for integrated position/velocity/etc. after
-    // spawn - uploading the full live range every frame would wipe
-    // out GPU's integrated state.
-    if (this._gpuDirtySlots.size > 0) {
-      this._gpuState!.uploadDirty(this, this._gpuDirtySlots);
-      this._gpuDirtySlots.clear();
-    }
-
-    if (__DEV__ && this._pendingDeathCount > storage.capacity && !this._deathOverflowReported) {
+    if (__DEV__ && overflow && !this._deathOverflowReported) {
       this._deathOverflowReported = true;
       logger.warn(
-        `ParticleSystem: the device held back ${this._pendingDeathCount} unreported deaths, more than the system's capacity of ${storage.capacity}. ` +
+        `ParticleSystem: more than the system's capacity of ${storage.capacity} deaths await readback. ` +
           'The excess is dropped: those particles expire without a death callback. Deaths queue on the device while readbacks are in flight, ' +
           'so this means either the death callbacks are outpacing the readback or the system recycles slots faster than it can report them.',
         { source: 'particles' },
@@ -1063,7 +1109,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
     // Dispatch over the pre-trim range: a slot that expired at the tail still
     // has to be visited once, or its death record is never appended.
-    const staged = this._gpuState!.dispatch(dt, liveCount, this._pendingDeathCount);
+    const staged = state.dispatch(dt, liveCount, this._pendingDeathCount);
 
     // Trim trailing dead slots for the next frame.
     let newLiveCount = storage.count;
@@ -1105,8 +1151,10 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
    * is where it was written at spawn.
    */
   private async _drainDeaths(pending: Map<number, number[]>): Promise<void> {
-    await this._gpuState?.readDeaths(records => {
+    const generation = this._deathGeneration;
+    await this._simulationState?.readDeaths(records => {
       for (const record of records) {
+        if (this.destroyed || this._deathGeneration !== generation) return;
         this._reportDeath({
           x: record.x,
           y: record.y,

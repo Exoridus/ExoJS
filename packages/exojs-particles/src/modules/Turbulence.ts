@@ -1,5 +1,6 @@
 ﻿import type { ParticleBatch } from '#ParticleStorage';
 
+import type { GlslContribution } from './GlslContribution';
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
@@ -17,8 +18,8 @@ import type { WgslContribution } from './WgslContribution';
  * Use cases: smoke turbulence, organic swirls, wind eddies, dust haze.
  * Pair with {@link Drag} to keep particle velocities bounded.
  *
- * GPU-eligible. The noise function is identical on CPU and GPU so visual
- * results match across backends (modulo float precision).
+ * CPU and GPU use the same integer lattice hash, avoiding backend-specific
+ * transcendental approximations. Interpolation still has float rounding error.
  */
 export class Turbulence extends UpdateModule {
   public strength: number;
@@ -35,8 +36,8 @@ export class Turbulence extends UpdateModule {
 
   public override apply(particles: ParticleBatch, dt: number): void {
     this._time += dt * this.timeScale;
-    const t = this._time;
-    const f = this.frequency;
+    const t = Math.fround(this._time);
+    const f = Math.fround(this.frequency);
     const s = this.strength * dt;
 
     const { x: posX, y: posY } = particles.position;
@@ -44,14 +45,51 @@ export class Turbulence extends UpdateModule {
     const liveCount = particles.count;
 
     for (let i = 0; i < liveCount; i++) {
-      const x = (posX[i] ?? 0) * f;
-      const y = (posY[i] ?? 0) * f;
-      const nx = valueNoise2(x + t, y);
-      const ny = valueNoise2(x, y + t + 17.31);
+      const x = Math.fround((posX[i] ?? 0) * f);
+      const y = Math.fround((posY[i] ?? 0) * f);
+      const nx = valueNoise2(Math.fround(x + t), y);
+      const ny = valueNoise2(x, Math.fround(Math.fround(y + t) + Math.fround(17.31)));
 
       velX[i] = (velX[i] ?? 0) + (nx * 2 - 1) * s;
       velY[i] = (velY[i] ?? 0) + (ny * 2 - 1) * s;
     }
+  }
+
+  public override glsl(): GlslContribution {
+    return {
+      ...this.wgsl(),
+      prelude: `
+float exojs_turbulence_hash21(vec2 p) {
+    uint n = uint(int(p.x)) * 0x1f123bb5u ^ uint(int(p.y)) * 0x5f356495u;
+    n = (n ^ (n >> 16u)) * 0x7feb352du;
+    n = (n ^ (n >> 15u)) * 0x846ca68bu;
+    n = n ^ (n >> 16u);
+    return float(n >> 8u) / 16777216.0;
+}
+float exojs_turbulence_valueNoise2(float x, float y) {
+    float xi = floor(x);
+    float yi = floor(y);
+    float xf = x - xi;
+    float yf = y - yi;
+    float u = xf * xf * (3.0 - 2.0 * xf);
+    float v = yf * yf * (3.0 - 2.0 * yf);
+    float a = exojs_turbulence_hash21(vec2(xi, yi));
+    float b = exojs_turbulence_hash21(vec2(xi + 1.0, yi));
+    float c = exojs_turbulence_hash21(vec2(xi, yi + 1.0));
+    float d = exojs_turbulence_hash21(vec2(xi + 1.0, yi + 1.0));
+    float ab = a + (b - a) * u;
+    float cd = c + (d - c) * u;
+    return ab + (cd - ab) * v;
+}`,
+      body: `
+float turbX = position.x * u_Turbulence.frequency;
+float turbY = position.y * u_Turbulence.frequency;
+float turbT = u_Turbulence.time;
+float turbNx = exojs_turbulence_valueNoise2(turbX + turbT, turbY);
+float turbNy = exojs_turbulence_valueNoise2(turbX, turbY + turbT + 17.31);
+velocity += vec2(turbNx * 2.0 - 1.0, turbNy * 2.0 - 1.0) * (u_Turbulence.strength * dt);
+`,
+    };
   }
 
   public override wgsl(): WgslContribution {
@@ -65,8 +103,11 @@ export class Turbulence extends UpdateModule {
       ],
       prelude: `
 fn exojs_turbulence_hash21(p: vec2<f32>) -> f32 {
-    let n = sin(dot(p, vec2<f32>(127.1, 311.7))) * 43758.5453;
-    return fract(n);
+    var n = (bitcast<u32>(i32(p.x)) * 0x1f123bb5u) ^ (bitcast<u32>(i32(p.y)) * 0x5f356495u);
+    n = (n ^ (n >> 16u)) * 0x7feb352du;
+    n = (n ^ (n >> 15u)) * 0x846ca68bu;
+    n = n ^ (n >> 16u);
+    return f32(n >> 8u) / 16777216.0;
 }
 
 fn exojs_turbulence_valueNoise2(x: f32, y: f32) -> f32 {
@@ -99,9 +140,7 @@ fn exojs_turbulence_valueNoise2(x: f32, y: f32) -> f32 {
   }
 
   public override writeUniforms(view: DataView, offset: number, dt: number): void {
-    // GPU mode: apply() never runs, so advance _time here once per frame.
-    // CPU mode: apply() already advances _time before update finishes,
-    // and writeUniforms is not called → no double-advance.
+    // apply() does not run during GPU simulation, so advance time here instead.
     this._time += dt * this.timeScale;
 
     view.setFloat32(offset + 0, this.strength, true);
@@ -112,9 +151,11 @@ fn exojs_turbulence_valueNoise2(x: f32, y: f32) -> f32 {
 }
 
 const hash21 = (x: number, y: number): number => {
-  let n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-  n = n - Math.floor(n);
-  return n;
+  let n = Math.imul(x | 0, 0x1f123bb5) ^ Math.imul(y | 0, 0x5f356495);
+  n = Math.imul(n ^ (n >>> 16), 0x7feb352d);
+  n = Math.imul(n ^ (n >>> 15), 0x846ca68b);
+  n ^= n >>> 16;
+  return (n >>> 8) / 16777216;
 };
 
 const valueNoise2 = (x: number, y: number): number => {

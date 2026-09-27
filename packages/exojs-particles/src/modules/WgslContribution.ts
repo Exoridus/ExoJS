@@ -1,31 +1,9 @@
-﻿/**
- * WGSL primitive types accepted in {@link WgslUniformField} declarations.
- * The codegen emits matching WGSL field declarations; the writeUniforms
- * implementation must produce bytes in the layout WGSL expects (see
- * https://www.w3.org/TR/WGSL/#alignment-and-size).
- *
- * Common pitfalls:
- * - `vec2<f32>` aligns to 8 bytes; pad with `f32` or use `vec4<f32>`.
- * - `vec3<f32>` aligns to 16 bytes (so does `vec4<f32>`); avoid `vec3` for tight packing.
- *
- * For now the supported subset covers what the built-in modules need. Add
- * more types here as new modules require them.
- */
-export type WgslPrimitive = 'f32' | 'i32' | 'u32' | 'vec2<f32>' | 'vec4<f32>';
+import type { ParticleShaderContribution, ParticleTextureBinding, ParticleUniformField, ParticleUniformPrimitive } from './ParticleShaderContribution';
 
-/** A named uniform field within a module's struct. Order matters - defines memory layout. */
-export interface WgslUniformField {
-  name: string;
-  type: WgslPrimitive;
-}
-
-/** A 1D texture binding (used by Curve / ColorGradient lookups). */
-export interface WgslTextureBinding {
-  /** Field name within the module - referenced in WGSL as `u_${moduleKey}_${name}`. */
-  name: string;
-  /** WGSL texture format. `r32float` for Curve, `rgba8unorm` for ColorGradient. */
-  format: 'r32float' | 'rgba8unorm';
-}
+/** Compatibility names for the backend-neutral shader resource schema. */
+export type WgslPrimitive = ParticleUniformPrimitive;
+export type WgslUniformField = ParticleUniformField;
+export type WgslTextureBinding = ParticleTextureBinding;
 
 /**
  * What an {@link UpdateModule} contributes to the system's composite compute
@@ -33,7 +11,7 @@ export interface WgslTextureBinding {
  * these locals in scope:
  *
  * - `idx: u32` - the particle slot index (already gated on `< sim.liveCount`
- *   and skip-on-dead via `timing[idx].y < 0.0`).
+ *   and skip-on-dead via the reserved lifecycle lane).
  * - `dt: f32` - frame delta in seconds (mirrors `sim.dt`).
  * - **Packed SoA bindings** (see body of doc) - channels are packed into
  *   `vec2<f32>`-typed storage buffers to fit within WebGPU's default 8-buffer
@@ -41,8 +19,8 @@ export interface WgslTextureBinding {
  *   - `positions[idx].x` / `.y` (was posX/posY)
  *   - `velocities[idx].x` / `.y` (was velX/velY)
  *   - `scales[idx].x` / `.y` (was scaleX/scaleY)
- *   - `rotInfo[idx].x` / `.y` (rotation, rotationSpeed)
- *   - `timing[idx].x` / `.y` (elapsed, lifetime - y is set to -1 when expired)
+ *   - `rotInfo[idx].x` / `.y` (rotation, rotationSpeed; z is the frame index and w is reserved)
+ *   - `timing[idx].x` / `.y` (elapsed, lifetime)
  *   - `color[idx]` - packed RGBA u32, single channel (no .x/.y)
  * - `sim: SimUniforms` - `{ dt: f32, liveCount: u32 }`.
  * - `modules.u_${key}: ${Key}Uniforms` - your module's uniform struct (if declared).
@@ -53,22 +31,7 @@ export interface WgslTextureBinding {
  * - composition concatenates several module bodies and any syntax mistake
  * surfaces only at pipeline-creation time.
  */
-export interface WgslContribution {
-  /** Unique key per module *class* (e.g. `'ApplyForce'`). Two ApplyForce instances on one system aren't supported - combine into one. */
-  key: string;
-  uniforms?: readonly WgslUniformField[];
-  textures?: readonly WgslTextureBinding[];
-  /**
-   * Optional WGSL declarations (functions, constants) emitted at module
-   * scope before `main()`. Use this for noise/hash helpers or any
-   * supporting function the {@link body} calls. Multiple modules can
-   * declare preludes; they're concatenated in registration order. Naming
-   * collisions across modules are the author's problem - prefix helpers
-   * with the module key (e.g. `myModule_hash`) to avoid clashes.
-   */
-  prelude?: string;
-  body: string;
-}
+export interface WgslContribution extends ParticleShaderContribution {}
 
 /**
  * Compute the byte size of a uniform struct from its declared fields,
