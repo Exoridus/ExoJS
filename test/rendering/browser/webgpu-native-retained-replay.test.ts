@@ -71,24 +71,27 @@ const createScene = async (mixed = false) => {
   backend.setRenderTarget(target);
   const builds = vi.spyOn(backend.device, 'createRenderBundleEncoder');
   const executions = vi.spyOn(GPURenderPassEncoder.prototype, 'executeBundles');
-  const render = async (): Promise<void> => {
-    backend.device.pushErrorScope('validation');
+  backend.device.pushErrorScope('validation');
+  const render = (): void => {
     backend.resetStats();
     backend.clear(Color.black);
     root.render(backend);
     backend.flush();
-    expect((await backend.device.popErrorScope())?.message ?? null).toBeNull();
   };
   const pixels = async (): Promise<Uint8ClampedArray> => (await context.readPixels(target)).data;
-  const destroy = (): void => {
-    builds.mockRestore();
-    executions.mockRestore();
-    root.destroy();
-    for (const map of maps) map.destroy();
-    texture.destroy();
-    siblingTexture.destroy();
-    target.destroy();
-    backend.destroy();
+  const destroy = async (): Promise<void> => {
+    try {
+      expect((await backend.device.popErrorScope())?.message ?? null).toBeNull();
+    } finally {
+      builds.mockRestore();
+      executions.mockRestore();
+      root.destroy();
+      for (const map of maps) map.destroy();
+      texture.destroy();
+      siblingTexture.destroy();
+      target.destroy();
+      backend.destroy();
+    }
   };
   return { backend, target, source, sourceContext, texture, root, group, builds, executions, render, pixels, destroy };
 };
@@ -96,22 +99,22 @@ const createScene = async (mixed = false) => {
 const pixel = (data: Uint8ClampedArray, x: number, y: number): number[] => Array.from(data.slice((y * size + x) * 4, (y * size + x) * 4 + 4));
 
 const promote = async (scene: Awaited<ReturnType<typeof createScene>>): Promise<Uint8ClampedArray> => {
-  await scene.render();
-  await scene.render();
+  scene.render();
+  scene.render();
   const baseline = await scene.pixels();
   expect(pixel(baseline, 3, 3)).toEqual([255, 0, 0, 255]);
   expect(pixel(baseline, 63, 0)).toEqual([0, 0, 255, 255]);
   expect(pixel(baseline, 63, 63)).toEqual([0, 0, 255, 255]);
   expect(scene.builds).not.toHaveBeenCalled();
   for (let frame = 0; frame < 30; frame++) {
-    await scene.render();
+    scene.render();
     expect(scene.builds).not.toHaveBeenCalled();
   }
-  await scene.render();
+  scene.render();
   expect(scene.builds).toHaveBeenCalledTimes(32);
   expect(scene.executions).toHaveBeenCalledTimes(32);
   expect(await scene.pixels()).toEqual(baseline);
-  await scene.render();
+  scene.render();
   expect(scene.builds).toHaveBeenCalledTimes(64);
   expect(await scene.pixels()).toEqual(baseline);
   return baseline;
@@ -123,14 +126,14 @@ describe('WebGPU native retained replay', () => {
     try {
       const baseline = await promote(scene);
       scene.executions.mockClear();
-      await scene.render();
+      scene.render();
       expect(scene.executions).toHaveBeenCalledTimes(64);
       expect(scene.builds).toHaveBeenCalledTimes(64);
       expect(await scene.pixels()).toEqual(baseline);
 
       scene.target.view.setCenter(size / 2 + 2, size / 2);
       scene.executions.mockClear();
-      await scene.render();
+      scene.render();
       const moved = await scene.pixels();
       expect(pixel(moved, 3, 3)).toEqual([255, 0, 0, 255]);
       expect(pixel(moved, 5, 3)).toEqual([0, 0, 0, 255]);
@@ -142,7 +145,7 @@ describe('WebGPU native retained replay', () => {
       scene.sourceContext.fillRect(0, 0, 6, 6);
       scene.texture.updateSource();
       scene.executions.mockClear();
-      await scene.render();
+      scene.render();
       expect(pixel(await scene.pixels(), 3, 3)).toEqual([0, 255, 0, 255]);
       expect(scene.executions).toHaveBeenCalledTimes(64);
       expect(scene.builds).toHaveBeenCalledTimes(64);
@@ -153,20 +156,20 @@ describe('WebGPU native retained replay', () => {
       scene.sourceContext.fillRect(0, 0, 12, 12);
       scene.texture.updateSource();
       scene.executions.mockClear();
-      await scene.render();
+      scene.render();
       expect(pixel(await scene.pixels(), 3, 3)).toEqual([0, 255, 0, 255]);
       expect(scene.executions).not.toHaveBeenCalled();
       expect(scene.builds).toHaveBeenCalledTimes(64);
       const resized = await scene.pixels();
       for (let frame = 0; frame < 35; frame++) {
         const previousBuilds = scene.builds.mock.calls.length;
-        await scene.render();
+        scene.render();
         expect(scene.builds.mock.calls.length - previousBuilds).toBeLessThanOrEqual(32);
       }
       expect(scene.builds).toHaveBeenCalledTimes(128);
       expect(await scene.pixels()).toEqual(resized);
     } finally {
-      scene.destroy();
+      await scene.destroy();
     }
   });
 
@@ -190,12 +193,12 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
       await promote(scene);
       material.setUniform('color', [0, 1, 0, 1]);
       scene.executions.mockClear();
-      await scene.render();
+      scene.render();
       expect(pixel(await scene.pixels(), 3, 3)).toEqual([0, 255, 0, 255]);
       expect(scene.executions).toHaveBeenCalledTimes(64);
       expect(scene.builds).toHaveBeenCalledTimes(64);
     } finally {
-      scene.destroy();
+      await scene.destroy();
       material.destroy();
     }
   });
@@ -205,11 +208,11 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     try {
       const baseline = await promote(scene);
       scene.executions.mockClear();
-      await scene.render();
+      scene.render();
       expect(scene.executions).toHaveBeenCalledTimes(64);
       expect(await scene.pixels()).toEqual(baseline);
     } finally {
-      scene.destroy();
+      await scene.destroy();
     }
   });
 
@@ -221,9 +224,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
       const baseline = await promote(scene);
       scene.backend.setRenderTarget(floatTarget);
       scene.executions.mockClear();
-      await scene.render();
+      scene.render();
       expect(scene.executions).not.toHaveBeenCalled();
-      for (let frame = 0; frame < 32; frame++) await scene.render();
+      for (let frame = 0; frame < 32; frame++) scene.render();
       expect(scene.builds).toHaveBeenCalledTimes(128);
       expect(scene.builds).toHaveBeenLastCalledWith({ colorFormats: ['rgba16float'] });
       const context = new RenderingContext(scene.backend);
@@ -232,13 +235,13 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
       expect(await scene.pixels()).toEqual(baseline);
       scene.backend.setRenderTarget(scene.target);
       scene.executions.mockClear();
-      await scene.render();
+      scene.render();
       expect(scene.executions).not.toHaveBeenCalled();
       expect(await scene.pixels()).toEqual(baseline);
     } finally {
       display.destroy();
       floatTarget.destroy();
-      scene.destroy();
+      await scene.destroy();
     }
   });
 
@@ -265,14 +268,14 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
       for (const child of scene.group.children) (child as Sprite).material = material;
       for (const child of scene.root.children) if (child instanceof Sprite) child.material = material;
       scene.backend.setRenderTarget(target);
-      for (let frame = 0; frame < 36; frame++) await scene.render();
+      for (let frame = 0; frame < 36; frame++) scene.render();
       expect(scene.builds).not.toHaveBeenCalled();
       expect(scene.executions).not.toHaveBeenCalled();
       const context = new RenderingContext(scene.backend);
       expect(pixel((await context.readPixels(target.attachment(0))).data, 3, 3)).toEqual([255, 0, 0, 255]);
       expect(pixel((await context.readPixels(target.attachment(1))).data, 3, 3)).toEqual([0, 255, 0, 255]);
     } finally {
-      scene.destroy();
+      await scene.destroy();
       target.destroy();
       material.destroy();
     }
@@ -289,19 +292,19 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
       scene.root.clipShape = shape;
       scene.root.clip = true;
       scene.executions.mockClear();
-      await scene.render();
+      scene.render();
       const clipped = await scene.pixels();
       expect(pixel(clipped, 3, 3)).toEqual([255, 0, 0, 255]);
       expect(pixel(clipped, 59, 59)).toEqual([0, 0, 0, 255]);
       expect(scene.executions).not.toHaveBeenCalled();
       expect(scene.builds).toHaveBeenCalledTimes(64);
       scene.root.clip = false;
-      await scene.render();
+      scene.render();
       expect(await scene.pixels()).toEqual(baseline);
       expect(scene.executions).not.toHaveBeenCalled();
       expect(scene.builds).toHaveBeenCalledTimes(64);
     } finally {
-      scene.destroy();
+      await scene.destroy();
       shape.destroy();
     }
   });
