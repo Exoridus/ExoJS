@@ -1319,12 +1319,34 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    pass.setPipeline(this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
-    pass.setBindGroup(0, frameBindGroup);
-    pass.setBindGroup(1, textureBindGroup);
-    pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
-    pass.setIndexBuffer(indexBuffer, 'uint32');
-    pass.drawIndexed(data.quadCount * 6, 1, 0, 0, 0);
+    const nativePipeline = this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+
+    const nativeCompatible = backend.colorAttachmentCount === 1;
+    if (!nativeCompatible) bundle.nativeReplay.skipPass();
+
+    if (
+      !nativeCompatible ||
+      !bundle.nativeReplay.draw(
+        device,
+        active,
+        payload,
+        backend.renderTargetFormat,
+        nativePipeline,
+        frameBindGroup,
+        textureBindGroup,
+        indexBuffer,
+        'uint32',
+        data.quadCount * 6,
+        1,
+      )
+    ) {
+      pass.setPipeline(nativePipeline);
+      pass.setBindGroup(0, frameBindGroup);
+      pass.setBindGroup(1, textureBindGroup);
+      pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
+      pass.setIndexBuffer(indexBuffer, 'uint32');
+      pass.drawIndexed(data.quadCount * 6, 1, 0, 0, 0);
+    }
 
     state.drawsInPass = active;
     coordinator.markPassDraws();

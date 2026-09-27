@@ -1419,19 +1419,42 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     this._syncUniformHazardPass(active);
 
-    pass.setPipeline(
+    const nativePipeline =
       material === null
         ? this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive)
-        : this._getOrCreateCustomPipeline(customResources!, payload.blendMode, backend.renderTargetFormats, coordinator.stencilActive, device),
-    );
-    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!, true));
-    pass.setBindGroup(1, textureBindGroup);
-    if (userBindGroup !== null) {
-      pass.setBindGroup(2, userBindGroup);
+        : this._getOrCreateCustomPipeline(customResources!, payload.blendMode, backend.renderTargetFormats, coordinator.stencilActive, device);
+    const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, true);
+
+    const nativeCompatible = backend.colorAttachmentCount === 1;
+    if (!nativeCompatible) bundle.nativeReplay.skipPass();
+
+    if (
+      !nativeCompatible ||
+      !bundle.nativeReplay.draw(
+        device,
+        active,
+        payload,
+        backend.renderTargetFormat,
+        nativePipeline,
+        nativeFrameBindGroup,
+        textureBindGroup,
+        this._indexBuffer,
+        'uint16',
+        indicesPerSprite,
+        payload.instanceCount,
+        userBindGroup,
+      )
+    ) {
+      pass.setPipeline(nativePipeline);
+      pass.setBindGroup(0, nativeFrameBindGroup);
+      pass.setBindGroup(1, textureBindGroup);
+      if (userBindGroup !== null) {
+        pass.setBindGroup(2, userBindGroup);
+      }
+      pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
+      pass.setIndexBuffer(this._indexBuffer, 'uint16');
+      pass.drawIndexed(indicesPerSprite, payload.instanceCount, 0, 0, 0);
     }
-    pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
-    pass.setIndexBuffer(this._indexBuffer, 'uint16');
-    pass.drawIndexed(indicesPerSprite, payload.instanceCount, 0, 0, 0);
 
     if (customResources !== null) {
       addUserUniformBuffersInPass(customResources.userUniform, this._uniformBuffersInPass);

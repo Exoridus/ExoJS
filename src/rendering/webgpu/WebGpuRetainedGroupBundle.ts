@@ -6,6 +6,7 @@ import { DirtyRowTracker } from './DirtyRowTracker';
 import type { WebGpuRetainedRendererReplayState } from './retainedGroupResources';
 import { retainedGroupUniformBytes, retainedTintSlotBytes, retainedTransformSlotBytes } from './retainedGroupResources';
 import { requireRepresentableStorageGrowth } from './storageLimits';
+import { WebGpuNativeRetainedReplay } from './WebGpuNativeRetainedReplay';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 
 /** Power-of-two growth from `current` to at least `min` (min 256 B). */
@@ -35,7 +36,7 @@ const rowsPerPatchBlock = 64;
  *   the shared sprite UBO (projection mat4 + group mat4) so the existing
  *   bind-group(0) layout - and therefore every existing pipeline - is reused
  *   as-is at replay,
- * - one cached bind group(0) pairing the two.
+ * - cached bind groups(0) pairing them with each renderer layout.
  *
  * Buffers are grow-only across recaptures - no realloc churn under
  * motion-stop/start. {@link generation} bumps whenever GPU resources are
@@ -44,6 +45,8 @@ const rowsPerPatchBlock = 64;
  * to entry replay.
  */
 export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
+  public readonly nativeReplay = new WebGpuNativeRetainedReplay();
+
   private _generation = 1;
   private _instanceBuffer: GPUBuffer | null = null;
   private _instanceCapacity = 0;
@@ -77,6 +80,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _bindGroup: GPUBindGroup | null = null;
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
   private _bindGroupIncludesTint = false;
+  private readonly _bindGroups = new Map<GPUBindGroupLayout, [GPUBindGroup | null, GPUBindGroup | null]>();
   private readonly _accountant: GpuResourceAccountant;
   private _accountedBytes = 0;
   private _onRelease: ((bundle: WebGpuRetainedGroupBundle) => void) | null;
@@ -234,8 +238,10 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     }
 
     if (recreated) {
+      this.nativeReplay.invalidate();
       this._generation++;
       this._bindGroup = null;
+      this._bindGroups.clear();
       this._accountedBytes = this._accountant.reallocate(
         this._accountedBytes,
         this._instanceCapacity + this._transformCapacity + this._tintCapacity + retainedGroupUniformBytes,
@@ -368,9 +374,8 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   /**
    * The bind group(0) pairing the group UBO with the group transform storage
    * (and, for a renderer that reads per-instance tint - sprite - the tint
-   * storage too), against the calling renderer's own uniform layout. Cached;
-   * rebuilt when a buffer, `includeTint`, or the layout (device restore)
-   * changed. `includeTint` MUST match what `layout` actually declares
+   * storage too), cached per renderer layout until buffers are recreated.
+   * `includeTint` MUST match what `layout` actually declares
    * (binding 2 present or not) - the entries list below is built to fit
    * exactly, since WebGPU bind group creation requires an exact match against
    * the layout's binding set (nine-slice/repeating's layout has no binding 2).
@@ -382,6 +387,19 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
     this._bindGroupLayout = layout;
     this._bindGroupIncludesTint = includeTint;
+    let cached = this._bindGroups.get(layout);
+    const slot = includeTint ? 1 : 0;
+
+    if (cached !== undefined && cached[slot] !== null) {
+      this._bindGroup = cached[slot];
+      return this._bindGroup;
+    }
+
+    if (cached === undefined) {
+      cached = [null, null];
+      this._bindGroups.set(layout, cached);
+    }
+
     this._bindGroup = device.createBindGroup({
       label: 'sprite:retained-bind-group',
       layout,
@@ -397,6 +415,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
           ],
     });
 
+    cached[slot] = this._bindGroup;
     return this._bindGroup;
   }
 
@@ -407,6 +426,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    * set recorded against the old resources fails validation and re-records.
    */
   public invalidateDeviceState(destroyBuffers: boolean): void {
+    this.nativeReplay.invalidate();
     if (destroyBuffers) {
       this._instanceBuffer?.destroy();
       this._transformBuffer?.destroy();
@@ -426,6 +446,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     this._dirtyTransforms.reset(0);
     this._dirtyTints.reset(0);
     this._bindGroup = null;
+    this._bindGroups.clear();
     this._bindGroupLayout = null;
     this._generation++;
     this.uboWritten = false;

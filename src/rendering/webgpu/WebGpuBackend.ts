@@ -374,6 +374,7 @@ export class WebGpuBackend implements RenderBackend {
   private _texture: Texture | RenderTexture | null = null;
   private _clearRequested = false;
   private _hasPresentedFrame = false;
+  private readonly _nativeReplayFrame = { id: 0, remainingBuilds: 32 };
   private readonly _stats: RenderStats = createRenderStats();
   private readonly _accountant: GpuResourceAccountant = new GpuResourceAccountant(this._stats);
   private _transformStorage: WebGpuTransformStorage | null = new WebGpuTransformStorage();
@@ -671,6 +672,8 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public resetStats(): this {
+    this._nativeReplayFrame.id++;
+    this._nativeReplayFrame.remainingBuilds = 32;
     resetRenderStats(this._stats);
     // The transform buffer is frame-scoped: reset it once per frame here (was
     // previously reset per render() call in _beginDrawPlan).
@@ -1995,6 +1998,7 @@ export class WebGpuBackend implements RenderBackend {
     // RetainedBatchInstruction), not its instance count.
     this._stats.submittedNodes += batch.nodeCount ?? batch.instanceCount;
     this._setActiveRenderer(payload.renderer);
+    payload.bundle.nativeReplay.beginFrame(this._nativeReplayFrame);
     payload.renderer.replayRetainedBatch(payload);
   }
 
@@ -2263,6 +2267,7 @@ export class WebGpuBackend implements RenderBackend {
     // Growth is safe against the open pass: a bundle can only be re-recorded
     // on a frame whose set was invalid at collect time, so no draw recorded
     // into the open pass references the buffers replaced here.
+    bundle.nativeReplay.invalidate();
     bundle.ensureCapacity(device, frame.totalBytes, transformBytes, tintBytes);
 
     for (const batch of staged) {

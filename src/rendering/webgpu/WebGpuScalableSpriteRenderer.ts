@@ -760,12 +760,35 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    pass.setPipeline(this._getPipeline('geo', payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
-    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!, false));
-    pass.setBindGroup(1, textureBindGroup);
-    pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
-    pass.setIndexBuffer(this._indexBuffer, 'uint16');
-    pass.drawIndexed(indicesPerInstance, payload.instanceCount, 0, 0, 0);
+    const nativePipeline = this._getPipeline('geo', payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, false);
+
+    const nativeCompatible = backend.colorAttachmentCount === 1;
+    if (!nativeCompatible) bundle.nativeReplay.skipPass();
+
+    if (
+      !nativeCompatible ||
+      !bundle.nativeReplay.draw(
+        device,
+        active,
+        payload,
+        backend.renderTargetFormat,
+        nativePipeline,
+        nativeFrameBindGroup,
+        textureBindGroup,
+        this._indexBuffer,
+        'uint16',
+        indicesPerInstance,
+        payload.instanceCount,
+      )
+    ) {
+      pass.setPipeline(nativePipeline);
+      pass.setBindGroup(0, nativeFrameBindGroup);
+      pass.setBindGroup(1, textureBindGroup);
+      pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
+      pass.setIndexBuffer(this._indexBuffer, 'uint16');
+      pass.drawIndexed(indicesPerInstance, payload.instanceCount, 0, 0, 0);
+    }
 
     bundle.drawsInPass = active;
     coordinator.markPassDraws();
