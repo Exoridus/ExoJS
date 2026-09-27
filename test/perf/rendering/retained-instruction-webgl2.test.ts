@@ -19,10 +19,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { Container } from '#rendering/Container';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
-import { RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
+import { RetainedInstructionKind, RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
-import type { WebGl2RetainedGroupResources } from '#rendering/webgl2/WebGl2RetainedGroupResources';
+import type { WebGl2RetainedBatchPayload, WebGl2RetainedGroupResources } from '#rendering/webgl2/WebGl2RetainedGroupResources';
+import { WebGl2SpriteRenderer } from '#rendering/webgl2/WebGl2SpriteRenderer';
 
 import { makeTextures } from './fixtures';
 import { createWebGl2Harness, measureFrame, type WebGl2Harness } from './harness';
@@ -75,6 +76,63 @@ const buildScene = () => {
 };
 
 describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', () => {
+  it('preserves descriptor counters for SDK replayers without a replay result', () => {
+    withHarness(harness => {
+      const { root, group } = buildScene();
+
+      measureFrame(harness, root);
+      measureFrame(harness, root);
+      const batch = fragmentOf(group).instructions!.instructions.find(instruction => instruction.kind === RetainedInstructionKind.Batch)!;
+
+      if (batch.kind !== RetainedInstructionKind.Batch) throw new Error('Expected a recorded batch');
+      const payload = batch.payload as WebGl2RetainedBatchPayload;
+      const replayer = {
+        scanRetainedNodeIndexRange: payload.replayer.scanRetainedNodeIndexRange.bind(payload.replayer),
+        rebaseRetainedNodeIndices: payload.replayer.rebaseRetainedNodeIndices.bind(payload.replayer),
+        configureRetainedVao: payload.replayer.configureRetainedVao.bind(payload.replayer),
+        replayRetainedBatch(): void {
+          payload.vao!.drawInstanced(4, 0, payload.instanceCount);
+        },
+      };
+
+      harness.backend.resetStats();
+      harness.backend.replayRetainedBatch({ ...batch, payload: { ...payload, replayer } });
+      expect(harness.backend.stats.batches).toBe(1);
+      expect(harness.backend.stats.drawCalls).toBe(batch.drawCalls);
+      expect(harness.backend.stats.submittedNodes).toBe(batch.nodeCount ?? batch.instanceCount);
+      root.destroy();
+    });
+  });
+
+  it.each(['missing-vao', 'destroyed-bundle', 'disconnected-renderer'] as const)('counts submissions but no draws on %s replay', failure => {
+    withHarness(harness => {
+      const { root, group } = buildScene();
+
+      measureFrame(harness, root);
+      measureFrame(harness, root);
+      const batch = fragmentOf(group).instructions!.instructions.find(instruction => instruction.kind === RetainedInstructionKind.Batch)!;
+
+      if (batch.kind !== RetainedInstructionKind.Batch) throw new Error('Expected a recorded batch');
+      const payload = { ...(batch.payload as WebGl2RetainedBatchPayload) };
+      const detached = new WebGl2SpriteRenderer(16);
+
+      if (failure === 'missing-vao') payload.vao = null;
+      if (failure === 'destroyed-bundle') payload.bundle.destroy();
+      const replayPayload = failure === 'disconnected-renderer' ? { ...payload, replayer: detached } : payload;
+
+      harness.backend.resetStats();
+      harness.backend.replayRetainedBatch({ ...batch, nodeCount: 2, payload: replayPayload });
+      expect(harness.backend.stats.submittedNodes).toBe(2);
+      expect(harness.backend.stats.batches).toBe(0);
+      expect(harness.backend.stats.drawCalls).toBe(0);
+      harness.backend.replayRetainedBatch({ ...batch, nodeCount: 0, payload: replayPayload });
+      expect(harness.backend.stats.submittedNodes).toBe(2);
+
+      detached.destroy();
+      root.destroy();
+    });
+  });
+
   it('walks capture -> record -> splice; the steady splice frame re-uploads ZERO instance bytes', () => {
     withHarness(harness => {
       const { root, group } = buildScene();

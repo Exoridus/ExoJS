@@ -321,7 +321,9 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       // F3 static frame: the fast/instruction-replay tier is the only path that
       // can draw the group's glyphs. A neutered replay that never issues its
       // drawElements leaves the canvas empty where the record frame had ink.
-      WebGl2TextRenderer.prototype.replayRetainedBatch = function (): void {};
+      WebGl2TextRenderer.prototype.replayRetainedBatch = function (): boolean {
+        return false;
+      };
 
       render(backend, scene.root);
 

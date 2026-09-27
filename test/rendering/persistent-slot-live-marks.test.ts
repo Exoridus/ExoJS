@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { DerivedRootProduct } from '#rendering/plan/DerivedRootProduct';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
@@ -231,6 +232,37 @@ const frameEvents = (harness: Harness, root: RenderNode): string[] => {
 };
 
 describe('persistent slots: a live entry cuts the order stream', () => {
+  test('counts an offscreen subgroup once and never queries its descendants', () => {
+    const harness = createHarness();
+    const root = new Container();
+    const group = new Container();
+    const nested = new Container();
+
+    root.cullable = false;
+    addLeaves(root, 'a', 4, 100);
+    addLeaves(nested, 'hidden', 3, 10_000);
+    group.addChild(nested);
+    root.addChild(group);
+    driveToSourceTier(root, harness.backend);
+
+    const query = vi.spyOn(nested, '_inCullRect');
+    const selectScope = vi.spyOn(DerivedRootProduct.prototype, 'selectScope');
+
+    harness.backend.stats.culledNodes = 0;
+    harness.backend.setView(viewAt(2_000));
+    frameEvents(harness, root);
+
+    expect(harness.stores.length).toBeGreaterThan(0);
+    expect(query).not.toHaveBeenCalled();
+    expect(selectScope).toHaveBeenCalledTimes(1);
+    expect(harness.backend.stats.culledNodes).toBe(5);
+    expect(harness.events).toEqual([]);
+
+    selectScope.mockRestore();
+    root.destroy();
+    harness.backend.destroy();
+  });
+
   test('a masked container inside the root draws between two slot segments, in collect order', () => {
     const harness = createHarness();
     const { root } = createMaskedScene();

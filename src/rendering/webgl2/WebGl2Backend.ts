@@ -2298,9 +2298,8 @@ export class WebGl2Backend implements RenderBackend {
    * group scope. The pending live batch drains first (in practice the group
    * boundary's transform switch already flushed it - hook contract), then the
    * owning renderer re-issues the batch from group-owned resources with all
-   * state resolved live. Stats are bumped from the descriptor so the spliced
-   * tier stays comparable with the entry tiers (batches / drawCalls /
-   * submittedNodes parity).
+   * state resolved live. Submitted nodes follow the descriptor; a renderer
+   * returning false suppresses draw counters when its resources cannot draw.
    * @internal
    */
   public replayRetainedBatch(batch: RetainedBatchInstruction): void {
@@ -2317,12 +2316,13 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._bindRenderTarget(this._renderTarget);
-    payload.replayer.replayRetainedBatch(payload);
-    this._stats.batches++;
-    this._stats.drawCalls += batch.drawCalls;
     // Nodes, not instances: a batch whose renderer expands one node into many
     // instances records its own node count (see RetainedBatchInstruction).
     this._stats.submittedNodes += batch.nodeCount ?? batch.instanceCount;
+    if (payload.replayer.replayRetainedBatch(payload) !== false) {
+      this._stats.batches++;
+      this._stats.drawCalls += batch.drawCalls;
+    }
   }
 
   public destroy(): void {

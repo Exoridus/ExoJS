@@ -32,13 +32,16 @@ import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
-import { RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
+import { RetainedInstructionKind, RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Shader } from '#rendering/shader/Shader';
+import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { BlendModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { WebGpuRetainedGroupBundle } from '#rendering/webgpu/WebGpuRetainedGroupBundle';
@@ -307,6 +310,71 @@ const buildGroupScene = (texture: Texture, groupCount: number): { root: Containe
 };
 
 describe('WebGPU retained record/replay: fallback ladder + submit collapse', () => {
+  test('mixed scalable geometry uses one batch through live, record and replay frames', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createBackend(environment);
+      const texture = createCanvasTexture();
+      const group = new RetainedContainer();
+
+      group.addChild(
+        new NineSliceSprite(texture, { slices: 4, width: 16, height: 16 }),
+        new RepeatingSprite(new TextureRegion(texture, { x: 0, y: 0, width: 16, height: 16 }), { width: 16, height: 16 }),
+      );
+
+      for (let frame = 0; frame < 4; frame++) {
+        const before = environment.draws().length;
+
+        renderFrame(backend, group);
+        expect(environment.draws().slice(before)).toEqual([{ instanceCount: 10 }]);
+        expect(backend.stats.batches).toBe(1);
+        expect(backend.stats.drawCalls).toBe(1);
+        expect(backend.stats.submittedNodes).toBe(2);
+      }
+
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+      group.destroy();
+      texture.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('destroyed replay resources count submitted nodes but no batches or draws', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createBackend(environment);
+      const texture = createCanvasTexture();
+      const { root, groups } = buildGroupScene(texture, 1);
+
+      renderFrame(backend, root);
+      renderFrame(backend, root);
+      const set = fragmentOf(groups[0]!).instructions!;
+      const batch = set.instructions.find(instruction => instruction.kind === RetainedInstructionKind.Batch)!;
+
+      if (batch.kind !== RetainedInstructionKind.Batch) throw new Error('Expected a recorded batch');
+      set.ownedBundle!.destroy!();
+      backend.resetStats();
+      const before = environment.draws().length;
+
+      backend.replayRetainedBatch({ ...batch, nodeCount: 2 });
+      backend.replayRetainedBatch({ ...batch, nodeCount: 0 });
+      expect(environment.draws()).toHaveLength(before);
+      expect(backend.stats.submittedNodes).toBe(2);
+      expect(backend.stats.batches).toBe(0);
+      expect(backend.stats.drawCalls).toBe(0);
+
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('SpriteMaterial values stay live on instruction replay and structural state re-records recoverably', async () => {
     const environment = createMockWebGpuEnvironment();
 

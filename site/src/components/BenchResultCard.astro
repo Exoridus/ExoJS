@@ -172,23 +172,15 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     {card.loads.map(load => (
         <div class="bench-load-panel" data-load={load.id} hidden={load.id !== opening?.id}>
             {/*
-              * The load's own note about itself: why its comparison is
-              * withheld, or what state every arm on it shares. Nothing to say
-              * leaves no row, so the paragraph is only rendered where there
-              * is something to read - an always-present element with nothing
-              * inside it is invisible on screen but still there for `:empty`
-              * and similar checks to miss.
+              * The load's own note about itself: what state every arm on it
+              * shares. Nothing to say leaves no row, so the paragraph is only
+              * rendered where there is something to read - an always-present
+              * element with nothing inside it is invisible on screen but still
+              * there for `:empty` and similar checks to miss.
               */}
-            {(load.withheld !== undefined || statesOf(load).length > 0) && (
+            {statesOf(load).length > 0 && (
                 <p class="meta">
-                    {load.withheld !== undefined ? (
-                        <>
-                            <span class="status withheld">Not comparable</span>
-                            <span class="reason">{load.withheld}</span>
-                        </>
-                    ) : (
-                        <span class="status">{OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}</span>
-                    )}
+                    <span class="status">{OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}</span>
                 </p>
             )}
 
@@ -196,20 +188,9 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                 {load.arms.map(arm => (
                     <li class:list={['arm', { reference: arm.reference, absent: arm.ms === null }]}>
                         <span class="name">{arm.label}</span>
-                        {/*
-                          * A withheld row draws no track at all. Its bars would
-                          * be durations like any other, but side by side they
-                          * are read as the comparison the row is published
-                          * without, and an empty track under every row reads as
-                          * a chart that failed to draw.
-                          */}
-                        {load.withheld === undefined ? (
-                            <span class="track">
-                                {widthOf(arm.ms, load.maxMs) !== null && <span class="bar" style={`width:${String(widthOf(arm.ms, load.maxMs))}%`} />}
-                            </span>
-                        ) : (
-                            <span />
-                        )}
+                        <span class="track">
+                            {widthOf(arm.ms, load.maxMs) !== null && <span class="bar" style={`width:${String(widthOf(arm.ms, load.maxMs))}%`} />}
+                        </span>
                         <span class="time">
                             {arm.ms === null ? (
                                 <span class="state">{OUTCOME_STATUS[arm.outcome]}</span>
@@ -326,14 +307,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         color: var(--color-text-muted);
         cursor: pointer;
         margin-left: auto;
-    }
-
-    /* Forced onto its own line under the status badge: the reason reads as a caption to it, not a second fact beside it. */
-    .reason {
-        flex-basis: 100%;
-        font-size: 0.74rem;
-        line-height: 1.45;
-        text-wrap: pretty;
     }
 
     /* No frame, no ground: the card is already the box, and the global `.panel` rule is what used to draw a second one here. */

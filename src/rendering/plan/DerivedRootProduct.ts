@@ -327,12 +327,12 @@ export class DerivedRootProduct {
         // A table sized only now has no previous assignment to diff against, so
         // every admitted item enters - which is what the backend's empty stores
         // require anyway.
-        this.slots.update(scopes[0]!, this._current, null);
+        this.slots.update(scopes[0]!, this._current, null, this._queried);
 
         return;
       }
 
-      this.slots.update(scopes[0]!, this._current, hadPrevious ? this._previous : null);
+      this.slots.update(scopes[0]!, this._current, hadPrevious ? this._previous : null, this._queried);
     }
   }
 

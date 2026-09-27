@@ -1,7 +1,8 @@
 import { packedGroupChanged } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
+import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
-import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
@@ -60,24 +61,12 @@ interface RendererConnection {
   readonly geoVaoHandle: WebGLVertexArrayObject;
 }
 
-/** Instanced renderer for {@link RepeatingSprite} using WebGL2. Handles both shader and geometry paths internally. */
-export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<RepeatingSprite> implements WebGl2RetainedBatchReplayer {
+/** Shared geometry batches for scalable sprites, with a separate whole-texture repeating path. @internal */
+export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSliceSprite | RepeatingSprite> implements WebGl2RetainedBatchReplayer {
   /**
-   * Retained-batch capability opt-in. Only the
-   * GEOMETRY path (TextureRegion source) is recorded: its 32-byte instance
-   * layout matches the sprite/NineSlice batch shape (node index at word 7 of
-   * the 8-word instance), so it records and replays exactly like the sprite
-   * renderer - a mixed group of sprites and geometry-path repeating sprites
-   * shares one bundle and one group transform texture.
-   *
-   * The SHADER path (bare {@link Texture} source) uses a distinct 40-byte
-   * stride AND a per-batch wrap-mode sampler; the generalized instruction
-   * seam carries no per-batch metadata channel for the path discriminant or
-   * the wrap modes, so a shader-path draw inside a capture window POISONS it
-   * - the group degrades to the (correct) entry-replay tier, exactly as it
-   * did before this renderer opted in. Pixel-snapped draws are excluded for
-   * the same reason the sprite renderer excludes them (view-dependent
-   * instance words).
+   * NineSlice and atlas repeating geometry share the retained instance layout.
+   * Whole-texture repeating uses a distinct stride and sampler state, so it
+   * stays on entry replay. Pixel snapping is resolved in the shader.
    * @internal
    */
   public readonly supportsRetainedBatches = true;
@@ -96,7 +85,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
    * @internal
    */
   public admitsRetainedRecording(drawable: Drawable): boolean {
-    return (drawable as RepeatingSprite).resolvedStrategy !== 'shader';
+    return !(drawable instanceof RepeatingSprite) || drawable.resolvedStrategy !== 'shader';
   }
 
   private readonly _shaderPathShader: WebGl2Shader;
@@ -176,12 +165,18 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._geoU32 = new Uint32Array(this._geoData);
   }
 
-  public render(sprite: RepeatingSprite): void {
-    const strategy = sprite.resolvedStrategy;
+  public render(sprite: NineSliceSprite | RepeatingSprite): void {
+    const repeating = sprite instanceof RepeatingSprite ? sprite : null;
+    const strategy = repeating?.resolvedStrategy ?? 'geometry';
+
+    if (strategy === 'geometry' && sprite.quads.length === 0) {
+      return;
+    }
+
     const texture = sprite.texture;
     const blendMode = sprite.blendMode;
-    const modeX = sprite.modeX;
-    const modeY = sprite.modeY;
+    const modeX = repeating?.modeX ?? null;
+    const modeY = repeating?.modeY ?? null;
 
     const hasData = this._shaderQuadCount > 0 || this._geoQuadCount > 0;
 
@@ -191,7 +186,9 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       const blendChanged = this._currentBlendMode !== blendMode;
       const modeChanged = strategy === 'shader' && (this._currentModeX !== modeX || this._currentModeY !== modeY);
 
-      if (pathChanged || texChanged || blendChanged || modeChanged) {
+      const geometryOverflow = repeating === null && this._geoQuadCount + sprite.quads.length > this._batchSize;
+
+      if (pathChanged || texChanged || blendChanged || modeChanged || geometryOverflow) {
         this.flush();
       }
     }
@@ -230,10 +227,10 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       this._maxNodeIndex = nodeIndex;
     }
 
-    if (strategy === 'shader') {
+    if (repeating !== null && strategy === 'shader') {
       this._currentModeX = modeX;
       this._currentModeY = modeY;
-      this._writeShaderInstance(sprite, nodeIndex);
+      this._writeShaderInstance(repeating, nodeIndex);
     } else {
       this._geoNodeBooked = false;
       this._writeGeoQuads(sprite, nodeIndex);
@@ -282,7 +279,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._shaderQuadCount++;
   }
 
-  private _writeGeoQuads(sprite: RepeatingSprite, nodeIndex: number): void {
+  private _writeGeoQuads(sprite: NineSliceSprite | RepeatingSprite, nodeIndex: number): void {
     // Quads are uploaded RAW; PixelSnapMode.Geometry snaps each shared segment
     // boundary to the device grid in the vertex shader (gap-free, like NineSlice).
     const quads: readonly RepeatingSpriteQuad[] = sprite.quads;
@@ -414,6 +411,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     const gl = conn.gl;
     const texture = this._currentTexture;
+    backend.bindTexture(texture, 0);
+    backend.setBlendMode(this._currentBlendMode);
     const scaleMode = texture instanceof Texture ? texture.scaleMode : ScaleModes.Linear;
     const wrapS = repeatModeToWrap(this._currentModeX ?? 'repeat');
     const wrapT = repeatModeToWrap(this._currentModeY ?? 'repeat');
@@ -447,6 +446,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     if (!conn || !buf || !vao || this._geoQuadCount === 0) return;
 
+    backend.bindTexture(this._currentTexture, 0);
+    backend.setBlendMode(this._currentBlendMode);
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
     this._geoPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
     this._geoPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
@@ -532,7 +533,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const vao = payload.vao;
 
     if (buffer === null || vao === null) {
-      throw new Error('WebGl2RepeatingSpriteRenderer: retained batch VAO configuration requires an uploaded bundle.');
+      throw new Error('WebGl2ScalableSpriteRenderer: retained batch VAO configuration requires an uploaded bundle.');
     }
 
     const base = payload.byteOffset;
@@ -552,7 +553,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
    * transform unit). Mirrors {@link WebGl2SpriteRenderer.replayRetainedBatch}.
    * @internal
    */
-  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;
@@ -560,7 +561,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     if (backend === null || vao === null || transformTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
-      return;
+      return false;
     }
 
     if (payload.blendMode !== this._currentBlendMode) {
@@ -584,6 +585,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     backend.bindVertexArrayObject(vao);
     vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
+
+    return true;
   }
 
   /**
@@ -635,7 +638,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     if (existing !== undefined) return existing;
 
     const sampler = gl.createSampler();
-    if (sampler === null) throw new Error('WebGl2RepeatingSpriteRenderer: could not create sampler.');
+    if (sampler === null) throw new Error('WebGl2ScalableSpriteRenderer: could not create sampler.');
 
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
@@ -733,7 +736,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const geoVaoHandle = gl.createVertexArray();
 
     if (shaderVaoHandle === null || geoVaoHandle === null) {
-      throw new Error('WebGl2RepeatingSpriteRenderer: could not create vertex array object.');
+      throw new Error('WebGl2ScalableSpriteRenderer: could not create vertex array object.');
     }
 
     return { gl, buffers: new Map(), shaderVaoHandle, geoVaoHandle };
@@ -741,7 +744,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   private _createBufRuntime(conn: RendererConnection, _kind: string): WebGl2RenderBufferRuntime {
     const handle = conn.gl.createBuffer();
-    if (handle === null) throw new Error('WebGl2RepeatingSpriteRenderer: could not create render buffer.');
+    if (handle === null) throw new Error('WebGl2ScalableSpriteRenderer: could not create render buffer.');
 
     return {
       bind: (buffer): void => {

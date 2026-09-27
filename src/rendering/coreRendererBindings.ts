@@ -9,13 +9,11 @@ import { BitmapText } from '#rendering/text/BitmapText';
 import { Text } from '#rendering/text/Text';
 import { Video } from '#rendering/video/Video';
 import { WebGl2MeshRenderer } from '#rendering/webgl2/WebGl2MeshRenderer';
-import { WebGl2NineSliceSpriteRenderer } from '#rendering/webgl2/WebGl2NineSliceSpriteRenderer';
-import { WebGl2RepeatingSpriteRenderer } from '#rendering/webgl2/WebGl2RepeatingSpriteRenderer';
+import { WebGl2ScalableSpriteRenderer } from '#rendering/webgl2/WebGl2ScalableSpriteRenderer';
 import { WebGl2SpriteRenderer } from '#rendering/webgl2/WebGl2SpriteRenderer';
 import { WebGl2TextRenderer } from '#rendering/webgl2/WebGl2TextRenderer';
 import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
-import { WebGpuNineSliceSpriteRenderer } from '#rendering/webgpu/WebGpuNineSliceSpriteRenderer';
-import { WebGpuRepeatingSpriteRenderer } from '#rendering/webgpu/WebGpuRepeatingSpriteRenderer';
+import { WebGpuScalableSpriteRenderer } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
 import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
 import { WebGpuVideoRenderer } from '#rendering/webgpu/WebGpuVideoRenderer';
@@ -48,13 +46,9 @@ export const buildCoreRendererBindings = (options: RenderingApplicationOptions):
     [RenderBackendType.WebGl2]: () => new WebGl2TextRenderer(),
     [RenderBackendType.WebGpu]: () => new WebGpuTextRenderer(),
   };
-  const nineSliceRenderers: BackendRendererMap<NineSliceSprite> = {
-    [RenderBackendType.WebGl2]: () => new WebGl2NineSliceSpriteRenderer(spriteRendererBatchSize),
-    [RenderBackendType.WebGpu]: () => new WebGpuNineSliceSpriteRenderer(),
-  };
-  const repeatingSpriteRenderers: BackendRendererMap<RepeatingSprite> = {
-    [RenderBackendType.WebGl2]: () => new WebGl2RepeatingSpriteRenderer(spriteRendererBatchSize),
-    [RenderBackendType.WebGpu]: () => new WebGpuRepeatingSpriteRenderer(),
+  const scalableSpriteRenderers: BackendRendererMap<NineSliceSprite | RepeatingSprite> = {
+    [RenderBackendType.WebGl2]: () => new WebGl2ScalableSpriteRenderer(spriteRendererBatchSize),
+    [RenderBackendType.WebGpu]: () => new WebGpuScalableSpriteRenderer(),
   };
   const videoRenderers: BackendRendererMap<Video> = {
     [RenderBackendType.WebGpu]: () => new WebGpuVideoRenderer(),
@@ -66,7 +60,6 @@ export const buildCoreRendererBindings = (options: RenderingApplicationOptions):
     defineRendererBinding([Mesh], backend => meshRenderers[backend.backendType]?.()),
     // Text and BitmapText share the same renderer class - one multi-target binding.
     defineRendererBinding([Text, BitmapText], backend => textRenderers[backend.backendType]?.()),
-    defineRendererBinding([NineSliceSprite], backend => nineSliceRenderers[backend.backendType]?.()),
-    defineRendererBinding([RepeatingSprite], backend => repeatingSpriteRenderers[backend.backendType]?.()),
+    defineRendererBinding([NineSliceSprite, RepeatingSprite], backend => scalableSpriteRenderers[backend.backendType]?.()),
   ];
 };

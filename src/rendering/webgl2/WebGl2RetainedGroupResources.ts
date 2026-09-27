@@ -144,8 +144,12 @@ export interface WebGl2RetainedBatchReplayer {
   configureRetainedVao(payload: WebGl2RetainedBatchPayload): void;
   /** Preflight structural live state before any instruction in the set draws. */
   validateRetainedBatch?(payload: WebGl2RetainedBatchPayload): boolean;
-  /** Replay the batch: live state (blend, uniforms, textures), cached data (bytes, transforms). */
-  replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void;
+  /**
+   * Replay cached data with live state. Return false when no draw was issued;
+   * true or no return preserves descriptor-based batch/draw accounting.
+   * Submitted nodes are counted by the backend even when replay cannot draw.
+   */
+  replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean | void;
 }
 
 /**

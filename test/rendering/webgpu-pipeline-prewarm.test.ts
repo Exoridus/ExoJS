@@ -20,8 +20,7 @@
 
 import { BlendModes } from '#rendering/types';
 import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
-import { WebGpuNineSliceSpriteRenderer } from '#rendering/webgpu/WebGpuNineSliceSpriteRenderer';
-import { WebGpuRepeatingSpriteRenderer } from '#rendering/webgpu/WebGpuRepeatingSpriteRenderer';
+import { WebGpuScalableSpriteRenderer } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
 import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
 
@@ -204,60 +203,11 @@ describe('WebGpuMeshRenderer pipeline prewarm', () => {
   });
 });
 
-describe('WebGpuNineSliceSpriteRenderer pipeline prewarm', () => {
-  const setup = (): { renderer: WebGpuNineSliceSpriteRenderer; stub: StubDevice; pipelines: Map<string, GPURenderPipeline> } => {
-    const renderer = new WebGpuNineSliceSpriteRenderer();
-    const stub = createStubDevice();
-    const internals = renderer as unknown as {
-      _device: unknown;
-      _shaderModule: unknown;
-      _pipelineLayout: unknown;
-      _backend: unknown;
-      _pipelines: Map<string, GPURenderPipeline>;
-    };
-
-    internals._device = stub.device;
-    internals._shaderModule = {};
-    internals._pipelineLayout = {};
-    internals._backend = {};
-
-    return { renderer, stub, pipelines: internals._pipelines };
-  };
-
-  test('prewarmed pipelines are found by the hot-path lookup (no synchronous compiles)', async () => {
-    const { renderer, stub } = setup();
-
-    await renderer.prewarmPipelines(formats);
-
-    const lookup = renderer as unknown as { _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline };
-
-    for (const blendMode of prewarmedBlendModes) {
-      for (const format of formats) {
-        lookup._getPipeline(blendMode, format, false);
-      }
-    }
-
-    expect(stub.syncCreates()).toBe(0);
-  });
-
-  test('the pipeline cache holds no unreachable (suffix-less) keys after prewarm', async () => {
-    const { renderer, pipelines } = setup();
-
-    await renderer.prewarmPipelines(formats);
-
-    expect(pipelines.size).toBe(prewarmedBlendModes.length * formats.length);
-
-    for (const key of pipelines.keys()) {
-      expect(key).toMatch(lookupKeyPattern);
-    }
-  });
-});
-
-describe('WebGpuRepeatingSpriteRenderer pipeline prewarm', () => {
+describe('WebGpuScalableSpriteRenderer pipeline prewarm', () => {
   const kinds = ['shader', 'geo'] as const;
 
-  const setup = (): { renderer: WebGpuRepeatingSpriteRenderer; stub: StubDevice; pipelines: Map<string, GPURenderPipeline> } => {
-    const renderer = new WebGpuRepeatingSpriteRenderer();
+  const setup = (): { renderer: WebGpuScalableSpriteRenderer; stub: StubDevice; pipelines: Map<string, GPURenderPipeline> } => {
+    const renderer = new WebGpuScalableSpriteRenderer();
     const stub = createStubDevice();
     const internals = renderer as unknown as {
       _device: unknown;

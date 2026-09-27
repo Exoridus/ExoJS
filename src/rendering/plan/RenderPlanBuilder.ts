@@ -1247,7 +1247,7 @@ export class RenderPlanBuilder {
     const rect = this._captureCullRect;
 
     product.beginSelection();
-    this._selectMembership(rootScope, product, source);
+    const culled = this._selectMembership(rootScope, product, source);
     product.commitSelection(source.scopes);
 
     const slots = product.slots;
@@ -1275,9 +1275,7 @@ export class RenderPlanBuilder {
       backend._writePersistentSlots!(bundle, source, slots.entered, slots.enteredCount);
     }
 
-    // One note for the whole root rather than one per item: the count is exact
-    // either way, and it is what proves the tier still culls.
-    this.backend.stats.culledNodes += source.itemCount - product.delta.visible;
+    this.backend.stats.culledNodes += culled;
     representation.notePersistentSelection(rect);
 
     const record = representation.persistentDrawRecord(bundle, slots);
@@ -1328,19 +1326,26 @@ export class RenderPlanBuilder {
   /**
    * Fill every scope's membership without emitting anything.
    *
-   * The subtree cull a nested group gets on the ordinary path is deliberately
-   * absent: it is an optimisation over a per-item test, and here the per-item
-   * test is the spatial index, which already answers for a fully off-screen
-   * group in the time it takes to reject its cells.
+   * Apply the selection tier's subtree cull before querying descendants. The
+   * queried-scope bitmap also keeps their live marks out of the slot stream.
    */
-  private _selectMembership(scope: SourceScope, product: DerivedRootProduct, source: RenderRootSource): void {
+  private _selectMembership(scope: SourceScope, product: DerivedRootProduct, source: RenderRootSource): number {
+    const visibleBefore = product.delta.visible;
+
     product.selectScope(scope, this._captureCullRect, source.visibility);
+    let culled = scope.items.count - (product.delta.visible - visibleBefore);
 
     for (const other of scope.others) {
       if (other.kind === RenderEntryKind.Group) {
-        this._selectMembership(other, product, source);
+        if (other.node._inCullRect(this._captureCullRect)) {
+          culled += this._selectMembership(other, product, source);
+        } else {
+          culled++;
+        }
       }
     }
+
+    return culled;
   }
 
   /**

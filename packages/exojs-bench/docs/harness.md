@@ -256,6 +256,7 @@ Rules the generator enforces rather than merely intends:
 - Every row names the mechanism behind its difference, drawn from the structural counters. A row whose mechanism cannot be evidenced is not published - it is listed under Omissions with the reason, so a dropped row stays auditable.
 - One column per competitor, no "best competitor" composite. Phaser occupies its own WebGL1 block, CPU time only, explicitly carrying no mechanism.
 - Cells where ExoJS loses are published exactly like the cells where it wins.
+- A scenario whose arms turn out not to do the same work is repaired and re-measured. It is never published with a "not comparable" label in place of its comparison, and never hidden: a label would keep a known-unfair row on the page, and hiding it would let the choice of what to show depend on the outcome.
 
 ### Machine profiles
 

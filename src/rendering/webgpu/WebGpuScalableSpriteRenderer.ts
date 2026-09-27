@@ -3,8 +3,9 @@
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
+import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
-import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
@@ -73,20 +74,12 @@ const repeatModeToAddressMode = (mode: RepeatMode): GPUAddressMode => {
   return 'clamp-to-edge';
 };
 
-/** Instanced renderer for {@link RepeatingSprite} using WebGPU. */
-export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<RepeatingSprite> implements WebGpuRetainedBatchReplayer {
+/** Shared geometry batches for scalable sprites, with a separate whole-texture repeating path. @internal */
+export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSliceSprite | RepeatingSprite> implements WebGpuRetainedBatchReplayer {
   /**
-   * Retained-batch capability opt-in. Only the
-   * GEOMETRY path (TextureRegion source) is recorded: its 32-byte instance
-   * layout (node index at word 7 of the 8-word instance) matches the sprite
-   * renderer's batch shape exactly, so it records and replays through the
-   * same generalized seam. The SHADER path (bare Texture source) uses a
-   * distinct 40-byte stride AND a per-batch wrap-mode sampler that the
-   * generalized instruction payload carries no metadata for - a shader-path
-   * draw inside a capture window POISONS it instead, degrading the group to
-   * the (correct) entry-replay tier rather than replaying with the wrong
-   * sampler. Pixel-snapped draws are excluded for the same reason the sprite
-   * renderer excludes them (view-dependent instance words).
+   * NineSlice and atlas repeating geometry share the retained instance layout.
+   * Whole-texture repeating uses a distinct stride and sampler state, so it
+   * stays on entry replay. Pixel snapping is resolved in the shader.
    * @internal
    */
   public readonly supportsRetainedBatches = true;
@@ -105,7 +98,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
    * @internal
    */
   public admitsRetainedRecording(drawable: Drawable): boolean {
-    return (drawable as RepeatingSprite).resolvedStrategy !== 'shader';
+    return !(drawable instanceof RepeatingSprite) || drawable.resolvedStrategy !== 'shader';
   }
 
   private readonly _projData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
@@ -274,17 +267,21 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     this._recordTextureScratch[0] = null;
   }
 
-  public render(sprite: RepeatingSprite): void {
+  public render(sprite: NineSliceSprite | RepeatingSprite): void {
     const backend = this._backend;
     if (!backend) return;
 
     const texture = sprite.texture;
     if (!isSampleableTexture(texture)) return;
 
-    const strategy = sprite.resolvedStrategy;
+    const repeating = sprite instanceof RepeatingSprite ? sprite : null;
+    const strategy = repeating?.resolvedStrategy ?? 'geometry';
+
+    if (strategy === 'geometry' && sprite.quads.length === 0) return;
+
     const blendMode = sprite.blendMode;
-    const modeX = sprite.modeX;
-    const modeY = sprite.modeY;
+    const modeX = repeating?.modeX ?? null;
+    const modeY = repeating?.modeY ?? null;
 
     // Retained recording: only the geometry path is replayable (see
     // supportsRetainedBatches), and admitsRetainedRecording keeps a
@@ -322,10 +319,10 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(sprite);
     if (nodeIndex > this._maxNodeIndex) this._maxNodeIndex = nodeIndex;
 
-    if (strategy === 'shader') {
+    if (repeating !== null && strategy === 'shader') {
       this._currentModeX = modeX;
       this._currentModeY = modeY;
-      this._writeShaderInstance(sprite, nodeIndex);
+      this._writeShaderInstance(repeating, nodeIndex);
     } else {
       this._writeGeoQuads(sprite, nodeIndex);
     }
@@ -370,7 +367,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     this._shaderQuadCount++;
   }
 
-  private _writeGeoQuads(sprite: RepeatingSprite, nodeIndex: number): void {
+  private _writeGeoQuads(sprite: NineSliceSprite | RepeatingSprite, nodeIndex: number): void {
     // Quads are uploaded RAW; PixelSnapMode.Geometry snaps each shared segment
     // boundary to the device grid in the vertex shader (gap-free, like NineSlice).
     const quads: readonly RepeatingSpriteQuad[] = sprite.quads;
@@ -878,7 +875,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     if (existing) return existing;
 
     if (!this._device || !this._shaderModule || !this._pipelineLayout) {
-      throw new Error('WebGpuRepeatingSpriteRenderer: not connected.');
+      throw new Error('WebGpuScalableSpriteRenderer: not connected.');
     }
 
     const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil));
@@ -888,7 +885,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
   private _buildPipelineDescriptor(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
     if (!this._shaderModule || !this._pipelineLayout) {
-      throw new Error('WebGpuRepeatingSpriteRenderer: not connected.');
+      throw new Error('WebGpuScalableSpriteRenderer: not connected.');
     }
 
     const isShader = kind === 'shader';
