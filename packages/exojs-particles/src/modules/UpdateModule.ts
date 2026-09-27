@@ -1,105 +1,53 @@
-﻿import type { ParticleBatch } from '#ParticleStorage';
+import type { ParticleBatch } from '#ParticleStorage';
 
+import type { GlslContribution } from './GlslContribution';
 import type { WgslContribution } from './WgslContribution';
 
 /**
- * Per-frame, per-batch mutator. Operates on the live particles through their
- * named channels - typically a single tight loop over `[0, particles.count)`
- * that reads and writes the channel arrays it needs.
+ * Mutates live particles after integration, in registration order. Later
+ * modules observe earlier writes. CPU `apply()` is always required.
  *
- * Implementations must always provide a CPU `apply()`. To make a module
- * GPU-eligible (executed inside the system's composite compute shader on
- * WebGPU backends), additionally implement {@link wgsl} and
- * {@link writeUniforms}. Modules that declare a {@link WgslContribution}
- * may also opt to declare a 1D texture binding via the `textures` field
- * (used by `Curve` / `ColorGradient`-driven modules) - in which case
- * {@link uploadTextures} runs once at compile time to upload the data.
+ * GPU support is explicit per backend: `wgsl()` opts into WebGPU compute,
+ * `glsl()` into WebGL2 transform feedback. If any module lacks the attached
+ * backend's contribution, the entire system uses the supported CPU fallback.
+ * Built-in modules provide all three implementations. GPU bodies must
+ * preserve the CPU operation, channel ownership and module ordering.
  *
- * Implementation pattern (CPU-only module):
- *
- * ```ts
- * class MyModule extends UpdateModule {
- *     apply(particles, dt) {
- *         const { x: velX, y: velY } = particles.velocity;
- *         for (let i = 0; i < particles.count; i++) { velX[i] *= 0.99; velY[i] *= 0.99; }
- *     }
- * }
- * ```
- *
- * Implementation pattern (GPU-eligible module):
- *
- * ```ts
- * class MyForce extends UpdateModule {
- *     constructor(public ax: number, public ay: number) { super(); }
- *
- *     apply(particles, dt) {
- *         const { x: velX, y: velY } = particles.velocity;
- *         for (let i = 0; i < particles.count; i++) { velX[i] += this.ax * dt; velY[i] += this.ay * dt; }
- *     }
- *
- *     wgsl(): WgslContribution {
- *         return {
- *             key: 'MyForce',
- *             uniforms: [{ name: 'ax', type: 'f32' }, { name: 'ay', type: 'f32' }],
- *             body: `velX[idx] += u_MyForce.ax * dt; velY[idx] += u_MyForce.ay * dt;`,
- *         };
- *     }
- *
- *     writeUniforms(view, offset) {
- *         view.setFloat32(offset + 0, this.ax, true);
- *         view.setFloat32(offset + 4, this.ay, true);
- *     }
- * }
- * ```
- *
- * If *any* registered update module on a system lacks `wgsl()`, the system
- * forces CPU mode regardless of backend - preserving the contract that
- * `apply()` is always honoured. Built-in modules ship both
- * implementations; custom modules can opt into GPU acceleration at their
- * authors' discretion.
- *
- * Update modules run after integration each frame. Multiple modules execute
- * in registration order; later modules see the effects of earlier ones.
+ * Shader sources and lookup tables are captured when the module list is
+ * compiled. Remove and re-add a module after replacing lookup configuration;
+ * uniform values are refreshed each frame without recompilation.
  */
 export abstract class UpdateModule {
-  /**
-   * Mutates the live particles for one frame.
-   *
-   * Runs only on the CPU path: a system whose modules are all GPU-eligible
-   * executes {@link wgsl} bodies inside its compute shader instead, and never
-   * calls this.
-   */
+  /** Runs only during CPU simulation; must not retain the borrowed particle batch. */
   public abstract apply(particles: ParticleBatch, dt: number): void;
 
-  /**
-   * Override to declare a GPU contribution. Returning a {@link WgslContribution}
-   * makes this module GPU-eligible; omitting (or returning undefined)
-   * forces CPU mode for any system that uses this module.
-   */
+  /** Explicit WebGPU implementation. Absence selects CPU fallback on WebGPU. */
   public wgsl?(): WgslContribution;
 
+  /** Explicit WebGL2 implementation. Absence selects CPU fallback on WebGL2. */
+  public glsl?(): GlslContribution;
+
   /**
-   * Write this module's current uniform values into the shared uniform
-   * buffer at `byteOffset`. Layout must match the field declarations
-   * returned by {@link wgsl} (in the same order).
+   * Backend-neutral lookup bytes keyed by texture binding name. Tables have
+   * 256 samples: `r32float` uses 256 floats, `rgba8unorm` uses 1024 RGBA bytes.
+   * Called at compilation; borrowed arrays must remain valid until upload
+   * completes. Shader authors must explicitly interpolate texels if needed.
+   */
+  public textureData?(): ReadonlyMap<string, Float32Array<ArrayBuffer> | Uint8Array<ArrayBuffer>>;
+
+  /**
+   * Writes little-endian values in contribution field order at `byteOffset`.
+   * Align scalars to 4 bytes, vec2 to 8 and vec4 to 16. The same bytes feed
+   * both backends. Required when the selected contribution declares uniforms.
    *
-   * Receives the current frame `dt` (seconds). Modules tracking
-   * accumulated time (e.g. noise/turbulence) should advance their
-   * internal counter here to stay in sync when running in GPU mode
-   * (where {@link apply} is not called).
-   *
-   * Required when {@link wgsl} declares uniforms. Called every frame by
-   * the system before dispatching compute.
+   * Called once per GPU simulation step. Stateful modules should advance
+   * their clock here instead of `apply()`, which does not run in GPU mode.
    */
   public writeUniforms?(view: DataView, byteOffset: number, dt: number): void;
 
   /**
-   * Upload texture data (Curve/ColorGradient lookup tables) to the GPU at
-   * compile time. Receives the GPUDevice and a map of texture bindings
-   * keyed by the `name` in {@link WgslContribution.textures}. Called once
-   * after pipeline creation.
-   *
-   * Required when {@link wgsl} declares textures.
+   * Legacy WebGPU texture uploader, called at compilation with bindings keyed
+   * by name. Prefer `textureData()` for modules that support both GPU backends.
    */
   public uploadTextures?(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void;
 

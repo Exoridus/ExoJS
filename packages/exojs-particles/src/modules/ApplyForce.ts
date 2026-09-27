@@ -1,5 +1,6 @@
 ﻿import type { ParticleBatch } from '#ParticleStorage';
 
+import type { GlslContribution } from './GlslContribution';
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
@@ -32,6 +33,15 @@ export class ApplyForce extends UpdateModule {
       velX[i] = (velX[i] ?? 0) + ax;
       velY[i] = (velY[i] ?? 0) + ay;
     }
+  }
+
+  public override glsl(): GlslContribution {
+    return {
+      ...this.wgsl(),
+      body: `
+velocity += vec2(u_ApplyForce.ax, u_ApplyForce.ay) * dt;
+      `,
+    };
   }
 
   public override wgsl(): WgslContribution {

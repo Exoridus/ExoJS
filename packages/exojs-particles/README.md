@@ -52,13 +52,23 @@ The no-texture constructor uses a white pixel. Particle positions and velocities
 
 ## Before choosing an execution path
 
-WebGL2 uses CPU simulation. WebGPU can use compute when the attached backend, update modules, and render mode are eligible. Inspect `gpuMode` after attachment and update rather than inferring it from the browser name.
+WebGL2 quad particles use transform feedback; WebGPU uses compute for eligible modes. Every update module must provide the attached backend's shader implementation (`glsl()` or `wgsl()`). Otherwise the whole system uses CPU simulation. Inspect `simulationBackend` (`cpu`, `webgl2`, `webgpu`) after attachment and update; `gpuMode` is true for either GPU path. Use `{ simulation: 'cpu' }` to require CPU execution, including synchronous death callbacks.
 
-Update modules may change while running. A change from GPU to CPU execution clears live particles because CPU storage does not contain the device's latest integrated state. Capacity is fixed at construction; choose it from rate, lifetime, bursts, and expected peak occupancy.
+The WebGL2 GPU path supports `QuadParticles`. Mesh remains CPU-simulated on WebGL2 and retains its existing WebGPU support. Ribbon and trail modes remain CPU-simulated. Insufficient WebGL2 vertex texture capacity selects CPU; shader compilation errors are reported rather than silently changing behavior.
+
+Update modules may change while running. A change from GPU to CPU execution clears live particles because CPU storage does not contain the device's latest integrated state. Backend replacement or context/device loss also clears device-integrated particles. `clearParticles()` cancels pending death callbacks while retaining simulation allocations. Capacity is fixed at construction; choose it from rate, lifetime, bursts, and expected peak occupancy.
 
 A scene system registry advances and destroys a registered system. A system outside such an owner needs explicit cleanup. The texture has its own ownership, and a custom render mode passed to a system is owned by that system; do not share the same owned mode between independent systems.
 
 Use `createParticlesExtension({ batchSize })` only when you need a deliberate renderer-batch configuration. Choose that descriptor instead of installing a second particle descriptor beside the default one.
+
+## Custom modules and numerical parity
+
+Implement `apply(particles, dt)` for CPU execution and explicit `wgsl()` / `glsl()` contributions for the GPU paths you support. Contributions share uniform fields and lookup texture declarations; `writeUniforms()` writes the same aligned little-endian bytes for both backends, and `textureData()` supplies backend-neutral lookup bytes. Module bodies run after integration, in registration order, including the final step before death. GPU contributions must treat elapsed and lifetime as read-only: the host owns expiry and slot reuse.
+
+Built-in curve modules interpolate a shared 256-sample Float32 table; gradients interpolate a shared 256-sample RGBA8 table and round to the nearest byte. Narrow curve features can therefore be approximated. Tables are captured when the module program is compiled; clear and re-register modules after replacing lookup configuration. Uniform parameters can change each update. Turbulence uses an integer lattice hash shared by all implementations. Floating-point arithmetic still permits small backend differences; parity does not mean bit-identical trajectories.
+
+Death records contain position, velocity, rotation, scale, color, elapsed and original lifetime after the terminal integration and module step. GPU delivery is asynchronous, ordered by submission and then slot, with three readback slots and a capacity-sized backlog. Overflow drops excess death callbacks and emits a development warning. Clear/destroy cancels pending delivery. Use CPU simulation for effects whose callbacks must run in the same update.
 
 ## Documentation
 

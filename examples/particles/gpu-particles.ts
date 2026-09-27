@@ -2,9 +2,7 @@ import { Application, Color, FixedResolutionCanvasSizing, RenderBackendType, typ
 import { AlphaFadeOverLifetime, ApplyForce, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn } from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-// WebGPU runs the whole simulation on a compute shader; WebGL2 falls back to a
-// CPU integrator and therefore starts from a much smaller budget. The slider
-// and the timing readout show where a given machine stops keeping up.
+// Illustrative loads for the two GPU backends; measure on target hardware.
 const budgets = {
   webgpu: { capacity: 320_000, rate: 75_000 },
   webgl2: { capacity: 20_000, rate: 3_000 },
@@ -20,10 +18,7 @@ class GpuParticlesScene extends Scene {
   override init(): void {
     const app = this.app;
     const { width, height } = app;
-    // Read here rather than beside the Application: a WebGPU request that finds
-    // no adapter falls back to WebGL2 during start(), so before the scene is
-    // activated the backend can still be the requested one rather than the one
-    // that came up - and these two budgets differ sixteenfold.
+    // Backend fallback is resolved before scene activation.
     const isWebGpu = app.backend.backendType === RenderBackendType.WebGpu;
     const { capacity, rate } = isWebGpu ? budgets.webgpu : budgets.webgl2;
 
@@ -45,9 +40,7 @@ class GpuParticlesScene extends Scene {
 
     this.hud = mountControls({
       title: 'Particle Capacity',
-      hint: isWebGpu
-        ? 'WebGPU compute simulation — hundreds of thousands of particles, no CPU per-particle work.'
-        : 'WebGL2 CPU fallback — a smaller budget keeps the CPU integrator smooth.',
+      hint: 'Quad simulation uses WebGPU compute or WebGL2 transform feedback when eligible. Frame interval includes the whole application.',
     });
     mountControlPanel({ title: 'Load' }).addSlider({
       label: 'Spawn / second',
@@ -62,7 +55,7 @@ class GpuParticlesScene extends Scene {
   }
 
   override update(): void {
-    const backend = this.system.gpuMode ? 'WebGPU (GPU compute)' : 'WebGL2 (CPU fallback)';
+    const backend = { cpu: 'CPU', webgl2: 'WebGL2 transform feedback', webgpu: 'WebGPU compute' }[this.system.simulationBackend];
     // The `update` delta is clamped for simulation stability and would hide a
     // slow frame; the raw frame-to-frame delta is what the display actually got.
     const { rawFrameDeltaMs } = this.app.backend.stats;

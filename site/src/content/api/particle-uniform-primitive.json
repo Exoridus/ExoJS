@@ -1,0 +1,95 @@
+{
+  "title": "ParticleUniformPrimitive",
+  "description": "Scalar/vector wire types shared by shader backends. Names retain WGSL spelling; GLSL maps them to its corresponding types.",
+  "symbol": "ParticleUniformPrimitive",
+  "kind": "type",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Scalar/vector wire types shared by shader backends. Names retain WGSL spelling; GLSL maps them to its corresponding types."
+      ],
+      "importLine": "import { ParticleUniformPrimitive } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ParticleUniformPrimitive",
+          "signature": "\"f32\" | \"i32\" | \"u32\" | \"vec2<f32>\" | \"vec4<f32>\"",
+          "signatureTokens": [
+            {
+              "text": "\"f32\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"i32\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"u32\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"vec2<f32>\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"vec4<f32>\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/ParticleShaderContribution.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ParticleShaderContribution.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/ParticleShaderContribution.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ParticleShaderContribution.ts"
+}

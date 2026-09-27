@@ -1,5 +1,6 @@
 ﻿import type { ParticleBatch } from '#ParticleStorage';
 
+import type { GlslContribution } from './GlslContribution';
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
@@ -29,6 +30,15 @@ export class RotateOverLifetime extends UpdateModule {
     for (let i = 0; i < liveCount; i++) {
       rotationSpeeds[i] = (rotationSpeeds[i] ?? 0) + delta;
     }
+  }
+
+  public override glsl(): GlslContribution {
+    return {
+      ...this.wgsl(),
+      body: `
+rotation.y += u_RotateOverLifetime.angularAcceleration * dt;
+      `,
+    };
   }
 
   public override wgsl(): WgslContribution {

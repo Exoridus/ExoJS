@@ -1,16 +1,16 @@
 {
   "title": "WgslTextureBinding",
-  "description": "A 1D texture binding (used by Curve / ColorGradient lookups).",
+  "description": "",
   "symbol": "WgslTextureBinding",
-  "kind": "interface",
+  "kind": "type",
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 0,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 0,
     "events": 0
   },
   "sections": [
@@ -18,65 +18,26 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A 1D texture binding (used by Curve / ColorGradient lookups)."
-      ],
+      "paragraphs": [],
       "importLine": "import { WgslTextureBinding } from '@codexo/exojs-particles'",
       "sourceLink": null
     },
     {
-      "id": "properties",
-      "title": "Properties",
+      "id": "definition",
+      "title": "Definition",
       "members": [
         {
-          "name": "format",
-          "signature": "format: \"r32float\" | \"rgba8unorm\"",
+          "name": "WgslTextureBinding",
+          "signature": "ParticleTextureBinding",
           "signatureTokens": [
             {
-              "text": "format",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"r32float\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"rgba8unorm\"",
-              "kind": "keyword"
+              "text": "ParticleTextureBinding",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "WGSL texture format. r32float for Curve, rgba8unorm for ColorGradient."
-        },
-        {
-          "name": "name",
-          "signature": "name: string",
-          "signatureTokens": [
-            {
-              "text": "name",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Field name within the module - referenced in WGSL as u_${moduleKey}_${name}."
+          "description": ""
         }
       ],
       "paragraphs": [],

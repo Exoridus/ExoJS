@@ -1,21 +1,3 @@
-/**
- * WebGPU particle death-context browser tests.
- *
- * A death module observes a particle that the GPU has been integrating. The CPU
- * copy of position/velocity/scale/rotation/colour stops at the spawn values in
- * GPU mode - only the compute shader advances them, and nothing reads them back
- * - so a death callback that reads CPU storage sees where the particle was BORN,
- * not where it died. Sub-emitters built on it fire in the wrong place on WebGPU
- * and in the right place on WebGL2.
- *
- * These tests run the real compute pipeline, so they fail on a death context
- * that is not backend-true. A jsdom test cannot cover this: with a mocked device
- * nothing integrates, and the stale value and the correct one are the same
- * number.
- *
- * Run via:  pnpm test:browser:webgpu
- */
-
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { type Seconds, Time } from '#core/units';
@@ -23,8 +5,8 @@ import { materializeRendererBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import type { ParticleDeathContext } from '../../../packages/exojs-particles/src/index';
-import { DeathModule, particlesExtension, ParticleSystem } from '../../../packages/exojs-particles/src/index';
+import type { ParticleBatch, ParticleDeathContext, WgslContribution } from '../../../packages/exojs-particles/src/index';
+import { DeathModule, particlesExtension, ParticleSystem, UpdateModule } from '../../../packages/exojs-particles/src/index';
 import { wireCoreRenderers } from './_coreRenderers';
 
 const canvasSize = 64;
@@ -107,6 +89,31 @@ class RecordDeaths extends DeathModule {
   }
 }
 
+class TerminalState extends UpdateModule {
+  public override apply(particles: ParticleBatch, dt: number): void {
+    for (let i = 0; i < particles.count; i++) {
+      particles.velocity.x[i] = particles.velocity.x[i]! + 8 * dt;
+      particles.velocity.y[i] = particles.velocity.y[i]! - 4 * dt;
+      particles.scale.x[i] = particles.timing.elapsed[i]! / particles.timing.lifetime[i]!;
+      particles.scale.y[i] = particles.scale.x[i]! * 2;
+      particles.rotation.angle[i] = particles.rotation.angle[i]! + dt;
+      particles.color[i] = particles.timing.elapsed[i]! >= particles.timing.lifetime[i]! ? 0x80402010 : 0xffabcdef;
+    }
+  }
+
+  public override wgsl(): WgslContribution {
+    return {
+      key: 'TerminalState',
+      body: `
+        velocities[idx] = velocities[idx] + vec2<f32>(8.0, -4.0) * dt;
+        scales[idx] = vec2<f32>(1.0, 2.0) * (timing[idx].x / timing[idx].y);
+        rotInfo[idx].x = rotInfo[idx].x + dt;
+        color[idx] = select(0xffabcdefu, 0x80402010u, timing[idx].x >= timing[idx].y);
+      `,
+    };
+  }
+}
+
 describe('WebGPU particle death context', () => {
   test('a death callback sees where the particle died, not where it was born', async () => {
     const backend = await setupBackend();
@@ -141,7 +148,7 @@ describe('WebGPU particle death context', () => {
     expect(deaths.records).toHaveLength(1);
     expect(deaths.records[0]!.x).toBeGreaterThan(10);
     expect(deaths.records[0]!.velocityX).toBeCloseTo(100, 1);
-    // The lifetime is the CPU's own value; the device only ever saw the sentinel.
+    // Lifetime survives the device's terminal marker unchanged.
     expect(deaths.records[0]!.lifetime).toBeCloseTo(0.15, 4);
   });
 
@@ -196,6 +203,117 @@ describe('WebGPU particle death context', () => {
     expect(gpuDeaths.records[0]!.y).toBeCloseTo(cpuDeaths.records[0]!.y, 2);
     expect(gpuDeaths.records[0]!.velocityX).toBeCloseTo(cpuDeaths.records[0]!.velocityX, 2);
     expect(gpuDeaths.records[0]!.velocityY).toBeCloseTo(cpuDeaths.records[0]!.velocityY, 2);
+  });
+
+  test.each([
+    { name: 'after earlier steps', steps: [0, 0.125, 0.125, 0.125], lifetime: 0.3 },
+    { name: 'in its spawn update', steps: [0.125], lifetime: 0.1 },
+  ])('terminal modules and every death field match CPU $name', async ({ steps, lifetime }) => {
+    const backend = await setupBackend();
+    const texture = createTexture();
+    const cpu = new ParticleSystem(texture, { capacity: 1 });
+    const gpu = new ParticleSystem(texture, { capacity: 1 });
+    const cpuDeaths = new RecordDeaths();
+    const gpuDeaths = new RecordDeaths();
+
+    try {
+      for (const [system, deaths] of [
+        [cpu, cpuDeaths],
+        [gpu, gpuDeaths],
+      ] as const) {
+        system.addUpdateModule(new TerminalState());
+        system.addDeathModule(deaths);
+        const particle = system.emit()!;
+
+        particle.position.set(17, -9);
+        particle.velocity.set(12, -6);
+        particle.rotation = 0.25;
+        particle.rotationSpeed = 2;
+        particle.lifetime = lifetime;
+      }
+
+      gpu.render(backend);
+      backend.flush();
+
+      for (const dt of steps) {
+        cpu.update(tick(dt));
+        gpu.update(tick(dt));
+        gpu.render(backend);
+        backend.flush();
+      }
+
+      expect(gpu.gpuMode).toBe(true);
+      await runUntil(gpu, backend, () => gpuDeaths.records.length > 0);
+      expect(cpuDeaths.records).toHaveLength(1);
+      expect(gpuDeaths.records).toHaveLength(1);
+      const expected = cpuDeaths.records[0]!;
+      const actual = gpuDeaths.records[0]!;
+
+      // Binary-exact timesteps isolate Float32 storage rounding from LUT approximation.
+      for (const field of ['x', 'y', 'velocityX', 'velocityY', 'rotation', 'scaleX', 'scaleY', 'elapsed', 'lifetime'] as const) {
+        expect(actual[field]).toBeCloseTo(expected[field], 5);
+      }
+      expect(actual.color).toBe(expected.color);
+      expect(actual.color).toBe(0x80402010);
+    } finally {
+      cpu.destroy();
+      gpu.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('uninitialized holes stay invisible when modules assign scale and color', async () => {
+    const backend = await setupBackend();
+    const texture = createTexture();
+    const system = new ParticleSystem(texture, { capacity: 2 });
+    const staging = backend.device.createBuffer({ size: 40, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+
+    try {
+      system.addUpdateModule(new TerminalState());
+      system.emit();
+      system.emit()!.lifetime = 10;
+      system._storage.alive[0] = 0;
+      system.render(backend);
+      backend.flush();
+      system.update(tick(0.125));
+      const encoder = backend.device.createCommandEncoder();
+
+      encoder.copyBufferToBuffer(system.gpuState!.instanceBuffer, 0, staging, 0, 40);
+      backend.device.queue.submit([encoder.finish()]);
+      await staging.mapAsync(GPUMapMode.READ);
+      expect([...new Uint32Array(staging.getMappedRange())]).toEqual(Array<number>(10).fill(0));
+      staging.unmap();
+    } finally {
+      staging.destroy();
+      system.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test.each(['clearParticles', 'destroy'] as const)('%s discards death callbacks still awaiting readback', async action => {
+    const backend = await setupBackend();
+    const texture = createTexture();
+    const system = new ParticleSystem(texture, { capacity: 1 });
+    const deaths = new RecordDeaths();
+
+    try {
+      system.addDeathModule(deaths);
+      system.render(backend);
+      backend.flush();
+      system.emit()!.lifetime = 0.1;
+      system.update(tick(0));
+      system.update(tick(0.125));
+      system[action]();
+      await backend.device.queue.onSubmittedWorkDone();
+      await new Promise(resolve => setTimeout(resolve, 30));
+      expect(deaths.records).toHaveLength(0);
+    } finally {
+      if (action !== 'destroy') system.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
   });
 
   test('deaths in consecutive frames are all delivered exactly once', async () => {

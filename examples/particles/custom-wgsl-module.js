@@ -2,14 +2,7 @@
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Vector } from '@codexo/exojs';
 import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
-/**
- * A custom update module that nudges each particle's horizontal velocity with a
- * per-particle sine wave, producing a swaying rising column. It ships BOTH a CPU
- * `apply()` loop and a GPU `wgsl()` body. The particle system auto-selects:
- * WebGPU backend ⇒ the WGSL body runs in the compute shader (no CPU readback);
- * any other backend (incl. WebGL2) ⇒ the `apply()` loop runs on the CPU. Both
- * paths compute the same motion - the on-screen readout reveals which one is live.
- */
+/** Adds horizontal sway after integration, using the same operation on every backend. */
 class SwayModule extends UpdateModule {
   amplitude;
   frequency;
@@ -35,6 +28,12 @@ class SwayModule extends UpdateModule {
       body: `velocities[idx].x = velocities[idx].x + sin(timing[idx].x * modules.u_SwayModule.frequency) * modules.u_SwayModule.amplitude * dt;`,
     };
   }
+  glsl() {
+    return {
+      ...this.wgsl(),
+      body: `velocity.x += sin(timing.x * u_SwayModule.frequency) * u_SwayModule.amplitude * dt;`,
+    };
+  }
   writeUniforms(view, offset) {
     view.setFloat32(offset + 0, this.amplitude, true);
     view.setFloat32(offset + 4, this.frequency, true);
@@ -43,7 +42,6 @@ class SwayModule extends UpdateModule {
 class CustomWgslModuleScene extends Scene {
   system;
   hud;
-  reportedMode = false;
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -60,21 +58,16 @@ class CustomWgslModuleScene extends Scene {
     );
     this.system.addUpdateModule(new SwayModule(250, 8));
     this.hud = mountControls({
-      title: 'Custom WGSL Module',
-      controls: [{ keys: 'Auto', action: 'CPU on WebGL2 · GPU on WebGPU' }],
+      title: 'Custom Particle Module',
+      controls: [{ keys: 'Auto', action: 'CPU / WebGL2 transform feedback / WebGPU compute' }],
       // GPU vs CPU routing is decided on the first update() once the
       // backend is known - show "detecting" until then.
       status: 'Compute path: detecting…',
-      hint: 'The SwayModule supplies both a CPU apply() and a GPU wgsl() body; the system picks one.',
+      hint: 'SwayModule provides apply(), glsl() and wgsl() with shared uniforms. Inspect the selected simulation path below.',
     });
   }
   update(_delta) {
-    // gpuMode is only meaningful after the first update() compiled the
-    // pipeline. Report it once it has settled.
-    if (!this.reportedMode) {
-      this.reportedMode = true;
-      this.hud.setStatus(this.system.gpuMode ? 'Compute path: GPU (WGSL compute shader)' : 'Compute path: CPU (apply fallback)');
-    }
+    this.hud.setStatus(`Simulation: ${this.system.simulationBackend}`);
   }
   draw(context) {
     context.render(this.system);
