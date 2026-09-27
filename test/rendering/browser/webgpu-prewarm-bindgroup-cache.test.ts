@@ -155,14 +155,21 @@ describe('WebGPU prewarm + flush-path caching (nine-slice / repeating / text)', 
       // Prewarm ran during initialize(): the no-clip pipeline variants exist.
       expect(pipelineCacheSize(backend, sprite)).toBeGreaterThan(0);
 
-      if (!(await renderNode(ctx, backend, sprite))) {
+      const device = getBackendDevice(backend);
+      const textureBindGroupLabel = 'repeating-sprite:texture-bind-group:geo';
+      let drew = false;
+
+      const warmed = await countBindGroups(device, textureBindGroupLabel, async () => {
+        drew = await renderNode(ctx, backend, sprite);
+      });
+
+      if (!drew) {
         return;
       }
 
-      const device = getBackendDevice(backend);
-      let drew = false;
+      expect(warmed).toBe(1);
 
-      const created = await countBindGroups(device, 'nine-slice:texture-bind-group', async () => {
+      const created = await countBindGroups(device, textureBindGroupLabel, async () => {
         drew = await renderNode(ctx, backend, sprite);
       });
 
