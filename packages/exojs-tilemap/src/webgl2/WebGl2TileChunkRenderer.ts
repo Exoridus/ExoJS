@@ -408,7 +408,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
    * dispatching here and bumps the stats from the instruction descriptor.
    * @internal
    */
-  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;
@@ -416,7 +416,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     if (backend === null || vao === null || transformTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
-      return;
+      return false;
     }
 
     backend.setBlendMode(payload.blendMode);
@@ -440,6 +440,8 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     this._shader.sync();
     backend.bindVertexArrayObject(vao);
     vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
+
+    return true;
   }
 
   protected onConnect(backend: WebGl2Backend): void {

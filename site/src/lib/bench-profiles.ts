@@ -674,10 +674,7 @@ const ARCHETYPE_TITLES: Readonly<Record<string, string>> = {
  * removing a losing card and quietly keeping a winning one is exactly what a
  * fixed headline set exists to prevent.
  */
-const WITHHELD_SCENARIOS: Readonly<Record<string, string>> = {
-  joints:
-    'On the published profiles the chains had settled and every arm that sleeps was idle: Nape-JS took less than the clock resolved, and the other figures set a solver at work against one at rest. The scene now keeps the chains moving, and the comparison returns with the next reference measurement.',
-};
+const WITHHELD_SCENARIOS: Readonly<Record<string, string>> = {};
 
 /** Why a scenario publishes no cross-arm comparison, or `undefined` where it publishes one. */
 export const withheldScenario = (archetype: string): string | undefined => WITHHELD_SCENARIOS[archetype];

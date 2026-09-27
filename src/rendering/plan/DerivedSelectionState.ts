@@ -272,7 +272,7 @@ export class DerivedSelectionState {
    * ordinal; pass `null` when there is none, in which case every admitted item
    * is treated as entering.
    */
-  public update(rootScope: SourceScope, current: readonly MembershipBits[], previous: readonly MembershipBits[] | null): void {
+  public update(rootScope: SourceScope, current: readonly MembershipBits[], previous: readonly MembershipBits[] | null, queried?: Uint8Array): void {
     resetSlotStats(this.stats);
     this._enteredCount = 0;
     this._orderCount = 0;
@@ -288,7 +288,7 @@ export class DerivedSelectionState {
     }
 
     this._admitTree(rootScope, current, previous);
-    this._walkScope(rootScope, current);
+    this._walkScope(rootScope, current, queried);
     this.stats.orderEntries = this._orderCount;
     this.stats.slotCapacity = this._slotCount;
   }
@@ -448,7 +448,7 @@ export class DerivedSelectionState {
    * contributes nothing to append. A live entry is never culled here either:
    * its own collect applies whatever cull its node has.
    */
-  private _walkScope(scope: SourceScope, current: readonly MembershipBits[]): void {
+  private _walkScope(scope: SourceScope, current: readonly MembershipBits[], queried: Uint8Array | undefined): void {
     const bits = current[scope.ordinal]!;
     const words = bits.words;
     const wordCount = bits.wordCount;
@@ -480,11 +480,11 @@ export class DerivedSelectionState {
 
           other++;
 
-          if (nested.kind === RenderEntryKind.Group) {
+          if (nested.kind === RenderEntryKind.Group && queried?.[nested.ordinal] !== 0) {
             this._orderCount = cursor;
-            this._walkScope(nested, current);
+            this._walkScope(nested, current, queried);
             cursor = this._orderCount;
-          } else {
+          } else if (nested.kind !== RenderEntryKind.Group) {
             this._mark(cursor, nested);
           }
         }
@@ -500,9 +500,9 @@ export class DerivedSelectionState {
 
       other++;
 
-      if (nested.kind === RenderEntryKind.Group) {
-        this._walkScope(nested, current);
-      } else {
+      if (nested.kind === RenderEntryKind.Group && queried?.[nested.ordinal] !== 0) {
+        this._walkScope(nested, current, queried);
+      } else if (nested.kind !== RenderEntryKind.Group) {
         this._mark(this._orderCount, nested);
       }
     }

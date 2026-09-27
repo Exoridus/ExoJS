@@ -2317,7 +2317,10 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._bindRenderTarget(this._renderTarget);
-    payload.replayer.replayRetainedBatch(payload);
+    if (!payload.replayer.replayRetainedBatch(payload)) {
+      return;
+    }
+
     this._stats.batches++;
     this._stats.drawCalls += batch.drawCalls;
     // Nodes, not instances: a batch whose renderer expands one node into many
