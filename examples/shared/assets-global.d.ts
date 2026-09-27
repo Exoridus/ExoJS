@@ -18,6 +18,7 @@
 
 interface ExampleAssetCatalog {
     readonly demo: {
+        readonly isometricLandscape: 'json/maps/isometric-landscape.tmj';
         readonly textures: {
             readonly particleFlame: 'demo/textures/particle-flame.png';
             readonly particleSmoke: 'demo/textures/particle-smoke.png';

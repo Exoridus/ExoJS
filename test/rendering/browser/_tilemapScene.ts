@@ -1,6 +1,6 @@
 import { tiledExtension } from '@codexo/exojs-tiled';
 import type { TileTransform } from '@codexo/exojs-tilemap';
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileProjection, TileSet } from '@codexo/exojs-tilemap';
 
 import { materializeRendererBindings } from '#extensions/materialize';
 import { buildSnapshot } from '#extensions/snapshot';
@@ -88,4 +88,16 @@ export const singleTileMap = (texture: Texture, transform: TileTransform = TILE_
   layer.setTileAt(0, 0, { tileset, localTileId: 0, transform });
 
   return new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
+};
+
+/** Opaque overlapping tiles exercise painter order across both chunk axes. */
+export const isometricOverlapMap = (red: Texture, blue: Texture): TileMap => {
+  const tilesets = [makeTileset(red, 'red'), makeTileset(blue, 'blue')];
+  const projection = new TileProjection({ orientation: 'isometric', tileWidth: 16, tileHeight: 8, originX: 32 });
+  const layer = new TileLayer({ id: 1, name: 'iso', width: 4, height: 4, tileWidth: 16, tileHeight: 8, chunkWidth: 2, chunkHeight: 2, tilesets, projection });
+  for (let y = 3; y >= 0; y--)
+    for (let x = 3; x >= 0; x--) {
+      layer.setTileAt(x, y, { tileset: tilesets[(x + y) % 2]!, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+    }
+  return new TileMap({ width: 4, height: 4, tileWidth: 16, tileHeight: 8, tilesets, layers: [layer], projection });
 };

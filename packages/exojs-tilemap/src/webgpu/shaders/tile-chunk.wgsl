@@ -18,6 +18,8 @@ var<storage, read> transforms: array<TransformSlot>;
 var tileTexture: texture_2d<f32>;
 @group(1) @binding(1)
 var tileSampler: sampler;
+@group(1) @binding(2)
+var<uniform> sampleAlpha: vec4<f32>;
 
 struct VertexInput {
     @location(0) quadBounds: vec4<f32>,   // x0, y0, x1, y1
@@ -86,5 +88,6 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     let sample = textureSample(tileTexture, tileSampler, input.texcoord);
-    return sample * input.color;
+    let rgb = select(sample.rgb, sample.rgb * sample.a, sampleAlpha.x != 0.0);
+    return vec4<f32>(rgb, sample.a) * input.color;
 }

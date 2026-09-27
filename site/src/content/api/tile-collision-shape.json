@@ -1,6 +1,6 @@
 {
   "title": "TileCollisionShape",
-  "description": "A per-tile collision shape placed in tile-layer pixel space (+Y down). Emitted for every collision shape that does not exactly cover a whole tile cell: partial boxes, ellipses, polygons, polylines, points, and rotated geometry. Shapes are never merged with one another.",
+  "description": "A per-tile collision shape placed in logical tile-layer pixel space (+Y down). Emitted for every collision shape that does not exactly cover a whole tile cell: partial boxes, ellipses, polygons, polylines, points, and rotated geometry. Shapes are never merged with one another.",
   "symbol": "TileCollisionShape",
   "kind": "interface",
   "subsystem": "tilemap",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A per-tile collision shape placed in tile-layer pixel space (+Y down).",
+        "A per-tile collision shape placed in logical tile-layer pixel space (+Y down).",
         "Emitted for every collision shape that does not exactly cover a whole tile cell: partial boxes, ellipses, polygons, polylines, points, and rotated geometry. Shapes are never merged with one another."
       ],
       "importLine": "import { TileCollisionShape } from '@codexo/exojs-tilemap'",

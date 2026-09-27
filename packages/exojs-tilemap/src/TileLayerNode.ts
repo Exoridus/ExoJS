@@ -26,9 +26,9 @@ export interface TileLayerNodeOptions {
  * A scene node that renders one generic {@link TileLayer} as a
  * {@link Container} of per-chunk {@link TileChunkNode} drawables.
  *
- * Each non-empty loaded chunk becomes one child positioned at its pixel
- * origin, so the engine's existing per-node culling drops individual chunks and
- * the render-plan optimiser batches them by tileset texture. The layer's pixel
+ * Orthogonal chunks become one child each. Isometric chunks become diagonal
+ * slices ordered across storage boundaries, preserving painter order and
+ * texture runs. Each drawable has its own culling bounds. The layer's pixel
  * `offset`, `visible` and `opacity` are all read live from the runtime layer on
  * every frame (no rebuild required).
  *
@@ -69,25 +69,16 @@ export class TileLayerNode extends Container {
    * revision-cached geometry survives untouched.
    */
   private readonly _onStructuralChange = (event: ChunkStructuralEvent): void => {
-    const existingIndex = this._chunkNodes.findIndex(n => n.chunkX === event.cx && n.chunkY === event.cy);
-
-    const existing = this._chunkNodes[existingIndex];
-
-    if (existing) {
-      this._chunkNodes.splice(existingIndex, 1);
-      this.removeChild(existing);
-      existing.destroy();
+    for (let i = this._chunkNodes.length - 1; i >= 0; i--) {
+      const node = this._chunkNodes[i];
+      if (!node) continue;
+      if (node.chunkX !== event.cx || node.chunkY !== event.cy) continue;
+      this._chunkNodes.splice(i, 1);
+      this.removeChild(node);
+      node.destroy();
     }
-
-    if (event.chunk === null || event.chunk.empty) {
-      return;
-    }
-
-    const node = this._createChunkNode(event.chunk);
-
-    this._chunkNodes.push(node);
-    this.addChild(node);
-    this._applyTint(node);
+    if (event.chunk !== null && !event.chunk.empty) this._addChunkNodes(event.chunk);
+    this._sortChunks();
   };
 
   public constructor(layer: TileLayer, options?: TileLayerNodeOptions) {
@@ -188,8 +179,11 @@ export class TileLayerNode extends Container {
     // is what narrows them to numbers - `bounded` is a plain boolean getter.
     const { pixelHeight, pixelWidth } = this._layer;
 
-    if (pixelWidth !== undefined && pixelHeight !== undefined) {
-      bounds.set(0, 0, pixelWidth, pixelHeight);
+    if (this._layer.projection.orientation === 'isometric') {
+      bounds.set(0, 0, 0, 0);
+      aggregateChildLocalBounds(this._chunkNodes, bounds);
+    } else if (pixelWidth !== undefined && pixelHeight !== undefined) {
+      bounds.set(this._layer.projection.originX, this._layer.projection.originY, pixelWidth, pixelHeight);
     } else if (this._chunkNodes.length > 0) {
       aggregateChildLocalBounds(this._chunkNodes, bounds);
     }
@@ -269,24 +263,39 @@ export class TileLayerNode extends Container {
         continue;
       }
 
-      const node = this._createChunkNode(chunk);
-
-      this._chunkNodes.push(node);
-      this.addChild(node);
+      this._addChunkNodes(chunk);
     }
 
+    this._sortChunks();
     this._syncTint();
   }
 
   /**
-   * Construct one configured {@link TileChunkNode} for `chunk` - shared by
+   * Construct the configured draw nodes for `chunk` - shared by
    * the initial bulk build ({@link _buildChunkNodes}) and the incremental
    * structural-listener handler, so a future constructor argument or
    * per-node setting only needs to be added in one place.
    */
-  private _createChunkNode(chunk: ReadonlyTileChunk): TileChunkNode {
+  private _addChunkNodes(chunk: ReadonlyTileChunk): void {
+    const iso = this._layer.projection.orientation === 'isometric';
+    const count = iso ? chunk.width + chunk.height - 1 : 1;
+    for (let i = 0; i < count; i++) {
+      const node = this._createChunkNode(chunk, iso ? i : undefined);
+      this._chunkNodes.push(node);
+      this.addChild(node);
+      this._applyTint(node);
+    }
+  }
+
+  private _sortChunks(): void {
+    if (this._layer.projection.orientation !== 'isometric') return;
+    this._chunkNodes.sort((a, b) => a.depth - b.depth || a.firstColumn - b.firstColumn);
+    for (const [index, node] of this._chunkNodes.entries()) this.setChildIndex(node, index);
+  }
+
+  private _createChunkNode(chunk: ReadonlyTileChunk, diagonal?: number): TileChunkNode {
     const layer = this._layer;
-    const node = new TileChunkNode(chunk, layer.tilesets, layer.tileWidth, layer.tileHeight, layer.chunkWidth, layer.chunkHeight);
+    const node = new TileChunkNode(chunk, layer.tilesets, layer.tileWidth, layer.tileHeight, layer.chunkWidth, layer.chunkHeight, layer.projection, diagonal);
 
     node.cullable = this._cullChunks;
     // Unconditional: a chunk built after the layer was set to `None` has to

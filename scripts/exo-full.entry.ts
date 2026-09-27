@@ -47,6 +47,7 @@ export {
   TileMapBand,
   TileMapNode,
   TileMapView,
+  TileProjection,
   TilePropertyKind,
   TileSet,
   tilemapExtension,
@@ -121,4 +122,4 @@ export * from '@codexo/exojs-lighting';
 export * from '@codexo/exojs-pathfinding';
 
 // ── Tilemap physics bridge ────────────────────────────────────────────────────
-export { buildObjectLayerColliders, TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+export { buildObjectLayerColliders, TileColliderStreamer, TilePhysicsBinding } from '@codexo/exojs-tilemap-physics';

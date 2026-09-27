@@ -23,7 +23,15 @@ import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { readWebGl2Pixel } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
-import { createQuadrantTexture, createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers, wireViaTiledExtension } from './_tilemapScene';
+import {
+  createQuadrantTexture,
+  createSolidTexture,
+  isometricOverlapMap,
+  makeTileset,
+  singleTileMap,
+  wireTilemapRenderers,
+  wireViaTiledExtension,
+} from './_tilemapScene';
 
 const canvasSize = 64;
 
@@ -356,6 +364,60 @@ describe('WebGL2 tilemap — one-extension Tiled wiring', () => {
     } finally {
       node.destroy();
       texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('webgl2 isometric tilemap', () => {
+  test('premultiplies translucent tile artwork across repeated frames', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture('rgba(255, 0, 0, 0.5)');
+    const map = isometricOverlapMap(texture, texture);
+    const node = new TileMapNode(map);
+    try {
+      node.y = 16;
+      for (let frame = 0; frame < 3; frame++) {
+        render(backend, node);
+        expectPixelNear(readWebGl2Pixel(backend, 30, 33), [239, 0, 0, 255]);
+        expectPixelNear(readWebGl2Pixel(backend, 30, 45), [128, 0, 0, 255]);
+      }
+    } finally {
+      node.destroy();
+      map.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('preserves painter order across chunks, edits, and overhang culling', async () => {
+    const backend = await createBackend();
+    const red = createSolidTexture('#ff0000');
+    const blue = createSolidTexture('#0000ff');
+    const map = isometricOverlapMap(red, blue);
+    const node = new TileMapNode(map);
+    try {
+      node.y = 16;
+      render(backend, node);
+
+      expectPixelNear(readWebGl2Pixel(backend, 30, 33), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 22, 29), [0, 0, 255, 255]);
+      map.layers[0]!.clearTileAt(3, 3);
+      render(backend, node);
+
+      expectPixelNear(readWebGl2Pixel(backend, 30, 33), [0, 0, 255, 255]);
+      node.y = 68;
+      render(backend, node);
+
+      expectPixelNear(readWebGl2Pixel(backend, 32, 62), [255, 0, 0, 255]);
+      node.y = 1000;
+      render(backend, node);
+      expect(backend.stats.drawCalls).toBe(0);
+    } finally {
+      node.destroy();
+      map.destroy();
+      red.destroy();
+      blue.destroy();
       backend.destroy();
     }
   });

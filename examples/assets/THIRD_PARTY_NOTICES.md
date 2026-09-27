@@ -69,3 +69,7 @@ form one consistent series; the audio is unmodified.
 
 All other assets in this package are original works created for the ExoJS
 project and are licensed under the MIT license.
+
+### Isometric Landscape example
+
+The isometric-landscape example uses six unmodified PNG tiles from Kenney's Isometric Tiles Landscape pack (https://kenney.nl/assets/isometric-tiles-landscape), archive `kenney_isometric-landscape.zip`. Copyright Kenney Vleugels; licensed CC0 1.0 Universal. The original `License.txt` and selected files are included in `demo/vendor/kenney/isometric-tiles-landscape/`; attribution: Kenney (https://kenney.nl). The Tiled map is authored for this example.

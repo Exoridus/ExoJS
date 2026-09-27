@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 40,
+  "memberCount": 42,
   "counts": {
     "constructors": 1,
     "methods": 15,
-    "properties": 24,
+    "properties": 26,
     "events": 0
   },
   "sections": [
@@ -1277,7 +1277,7 @@
             }
           ],
           "returnType": "{ x: number; y: number }",
-          "description": "Convert a tile coordinate to the pixel position of its top-left corner in the layer's local space."
+          "description": "Convert a grid vertex to display pixels (the top diamond vertex for isometric cells) including the layer's display offset."
         }
       ],
       "paragraphs": [],
@@ -1549,6 +1549,27 @@
           "description": "Parallax scroll factor on the Y axis. 1.0 = full camera speed, 0.5 = half speed, 0.0 = stationary."
         },
         {
+          "name": "projection",
+          "signature": "projection: TileProjection",
+          "signatureTokens": [
+            {
+              "text": "projection",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProjection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "properties",
           "signature": "properties: TileProperties",
           "signatureTokens": [
@@ -1764,6 +1785,59 @@
           "params": [],
           "returnType": null,
           "description": "Whether the layer has been destroyed."
+        },
+        {
+          "name": "logicalOffset",
+          "signature": "logicalOffset: { x: number; y: number }",
+          "signatureTokens": [
+            {
+              "text": "logicalOffset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Display layer translation expressed as a logical simulation-space vector."
         },
         {
           "name": "pixelHeight",

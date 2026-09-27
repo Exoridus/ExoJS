@@ -339,6 +339,28 @@
       "notablePngCount": 0,
       "notableSvgCount": 0,
       "notableTtfCount": 0
+    },
+    {
+      "id": "isometric-tiles-landscape",
+      "title": "Isometric Tiles Landscape",
+      "slug": "isometric-tiles-landscape",
+      "url": "https://kenney.nl/assets/isometric-tiles-landscape",
+      "license": "Creative Commons CC0",
+      "downloadFileName": "kenney_isometric-landscape.zip",
+      "localVendorFolder": "vendor/kenney/isometric-tiles-landscape",
+      "fileCountByExtension": {
+        ".png": 6,
+        ".txt": 1
+      },
+      "selection": [
+        "PNG/landscapeTiles_020.png",
+        "PNG/landscapeTiles_000.png",
+        "PNG/landscapeTiles_001.png",
+        "PNG/landscapeTiles_005.png",
+        "PNG/landscapeTiles_030.png",
+        "PNG/landscapeTiles_040.png"
+      ],
+      "notablePngCount": 6
     }
   ]
 }

@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 16,
+  "memberCount": 17,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 16,
+    "properties": 17,
     "events": 0
   },
   "sections": [
@@ -345,6 +345,31 @@
           "params": [],
           "returnType": null,
           "description": "Object layers (data-only; spawn points, triggers, collision regions)."
+        },
+        {
+          "name": "projection",
+          "signature": "projection?: TileProjection",
+          "signatureTokens": [
+            {
+              "text": "projection",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProjection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shared projection; defaults to an orthogonal grid of the supplied tile size."
         },
         {
           "name": "properties",

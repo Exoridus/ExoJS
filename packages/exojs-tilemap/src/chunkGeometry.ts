@@ -1,6 +1,7 @@
 import type { Texture } from '@codexo/exojs';
 
 import type { ReadonlyTileChunk } from './TileChunk';
+import type { TileProjection } from './TileProjection';
 import type { TileSet } from './TileSet';
 import type { TileTransform } from './types';
 import { unpackTile } from './types';
@@ -32,9 +33,8 @@ export interface TileQuad {
 }
 
 /**
- * Geometry for one tileset "page" within a chunk: every tile in the chunk that
- * draws from a single tileset texture, grouped so the renderer can batch by
- * `(shader, texture)`.
+ * Geometry sharing one tileset texture. Orthogonal chunks group tiles by
+ * tileset; isometric chunks keep consecutive runs to preserve painter order.
  * @internal
  */
 export interface ChunkPage {
@@ -42,7 +42,7 @@ export interface ChunkPage {
   readonly tileset: TileSet;
   /** The underlying GPU texture (the tileset's atlas), bound once per page. */
   readonly texture: Texture;
-  /** The tile quads for this page, in deterministic row-major order. */
+  /** The tile quads in deterministic projection-specific draw order. */
   readonly quads: readonly TileQuad[];
 }
 
@@ -64,10 +64,48 @@ export const resetTileGeometryRebuildCount = (): void => {
   tileGeometryRebuildCount = 0;
 };
 
+const drawableTileset = (tilesets: readonly TileSet[], tilesetIndex: number, localTileId: number): TileSet | undefined => {
+  const tileset = tilesets[tilesetIndex];
+
+  // getTileRect throws for an invalid id; malformed cells must remain empty.
+  if (tileset === undefined || localTileId >= tileset.tileCount) return undefined;
+  const texture = tileset.texture.texture;
+  if (texture.width <= 0 || texture.height <= 0) return undefined;
+  return tileset;
+};
+
+const pageQuads = (tileset: TileSet, isometric: boolean, buckets: Map<TileSet, TileQuad[]>, ordered: ChunkPage[]): TileQuad[] => {
+  let bucket: TileQuad[] | undefined;
+  if (isometric) {
+    const previous = ordered[ordered.length - 1];
+    if (previous?.tileset === tileset) bucket = previous.quads as TileQuad[];
+  } else {
+    bucket = buckets.get(tileset);
+  }
+
+  if (bucket === undefined) {
+    bucket = [];
+    buckets.set(tileset, bucket);
+    if (isometric) ordered.push({ tileset, texture: tileset.texture.texture, quads: bucket });
+  }
+  return bucket;
+};
+
+const tilesetPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<TileSet, TileQuad[]>): ChunkPage[] => {
+  const pages: ChunkPage[] = [];
+  for (const tileset of tilesets) {
+    const quads = buckets.get(tileset);
+    if (quads !== undefined && quads.length > 0) {
+      pages.push({ tileset, texture: tileset.texture.texture, quads });
+    }
+  }
+  return pages;
+};
+
 /**
  * Build per-tileset page geometry for a single chunk.
  *
- * Iterates the chunk's packed cells in deterministic row-major order, skipping
+ * Iterates packed cells in row-major or isometric diagonal order, skipping
  * empties, out-of-range tilesets, and out-of-range local tile ids (all treated
  * as empty - this is the renderer's half of the G-GID contract). Each surviving
  * cell is resolved to its source UV rect (from `tileset.getTileRect` + the
@@ -85,7 +123,16 @@ export const resetTileGeometryRebuildCount = (): void => {
  * @param tileHeight Map/layer tile cell height in pixels.
  * @internal
  */
-export const buildChunkPages = (chunk: ReadonlyTileChunk, tilesets: readonly TileSet[], tileWidth: number, tileHeight: number): ChunkPage[] => {
+export const buildChunkPages = (
+  chunk: ReadonlyTileChunk,
+  tilesets: readonly TileSet[],
+  tileWidth: number,
+  tileHeight: number,
+  projection?: TileProjection,
+  diagonal?: number,
+  geometryX = 0,
+  geometryY = 0,
+): ChunkPage[] => {
   tileGeometryRebuildCount++;
 
   if (chunk.empty) {
@@ -93,11 +140,16 @@ export const buildChunkPages = (chunk: ReadonlyTileChunk, tilesets: readonly Til
   }
 
   const buckets = new Map<TileSet, TileQuad[]>();
+  const ordered: ChunkPage[] = [];
+  const isometric = projection?.orientation === 'isometric';
   const width = chunk.width;
   const height = chunk.height;
 
-  for (let ly = 0; ly < height; ly++) {
+  for (let row = 0; row < (isometric ? width + height - 1 : height); row++) {
+    if (diagonal !== undefined && row !== diagonal) continue;
     for (let lx = 0; lx < width; lx++) {
+      const ly = isometric ? row - lx : row;
+      if (ly < 0 || ly >= height) continue;
       const packed = chunk.getRawAt(lx, ly);
 
       if (packed === 0) {
@@ -110,11 +162,8 @@ export const buildChunkPages = (chunk: ReadonlyTileChunk, tilesets: readonly Til
         continue;
       }
 
-      const tileset = tilesets[decoded.tilesetIndex];
-
-      // Out-of-range tileset or local id → treat as empty (G-GID). getTileRect
-      // throws on an out-of-range id, so the bounds check must precede it.
-      if (tileset === undefined || decoded.localTileId >= tileset.tileCount) {
+      const tileset = drawableTileset(tilesets, decoded.tilesetIndex, decoded.localTileId);
+      if (tileset === undefined) {
         continue;
       }
 
@@ -122,10 +171,6 @@ export const buildChunkPages = (chunk: ReadonlyTileChunk, tilesets: readonly Til
       const texture = region.texture;
       const textureWidth = texture.width;
       const textureHeight = texture.height;
-
-      if (textureWidth <= 0 || textureHeight <= 0) {
-        continue;
-      }
 
       const rect = tileset.getTileRect(decoded.localTileId);
 
@@ -143,35 +188,17 @@ export const buildChunkPages = (chunk: ReadonlyTileChunk, tilesets: readonly Til
       const u1 = (sx + rect.width) / textureWidth;
       const v1 = (sy + rect.height) / textureHeight;
 
-      // Bottom-left aligned destination (Tiled orthogonal). Uniform tiles
-      // (rect.height === tileHeight) collapse to a plain cell rect. The
-      // tileset's visual draw offset (Tiled `tileoffset`) shifts every tile.
-      const x0 = lx * tileWidth + tileset.offsetX;
-      const y0 = ly * tileHeight + tileHeight - rect.height + tileset.offsetY;
+      // Isometric cells start at their top vertex; artwork is bottom-aligned
+      // with the cell base before applying the tileset's display offset.
+      const x0 = geometryX + (isometric ? ((lx - ly) * tileWidth) / 2 - tileWidth / 2 : lx * tileWidth) + tileset.offsetX;
+      const y0 = geometryY + (isometric ? ((lx + ly) * tileHeight) / 2 : ly * tileHeight) + tileHeight - rect.height + tileset.offsetY;
       const x1 = x0 + rect.width;
       const y1 = y0 + rect.height;
 
-      let bucket = buckets.get(tileset);
-
-      if (bucket === undefined) {
-        bucket = [];
-        buckets.set(tileset, bucket);
-      }
-
+      const bucket = pageQuads(tileset, isometric, buckets, ordered);
       bucket.push({ x0, y0, x1, y1, u0, v0, u1, v1, orient: orientCode(decoded.transform) });
     }
   }
 
-  // Emit pages in tileset-array order for deterministic, reproducible builds.
-  const pages: ChunkPage[] = [];
-
-  for (const tileset of tilesets) {
-    const quads = buckets.get(tileset);
-
-    if (quads !== undefined && quads.length > 0) {
-      pages.push({ tileset, texture: tileset.texture.texture, quads });
-    }
-  }
-
-  return pages;
+  return isometric ? ordered : tilesetPages(tilesets, buckets);
 };

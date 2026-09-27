@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 14,
+  "memberCount": 15,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 14,
+    "properties": 15,
     "events": 0
   },
   "sections": [
@@ -330,6 +330,31 @@
           "params": [],
           "returnType": null,
           "description": "Parallax scroll factor on the Y axis. 1 = full camera speed (normal), 0.5 = half speed (farther away), 0 = stationary. Default 1."
+        },
+        {
+          "name": "projection",
+          "signature": "projection?: TileProjection",
+          "signatureTokens": [
+            {
+              "text": "projection",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProjection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Object geometry uses logical pixels when supplied; display placement is available through getDisplayObject."
         },
         {
           "name": "properties",

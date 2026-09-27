@@ -10,6 +10,7 @@
  */
 export const assets = {
     demo: {
+        isometricLandscape: 'json/maps/isometric-landscape.tmj',
         textures: {
             particleFlame: 'demo/textures/particle-flame.png',
             particleSmoke: 'demo/textures/particle-smoke.png',
