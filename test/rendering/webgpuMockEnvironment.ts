@@ -51,8 +51,8 @@ export interface MockWebGpuEnvironment {
   depthLoadOps(): readonly string[];
   /** `depthWriteEnabled` of every synchronously created pipeline that declared depth/stencil state. */
   pipelineDepthWrites(): readonly boolean[];
-  /** Format and usage of every `device.createTexture` call, in call order. */
-  textureDescriptors(): ReadonlyArray<{ readonly format: string; readonly usage: number }>;
+  /** Format, usage and mip level count of every `device.createTexture` call, in call order. */
+  textureDescriptors(): ReadonlyArray<{ readonly format: string; readonly usage: number; readonly mipLevelCount: number | undefined }>;
   restore(): void;
 }
 
@@ -81,7 +81,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const pipelineTargetBlends: Array<Array<GPUBlendState | undefined>> = [];
   const pipelineDepthWrites: boolean[] = [];
   const depthLoadOps: string[] = [];
-  const textureDescriptors: Array<{ format: string; usage: number }> = [];
+  const textureDescriptors: Array<{ format: string; usage: number; mipLevelCount: number | undefined }> = [];
   let depthAttachmentPasses = 0;
 
   const pass = {
@@ -167,7 +167,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
       } as unknown as GPUBuffer;
     },
     createTexture: (descriptor: GPUTextureDescriptor): GPUTexture => {
-      textureDescriptors.push({ format: descriptor.format, usage: descriptor.usage });
+      textureDescriptors.push({ format: descriptor.format, usage: descriptor.usage, mipLevelCount: descriptor.mipLevelCount });
 
       // A stable view per GPU texture, matching the backend's cached-view
       // contract (a fresh view identity means "texture was recreated").

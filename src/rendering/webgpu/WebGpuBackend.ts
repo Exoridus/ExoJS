@@ -3871,13 +3871,20 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _getMipLevelCount(texture: Texture | RenderTexture): number {
-    // A compressed payload carries whatever chain the container shipped; the GPU
-    // cannot derive one from compressed blocks, so `generateMipMap` says nothing
-    // about it and the level count comes from the levels themselves.
+    // A compressed or raw authored payload carries whatever chain it shipped
+    // with; the GPU cannot derive one from compressed blocks, and a raw chain
+    // may be intentionally partial, so `generateMipMap` says nothing about
+    // either and the level count comes from the levels themselves.
     const compressed = compressedPayloadOf(texture);
 
     if (compressed !== null) {
       return compressed.levels.length;
+    }
+
+    const rawPayload = texture instanceof Texture ? texture.pixels : null;
+
+    if (rawPayload !== null && rawPayload.levels.length > 1) {
+      return rawPayload.levels.length;
     }
 
     if (!texture.generateMipMap) {

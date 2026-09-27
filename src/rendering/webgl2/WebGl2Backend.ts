@@ -1504,7 +1504,7 @@ export class WebGl2Backend implements RenderBackend {
         throw new Error('WebGl2Backend: could not create a material sampler.');
       }
 
-      gl.samplerParameteri(created, gl.TEXTURE_MAG_FILTER, options.scaleMode);
+      gl.samplerParameteri(created, gl.TEXTURE_MAG_FILTER, baseScaleFilter(options.scaleMode));
       gl.samplerParameteri(created, gl.TEXTURE_MIN_FILTER, options.scaleMode);
       gl.samplerParameteri(created, gl.TEXTURE_WRAP_S, options.wrapMode);
       gl.samplerParameteri(created, gl.TEXTURE_WRAP_T, options.wrapMode);
@@ -2762,6 +2762,29 @@ export class WebGl2Backend implements RenderBackend {
     return Math.floor(Math.log2(maxSize)) + 1;
   }
 
+  /**
+   * The number of mip levels actually present on `texture`'s GL object after
+   * upload: an authored compressed/raw chain's own level count, the full
+   * pyramid `gl.generateMipmap` produces for an auto-mipped browser source, or
+   * 1 for everything else. Drives TEXTURE_MAX_LEVEL so a partial or absent
+   * chain does not silently fail mip completeness.
+   */
+  private _uploadedMipLevelCount(texture: Texture | RenderTexture): number {
+    if (texture instanceof RenderTexture) {
+      return texture.generateMipMap ? this._textureMipLevelCount(texture) : 1;
+    }
+
+    if (texture.mipLevelCount > 1) {
+      return texture.mipLevelCount;
+    }
+
+    if (texture.generateMipMap && texture.pixels === null && texture.source !== null) {
+      return this._textureMipLevelCount(texture);
+    }
+
+    return 1;
+  }
+
   private _destroyManagedResources(): void {
     for (const renderTarget of [...this._renderTargetStates.keys()]) {
       this._evictRenderTarget(renderTarget, false);
@@ -3390,7 +3413,7 @@ export class WebGl2Backend implements RenderBackend {
     this._assertTextureFilterable(texture);
     const gl = this._context;
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, baseScaleFilter(texture.scaleMode));
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture.scaleMode);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapMode);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
@@ -3597,6 +3620,14 @@ export class WebGl2Backend implements RenderBackend {
       gl.generateMipmap(gl.TEXTURE_2D);
     }
 
+    // Mip completeness requires every level from 0 to TEXTURE_MAX_LEVEL to be
+    // present, or the texture samples as incomplete (undefined/black) under a
+    // mip-aware MIN filter. Clamp it to what was actually uploaded instead of
+    // leaving the GL default (1000), which only an auto-generated full pyramid
+    // satisfies.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, this._uploadedMipLevelCount(texture) - 1);
+
     state.version = version;
     state.width = texture.width;
     state.height = texture.height;
@@ -3687,6 +3718,12 @@ const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blend
   blendable,
   sampleCounts: [1],
 });
+
+// TEXTURE_MAG_FILTER only accepts NEAREST/LINEAR; the mip-aware ScaleModes
+// variants are valid for TEXTURE_MIN_FILTER alone and raise GL_INVALID_ENUM
+// on MAG. ScaleModes reserves its low bit for this: 0 selects the nearest
+// family, 1 the linear family, independent of the mip suffix.
+const baseScaleFilter = (scaleMode: ScaleModes): ScaleModes => ((scaleMode & 1) === 1 ? ScaleModes.Linear : ScaleModes.Nearest);
 
 const scaleModeRequiresLinearFiltering = (scaleMode: ScaleModes): boolean =>
   scaleMode === ScaleModes.Linear ||

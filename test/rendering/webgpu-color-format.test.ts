@@ -35,6 +35,30 @@ describe('WebGpuBackend exact color formats', () => {
     texture.destroy();
   });
 
+  test('sizes the GPU texture for an authored raw mip chain so every level can be written', async () => {
+    environment = createMockWebGpuEnvironment();
+    backend = await createMockBackend(environment);
+    const texture = Texture.fromPixels(
+      {
+        colorSpace: 'none',
+        alphaMode: 'straight',
+        levels: [
+          { data: new Uint8Array(4 * 4 * 4), width: 4, height: 4 },
+          { data: new Uint8Array(2 * 2 * 4), width: 2, height: 2 },
+          { data: new Uint8Array(1 * 1 * 4), width: 1, height: 1 },
+        ],
+      },
+      { generateMipMap: false },
+    );
+
+    backend.getTextureBinding(texture);
+
+    expect(environment.textureDescriptors().at(-1)?.mipLevelCount).toBe(3);
+    expect(environment.writeTextureData()).toHaveLength(3);
+
+    texture.destroy();
+  });
+
   test('keeps a default external image destination on rgba8unorm before color-pipeline activation', async () => {
     environment = createMockWebGpuEnvironment();
     backend = await createMockBackend(environment);
