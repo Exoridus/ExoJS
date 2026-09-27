@@ -31,16 +31,18 @@ export class WebGpuNativeRetainedReplay {
   private _observationFrame = -1;
   private _stableFrames = 0;
   private _seenCount = 0;
+  private _fallbackFrame = false;
 
   public beginFrame(frame: WebGpuNativeRetainedReplayFrame): void {
     if (frame.id !== this._lastFrame) {
-      if (frame.id !== this._lastFrame + 1 || this._seenCount !== this._entries.size) {
+      if (frame.id !== this._lastFrame + 1 || (!this._fallbackFrame && this._seenCount !== this._entries.size)) {
         this.invalidate();
-      } else if (this._entries.size >= 32) {
+      } else if (!this._fallbackFrame && this._entries.size >= 32) {
         this._stableFrames++;
       }
 
       this._seenCount = 0;
+      this._fallbackFrame = false;
       this._lastFrame = frame.id;
     }
 
@@ -53,6 +55,12 @@ export class WebGpuNativeRetainedReplay {
     this._observationFrame = -1;
     this._stableFrames = 0;
     this._seenCount = 0;
+    this._fallbackFrame = false;
+  }
+
+  /** Pauses observation for a pass whose commands cannot use the normal-pass cache. */
+  public skipPass(): void {
+    this._fallbackFrame = true;
   }
 
   public draw(
@@ -72,8 +80,13 @@ export class WebGpuNativeRetainedReplay {
     const frame = this._frame;
     const vertexBuffer = payload.bundle.instanceBuffer;
 
-    if (frame === null || vertexBuffer === null || activePass.stencilEnabled || activePass.depthWrites) {
+    if (frame === null || vertexBuffer === null) {
       this.invalidate();
+      return false;
+    }
+
+    if (activePass.stencilEnabled || activePass.depthWrites) {
+      this.skipPass();
       return false;
     }
 

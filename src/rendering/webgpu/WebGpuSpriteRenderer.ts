@@ -1426,7 +1426,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, true);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
-    if (!nativeCompatible) bundle.nativeReplay.invalidate();
+    if (!nativeCompatible) bundle.nativeReplay.skipPass();
 
     if (
       !nativeCompatible ||

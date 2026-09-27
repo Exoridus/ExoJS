@@ -140,14 +140,46 @@ describe('WebGpuNativeRetainedReplay', () => {
     expect(f.draw(f.payloads[1])).toBe(false);
   });
 
-  it.each(['stencilEnabled', 'depthWrites'] as const)('falls back and restarts observation for %s', field => {
+  it.each(['stencilEnabled', 'depthWrites'] as const)('preserves promoted commands across incompatible %s passes', field => {
     const f = fixture();
     observe(f);
     expect(f.replay(31).every(Boolean)).toBe(true);
     Object.assign(f.args.activePass, { [field]: true });
     expect(f.draw()).toBe(false);
     Object.assign(f.args.activePass, { [field]: false });
-    expect(f.draw()).toBe(false);
+    expect(f.draw()).toBe(true);
+    Object.assign(f.args.activePass, { [field]: true });
+    expect(f.replay(32).some(Boolean)).toBe(false);
+    expect(f.replay(33).some(Boolean)).toBe(false);
+    Object.assign(f.args.activePass, { [field]: false });
+    expect(f.replay(34, 0).every(Boolean)).toBe(true);
+    expect(f.args.device.createRenderBundleEncoder).toHaveBeenCalledTimes(32);
+  });
+
+  it('preserves the cache across explicit pass fallback and validates resources on return', () => {
+    const f = fixture();
+    observe(f);
+    f.replay(31);
+    for (const id of [32, 33]) {
+      f.cache.beginFrame({ id, remainingBuilds: 32 });
+      f.cache.skipPass();
+    }
+    expect(f.replay(34, 0).every(Boolean)).toBe(true);
+    f.cache.skipPass();
+    f.args.group1 = {} as GPUBindGroup;
+    expect(f.replay(35).some(Boolean)).toBe(false);
+    expect(f.args.device.createRenderBundleEncoder).toHaveBeenCalledTimes(32);
+  });
+
+  it('does not count incompatible frames toward promotion', () => {
+    const f = fixture();
+    for (let id = 1; id <= 29; id++) f.replay(id);
+    for (const id of [30, 31]) {
+      f.cache.beginFrame({ id, remainingBuilds: 32 });
+      f.cache.skipPass();
+    }
+    expect(f.replay(32).some(Boolean)).toBe(false);
+    expect(f.replay(33).every(Boolean)).toBe(true);
   });
 
   it('restarts after a skipped frame, incomplete frame, or explicit invalidation', () => {

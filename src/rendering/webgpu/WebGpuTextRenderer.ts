@@ -1322,7 +1322,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const nativePipeline = this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
-    if (!nativeCompatible) bundle.nativeReplay.invalidate();
+    if (!nativeCompatible) bundle.nativeReplay.skipPass();
 
     if (
       !nativeCompatible ||

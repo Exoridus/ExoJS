@@ -764,7 +764,7 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, false);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
-    if (!nativeCompatible) bundle.nativeReplay.invalidate();
+    if (!nativeCompatible) bundle.nativeReplay.skipPass();
 
     if (
       !nativeCompatible ||

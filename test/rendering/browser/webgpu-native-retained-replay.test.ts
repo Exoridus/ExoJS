@@ -245,7 +245,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     }
   });
 
-  test('keeps multi-attachment passes on live encoding', async () => {
+  test('preserves native commands across multi-attachment passes', async () => {
     const scene = await createScene();
     const target = new MultiRenderTarget(size, size, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
     const material = new SpriteMaterial({
@@ -267,20 +267,27 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
     try {
       for (const child of scene.group.children) (child as Sprite).material = material;
       for (const child of scene.root.children) if (child instanceof Sprite) child.material = material;
+      const baseline = await promote(scene);
+      scene.executions.mockClear();
       scene.backend.setRenderTarget(target);
       for (let frame = 0; frame < 36; frame++) scene.render();
-      expect(scene.builds).not.toHaveBeenCalled();
+      expect(scene.builds).toHaveBeenCalledTimes(64);
       expect(scene.executions).not.toHaveBeenCalled();
       const context = new RenderingContext(scene.backend);
       expect(pixel((await context.readPixels(target.attachment(0))).data, 3, 3)).toEqual([255, 0, 0, 255]);
       expect(pixel((await context.readPixels(target.attachment(1))).data, 3, 3)).toEqual([0, 255, 0, 255]);
+      scene.backend.setRenderTarget(scene.target);
+      scene.render();
+      expect(scene.executions).toHaveBeenCalledTimes(64);
+      expect(scene.builds).toHaveBeenCalledTimes(64);
+      expect(await scene.pixels()).toEqual(baseline);
     } finally {
       await scene.destroy();
       target.destroy();
       material.destroy();
     }
   });
-  test('falls back under stencil clipping and restarts observation when clipping ends', async () => {
+  test('preserves native commands across stencil clipping', async () => {
     const scene = await createScene();
     const shape = new Geometry({
       attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
@@ -301,7 +308,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
       scene.root.clip = false;
       scene.render();
       expect(await scene.pixels()).toEqual(baseline);
-      expect(scene.executions).not.toHaveBeenCalled();
+      expect(scene.executions).toHaveBeenCalledTimes(64);
       expect(scene.builds).toHaveBeenCalledTimes(64);
     } finally {
       await scene.destroy();
