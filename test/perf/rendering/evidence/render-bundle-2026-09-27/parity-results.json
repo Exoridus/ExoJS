@@ -1,0 +1,81 @@
+{
+  "revision": "07d5ea5496381a24b82d491edf763578448574c5",
+  "date": "2026-09-27T03:38:23.521Z",
+  "results": [
+    {
+      "run": 0,
+      "browser": "153.0.8010.12",
+      "count": 10000,
+      "batches": 157,
+      "replayCallsPerFrame": 157,
+      "instrumentedReplayMs": 0.2616500008106232,
+      "isolated": true,
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "samples": [],
+      "bundleBuilds": 0,
+      "parityBatches": 157,
+      "parityBundleBuilds": 157,
+      "parityReadback": "RenderTexture/readPixels",
+      "pixelByteDifferences": 0,
+      "replayPixelByteDifferences": 0,
+      "nonzeroRgbBytes": 712545,
+      "clearControlDifferences": 800955,
+      "errors": []
+    },
+    {
+      "run": 1,
+      "browser": "153.0.8010.12",
+      "count": 10000,
+      "batches": 157,
+      "replayCallsPerFrame": 157,
+      "instrumentedReplayMs": 0.2639999997615814,
+      "isolated": true,
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "samples": [],
+      "bundleBuilds": 0,
+      "parityBatches": 157,
+      "parityBundleBuilds": 157,
+      "parityReadback": "RenderTexture/readPixels",
+      "pixelByteDifferences": 0,
+      "replayPixelByteDifferences": 0,
+      "nonzeroRgbBytes": 712545,
+      "clearControlDifferences": 800955,
+      "errors": []
+    },
+    {
+      "run": 2,
+      "browser": "153.0.8010.12",
+      "count": 10000,
+      "batches": 157,
+      "replayCallsPerFrame": 157,
+      "instrumentedReplayMs": 0.264350001513958,
+      "isolated": true,
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "blackwell",
+        "device": "",
+        "description": ""
+      },
+      "samples": [],
+      "bundleBuilds": 0,
+      "parityBatches": 157,
+      "parityBundleBuilds": 157,
+      "parityReadback": "RenderTexture/readPixels",
+      "pixelByteDifferences": 0,
+      "replayPixelByteDifferences": 0,
+      "nonzeroRgbBytes": 712545,
+      "clearControlDifferences": 800955,
+      "errors": []
+    }
+  ]
+}
