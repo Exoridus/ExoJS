@@ -34,7 +34,6 @@ const loadOf = (count: number, peerOutcomes: Readonly<Record<string, CellOutcome
   primary: false,
   arms: [armOf('exojs', 'level', true), ...Object.entries(peerOutcomes).map(([id, outcome]) => armOf(id, outcome))],
   maxMs: 1,
-  withheld: undefined,
 });
 
 const cardOf = (loads: readonly CardLoad[]): BenchCard => ({ id: 'test', category: 'test', loads });

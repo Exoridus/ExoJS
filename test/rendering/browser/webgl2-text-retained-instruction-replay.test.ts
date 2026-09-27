@@ -322,7 +322,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       // can draw the group's glyphs. A neutered replay that never issues its
       // drawElements leaves the canvas empty where the record frame had ink.
       WebGl2TextRenderer.prototype.replayRetainedBatch = function (): boolean {
-        return true;
+        return false;
       };
 
       render(backend, scene.root);

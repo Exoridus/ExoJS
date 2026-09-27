@@ -35,20 +35,10 @@
  *    (informational) on non-ANGLE backends (Firefox) so it never spuriously
  *    reds them.
  *
- *  - Layer 2 (source regression teeth): every position/UV vertex stage must
- *    declare `precision highp float` and must NOT declare `mediump`/`lowp`
- *    float - the 7 standalone `.vert` files (`sprite`, `mesh`, `particle`,
- *    `text`, `mask-compose`, `backdrop-blend`, `stencil-clip`) via a `?raw`
- *    import, PLUS the 3 vertex sources NineSlice/RepeatingSprite inline as
- *    template literals inside their renderer `.ts` files rather than separate
- *    `.vert` files (`WebGl2NineSliceSpriteRenderer.ts`'s `nineSliceVertexSource`,
- *    `WebGl2RepeatingSpriteRenderer.ts`'s `shaderPathVertSource` and
- *    `geoPathVertSource`) - extracted from the `.ts` source text by name, since
- *    they aren't separately importable. This fails RED the instant someone
- *    reintroduces reduced precision on any of these 10 stages - proven during
- *    development: downgrading `sprite.vert` to `mediump` fails this layer
- *    immediately. This is the guard that catches the regression in required
- *    CI, since the render layer cannot (arithmetic is fp32 on SwiftShader).
+ *  - Layer 2 (source precision): position/UV vertex stages, including the shared
+ *    scalable geometry and repeating shader paths, must declare `precision
+ *    highp float` and never `mediump`/`lowp` float. Raw shader imports catch
+ *    reduced precision even where rendering uses fp32 arithmetic on SwiftShader.
  *
  *  - Layer 3 (end-to-end correctness): render the REAL shipped `sprite.vert`/
  *    `sprite.frag` (bypassing the shader stub via a `?raw` import, the same
@@ -181,7 +171,6 @@ const positionVertStages = {
   'mask-compose.vert': () => import('../../../src/rendering/webgl2/shaders/mask-compose.vert?raw'),
   'backdrop-blend.vert': () => import('../../../src/rendering/webgl2/shaders/backdrop-blend.vert?raw'),
   'stencil-clip.vert': () => import('../../../src/rendering/webgl2/shaders/stencil-clip.vert?raw'),
-  'nine-slice.vert': () => import('../../../src/rendering/webgl2/shaders/nine-slice.vert?raw'),
   'repeating-sprite-shader-path.vert': () => import('../../../src/rendering/webgl2/shaders/repeating-sprite-shader-path.vert?raw'),
   'repeating-sprite-geo-path.vert': () => import('../../../src/rendering/webgl2/shaders/repeating-sprite-geo-path.vert?raw'),
   'sprite-material.vert': () => import('../../../src/rendering/sprite/shaders/sprite-material.vert?raw'),

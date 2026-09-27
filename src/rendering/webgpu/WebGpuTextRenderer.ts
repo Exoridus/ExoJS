@@ -1444,7 +1444,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * indices are ALWAYS this exact pattern (`buildTextPageQuads` never packs
    * anything else), so replay never needs to persist per-batch index bytes;
    * one shared, ever-growing buffer serves every recorded Text batch on this
-   * renderer, exactly like `WebGpuNineSliceSpriteRenderer`'s static per-quad
+   * renderer, exactly like `WebGpuScalableSpriteRenderer`'s static per-quad
    * index buffer serves every nine-slice instance.
    */
   private _ensureRetainedQuadIndexBuffer(device: GPUDevice, quadCount: number, coordinator: WebGpuBackend['passCoordinator']): GPUBuffer {

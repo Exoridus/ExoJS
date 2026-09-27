@@ -179,7 +179,6 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['text.vert', 'text-color.frag'],
   ['text.vert', 'text-sdf.frag'],
   ['text.vert', 'text-msdf.frag'],
-  ['nine-slice.vert', 'nine-slice.frag'],
   // Both repeating-sprite vertex paths (one quad per sprite, N quads per sprite)
   // link against the same fragment stage.
   ['repeating-sprite-shader-path.vert', 'repeating-sprite.frag'],

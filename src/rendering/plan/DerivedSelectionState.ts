@@ -442,13 +442,11 @@ export class DerivedSelectionState {
    *
    * This is the same walk `RenderPlanBuilder._emitSourceSelection` performs, and
    * it has to stay the same walk: the order stream IS the draw order, so any
-   * divergence here is a reordered frame. Nested groups are entered
-   * unconditionally rather than behind their subtree cull test - the per-item
-   * membership already answers that question, and an empty nested scope
-   * contributes nothing to append. A live entry is never culled here either:
-   * its own collect applies whatever cull its node has.
+   * divergence here is a reordered frame. Only queried groups are entered:
+   * empty membership alone cannot distinguish a culled subtree from a visible
+   * group containing live entries. A live entry's own collect applies its cull.
    */
-  private _walkScope(scope: SourceScope, current: readonly MembershipBits[], queried: Uint8Array | undefined): void {
+  private _walkScope(scope: SourceScope, current: readonly MembershipBits[], queried?: Uint8Array): void {
     const bits = current[scope.ordinal]!;
     const words = bits.words;
     const wordCount = bits.wordCount;
@@ -480,11 +478,15 @@ export class DerivedSelectionState {
 
           other++;
 
-          if (nested.kind === RenderEntryKind.Group && queried?.[nested.ordinal] !== 0) {
+          if (nested.kind === RenderEntryKind.Group) {
+            if (queried?.[nested.ordinal] === 0) {
+              continue;
+            }
+
             this._orderCount = cursor;
             this._walkScope(nested, current, queried);
             cursor = this._orderCount;
-          } else if (nested.kind !== RenderEntryKind.Group) {
+          } else {
             this._mark(cursor, nested);
           }
         }
@@ -500,9 +502,11 @@ export class DerivedSelectionState {
 
       other++;
 
-      if (nested.kind === RenderEntryKind.Group && queried?.[nested.ordinal] !== 0) {
-        this._walkScope(nested, current, queried);
-      } else if (nested.kind !== RenderEntryKind.Group) {
+      if (nested.kind === RenderEntryKind.Group) {
+        if (queried?.[nested.ordinal] !== 0) {
+          this._walkScope(nested, current, queried);
+        }
+      } else {
         this._mark(this._orderCount, nested);
       }
     }

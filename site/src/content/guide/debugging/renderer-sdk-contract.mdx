@@ -84,6 +84,8 @@ Recorded batches reference a `RetainedGroupBundle` you own. One field carries th
 
 Set `nodeCount` on a batch whenever one render node expands into several GPU instances — a tile chunk, a nine-slice, a repeating sprite, a text run. `instanceCount` is the replay draw's instance argument, not a node count, and without `nodeCount` the recorded tier reports instances where the live and entry-replay tiers report nodes. A node is booked once, against whichever batch was open when its first instance was written.
 
+For WebGL2, return `false` from `replayRetainedBatch` when a defensive check prevents drawing. The backend then leaves `batches` and `drawCalls` unchanged. Returning `true` or nothing keeps descriptor-based accounting, so existing SDK replayers remain compatible. WebGPU replayers increment these two counters after issuing a draw. Both backends count `submittedNodes` before replay, including submissions that cannot draw.
+
 ## Seam 4 — the pass coordinator
 
 Target, view, clear, the scissor stack and the stencil-clip stack belong to the backend's `passCoordinator`. Reach it through the backend when you need a pass of your own:

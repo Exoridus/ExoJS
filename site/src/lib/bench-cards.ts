@@ -19,7 +19,7 @@
  */
 
 import type { BenchProfileDocument, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
-import { armLabel, formatLoad, isQuantitative, isWasmReferenceArm, orderArms, OUTCOME_ORDER, outcomeOf, publishedMs, withheldScenario } from './bench-profiles';
+import { armLabel, formatLoad, isQuantitative, isWasmReferenceArm, orderArms, OUTCOME_ORDER, outcomeOf, publishedMs } from './bench-profiles';
 
 /** One arm's time on one load of one scenario. */
 export interface CardArm {
@@ -61,15 +61,6 @@ export interface CardLoad {
   readonly arms: readonly CardArm[];
   /** Largest plottable figure on this load, for scaling the bars. */
   readonly maxMs: number;
-  /**
-   * Why this load publishes no cross-arm comparison, or `undefined` where it
-   * publishes one; see `withheldScenario`.
-   *
-   * A withheld load keeps every arm's time and loses every bar, factor and
-   * winner: the arms ran the same scene and are not doing the same work in it,
-   * which a bar length would assert they were.
-   */
-  readonly withheld: string | undefined;
 }
 
 /** One scenario's card. */
@@ -201,16 +192,8 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     return null;
   }
 
-  const withheld = withheldScenario(row.archetype);
   const cells = orderArms(row.cells, cell => cell.competitor);
-  // A withheld row loses its quantitative treatment wholesale rather than per
-  // arm: the doubt is about the comparison, so no arm in it may keep a bar.
-  const canonical = [reference, ...cells.map(competitorArm)].map(arm => (withheld === undefined ? arm : { ...arm, quantitative: false }));
-  // Sorted even where the comparison is withheld. The order is the reader's way
-  // through the rows and the same one on every card, and leaving a withheld
-  // load in canonical order does not stop anyone ranking four printed numbers,
-  // it only makes them do it by eye. That these times are not a ranking is said
-  // where it belongs, on the load's own marker.
+  const canonical = [reference, ...cells.map(competitorArm)];
   const arms = fastestFirst(canonical);
   // Every published figure sets the scale, because the bars are durations: an
   // arm whose PAIR the clock could not separate still took the time it reports,
@@ -225,7 +208,6 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     primary: row.primary ?? false,
     arms,
     maxMs: plotted.length > 0 ? Math.max(...plotted) : 0,
-    withheld,
   };
 };
 

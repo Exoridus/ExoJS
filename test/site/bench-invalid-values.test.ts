@@ -16,16 +16,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { openingLoad, physicsCards, renderingCards } from '../../site/src/lib/bench-cards';
-import {
-  benchProfiles,
-  formatMs,
-  isQuantitative,
-  outcomeOf,
-  type ProfileCell,
-  publishedMs,
-  type TimerCheck,
-  withheldScenario,
-} from '../../site/src/lib/bench-profiles';
+import { benchProfiles, formatMs, isQuantitative, outcomeOf, type ProfileCell, publishedMs, type TimerCheck } from '../../site/src/lib/bench-profiles';
 
 /** A cell whose competitor arm reported `ms` under the given timer verdict. */
 const cellOf = (ms: number, timer: TimerCheck, comparable = true): ProfileCell => ({
@@ -126,6 +117,13 @@ describe('every published profile', () => {
     expect(loads.length).toBeGreaterThan(0);
   });
 
+  it('publishes quantitative comparisons for joints like every other scenario', () => {
+    const joints = benchProfiles.flatMap(document => physicsCards(document)).filter(card => card.id === 'joints');
+
+    expect(joints.length).toBeGreaterThan(0);
+    expect(joints.flatMap(card => card.loads).some(load => load.arms.some(arm => arm.quantitative))).toBe(true);
+  });
+
   it('publishes no arm at a zero time', () => {
     // A stored zero is an arm that sat the comparison out. Whatever else a card
     // does with it, it must never reach the page as the fastest figure on it.
@@ -145,8 +143,6 @@ describe('every published profile', () => {
       const published = load.arms.filter(arm => arm.ms !== null).map(arm => arm.ms ?? 0);
 
       // The section reads "lower is better", so the rows read best to worst.
-      // A withheld load is sorted the same way: its times are real durations,
-      // and the marker on the load, not the order, says they are no ranking.
       expect(published).toStrictEqual([...published].sort((a, b) => a - b));
       // Arms without a figure sit behind the published ones, never between them.
       const firstUnpublished = load.arms.findIndex(arm => arm.ms === null);
@@ -161,9 +157,5 @@ describe('every published profile', () => {
     for (const card of benchProfiles.flatMap(document => (['webgl2', 'webgpu'] as const).flatMap(backend => renderingCards(document, backend)))) {
       expect(openingLoad(card)).toBeDefined();
     }
-  });
-
-  it('publishes the aligned joint-chain workload as a normal comparison', () => {
-    expect(withheldScenario('joints')).toBeUndefined();
   });
 });
