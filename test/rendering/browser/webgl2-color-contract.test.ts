@@ -32,7 +32,7 @@ test('WebGL2 decodes sRGB storage while leaving UNORM raw samples unchanged', as
       backend.setRenderTarget(target).clear();
       root.render(backend);
       backend.flush();
-      root.destroy({ children: true });
+      root.destroy();
     }
 
     const srgbPixels = await backend.readPixels(srgbTarget, 0, 0, 1, 1);

@@ -22,7 +22,7 @@ const join = (chunks: readonly Uint8Array[]): Uint8Array => {
   return result;
 };
 
-const deflate = async (data: Uint8Array): Promise<Uint8Array> => {
+const deflate = async (data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> => {
   const stream = new CompressionStream('deflate');
   const writer = stream.writable.getWriter();
   const reader = stream.readable.getReader();

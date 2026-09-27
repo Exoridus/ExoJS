@@ -62,7 +62,7 @@ describe('WebGpuBackend exact color formats', () => {
   test('keeps a default external image destination on rgba8unorm before color-pipeline activation', async () => {
     environment = createMockWebGpuEnvironment();
     backend = await createMockBackend(environment);
-    const destinations: GPUCopyExternalImageDest[] = [];
+    const destinations: GPUCopyExternalImageDestInfo[] = [];
     const queue = backend.device.queue as GPUQueue & { copyExternalImageToTexture: GPUQueue['copyExternalImageToTexture'] };
     const originalCopy = queue.copyExternalImageToTexture.bind(queue);
 
