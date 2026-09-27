@@ -130,10 +130,16 @@ describe('particle CPU/WebGL2/WebGPU simulation parity', () => {
       expectPixelNear(expected[1]!, [0, 0, 255, 255], 1);
       expectPixelNear(expected[2]!, [0, 0, 0, 255], 0);
       renderWebGl2Once(webgl, gl);
-      for (let i = 0; i < points.length; i++) expectPixelNear(readWebGl2Pixel(webgl, ...points[i]!), expected[i]!, 1);
+      for (let i = 0; i < points.length; i++) {
+        const [x, y] = points[i]!;
+        expectPixelNear(readWebGl2Pixel(webgl, x, y), expected[i]!, 1);
+      }
       await renderWebGpuOnce(context, webgpu, gpu);
       const pixel = readWebGpuPixels(webgpu, 64);
-      for (let i = 0; i < points.length; i++) expectPixelNear(pixel(...points[i]!), expected[i]!, 1);
+      for (let i = 0; i < points.length; i++) {
+        const [x, y] = points[i]!;
+        expectPixelNear(pixel(x, y), expected[i]!, 1);
+      }
     } finally {
       cpu.destroy();
       gl.destroy();

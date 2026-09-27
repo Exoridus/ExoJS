@@ -34,7 +34,7 @@ const setup = (modules: UpdateModule[] = [], deaths = false) => {
   source.height = 4;
 
   const texture = new Texture(source);
-  const system = new ParticleSystem({ capacity: 4, texture });
+  const system = new ParticleSystem(texture, { capacity: 4 });
   const state = new ParticleGlState(gl, 4, modules, [], texture, new Rectangle(0, 0, 4, 4), deaths);
 
   return { gl, system, state, texture };
