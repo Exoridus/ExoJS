@@ -7,6 +7,7 @@ import type { ParticleSystem } from '#ParticleSystem';
 
 import type { ParticleDeathRecord } from './ParticleGpuState';
 import { ParticleModuleKeyCollisionError } from './ParticleModuleKeyCollisionError';
+import fragmentSource from './shaders/particle-simulate.frag';
 import simulationSource from './shaders/particle-simulate.vert';
 
 const stride = 80;
@@ -526,7 +527,7 @@ export class ParticleGlState {
     try {
       for (const [type, text] of [
         [gl.VERTEX_SHADER, source],
-        [gl.FRAGMENT_SHADER, '#version 300 es\nprecision highp float; out vec4 color; void main() { color = vec4(0.0); }'],
+        [gl.FRAGMENT_SHADER, fragmentSource],
       ] as const) {
         const shader = this._require(gl.createShader(type));
 
