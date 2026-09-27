@@ -18,6 +18,7 @@ export { FilterPass } from './FilterPass';
 export type { MultiRenderTargetOptions } from './MultiRenderTarget';
 export { MultiRenderTarget } from './MultiRenderTarget';
 export { PassContext } from './PassContext';
+export type { PixelArray, PixelArrayFor, PixelDataType } from './pixelPayload';
 export { PixelSnapMode } from './pixelSnap';
 export { RenderBackendType } from './RenderBackendType';
 export { RenderBatch } from './RenderBatch';

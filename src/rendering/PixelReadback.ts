@@ -1,3 +1,5 @@
+import type { PixelArray } from './pixelPayload';
+
 /**
  * A backend's half of a standing readback: a fixed ring of staging slots over
  * one rectangle of one render texture, filled without blocking and drained on
@@ -13,7 +15,7 @@
  * back to `free`, whichever state the slot is in.
  * @advanced
  */
-export interface PixelReadback {
+export interface PixelReadback<T extends PixelArray = Uint8ClampedArray> {
   /** Number of staging slots, fixed at creation. */
   readonly slots: number;
 
@@ -32,8 +34,8 @@ export interface PixelReadback {
   /** Whether the slot's read cannot complete: device lost, released early, or destroyed under it. Terminal until released. */
   isFailed(slot: number): boolean;
 
-  /** The slot's destination array: RGBA bytes, top row first. Valid content only while `isReady`. */
-  data(slot: number): Uint8ClampedArray;
+  /** The slot's destination array: RGBA components, top row first. Valid content only while `isReady`. */
+  data(slot: number): T;
 
   /** Return the slot to the ring. A pending read is abandoned; its bytes are discarded when they land. */
   release(slot: number): void;

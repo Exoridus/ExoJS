@@ -218,6 +218,14 @@ backdrop.cacheResolution = 1; // logical size regardless of the display
 
 Changing `cacheResolution` invalidates the cache, as does anything that moves the node's world bounds — including its own transform. A node that animates re-bakes every frame and is strictly slower cached than uncached, whatever its resolution.
 
+## Reading pixels and generated data
+
+Use [`RenderingContext.readPixels`](/ExoJS/en/api/rendering-context/) for a one-shot read, or [`PixelReader`](/ExoJS/en/api/pixel-reader/) for repeated non-blocking reads with a fixed number of staging slots. Both return top-row-first RGBA data. The default mode reads `rgba8` into `Uint8ClampedArray`, suitable for `ImageData`.
+
+To read a float target, explicitly pass `{ dataType: 'float32' }` to `readPixels` or `createPixelReader`. Both `rgba32f` and `rgba16f` then return `Float32Array`; half-float storage retains its original precision. Signed values and values above one survive without clipping or normalization. The byte mode rejects float targets, and the float mode rejects byte targets. Check `context.supportsReadbackFormat(format)` separately from rendering support before choosing a target format; the engine never silently selects a lower-precision fallback.
+
+A one-shot result belongs to the caller. A standing reader's result belongs to its slot and stays valid only until `release()`. Copy values you need to retain before releasing that slot. The reader refuses requests while all slots are held. Destroy the reader to cancel pending reads; destroying its source refuses new requests but does not recall copies already submitted. A whole-source reader follows a resize on its next request, invalidating handles from its old slots. A fixed-region reader retains its slots if the region still fits, or refuses the next request if it no longer fits. This makes the ownership and buffering bound explicit for consumers such as GPU-generated PCM.
+
 ## Lifecycle
 
 `RenderTexture` owns GPU resources. Call `destroy()` when the texture is no longer needed to release the backing framebuffer and texture. The engine does not garbage-collect GPU objects automatically. Destroying a `MultiRenderTarget` destroys its attachments too, so do not `destroy()` one of those separately.

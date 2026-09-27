@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "sampleRate": 48000,
+  "channels": 1,
+  "bitsPerSample": 16,
+  "conversion": {
+    "tool": "ffmpeg version 7.1.1-essentials_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers",
+    "filter": "pan=mono|c0=0.5*c0+0.5*c1,aresample=48000:resampler=swr:dither_method=none,atrim=start_sample=0:end_sample=1440000",
+    "normalization": "none",
+    "codec": "pcm_s16le",
+    "metadata": "removed; bitexact WAV"
+  },
+  "fixtures": [
+    {
+      "id": "chill-menu",
+      "title": "ChillMenu",
+      "artist": "Not Jam",
+      "category": "clear-percussion",
+      "sourcePage": "https://not-jam.itch.io/not-jam-music-pack",
+      "license": "CC0-1.0",
+      "sourceSha256": "a112647ff715ac6aa722c1a1451293cff4d10219cda6869730a36f3cbd15b34c",
+      "sourceFile": "ChillMenu_Loopable.wav",
+      "file": "chill-menu.wav",
+      "sha256": "7a12ebd091383af63d22dd1f67695fab506186398bc6f0cc92d70c0ff38bb412",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          0.677333, 1.338667, 2.005333, 2.768, 3.328, 3.984, 4.645333, 5.301333, 5.754667, 6.410667, 7.072, 7.738667, 8.394667, 9.066667, 9.824, 10.389333,
+          11.045333, 11.706667, 12.357333, 12.810667, 13.472, 14.133333, 14.794667, 15.456, 16.122667, 16.885333, 17.445333, 18.101333, 18.656, 19.216,
+          19.866667, 20.416, 20.976, 21.632, 22.293333, 22.954667, 23.621333, 24.277333, 24.949333, 25.706667, 26.277333, 26.922667, 27.477333, 28.037333,
+          28.693333, 29.349333
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True. No ExoJS output used. Tempo/phase, half-time/double-time and whether a pulse exists require auditory review. Auditory review rejected the phase: clicks mostly fall between the main beats, with occasional additional offsets. Correction remains pending."
+      }
+    },
+    {
+      "id": "descend-gameplay",
+      "title": "DescendGameplay",
+      "artist": "Not Jam",
+      "category": "complex-breakbeat",
+      "sourcePage": "https://not-jam.itch.io/not-jam-music-pack",
+      "license": "CC0-1.0",
+      "sourceSha256": "f0e3effe364606c101a09e4ba04f3893f0548c3010ceddff0505cde72a5965dc",
+      "sourceFile": "DescendGameplay_Loopable.wav",
+      "file": "descend-gameplay.wav",
+      "sha256": "ae20f4daef146df05a9b755b38cf413ccac476b91f2196415d00c3081f079670",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "reviewed",
+        "kind": "beats",
+        "beatTimesSec": [
+          0.666667, 1.093333, 1.541333, 1.973333, 2.405333, 2.842667, 3.28, 3.706667, 4.144, 4.576, 5.008, 5.44, 5.882667, 6.32, 6.752, 7.178667, 7.621333,
+          8.053333, 8.490667, 8.922667, 9.36, 9.792, 10.24, 10.661333, 11.210667, 11.744, 12.181333, 12.618667, 13.061333, 13.488, 13.925333, 14.357333, 14.8,
+          15.232, 15.664, 16.096, 16.533333, 16.965333, 17.392, 17.834667, 18.277333, 18.709333, 19.141333, 19.573333, 20.016, 20.453333, 20.88, 21.312,
+          21.754667, 22.186667, 22.618667, 23.050667, 23.493333, 23.925333, 24.352, 24.789333, 25.232, 25.664, 26.101333, 26.533333, 26.976, 27.408, 27.834667,
+          28.272, 28.704, 29.034667
+        ],
+        "reviewedBy": "User",
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True. No ExoJS output used. Main perceived pulse accepted in auditory click-overlay review; candidate timestamps retained without manual refinement."
+      }
+    },
+    {
+      "id": "vampires-piano",
+      "title": "Vampire's Piano",
+      "artist": "TAD",
+      "category": "piano",
+      "sourcePage": "https://opengameart.org/content/vampires-piano",
+      "license": "CC0-1.0",
+      "sourceSha256": "9317c1dc40359347056441367351a0f0acec6c4355f0a3026815369119f4fead",
+      "sourceFile": "vampires_piano_1.wav",
+      "file": "vampires-piano.wav",
+      "sha256": "935e4a874930b82575cd93205aa8856edcae22d3765b4b6766f0a777599d3c60",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "reviewed",
+        "kind": "beats",
+        "beatTimesSec": [
+          0.848, 1.264, 1.674667, 2.085333, 2.501333, 2.917333, 3.333333, 3.744, 4.16, 4.570667, 4.986667, 5.397333, 5.813333, 6.224, 6.64, 7.056, 7.466667,
+          7.882667, 8.293333, 8.709333, 9.125333, 9.541333, 9.952, 10.368, 10.778667, 11.189333, 11.605333, 12.021333, 12.432, 12.848, 13.258667, 13.674667,
+          14.096, 14.501333, 14.917333, 15.328, 15.744, 16.16, 16.576, 16.986667, 17.402667, 17.813333, 18.229333, 18.645333, 19.050667, 19.466667, 19.882667,
+          20.293333, 20.714667, 21.130667, 21.536, 21.946667, 22.373333, 22.778667, 23.189333, 23.610667, 24.021333, 24.432, 24.858667, 25.264, 25.701333,
+          26.096, 26.501333, 26.917333, 27.338667, 27.744, 28.149333, 28.576, 28.986667, 29.397333, 29.813333
+        ],
+        "reviewedBy": "User",
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True. No ExoJS output used. Main perceived pulse accepted in auditory click-overlay review; candidate timestamps retained without manual refinement."
+      }
+    },
+    {
+      "id": "2-jazz",
+      "title": "2 (jazz)",
+      "artist": "HoliznaCC0",
+      "category": "jazz",
+      "sourcePage": "https://freemusicarchive.org/music/holiznacc0/busted-guitar-jazz/2-jazz/",
+      "license": "CC0-1.0",
+      "sourceSha256": "13ef86dc8f7dff2142e92bce2d96f27ef2337dad6cc0f70d091bba669811b743",
+      "sourceFile": "RAhpT3UVJ6LGPxXrM8atr526kdskbJTAs1Fw1QRw.mp3",
+      "file": "2-jazz.wav",
+      "sha256": "26dc917afb726d006d23969502b49d352a3b9bac57ab35313042718faedd4dd7",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "reviewed",
+        "kind": "beats",
+        "beatTimesSec": [
+          1.093333, 1.818667, 2.490667, 3.216, 3.914667, 4.64, 5.317333, 6.037333, 6.714667, 7.466667, 8.138667, 8.853333, 9.552, 10.293333, 10.96, 11.68,
+          12.384, 13.114667, 13.786667, 14.512, 15.2, 15.936, 16.608, 17.322667, 18.010667, 18.762667, 19.434667, 20.154667, 20.848, 21.589333, 22.256, 22.976,
+          23.674667, 24.405333, 25.082667, 25.802667, 26.501333, 27.232, 27.909333, 28.613333, 29.306667
+        ],
+        "reviewedBy": "User",
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True. No ExoJS output used. Main perceived pulse accepted in auditory click-overlay review; candidate timestamps retained without manual refinement."
+      }
+    },
+    {
+      "id": "cave-theme",
+      "title": "Cave Theme",
+      "artist": "Brandon Morris (Brandon75689 / HaelDB)",
+      "category": "ambient",
+      "sourcePage": "https://opengameart.org/content/cave-theme",
+      "license": "CC0-1.0",
+      "sourceSha256": "1ddf7a0845c808136edfda7ea829e48fa2b7c57793e008d706dadbb5917dff9c",
+      "sourceFile": "cave themeb4.ogg",
+      "file": "cave-theme.wav",
+      "sha256": "f598e3f5ef9882feea0315a0f354cbd4db92188f843ebcdf14ac1cad731d906c",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          7.493333, 7.888, 8.32, 8.768, 9.242667, 9.722667, 10.122667, 10.613333, 11.109333, 11.530667, 11.909333, 12.346667, 12.768, 13.146667, 13.610667,
+          14.053333, 14.528, 15.114667, 15.525333, 15.957333, 16.368, 16.8, 17.226667, 17.701333, 18.144, 18.576, 19.024, 19.461333, 19.877333, 20.330667,
+          20.789333, 21.264, 21.669333, 22.08, 22.512, 22.997333, 23.466667, 23.968, 24.485333, 24.938667, 25.397333, 25.872, 26.309333, 26.757333, 27.216,
+          27.712, 28.181333, 28.634667, 29.109333, 29.546667, 29.952
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True. No ExoJS output used. Tempo/phase, half-time/double-time and whether a pulse exists require auditory review. Auditory review rejected the clicks as too fast; the excerpt has no clear percussive rhythm. Pulse convention and timestamps remain unresolved; this is not a reviewed no-pulse reference."
+      }
+    }
+  ]
+}

@@ -6,26 +6,36 @@
 
 import { logger } from '#core/Logger';
 import { Rectangle } from '#math/Rectangle';
+import type { PixelDataType } from '#rendering/pixelPayload';
+import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { PixelReader } from '#rendering/texture/PixelReader';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { TextureFormat } from '#rendering/types';
 
-import type { PixelReadbackDouble } from '../support/pixel-readback-double';
+import { createPixelReadbackDouble, type PixelReadbackDouble } from '../support/pixel-readback-double';
 import { createRenderBackendDouble } from '../support/render-backend-double';
 
 const createRuntime = () => {
-  const readbacks: PixelReadbackDouble[] = [];
+  const readbacks: Array<PixelReadbackDouble<Uint8ClampedArray | Float32Array>> = [];
   const base = createRenderBackendDouble();
   const backend = {
     ...base,
-    createPixelReadback(...args: Parameters<typeof base.createPixelReadback>) {
-      const readback = base.createPixelReadback(...args) as PixelReadbackDouble;
+    createPixelReadback: (<T extends PixelDataType = 'uint8'>(
+      _source: RenderTexture,
+      _x: number,
+      _y: number,
+      width: number,
+      height: number,
+      slots: number,
+      dataType: T = 'uint8' as T,
+    ) => {
+      const readback = createPixelReadbackDouble(width, height, slots, dataType);
 
       readbacks.push(readback);
 
       return readback;
-    },
+    }) as RenderBackend['createPixelReadback'],
   };
   const context = new RenderingContext(backend);
 
@@ -199,6 +209,6 @@ describe('PixelReader', () => {
 
     new PixelReader(base, source, { region: new Rectangle(10.9, 2.1, 5.5, 3.9), slots: 3 });
 
-    expect(spy).toHaveBeenCalledWith(source, 10, 2, 5, 3, 3);
+    expect(spy).toHaveBeenCalledWith(source, 10, 2, 5, 3, 3, 'uint8');
   });
 });

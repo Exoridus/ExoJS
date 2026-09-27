@@ -18,6 +18,7 @@ import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant }
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { assertBatchSingleAttachment, assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
+import { createPixelArray, type PixelArray, type PixelDataType, pixelTransferBytes } from '#rendering/pixelPayload';
 import type { PixelReadback } from '#rendering/PixelReadback';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
@@ -65,6 +66,7 @@ import {
 import mipmapWgslModule from './shaders/mipmap.wgsl';
 import { depthStencilAttachmentFormat as depthAttachmentFormat } from './stencilState';
 import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './storageLimits';
+import { unpackPixelRows } from './unpackPixelRows';
 import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuGpuTimer } from './WebGpuGpuTimer';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
@@ -1284,14 +1286,21 @@ export class WebGpuBackend implements RenderBackend {
     return true;
   }
 
-  public async readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray> {
+  public supportsReadbackFormat(_format: ColorTextureFormat): boolean {
+    return true;
+  }
+
+  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType?: 'uint8'): Promise<Uint8ClampedArray>;
+  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: 'float32'): Promise<Float32Array>;
+  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
+  public async readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType = 'uint8'): Promise<PixelArray> {
     this.flush();
 
     const texture = this._syncTexture(source).texture;
     // `copyTextureToBuffer` wants every row to start on a 256-byte boundary,
     // unlike `writeTexture`, so the staging rows are padded and the payload is
     // unpacked out of them below.
-    const bytesPerRow = Math.ceil((width * 4) / 256) * 256;
+    const bytesPerRow = Math.ceil((width * pixelTransferBytes(source.format)) / 256) * 256;
     const staging = this.device.createBuffer({
       label: 'backend:readPixels',
       size: bytesPerRow * height,
@@ -1306,16 +1315,12 @@ export class WebGpuBackend implements RenderBackend {
 
       await staging.mapAsync(GPUMapMode.READ);
 
-      const padded = new Uint8Array(staging.getMappedRange());
-      const stride = width * 4;
-      const pixels = new Uint8ClampedArray(stride * height);
+      const pixels = createPixelArray(width * height * 4, dataType);
 
-      for (let row = 0; row < height; row++) {
-        pixels.set(padded.subarray(row * bytesPerRow, row * bytesPerRow + stride), row * stride);
-      }
+      unpackPixelRows(staging.getMappedRange(), pixels, width, height, bytesPerRow, source.format);
 
       staging.unmap();
-      this._accountant.recordDownload(pixels.byteLength);
+      this._accountant.recordDownload(width * height * pixelTransferBytes(source.format));
 
       return pixels;
     } finally {
@@ -1323,8 +1328,35 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
-  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback {
-    const readback = new WebGpuPixelReadback(this._pixelReadbackHost(), source, x, y, width, height, slots);
+  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: 'float32',
+  ): PixelReadback<Float32Array>;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: PixelDataType,
+  ): PixelReadback<PixelArray>;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: PixelDataType = 'uint8',
+  ): PixelReadback<PixelArray> {
+    const readback = new WebGpuPixelReadback(this._pixelReadbackHost(), source, x, y, width, height, slots, dataType);
 
     this._pixelReadbacks.add(readback);
 

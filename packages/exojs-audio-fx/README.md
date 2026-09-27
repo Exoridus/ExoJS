@@ -30,6 +30,12 @@ export const inspectMusic = (app: Application): { read: () => Uint8Array; destro
 
 Call `read` from the owner's update path and destroy the helper when that owner ends. An analyser taps a live bus or voice, not an unloaded asset descriptor. A silent or muted routing path is not repaired by repeatedly creating analysers.
 
+## Externally produced PCM
+
+Use `PcmStreamSource` for bounded mono/stereo Float32 streaming into an `AudioBus`. Await readiness, enqueue at the source's sample rate, then explicitly start playback; caller-owned arrays are copied and remain reusable. See [the PCM contract and lifecycle guide](docs/pcm-streaming.md) and [the runnable streaming example](../../examples/audio-fx/pcm-stream.ts) for scheduling, overflow, underrun telemetry, clear and drain.
+
+For GPU-generated samples, the [GPU stereo PCM guide](docs/gpu-pcm.md) and [example](../../examples/audio-fx/gpu-pcm-stream.ts) connect bounded readback slots to the source, with explicit byte packing or typed float readback on both rendering backends.
+
 ## Important boundaries
 
 Browser audio needs a real user-gesture path. Worklet-backed processors can have asynchronous initialization and capability requirements; handle failure and teardown rather than assuming construction means readiness.
@@ -41,6 +47,12 @@ Beat detection estimates tempo and phase. Polling windows such as `justBeat` are
 ## Documentation
 
 [Audio basics](https://exoridus.github.io/ExoJS/en/guide/audio/audio-basics/) · [Effects and routing](https://exoridus.github.io/ExoJS/en/guide/audio/audio-effects/) · [Beat detection](https://exoridus.github.io/ExoJS/en/guide/audio/beat-detection/) · [Audio-reactive visuals](https://exoridus.github.io/ExoJS/en/guide/audio/audio-reactive-visualization/) · [AudioAnalyser API](https://exoridus.github.io/ExoJS/en/api/audio-analyser/)
+
+## Beat evaluation
+
+[The synthetic MIR evaluation](docs/mir-evaluation.md) documents reproducible quality and posting-latency measurements, adversarial fixtures, provisional-versus-locked comparisons, and their limits. Run the named evaluation test from the repository root; no external audio dataset is required.
+
+[The recorded music corpus](test/fixtures/music/README.md) complements it with five committed CC0 excerpts. Its tests run offline and distinguish unreviewed beat proposals from reviewed references; passing integration checks alone does not establish accuracy on music.
 
 ## License
 

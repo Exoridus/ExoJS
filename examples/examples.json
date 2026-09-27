@@ -838,6 +838,28 @@
       "level": "intro"
     },
     {
+      "slug": "pcm-stream",
+      "path": "audio-fx/pcm-stream.js",
+      "language": "typescript",
+      "title": "Streaming PCM",
+      "description": "Feed stereo PCM through the music bus, inspect the bounded queue, and compare producer starvation, clear and drain.",
+      "backend": "core",
+      "tags": ["audio", "pcm", "streaming", "synthesis"],
+      "capabilities": ["pointer", "audio"],
+      "level": "intermediate"
+    },
+    {
+      "slug": "gpu-pcm-stream",
+      "path": "audio-fx/gpu-pcm-stream.js",
+      "language": "typescript",
+      "title": "GPU Stereo PCM",
+      "description": "Generate stereo samples on the GPU, read bounded blocks as packed bytes or floats, and stream them through the music bus.",
+      "backend": "core",
+      "tags": ["audio", "pcm", "gpu", "readback", "synthesis"],
+      "capabilities": ["pointer", "audio"],
+      "level": "advanced"
+    },
+    {
       "slug": "compressor",
       "path": "audio-fx/compressor.js",
       "language": "typescript",
