@@ -20,7 +20,15 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { readWebGpuPixels } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
-import { createQuadrantTexture, createSolidTexture, makeTileset, singleTileMap, wireTilemapRenderers, wireViaTiledExtension } from './_tilemapScene';
+import {
+  createQuadrantTexture,
+  createSolidTexture,
+  isometricOverlapMap,
+  makeTileset,
+  singleTileMap,
+  wireTilemapRenderers,
+  wireViaTiledExtension,
+} from './_tilemapScene';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 64;
@@ -295,6 +303,60 @@ describe('WebGPU tilemap — one-extension Tiled wiring', () => {
     } finally {
       node.destroy();
       texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('webgpu isometric tilemap', () => {
+  test('premultiplies translucent tile artwork across repeated frames', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('rgba(255, 0, 0, 0.5)');
+    const map = isometricOverlapMap(texture, texture);
+    const node = new TileMapNode(map);
+    try {
+      node.y = 16;
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderScene(ctx, backend, node))) return;
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(30, 33), [239, 0, 0, 255]);
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(30, 45), [128, 0, 0, 255]);
+      }
+    } finally {
+      node.destroy();
+      map.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('preserves painter order across chunks, edits, and overhang culling', async ctx => {
+    const backend = await setupBackend();
+    const red = createSolidTexture('#ff0000');
+    const blue = createSolidTexture('#0000ff');
+    const map = isometricOverlapMap(red, blue);
+    const node = new TileMapNode(map);
+    try {
+      node.y = 16;
+      if (!(await renderScene(ctx, backend, node))) return;
+      const read = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(read(30, 33), [255, 0, 0, 255]);
+      expectPixelNear(read(22, 29), [0, 0, 255, 255]);
+      map.layers[0]!.clearTileAt(3, 3);
+      if (!(await renderScene(ctx, backend, node))) return;
+      const read2 = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(read2(30, 33), [0, 0, 255, 255]);
+      node.y = 68;
+      if (!(await renderScene(ctx, backend, node))) return;
+      const read3 = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(read3(32, 62), [255, 0, 0, 255]);
+      node.y = 1000;
+      if (!(await renderScene(ctx, backend, node))) return;
+      expect(backend.stats.drawCalls).toBe(0);
+    } finally {
+      node.destroy();
+      map.destroy();
+      red.destroy();
+      blue.destroy();
       backend.destroy();
     }
   });

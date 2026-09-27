@@ -36,9 +36,9 @@ export interface MapObjectDescriptor {
   readonly kind: string | null;
   /** Object name; may be empty and is not unique. */
   readonly name: string;
-  /** X of the object origin in object-layer pixel space. */
+  /** X of the object origin in layer coordinates; use layer.getDisplayObject for projected placement. */
   readonly x: number;
-  /** Y of the object origin in object-layer pixel space. */
+  /** Y of the object origin in layer coordinates; use layer.getDisplayObject for projected placement. */
   readonly y: number;
   /** Bounding width in px (0 for points). */
   readonly width: number;

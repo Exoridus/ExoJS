@@ -108,5 +108,6 @@ export { createWorkerSampledChunkSource } from './WorkerSampledChunkSource';
 // Wang autotiling: automatic tile selection based on neighbor bitmasks.
 export type { AutoTileOptions } from './autoTile';
 export { autoTile, refreshCell } from './autoTile';
+export { TileProjection, type TileProjectionOptions } from './TileProjection';
 export type { WangSetOptions } from './WangSet';
 export { WangSet } from './WangSet';

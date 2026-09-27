@@ -290,12 +290,12 @@ describe('TiledMap.toTileMap() — rejects maps it cannot convert faithfully', (
     tilecount: 8,
   };
 
-  it('throws TiledFormatError for a non-orthogonal (isometric) map', async () => {
+  it('throws TiledFormatError for an unsupported staggered map', async () => {
     const { loadSource } = makeContext({
       'iso.tmj': {
         type: 'map',
         version: '1.10',
-        orientation: 'isometric',
+        orientation: 'staggered',
         width: 2,
         height: 1,
         tilewidth: 16,

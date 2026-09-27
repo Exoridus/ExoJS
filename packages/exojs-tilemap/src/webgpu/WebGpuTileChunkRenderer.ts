@@ -79,6 +79,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
   private _pipelineLayout: GPUPipelineLayout | null = null;
   private _uniformBuffer: GPUBuffer | null = null;
+  private readonly _sampleAlphaBuffers: GPUBuffer[] = [];
   private _transformBindGroup: GPUBindGroup | null = null;
   private _transformStorageBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
@@ -96,7 +97,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   // nine-slice renderers): resolving `backend.getTextureBinding` is what
   // syncs a dirty/mutated texture's content to the GPU, so it must run every
   // flush/replay even when the bind group itself is served from cache.
-  private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
+  private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler; premultiply: boolean }>();
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
@@ -151,6 +152,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
       ],
     });
 
@@ -162,6 +164,13 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       size: projectionByteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+
+    for (const premultiply of [0, 1]) {
+      const buffer = this._device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM, mappedAtCreation: true });
+      new Float32Array(buffer.getMappedRange())[0] = premultiply;
+      buffer.unmap();
+      this._sampleAlphaBuffers.push(buffer);
+    }
 
     this._indexBuffer = this._device.createBuffer({
       size: quadIndices.byteLength,
@@ -185,6 +194,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._instanceBuffer?.destroy();
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();
+    for (const buffer of this._sampleAlphaBuffers) buffer.destroy();
+    this._sampleAlphaBuffers.length = 0;
     this._pipelines.clear();
     this._instanceBuffer = null;
     this._indexBuffer = null;
@@ -192,7 +203,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._transformStorageBuffer = null;
     // Bind groups belong to the (possibly lost) device; drop the cache so
     // reconnect rebuilds them against the fresh device.
-    this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
+    this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler; premultiply: boolean }>();
     this._uniformBuffer = null;
     this._pipelineLayout = null;
     this._textureBindGroupLayout = null;
@@ -524,9 +535,10 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
    */
   private _getOrCreateTextureBindGroup(device: GPUDevice, backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
     const { view, sampler } = backend.getTextureBinding(texture);
+    const premultiply = backend.shouldPremultiplyTextureSample(texture);
     const cached = this._textureBindGroups.get(texture);
 
-    if (cached?.view === view && cached.sampler === sampler) {
+    if (cached?.view === view && cached.sampler === sampler && cached.premultiply === premultiply) {
       return cached.group;
     }
 
@@ -535,10 +547,11 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       entries: [
         { binding: 0, resource: view },
         { binding: 1, resource: sampler },
+        { binding: 2, resource: { buffer: this._sampleAlphaBuffers[premultiply ? 1 : 0]! } },
       ],
     });
 
-    this._textureBindGroups.set(texture, { group, view, sampler });
+    this._textureBindGroups.set(texture, { group, view, sampler, premultiply });
 
     return group;
   }

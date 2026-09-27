@@ -50,6 +50,14 @@ Tileset resources acquired through the loader have loader-managed claims and dep
 
 `TileMap`, `TileMapNode`, `TileMapView`, and the other runtime re-exports are the same bindings as in `@codexo/exojs-tilemap`, not independent adapter-specific classes.
 
+## Isometric maps
+
+`toTileMap()` converts standard Tiled isometric maps as well as orthogonal maps. It shares a `TileProjection` across the map, tile layers and object layers, with Tiled's horizontal origin (`map.height * tileWidth / 2`). Infinite maps retain signed chunk coordinates and stream through the same public chunk-source API. Staggered and hexagonal maps remain unsupported; LDtk remains orthogonal.
+
+Tiled object positions use logical pixels with `tileHeight` units per cell on both axes. Runtime object geometry stays in that logical space for physics. Use `objectLayer.getDisplayObject(object)` for placement and drawing; it projects shapes and applies group/layer display offsets. Imported object rotations are normalized to preserve Tiled's rotation after projection. Tile objects use Tiled's bottom-centre default alignment on isometric maps, retain their visual size and rotation, expose the image pivot as `rotationOrigin`, and keep the tileset drawing offset separate as on orthogonal maps.
+
+See the **Isometric Landscape** example for Kenney artwork, cell picking, authored object colliders and an explicit physics presentation binding.
+
 ## Learn more
 
 - [Tiled maps guide](https://exoridus.github.io/ExoJS/en/guide/assets/tiled-maps/) explains the normal import workflow and format boundaries.

@@ -950,6 +950,16 @@
   ],
   "worlds-navigation": [
     {
+      "slug": "tiled-isometric",
+      "path": "tilemap/tiled-isometric.js",
+      "language": "typescript",
+      "title": "Isometric Landscape",
+      "description": "Explore a Kenney landscape loaded from Tiled: pick diamond cells, move a physics actor through the bridge, and inspect projected collision outlines.",
+      "backend": "core",
+      "tags": ["tilemap", "tiled", "isometric", "physics", "pointer"],
+      "level": "intermediate"
+    },
+    {
       "slug": "tile-chunks-and-bands",
       "path": "tilemap/tile-chunks-and-bands.js",
       "language": "typescript",

@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 22,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
-    "methods": 6,
-    "properties": 15,
+    "methods": 7,
+    "properties": 16,
     "events": 0
   },
   "sections": [
@@ -603,6 +603,53 @@
           ],
           "returnType": "TypedObject<S, T>[]",
           "description": "Objects whose type equals type, with properties narrowed to the schema shape S[T]. Returns a fresh array (insertion order). The narrowing is a static convenience only - no runtime validation is performed (see ObjectSchema). On an unschematised layer this behaves like query({ type }) with TileProperties properties."
+        },
+        {
+          "name": "getDisplayObject",
+          "signature": "getDisplayObject(object: TileMapObject): TileMapObject",
+          "signatureTokens": [
+            {
+              "text": "getDisplayObject",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapObject",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapObject",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "object",
+              "type": "TileMapObject",
+              "optional": false
+            }
+          ],
+          "returnType": "TileMapObject",
+          "description": "Returns display-space geometry including the layer offset. Isometric rectangles become polygons; ellipses retain their exact affine shape. Tile/text dimensions remain display pixels. Parallax and scene transforms are applied by the consumer, after this conversion."
         },
         {
           "name": "getObjectById",
@@ -1225,6 +1272,35 @@
           "params": [],
           "returnType": null,
           "description": "Parallax scroll factor on the Y axis. See ObjectLayer.parallaxX."
+        },
+        {
+          "name": "projection",
+          "signature": "projection: TileProjection | undefined",
+          "signatureTokens": [
+            {
+              "text": "projection",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProjection",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Projection of the logical object geometry, or undefined for ordinary display-space objects."
         },
         {
           "name": "properties",

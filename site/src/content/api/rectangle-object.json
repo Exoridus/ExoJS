@@ -286,7 +286,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "X of the object origin in object-layer pixel space."
+          "description": "X of the object origin in layer coordinates; logical pixels when the layer has a projection."
         },
         {
           "name": "y",
@@ -307,7 +307,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Y of the object origin in object-layer pixel space."
+          "description": "Y of the object origin in layer coordinates; logical pixels when the layer has a projection."
         }
       ],
       "paragraphs": [],

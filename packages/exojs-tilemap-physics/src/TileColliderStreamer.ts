@@ -267,15 +267,16 @@ export class TileColliderStreamer {
       return null;
     }
 
-    const x = startTx * layer.tileWidth + layer.offsetX;
-    const y = startTy * layer.tileHeight + layer.offsetY;
+    const offset = layer.logicalOffset;
+    const x = startTx * layer.projection.logicalTileWidth + offset.x;
+    const y = startTy * layer.projection.logicalTileHeight + offset.y;
     const colliders = buildTileColliders(geometry, {
       x,
       y,
-      tileWidth: layer.tileWidth,
-      tileHeight: layer.tileHeight,
-      layerOffsetX: layer.offsetX,
-      layerOffsetY: layer.offsetY,
+      tileWidth: layer.projection.logicalTileWidth,
+      tileHeight: layer.projection.logicalTileHeight,
+      layerOffsetX: offset.x,
+      layerOffsetY: offset.y,
       regionMode: this._regionMode,
       defaults: this._defaults,
       material: options.material,

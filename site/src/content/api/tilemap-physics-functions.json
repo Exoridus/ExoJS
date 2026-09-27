@@ -119,7 +119,7 @@
             }
           ],
           "returnType": "ObjectCollider[]",
-          "description": "Build one static body per collision object in an object layer and add them to world. An object layer is static data with no residency, so this is a one-shot build with no lifecycle: the caller owns the returned bodies and destroys them through the world. Use import('./TileColliderStreamer').TileColliderStreamer for tile layers, whose chunks come and go. The layer's pixel offset is applied, so the colliders land where the layer is drawn. Objects with no collision geometry (points, tile and text objects) are skipped, as is any object the decomposition rejects - with a warning, not an exception."
+          "description": "Build one static body per collision object in an object layer and add them to world. An object layer is static data with no residency, so this is a one-shot build with no lifecycle: the caller owns the returned bodies and destroys them through the world. Use import('./TileColliderStreamer').TileColliderStreamer for tile layers, whose chunks come and go. The layer's display offset is converted to a logical translation. Isometric geometry remains in logical space; use TilePhysicsBinding for presentation. Objects with no collision geometry (points, tile and text objects) are skipped, as is any object the decomposition rejects - with a warning, not an exception."
         }
       ],
       "paragraphs": [],

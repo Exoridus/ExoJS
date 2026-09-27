@@ -34,7 +34,7 @@ export interface TileRegion {
 }
 
 /**
- * An axis-aligned collision rectangle in tile-layer pixel space (+Y down),
+ * An axis-aligned collision rectangle in logical tile-layer pixel space (+Y down),
  * covering one or more whole tile cells.
  *
  * Rectangles are synthesized geometry, not source objects: a merged run has no
@@ -58,7 +58,7 @@ export interface TileCollisionRect {
 }
 
 /**
- * A per-tile collision shape placed in tile-layer pixel space (+Y down).
+ * A per-tile collision shape placed in logical tile-layer pixel space (+Y down).
  *
  * Emitted for every collision shape that does not exactly cover a whole tile
  * cell: partial boxes, ellipses, polygons, polylines, points, and rotated
@@ -242,10 +242,13 @@ const mapLocalPoint = (px: number, py: number, boxWidth: number, boxHeight: numb
  * every tile, and a tile taller than the layer's cell is bottom-aligned within
  * it, so collision geometry lands exactly where the tile is drawn.
  */
-const tileAnchor = (layer: TileLayer, tileset: TileSet, tx: number, ty: number): ObjectPoint => ({
-  x: tx * layer.tileWidth + layer.offsetX + tileset.offsetX,
-  y: ty * layer.tileHeight + layer.offsetY + layer.tileHeight - tileset.tileHeight + tileset.offsetY,
-});
+const tileAnchor = (layer: TileLayer, tileset: TileSet, tx: number, ty: number): ObjectPoint => {
+  const point = layer.tileToPixel(tx, ty);
+  return {
+    x: point.x + tileset.offsetX - (layer.projection.orientation === 'isometric' ? layer.tileWidth / 2 : 0),
+    y: point.y + layer.tileHeight - tileset.tileHeight + tileset.offsetY,
+  };
+};
 
 /** A shape in layer pixel space, before it is classified as cell or shape. */
 interface PlacedShape {
@@ -364,6 +367,28 @@ const placeShape = (object: TileMapObject, layer: TileLayer, tileset: TileSet, t
   };
 };
 
+/** Undo display geometry before merging cells or handing shapes to simulation. */
+const logicalShape = (shape: PlacedShape, object: TileMapObject, layer: TileLayer): PlacedShape => {
+  const p = layer.projection;
+  if (p.orientation === 'orthogonal' && p.originX === 0 && p.originY === 0) return shape;
+  const geometry = { ...object, ...shape };
+  const mapped = p.unprojectObject(geometry as TileMapObject);
+  if (mapped.kind === 'tile' || mapped.kind === 'text') return shape;
+  if (mapped.kind === 'polygon' && mapped.points.length === 4) {
+    const xs = mapped.points.map(point => point.x);
+    const ys = mapped.points.map(point => point.y);
+    const left = Math.min(...xs);
+    const top = Math.min(...ys);
+    const right = Math.max(...xs);
+    const bottom = Math.max(...ys);
+    const corners = new Set(mapped.points.map(point => `${point.x},${point.y}`));
+    if (corners.size === 4 && mapped.points.every(point => (point.x === left || point.x === right) && (point.y === top || point.y === bottom))) {
+      return { kind: 'rectangle', x: mapped.x + left, y: mapped.y + top, width: right - left, height: bottom - top, rotation: 0 };
+    }
+  }
+  return mapped;
+};
+
 /** The tile-coordinate bounding box of the layer's loaded chunks, or `null`. */
 const loadedTileRegion = (layer: TileLayer): TileRegion | null => {
   let minTx = Number.POSITIVE_INFINITY;
@@ -440,8 +465,8 @@ const coversWholeCell = (placed: PlacedShape, layer: TileLayer, cellX: number, c
   placed.rotation === 0 &&
   placed.x === cellX &&
   placed.y === cellY &&
-  placed.width === layer.tileWidth &&
-  placed.height === layer.tileHeight;
+  placed.width === layer.projection.logicalTileWidth &&
+  placed.height === layer.projection.logicalTileHeight;
 
 /** One single-cell rectangle per claimed cell, for `merge: false`. */
 const unmergedCells = (cells: ReadonlyMap<string, string>, layer: TileLayer): TileCollisionRect[] => {
@@ -451,10 +476,10 @@ const unmergedCells = (cells: ReadonlyMap<string, string>, layer: TileLayer): Ti
     const [tx, ty] = key.split(',').map(Number) as [number, number];
 
     rects.push({
-      x: tx * layer.tileWidth + layer.offsetX,
-      y: ty * layer.tileHeight + layer.offsetY,
-      width: layer.tileWidth,
-      height: layer.tileHeight,
+      x: tx * layer.projection.logicalTileWidth + layer.logicalOffset.x,
+      y: ty * layer.projection.logicalTileHeight + layer.logicalOffset.y,
+      width: layer.projection.logicalTileWidth,
+      height: layer.projection.logicalTileHeight,
       type,
     });
   }
@@ -510,10 +535,10 @@ const mergeCells = (cells: ReadonlyMap<string, string>, region: TileRegion, laye
       }
 
       rects.push({
-        x: tx * layer.tileWidth + layer.offsetX,
-        y: ty * layer.tileHeight + layer.offsetY,
-        width: width * layer.tileWidth,
-        height: height * layer.tileHeight,
+        x: tx * layer.projection.logicalTileWidth + layer.logicalOffset.x,
+        y: ty * layer.projection.logicalTileHeight + layer.logicalOffset.y,
+        width: width * layer.projection.logicalTileWidth,
+        height: height * layer.projection.logicalTileHeight,
         type: key,
       });
     }
@@ -587,15 +612,16 @@ export const buildTileCollisionGeometry = (layer: TileLayer, options: TileCollis
       continue;
     }
 
-    const cellX = tx * layer.tileWidth + layer.offsetX;
-    const cellY = ty * layer.tileHeight + layer.offsetY;
+    const cellX = tx * layer.projection.logicalTileWidth + layer.logicalOffset.x;
+    const cellY = ty * layer.projection.logicalTileHeight + layer.logicalOffset.y;
 
     for (const object of definition.collision) {
       if (accept !== undefined && !accept(object, tx, ty)) {
         continue;
       }
 
-      const placed = placeShape(object, layer, tile.tileset, tile.transform, tx, ty);
+      const visual = placeShape(object, layer, tile.tileset, tile.transform, tx, ty);
+      const placed = visual === null ? null : logicalShape(visual, object, layer);
 
       if (placed === null) {
         continue;

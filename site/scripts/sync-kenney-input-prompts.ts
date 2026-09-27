@@ -160,7 +160,7 @@ const run = (): void => {
       },
     };
 
-    fs.writeFileSync(targetJsonPath, `${JSON.stringify(atlasJson, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(targetJsonPath, `${JSON.stringify(atlasJson)}\n`, 'utf8');
 
     const frameCount = Object.keys(atlas.frames).length;
     console.log(`[input-prompts] ${profile.key}: ${frameCount} frames -> ${path.relative(projectRoot, targetJsonPath)}`);

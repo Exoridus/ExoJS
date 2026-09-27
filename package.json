@@ -166,6 +166,8 @@
     "verify:external-consumers": "tsx ./scripts/release/external-consumers.ts",
     "docs:api:generate": "pnpm --filter @codexo/exojs-examples build:api",
     "docs:api:check": "tsx scripts/check-api-docs-sync.ts",
+    "assets:compact": "tsx scripts/compact-example-assets.ts --write",
+    "assets:compact:check": "tsx scripts/compact-example-assets.ts",
     "examples:sync:check": "tsx scripts/check-examples-sync.ts",
     "full-bundle:exports:check": "tsx scripts/check-dist-fresh.ts && tsx scripts/check-full-bundle-exports.ts",
     "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
