@@ -1,8 +1,8 @@
 # Native WebGPU render-bundle spike, 2026-09-27
 
-Status: **positive evidence, production deferred**. No production integration in v0.19.
+Current decision: **production candidate accepted for conditional integration**; see [phase 2](phase2/README.md) for the larger scale, reconstruction and churn matrix. The phase-1 measurements and historical recommendation below are preserved as acquired.
 
-Decision: the evidence gate is met for a static state-churn fixture, and a native per-batch prototype has a repeatable but small CPU benefit. Keep production integration deferred: this result justifies a narrowly scoped follow-up, not general native-bundle support. This establishes a measured triple-digit-batch case for future evaluation.
+Historical phase-1 decision: the evidence gate is met for a static state-churn fixture, and a native per-batch prototype has a repeatable but small CPU benefit. Keep production integration deferred: this result justifies a narrowly scoped follow-up, not general native-bundle support. This establishes a measured triple-digit-batch case for future evaluation.
 
 Measured source: `07d5ea5496381a24b82d491edf763578448574c5`, tree `c57d4ada609cb74bf0a227ecd4e2b72cb6b9e94f`. This is the rendering-integrity implementation state, including the renderer consolidation. The result already includes those changes; it is not a measurement of the preceding architecture. Chromium 153.0.8010.12, Windows, headless, hardware adapter reports NVIDIA / Blackwell. The browser does not expose the exact device name. Three independent browser processes, two scene sizes per process. Raw readings and adapter metadata are in [results.json](results.json). Preliminary coarse-timer runs are excluded.
 
@@ -33,7 +33,7 @@ All three candidate runs built exactly 157 native bundles across the measured bl
 
 A separate three-process correctness acquisition, [parity-results.json](parity-results.json), uses a persistent RenderTexture, awaits submitted GPU work, and reads via the backend's staging-buffer/mapAsync path. All three runs have 157 batches, exactly 157 parity bundle builds, zero byte differences for both initial bundle execution and subsequent cached replay, and no WebGPU validation errors. Each baseline contains 712,545 nonzero RGB bytes; a clear-only negative control differs in 800,955 bytes, rejecting empty or stale readback. The target switch explicitly resets the disposable cache, so this proves static offscreen sprite parity, not general target-format invalidation or canvas presentation. No performance samples were reacquired or replaced.
 
-## Limits and recommendation
+## Phase-1 limits and historical recommendation
 
 The prototype is throwaway and must not ship unchanged. It does not handle texture/buffer/pipeline identity changes, device loss, changing render formats, stencil, custom materials, mixed renderers, or general pass-state invalidation. It does not combine multiple batches into a single bundle, measure rebuild amortization, measure GPU cost, or validate another backend/device. Bundles can invalidate pass bindings; the tested sprite path explicitly rebinds its complete draw state, but mixed-renderer behavior needs separate proof.
 

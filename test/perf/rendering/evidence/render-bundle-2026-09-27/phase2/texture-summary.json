@@ -1,0 +1,146 @@
+[
+  {
+    "run": 0,
+    "id": "texture",
+    "batches": 157,
+    "constructionMs": 0.3349999934434891,
+    "instrumentedBuildMs": 0.4800000488758087,
+    "breakEvenFrames": 7.4444464680595175,
+    "rates": [
+      {
+        "rate": 0,
+        "baselineMs": 0.375,
+        "bundleMs": 0.32999999821186066,
+        "savingMs": 0.04499998688697815,
+        "positivePairs": 6,
+        "buildsPerFrame": 0
+      },
+      {
+        "rate": 0.01,
+        "baselineMs": 0.35500000417232513,
+        "bundleMs": 0.3349999934434891,
+        "savingMs": 0.019999995827674866,
+        "positivePairs": 5,
+        "buildsPerFrame": 1.5666666666666667
+      },
+      {
+        "rate": 0.05,
+        "baselineMs": 0.26999999582767487,
+        "bundleMs": 0.27000001072883606,
+        "savingMs": 0.004999995231628418,
+        "positivePairs": 3,
+        "buildsPerFrame": 7.85
+      },
+      {
+        "rate": 0.1,
+        "baselineMs": 0.26500000059604645,
+        "bundleMs": 0.2900000065565109,
+        "savingMs": -0.025000005960464478,
+        "positivePairs": 0,
+        "buildsPerFrame": 15.7
+      }
+    ],
+    "parity": {
+      "differences": 0,
+      "replayDifferences": 0,
+      "clearDifferences": 744965
+    },
+    "errors": []
+  },
+  {
+    "run": 1,
+    "id": "texture",
+    "batches": 157,
+    "constructionMs": 0.3349999934434891,
+    "instrumentedBuildMs": 0.4750000536441803,
+    "breakEvenFrames": 11.166671550938402,
+    "rates": [
+      {
+        "rate": 0,
+        "baselineMs": 0.29999999701976776,
+        "bundleMs": 0.29500000178813934,
+        "savingMs": 0.0299999862909317,
+        "positivePairs": 5,
+        "buildsPerFrame": 0
+      },
+      {
+        "rate": 0.01,
+        "baselineMs": 0.2900000065565109,
+        "bundleMs": 0.28999999165534973,
+        "savingMs": 0.009999990463256836,
+        "positivePairs": 4,
+        "buildsPerFrame": 1.5666666666666667
+      },
+      {
+        "rate": 0.05,
+        "baselineMs": 0.3149999976158142,
+        "bundleMs": 0.32999999821186066,
+        "savingMs": -0.015000000596046448,
+        "positivePairs": 0,
+        "buildsPerFrame": 7.85
+      },
+      {
+        "rate": 0.1,
+        "baselineMs": 0.3100000023841858,
+        "bundleMs": 0.32999999821186066,
+        "savingMs": -0.019999995827674866,
+        "positivePairs": 0,
+        "buildsPerFrame": 15.7
+      }
+    ],
+    "parity": {
+      "differences": 0,
+      "replayDifferences": 0,
+      "clearDifferences": 744965
+    },
+    "errors": []
+  },
+  {
+    "run": 2,
+    "id": "texture",
+    "batches": 157,
+    "constructionMs": 0.3750000149011612,
+    "instrumentedBuildMs": 0.4249999672174454,
+    "breakEvenFrames": null,
+    "rates": [
+      {
+        "rate": 0,
+        "baselineMs": 0.32999999821186066,
+        "bundleMs": 0.32500000298023224,
+        "savingMs": -0.004999980330467224,
+        "positivePairs": 2,
+        "buildsPerFrame": 0
+      },
+      {
+        "rate": 0.01,
+        "baselineMs": 0.29500000178813934,
+        "bundleMs": 0.2849999964237213,
+        "savingMs": 0.019999995827674866,
+        "positivePairs": 4,
+        "buildsPerFrame": 1.5666666666666667
+      },
+      {
+        "rate": 0.05,
+        "baselineMs": 0.28999999165534973,
+        "bundleMs": 0.29999999701976776,
+        "savingMs": -0.004999995231628418,
+        "positivePairs": 1,
+        "buildsPerFrame": 7.85
+      },
+      {
+        "rate": 0.1,
+        "baselineMs": 0.2750000059604645,
+        "bundleMs": 0.30000001192092896,
+        "savingMs": -0.019999995827674866,
+        "positivePairs": 0,
+        "buildsPerFrame": 15.7
+      }
+    ],
+    "parity": {
+      "differences": 0,
+      "replayDifferences": 0,
+      "clearDifferences": 744965
+    },
+    "errors": []
+  }
+]
