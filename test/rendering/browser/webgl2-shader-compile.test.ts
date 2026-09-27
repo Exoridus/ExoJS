@@ -31,6 +31,7 @@ import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lightin
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
 import { angularAverageShader, transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
+import { composeParticleGlSource } from '../../../packages/exojs-particles/src/gpu/particleGlSource';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 
 // Core shaders plus the extension packages' own - the particle stage ships
@@ -113,6 +114,7 @@ const composedFragments: ReadonlyMap<string, string> = new Map([
 // handing a source to the driver, so a shader that reads the shared transform
 // store only compiles in its resolved form - the same form the renderer submits.
 const composeRuntimeSource = (name: string, source: string): string => {
+  if (name === 'particle-simulate.vert') return composeParticleGlSource([], source);
   const composedChunk = composedFragments.get(name);
 
   if (composedChunk !== undefined) {
@@ -174,6 +176,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['sprite-indexed.vert', 'sprite.frag'],
   ['mesh.vert', 'mesh.frag'],
   ['particle.vert', 'particle.frag'],
+  ['particle-simulate.vert', 'particle-simulate.frag'],
   ['ribbon.vert', 'ribbon.frag'],
   ['trail.vert', 'trail.frag'],
   ['text.vert', 'text-color.frag'],

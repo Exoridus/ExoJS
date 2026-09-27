@@ -5,10 +5,10 @@ import type { UpdateModule } from '#modules/UpdateModule';
 import { getWgslFieldLayout, getWgslUniformByteSize, type WgslPrimitive } from '#modules/WgslContribution';
 import type { ParticleSystem } from '#ParticleSystem';
 
+import { composeParticleGlSource } from './particleGlSource';
 import type { ParticleDeathRecord } from './ParticleGpuState';
 import { ParticleModuleKeyCollisionError } from './ParticleModuleKeyCollisionError';
 import fragmentSource from './shaders/particle-simulate.frag';
-import simulationSource from './shaders/particle-simulate.vert';
 
 const stride = 80;
 const varyingNames = [
@@ -25,13 +25,6 @@ const varyingNames = [
   'o_slot',
   'o_simScale',
 ];
-const glslTypes = new Map<WgslPrimitive, string>([
-  ['f32', 'float'],
-  ['i32', 'int'],
-  ['u32', 'uint'],
-  ['vec2<f32>', 'vec2'],
-  ['vec4<f32>', 'vec4'],
-]);
 
 interface ModuleSlot {
   module: UpdateModule;
@@ -186,21 +179,7 @@ export class ParticleGlState {
     if (textureCount > gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) || textureCount > gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)) {
       throw new Error('Particle transform feedback exceeds the available vertex texture units.');
     }
-    const declarations = contributions
-      .map(item =>
-        [
-          (item.uniforms?.length ?? 0) > 0
-            ? `struct ${item.key}Uniforms { ${item.uniforms!.map(field => `${glslTypes.get(field.type)!} ${field.name};`).join('\n')} }; uniform ${item.key}Uniforms u_${item.key};`
-            : '',
-          ...(item.textures ?? []).map(binding => `uniform sampler2D u_${item.key}_${binding.name};`),
-        ].join('\n'),
-      )
-      .join('\n');
-    const source = simulationSource
-      .replace('{{declarations}}', declarations)
-      .replace('{{preludes}}', contributions.map(item => item.prelude ?? '').join('\n'))
-      .replace('{{bodies}}', contributions.map(item => `{\n${item.body}\n}`).join('\n'));
-    const program = this._compile(source);
+    const program = this._compile(composeParticleGlSource(contributions));
 
     this._capture(textureCount);
     try {
