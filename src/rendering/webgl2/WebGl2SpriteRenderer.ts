@@ -547,7 +547,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * dispatching here and bumps the stats from the instruction descriptor.
    * @internal
    */
-  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;
@@ -558,7 +558,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     if (backend === null || vao === null || transformTexture === null || tintTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
-      return;
+      return false;
     }
 
     backend.setBlendMode(payload.blendMode);
@@ -614,6 +614,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     this._bindBaseTextureSamplers(backend, material, textures.length);
     vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
     this._unbindBaseTextureSamplers(backend, material, textures.length);
+
+    return true;
   }
 
   private _bindBaseTextureSamplers(backend: WebGl2Backend, material: AnySpriteMaterial | null, slotCount: number): void {

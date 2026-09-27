@@ -769,7 +769,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * (`drawElementsInstanced`), unlike the sprite path's `drawArraysInstanced`.
    * @internal
    */
-  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const geometry = payload.geometry;
@@ -779,7 +779,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     if (backend === null || vao === null || geometry === null || geometry === undefined || transformTexture === null || tintTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
-      return;
+      return false;
     }
 
     const shader = this._defaultShader;
@@ -819,6 +819,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     shader.sync();
     backend.bindVertexArrayObject(vao);
     vao.drawInstanced(geometry.indexCount, 0, payload.instanceCount, RenderingPrimitives.Triangles);
+
+    return true;
   }
 
   private _canBatchStatic(draw: PendingMeshDraw): boolean {

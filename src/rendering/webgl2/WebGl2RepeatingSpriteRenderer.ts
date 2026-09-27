@@ -552,7 +552,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
    * transform unit). Mirrors {@link WebGl2SpriteRenderer.replayRetainedBatch}.
    * @internal
    */
-  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;
@@ -560,7 +560,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     if (backend === null || vao === null || transformTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
-      return;
+      return false;
     }
 
     if (payload.blendMode !== this._currentBlendMode) {
@@ -584,6 +584,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     backend.bindVertexArrayObject(vao);
     vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
+
+    return true;
   }
 
   /**
