@@ -1,13 +1,15 @@
 {
-  "base": "07d5ea5496381a24b82d491edf763578448574c5",
+  "base": "91172487b32fd27539349c136ab1e878c640fa5e",
   "normalization": "LF before SHA-256",
   "files": {
-    "src/rendering/webgpu/WebGpuNativeRetainedReplay.ts": "dfe40210af1985526438d28671f89d9b785e912474a39d8daacfdad57e977ece",
+    "src/rendering/webgpu/WebGpuNativeRetainedReplay.ts": "d204325f2668fd2a164cfaafc00f128059cc588be7da78a9f7e2dbd22a30a6d6",
     "src/rendering/webgpu/WebGpuBackend.ts": "f43cdbba21d884339e51d8dae1e56f41c12f5b15c9b5940121462c56db355502",
     "src/rendering/webgpu/WebGpuRetainedGroupBundle.ts": "6ad9f0efe469d095a57c4a39cd096e57d97fc1c5a837a0f3cbbb6ec8138d64f4",
-    "src/rendering/webgpu/WebGpuSpriteRenderer.ts": "827c27ba8bfa195b7f91335fab9a3789621bf7994fe72e33e78713e5a8d05431",
-    "src/rendering/webgpu/WebGpuTextRenderer.ts": "aeba99f0c01a5cd91f47baa0b6f94f1d97b1d762ec6353fc3c988cc3ccf44ea4",
-    "src/rendering/webgpu/WebGpuScalableSpriteRenderer.ts": "c8dd18a6312795405ef6945b6778d56b8c9f1594f5a1a88761b08940cea67b5f",
-    "packages/exojs-tilemap/src/webgpu/WebGpuTileChunkRenderer.ts": "a17633980f6a911641548e2140738f4be953961bb9b6058dfd6713b4b30e30a0"
-  }
+    "src/rendering/webgpu/WebGpuSpriteRenderer.ts": "354107f09f65de8ad6401dc37d1caea86a52dd2f0f4be96fa1d0d74c53ff1bdd",
+    "src/rendering/webgpu/WebGpuTextRenderer.ts": "a0ca3c2923792de93ff7dcbaf23d380904a9ef86c2c2050839a47fee6feccd7f",
+    "src/rendering/webgpu/WebGpuScalableSpriteRenderer.ts": "db64618211ffb77cede95abbaa2c9d1fdcaa478a089d4299c515645eafbd61c2",
+    "packages/exojs-tilemap/src/webgpu/WebGpuTileChunkRenderer.ts": "1f8354a7fa7809d6d7e230cd07a847e3797ee560959741bc01533e80d3ff55fe"
+  },
+  "revision": "854b09a95929135a4b7ee19a9be64d084a5cc9da",
+  "tree": "3bc994680c28b76f6b16a73c5aaf8217627f6b41"
 }

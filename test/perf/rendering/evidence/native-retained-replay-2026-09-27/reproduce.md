@@ -1,6 +1,6 @@
 # Reproduce the integrated measurement
 
-Use the source accompanying this report and installed development dependencies. Verify the source manifest, then create the following disposable files under `.cache/native-integrated/`. Run `node .cache/native-integrated/run.mjs` from the repository root for timing, or add `--parity-only` for a separate correctness acquisition. Each runs three fresh processes per scale cell. No maintained runtime switch is added. The archived timing readings precede the corrected parity settling below; their CPU acquisition is unchanged.
+Use the source accompanying this report and installed development dependencies. Verify the source manifest, then create the following disposable files under `.cache/native-integrated/`. Run `node .cache/native-integrated/run.mjs` from the repository root for timing, or add `--parity-only` for a separate correctness acquisition. Each runs three fresh processes per scale cell. No maintained runtime switch is added. The archived idle acquisition uses this corrected parity settling after timing. Reserve the PC for the run and do not run concurrent builds or tests.
 
 ## run.mjs
 
