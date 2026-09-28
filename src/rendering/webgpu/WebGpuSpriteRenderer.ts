@@ -3,6 +3,7 @@
 import { Matrix } from '#math/Matrix';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import {
   createRetainedMaterialState,
@@ -140,7 +141,8 @@ export const resolveSpriteBatchTextureSlots = (device: GPUDevice): number => {
  * dispatches over the same slot range.
  * @internal
  */
-export const buildSpriteShaderSource = (textureSlots: number): string => `${spriteSharedStorageWgsl}
+export const buildSpriteShaderSource = (textureSlots: number): string => `${colorShaderSourcesWgsl}
+${spriteSharedStorageWgsl}
 ${buildSpriteTextureSlotWgsl(textureSlots)}
 
 ${spriteDefaultVertexInputWgsl}${spriteVertexCoreWgsl}
@@ -173,7 +175,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`;
  * `premultiplyAlpha` changed under a staying item.
  * @internal
  */
-export const buildPersistentSpriteShaderSource = (textureSlots: number): string => `
+export const buildPersistentSpriteShaderSource = (textureSlots: number): string => `${colorShaderSourcesWgsl}
 ${spritePersistentBindingsWgsl}
 ${buildSpriteTextureSlotWgsl(textureSlots)}
 ${spriteVertexCoreWgsl}

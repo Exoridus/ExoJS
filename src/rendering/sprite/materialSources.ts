@@ -36,6 +36,8 @@
  * {@link spriteMaterialTextureSlots}..N / WGSL group(2)).
  */
 
+import { colorShaderSourcesGlsl, colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
+
 import spriteFragmentMainWgslModule from './shaders/sprite-fragment-main.wgsl';
 import spriteVertexGlslModule from './shaders/sprite-material.vert';
 import spriteSampleBaseWgsl from './shaders/sprite-sample-base.wgsl';
@@ -115,9 +117,14 @@ ${dispatch}
 /**
  * Engine-owned fragment prologue spliced into every custom sprite-material
  * GLSL fragment (see {@link composeSpriteMaterialFragmentGlsl}).
+ *
+ * Carries the shared colour helpers ahead of the slot table, so a custom
+ * fragment associates and decodes colour through the same functions every other
+ * draw stage uses.
  * @internal
  */
-export const spriteMaterialPrologueGlsl = buildSpriteMaterialSlotGlsl(spriteMaterialTextureSlots);
+export const spriteMaterialPrologueGlsl = `${colorShaderSourcesGlsl}
+${buildSpriteMaterialSlotGlsl(spriteMaterialTextureSlots)}`;
 
 /**
  * Splice {@link spriteMaterialPrologueGlsl} into an author-supplied sprite
@@ -262,7 +269,8 @@ ${sampleCases}
  * `VertexOutput`.
  * @internal
  */
-export const spriteMaterialPrologueWgsl = `${spriteVertexWgsl}
+export const spriteMaterialPrologueWgsl = `${colorShaderSourcesWgsl}
+${spriteVertexWgsl}
 ${buildSpriteTextureSlotWgsl(spriteMaterialTextureSlots)}
 
 ${spriteSampleBaseWgsl}`;

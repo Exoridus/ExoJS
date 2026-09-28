@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/materialSources';
 import { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
@@ -137,7 +138,8 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
     // texture_2d, sampled via textureSampleBaseClampToEdge).
     this._externalShaderModule = this._device.createShaderModule({
       label: 'video:shader:external',
-      code: `${spriteSharedStorageWgsl}
+      code: `${colorShaderSourcesWgsl}
+${spriteSharedStorageWgsl}
 ${videoExternalTextureGroupWgsl}
 ${spriteDefaultVertexInputWgsl}${spriteVertexCoreWgsl}
 ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
