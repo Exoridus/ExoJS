@@ -8,7 +8,7 @@ if (mode === 'streams') {
   process.stdout.write(`stdout:${process.env['EXOJS_OUTPUT']}\n`);
   process.stderr.write('stderr\n');
 } else if (mode === 'failure') {
-  for (let i = 0;i < 125;i++) process.stdout.write(`line-${i}\n`);
+  for (let i = 0; i < 125; i++) process.stdout.write(`line-${i}\n`);
   process.stdout.write('last-line');
   process.exitCode = 7;
 } else if (mode === 'long-line') {

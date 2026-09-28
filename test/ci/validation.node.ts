@@ -250,7 +250,8 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
       assert.equal(await finished, signal === 'SIGINT' ? 130 : 143);
       const record = JSON.parse(Buffer.concat(output).toString().trim()) as { status: number; aborted: boolean };
       assert.equal(record.aborted, true);
-      assert.equal(isRunning(pid), false);
+      for (let i = 0; i < 50 && isRunning(pid); i++) await delay(20);
+      assert.equal(isRunning(pid), false, `owned child ${pid} survived`);
     } finally {
       if (supervisor.exitCode === null) supervisor.kill('SIGKILL');
     }
