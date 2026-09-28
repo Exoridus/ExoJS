@@ -1,22 +1,11 @@
-import { Color, RenderPipeline, RenderTexture, Signal, Texture } from '@codexo/exojs';
+import { Color, Texture } from '@codexo/exojs';
 import { COLOR_PIPELINE_ENABLED } from '@codexo/exojs/renderer-sdk';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import type { LightingHost } from '../src/LightingHost';
 import { PointLight } from '../src/lights/PointLight';
 import { NormalMap } from '../src/normals/NormalMap';
 
 const channels = 4;
-
-const fakeApp = (): LightingHost =>
-  ({
-    framePasses: new RenderPipeline(),
-    frameTexture: new RenderTexture(64, 64),
-    onResize: new Signal(),
-    rendering: { supportsColorFormat: (): boolean => true },
-    width: 64,
-    height: 64,
-  }) as unknown as LightingHost;
 
 describe('lighting colour contract', () => {
   test('the colour pipeline stays inactive until every renderer is integrated', () => {
