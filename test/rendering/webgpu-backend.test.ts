@@ -732,7 +732,7 @@ describe('WebGpuBackend', () => {
             target?.blend?.color.srcFactor === 'one' &&
             target.blend.color.dstFactor === 'one' &&
             target.blend.alpha.srcFactor === 'one' &&
-            target.blend.alpha.dstFactor === 'one',
+            target.blend.alpha.dstFactor === 'one-minus-src-alpha',
         ),
       );
 
@@ -774,7 +774,7 @@ describe('WebGpuBackend', () => {
             target?.blend?.color.srcFactor === 'zero' &&
             target.blend.color.dstFactor === 'one-minus-src' &&
             target.blend.alpha.srcFactor === 'zero' &&
-            target.blend.alpha.dstFactor === 'one-minus-src-alpha',
+            target.blend.alpha.dstFactor === 'one',
         ),
       );
 
@@ -1157,7 +1157,7 @@ describe('WebGpuBackend', () => {
               target?.blend?.color.srcFactor === 'one' &&
               target.blend.color.dstFactor === 'one' &&
               target.blend.alpha.srcFactor === 'one' &&
-              target.blend.alpha.dstFactor === 'one',
+              target.blend.alpha.dstFactor === 'one-minus-src-alpha',
           ),
       );
 
@@ -1202,7 +1202,7 @@ describe('WebGpuBackend', () => {
             target =>
               target?.blend?.color.srcFactor === 'dst' &&
               target.blend.color.dstFactor === 'one-minus-src-alpha' &&
-              target.blend.alpha.srcFactor === 'dst-alpha' &&
+              target.blend.alpha.srcFactor === 'one' &&
               target.blend.alpha.dstFactor === 'one-minus-src-alpha',
           ),
       );
@@ -1752,7 +1752,7 @@ describe('WebGpuBackend', () => {
               target?.blend?.color.srcFactor === 'one' &&
               target.blend.color.dstFactor === 'one' &&
               target.blend.alpha.srcFactor === 'one' &&
-              target.blend.alpha.dstFactor === 'one',
+              target.blend.alpha.dstFactor === 'one-minus-src-alpha',
           ),
       );
 

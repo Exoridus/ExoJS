@@ -172,8 +172,8 @@ describe('WebGL2 per-attachment blend', () => {
     });
     const mutable = base.context as unknown as Record<string, unknown>;
 
-    mutable['blendFunc'] = (src: number, dst: number): void => {
-      globalCalls.push({ src, dst });
+    mutable['blendFuncSeparate'] = (srcRgb: number, dstRgb: number): void => {
+      globalCalls.push({ src: srcRgb, dst: dstRgb });
       order.push('global');
     };
     mutable['blendEquation'] = (): void => {
