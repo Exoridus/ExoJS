@@ -375,7 +375,7 @@ describe('WebGL2 managed-colour alpha normalization', () => {
 
     harness.backend.bindTexture(texture, 0);
 
-    // The activation gate stays closed until R41, so an ordinary decoded image
+    // The activation gate stays closed until the pipeline is activated, so an ordinary decoded image
     // keeps legacy RGBA8 storage and the browser's own premultiply: the pass
     // would decode and re-encode for a destination that has no transfer function
     // to begin with.

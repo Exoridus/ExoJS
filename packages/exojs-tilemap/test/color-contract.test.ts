@@ -1,6 +1,10 @@
-import tileFragmentGlsl from '../src/webgl2/shaders/tile-chunk.frag?raw';
-import tileVertexGlsl from '../src/webgl2/shaders/tile-chunk.vert?raw';
-import tileShaderWgsl from '../src/webgpu/shaders/tile-chunk.wgsl?raw';
+import { readFileSync } from 'node:fs';
+
+// Vitest stubs shader-module imports to empty strings, so the sources are read from disk.
+const shaderSource = (path: string): string => readFileSync(new URL(path, import.meta.url), 'utf8');
+const tileFragmentGlsl = shaderSource('../src/webgl2/shaders/tile-chunk.frag');
+const tileVertexGlsl = shaderSource('../src/webgl2/shaders/tile-chunk.vert');
+const tileShaderWgsl = shaderSource('../src/webgpu/shaders/tile-chunk.wgsl');
 
 describe('tilemap colour contract', () => {
   test('the GLSL tile vertex stage decodes the authored tint, gated on colorPipelineEnabled', () => {
@@ -15,7 +19,7 @@ describe('tilemap colour contract', () => {
 
   // The tint decode is added ahead of the sample, not inside it - the fragment
   // stage's existing sample-alpha handling (the open alpha fix these draw
-  // paths already carry) is untouched by this task.
+  // paths already carry) stays untouched.
   test('the GLSL tile fragment stage keeps its existing sample/tint combine', () => {
     expect(tileFragmentGlsl).toContain('fragColor = sampleColor * v_color;');
   });

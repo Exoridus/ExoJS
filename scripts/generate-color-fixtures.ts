@@ -13,8 +13,8 @@
  * sizes. The native block-compressed family is NOT produced here. Encoding real
  * BC1/BC3/BC7/ETC2/ASTC blocks needs an encoder, and qualifying them needs the
  * Khronos `ktx` validator; neither is a repository dependency, so a hand-rolled
- * encoder would be a worse oracle than no fixture at all. That half of the plan's
- * R19 stays open rather than being faked with plausible-looking block bytes.
+ * encoder would be a worse oracle than no fixture at all. Compressed fixtures stay
+ * absent rather than being faked with plausible-looking block bytes.
  *
  * Run with no arguments to write every fixture and its manifest.
  */

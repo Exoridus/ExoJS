@@ -227,7 +227,7 @@ describe('WebGPU managed-colour alpha normalization', () => {
 
     backend.getTextureBinding(texture);
 
-    // The activation gate stays closed until R41, so an ordinary decoded image
+    // The activation gate stays closed until the pipeline is activated, so an ordinary decoded image
     // keeps linear storage rather than acquiring sRGB storage and a pass.
     expect(environment.renderPassLabels()).not.toContain(NORMALIZE_PASS);
     expect(environment.textureDescriptors().some(entry => entry.format === 'rgba8unorm-srgb')).toBe(false);

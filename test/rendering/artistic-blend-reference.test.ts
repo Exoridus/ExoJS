@@ -18,7 +18,7 @@
  *
  * `w3cBlend`/`ADVANCED_BLEND_MODES` are reused from the browser suite's own
  * reference (same W3C per-mode formulas) rather than re-typed a third time;
- * only the compositing formula around them - the part this task adds
+ * only the compositing formula around them - the part under test
  * fractional destination-alpha coverage for - is independent here.
  */
 import { BlendModes } from '#rendering/types';
