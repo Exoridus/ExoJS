@@ -29,5 +29,8 @@ fn sampleLut3d(c: vec3<f32>) -> vec3<f32> {
 @fragment
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let src = textureSample(uTexture, uSampler, vUv);
-    return vec4<f32>(sampleLut3d(src.rgb), src.a);
+    // The lookup coordinate is the straight colour, not the premultiplied
+    // sample - see lut-rgb1d.wgsl for why.
+    let straight = select(vec3<f32>(0.0), src.rgb / src.a, src.a > 0.0);
+    return vec4<f32>(sampleLut3d(straight) * src.a, src.a);
 }
