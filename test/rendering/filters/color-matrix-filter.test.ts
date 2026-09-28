@@ -11,7 +11,6 @@
 import { Color } from '#core/Color';
 import { linearToSrgb, srgbToLinear } from '#core/colorTransfer';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
-import { type ShaderFilter } from '#rendering/filters/ShaderFilter';
 import { RenderNode } from '#rendering/RenderNode';
 
 class CountingNode extends RenderNode {
@@ -171,7 +170,7 @@ describe('ColorMatrixFilter mutation reaches its owners', () => {
 
 /** The scalar accessor of the raw shader uniform the filter writes at construction. */
 const domainUniformOf = (filter: ColorMatrixFilter): number =>
-  (filter as unknown as { _shaderFilter: ShaderFilter<{ uDomain: unknown }> })._shaderFilter.uniforms.uDomain.value as unknown as number;
+  (filter as unknown as { _shaderFilter: { uniforms: { uDomain: { value: number } } } })._shaderFilter.uniforms.uDomain.value;
 
 describe('ColorMatrixFilter colorSpace', () => {
   test('defaults to srgb', () => {
