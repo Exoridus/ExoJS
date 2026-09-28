@@ -9,7 +9,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import outputFragmentModule from '#rendering/shaders/output.wgsl';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
-import type { WebGpuBackend } from './WebGpuBackend';
+import { type WebGpuBackend, webgpuColorTextureFormat } from './WebGpuBackend';
 
 /**
  * Interleaved position+UV fullscreen TRIANGLE_STRIP quad, WebGPU's top-down
@@ -30,16 +30,17 @@ interface WebGpuOutputConnection {
   readonly uniformBuffer: GPUBuffer;
   readonly sourceBindGroupLayout: GPUBindGroupLayout;
   readonly uniformBindGroupLayout: GPUBindGroupLayout;
-  readonly pipeline: GPURenderPipeline;
   readonly sampler: GPUSampler;
+  readonly pipelines: Map<GPUTextureFormat, GPURenderPipeline>;
 }
 
 /**
- * The WebGPU half of the engine's {@link OutputTransform}: builds the pipeline
- * from `output.wgsl` once per canvas format, then samples the linear-PMA
- * working target and writes the sRGB-encoded result straight to the canvas.
- * The pipeline declares no blend state, so the draw overwrites every texel of
- * the target rather than compositing against whatever it held.
+ * The WebGPU half of the engine's {@link OutputTransform}: builds a pipeline
+ * from `output.wgsl` per destination format (the canvas's own by default, or
+ * an explicit `target`'s), then samples the linear-PMA working target and
+ * writes the sRGB-encoded result straight to it. Every pipeline declares no
+ * blend state, so the draw overwrites every texel of the destination rather
+ * than compositing against whatever it held.
  * @internal
  */
 export class WebGpuOutputPass {
@@ -49,11 +50,24 @@ export class WebGpuOutputPass {
 
   private _connection: WebGpuOutputConnection | null = null;
   private _source: RenderTexture | null = null;
+  private _targetFormat: GPUTextureFormat = 'rgba8unorm';
 
-  public present(backend: RenderBackend, source: RenderTexture, options: ResolvedOutputTransformOptions, transparent: boolean, matte: Color): void {
+  /**
+   * Sample `source` through the output transform and write the result to
+   * `target`, or the canvas when omitted (the ordinary per-frame path).
+   */
+  public present(
+    backend: RenderBackend,
+    source: RenderTexture,
+    options: ResolvedOutputTransformOptions,
+    transparent: boolean,
+    matte: Color,
+    target?: RenderTexture,
+  ): void {
     const gpu = backend as WebGpuBackend;
 
-    this._ensureConnected(gpu);
+    this._targetFormat = target !== undefined ? webgpuColorTextureFormat(target.format) : gpu.format;
+    this._ensureConnected(gpu, this._targetFormat);
 
     this._source = source;
     matte.writeLinear(this._matteScratch);
@@ -65,13 +79,14 @@ export class WebGpuOutputPass {
     this._uniformScratch[13] = this._matteScratch[1]!;
     this._uniformScratch[14] = this._matteScratch[2]!;
 
-    backend.execute(this._pass.retarget(null, null, null));
+    backend.execute(this._pass.retarget(target ?? null, target !== undefined ? target.view : null, null));
   }
 
   public destroy(): void {
     if (this._connection !== null) {
       this._connection.vertexBuffer.destroy();
       this._connection.uniformBuffer.destroy();
+      this._connection.pipelines.clear();
       this._connection = null;
     }
   }
@@ -98,7 +113,7 @@ export class WebGpuOutputPass {
 
     const pass = gpu.passCoordinator.acquirePass().pass;
 
-    pass.setPipeline(conn.pipeline);
+    pass.setPipeline(conn.pipelines.get(this._targetFormat)!);
     pass.setVertexBuffer(0, conn.vertexBuffer);
     pass.setBindGroup(0, sourceBindGroup);
     pass.setBindGroup(1, uniformBindGroup);
@@ -110,13 +125,16 @@ export class WebGpuOutputPass {
     gpu.passCoordinator.endPass();
   }
 
-  private _ensureConnected(backend: WebGpuBackend): void {
+  private _ensureConnected(backend: WebGpuBackend, targetFormat: GPUTextureFormat): void {
     if (this._connection !== null) {
+      if (!this._connection.pipelines.has(targetFormat)) {
+        this._connection.pipelines.set(targetFormat, this._createPipeline(backend, this._connection, targetFormat));
+      }
+
       return;
     }
 
     const device = backend.device;
-    const module = device.createShaderModule({ code: outputPassShaderSource });
 
     const sourceBindGroupLayout = device.createBindGroupLayout({
       entries: [
@@ -127,9 +145,38 @@ export class WebGpuOutputPass {
     const uniformBindGroupLayout = device.createBindGroupLayout({
       entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
     });
-    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [sourceBindGroupLayout, uniformBindGroupLayout] });
 
-    const pipeline = device.createRenderPipeline({
+    const vertexBuffer = device.createBuffer({ size: quadVertexData.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+
+    device.queue.writeBuffer(vertexBuffer, 0, quadVertexData);
+
+    const uniformBuffer = device.createBuffer({ size: uniformBufferBytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+
+    const sampler = device.createSampler({
+      magFilter: 'linear',
+      minFilter: 'linear',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
+    });
+
+    this._connection = {
+      device,
+      vertexBuffer,
+      uniformBuffer,
+      sourceBindGroupLayout,
+      uniformBindGroupLayout,
+      sampler,
+      pipelines: new Map<GPUTextureFormat, GPURenderPipeline>(),
+    };
+    this._connection.pipelines.set(targetFormat, this._createPipeline(backend, this._connection, targetFormat));
+  }
+
+  private _createPipeline(backend: WebGpuBackend, connection: WebGpuOutputConnection, targetFormat: GPUTextureFormat): GPURenderPipeline {
+    const device = backend.device;
+    const module = device.createShaderModule({ code: outputPassShaderSource });
+    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [connection.sourceBindGroupLayout, connection.uniformBindGroupLayout] });
+
+    return device.createRenderPipeline({
       layout: pipelineLayout,
       vertex: {
         module,
@@ -147,24 +194,9 @@ export class WebGpuOutputPass {
       fragment: {
         module,
         entryPoint: 'fragmentMain',
-        targets: [{ format: backend.format }],
+        targets: [{ format: targetFormat }],
       },
       primitive: { topology: 'triangle-strip' },
     });
-
-    const vertexBuffer = device.createBuffer({ size: quadVertexData.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
-
-    device.queue.writeBuffer(vertexBuffer, 0, quadVertexData);
-
-    const uniformBuffer = device.createBuffer({ size: uniformBufferBytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-
-    const sampler = device.createSampler({
-      magFilter: 'linear',
-      minFilter: 'linear',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge',
-    });
-
-    this._connection = { device, vertexBuffer, uniformBuffer, sourceBindGroupLayout, uniformBindGroupLayout, pipeline, sampler };
   }
 }

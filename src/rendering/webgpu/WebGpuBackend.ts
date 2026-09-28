@@ -4175,8 +4175,12 @@ const isCanvasTextureSource = (source: TextureSource): source is HTMLCanvasEleme
   (typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement) ||
   (typeof OffscreenCanvas !== 'undefined' && source instanceof OffscreenCanvas);
 
-/** Map a {@link RenderTexture} color format to its WebGPU render-target format. */
-const webgpuColorTextureFormat = (format: ColorTextureFormat): GPUTextureFormat => {
+/**
+ * Map a {@link RenderTexture} color format to its WebGPU render-target format.
+ * @internal - exported for `WebGpuOutputPass`, which builds a pipeline per
+ * destination format rather than assuming the canvas's own.
+ */
+export const webgpuColorTextureFormat = (format: ColorTextureFormat): GPUTextureFormat => {
   switch (format) {
     case TextureFormat.Rgba8:
       return 'rgba8unorm';

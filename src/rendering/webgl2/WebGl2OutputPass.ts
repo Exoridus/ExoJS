@@ -28,8 +28,11 @@ interface WebGl2Connection {
 /**
  * The WebGL2 half of the engine's {@link OutputTransform}: compiles `output.frag`
  * once, then samples the linear-PMA working target and writes the sRGB-encoded
- * result straight to the canvas, disabling blending so every canvas texel is
- * overwritten rather than composited against whatever it held.
+ * result straight to the canvas (or an explicit `target`, for
+ * `RenderingContext.readImageData`), clearing to transparent first so every
+ * texel is overwritten rather than composited against whatever it held. The
+ * shader does its own sRGB encode into plain UNORM bytes, so it needs no
+ * per-format pipeline the way the WebGPU counterpart does.
  * @internal
  */
 export class WebGl2OutputPass {
@@ -46,7 +49,18 @@ export class WebGl2OutputPass {
   private _toneMapping = 0;
   private _transparentCanvas = 0;
 
-  public present(backend: RenderBackend, source: RenderTexture, options: ResolvedOutputTransformOptions, transparent: boolean, matte: Color): void {
+  /**
+   * Sample `source` through the output transform and write the result to
+   * `target`, or the canvas when omitted (the ordinary per-frame path).
+   */
+  public present(
+    backend: RenderBackend,
+    source: RenderTexture,
+    options: ResolvedOutputTransformOptions,
+    transparent: boolean,
+    matte: Color,
+    target?: RenderTexture,
+  ): void {
     this._ensureConnected(backend as WebGl2Backend);
 
     this._source = source;
@@ -55,7 +69,7 @@ export class WebGl2OutputPass {
     this._transparentCanvas = transparent ? 1 : 0;
     matte.writeLinear(this._matteScratch);
 
-    backend.execute(this._pass.retarget(null, null, Color.transparentBlack));
+    backend.execute(this._pass.retarget(target ?? null, target !== undefined ? target.view : null, Color.transparentBlack));
   }
 
   public destroy(): void {
