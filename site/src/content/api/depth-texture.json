@@ -762,7 +762,7 @@
             }
           ],
           "returnType": "Texture",
-          "description": "Create a solid-colour texture of the given square size (default 1×1). Accepts a Color instance or any CSS colour string; a Color with alpha below 1 is rendered with that alpha. Generalizes the fixed Texture.black/Texture.white helpers."
+          "description": "Create a solid-colour texture of the given square size (default 1×1). Accepts a Color instance or any CSS colour string; a Color with alpha below 1 is rendered with that alpha. Generalizes the fixed Texture.black/Texture.white helpers. A color producer, not a numeric placeholder: the fill goes through an ordinary HTMLCanvasElement, so it gets the same browser sRGB, straight-alpha interpretation as any loaded image and matches a genuinely loaded color asset of the same value."
         },
         {
           "name": "fromPixels",
@@ -1458,7 +1458,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "A color producer: a browser-rasterized canvas, interpreted exactly like any other decoded image source."
         },
         {
           "name": "missing",
@@ -1479,7 +1479,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shared 8×8 magenta/black checkerboard shown in place of assets that failed to load - a visible error beats an invisible hole, in production too. Lazily created; every access returns the same instance."
+          "description": "Shared 8×8 magenta/black checkerboard shown in place of assets that failed to load - a visible error beats an invisible hole, in production too. Lazily created; every access returns the same instance. A color producer, like Texture.fromColor: the checker pattern is drawn on a canvas and resolved the same way a loaded color asset is."
         },
         {
           "name": "white",
@@ -1500,7 +1500,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "A color producer: a browser-rasterized canvas, interpreted exactly like any other decoded image source."
         }
       ],
       "paragraphs": [],

@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -50,6 +50,31 @@
           "params": [],
           "returnType": null,
           "description": "How the canvas composites against the page. Default 'opaque'. Honoured by both backends: WebGL2 derives the context's alpha/premultipliedAlpha from it, WebGPU its GPUCanvasConfiguration.alphaMode."
+        },
+        {
+          "name": "color",
+          "signature": "color?: OutputTransformOptions",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OutputTransformOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The application's output transform - exposure and the HDR-to-SDR mapping applied once, at the end of every frame, while COLOR_PIPELINE_ENABLED is active. See OutputTransformOptions."
         },
         {
           "name": "debug",
