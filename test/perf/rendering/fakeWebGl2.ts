@@ -504,7 +504,14 @@ export const createFakeWebGl2Context = (recorder: GlRecorder, extensions: Readon
       framebufferBinding = framebuffer;
     },
     viewport: (x: number, y: number, width: number, height: number): void => {
-      viewportRect.set([x, y, width, height]);
+      // Element by element, not `set([x, y, width, height])`: an array literal per
+      // call is harness garbage, and `gl.viewport` lands on every render-target
+      // rebind - so the allocation gate, which measures engine allocations THROUGH
+      // this fake, would bill it to the engine.
+      viewportRect[0] = x;
+      viewportRect[1] = y;
+      viewportRect[2] = width;
+      viewportRect[3] = height;
     },
     enable: (cap: number): void => {
       if (cap === C.BLEND) blendEnabled = true;
