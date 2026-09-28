@@ -1005,6 +1005,16 @@ export default defineConfig([
   },
   // Vitest test-quality rules, over both the root suite and every package's.
   ...vitestConfig({ files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}', 'packages/eslint-plugin-exojs/test/**/*.ts'] }),
+  // Node's built-in test runner, not Vitest: these tests launch real child
+  // processes and must not run inside Vitest's worker/sandbox model. The
+  // vitest plugin's import and disabled-test rules do not apply here.
+  {
+    files: ['test/ci/*.node.ts'],
+    rules: {
+      'vitest/no-import-node-test': 'off',
+      'vitest/no-disabled-tests': 'off',
+    },
+  },
   // Node / config files / scripts - not part of any tsconfig `include`, so
   // type-aware rules (from the global `recommendedTypeChecked`/
   // `stylisticTypeChecked` configs applied unscoped above) have no type

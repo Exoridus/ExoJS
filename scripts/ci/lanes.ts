@@ -49,6 +49,10 @@ export interface Lane {
   timeoutMinutes?: number;
 }
 
+export const laneTimeoutMinutes = (lane: Pick<Lane, 'timeoutMinutes'>): number => lane.timeoutMinutes ?? 20;
+
+const supervisorTests = 'node --test test/ci/validation.node.ts && ';
+
 const junit = (id: string): string => `--reporter=minimal --reporter=junit --outputFile.junit=./test-results/${id}.junit.xml`;
 
 export const LANES: readonly Lane[] = [
@@ -60,11 +64,11 @@ export const LANES: readonly Lane[] = [
     id: 'unit',
     stage: 'test',
     when: 'unit',
-    run: 'pnpm test && pnpm test:alloc && pnpm test:physics-perf',
+    run: supervisorTests + 'pnpm test && pnpm test:alloc && pnpm test:physics-perf',
     // The WGSL tests validate through Naga when it is on PATH and skip
     // otherwise; CI installs it and refuses the skip.
-    ciRun: `EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
-    coverageRun: `EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
+    ciRun: supervisorTests + `EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
+    coverageRun: supervisorTests + `EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
     naga: true,
     junit: true,
   },
@@ -86,9 +90,9 @@ export const LANES: readonly Lane[] = [
     id: 'webgpu',
     stage: 'test',
     when: 'browserWebgpu',
-    run: 'pnpm test:browser:webgpu',
-    // Mesa lavapipe is the only WebGPU adapter a GPU-less runner can offer, and
-    // Chromium exposes it only to a headed browser, hence xvfb.
+    run: 'pnpm test:browser:webgpu --no-file-parallelism',
+    // Local diagnostics avoid concurrent files competing for one GPU process.
+    // CI keeps its existing, independently qualified parallel configuration.
     ciRun: 'VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json EXOJS_WEBGPU_CI_HEADED=1 ' + `xvfb-run -a pnpm test:browser:webgpu ${junit('webgpu')}`,
     browser: 'chromium',
     apt: ['mesa-vulkan-drivers', 'xvfb'],
@@ -240,7 +244,7 @@ const toEntry = (lane: Lane, coverage: boolean): MatrixEntry => ({
   dist: lane.dist ?? false,
   junit: lane.junit ?? false,
   coverage: coverage && lane.coverageRun !== undefined,
-  timeoutMinutes: lane.timeoutMinutes ?? 20,
+  timeoutMinutes: laneTimeoutMinutes(lane),
 });
 
 export const selectLanes = (effective: EffectiveLanes, isPullRequest: boolean): Lane[] =>
