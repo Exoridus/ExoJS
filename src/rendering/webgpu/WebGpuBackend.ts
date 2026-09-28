@@ -15,7 +15,7 @@ import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import { dataTextureBytesPerPixel, estimateCompressedTextureBytes, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { assertBatchSingleAttachment, assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
@@ -94,6 +94,8 @@ interface ManagedDepthAttachment {
   sampleView: GPUTextureView;
   width: number;
   height: number;
+  /** Bytes booked with the accountant for {@link texture}'s storage. */
+  accountedBytes: number;
 }
 
 interface ManagedWebGpuTextureState {
@@ -173,6 +175,12 @@ const NON_FILTERABLE_SAMPLER_KEY_BIT = 0x1_0000_0000;
 const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
 // Managed content + render textures use rgba8unorm = 4 bytes/px.
 const MANAGED_TEXTURE_BYTES_PER_PIXEL = 4;
+// `depth24plus-stencil8`'s exact bit layout is implementation-defined (the
+// "plus" leaves room for a driver to store depth as 32-bit float), so this is
+// the same nominal packed-depth-plus-stencil estimate GL's DEPTH24_STENCIL8
+// uses - the accountant already documents its totals as estimates, and this
+// keeps the two backends' depth/stencil attachment bookkeeping comparable.
+const DEPTH_STENCIL_BYTES_PER_PIXEL = 4;
 
 /** WGSL source for the box-filter mipmap-generation pipeline. @internal */
 export const mipmapWgsl: string = mipmapWgslModule;
@@ -2827,6 +2835,13 @@ export class WebGpuBackend implements RenderBackend {
     this._format = null;
     this._initializePromise = null;
     this._hasPresentedFrame = false;
+
+    // Every resource cache above was cleared by dropping dead handles rather
+    // than by the individual free() calls that normally keep the tally
+    // correct (the dead device already reclaimed them; there is nothing left
+    // to destroy). Reset the tally itself so it does not carry those bytes
+    // forward into the recovered device's accounting.
+    this._accountant.resetLiveBytes();
   }
 
   private async _prewarmRendererPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
@@ -3045,6 +3060,7 @@ export class WebGpuBackend implements RenderBackend {
       }
 
       existing.texture.destroy();
+      this._accountant.free(existing.accountedBytes);
       this._depthAttachments.delete(target);
       this._dropDepthTextureState(target);
     }
@@ -3057,6 +3073,10 @@ export class WebGpuBackend implements RenderBackend {
       // attachment works and cannot be read back.
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     });
+    const accountedBytes = safeWidth * safeHeight * DEPTH_STENCIL_BYTES_PER_PIXEL;
+
+    this._accountant.allocate(accountedBytes);
+
     const attachment: ManagedDepthAttachment = {
       texture,
       attachmentView: texture.createView(),
@@ -3065,6 +3085,7 @@ export class WebGpuBackend implements RenderBackend {
       sampleView: texture.createView({ aspect: 'depth-only' }),
       width: safeWidth,
       height: safeHeight,
+      accountedBytes,
     };
 
     this._depthAttachments.set(target, attachment);
@@ -3077,6 +3098,7 @@ export class WebGpuBackend implements RenderBackend {
 
     if (attachment !== undefined) {
       attachment.texture.destroy();
+      this._accountant.free(attachment.accountedBytes);
       this._depthAttachments.delete(target);
     }
 
@@ -3952,7 +3974,7 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
-  /** Bytes per pixel for a texture's GPU format (DataTexture formats, else managed `rgba8unorm`). */
+  /** Bytes per pixel for a texture's GPU format (DataTexture formats, else managed `rgba8unorm`). Not valid for a compressed texture - see {@link _estimateTextureBytes}. */
   private _textureBytesPerPixel(texture: Texture | RenderTexture): number {
     if (texture instanceof DataTexture) {
       // `instanceof DataTexture` erases the generic, widening `format` to `any`;
@@ -3961,19 +3983,25 @@ export class WebGpuBackend implements RenderBackend {
       return dataTextureBytesPerPixel(format);
     }
 
-    const compressed = compressedPayloadOf(texture);
-
-    if (compressed !== null) {
-      const { blockWidth, blockHeight, bytesPerBlock } = compressedBlockLayout(compressed.format);
-
-      return bytesPerBlock / (blockWidth * blockHeight);
-    }
-
     return MANAGED_TEXTURE_BYTES_PER_PIXEL;
   }
 
-  /** Estimated VRAM bytes for a texture's storage (base level + mip chain). */
+  /**
+   * Estimated VRAM bytes for a texture's storage (base level + mip chain).
+   *
+   * A compressed texture is booked from its exact per-level block footprint
+   * ({@link estimateCompressedTextureBytes}), never from a uniform
+   * bytes-per-pixel figure multiplied by `width * height` - see that
+   * function's doc for why the uniform shortcut undercounts a mip tail
+   * smaller than one block.
+   */
   private _estimateTextureBytes(texture: Texture | RenderTexture, mipLevelCount: number): number {
+    const compressed = compressedPayloadOf(texture);
+
+    if (compressed !== null) {
+      return estimateCompressedTextureBytes(compressed.format, compressed.levels);
+    }
+
     return estimateTextureBytes(texture.width, texture.height, this._textureBytesPerPixel(texture), mipLevelCount);
   }
 

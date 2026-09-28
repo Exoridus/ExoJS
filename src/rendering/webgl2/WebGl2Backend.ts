@@ -201,6 +201,8 @@ interface ManagedRenderTargetState {
   depthStencilTexture: WebGLTexture | null;
   stencilWidth: number;
   stencilHeight: number;
+  /** Bytes booked with the accountant for whichever of the two above is allocated. */
+  stencilAccountedBytes: number;
 }
 
 interface StencilClipEntry {
@@ -2945,6 +2947,7 @@ export class WebGl2Backend implements RenderBackend {
       depthStencilTexture: null,
       stencilWidth: 0,
       stencilHeight: 0,
+      stencilAccountedBytes: 0,
     };
 
     this._renderTargetStates.set(target, state);
@@ -3054,6 +3057,9 @@ export class WebGl2Backend implements RenderBackend {
         this._context.deleteTexture(state.depthStencilTexture);
         state.depthStencilTexture = null;
       }
+
+      this._accountant.free(state.stencilAccountedBytes);
+      state.stencilAccountedBytes = 0;
 
       this._renderTargetStates.delete(target);
     }
@@ -3392,6 +3398,7 @@ export class WebGl2Backend implements RenderBackend {
 
     state.stencilWidth = width;
     state.stencilHeight = height;
+    state.stencilAccountedBytes = this._accountant.reallocate(state.stencilAccountedBytes, width * height * DEPTH_STENCIL8_BYTES_PER_PIXEL);
   }
 
   private _getStencilState(target: RenderTarget): StencilTargetState {
@@ -3941,6 +3948,10 @@ export class WebGl2Backend implements RenderBackend {
 
 // Content + render textures upload as gl.RGBA / gl.UNSIGNED_BYTE = 4 bytes/px.
 const RGBA8_BYTES_PER_PIXEL = 4;
+// DEPTH24_STENCIL8 packs a 24-bit depth value and an 8-bit stencil value into
+// one 32-bit texel, for both the sampleable-texture and renderbuffer forms of
+// a target's depth/stencil attachment.
+const DEPTH_STENCIL8_BYTES_PER_PIXEL = 4;
 const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blendable: boolean): ColorFormatCapabilities => ({
   renderable,
   filterable,
