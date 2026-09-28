@@ -28,6 +28,13 @@ const defaultCapacity = 4096;
  * render as solid color quads (the per-particle `color` channel times
  * white-with-alpha-1). Shared across systems to avoid wasted texture
  * allocations.
+ *
+ * A color producer, not a numeric placeholder: white is drawn on an
+ * `HTMLCanvasElement`, so it gets the browser's ordinary sRGB, straight-alpha
+ * interpretation, matching a genuinely loaded white asset. sRGB white and
+ * linear white are the same value (1.0), so this choice is invisible at this
+ * specific color but keeps the classification honest for any future default
+ * color that is not white.
  */
 let defaultWhiteTexture: Texture | null = null;
 const getDefaultWhiteTexture = (): Texture => {

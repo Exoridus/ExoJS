@@ -69,6 +69,7 @@ export class Texture {
     return texture;
   }
 
+  /** A color producer: a browser-rasterized canvas, interpreted exactly like any other decoded image source. */
   public static get black(): Texture {
     if (Texture._black === null) {
       Texture._black = Texture.fromColor('#000', 10);
@@ -77,6 +78,7 @@ export class Texture {
     return Texture._black;
   }
 
+  /** A color producer: a browser-rasterized canvas, interpreted exactly like any other decoded image source. */
   public static get white(): Texture {
     if (Texture._white === null) {
       Texture._white = Texture.fromColor('#fff', 10);
@@ -90,6 +92,11 @@ export class Texture {
    * Accepts a {@link Color} instance or any CSS colour string; a Color with
    * alpha below 1 is rendered with that alpha. Generalizes the fixed
    * {@link Texture.black}/{@link Texture.white} helpers.
+   *
+   * A color producer, not a numeric placeholder: the fill goes through an
+   * ordinary `HTMLCanvasElement`, so it gets the same browser sRGB, straight-alpha
+   * interpretation as any loaded image and matches a genuinely loaded color
+   * asset of the same value.
    */
   public static fromColor(color: Color | string, size = 1): Texture {
     let fillStyle: string;
@@ -109,6 +116,9 @@ export class Texture {
    * Shared 8×8 magenta/black checkerboard shown in place of assets that failed
    * to load - a visible error beats an invisible hole, in production too.
    * Lazily created; every access returns the same instance.
+   *
+   * A color producer, like {@link Texture.fromColor}: the checker pattern is
+   * drawn on a canvas and resolved the same way a loaded color asset is.
    */
   public static get missing(): Texture {
     if (Texture._missing === null) {

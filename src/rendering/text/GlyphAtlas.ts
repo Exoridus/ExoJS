@@ -158,6 +158,9 @@ export class AtlasPage {
     this._packer = new ShelfPacker(width, height);
 
     if (mode === 'sdf') {
+      // A data producer: the buffer holds a numeric distance field, never
+      // color, so it is a DataTexture (colorSpace 'none') rather than a
+      // canvas-backed Texture.
       this._sdfBuffer = new Uint8Array(width * height);
       this._sdfTexture = new DataTexture({ width, height, format: TextureFormat.R8, data: this._sdfBuffer });
       // A DataTexture defaults to NEAREST, which is right for the lookup tables
@@ -173,6 +176,9 @@ export class AtlasPage {
       this._sdfTexture.setSize(width, height);
       this.texture = this._sdfTexture;
     } else {
+      // A color producer: full-color emoji glyphs are rasterized on a canvas,
+      // so this page gets the same browser sRGB interpretation as any other
+      // decoded image source.
       const { canvas, ctx } = makeCtx(width, height);
       this._ctx = ctx;
       this.texture = new Texture(canvas);
