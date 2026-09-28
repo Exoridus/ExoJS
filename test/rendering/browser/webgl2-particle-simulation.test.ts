@@ -1,295 +1,242 @@
-import { type Application, Color, Rectangle, Texture, Time } from '@codexo/exojs';
-import {
-  DeathModule,
-  type GlslContribution,
-  type ParticleBatch,
-  type ParticleDeathContext,
-  particlesExtension,
-  ParticleSystem,
-  UpdateModule,
-} from '@codexo/exojs-particles';
+/**
+ * WebGL2 transform-feedback particle simulation: the per-update contract.
+ *
+ * The structural benchmark gate guards a total - `particles-lifecycle` records
+ * 6 draw calls, 12 texture binds and 10 buffer uploads per frame against a
+ * 1/0/1 baseline. That total is a useful tripwire but a poor specification: it
+ * cannot distinguish one required simulation pass from two, and it says nothing
+ * about which scene pays. This suite pins the contract the total is made of.
+ *
+ * What the implementation is entitled to do, and no more:
+ * - one `update()` issues exactly ONE transform-feedback pass - one
+ *   `beginTransformFeedback`, one `drawArrays`, one `endTransformFeedback`;
+ * - a system that is never advanced issues none;
+ * - an explicit `simulation: 'cpu'` never reaches the path at all.
+ *
+ * Counted by wrapping the live context's own methods, so the numbers describe
+ * what the engine actually submitted rather than what it reported about itself.
+ * A real context is required: the GPU state refuses to compile unless the driver
+ * reports the interleaved components and vertex attributes transform feedback
+ * needs, so this contract is not observable against a recording stub.
+ */
 
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
 import { materializeRendererBindings } from '#extensions/materialize';
+import { Container } from '#rendering/Container';
+import type { RenderNode } from '#rendering/RenderNode';
+import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { ParticleGlState } from '../../../packages/exojs-particles/src/gpu/ParticleGlState';
+import { AlphaFadeOverLifetime, Curve, particlesExtension, ParticleSystem, QuadParticles } from '../../../packages/exojs-particles/src/index';
 import { wireCoreRenderers } from './_coreRenderers';
 
-class TerminalModule extends UpdateModule {
-  public override apply(_particles: ParticleBatch, _dt: number): void {}
+const canvasSize = 64;
+const particleCount = 32;
 
-  public override glsl(): GlslContribution {
-    return {
-      key: 'Terminal',
-      body: 'velocity += vec2(8.0, -4.0) * dt; scale = vec2(timing.x / timing.y, 2.0 * timing.x / timing.y); color = 0x80402010u;',
-    };
-  }
-}
+const createBackend = async (): Promise<WebGl2Backend> => {
+  const canvas = document.createElement('canvas');
 
-const setup = (modules: UpdateModule[] = [], deaths = false) => {
-  const gl = document.createElement('canvas').getContext('webgl2')!;
-  const source = document.createElement('canvas');
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
 
-  source.width = 4;
-  source.height = 4;
+  const app = {
+    canvas,
+    options: {
+      clearColor: Color.black,
+      canvas: { width: canvasSize, height: canvasSize },
+      rendering: {
+        debug: false,
+        webglAttributes: { antialias: false, preserveDrawingBuffer: true, stencil: false, depth: false },
+        spriteRendererBatchSize: 1024,
+        particleRendererBatchSize: 1024,
+      },
+    },
+  } as unknown as Application;
 
-  const texture = new Texture(source);
-  const system = new ParticleSystem(texture, { capacity: 4 });
-  const state = new ParticleGlState(gl, 4, modules, [], texture, new Rectangle(0, 0, 4, 4), deaths);
+  const backend = new WebGl2Backend(app);
 
-  return { gl, system, state, texture };
+  await backend.initialize();
+  wireCoreRenderers(backend, app.options.rendering);
+  // The particle renderer is not part of the core bindings; the extension
+  // materialises it. A bare backend built outside Application needs that wired
+  // explicitly, same as `wireCoreRenderers` does for Sprite/Mesh/Text.
+  materializeRendererBindings(backend, particlesExtension.renderers!);
+
+  return backend;
 };
 
-describe('WebGL2 transform feedback particle simulation', () => {
-  it('isolates texture upload from caller unpack buffers and pixel stores', () => {
-    const { gl, system, state, texture } = setup();
-    const unpack = gl.createBuffer();
+const render = (backend: WebGl2Backend, node: RenderNode): void => {
+  backend.clear();
+  node.render(backend);
+  backend.flush();
+};
 
-    gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, unpack);
-    gl.bufferData(gl.PIXEL_UNPACK_BUFFER, 4096, gl.STATIC_DRAW);
-    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 32);
-    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 2);
-    state.refreshFrames([], texture, new Rectangle(1, 1, 2, 2));
-    expect(gl.getError()).toBe(gl.NO_ERROR);
-    expect(gl.getParameter(gl.PIXEL_UNPACK_BUFFER_BINDING)).toBe(unpack);
-    expect(gl.getParameter(gl.UNPACK_ROW_LENGTH)).toBe(32);
-    expect(gl.getParameter(gl.UNPACK_SKIP_PIXELS)).toBe(2);
-    gl.bindBuffer(gl.PIXEL_UNPACK_BUFFER, null);
-    gl.deleteBuffer(unpack);
-    state.destroy();
-    system.destroy();
-    texture.destroy();
+const createTexture = (): Texture => {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = 16;
+  canvas.height = 16;
+
+  return new Texture(canvas);
+};
+
+/** A module that ships a GLSL form, which is part of what makes the system GPU-eligible. */
+const fade = (): AlphaFadeOverLifetime =>
+  new AlphaFadeOverLifetime(
+    new Curve([
+      { t: 0, v: 1 },
+      { t: 1, v: 0 },
+    ]),
+  );
+
+const makeSystem = (simulation?: 'cpu'): { root: Container; system: ParticleSystem } => {
+  const system = new ParticleSystem(createTexture(), {
+    capacity: particleCount,
+    // GPU simulation is only eligible for the quad render mode, so it is named
+    // rather than inherited: the default is not guaranteed to be it, and a
+    // default that silently changed would turn this suite into a no-op.
+    render: new QuadParticles(),
+    ...(simulation === undefined ? {} : { simulation }),
   });
+  const root = new Container();
 
-  it('integrates ping-pong buffers and preserves live GL bindings', () => {
-    const { gl, system, state, texture } = setup();
-    const particle = system.emit()!;
+  system.addUpdateModule(fade());
 
-    particle.position.set(3, 5);
-    particle.velocity.set(8, -4);
-    particle.lifetime = 2;
+  for (let i = 0; i < particleCount; i++) {
+    system.emit();
+  }
 
-    const vao = gl.createVertexArray();
-    const buffer = gl.createBuffer();
-    const feedback = gl.createTransformFeedback();
-    const sampler = gl.createSampler();
-    const boundTexture = gl.createTexture();
+  system.setPosition(canvasSize / 2, canvasSize / 2);
+  root.addChild(system);
 
-    gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, feedback);
-    gl.bindSampler(0, sampler);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, boundTexture);
-    gl.activeTexture(gl.TEXTURE3);
-    state.uploadDirty(system, [0]);
-    const initial = state.instanceBuffer;
-    const readback = vi.spyOn(gl, 'getBufferSubData');
+  return { root, system };
+};
 
-    state.dispatch(0.25, 1, 0);
-    expect(readback).not.toHaveBeenCalled();
-    readback.mockRestore();
-    expect(state.instanceBuffer).not.toBe(initial);
-    expect(gl.getParameter(gl.VERTEX_ARRAY_BINDING)).toBe(vao);
-    expect(gl.getParameter(gl.ARRAY_BUFFER_BINDING)).toBe(buffer);
-    expect(gl.getParameter(gl.TRANSFORM_FEEDBACK_BINDING)).toBe(feedback);
-    expect(gl.isEnabled(gl.RASTERIZER_DISCARD)).toBe(false);
-    expect(gl.getParameter(gl.ACTIVE_TEXTURE)).toBe(gl.TEXTURE3);
-    gl.activeTexture(gl.TEXTURE0);
-    expect(gl.getParameter(gl.TEXTURE_BINDING_2D)).toBe(boundTexture);
-    expect(gl.getParameter(gl.SAMPLER_BINDING)).toBe(sampler);
-    state.dispatch(0.25, 1, 0);
+interface SimulationTally {
+  begin: number;
+  draw: number;
+  end: number;
+}
 
-    const values = new Float32Array(20);
+/** Count the transform-feedback calls on the backend's live context for the duration of `body`. */
+const tallyTransformFeedback = (backend: WebGl2Backend, body: () => void): SimulationTally => {
+  const gl = backend.context;
+  const target = gl as unknown as Record<string, unknown>;
+  const tally: SimulationTally = { begin: 0, draw: 0, end: 0 };
+  const originals: Array<[string, unknown]> = [];
 
-    gl.bindBuffer(gl.COPY_READ_BUFFER, state.instanceBuffer);
-    gl.getBufferSubData(gl.COPY_READ_BUFFER, 0, values);
-    expect(values[0]).toBe(7);
-    expect(values[1]).toBe(3);
-    expect(values[13]).toBe(0.5);
-    expect(gl.getError()).toBe(gl.NO_ERROR);
+  const count = (name: string, field: keyof SimulationTally): void => {
+    const original = target[name];
 
-    state.destroy();
-    state.destroy();
-    expect(gl.isBuffer(initial)).toBe(false);
-    gl.deleteVertexArray(vao);
-    gl.deleteBuffer(buffer);
-    gl.deleteTransformFeedback(feedback);
-    gl.deleteSampler(sampler);
-    gl.deleteTexture(boundTexture);
-    system.destroy();
-    texture.destroy();
-  });
+    originals.push([name, original]);
+    target[name] = function counted(this: unknown, ...args: unknown[]): unknown {
+      tally[field]++;
 
-  it('captures terminal module state with the original lifetime exactly once', async () => {
-    const { gl, system, state, texture } = setup([new TerminalModule()], true);
-    const particle = system.emit()!;
-
-    particle.position.set(3, 5);
-    particle.velocity.set(8, -4);
-    particle.lifetime = 0.5;
-    state.uploadDirty(system, [0]);
-    state.dispatch(0.25, 1, 0);
-    state.uploadExpiry(0);
-    state.dispatch(0.25, 1, 1);
-
-    const records: unknown[] = [];
-
-    await state.readDeaths(batch => records.push(...batch));
-    expect(records).toEqual([{ x: 7.5, y: 2.75, velocityX: 12, velocityY: -6, rotation: 0, scaleX: 1, scaleY: 2, elapsed: 0.5, color: 0x80402010, slot: 0 }]);
-    state.dispatch(0.25, 1, 0);
-    await state.readDeaths(batch => records.push(...batch));
-    expect(records).toHaveLength(1);
-    expect(gl.getError()).toBe(gl.NO_ERROR);
-    state.destroy();
-    system.destroy();
-    texture.destroy();
-  });
-
-  it('keeps simulating when staging is full and reports only staged batches', async () => {
-    const { gl, system, state, texture } = setup([], true);
-    const particle = system.emit()!;
-
-    particle.velocity.set(4, 0);
-    particle.lifetime = 0.25;
-    for (let i = 0; i < 5; i++) {
-      particle.position.set(i * 10, 0);
-      state.uploadDirty(system, [0]);
-      state.uploadExpiry(0);
-      expect(state.dispatch(0.25, 1, 1)).toBe(i < 3);
-    }
-
-    const positions: number[] = [];
-    const receive = (records: ReadonlyArray<{ x: number }>) => {
-      positions.push(...records.map(record => record.x));
+      return (original as (...fnArgs: unknown[]) => unknown).apply(this, args);
     };
+  };
 
-    await Promise.all([state.readDeaths(receive), state.readDeaths(receive), state.readDeaths(receive)]);
-    expect(positions).toEqual([1, 11, 21]);
-    expect(state.dispatch(0, 0, 2)).toBe(true);
-    await state.readDeaths(receive);
-    expect(positions).toEqual([1, 11, 21, 31, 41]);
-    expect(state.dispatch(0, 0, 0)).toBe(false);
-    expect(gl.getError()).toBe(gl.NO_ERROR);
-    state.destroy();
-    system.destroy();
-    texture.destroy();
-  });
+  count('beginTransformFeedback', 'begin');
+  count('drawArrays', 'draw');
+  count('endTransformFeedback', 'end');
 
-  it('integrates particles expiring in their zero-lifetime spawn step', async () => {
-    const { gl, system, state, texture } = setup([], true);
-    const particle = system.emit()!;
-
-    particle.position.set(3, 5);
-    particle.velocity.set(8, -4);
-    particle.lifetime = 0;
-    state.uploadDirty(system, [0]);
-    state.uploadExpiry(0);
-    expect(state.dispatch(0.25, 1, 1)).toBe(true);
-    const records: unknown[] = [];
-
-    await state.readDeaths(batch => records.push(...batch));
-    expect(records).toEqual([{ x: 5, y: 4, velocityX: 8, velocityY: -4, rotation: 0, scaleX: 1, scaleY: 1, elapsed: 0.25, color: 0xffffffff, slot: 0 }]);
-    expect(gl.getError()).toBe(gl.NO_ERROR);
-    state.destroy();
-    system.destroy();
-    texture.destroy();
-  });
-
-  it('preserves original lifetimes through system slot reuse and staging backpressure', async () => {
-    const canvas = document.createElement('canvas');
-    const backend = new WebGl2Backend({ canvas, options: { canvas: { width: 64, height: 64 }, clearColor: Color.black } } as unknown as Application);
-
-    await backend.initialize();
-    wireCoreRenderers(backend);
-    materializeRendererBindings(backend, particlesExtension.renderers!);
-    const system = new ParticleSystem({ capacity: 4 });
-    const deaths: ParticleDeathContext[] = [];
-
-    class Recorder extends DeathModule {
-      public override onDeath(_system: ParticleSystem, context: ParticleDeathContext): void {
-        deaths.push(context);
-      }
+  try {
+    body();
+  } finally {
+    for (const [name, original] of originals) {
+      target[name] = original;
     }
+  }
 
-    system.addDeathModule(new Recorder());
-    system.render(backend);
-    backend.flush();
-    system.update(Time.seconds(0));
-    expect(system.simulationBackend).toBe('webgl2');
+  return tally;
+};
 
-    for (let i = 0; i < 6; i++) {
-      const particle = system.emit()!;
+test('one particle update issues exactly one transform-feedback simulation pass', async () => {
+  const backend = await createBackend();
+  const { root, system } = makeSystem();
 
-      particle.lifetime = (i + 1) / 8;
-      particle.position.set(i * 10, 0);
-      particle.velocity.set(4, 0);
-      system.update(Time.seconds(1));
-    }
+  try {
+    // One draw first: the system learns its backend from a render, and that is
+    // also where the renderer is resolved.
+    render(backend, root);
 
-    const deadline = performance.now() + 3000;
-
-    while (deaths.length < 6 && performance.now() < deadline) {
-      await new Promise<void>(resolve => {
-        setTimeout(resolve, 4);
-      });
-      system.update(Time.seconds(0));
-    }
-    expect(deaths.map(death => death.x)).toEqual([4, 14, 24, 34, 44, 54]);
-    expect(deaths.map(death => death.lifetime)).toEqual([0.125, 0.25, 0.375, 0.5, 0.625, 0.75]);
-    system.destroy();
-    backend.destroy();
-  });
-
-  it('releases queued readbacks safely when destroyed before delivery', async () => {
-    const { gl, system, state, texture } = setup([], true);
-    const particle = system.emit()!;
-
-    particle.lifetime = 0.25;
-    state.uploadDirty(system, [0]);
-    state.uploadExpiry(0);
-    state.dispatch(0.25, 1, 1);
-    const buffer = state.instanceBuffer;
-    const receive = vi.fn();
-    const destroyed = vi.fn();
-    const pending = state.readDeaths(receive);
-
-    state.onDestroy = destroyed;
-    state.destroy();
-    state.destroy();
-    await pending;
-    expect(receive).not.toHaveBeenCalled();
-    expect(destroyed).toHaveBeenCalledOnce();
-    expect(gl.isBuffer(buffer)).toBe(false);
-    expect(gl.getError()).toBe(gl.NO_ERROR);
-    system.destroy();
-    texture.destroy();
-  });
-
-  it('releases all allocated buffers after shader compilation fails', () => {
-    const { gl, system, state, texture } = setup();
-    const createBuffer = gl.createBuffer.bind(gl);
-    const buffers: WebGLBuffer[] = [];
-    const spy = vi.spyOn(gl, 'createBuffer').mockImplementation(() => {
-      const buffer = createBuffer();
-
-      if (buffer) buffers.push(buffer);
-      return buffer;
+    const tally = tallyTransformFeedback(backend, () => {
+      system.update((1 / 60) as never);
     });
-    class InvalidModule extends UpdateModule {
-      public override apply(_particles: ParticleBatch, _dt: number): void {}
-      public override glsl(): GlslContribution {
-        return { key: 'Invalid', body: 'invalid syntax;' };
-      }
-    }
 
-    expect(() => new ParticleGlState(gl, 4, [new InvalidModule()], [], texture, new Rectangle(0, 0, 4, 4))).toThrow('Particle transform feedback shader');
-    expect(buffers).toHaveLength(2);
-    expect(buffers.every(buffer => !gl.isBuffer(buffer))).toBe(true);
-    spy.mockRestore();
-    expect(gl.getError()).toBe(gl.NO_ERROR);
-    state.destroy();
-    system.destroy();
-    texture.destroy();
-  });
+    // Without this the pass could be absent because the system never reached the
+    // GPU path, which would make the counts below vacuously correct.
+    expect(system.gpuMode).toBe(true);
+    expect(tally.begin).toBe(1);
+    expect(tally.draw).toBe(1);
+    expect(tally.end).toBe(1);
+  } finally {
+    root.destroy();
+    backend.destroy();
+  }
+});
+
+test('repeated updates issue one pass each, not one accumulated pass', async () => {
+  const backend = await createBackend();
+  const { root, system } = makeSystem();
+
+  try {
+    render(backend, root);
+    system.update((1 / 60) as never);
+
+    const tally = tallyTransformFeedback(backend, () => {
+      system.update((1 / 60) as never);
+      system.update((1 / 60) as never);
+      system.update((1 / 60) as never);
+    });
+
+    expect(tally.begin).toBe(3);
+    expect(tally.draw).toBe(3);
+    expect(tally.end).toBe(3);
+  } finally {
+    root.destroy();
+    backend.destroy();
+  }
+});
+
+test('a system that is never advanced issues no simulation pass', async () => {
+  const backend = await createBackend();
+  const { root } = makeSystem();
+
+  try {
+    // This is the `particles-draw` archetype: it submits the same quads every
+    // frame and simulates nothing, which is why it still measures 1/0/1.
+    const tally = tallyTransformFeedback(backend, () => {
+      render(backend, root);
+      render(backend, root);
+      render(backend, root);
+    });
+
+    expect(tally.begin).toBe(0);
+    expect(tally.end).toBe(0);
+  } finally {
+    root.destroy();
+    backend.destroy();
+  }
+});
+
+test('an explicit cpu simulation never reaches the transform-feedback path', async () => {
+  const backend = await createBackend();
+  const { root, system } = makeSystem('cpu');
+
+  try {
+    render(backend, root);
+
+    const tally = tallyTransformFeedback(backend, () => {
+      system.update((1 / 60) as never);
+    });
+
+    expect(system.gpuMode).toBe(false);
+    expect(tally.begin).toBe(0);
+    expect(tally.end).toBe(0);
+  } finally {
+    root.destroy();
+    backend.destroy();
+  }
 });
