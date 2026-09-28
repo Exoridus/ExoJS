@@ -87,7 +87,7 @@
     "bootstrap": "pnpm install --frozen-lockfile --ignore-scripts && pnpm build:tooling",
     "bootstrap:dev": "pnpm bootstrap && pnpm exec husky && pnpm build:all && pnpm bench:setup && pnpm exec playwright install chromium && pnpm doctor",
     "doctor": "tsx ./scripts/doctor.ts",
-    "prepare": "husky",
+    "prepare": "husky && pnpm --filter @codexo/eslint-plugin-exojs build",
     "clean": "rimraf dist",
     "clean:artifacts": "tsx ./scripts/clean-artifacts.ts",
     "clean:all": "tsx ./scripts/clean-artifacts.ts --all",
