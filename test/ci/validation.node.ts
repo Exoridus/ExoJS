@@ -8,6 +8,13 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { runCommand } from '../../scripts/lib/run-command.ts';
 
+// Git hooks export GIT_DIR and related variables. Inherited by the fixture's git
+// calls, they would re-initialize, commit to and add worktrees to the repository
+// running the hook instead of the temporary fixture repositories.
+for (const name of Object.keys(process.env)) {
+  if (name.startsWith('GIT_')) delete process.env[name];
+}
+
 const fixture = resolve(import.meta.dirname, 'fixtures/validation-process.ts');
 const temporary: string[] = [];
 const directory = (): string => {
