@@ -1,4 +1,5 @@
 struct Uniforms {
+    uDomain: f32,
     uLutSize: f32,
 };
 
@@ -32,5 +33,21 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     // The lookup coordinate is the straight colour, not the premultiplied
     // sample - see lut-rgb1d.wgsl for why.
     let straight = select(vec3<f32>(0.0), src.rgb / src.a, src.a > 0.0);
-    return vec4<f32>(sampleLut3d(straight) * src.a, src.a);
+
+    // Legacy (colorPipelineEnabled == false): the LUT indexes the straight
+    // sample directly, no domain conversion - byte-identical to before the
+    // colorSpace option existed.
+    let legacy = sampleLut3d(straight);
+
+    // Gated: the straight sample is already linear light under the active
+    // pipeline. uDomain selects which domain the LUT was authored in - convert
+    // into it before indexing, then convert the graded result back so the
+    // output stays linear.
+    let domainSrgb = uniforms.uDomain > 0.5;
+    let domainRgb = select(straight, linearToSrgb(straight), domainSrgb);
+    let gatedResult = sampleLut3d(domainRgb);
+    let gated = select(gatedResult, srgbToLinear(gatedResult), domainSrgb);
+
+    let graded = select(legacy, gated, colorPipelineEnabled);
+    return vec4<f32>(graded * src.a, src.a);
 }

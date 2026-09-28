@@ -1,3 +1,4 @@
+import { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -6,13 +7,16 @@ import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 
 import { Filter } from './Filter';
 import { createFilterShader, ShaderFilter } from './ShaderFilter';
-import glsl3dFragment from './shaders/lut-3d.frag';
-import wgsl3dFragment from './shaders/lut-3d.wgsl';
-import glslRgb1dFragment from './shaders/lut-rgb1d.frag';
-import wgslRgb1dFragment from './shaders/lut-rgb1d.wgsl';
+import glsl3dFragmentModule from './shaders/lut-3d.frag';
+import wgsl3dFragmentModule from './shaders/lut-3d.wgsl';
+import glslRgb1dFragmentModule from './shaders/lut-rgb1d.frag';
+import wgslRgb1dFragmentModule from './shaders/lut-rgb1d.wgsl';
 
 /** Storage layout for a Look-Up Table texture. */
 export type LutMode = 'rgb1d' | '3d';
+
+/** The domain a LUT lookup coordinate/output is carried out in. */
+export type LutDomain = 'srgb' | 'linear-srgb';
 
 /** Construction options for {@link LutFilter}. */
 export interface LutFilterOptions {
@@ -27,7 +31,21 @@ export interface LutFilterOptions {
    * Default `17` (matches DaVinci/OBS export defaults).
    */
   size?: number;
+  /**
+   * Domain the LUT lookup coordinate and grading result are carried out in.
+   * `'srgb'` matches how grading LUTs are authored by DCC/grading tools -
+   * the source is converted to display-referred values before indexing the
+   * LUT, and the graded result is converted back. `'linear-srgb'` indexes
+   * and reads the LUT in scene-linear values directly. Either way the filter
+   * returns linear premultiplied colour. Default `'srgb'`.
+   */
+  colorSpace?: LutDomain;
 }
+
+const glslRgb1dFragment = spliceGlslPrologue(glslRgb1dFragmentModule, colorShaderSourcesGlsl);
+const wgslRgb1dFragment = `${colorShaderSourcesWgsl}\n${wgslRgb1dFragmentModule}`;
+const glsl3dFragment = spliceGlslPrologue(glsl3dFragmentModule, colorShaderSourcesGlsl);
+const wgsl3dFragment = `${colorShaderSourcesWgsl}\n${wgsl3dFragmentModule}`;
 
 // Three independent lookups, one per channel - NOT one lookup indexed by red.
 // `textureSize` supplies N, so the sample lands on a texel centre for LUTs of
@@ -156,6 +174,7 @@ export class LutFilter extends Filter {
 
   private readonly _mode: LutMode;
   private readonly _size: number;
+  private readonly _colorSpace: LutDomain;
   private readonly _shaderFilter: ShaderFilter;
   private _lut: Texture;
 
@@ -163,14 +182,18 @@ export class LutFilter extends Filter {
     super();
     this._mode = options.mode ?? '3d';
     this._size = Math.max(2, Math.floor(options.size ?? 17));
+    this._colorSpace = options.colorSpace ?? 'srgb';
 
     const is3d = this._mode === '3d';
 
     this._lut = is3d ? LutFilter.identityLut3D(this._size) : LutFilter.identityLut1D();
 
+    const domain = this._colorSpace === 'srgb' ? 1 : 0;
+
     // Insertion order matters on WebGPU: the packer lays each non-texture
-    // uniform out in a 16-byte slot, in declaration order.
-    const uniforms: Record<string, Texture | number> = is3d ? { uLutSize: this._size, uLut: this._lut } : { uLut: this._lut };
+    // uniform out in a 16-byte slot, in declaration order - matching the
+    // `Uniforms` struct field order the shader source declares.
+    const uniforms: Record<string, Texture | number> = is3d ? { uDomain: domain, uLutSize: this._size, uLut: this._lut } : { uDomain: domain, uLut: this._lut };
 
     this._shaderFilter = ShaderFilter.from(is3d ? lut3dShaderSource : lutRgb1dShaderSource, { uniforms });
   }
@@ -178,6 +201,11 @@ export class LutFilter extends Filter {
   /** The LUT mode this filter was constructed with. */
   public get mode(): LutMode {
     return this._mode;
+  }
+
+  /** The domain the LUT lookup and grading result are carried out in. Fixed at construction. */
+  public get colorSpace(): LutDomain {
+    return this._colorSpace;
   }
 
   /** The cube edge size (3D only). For 1D this returns the constructor-time size hint. */

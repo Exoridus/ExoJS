@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 13,
+  "memberCount": 14,
   "counts": {
     "constructors": 1,
     "methods": 8,
-    "properties": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -426,11 +426,11 @@
             }
           ],
           "returnType": "Texture",
-          "description": "Wrap an image element as a LUT texture with the right sampler defaults (linear filtering, clamp-to-edge, no mipmaps). Accepts the standard LUT image conventions exported by Photoshop, DaVinci Resolve, OBS, and similar tools - typically a 289×17 or 1024×32 strip for 3D LUTs, or a 256×1 strip for 1D."
+          "description": "Wrap an image element as a LUT texture with the right sampler defaults (linear filtering, clamp-to-edge, no mipmaps). Accepts the standard LUT image conventions exported by Photoshop, DaVinci Resolve, OBS, and similar tools - typically a 289×17 or 1024×32 strip for 3D LUTs, or a 256×1 strip for 1D. An imported image decodes through the ordinary browser colour-image path (unlike the generated identity LUTs above, which are numeric data) - its authoring tool wrote the strip as sRGB pixels for a human to inspect, not as pre-encoded coordinate data."
         },
         {
           "name": "identityLut1D",
-          "signature": "identityLut1D(size: number): Texture",
+          "signature": "identityLut1D(size: number): DataTexture<Rgba8>",
           "signatureTokens": [
             {
               "text": "identityLut1D",
@@ -461,8 +461,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "DataTexture",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rgba8",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -472,12 +484,12 @@
               "optional": false
             }
           ],
-          "returnType": "Texture",
-          "description": "Build a 1D identity LUT (N×1 texture with a smooth grayscale gradient). Because all three channels carry the same ramp, applying this LUT in 'rgb1d' mode is an exact no-op for ANY colour. Mutate texture.source to derive curves, posterization, contrast pushes, per-channel ramps, etc."
+          "returnType": "DataTexture<Rgba8>",
+          "description": "Build a 1D identity LUT (N×1 texture with a smooth grayscale gradient). Because all three channels carry the same ramp, applying this LUT in 'rgb1d' mode is an exact no-op for ANY colour. Mutate texture.buffer (then texture.commit()) to derive curves, posterization, contrast pushes, per-channel ramps, etc. Generated as numeric data, not a colour image - a LUT texel is a coordinate, never hardware sRGB-decoded."
         },
         {
           "name": "identityLut3D",
-          "signature": "identityLut3D(size: number): Texture",
+          "signature": "identityLut3D(size: number): DataTexture<Rgba8>",
           "signatureTokens": [
             {
               "text": "identityLut3D",
@@ -508,8 +520,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "DataTexture",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rgba8",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -519,8 +543,8 @@
               "optional": false
             }
           ],
-          "returnType": "Texture",
-          "description": "Build a 3D identity LUT (N²×N unwrapped cube texture). Applying this LUT is a no-op for any RGB input. Use as a starting point for procedural grading or as a fallback when a real LUT image hasn't loaded yet."
+          "returnType": "DataTexture<Rgba8>",
+          "description": "Build a 3D identity LUT (N²×N unwrapped cube texture). Applying this LUT is a no-op for any RGB input. Use as a starting point for procedural grading or as a fallback when a real LUT image hasn't loaded yet. Generated as numeric data - see identityLut1D."
         }
       ],
       "paragraphs": [],
@@ -551,6 +575,27 @@
           "params": [],
           "returnType": null,
           "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ strength: 4 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+        },
+        {
+          "name": "colorSpace",
+          "signature": "colorSpace: LutDomain",
+          "signatureTokens": [
+            {
+              "text": "colorSpace",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LutDomain",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The domain the LUT lookup and grading result are carried out in. Fixed at construction."
         },
         {
           "name": "lut",

@@ -450,6 +450,32 @@ describe('LutFilter construction and options', () => {
     expect(filter.lut.height).toBe(17);
   });
 
+  test('colorSpace defaults to srgb', () => {
+    const filter3d = new LutFilter();
+    const filterRgb1d = new LutFilter({ mode: 'rgb1d' });
+
+    expect(filter3d.colorSpace).toBe('srgb');
+    expect(filterRgb1d.colorSpace).toBe('srgb');
+  });
+
+  test('colorSpace accepts linear-srgb and reaches the shader uniform', () => {
+    const filter3d = new LutFilter({ colorSpace: 'linear-srgb' });
+    const filterRgb1d = new LutFilter({ mode: 'rgb1d', colorSpace: 'linear-srgb' });
+
+    expect(filter3d.colorSpace).toBe('linear-srgb');
+    expect(shaderFilterOf(filter3d).uniforms['uDomain']).toBe(0);
+    expect(filterRgb1d.colorSpace).toBe('linear-srgb');
+    expect(shaderFilterOf(filterRgb1d).uniforms['uDomain']).toBe(0);
+  });
+
+  test('the srgb default writes uDomain as 1', () => {
+    const filter3d = new LutFilter();
+    const filterRgb1d = new LutFilter({ mode: 'rgb1d' });
+
+    expect(shaderFilterOf(filter3d).uniforms['uDomain']).toBe(1);
+    expect(shaderFilterOf(filterRgb1d).uniforms['uDomain']).toBe(1);
+  });
+
   test('rgb1d mode builds a 1D identity LUT', () => {
     const filter = new LutFilter({ mode: 'rgb1d' });
 
