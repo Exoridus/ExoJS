@@ -190,6 +190,10 @@ export class WebGpuShaderFilterPass {
     }
 
     // ---- Build auto-bind group (group 0) ----
+    // `getTextureBinding` resolves the working render texture's own GPU view,
+    // so a plain `textureSample` on `uTexture` already returns the
+    // hardware-decoded linear color ShaderFilter's color contract promises -
+    // no sRGB view is chosen or manually decoded here.
     const inputBinding = gpu.getTextureBinding(input);
     const autoBindGroup = device.createBindGroup({
       layout: conn.autoBindGroupLayout,

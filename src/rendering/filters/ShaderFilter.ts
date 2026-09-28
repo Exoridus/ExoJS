@@ -303,6 +303,18 @@ export const createFilterShader = <const F extends UniformFields | undefined = u
  * (a displacement or mask map, whose own row 0 is its top on both backends):
  * `0.5 + (vUv.y - 0.5) * uOrientation` is that texture's v.
  *
+ * ## Color contract
+ *
+ * `uTexture` is the filter chain's actual working-format render texture, so a
+ * sample from it is already hardware-decoded, linear-light, premultiplied
+ * color - never call `pow(color, vec3(2.2))` or any other transfer function on
+ * it. Return the fragment in the same domain (linear, premultiplied RGB,
+ * straight alpha): the next filter in the chain, and the engine's own output
+ * transform, both assume every stage agrees on it. A filter whose input or
+ * output is genuinely non-color data (a mask, a displacement field) is the
+ * author's own contract to keep straight - nothing here infers "data" from a
+ * texture's channel layout or declared name.
+ *
  * ## User uniforms
  *
  * A source built with {@link createFilterShader} can declare its uniforms,

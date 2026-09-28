@@ -10,8 +10,16 @@
 // usually invisible, because most fixtures are mid-grey.
 import { describe, expect, test } from 'vitest';
 
+import { Color } from '#core/Color';
 import { colorShaderSourcesGlsl, colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
+import { isTextureUniformValue } from '#rendering/material/Material';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { Shader } from '#rendering/shader/Shader';
 import { spriteMaterialPrologueGlsl, spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
+import { DataTexture } from '#rendering/texture/DataTexture';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
 
 // `?raw` reads the shipped file directly, so these assertions hold even where a
@@ -186,5 +194,88 @@ describe('native opaque alpha', () => {
     // straight, and its RGB must reach the blend unchanged.
     expect(code(colorShaderSourcesWgsl)).not.toMatch(/fn forceOpaqueSampleAlpha[\s\S]*?sampleColor\.rgb\s*\*/);
     expect(code(colorShaderSourcesGlsl)).not.toMatch(/vec4 forceOpaqueSampleAlpha[\s\S]*?sampleColor\.rgb\s*\*/);
+  });
+});
+
+// The custom renderer/material boundary (R32): a custom shader's uniform
+// values keep exactly the domain the caller wrote them in - Material never
+// guesses "this numeric tuple is secretly a color" and applies a transfer
+// function of its own, and a bound DataTexture keeps its own
+// `colorSpace: 'none'` untouched by the material layer. See the JSDoc on
+// Material.ts's UniformValue, SpriteMaterial.ts and ShaderFilter.ts for the
+// full contract these assertions pin.
+
+const materialGlslVertex = /* glsl */ `#version 300 es
+layout(location = 0) in vec2 a_position;
+void main() { gl_Position = vec4(a_position, 0.0, 1.0); }
+`;
+
+const materialGlslFragment = /* glsl */ `#version 300 es
+precision highp float;
+uniform vec4 u_tint;
+uniform sampler2D u_lookup;
+out vec4 fragColor;
+void main() { fragColor = u_tint; }
+`;
+
+const createMaterialShader = (): Shader => new Shader({ glsl: { vertex: materialGlslVertex, fragment: materialGlslFragment } });
+
+describe('isTextureUniformValue distinguishes a color array from a texture binding', () => {
+  test('a plain numeric tuple is a scalar', () => {
+    expect(isTextureUniformValue([1, 0.5, 0, 1])).toBe(false);
+  });
+
+  test('a Float32Array produced by Color.writeLinear is a scalar, not a texture', () => {
+    const linear = new Float32Array(4);
+
+    Color.red.writeLinear(linear);
+
+    expect(isTextureUniformValue(linear)).toBe(false);
+  });
+
+  test('a Texture and a RenderTexture are texture bindings', () => {
+    const texture = Texture.fromColor('#ff0000');
+    const target = new RenderTexture(2, 2);
+
+    expect(isTextureUniformValue(texture)).toBe(true);
+    expect(isTextureUniformValue(target)).toBe(true);
+
+    target.destroy();
+  });
+});
+
+describe('a raw numeric uniform round-trips unchanged, undecoded', () => {
+  test('setUniform stores the exact bytes written, applying no transfer function', () => {
+    const linear = new Float32Array(4);
+
+    Color.magenta.writeLinear(linear);
+
+    const material = new SpriteMaterial({ shader: createMaterialShader(), uniforms: { u_tint: [0, 0, 0, 1] } });
+
+    material.setUniform('u_tint', linear);
+
+    expect(material.uniforms.u_tint).toBe(linear);
+    expect(Array.from(material.uniforms.u_tint as Float32Array)).toEqual(Array.from(linear));
+  });
+});
+
+describe('a bound DataTexture keeps its own numeric color-space, untouched by the material layer', () => {
+  test('material construction and texture replacement never read or rewrite the texture colorSpace', () => {
+    const lookup = new DataTexture({ width: 4, height: 1, format: TextureFormat.Rgba8 });
+    const material = new SpriteMaterial({
+      shader: createMaterialShader(),
+      uniforms: { u_tint: [1, 1, 1, 1] },
+      textures: { u_lookup: lookup },
+    });
+
+    expect(lookup.colorSpace).toBe('none');
+    expect(material.textures.u_lookup).toBe(lookup);
+
+    const replacement = new DataTexture({ width: 4, height: 1, format: TextureFormat.Rgba8 });
+
+    material.setTexture('u_lookup', replacement);
+
+    expect(replacement.colorSpace).toBe('none');
+    expect(material.textures.u_lookup).toBe(replacement);
   });
 });
