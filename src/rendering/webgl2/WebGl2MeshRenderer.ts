@@ -1,4 +1,5 @@
 import { Matrix } from '#math/Matrix';
+import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMaterial, UniformValue } from '#rendering/material/Material';
@@ -122,7 +123,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   /** Reusable single-slot texture list handed to the recorder (avoids a per-batch array). */
   private readonly _retainedTextureScratch: [Texture | RenderTexture] = [Texture.white];
 
-  private readonly _defaultShader: WebGl2Shader = new WebGl2Shader(vertexSource, fragmentSource);
+  private readonly _defaultShader: WebGl2Shader = new WebGl2Shader(vertexSource, spliceGlslPrologue(fragmentSource, colorShaderSourcesGlsl));
   private readonly _customShaders = new Map<AnyMaterial, WebGl2Shader>();
   private readonly _compatibilityCache = new Map<WebGl2Shader, boolean>();
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
