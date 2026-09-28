@@ -22,6 +22,12 @@ export interface DisplacementFilterOptions {
    * area and read with the texture's own filtering and wrap mode. The filter
    * samples the map but does not own it - destroying the filter leaves the
    * texture alone.
+   *
+   * Sampled as numeric data, never colour: an explicit `colorSpace: 'srgb'`
+   * texture is rejected, because that storage format is hardware-decoded on
+   * sample regardless of what the shader does with the result, which would
+   * corrupt the displacement vector. A `DataTexture` is accepted directly.
+   * @throws Error - `map.colorSpace` is `'srgb'`.
    */
   readonly map: Texture;
   /**
@@ -81,6 +87,8 @@ export class DisplacementFilter extends Filter {
   public constructor(options: DisplacementFilterOptions) {
     super();
 
+    assertNotSrgbMap(options.map);
+
     const scale = options.scale ?? 20;
     const offset = options.offset ?? [0, 0];
     const scaleUniform = new Float32Array(4);
@@ -108,6 +116,7 @@ export class DisplacementFilter extends Filter {
 
   public set map(map: Texture) {
     if (this._map !== map) {
+      assertNotSrgbMap(map);
       this._map = map;
       this._shaderFilter.setUniform('uMap', map);
       this.invalidate();
@@ -195,3 +204,9 @@ export class DisplacementFilter extends Filter {
     this._shaderFilter.destroy();
   }
 }
+
+const assertNotSrgbMap = (map: Texture): void => {
+  if (map.colorSpace === 'srgb') {
+    throw new Error("DisplacementFilter map cannot be an explicit colorSpace: 'srgb' texture - displacement channels are numeric, not colour.");
+  }
+};

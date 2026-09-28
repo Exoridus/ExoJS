@@ -81,3 +81,23 @@ describe('DisplacementFilter options', () => {
     filter.destroy();
   });
 });
+
+describe('DisplacementFilter numeric-only map', () => {
+  test('rejects an explicit colorSpace srgb map at construction', () => {
+    const srgbMap = new Texture(document.createElement('canvas'), { colorSpace: 'srgb' });
+
+    expect(() => new DisplacementFilter({ map: srgbMap })).toThrow(/cannot be an explicit colorSpace: 'srgb'/);
+  });
+
+  test('rejects an explicit colorSpace srgb map assigned later', () => {
+    const filter = new DisplacementFilter({ map: map() });
+    const srgbMap = new Texture(document.createElement('canvas'), { colorSpace: 'srgb' });
+
+    expect(() => (filter.map = srgbMap)).toThrow(/cannot be an explicit colorSpace: 'srgb'/);
+    filter.destroy();
+  });
+
+  test('an ordinary implicit-colour map is accepted (default legacy interpretation, not srgb)', () => {
+    expect(() => new DisplacementFilter({ map: map() })).not.toThrow();
+  });
+});
