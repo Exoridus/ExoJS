@@ -17,8 +17,9 @@
 import type { Application } from '#core/Application';
 import type { CanvasAlphaMode } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, TextureFormat } from '#rendering/types';
 import { WebGl2BackdropBlendCompositor } from '#rendering/webgl2/WebGl2BackdropBlendCompositor';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -202,6 +203,28 @@ describe('WebGL2 backdrop-aware blend (Darken spike)', () => {
     } finally {
       compositor.disconnect();
       source.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('backdrop capture matches an sRGB render-texture target instead of blitting into a mismatched Rgba8 scratch', async () => {
+    const backend = await createBackend();
+    const target = new RenderTexture(canvasSize, canvasSize, { format: TextureFormat.Rgba8Srgb });
+    const source = createSolidTexture('#ffffff');
+
+    try {
+      backend.setRenderTarget(target);
+      backend.clear(new Color(60, 120, 200));
+
+      // A same-format blit is guaranteed compatible; a backdrop scratch stuck at
+      // the pool's Rgba8 default while the target is Rgba8Srgb would blit two
+      // mismatched internal formats, which is not portably valid on WebGL2.
+      expect(() => composeBackdropBlend(backend, source, BlendModes.Darken)).not.toThrow();
+      expectRgbNear(readPixel(backend, 32, 32), [60, 120, 200]);
+    } finally {
+      backend.setRenderTarget(null);
+      source.destroy();
+      target.destroy();
       backend.destroy();
     }
   });

@@ -113,14 +113,17 @@ export class FilterPass extends RenderPass {
           output = destination;
         } else {
           // Never the texture being read this stage, so the two alternate.
+          // Sized and formatted after the source: intermediates carry the
+          // chain's own working colour format rather than always Rgba8, so a
+          // chain running in a wider format does not lose it mid-chain.
           if (scratchA === null) {
-            scratchA = backend.acquireRenderTexture(width, height);
+            scratchA = backend.acquireRenderTexture(width, height, this._source.format);
           }
 
           if (scratchA !== input) {
             output = scratchA;
           } else {
-            scratchB ??= backend.acquireRenderTexture(width, height);
+            scratchB ??= backend.acquireRenderTexture(width, height, this._source.format);
             output = scratchB;
           }
         }

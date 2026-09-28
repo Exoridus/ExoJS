@@ -1,6 +1,6 @@
-import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage } from '#rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, TextureFormat } from '#rendering/types';
 import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { createWebGl2ShaderProgram } from './shaderProgram';
@@ -115,7 +115,10 @@ export class WebGl2BackdropBlendCompositor {
     const scaleY = target.root && target.height > 0 ? gl.drawingBufferHeight / target.height : 1;
     const px = Math.max(0, Math.floor(x * scaleX));
     const py = Math.max(0, Math.floor(gl.drawingBufferHeight - (y + height) * scaleY));
-    const backdrop = backend.acquireRenderTexture(width, height);
+    // The blit below is a raw framebuffer copy: it must land in the target's
+    // own storage format, or a mismatch (e.g. an Rgba8Srgb target into an
+    // Rgba8 backdrop) is not a guaranteed-compatible blit on every driver.
+    const backdrop = backend.acquireRenderTexture(width, height, target instanceof RenderTexture ? target.format : TextureFormat.Rgba8);
     const cw = Math.min(backdrop.width, Math.max(0, Math.round(width * scaleX)));
     const ch = Math.min(backdrop.height, Math.max(0, Math.round(height * scaleY)));
     // An opaque framebuffer (the default alpha-less root canvas) reports a
