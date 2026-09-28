@@ -111,7 +111,7 @@ const composedFragments: ReadonlyMap<string, string> = new Map([
   ['transport-filter.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
 ]);
 
-// Sprite stages that call the shared colour helpers directly (tint decode,
+// Stages that call the shared colour helpers directly (tint decode,
 // sample association) rather than through `composeSpriteMaterialFragmentGlsl`
 // (which already carries them as part of its prologue - splicing them again
 // here would redeclare every helper).
@@ -128,6 +128,9 @@ const needsColorHelpers: ReadonlySet<string> = new Set([
   'mesh.vert',
   'ribbon.vert',
   'trail.vert',
+  'color-matrix.frag',
+  'lut-rgb1d.frag',
+  'lut-3d.frag',
 ]);
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
