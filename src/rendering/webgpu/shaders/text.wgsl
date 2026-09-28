@@ -100,6 +100,14 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 }
 
 
+// Node-row colours are authored sRGB, straight alpha - the same authoring
+// convention as Color. Decode the RGB once at the point each colour is read,
+// gated on colorPipelineEnabled (see colorShaderSources.ts): alpha is
+// coverage/opacity, never gamma-transformed.
+fn decodeAuthoredColor(raw: vec4<f32>) -> vec4<f32> {
+    return vec4<f32>(select(raw.rgb, srgbToLinear(raw.rgb), colorPipelineEnabled), raw.a);
+}
+
 // ── Gradient ramp ────────────────────────────────────────────────────────────
 //
 // Mirrors evalTextGradient in text-sdf.frag exactly: colours in texels 10..17
@@ -119,13 +127,13 @@ fn gradientStopOffset(base: u32, index: u32) -> f32 {
 fn evalTextGradient(base: u32, stopCount: u32, t: f32) -> vec4<f32> {
     let position = clamp(t, 0.0, 1.0);
     var prevOffset = gradientStopOffset(base, 0u);
-    var prevColor = nodes[base + 10u];
+    var prevColor = decodeAuthoredColor(nodes[base + 10u]);
 
     for (var i = 1u; i < 8u; i = i + 1u) {
         if (i >= stopCount) { break; }
 
         let offset = gradientStopOffset(base, i);
-        let color = nodes[base + 10u + i];
+        let color = decodeAuthoredColor(nodes[base + 10u + i]);
 
         if (position <= offset) {
             // Coincident stops are a hard colour break, not a division by zero.
@@ -148,10 +156,10 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let ni   = in.nodeIdx;
     let base = ni * {{nodeDataTexels}}u;
 
-    let tFill     = nodes[base + 2u];
-    let tOutline  = nodes[base + 3u];
+    let tFill     = decodeAuthoredColor(nodes[base + 2u]);
+    let tOutline  = decodeAuthoredColor(nodes[base + 3u]);
     let tParams   = nodes[base + 4u];
-    let tShadow   = nodes[base + 5u];
+    let tShadow   = decodeAuthoredColor(nodes[base + 5u]);
     let tShadow2  = nodes[base + 6u];
     let tGradAxis = nodes[base + 7u];
 
@@ -226,7 +234,7 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
     // by default - which is what gives an underline the gradient for free. An
     // explicit decoration colour overrides it here.
     if (in.decoration == 1u && tShadow2.z > 0.5) {
-        fillColor = nodes[base + 8u];
+        fillColor = decodeAuthoredColor(nodes[base + 8u]);
     }
 
     return fillColor * fill + tOutline * outline + tShadow * shadow;
@@ -243,10 +251,10 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let ni   = in.nodeIdx;
     let base = ni * {{nodeDataTexels}}u;
 
-    let tFill     = nodes[base + 2u];
-    let tOutline  = nodes[base + 3u];
+    let tFill     = decodeAuthoredColor(nodes[base + 2u]);
+    let tOutline  = decodeAuthoredColor(nodes[base + 3u]);
     let tParams   = nodes[base + 4u];
-    let tShadow   = nodes[base + 5u];
+    let tShadow   = decodeAuthoredColor(nodes[base + 5u]);
     let tShadow2  = nodes[base + 6u];
     let tGradAxis = nodes[base + 7u];
 
@@ -292,7 +300,7 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
     // by default - which is what gives an underline the gradient for free. An
     // explicit decoration colour overrides it here.
     if (in.decoration == 1u && tShadow2.z > 0.5) {
-        fillColor = nodes[base + 8u];
+        fillColor = decodeAuthoredColor(nodes[base + 8u]);
     }
 
     return fillColor * fill + tOutline * outline + tShadow * shadow;
@@ -314,5 +322,18 @@ fn fragmentColor(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     let sample = sampleTexture(in.textureSlot, in.texcoord, dpdx(in.texcoord), dpdy(in.texcoord));
-    return sample * tint;
+
+    // Legacy (colorPipelineEnabled == false): unchanged bit-for-bit - tint is
+    // authored straight and was never decoded or premultiplied before this
+    // modulate, so white ((1,1,1,1)) is the only tint that leaves sample alone.
+    let legacy = sample * tint;
+
+    // Gated: decode the authored tint once and premultiply it, matching the
+    // sprite tint convention, before combining with the already-associated
+    // sample by a single component-wise multiply.
+    let linearTintRgb = select(tint.rgb, srgbToLinear(tint.rgb), colorPipelineEnabled);
+    let tintPremultiplied = vec4<f32>(linearTintRgb * tint.a, tint.a);
+    let gated = sample * tintPremultiplied;
+
+    return select(legacy, gated, colorPipelineEnabled);
 }

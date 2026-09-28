@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat3Std140FloatCount, packAffineMat3Std140, packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import type { OwnTransformRowPatcher } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -236,13 +237,13 @@ class TextRetainedReplayState implements WebGpuRetainedRendererReplayState {
 
 // ── WGSL: shared vertex + three fragment entry points ────────────────────────
 /** WGSL source for the text pipeline (shared vertex + color/SDF/MSDF fragment entry points). @internal */
-export const textShaderSource = fillShaderSource(textShaderTemplate, {
+export const textShaderSource = `${colorShaderSourcesWgsl}${fillShaderSource(textShaderTemplate, {
   atlasTextureSlots: textAtlasTextureSlotWgsl,
   nodeIndexMask: textNodeIndexMask,
   decorationFlagBit: textDecorationFlagBit,
   atlasSlotShift: textAtlasSlotShift,
   nodeDataTexels: textNodeDataTexels,
-});
+})}`;
 
 /**
  * WebGPU renderer for {@link Text} and {@link BitmapText} nodes.
