@@ -4,19 +4,22 @@ import { Color } from '#core/Color';
 /**
  * LutFilter unit tests.
  *
- * LutFilter is a thin wrapper: its static factories rasterize LUT textures via
- * the 2D canvas API, and `apply()` delegates to a `ShaderFilter` carrying both
- * language sources (covered by its own dedicated test files). These tests focus
- * on LutFilter's own logic: texture generation, option defaults/clamping,
- * `setLut`, source selection, and lifecycle - using the same minimal
- * WebGL2/WebGPU backend mocks established in shader-filter-webgl2.test.ts /
- * shader-filter-webgpu.test.ts, not a from-scratch GPU simulation.
+ * LutFilter is a thin wrapper: its identity-LUT factories write raw numeric
+ * `DataTexture` bytes directly (no canvas 2D involved - a LUT texel is a
+ * coordinate, not a colour image), `fromImage` wraps a caller-supplied
+ * image/canvas through the ordinary colour-image path, and `apply()`
+ * delegates to a `ShaderFilter` carrying both language sources (covered by
+ * its own dedicated test files). These tests focus on LutFilter's own logic:
+ * texture generation, option defaults/clamping, `setLut`, source selection,
+ * and lifecycle - using the same minimal WebGL2/WebGPU backend mocks
+ * established in shader-filter-webgl2.test.ts / shader-filter-webgpu.test.ts,
+ * not a from-scratch GPU simulation.
  *
  * The shared jsdom canvas 2D context stub (test/setup-env.vitest.ts) only
- * implements `fillStyle`/`fillRect`/`drawImage` - LutFilter's identity-LUT
- * builders also need `createImageData`/`putImageData`, so this file installs
- * a fuller local mock for the duration of the suite and restores the
- * original afterwards.
+ * implements `fillStyle`/`fillRect`/`drawImage`; some tests below still need
+ * a real canvas element as a `fromImage` source, so this file installs a
+ * fuller local mock for the duration of the suite and restores the original
+ * afterwards.
  */
 import { LutFilter } from '#rendering/filters/LutFilter';
 import { ShaderFilter } from '#rendering/filters/ShaderFilter';
@@ -24,6 +27,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import type { View } from '#rendering/View';
@@ -405,16 +409,34 @@ describe('LutFilter static texture factories', () => {
     expect(texture.source).toBe(canvas);
   });
 
-  test('identityLut1D throws a clear error when no 2D context is available', () => {
-    getContextSpy.mockImplementationOnce(() => null);
+  test('identityLut1D and identityLut3D build numeric DataTextures, not colour images', () => {
+    const oneD = LutFilter.identityLut1D(4);
+    const threeD = LutFilter.identityLut3D(2);
 
-    expect(() => LutFilter.identityLut1D()).toThrow('LutFilter.identityLut1D: 2D canvas context unavailable.');
+    expect(oneD).toBeInstanceOf(DataTexture);
+    expect(oneD.colorSpace).toBe('none');
+    expect(threeD).toBeInstanceOf(DataTexture);
+    expect(threeD.colorSpace).toBe('none');
   });
 
-  test('identityLut3D throws a clear error when no 2D context is available', () => {
-    getContextSpy.mockImplementationOnce(() => null);
+  test('identityLut1D writes an exact grayscale ramp', () => {
+    const texture = LutFilter.identityLut1D(4);
 
-    expect(() => LutFilter.identityLut3D()).toThrow('LutFilter.identityLut3D: 2D canvas context unavailable.');
+    // 4 steps: 0, 85, 170, 255.
+    expect(Array.from(texture.buffer)).toEqual([0, 0, 0, 255, 85, 85, 85, 255, 170, 170, 170, 255, 255, 255, 255, 255]);
+  });
+
+  test('identityLut3D writes exact identity texel values at the corner and centre', () => {
+    const size = 2;
+    const texture = LutFilter.identityLut3D(size);
+
+    // Corner (r=0, g=0, b=0) -> texel (0, 0).
+    expect(Array.from(texture.buffer.slice(0, 4))).toEqual([0, 0, 0, 255]);
+
+    // Opposite corner (r=1, g=1, b=1) at x = 1*size + 1 = 3, y = 1.
+    const offset = (1 * (size * size) + 3) * 4;
+
+    expect(Array.from(texture.buffer.slice(offset, offset + 4))).toEqual([255, 255, 255, 255]);
   });
 });
 
@@ -426,6 +448,32 @@ describe('LutFilter construction and options', () => {
     expect(filter.size).toBe(17);
     expect(filter.lut.width).toBe(17 * 17);
     expect(filter.lut.height).toBe(17);
+  });
+
+  test('colorSpace defaults to srgb', () => {
+    const filter3d = new LutFilter();
+    const filterRgb1d = new LutFilter({ mode: 'rgb1d' });
+
+    expect(filter3d.colorSpace).toBe('srgb');
+    expect(filterRgb1d.colorSpace).toBe('srgb');
+  });
+
+  test('colorSpace accepts linear-srgb and reaches the shader uniform', () => {
+    const filter3d = new LutFilter({ colorSpace: 'linear-srgb' });
+    const filterRgb1d = new LutFilter({ mode: 'rgb1d', colorSpace: 'linear-srgb' });
+
+    expect(filter3d.colorSpace).toBe('linear-srgb');
+    expect(shaderFilterOf(filter3d).uniforms['uDomain']).toBe(0);
+    expect(filterRgb1d.colorSpace).toBe('linear-srgb');
+    expect(shaderFilterOf(filterRgb1d).uniforms['uDomain']).toBe(0);
+  });
+
+  test('the srgb default writes uDomain as 1', () => {
+    const filter3d = new LutFilter();
+    const filterRgb1d = new LutFilter({ mode: 'rgb1d' });
+
+    expect(shaderFilterOf(filter3d).uniforms['uDomain']).toBe(1);
+    expect(shaderFilterOf(filterRgb1d).uniforms['uDomain']).toBe(1);
   });
 
   test('rgb1d mode builds a 1D identity LUT', () => {

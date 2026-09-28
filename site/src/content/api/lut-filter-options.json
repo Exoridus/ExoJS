@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "colorSpace",
+          "signature": "colorSpace?: LutDomain",
+          "signatureTokens": [
+            {
+              "text": "colorSpace",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LutDomain",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Domain the LUT lookup coordinate and grading result are carried out in. 'srgb' matches how grading LUTs are authored by DCC/grading tools - the source is converted to display-referred values before indexing the LUT, and the graded result is converted back. 'linear-srgb' indexes and reads the LUT in scene-linear values directly. Either way the filter returns linear premultiplied colour. Default 'srgb'."
+        },
         {
           "name": "mode",
           "signature": "mode?: LutMode",

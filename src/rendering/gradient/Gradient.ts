@@ -2,6 +2,7 @@ import type { Color } from '#core/Color';
 import { srgbToLinear } from '#core/colorTransfer';
 import type { Cloneable, Destroyable } from '#core/types';
 import { clamp } from '#math/utils';
+import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import { TextureFormat } from '#rendering/types';
@@ -40,12 +41,14 @@ const sortedStopOffset = (left: InternalGradientStop, right: InternalGradientSto
  *
  * Convert a gradient into a sampleable {@link DataTexture} with
  * {@link Gradient.toTexture}; wrap that texture in a `Sprite`/`Mesh` to draw it.
- * Stops are authored and interpolated in sRGB, then the interpolated result is
- * converted to linear light and premultiplied by alpha before it is written into
- * the texture buffer, so the texture holds the same representation a colour
- * shader samples at draw time. {@link Gradient.toTexture} marks that buffer
- * `colorSpace: 'none'` and `alphaMode: 'premultiplied'` accordingly - it is not
- * upload-time-normalized straight sRGB like an ordinary managed color texture.
+ * Stops are always authored and interpolated in sRGB. Once the engine's colour
+ * pipeline is active, the interpolated result is additionally converted to
+ * linear light and premultiplied by alpha before it is written into the
+ * texture buffer, so the texture holds the same representation a colour
+ * shader samples at draw time, and {@link Gradient.toTexture} marks that
+ * buffer `colorSpace: 'none'` and `alphaMode: 'premultiplied'` accordingly.
+ * Until then the buffer keeps its legacy straight sRGB bytes untouched, byte-
+ * identical to a pre-colour-pipeline build.
  */
 export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
   /** Concrete gradient kind, e.g. `'linear'` or `'radial'`. */
@@ -263,17 +266,29 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
 }
 
 /**
- * The DataTexture this producer writes into carries linear-premultiplied
- * samples, not upload-time-normalized straight sRGB - forced regardless of
- * any sampler overrides the caller passes, since these flags describe the
- * buffer's actual content rather than a preference.
+ * While the colour pipeline is active, the DataTexture this producer writes
+ * into carries linear-premultiplied samples, not upload-time-normalized
+ * straight sRGB - forced regardless of any sampler overrides the caller
+ * passes, since these flags describe the buffer's actual content rather than
+ * a preference. Before activation the buffer holds legacy straight sRGB
+ * bytes, so forcing `alphaMode: 'premultiplied'` here would mislabel it;
+ * only `colorSpace: 'none'` applies in both cases (DataTexture's own
+ * default, harmless either way - see DataTexture.ts).
  */
-const producerTextureOptions = { colorSpace: 'none', alphaMode: 'premultiplied', premultiplyAlpha: false } as const;
+const producerTextureOptions = COLOR_PIPELINE_ENABLED ? ({ colorSpace: 'none', alphaMode: 'premultiplied', premultiplyAlpha: false } as const) : ({} as const);
 
 const toUnorm8 = (value: number): number => (clamp(value, 0, 1) * 255 + 0.5) | 0;
 
-/** Convert an sRGB-interpolated, straight-alpha sample in place to linear, premultiplied. */
+/**
+ * Convert an sRGB-interpolated, straight-alpha sample in place to linear,
+ * premultiplied - a no-op while the colour pipeline is inactive, so the
+ * buffer stays byte-identical to the legacy straight-sRGB output.
+ */
 const toLinearPremultiplied = (sample: Float32Array): void => {
+  if (!COLOR_PIPELINE_ENABLED) {
+    return;
+  }
+
   const alpha = sample[3]!;
 
   sample[0] = srgbToLinear(sample[0]!) * alpha;

@@ -1,4 +1,5 @@
 import type { Color } from '#core/Color';
+import { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { UniformArray } from '#rendering/uniforms/uniformDeclarations';
@@ -6,13 +7,31 @@ import { UniformType } from '#rendering/uniforms/UniformType';
 
 import { Filter } from './Filter';
 import { createFilterShader, ShaderFilter } from './ShaderFilter';
-import glslFragment from './shaders/color-matrix.frag';
-import wgslFragment from './shaders/color-matrix.wgsl';
+import glslFragmentModule from './shaders/color-matrix.frag';
+import wgslFragmentModule from './shaders/color-matrix.wgsl';
 
 /** A 4×5 row-major colour matrix: four rows of `[r, g, b, a, offset]`. */
 export type ColorMatrixEntries = readonly number[];
 
+/** The domain a filter's colour operation is carried out in. */
+export type ColorMatrixDomain = 'srgb' | 'linear-srgb';
+
+/** Construction options for {@link ColorMatrixFilter}. */
+export interface ColorMatrixFilterOptions {
+  /**
+   * Domain the matrix coefficients operate in. `'srgb'` keeps the classic
+   * display-referred grading feel the conveniences below were designed
+   * around; `'linear-srgb'` applies the matrix to scene-linear values
+   * instead. Either way the filter returns linear premultiplied colour -
+   * only the domain the matrix itself sees changes. Default `'srgb'`.
+   */
+  colorSpace?: ColorMatrixDomain;
+}
+
 const ENTRIES = 20;
+
+const glslFragment = spliceGlslPrologue(glslFragmentModule, colorShaderSourcesGlsl);
+const wgslFragment = `${colorShaderSourcesWgsl}\n${wgslFragmentModule}`;
 
 /** Rec. 709 luma weights - the same ones the rest of the engine desaturates with. */
 const LUMA_R = 0.2126;
@@ -30,7 +49,7 @@ const IDENTITY: ColorMatrixEntries = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 
 export const colorMatrixShader = createFilterShader({
   glsl: { fragment: glslFragment },
   wgsl: wgslFragment,
-  uniforms: { uRows: new UniformArray(UniformType.Vec4, 4), uBias: UniformType.Vec4 },
+  uniforms: { uRows: new UniformArray(UniformType.Vec4, 4), uBias: UniformType.Vec4, uDomain: UniformType.Float },
 });
 
 /**
@@ -65,12 +84,20 @@ export const colorMatrixShader = createFilterShader({
  */
 export class ColorMatrixFilter extends Filter {
   private readonly _matrix = new Float32Array(ENTRIES);
+  private readonly _colorSpace: ColorMatrixDomain;
   private readonly _shaderFilter = ShaderFilter.from(colorMatrixShader);
 
-  public constructor(matrix: ColorMatrixEntries = IDENTITY) {
+  public constructor(matrix: ColorMatrixEntries = IDENTITY, options: ColorMatrixFilterOptions = {}) {
     super();
 
+    this._colorSpace = options.colorSpace ?? 'srgb';
+    this._shaderFilter.uniforms.uDomain.set(this._colorSpace === 'srgb' ? 1 : 0);
     this._write(matrix);
+  }
+
+  /** The domain {@link matrix} operates in. Fixed at construction. */
+  public get colorSpace(): ColorMatrixDomain {
+    return this._colorSpace;
   }
 
   /** The current 4×5 matrix. Assign a new one, or use the conveniences. */

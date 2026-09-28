@@ -1,17 +1,22 @@
+import { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { ScaleModes, WrapModes } from '#rendering/types';
+import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 
 import { Filter } from './Filter';
 import { createFilterShader, ShaderFilter } from './ShaderFilter';
-import glsl3dFragment from './shaders/lut-3d.frag';
-import wgsl3dFragment from './shaders/lut-3d.wgsl';
-import glslRgb1dFragment from './shaders/lut-rgb1d.frag';
-import wgslRgb1dFragment from './shaders/lut-rgb1d.wgsl';
+import glsl3dFragmentModule from './shaders/lut-3d.frag';
+import wgsl3dFragmentModule from './shaders/lut-3d.wgsl';
+import glslRgb1dFragmentModule from './shaders/lut-rgb1d.frag';
+import wgslRgb1dFragmentModule from './shaders/lut-rgb1d.wgsl';
 
 /** Storage layout for a Look-Up Table texture. */
 export type LutMode = 'rgb1d' | '3d';
+
+/** The domain a LUT lookup coordinate/output is carried out in. */
+export type LutDomain = 'srgb' | 'linear-srgb';
 
 /** Construction options for {@link LutFilter}. */
 export interface LutFilterOptions {
@@ -26,7 +31,21 @@ export interface LutFilterOptions {
    * Default `17` (matches DaVinci/OBS export defaults).
    */
   size?: number;
+  /**
+   * Domain the LUT lookup coordinate and grading result are carried out in.
+   * `'srgb'` matches how grading LUTs are authored by DCC/grading tools -
+   * the source is converted to display-referred values before indexing the
+   * LUT, and the graded result is converted back. `'linear-srgb'` indexes
+   * and reads the LUT in scene-linear values directly. Either way the filter
+   * returns linear premultiplied colour. Default `'srgb'`.
+   */
+  colorSpace?: LutDomain;
 }
+
+const glslRgb1dFragment = spliceGlslPrologue(glslRgb1dFragmentModule, colorShaderSourcesGlsl);
+const wgslRgb1dFragment = `${colorShaderSourcesWgsl}\n${wgslRgb1dFragmentModule}`;
+const glsl3dFragment = spliceGlslPrologue(glsl3dFragmentModule, colorShaderSourcesGlsl);
+const wgsl3dFragment = `${colorShaderSourcesWgsl}\n${wgsl3dFragmentModule}`;
 
 // Three independent lookups, one per channel - NOT one lookup indexed by red.
 // `textureSize` supplies N, so the sample lands on a texel centre for LUTs of
@@ -74,32 +93,32 @@ export const lut3dShaderSource = createFilterShader({ glsl: { fragment: glsl3dFr
  * works on either backend without the caller choosing one.
  */
 export class LutFilter extends Filter {
+  /** Sampler defaults every generated or imported LUT texture uses. */
+  private static readonly _lutSamplerOptions = { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, generateMipMap: false } as const;
+
   /**
    * Build a 1D identity LUT (`N×1` texture with a smooth grayscale gradient).
    *
    * Because all three channels carry the same ramp, applying this LUT in
-   * `'rgb1d'` mode is an exact no-op for ANY colour. Mutate `texture.source` to
-   * derive curves, posterization, contrast pushes, per-channel ramps, etc.
+   * `'rgb1d'` mode is an exact no-op for ANY colour. Mutate `texture.buffer`
+   * (then `texture.commit()`) to derive curves, posterization, contrast
+   * pushes, per-channel ramps, etc. Generated as numeric data, not a colour
+   * image - a LUT texel is a coordinate, never hardware sRGB-decoded.
    */
-  public static identityLut1D(size = 256): Texture {
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = 1;
-    const ctx = canvas.getContext('2d');
-    if (ctx === null) {
-      throw new Error('LutFilter.identityLut1D: 2D canvas context unavailable.');
-    }
-    const image = ctx.createImageData(size, 1);
+  public static identityLut1D(size = 256): DataTexture<TextureFormat.Rgba8> {
+    const data = new Uint8Array(size * 4);
+
     for (let i = 0; i < size; i++) {
       const v = Math.round((i / (size - 1)) * 255);
       const offset = i * 4;
-      image.data[offset] = v;
-      image.data[offset + 1] = v;
-      image.data[offset + 2] = v;
-      image.data[offset + 3] = 255;
+
+      data[offset] = v;
+      data[offset + 1] = v;
+      data[offset + 2] = v;
+      data[offset + 3] = 255;
     }
-    ctx.putImageData(image, 0, 0);
-    return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, generateMipMap: false });
+
+    return new DataTexture({ width: size, height: 1, format: TextureFormat.Rgba8, data, textureOptions: LutFilter._lutSamplerOptions });
   }
 
   /**
@@ -107,37 +126,34 @@ export class LutFilter extends Filter {
    *
    * Applying this LUT is a no-op for any RGB input. Use as a starting point
    * for procedural grading or as a fallback when a real LUT image hasn't
-   * loaded yet.
+   * loaded yet. Generated as numeric data - see {@link identityLut1D}.
    */
-  public static identityLut3D(size = 17): Texture {
+  public static identityLut3D(size = 17): DataTexture<TextureFormat.Rgba8> {
     const width = size * size;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (ctx === null) {
-      throw new Error('LutFilter.identityLut3D: 2D canvas context unavailable.');
-    }
-    const image = ctx.createImageData(width, size);
+    const data = new Uint8Array(width * size * 4);
     const max = size - 1;
+
     for (let bIndex = 0; bIndex < size; bIndex++) {
       const b = Math.round((bIndex / max) * 255);
+
       for (let g = 0; g < size; g++) {
         const gVal = Math.round((g / max) * 255);
+
         for (let r = 0; r < size; r++) {
           const rVal = Math.round((r / max) * 255);
           const x = bIndex * size + r;
           const y = g;
           const offset = (y * width + x) * 4;
-          image.data[offset] = rVal;
-          image.data[offset + 1] = gVal;
-          image.data[offset + 2] = b;
-          image.data[offset + 3] = 255;
+
+          data[offset] = rVal;
+          data[offset + 1] = gVal;
+          data[offset + 2] = b;
+          data[offset + 3] = 255;
         }
       }
     }
-    ctx.putImageData(image, 0, 0);
-    return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, generateMipMap: false });
+
+    return new DataTexture({ width, height: size, format: TextureFormat.Rgba8, data, textureOptions: LutFilter._lutSamplerOptions });
   }
 
   /**
@@ -146,14 +162,19 @@ export class LutFilter extends Filter {
    *
    * Accepts the standard LUT image conventions exported by Photoshop,
    * DaVinci Resolve, OBS, and similar tools - typically a `289×17` or
-   * `1024×32` strip for 3D LUTs, or a `256×1` strip for 1D.
+   * `1024×32` strip for 3D LUTs, or a `256×1` strip for 1D. An imported image
+   * decodes through the ordinary browser colour-image path (unlike the
+   * generated identity LUTs above, which are numeric data) - its authoring
+   * tool wrote the strip as sRGB pixels for a human to inspect, not as
+   * pre-encoded coordinate data.
    */
   public static fromImage(image: HTMLImageElement | HTMLCanvasElement): Texture {
-    return new Texture(image, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, generateMipMap: false });
+    return new Texture(image, LutFilter._lutSamplerOptions);
   }
 
   private readonly _mode: LutMode;
   private readonly _size: number;
+  private readonly _colorSpace: LutDomain;
   private readonly _shaderFilter: ShaderFilter;
   private _lut: Texture;
 
@@ -161,14 +182,18 @@ export class LutFilter extends Filter {
     super();
     this._mode = options.mode ?? '3d';
     this._size = Math.max(2, Math.floor(options.size ?? 17));
+    this._colorSpace = options.colorSpace ?? 'srgb';
 
     const is3d = this._mode === '3d';
 
     this._lut = is3d ? LutFilter.identityLut3D(this._size) : LutFilter.identityLut1D();
 
+    const domain = this._colorSpace === 'srgb' ? 1 : 0;
+
     // Insertion order matters on WebGPU: the packer lays each non-texture
-    // uniform out in a 16-byte slot, in declaration order.
-    const uniforms: Record<string, Texture | number> = is3d ? { uLutSize: this._size, uLut: this._lut } : { uLut: this._lut };
+    // uniform out in a 16-byte slot, in declaration order - matching the
+    // `Uniforms` struct field order the shader source declares.
+    const uniforms: Record<string, Texture | number> = is3d ? { uDomain: domain, uLutSize: this._size, uLut: this._lut } : { uDomain: domain, uLut: this._lut };
 
     this._shaderFilter = ShaderFilter.from(is3d ? lut3dShaderSource : lutRgb1dShaderSource, { uniforms });
   }
@@ -176,6 +201,11 @@ export class LutFilter extends Filter {
   /** The LUT mode this filter was constructed with. */
   public get mode(): LutMode {
     return this._mode;
+  }
+
+  /** The domain the LUT lookup and grading result are carried out in. Fixed at construction. */
+  public get colorSpace(): LutDomain {
+    return this._colorSpace;
   }
 
   /** The cube edge size (3D only). For 1D this returns the constructor-time size hint. */

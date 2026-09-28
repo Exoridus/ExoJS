@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 16,
+  "memberCount": 17,
   "counts": {
     "constructors": 1,
     "methods": 13,
-    "properties": 2,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -36,7 +36,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(matrix: ColorMatrixEntries): ColorMatrixFilter",
+          "signature": "new(matrix: ColorMatrixEntries, options: ColorMatrixFilterOptions): ColorMatrixFilter",
           "signatureTokens": [
             {
               "text": "new",
@@ -59,6 +59,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorMatrixFilterOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -75,6 +91,11 @@
             {
               "name": "matrix",
               "type": "ColorMatrixEntries",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ColorMatrixFilterOptions",
               "optional": false
             }
           ],
@@ -706,6 +727,27 @@
           "params": [],
           "returnType": null,
           "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ strength: 4 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+        },
+        {
+          "name": "colorSpace",
+          "signature": "colorSpace: ColorMatrixDomain",
+          "signatureTokens": [
+            {
+              "text": "colorSpace",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorMatrixDomain",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The domain matrix operates in. Fixed at construction."
         },
         {
           "name": "matrix",
