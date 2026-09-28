@@ -246,12 +246,17 @@ export interface RenderBackend {
   ): PixelReadback<PixelArray>;
 
   /**
-   * Borrow a temporary {@link RenderTexture} of exactly `width × height` from
-   * the backend's pool, allocating one if no pooled entry matches. Hand it back
-   * with {@link releaseRenderTexture} - destroying a borrowed texture instead
-   * corrupts the pool.
+   * Borrow a temporary {@link RenderTexture} of exactly `width × height` and
+   * `format` from the backend's pool, allocating one if no pooled entry
+   * matches. Hand it back with {@link releaseRenderTexture} - destroying a
+   * borrowed texture instead corrupts the pool.
+   *
+   * `format` defaults to `Rgba8`. Pass the working color
+   * format explicitly for a scratch surface that carries color through a
+   * filter, cache or compositor - the pool keys on it, so a mismatched
+   * request never aliases a differently-formatted entry.
    */
-  acquireRenderTexture(width: number, height: number): RenderTexture;
+  acquireRenderTexture(width: number, height: number, format?: ColorTextureFormat): RenderTexture;
 
   /**
    * Return a borrowed render texture for reuse. The pool is bounded in both

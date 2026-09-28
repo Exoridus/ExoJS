@@ -63,12 +63,13 @@ export class RenderTexture extends RenderTarget {
     super(width, height, false);
 
     const format = options?.format ?? TextureFormat.Rgba8;
+    const isFloatFormat = format === TextureFormat.Rgba16F || format === TextureFormat.Rgba32F;
 
     // Float targets are point-sampled by default: linear filtering of a float
-    // texture requires OES_texture_float_linear, which is not guaranteed. An
+    // texture requires OES_texture_float_linear, which is not guaranteed. Rgba8Srgb
+    // is exactly as filterable as Rgba8, so it keeps the linear default. An
     // explicit `scaleMode` in `options` still overrides this.
-    const defaults: TextureOptions =
-      format === TextureFormat.Rgba8 ? RenderTexture.defaultOptions : { ...RenderTexture.defaultOptions, scaleMode: ScaleModes.Nearest };
+    const defaults: TextureOptions = isFloatFormat ? { ...RenderTexture.defaultOptions, scaleMode: ScaleModes.Nearest } : RenderTexture.defaultOptions;
 
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
       ...defaults,
