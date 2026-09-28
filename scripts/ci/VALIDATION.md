@@ -21,7 +21,7 @@ pnpm lanes --run --only bench --output normal
 
 `--only` selects named local lanes independently of the current diff. Its result explicitly says **diagnostic subset**, not full validation. Unknown names and incompatible options fail before starting commands. After correcting a failure, the complete selected validation still has to pass. A bare `pnpm test:browser:webgpu` does not use this lane supervisor or its repository lock.
 
-The local WebGPU lane passes `--no-file-parallelism` to the existing test script. It runs the same test inventory with reduced simultaneous browser-file pressure. CI deliberately keeps its existing WebGPU concurrency until measurements on its own runner justify a change. This is resource isolation, not proof that a driver hang or test-lifecycle defect has been fixed.
+The local WebGPU lane passes `--no-file-parallelism --reporter=verbose` to the existing test script. The default reporter stalls local non-TTY runs until the lane deadline; the verbose reporter completes the same inventory. It runs the same test inventory with reduced simultaneous browser-file pressure. CI deliberately keeps its existing WebGPU concurrency until measurements on its own runner justify a change. This is resource isolation, not proof that a driver hang or test-lifecycle defect has been fixed.
 
 ## Time limits, ownership and logs
 

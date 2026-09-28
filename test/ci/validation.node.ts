@@ -300,7 +300,7 @@ void test('CLI executes only the requested lane, passes its budget, and labels t
     .trim()
     .split('\n')
     .map(line => JSON.parse(line) as string[]);
-  assert.deepEqual(calls, [['test:browser:webgpu', '--no-file-parallelism']]);
+  assert.deepEqual(calls, [['test:browser:webgpu', '--no-file-parallelism', '--reporter=verbose']]);
   const logs = join(cwd, '.workspace/logs');
   const summary = JSON.parse(
     readFileSync(

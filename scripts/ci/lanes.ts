@@ -90,8 +90,10 @@ export const LANES: readonly Lane[] = [
     id: 'webgpu',
     stage: 'test',
     when: 'browserWebgpu',
-    run: 'pnpm test:browser:webgpu --no-file-parallelism',
+    run: 'pnpm test:browser:webgpu --no-file-parallelism --reporter=verbose',
     // Local diagnostics avoid concurrent files competing for one GPU process.
+    // Under the default reporter, local non-TTY runs stall after a few dozen
+    // files and only end at the lane deadline; the verbose reporter completes.
     // CI keeps its existing, independently qualified parallel configuration.
     ciRun: 'VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json EXOJS_WEBGPU_CI_HEADED=1 ' + `xvfb-run -a pnpm test:browser:webgpu ${junit('webgpu')}`,
     browser: 'chromium',
