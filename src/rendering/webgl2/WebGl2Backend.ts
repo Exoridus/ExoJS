@@ -8,6 +8,7 @@
 import type { Application } from '#core/Application';
 import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
+import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
@@ -488,6 +489,19 @@ export class WebGl2Backend implements RenderBackend {
     const debug = renderingOptions.debug ?? false;
     this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._canvas = app.canvas;
+
+    // `webglAttributes.antialias` only ever affected the default framebuffer.
+    // Under the color pipeline the scene always draws into an offscreen working
+    // target first (see `Application._drawFrameColorManaged`), where the
+    // browser's own multisampling has no effect - measured and reported rather
+    // than silently dropped, since an offscreen multisample resolve is not
+    // implemented yet.
+    if (COLOR_PIPELINE_ENABLED && webglAttributes?.antialias === true) {
+      logger.warn(
+        'rendering.webglAttributes.antialias has no effect while the color-managed rendering pipeline is active: the scene renders into an offscreen working target, which the browser cannot multisample. Offscreen antialiasing is not implemented yet.',
+        { source: 'WebGl2Backend', once: 'webgl2-backend:offscreen-antialias-unsupported' },
+      );
+    }
 
     const gl = this._createContext(webglAttributes, alphaMode);
 
