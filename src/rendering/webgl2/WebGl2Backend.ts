@@ -420,6 +420,10 @@ export class WebGl2Backend implements RenderBackend {
   private _textureUnit = 0;
   private _vao: WebGl2VertexArrayObject | null = null;
   private _clearColor: Color = new Color();
+  /** Whether the GL clear color currently bound was resolved for an sRGB target - see {@link setClearColor}. */
+  private _clearColorSrgb = false;
+  /** Reused scratch for the linear-decoded clear color on an sRGB target - see {@link setClearColor}. */
+  private readonly _clearColorLinearScratch = new Float32Array(4);
   private _boundFramebuffer: WebGLFramebuffer | null = null;
   /**
    * The framebuffer `readPixels` attaches its source to, created on first
@@ -1956,13 +1960,41 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
+  /**
+   * A render-target write into an `Rgba8Srgb` attachment - including a clear -
+   * hardware-encodes its input, exactly as a fragment shader output does (see
+   * `colorShaderSourcesGlsl`'s `linearToSrgb`). `Color`'s RGB fields are
+   * sRGB-authored bytes, so an unconverted `gl.clearColor` call would be
+   * hardware-encoded a SECOND time - decode first so a clear and an authored
+   * draw of the same nominal color agree.
+   */
+  private _isSrgbTarget(target: RenderTarget): boolean {
+    return target instanceof RenderTexture && target.format === TextureFormat.Rgba8Srgb;
+  }
+
+  private _applyClearColor(color: Color, isSrgb: boolean): void {
+    const gl = this._context;
+
+    this._clearColor.copy(color);
+    this._clearColorSrgb = isSrgb;
+
+    if (isSrgb) {
+      const linear = this._clearColorLinearScratch;
+
+      color.writeLinear(linear);
+      gl.clearColor(linear[0]!, linear[1]!, linear[2]!, linear[3]!);
+
+      return;
+    }
+
+    gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+  }
+
   public setClearColor(color: Color): this {
-    if (!this._clearColor.equals(color)) {
-      const gl = this._context;
+    const isSrgb = this._isSrgbTarget(this._renderTarget);
 
-      this._clearColor.copy(color);
-
-      gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+    if (!this._clearColor.equals(color) || isSrgb !== this._clearColorSrgb) {
+      this._applyClearColor(color, isSrgb);
     }
 
     return this;
@@ -1973,6 +2005,15 @@ export class WebGl2Backend implements RenderBackend {
 
     if (color) {
       this.setClearColor(color);
+    } else {
+      // No new color, but the active target's sRGB-ness may have changed
+      // since the last resolved `gl.clearColor` (e.g. a `setRenderTarget`
+      // with no accompanying `clear(color)`) - re-resolve against it.
+      const isSrgb = this._isSrgbTarget(this._renderTarget);
+
+      if (isSrgb !== this._clearColorSrgb) {
+        this._applyClearColor(this._clearColor, isSrgb);
+      }
     }
 
     this._bindRenderTarget(this._renderTarget);

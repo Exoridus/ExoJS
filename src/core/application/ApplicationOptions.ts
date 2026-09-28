@@ -8,6 +8,8 @@ import type { GamepadDefinition } from '#input/gamepadDefinitions';
 import type { GamepadSlotStrategy } from '#input/InputSystem';
 import type { PlatformAdapter } from '#platform/PlatformAdapter';
 import type { RenderSurface } from '#platform/RenderSurface';
+import type { OutputTransformOptions, ResolvedOutputTransformOptions } from '#rendering/OutputTransform';
+import { resolveOutputTransformOptions } from '#rendering/OutputTransform';
 
 /**
  * How the finished frame composites against the page behind the canvas.
@@ -122,6 +124,12 @@ export interface RenderingApplicationOptions {
   webglAttributes?: Omit<WebGLContextAttributes, 'alpha' | 'premultipliedAlpha' | 'stencil'>;
   /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
   spriteRendererBatchSize?: number;
+  /**
+   * The application's output transform - exposure and the HDR-to-SDR mapping
+   * applied once, at the end of every frame, while
+   * {@link COLOR_PIPELINE_ENABLED} is active. See {@link OutputTransformOptions}.
+   */
+  color?: OutputTransformOptions;
 }
 
 export interface InputApplicationOptions {
@@ -286,7 +294,7 @@ export const defaultLoaderFetchOptions: RequestInit = {
   mode: 'cors',
   cache: 'default',
 };
-const defaultRenderingSettings: Required<RenderingApplicationOptions> = {
+const defaultRenderingSettings: Omit<Required<RenderingApplicationOptions>, 'color'> = {
   alphaMode: 'opaque',
   debug: false,
   spriteRendererBatchSize: 4096, // ~ 262kb
@@ -296,20 +304,27 @@ const defaultRenderingSettings: Required<RenderingApplicationOptions> = {
     depth: false,
   },
 };
+
+/** {@link RenderingApplicationOptions}, resolved against ExoJS's own defaults and with `color` validated. */
+export type ResolvedRenderingOptions = Omit<Required<RenderingApplicationOptions>, 'color'> & { color: ResolvedOutputTransformOptions };
+
 /**
  * Resolve public {@link RenderingApplicationOptions} against ExoJS's own
  * defaults. `webglAttributes` is merged as partial overrides on top of the
  * full default set (see {@link RenderingApplicationOptions.webglAttributes})
- * - everything else is a plain per-field fallback.
+ * - everything else is a plain per-field fallback. `color` is validated
+ * through {@link resolveOutputTransformOptions}, which throws on an
+ * out-of-range exposure or an unrecognised tone mapping.
  *
  * @internal - shared by the constructor and by tests that need to assert on
  * the resolved options without spinning up a full {@link Application}.
  */
-export const resolveRenderingOptions = (renderingOptions: RenderingApplicationOptions): Required<RenderingApplicationOptions> => ({
+export const resolveRenderingOptions = (renderingOptions: RenderingApplicationOptions): ResolvedRenderingOptions => ({
   alphaMode: renderingOptions.alphaMode ?? defaultRenderingSettings.alphaMode,
   debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
   webglAttributes: { ...defaultRenderingSettings.webglAttributes, ...renderingOptions.webglAttributes },
   spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
+  color: resolveOutputTransformOptions(renderingOptions.color),
 });
 
 export const defaultInputSettings: Required<InputApplicationOptions> = {

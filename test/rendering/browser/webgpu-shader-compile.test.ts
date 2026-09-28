@@ -48,6 +48,7 @@ import { compositorShaderSource as backdropBlendCompositorWgsl } from '#renderin
 import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
 import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/WebGpuMaskCompositor';
 import { instancedMeshShaderSource, meshShaderSource } from '#rendering/webgpu/WebGpuMeshRenderer';
+import { outputPassShaderSource } from '#rendering/webgpu/WebGpuOutputPass';
 import { scalableSpriteShaderSource } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
 import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
@@ -74,6 +75,7 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuMaskCompositor', source: maskCompositorWgsl },
   { name: 'WebGpuMeshRenderer (default)', source: meshShaderSource },
   { name: 'WebGpuMeshRenderer (instanced)', source: instancedMeshShaderSource },
+  { name: 'WebGpuOutputPass', source: outputPassShaderSource },
   // Combined exactly as `onConnect` feeds `createShaderModule`: shared struct/
   // binding declarations + both entry-point sets in one module.
   { name: 'WebGpuScalableSpriteRenderer (combined)', source: scalableSpriteShaderSource },
@@ -133,9 +135,9 @@ const compileWgsl = async (device: GPUDevice, code: string): Promise<CompileResu
 
 describe('WebGPU WGSL shader sources', () => {
   test('imports non-empty WGSL sources for every fixed createShaderModule call site', () => {
-    // 9 renderer/compositor sources + the shared custom-material vertex
+    // 10 renderer/compositor sources + the shared custom-material vertex
     // prelude; grows if a new WebGPU renderer is added.
-    expect(shaders.length).toBeGreaterThanOrEqual(10);
+    expect(shaders.length).toBeGreaterThanOrEqual(11);
 
     for (const { name, source } of shaders) {
       expect(source.length, `${name} is empty`).toBeGreaterThan(0);

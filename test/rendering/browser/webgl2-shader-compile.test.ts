@@ -48,6 +48,10 @@ const shaderModules = import.meta.glob(
     '/src/rendering/webgl2/shaders/*.{vert,frag}',
     '/src/rendering/filters/shaders/*.{vert,frag}',
     '/src/rendering/sprite/shaders/*.{vert,frag}',
+    // The output transform's own encode shader - deliberately not a glob over
+    // the whole `shaders/` directory, which also holds `color-transfer.frag`,
+    // a chunk with no `#version`/`main` of its own that cannot compile alone.
+    '/src/rendering/shaders/output.frag',
     '/packages/exojs-*/src/**/shaders/*.{vert,frag}',
   ],
   {
@@ -131,6 +135,7 @@ const needsColorHelpers: ReadonlySet<string> = new Set([
   'color-matrix.frag',
   'lut-rgb1d.frag',
   'lut-3d.frag',
+  'output.frag',
 ]);
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
@@ -225,6 +230,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'drop-shadow.frag'],
   ['default-vertex.vert', 'lut-3d.frag'],
   ['default-vertex.vert', 'lut-rgb1d.frag'],
+  ['default-vertex.vert', 'output.frag'],
   // The lighting package's shadow march runs on the same fullscreen quad: the
   // occluder mask in, one shadow row per light out.
   ['default-vertex.vert', 'shadow-march.frag'],

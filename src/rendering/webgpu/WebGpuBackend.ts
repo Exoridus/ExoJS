@@ -356,6 +356,8 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _attachmentPixelSize = { width: 0, height: 0 };
   /** Reused colour attachment + its clear value - see `createColorAttachment`. */
   private readonly _clearValue = { r: 0, g: 0, b: 0, a: 0 };
+  /** Reused scratch for the linear-decoded clear color on an `Rgba8Srgb` target - see `createColorAttachment`. */
+  private readonly _clearColorLinearScratch = new Float32Array(4);
   private readonly _colorAttachment: GPURenderPassColorAttachment = {
     view: undefined as unknown as GPUTextureView,
     clearValue: this._clearValue,
@@ -1625,10 +1627,23 @@ export class WebGpuBackend implements RenderBackend {
 
       const clearValue = this._clearValue;
 
-      clearValue.r = this._clearColor.r / 255;
-      clearValue.g = this._clearColor.g / 255;
-      clearValue.b = this._clearColor.b / 255;
-      clearValue.a = this._clearColor.a;
+      // An `Rgba8Srgb` attachment write - including a clear - hardware-encodes
+      // its input, exactly as a fragment shader output does. `Color`'s RGB
+      // fields are sRGB-authored bytes, so an unconverted clear value would be
+      // hardware-encoded a SECOND time - decode first so a clear and an
+      // authored draw of the same nominal color agree.
+      if (renderTarget instanceof RenderTexture && renderTarget.format === TextureFormat.Rgba8Srgb) {
+        this._clearColor.writeLinear(this._clearColorLinearScratch);
+        clearValue.r = this._clearColorLinearScratch[0]!;
+        clearValue.g = this._clearColorLinearScratch[1]!;
+        clearValue.b = this._clearColorLinearScratch[2]!;
+        clearValue.a = this._clearColorLinearScratch[3]!;
+      } else {
+        clearValue.r = this._clearColor.r / 255;
+        clearValue.g = this._clearColor.g / 255;
+        clearValue.b = this._clearColor.b / 255;
+        clearValue.a = this._clearColor.a;
+      }
     }
 
     const attachment = index === 0 ? this._colorAttachment : this._extraAttachment(index);

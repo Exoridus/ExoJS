@@ -44,13 +44,16 @@ import { OffscreenPlatform } from '#platform/OffscreenPlatform';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
+import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
+import { OutputTransform } from '#rendering/OutputTransform';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { type CaptureOptions, RenderingContext } from '#rendering/RenderingContext';
 import { type RenderNode } from '#rendering/RenderNode';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 
 import { Capabilities } from './Capabilities';
 import { Color } from './Color';
@@ -345,6 +348,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _framePasses: RenderPipeline | null = null;
   private _frameTexture: RenderTexture | null = null;
   private _frameRedirect: BackendTargetPass | null = null;
+  /**
+   * The output transform's linear-PMA source and the engine's dispatcher for
+   * it, alive only while {@link COLOR_PIPELINE_ENABLED} is active - see
+   * {@link _drawFrameColorManaged}.
+   */
+  private readonly _outputTransform: OutputTransform;
+  private _outputTexture: RenderTexture | null = null;
+  private _outputPassesRedirect: BackendTargetPass | null = null;
+  private readonly _transparentCanvas: boolean;
   private _cursor = 'default';
   private readonly _errors: ApplicationErrorReporter;
   /** Whether {@link onAppInitialized} has already announced this application. */
@@ -512,6 +524,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       };
 
       this._autoClear = this.options.autoClear ?? true;
+      this._transparentCanvas = this.options.rendering?.alphaMode === 'premultiplied';
+      this._outputTransform = new OutputTransform(this.options.rendering?.color);
 
       // Capture extension snapshot before constructing extension-sensitive subsystems.
       this._snapshot = buildSnapshot([...(appSettings.extensions ?? [])]);
@@ -845,7 +859,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public get frameTexture(): RenderTexture {
     if (this._frameTexture === null) {
-      this._frameTexture = new RenderTexture(1, 1);
+      // Under the color pipeline this doubles as the engine's linear working
+      // storage - see `_drawFrameColorManaged`. `COLOR_PIPELINE_ENABLED` is a
+      // module-level constant, so this never changes for a texture's lifetime.
+      this._frameTexture = new RenderTexture(1, 1, COLOR_PIPELINE_ENABLED ? { format: TextureFormat.Rgba8Srgb } : {});
       this._resizeFrameTexture();
     }
 
@@ -1423,6 +1440,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * the effect.
    */
   private _drawFrame(): void {
+    if (COLOR_PIPELINE_ENABLED) {
+      this._drawFrameColorManaged();
+
+      return;
+    }
+
     const passes = this._framePasses;
 
     if (passes === null || passes.size === 0) {
@@ -1444,6 +1467,41 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._backend.execute(this._frameRedirect.retarget(texture, texture.view, this._autoClear ? this.clearColor : null));
 
     passes.execute(this._rendering);
+  }
+
+  /**
+   * The gated counterpart of {@link _drawFrame}: the scene always renders into
+   * an engine-owned linear working target - {@link frameTexture} while
+   * {@link framePasses} holds passes, {@link _outputTexture} otherwise, reused
+   * as the pipeline's own final target so the two paths share one texture
+   * rather than each owning a screen-sized allocation.
+   *
+   * `framePasses` therefore runs with the active target already redirected to
+   * `_outputTexture`, so a `FilterPass` ending in a `target: null` blit -
+   * the documented idiom - lands there instead of on the canvas. The output
+   * transform then samples `_outputTexture` exactly once, whichever path ran,
+   * so an identical scene with and without an identity frame pass matches by
+   * construction.
+   */
+  private _drawFrameColorManaged(): void {
+    const output = this._ensureOutputTexture();
+    const passes = this._framePasses;
+    const clear = this._autoClear ? this.clearColor : null;
+
+    this._frameRedirect ??= new BackendTargetPass(() => this._drawSceneAndSystems());
+
+    if (passes === null || passes.size === 0) {
+      this._backend.execute(this._frameRedirect.retarget(output, output.view, clear));
+    } else {
+      const texture = this.frameTexture;
+
+      this._backend.execute(this._frameRedirect.retarget(texture, texture.view, clear));
+
+      this._outputPassesRedirect ??= new BackendTargetPass(() => this._framePasses!.execute(this._rendering));
+      this._backend.execute(this._outputPassesRedirect.retarget(output, output.view, Color.transparentBlack));
+    }
+
+    this._outputTransform.present(this._backend, output, this._transparentCanvas, this.clearColor);
   }
 
   /** The frame's own drawing, in the order the transition placement asks for. */
@@ -1480,15 +1538,46 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * logical units so a pass reads the coordinates the scene was drawn in.
    */
   private _resizeFrameTexture(): void {
-    const texture = this._frameTexture;
+    Application._resizeWorkingTexture(this._frameTexture, this._geometry);
+  }
 
+  /**
+   * The output transform's own working target - see {@link _drawFrameColorManaged}.
+   * Built lazily and independently of {@link framePasses}: it is needed the
+   * moment {@link COLOR_PIPELINE_ENABLED} is active, whether or not the
+   * application ever adds a frame pass.
+   */
+  private _ensureOutputTexture(): RenderTexture {
+    if (this._outputTexture === null) {
+      this._outputTexture = new RenderTexture(1, 1, { format: TextureFormat.Rgba8Srgb });
+      this._resizeOutputTexture();
+    }
+
+    return this._outputTexture;
+  }
+
+  /** Bring {@link _outputTexture} onto the current geometry - see {@link _resizeFrameTexture}. */
+  private _resizeOutputTexture(): void {
+    Application._resizeWorkingTexture(this._outputTexture, this._geometry);
+  }
+
+  /** Release the output transform's own resources - independent of {@link _releaseFramePasses}. */
+  private _releaseOutputTarget(): void {
+    this._outputTransform.destroy();
+    this._outputPassesRedirect = null;
+    this._outputTexture?.destroy();
+    this._outputTexture = null;
+  }
+
+  /** Shared resize body for a screen-sized working {@link RenderTexture} - see {@link _resizeFrameTexture}, {@link _resizeOutputTexture}. */
+  private static _resizeWorkingTexture(texture: RenderTexture | null, geometry: ApplicationSizing): void {
     if (texture === null) {
       return;
     }
 
-    const logicalWidth = Math.max(1, this._geometry.width);
-    const logicalHeight = Math.max(1, this._geometry.height);
-    const ratio = this._geometry.pixelRatio;
+    const logicalWidth = Math.max(1, geometry.width);
+    const logicalHeight = Math.max(1, geometry.height);
+    const ratio = geometry.pixelRatio;
 
     texture.setSize(Math.max(1, Math.round(logicalWidth * ratio)), Math.max(1, Math.round(logicalHeight * ratio)));
     texture.view.resize(logicalWidth, logicalHeight);
@@ -1510,6 +1599,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._backend.resize(logicalWidth, logicalHeight);
     this._rendering.resize(logicalWidth, logicalHeight);
     this._resizeFrameTexture();
+    this._resizeOutputTexture();
     this._framePasses?.resize(logicalWidth, logicalHeight);
     this.onResize.dispatch(logicalWidth, logicalHeight, this);
   }
@@ -1710,6 +1800,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this.systems.destroy();
 
+    this._releaseOutputTarget();
     this._releaseFramePasses();
     this._rendering.destroy();
     this.animations.destroy();

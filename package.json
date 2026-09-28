@@ -72,6 +72,7 @@
   "imports": {
     "#*.vert": "./src/*.vert",
     "#*.frag": "./src/*.frag",
+    "#*.wgsl": "./src/*.wgsl",
     "#*": {
       "@codexo/exojs-source": "./src/*.ts",
       "types": "./dist/esm/*.d.ts",
