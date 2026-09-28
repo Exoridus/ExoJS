@@ -441,8 +441,9 @@ describe('CI lane selection - prose outside the documentation folders', () => {
     file => {
       // The `particles-*` archetypes measure the particle package's renderers, so
       // a change confined to it alters the counters `gate:bench:structural` guards.
-      // Without this, #786's transform-feedback simulation moved `particles-lifecycle`
-      // from 1/0/1 to 6/12/10 and the gate could not have noticed.
+      // Without this, the WebGL2 particle simulation's move to transform feedback
+      // took `particles-lifecycle` from 1/0/1 to 6/12/10 and the gate could not
+      // have noticed.
       expect(decide(file).lanes.benchStructural).toBe(true);
     },
   );
