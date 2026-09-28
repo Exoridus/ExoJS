@@ -41,3 +41,20 @@ describe('DropShadowFilter bounds', () => {
     color.destroy();
   });
 });
+
+interface ShadowUniformPeek {
+  _silhouette: { uniforms: { uColor: { x: number; y: number; z: number; w: number } } };
+}
+
+describe('DropShadowFilter legacy shadow colour (colour pipeline inactive)', () => {
+  test('the shadow uniform stays straight sRGB-normalized, not linearized', () => {
+    const filter = new DropShadowFilter({ color: new Color(128, 0, 0, 0.5) });
+    const uColor = (filter as unknown as ShadowUniformPeek)._silhouette.uniforms.uColor;
+
+    expect(uColor.x).toBeCloseTo(128 / 255, 6);
+    expect(uColor.y).toBe(0);
+    expect(uColor.z).toBe(0);
+    expect(uColor.w).toBe(0.5);
+    filter.destroy();
+  });
+});

@@ -27,5 +27,8 @@ vec3 sampleLut3d(vec3 c) {
 
 void main() {
     vec4 src = texture(uTexture, vUv);
-    fragColor = vec4(sampleLut3d(src.rgb), src.a);
+    // The lookup coordinate is the straight colour, not the premultiplied
+    // sample - see lut-rgb1d.frag for why.
+    vec3 straight = src.a > 0.0 ? src.rgb / src.a : vec3(0.0);
+    fragColor = vec4(sampleLut3d(straight) * src.a, src.a);
 }

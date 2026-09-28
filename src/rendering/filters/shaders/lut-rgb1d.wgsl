@@ -5,10 +5,14 @@
 @fragment
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let src = textureSample(uTexture, uSampler, vUv);
+    // The lookup coordinate is the straight colour, not the premultiplied
+    // sample - looking a translucent pixel's darkened premultiplied RGB up
+    // directly would grade it as if it were a darker straight colour.
+    let straight = select(vec3<f32>(0.0), src.rgb / src.a, src.a > 0.0);
     let n = f32(textureDimensions(uLut).x);
-    let coord = clamp(src.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * ((n - 1.0) / n) + 0.5 / n;
+    let coord = clamp(straight, vec3<f32>(0.0), vec3<f32>(1.0)) * ((n - 1.0) / n) + 0.5 / n;
     let r = textureSample(uLut, uSampler, vec2<f32>(coord.r, 0.5)).r;
     let g = textureSample(uLut, uSampler, vec2<f32>(coord.g, 0.5)).g;
     let b = textureSample(uLut, uSampler, vec2<f32>(coord.b, 0.5)).b;
-    return vec4<f32>(r, g, b, src.a);
+    return vec4<f32>(vec3<f32>(r, g, b) * src.a, src.a);
 }
