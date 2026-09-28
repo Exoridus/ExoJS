@@ -21,6 +21,7 @@ import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import type { RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 vi.mock('#rendering/colorPipelineActivation', () => ({ COLOR_PIPELINE_ENABLED: true }));
@@ -146,7 +147,7 @@ const destroyVideo = (video: HTMLVideoElement): void => {
 };
 
 /** Renders one solid-color video and returns the center pixel, on whichever draw path the device currently resolves to. */
-const renderVideoPixel = async (ctx: SkipCtx, backend: WebGpuBackend, color: string): Promise<Uint8ClampedArray | null> => {
+const renderVideoPixel = async (ctx: SkipCtx, backend: WebGpuBackend, color: string): Promise<RgbaTuple | null> => {
   const video = await createSolidColorVideo(color);
   const root = new Container();
   const videoSprite = new Video(video);
@@ -167,48 +168,53 @@ const renderVideoPixel = async (ctx: SkipCtx, backend: WebGpuBackend, color: str
   }
 };
 
-describe('WebGPU video color pipeline - SDR input boundary parity', { timeout: 30_000 }, () => {
-  test.each([
-    ['gray', '#808080'],
-    ['color', '#3c8cd6'],
-  ])('external-texture and texture_2d fallback agree on a %s frame under the color pipeline', async (_name, color, ctx) => {
-    const backend = await setupBackend();
+const expectParity = async (ctx: SkipCtx, color: string): Promise<void> => {
+  const backend = await setupBackend();
 
-    try {
-      const device = getBackendDevice(backend);
+  try {
+    const device = getBackendDevice(backend);
 
-      const externalPixel = await renderVideoPixel(ctx, backend, color);
+    const externalPixel = await renderVideoPixel(ctx, backend, color);
 
-      if (externalPixel === null) {
-        return;
-      }
-
-      const originalImport = device.importExternalTexture;
-
-      // @ts-expect-error -- deliberately removing a required method to force the fallback branch
-      device.importExternalTexture = undefined;
-
-      const fallbackPixel = await renderVideoPixel(ctx, backend, color);
-
-      device.importExternalTexture = originalImport;
-
-      if (fallbackPixel === null) {
-        return;
-      }
-
-      // Both paths must land on the same linear-light sample: the external path's
-      // explicit srgbToLinear (gated on colorPipelineEnabled) stands in for the
-      // hardware sRGB decode the fallback's rgba8unorm-srgb view applies for free.
-      for (let channel = 0; channel < 4; channel++) {
-        expect(Math.abs(externalPixel[channel]! - fallbackPixel[channel]!)).toBeLessThanOrEqual(1);
-      }
-
-      // A video frame carries no alpha channel of its own: both paths must report
-      // it fully opaque, matching the source's premultiplied-opaque contract.
-      expect(externalPixel[3]).toBe(255);
-      expect(fallbackPixel[3]).toBe(255);
-    } finally {
-      backend.destroy();
+    if (externalPixel === null) {
+      return;
     }
+
+    const originalImport = device.importExternalTexture;
+
+    // @ts-expect-error -- deliberately removing a required method to force the fallback branch
+    device.importExternalTexture = undefined;
+
+    const fallbackPixel = await renderVideoPixel(ctx, backend, color);
+
+    device.importExternalTexture = originalImport;
+
+    if (fallbackPixel === null) {
+      return;
+    }
+
+    // Both paths must land on the same linear-light sample: the external path's
+    // explicit srgbToLinear (gated on colorPipelineEnabled) stands in for the
+    // hardware sRGB decode the fallback's rgba8unorm-srgb view applies for free.
+    for (let channel = 0; channel < 4; channel++) {
+      expect(Math.abs(externalPixel[channel]! - fallbackPixel[channel]!)).toBeLessThanOrEqual(1);
+    }
+
+    // A video frame carries no alpha channel of its own: both paths must report
+    // it fully opaque, matching the source's premultiplied-opaque contract.
+    expect(externalPixel[3]).toBe(255);
+    expect(fallbackPixel[3]).toBe(255);
+  } finally {
+    backend.destroy();
+  }
+};
+
+describe('WebGPU video color pipeline - SDR input boundary parity', { timeout: 30_000 }, () => {
+  test('external-texture and texture_2d fallback agree on a gray frame under the color pipeline', async ctx => {
+    await expectParity(ctx, '#808080');
+  });
+
+  test('external-texture and texture_2d fallback agree on a color frame under the color pipeline', async ctx => {
+    await expectParity(ctx, '#3c8cd6');
   });
 });
