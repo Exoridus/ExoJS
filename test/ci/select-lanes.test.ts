@@ -436,6 +436,24 @@ describe('CI lane selection - prose outside the documentation folders', () => {
     expect(decide('packages/create-exo-app/templates/top-down/src/main.ts').lanes.createExoAppVerify).toBe(true);
   });
 
+  it.each(['packages/exojs-particles/src/ParticleSystem.ts', 'packages/exojs-particles/src/gpu/ParticleGlState.ts', 'packages/exojs-particles/package.json'])(
+    'a particles-only change runs the structural gate: %s',
+    file => {
+      // The `particles-*` archetypes measure the particle package's renderers, so
+      // a change confined to it alters the counters `gate:bench:structural` guards.
+      // Without this, the WebGL2 particle simulation's move to transform feedback
+      // took `particles-lifecycle` from 1/0/1 to 6/12/10 and the gate could not
+      // have noticed.
+      expect(decide(file).lanes.benchStructural).toBe(true);
+    },
+  );
+
+  it('prose in the particle package is still prose', () => {
+    // The gate follows the code that decides the counters, and the rule that
+    // gates code on its own is unchanged.
+    expect(decide('packages/exojs-particles/README.md').lanes.benchStructural).toBe(false);
+  });
+
   it('a licence file is prose too', () => {
     expect(decide('packages/exojs-bench/LICENSE').areas.engine).toBe(false);
     expect(decide('LICENSE').areas.engine).toBe(false);

@@ -247,6 +247,14 @@ const isBenchStructuralPath = (file: string): boolean => {
   if (file.startsWith('packages/exojs-bench/test/')) return true;
   if (file.startsWith('packages/exojs-bench/baselines/')) return true;
   if (file === 'packages/exojs-bench/package.json') return true;
+  // The particle package owns the renderers the `particles-*` archetypes
+  // measure. Without it here, a particles-only change alters exactly the
+  // counters this gate guards and never runs the gate that would notice: the
+  // WebGL2 particle simulation moved to a transform-feedback one, the
+  // `particles-lifecycle` cell moved from 1/0/1 to 6/12/10, and the gate stayed
+  // green on the merge because nothing in that PR selected this lane.
+  if (file.startsWith('packages/exojs-particles/src/')) return true;
+  if (file === 'packages/exojs-particles/package.json') return true;
   if (file.startsWith('.github/workflows/')) return true;
 
   return false;
