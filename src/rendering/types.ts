@@ -8,10 +8,24 @@
  * mode requires the compositor path.
  */
 export enum BlendModes {
+  /** Source-over: `Cs + Cd*(1-as)`; alpha `as + ad*(1-as)`. */
   Normal = 0,
+  /** `Cs + Cd`, unclamped - preserve for emissive/glow accumulation. Alpha is ordinary source-over coverage, not `as + ad`. */
   Additive = 1,
+  /**
+   * `Cd*(1-Cs)` - an attenuation compatibility mode, not arithmetic
+   * subtraction, despite the name. Destination alpha is preserved exactly:
+   * this mode has no coverage of its own to composite over the destination
+   * with.
+   */
   Subtract = 2,
+  /**
+   * `Cs*Cd + Cd*(1-as)` with source-over alpha. Exact only against an opaque
+   * destination; a translucent destination needs the backdrop-aware
+   * compositor's full W3C formula (see {@link isAdvancedBlendMode}).
+   */
   Multiply = 3,
+  /** `Cs + Cd*(1-Cs)` with source-over alpha. */
   Screen = 4,
   /** `min(src, dst)` per channel - coverage-correct via backdrop-aware shader. */
   Darken = 5,

@@ -24,8 +24,8 @@ import type { Texture } from '#rendering/texture/Texture';
 import { BackendTargetPass } from './BackendTargetPass';
 import type { Drawable } from './Drawable';
 import type { RenderBackend } from './RenderBackend';
-import type { TargetResolution } from './types';
-import { BlendModes, isAdvancedBlendMode } from './types';
+import type { ColorTextureFormat, TargetResolution } from './types';
+import { BlendModes, isAdvancedBlendMode, TextureFormat } from './types';
 import { View } from './View';
 
 interface DestroyableFilter {
@@ -968,8 +968,8 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /** @internal */
-  public _renderPlanEnsureCacheTexture(width: number, height: number): RenderTexture {
-    return this._ensureCacheTexture(width, height);
+  public _renderPlanEnsureCacheTexture(width: number, height: number, format: ColorTextureFormat = TextureFormat.Rgba8): RenderTexture {
+    return this._ensureCacheTexture(width, height, format);
   }
 
   /** @internal */
@@ -1129,9 +1129,15 @@ export abstract class RenderNode extends SceneNode {
     drawDrawableDirect(sprite, backend);
   }
 
-  private _ensureCacheTexture(width: number, height: number): RenderTexture {
-    if (this._cacheTexture === null) {
-      this._cacheTexture = new RenderTexture(width, height);
+  private _ensureCacheTexture(width: number, height: number, format: ColorTextureFormat): RenderTexture {
+    // Format is immutable on a RenderTexture (see RenderTexture.format), so a
+    // format change - the scene's working colour format changed since this
+    // node was last cached - has to replace the texture outright rather than
+    // resize it in place; reusing the old one would keep stale storage the
+    // new content is never actually written into as that format.
+    if (this._cacheTexture?.format !== format) {
+      this._cacheTexture?.destroy();
+      this._cacheTexture = new RenderTexture(width, height, { format });
     } else if (this._cacheTexture.width !== width || this._cacheTexture.height !== height) {
       this._cacheTexture.setSize(width, height);
     }

@@ -1390,8 +1390,8 @@ export class WebGpuBackend implements RenderBackend {
     });
   }
 
-  public acquireRenderTexture(width: number, height: number): RenderTexture {
-    return this._renderTexturePool.acquire(width, height);
+  public acquireRenderTexture(width: number, height: number, format?: ColorTextureFormat): RenderTexture {
+    return this._renderTexturePool.acquire(width, height, format);
   }
 
   public releaseRenderTexture(texture: RenderTexture): this {

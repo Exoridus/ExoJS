@@ -1416,8 +1416,8 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
-  public acquireRenderTexture(width: number, height: number): RenderTexture {
-    return this._renderTexturePool.acquire(width, height);
+  public acquireRenderTexture(width: number, height: number, format?: ColorTextureFormat): RenderTexture {
+    return this._renderTexturePool.acquire(width, height, format);
   }
 
   public releaseRenderTexture(texture: RenderTexture): this {
@@ -1807,41 +1807,63 @@ export class WebGl2Backend implements RenderBackend {
    */
   private _applyBlendMode(blendMode: BlendModes | null, extension: OES_draw_buffers_indexed | null, attachment: number): void {
     const gl = this._context;
-    let src: GLenum;
-    let dst: GLenum;
+    let srcRgb: GLenum;
+    let dstRgb: GLenum;
+    let srcAlpha: GLenum;
+    let dstAlpha: GLenum;
 
+    // RGB and alpha need independent factors - fixed-function source-over
+    // coverage (as + ad*(1-as)) is not the same expression as most of these
+    // modes' RGB equations - so every case is `blendFuncSeparate`, never the
+    // single-pair `blendFunc` that applies one factor pair to both.
     switch (blendMode) {
       case BlendModes.Additive:
-        src = gl.ONE;
-        dst = gl.ONE;
+        srcRgb = gl.ONE;
+        dstRgb = gl.ONE;
+        srcAlpha = gl.ONE;
+        dstAlpha = gl.ONE_MINUS_SRC_ALPHA;
         break;
       case BlendModes.Subtract:
-        src = gl.ZERO;
-        dst = gl.ONE_MINUS_SRC_COLOR;
+        srcRgb = gl.ZERO;
+        dstRgb = gl.ONE_MINUS_SRC_COLOR;
+        // Destination alpha is preserved exactly: this mode only attenuates
+        // RGB (Cd*(1-Cs), not arithmetic subtraction), and has no coverage of
+        // its own to composite over the destination with.
+        srcAlpha = gl.ZERO;
+        dstAlpha = gl.ONE;
         break;
       case BlendModes.Multiply:
-        src = gl.DST_COLOR;
-        dst = gl.ONE_MINUS_SRC_ALPHA;
+        srcRgb = gl.DST_COLOR;
+        dstRgb = gl.ONE_MINUS_SRC_ALPHA;
+        // Source-over coverage. This RGB shortcut (Cs*Cd + Cd*(1-as)) is exact
+        // only against an opaque destination; a translucent destination needs
+        // the backdrop-aware compositor's full W3C formula.
+        srcAlpha = gl.ONE;
+        dstAlpha = gl.ONE_MINUS_SRC_ALPHA;
         break;
       case BlendModes.Screen:
-        src = gl.ONE;
-        dst = gl.ONE_MINUS_SRC_COLOR;
+        srcRgb = gl.ONE;
+        dstRgb = gl.ONE_MINUS_SRC_COLOR;
+        srcAlpha = gl.ONE;
+        dstAlpha = gl.ONE_MINUS_SRC_ALPHA;
         break;
       default:
-        src = gl.ONE;
-        dst = gl.ONE_MINUS_SRC_ALPHA;
+        srcRgb = gl.ONE;
+        dstRgb = gl.ONE_MINUS_SRC_ALPHA;
+        srcAlpha = gl.ONE;
+        dstAlpha = gl.ONE_MINUS_SRC_ALPHA;
         break;
     }
 
     if (extension === null) {
       gl.blendEquation(gl.FUNC_ADD);
-      gl.blendFunc(src, dst);
+      gl.blendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
 
       return;
     }
 
     extension.blendEquationSeparateiOES(attachment, gl.FUNC_ADD, gl.FUNC_ADD);
-    extension.blendFuncSeparateiOES(attachment, src, dst, src, dst);
+    extension.blendFuncSeparateiOES(attachment, srcRgb, dstRgb, srcAlpha, dstAlpha);
   }
 
   private _setTextureUnit(unit: number): void {

@@ -9,6 +9,7 @@ import { createRenderStats, type RenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { ColorTextureFormat } from '#rendering/types';
 
 import { createPixelReadbackDouble } from './pixel-readback-double';
 
@@ -138,8 +139,8 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     ) => {
       return createPixelReadbackDouble(width, height, slots, dataType);
     }) as RenderBackend['createPixelReadback'],
-    acquireRenderTexture(width: number, height: number) {
-      return new RenderTexture(width, height);
+    acquireRenderTexture(width: number, height: number, format?: ColorTextureFormat) {
+      return new RenderTexture(width, height, format === undefined ? {} : { format });
     },
     releaseRenderTexture() {
       return this;

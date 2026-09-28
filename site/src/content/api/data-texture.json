@@ -516,7 +516,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Change the caller-selected interpretation where the active payload permits it."
+          "description": "Numerical data is never colour-managed: 'srgb' would imply a hardware decode of raw samples, silently corrupting them."
         },
         {
           "name": "setCompressed",

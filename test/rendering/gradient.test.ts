@@ -32,7 +32,7 @@ describe('Gradient toTexture()', () => {
     expect(texture.buffer.length).toBe(8);
   });
 
-  test('rasterizes linear gradients to rgba8', () => {
+  test('rasterizes linear gradients to rgba8 as linear, premultiplied samples', () => {
     const gradient = new LinearGradient(
       [
         { offset: 0, color: Color.red },
@@ -44,13 +44,18 @@ describe('Gradient toTexture()', () => {
 
     const texture = gradient.toTexture(4, 1);
 
+    // Endpoints are unaffected by the sRGB transfer function (0 and 1 are fixed points).
     expect(readPixel8(texture.buffer, 0)).toEqual([255, 0, 0, 255]);
     expect(readPixel8(texture.buffer, 3)).toEqual([0, 0, 255, 255]);
 
+    // Interpolation happens in sRGB, then the result is converted to linear light:
+    // a straight sRGB half-mix would read ~[170, 0, 85], noticeably brighter.
     const mid = readPixel8(texture.buffer, 1);
 
-    expect(mid[0]).toBeGreaterThan(150);
-    expect(mid[2]).toBeGreaterThan(70);
+    expect(mid[0]).toBeGreaterThan(90);
+    expect(mid[0]).toBeLessThan(115);
+    expect(mid[2]).toBeGreaterThan(15);
+    expect(mid[2]).toBeLessThan(30);
   });
 
   test('rasterizes radial gradients to rgba8', () => {
