@@ -22,7 +22,11 @@
  * asks for association - so a source carrying both is a resolution bug, not a
  * redundant pair of steps.
  *
- * @internal - not part of the public package surface.
+ * The composed sources and the splice helper are re-exported from
+ * `@codexo/exojs/renderer-sdk` for a package outside Core (a particle, tilemap
+ * or lighting renderer) that authors its own colour and needs the same
+ * contract; `resolveTransformTextureGlsl`-style internal machinery stays out
+ * of that surface.
  */
 
 import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
@@ -48,7 +52,6 @@ import colorShaderSourcesWgslModule from './shaders/color-transfer.wgsl';
  * the fragment stage. Helpers are functions, so a stage only needs the ones it
  * calls; composing the whole source keeps every stage's colour contract
  * identical.
- * @internal
  */
 export const colorShaderSourcesWgsl = `const colorPipelineEnabled: bool = ${String(COLOR_PIPELINE_ENABLED)};
 ${colorShaderSourcesWgslModule}`;
@@ -59,7 +62,6 @@ ${colorShaderSourcesWgslModule}`;
  *
  * A chunk rather than a stage: it carries no `#version` and no `main`, because
  * the shader it is spliced into owns both.
- * @internal
  */
 export const colorShaderSourcesGlsl = `const bool colorPipelineEnabled = ${String(COLOR_PIPELINE_ENABLED)};
 ${colorShaderSourcesGlslModule}`;
@@ -72,7 +74,6 @@ ${colorShaderSourcesGlslModule}`;
  *
  * A GLSL ES 3.00 unit starts with its own `#version` directive, which must be
  * the first token in the unit, so the prologue cannot simply be prepended.
- * @internal
  */
 export const spliceGlslPrologue = (source: string, prologue: string): string => {
   const lines = source.split('\n');

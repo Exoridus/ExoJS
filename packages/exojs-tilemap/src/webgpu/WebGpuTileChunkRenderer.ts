@@ -13,6 +13,7 @@ import { isSampleableTexture } from '@codexo/exojs/renderer-sdk';
 import {
   AbstractWebGpuRenderer,
   type BlendModes,
+  colorShaderSourcesWgsl,
   DataTexture,
   fillShaderSource,
   getWebGpuBlendState,
@@ -37,7 +38,7 @@ const initialBatchCapacity = 256;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
-const tileShaderSource = fillShaderSource(tileShaderTemplate, { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT });
+const tileShaderSource = `${colorShaderSourcesWgsl}${fillShaderSource(tileShaderTemplate, { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT })}`;
 
 /**
  * Instanced WebGPU renderer for {@link TileChunkNode}, the parity counterpart of

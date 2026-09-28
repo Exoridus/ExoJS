@@ -14,6 +14,7 @@
 export { defineRendererBinding } from '#extensions/defineRendererBinding';
 export { packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 export { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
+export { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 export { Drawable } from '#rendering/Drawable';
 export type { MaterialKey } from '#rendering/material/MaterialKey';
 export type { RenderPassCoordinator, RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordinator';
