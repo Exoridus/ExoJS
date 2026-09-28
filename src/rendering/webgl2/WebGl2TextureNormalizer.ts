@@ -179,6 +179,7 @@ export class WebGl2TextureNormalizer {
     const previousArray = gl.getParameter(gl.VERTEX_ARRAY_BINDING) as WebGLVertexArrayObject | null;
     const previousBuffer = gl.getParameter(gl.ARRAY_BUFFER_BINDING) as WebGLBuffer | null;
     const previousUnit = gl.getParameter(gl.ACTIVE_TEXTURE);
+    const previousBinding = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
 
     try {
       gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
@@ -200,13 +201,8 @@ export class WebGl2TextureNormalizer {
       gl.uniform2f(this._levelScaleLocation, levelScaleScratch[0], levelScaleScratch[1]);
 
       gl.drawArrays(gl.TRIANGLES, 0, quadVertexCount);
-
-      // Leave the unit as the pass found it: the staging texture is scratch, and
-      // a stale binding on a unit the backend believes it owns is a feedback
-      // loop waiting for the frame that samples it.
-      gl.bindTexture(gl.TEXTURE_2D, null);
     } finally {
-      this._restore(previousFramebuffer, previousViewport, previousProgram, previousArray, previousBuffer, previousUnit);
+      this._restore(previousFramebuffer, previousViewport, previousProgram, previousArray, previousBuffer, previousUnit, previousBinding);
     }
   }
 
@@ -216,10 +212,20 @@ export class WebGl2TextureNormalizer {
    *
    * The attachment is detached while the pass's OWN framebuffer is still bound -
    * it lives on that framebuffer, not on whatever was bound before - and only
-   * then is the previous framebuffer restored. Each saved value is re-applied
-   * only when the query answered with the shape the call needs, so a context that
-   * does not track the state cannot turn a restore into a call with `null` where
-   * an object belongs, or a viewport write out of a shorter array.
+   * then is the previous framebuffer restored.
+   *
+   * The borrowed unit's texture binding is restored too, and it is the one
+   * omission that is not merely a cache inconsistency. The staging texture
+   * overwrote the destination on that unit, and the upload path applies its
+   * sampler parameters AFTER this pass returns: with nothing bound there,
+   * `gl.texParameteri` is an `INVALID_OPERATION` that silently leaves the texture
+   * on GL's default mip-aware `MIN_FILTER` with `MAX_LEVEL` still at 1000, and a
+   * texture with one level is then mip-INCOMPLETE and samples as black.
+   *
+   * Each saved value is re-applied only when the query answered with the shape the
+   * call needs, so a context that does not track the state cannot turn a restore
+   * into a call with `null` where an object belongs, or a viewport write out of a
+   * shorter array.
    */
   private _restore(
     framebuffer: WebGLFramebuffer | null,
@@ -228,6 +234,7 @@ export class WebGl2TextureNormalizer {
     array: WebGLVertexArrayObject | null,
     buffer: WebGLBuffer | null,
     unit: unknown,
+    binding: WebGLTexture | null,
   ): void {
     const gl = this._gl;
 
@@ -247,6 +254,10 @@ export class WebGl2TextureNormalizer {
 
     if (typeof unit === 'number') {
       gl.activeTexture(unit);
+    }
+
+    if (binding !== null) {
+      gl.bindTexture(gl.TEXTURE_2D, binding);
     }
 
     this._host.restoreAfterColorNormalization();

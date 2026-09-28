@@ -416,9 +416,12 @@ describe('WebGL2 managed-colour alpha normalization', () => {
     expect(passViewports()).toEqual([[0, 0, 1, 1]]);
     expect(harness.gl.getParameter(harness.gl.BLEND)).toBe(true);
     expect(harness.gl.getParameter(harness.gl.ACTIVE_TEXTURE)).toBe(harness.gl.TEXTURE0);
-    // The attachment is dropped from the pass's own framebuffer, not the
-    // restored one, so no framebuffer is left holding a borrowed level.
-    expect(harness.events.at(-1)).toBe('detach');
+    // The borrowed unit's destination is put back LAST: the upload path applies
+    // its sampler parameters after this pass returns, and with nothing bound
+    // there those calls are INVALID_OPERATION and silently leave the texture
+    // mip-incomplete.
+    expect(harness.events.at(-1)).toBe('bind@0');
+    expect(harness.events.at(-2)).toBe('detach');
 
     texture.destroy();
   });
