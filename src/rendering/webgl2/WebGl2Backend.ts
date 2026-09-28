@@ -1316,6 +1316,10 @@ export class WebGl2Backend implements RenderBackend {
    * @internal
    */
   public _rebindActiveTarget(): void {
+    // The compositor issued raw gl.bindFramebuffer calls for the blit, so the
+    // cached binding no longer reflects GL state; force `_bindRenderTarget` to
+    // reissue the bind instead of skipping it as a no-op.
+    this._boundFramebuffer = null;
     this._bindRenderTarget(this._renderTarget);
   }
 
