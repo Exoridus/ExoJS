@@ -45,7 +45,10 @@ export interface LitMaterialOptions {
    *
    * It is added to the light term rather than to the colour, so a transparent
    * pixel stays transparent and emission scales the albedo the way a light
-   * does: a black pixel emits nothing however high this is. Defaults to `0`.
+   * does: a black pixel emits nothing however high this is. The addition
+   * happens in the same linear-light space the light/ambient term does, so
+   * `1` is comparable to what a nearby light of intensity `1` contributes.
+   * Defaults to `0`.
    */
   readonly emissive?: number;
   /** Blend mode for sprites drawn with this material. */

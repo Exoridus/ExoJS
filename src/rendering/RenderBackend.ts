@@ -50,6 +50,17 @@ export interface ColorFormatCapabilities {
  */
 export interface RenderBackend {
   readonly backendType: RenderBackendType;
+  /**
+   * Whether the color-managed linear-light rendering pipeline is active.
+   *
+   * An extension renderer that authors its own colour (a light, a particle
+   * tint, a tile tint) reads this to choose between the legacy authoring-byte
+   * path and the linear-light one, exactly as the engine's own sprite/mesh/
+   * text draw stages do - so a package outside Core stays in step with the
+   * activation state without depending on Core's internal module layout.
+   * @advanced
+   */
+  readonly colorPipelineEnabled: boolean;
   readonly rendererRegistry: RendererRegistry<RenderBackend>;
   readonly view: View;
   readonly renderTarget: RenderTarget;

@@ -15,6 +15,7 @@ import { Vector } from '#math/Vector';
 import { getWebGl2Context, type RenderSurface } from '#platform/RenderSurface';
 import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
+import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
@@ -296,6 +297,7 @@ const nativeRowCopyThreshold = 48;
 
 export class WebGl2Backend implements RenderBackend {
   public readonly backendType = RenderBackendType.WebGl2;
+  public readonly colorPipelineEnabled = COLOR_PIPELINE_ENABLED;
   public readonly rendererRegistry: RendererRegistry<WebGl2Backend> = new RendererRegistry<WebGl2Backend>();
   public readonly onContextLost = new Signal();
   public readonly onContextRestored = new Signal();

@@ -1,4 +1,5 @@
 import { type Color, DataTexture, type Filter, FilterPass, TextureFormat } from '@codexo/exojs';
+import { COLOR_PIPELINE_ENABLED } from '@codexo/exojs/renderer-sdk';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { LightingHost } from '../LightingHost';
@@ -13,6 +14,27 @@ const rows = 3;
 const channels = 4;
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 const noCone = -1;
+
+/**
+ * Write `color`'s RGB into `buffer` at `offset..offset+2`, decoded to linear
+ * light when the colour pipeline is active and left as authoring bytes
+ * normalized to 0..1 otherwise. Writes `offset + 3` too when decoding (the
+ * colour's own alpha) - every caller here packs a numeric field (a flag, a
+ * height) into that slot instead, and overwrites it immediately after.
+ */
+const writeLightColorRgb = (buffer: Float32Array, offset: number, color: Color): void => {
+  // COLOR_PIPELINE_ENABLED is `false` today, which is the only reason the
+  // linter can see this branch as dead - it flips exactly once, engine-wide,
+  // and this function has to hold both sides of that flip.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (COLOR_PIPELINE_ENABLED) {
+    color.writeLinear(buffer, offset);
+  } else {
+    buffer[offset] = color.r / 255;
+    buffer[offset + 1] = color.g / 255;
+    buffer[offset + 2] = color.b / 255;
+  }
+};
 
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
@@ -130,9 +152,7 @@ export class ForwardBackend implements LightingBackend {
     buffer[1] = 0;
     buffer[2] = 0;
     buffer[3] = 0;
-    buffer[secondRow] = ambient.r / 255;
-    buffer[secondRow + 1] = ambient.g / 255;
-    buffer[secondRow + 2] = ambient.b / 255;
+    writeLightColorRgb(buffer, secondRow, ambient);
     buffer[secondRow + 3] = 0;
 
     let written = 0;
@@ -154,9 +174,7 @@ export class ForwardBackend implements LightingBackend {
       buffer[offset + 2] = lightRadius(light);
       buffer[offset + 3] = light.intensity;
 
-      buffer[secondRow + offset] = light.color.r / 255;
-      buffer[secondRow + offset + 1] = light.color.g / 255;
-      buffer[secondRow + offset + 2] = light.color.b / 255;
+      writeLightColorRgb(buffer, secondRow + offset, light.color);
       buffer[secondRow + offset + 3] = lightHeight(light);
 
       writeCone(buffer, thirdRow + offset, light);

@@ -30,6 +30,13 @@ export class NormalMap implements NormalSource {
   public readonly convention: NormalConvention;
 
   public constructor(texture: Texture, options: NormalMapOptions = {}) {
+    if (texture.colorSpace === 'srgb') {
+      throw new Error(
+        'NormalMap: the texture requests colorSpace "srgb", but a normal map\'s XYZ channels are numeric data, not colour - ' +
+          'sampling it through an sRGB view would decode the normal itself. Construct the Texture without an explicit colorSpace, or with "none".',
+      );
+    }
+
     this.texture = texture;
     this.convention = options.convention ?? 'opengl';
   }

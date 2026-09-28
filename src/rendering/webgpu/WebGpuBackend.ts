@@ -12,6 +12,7 @@ import { Vector } from '#math/Vector';
 import { get2dContext, getWebGpuContext, type RenderSurface } from '#platform/RenderSurface';
 import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
+import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
@@ -268,6 +269,7 @@ const invalidateSharedAdapter = (gpu: GPU): void => {
  */
 export class WebGpuBackend implements RenderBackend {
   public readonly backendType = RenderBackendType.WebGpu;
+  public readonly colorPipelineEnabled = COLOR_PIPELINE_ENABLED;
   public readonly rendererRegistry: RendererRegistry<WebGpuBackend> = new RendererRegistry<WebGpuBackend>();
   public readonly onDeviceLost = new Signal<[GPUDeviceLostInfo]>();
   public readonly onDeviceRestored = new Signal();
