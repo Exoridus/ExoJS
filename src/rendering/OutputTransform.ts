@@ -2,6 +2,7 @@ import type { Color } from '#core/Color';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { TextureFormat } from '#rendering/types';
 import { WebGl2OutputPass } from '#rendering/webgl2/WebGl2OutputPass';
 import { WebGpuOutputPass } from '#rendering/webgpu/WebGpuOutputPass';
 
@@ -9,11 +10,27 @@ import { WebGpuOutputPass } from '#rendering/webgpu/WebGpuOutputPass';
 export type OutputToneMapping = 'none' | 'reinhard';
 
 /**
+ * The internal storage the scene renders into before the output transform.
+ * `'sdr'` (the default) is the existing eight-bit `Rgba8Srgb` working target.
+ * `'hdr'` allocates an `Rgba16F` working target instead, so a value above
+ * display white survives every intermediate pass instead of clamping before
+ * the tone map ever sees it - it does not change the output transform's own
+ * math, which already operates on unbounded linear input.
+ */
+export type WorkingColorFormat = 'sdr' | 'hdr';
+
+/**
  * The application's output transform - the mandatory step every frame passes
  * through exactly once, whatever else ran before it. See
  * {@link RenderingApplicationOptions.color}.
  */
 export interface OutputTransformOptions {
+  /**
+   * Internal working storage for the scene and its frame passes. Default `'sdr'`.
+   * Requesting `'hdr'` on a backend without `Rgba16F` render-target support
+   * throws during initialization, before the first frame draws.
+   */
+  workingFormat?: WorkingColorFormat;
   /**
    * Exposure applied before the tone-map and sRGB encode, in stops - the
    * working color is scaled by `2 ** exposure`. Must be finite and within
@@ -30,6 +47,7 @@ export interface OutputTransformOptions {
 
 /** {@link OutputTransformOptions}, fully resolved and validated. @internal */
 export interface ResolvedOutputTransformOptions {
+  readonly workingFormat: WorkingColorFormat;
   readonly exposure: number;
   readonly toneMapping: OutputToneMapping;
 }
@@ -40,10 +58,18 @@ const maxExposureStops = 32;
 /**
  * Resolve and validate {@link OutputTransformOptions} against their defaults.
  * Throws on a non-finite/out-of-range exposure or an unrecognised tone
- * mapping.
+ * mapping or working format. Capability (whether the backend actually
+ * supports `Rgba16F` rendering) is checked separately once a backend exists -
+ * see `Application`'s post-initialize validation.
  * @internal
  */
 export const resolveOutputTransformOptions = (options: OutputTransformOptions = {}): ResolvedOutputTransformOptions => {
+  const workingFormat = options.workingFormat ?? 'sdr';
+
+  if (workingFormat !== 'sdr' && workingFormat !== 'hdr') {
+    throw new Error(`rendering.color.workingFormat must be 'sdr' or 'hdr', got '${workingFormat as string}'.`);
+  }
+
   const exposure = options.exposure ?? 0;
 
   if (!Number.isFinite(exposure) || exposure < minExposureStops || exposure > maxExposureStops) {
@@ -56,7 +82,23 @@ export const resolveOutputTransformOptions = (options: OutputTransformOptions = 
     throw new Error(`rendering.color.toneMapping must be 'none' or 'reinhard', got '${toneMapping as string}'.`);
   }
 
-  return { exposure, toneMapping };
+  return { workingFormat, exposure, toneMapping };
+};
+
+/** The color-managed working target's storage format for a resolved `workingFormat`. @internal */
+export const workingColorTextureFormat = (workingFormat: WorkingColorFormat): TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F =>
+  workingFormat === 'hdr' ? TextureFormat.Rgba16F : TextureFormat.Rgba8Srgb;
+
+/**
+ * Fail fast on an `'hdr'` working format the given backend cannot actually
+ * render into, rather than falling back to SDR storage or failing later
+ * inside the first frame's draw. A no-op under `'sdr'`.
+ * @internal
+ */
+export const validateWorkingColorFormatSupport = (backend: RenderBackend, workingFormat: WorkingColorFormat): void => {
+  if (workingFormat === 'hdr' && !backend.supportsColorFormat(TextureFormat.Rgba16F)) {
+    throw new Error("rendering.color.workingFormat: 'hdr' requires Rgba16F render-target support, which this backend does not have.");
+  }
 };
 
 /** A linear-light RGBA sample, premultiplied by alpha. */
@@ -144,9 +186,14 @@ export class OutputTransform {
     this._options = resolveOutputTransformOptions(options);
   }
 
-  /** Replace the resolved options, validating them the same way the constructor does. */
+  /**
+   * Replace the resolved exposure/tone-mapping, validating them the same way
+   * the constructor does. `workingFormat` is fixed at construction - the
+   * working target's own allocation already happened by the time this runs,
+   * so a later change here would silently stop matching the real storage.
+   */
   public setOptions(options: OutputTransformOptions): void {
-    this._options = resolveOutputTransformOptions(options);
+    this._options = resolveOutputTransformOptions({ ...options, workingFormat: this._options.workingFormat });
   }
 
   /**

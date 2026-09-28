@@ -8,9 +8,17 @@ const reinhard = resolveOutputTransformOptions({ toneMapping: 'reinhard' });
 const black = { r: 0, g: 0, b: 0, a: 1 };
 
 describe('resolveOutputTransformOptions', () => {
-  test('defaults to zero exposure and no tone mapping', () => {
-    expect(resolveOutputTransformOptions()).toEqual({ exposure: 0, toneMapping: 'none' });
-    expect(resolveOutputTransformOptions({})).toEqual({ exposure: 0, toneMapping: 'none' });
+  test('defaults to zero exposure, no tone mapping and an SDR working format', () => {
+    expect(resolveOutputTransformOptions()).toEqual({ workingFormat: 'sdr', exposure: 0, toneMapping: 'none' });
+    expect(resolveOutputTransformOptions({})).toEqual({ workingFormat: 'sdr', exposure: 0, toneMapping: 'none' });
+  });
+
+  test('rejects an unrecognised working format', () => {
+    expect(() => resolveOutputTransformOptions({ workingFormat: 'linear' as never })).toThrow(/workingFormat/);
+  });
+
+  test('accepts an explicit hdr working format', () => {
+    expect(resolveOutputTransformOptions({ workingFormat: 'hdr' }).workingFormat).toBe('hdr');
   });
 
   test('accepts exposure at the [-32, 32] boundary', () => {

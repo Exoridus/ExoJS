@@ -46,14 +46,14 @@ import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
-import { OutputTransform } from '#rendering/OutputTransform';
+import { OutputTransform, validateWorkingColorFormatSupport, workingColorTextureFormat } from '#rendering/OutputTransform';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { type CaptureOptions, RenderingContext } from '#rendering/RenderingContext';
 import { type RenderNode } from '#rendering/RenderNode';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { TextureFormat } from '#rendering/types';
+import type { TextureFormat } from '#rendering/types';
 
 import { Capabilities } from './Capabilities';
 import { Color } from './Color';
@@ -860,13 +860,24 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public get frameTexture(): RenderTexture {
     if (this._frameTexture === null) {
       // Under the color pipeline this doubles as the engine's linear working
-      // storage - see `_drawFrameColorManaged`. `COLOR_PIPELINE_ENABLED` is a
-      // module-level constant, so this never changes for a texture's lifetime.
-      this._frameTexture = new RenderTexture(1, 1, COLOR_PIPELINE_ENABLED ? { format: TextureFormat.Rgba8Srgb } : {});
+      // storage - see `_drawFrameColorManaged`. `COLOR_PIPELINE_ENABLED` and the
+      // resolved `workingFormat` are both fixed for the application's life, so
+      // this never changes for a texture's lifetime.
+      this._frameTexture = new RenderTexture(1, 1, COLOR_PIPELINE_ENABLED ? { format: this._workingColorFormat() } : {});
       this._resizeFrameTexture();
     }
 
     return this._frameTexture;
+  }
+
+  /**
+   * The color-managed working target's storage format: `Rgba16F` when
+   * `rendering.color.workingFormat` asked for `'hdr'` (validated against the
+   * backend's actual capability in {@link initializeBackend}), `Rgba8Srgb`
+   * otherwise.
+   */
+  private _workingColorFormat(): TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F {
+    return workingColorTextureFormat(this.options.rendering?.color?.workingFormat ?? 'sdr');
   }
 
   /**
@@ -1549,7 +1560,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private _ensureOutputTexture(): RenderTexture {
     if (this._outputTexture === null) {
-      this._outputTexture = new RenderTexture(1, 1, { format: TextureFormat.Rgba8Srgb });
+      this._outputTexture = new RenderTexture(1, 1, { format: this._workingColorFormat() });
       this._resizeOutputTexture();
     }
 
@@ -1904,6 +1915,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     try {
       await this._backend.initialize();
       this.publishAssetVariantProfile();
+      this._validateWorkingColorFormatCapability();
     } catch (error) {
       if (this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
         throw error;
@@ -1935,6 +1947,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       await this._backend.initialize();
       this.publishAssetVariantProfile();
+      this._validateWorkingColorFormatCapability();
+    }
+  }
+
+  /**
+   * Validate the resolved working format against the now-initialized backend's
+   * actual capability. A no-op while the color pipeline gate is closed - an
+   * unreachable `'hdr'` request never allocates anything and should not block
+   * startup.
+   */
+  private _validateWorkingColorFormatCapability(): void {
+    if (COLOR_PIPELINE_ENABLED) {
+      validateWorkingColorFormatSupport(this._backend, this.options.rendering?.color?.workingFormat ?? 'sdr');
     }
   }
 
