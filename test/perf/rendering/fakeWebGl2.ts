@@ -325,6 +325,14 @@ const C = {
   MAX_TEXTURE_SIZE: constantFor('MAX_TEXTURE_SIZE'),
   RGBA32F: constantFor('RGBA32F'),
   FRAMEBUFFER_COMPLETE: constantFor('FRAMEBUFFER_COMPLETE'),
+  FRAMEBUFFER_BINDING: constantFor('FRAMEBUFFER_BINDING'),
+  VIEWPORT: constantFor('VIEWPORT'),
+  CURRENT_PROGRAM: constantFor('CURRENT_PROGRAM'),
+  VERTEX_ARRAY_BINDING: constantFor('VERTEX_ARRAY_BINDING'),
+  ARRAY_BUFFER_BINDING: constantFor('ARRAY_BUFFER_BINDING'),
+  ACTIVE_TEXTURE: constantFor('ACTIVE_TEXTURE'),
+  ARRAY_BUFFER: constantFor('ARRAY_BUFFER'),
+  BLEND: constantFor('BLEND'),
   NO_ERROR: 0,
 };
 
@@ -360,6 +368,16 @@ export const createFakeWebGl2Context = (recorder: GlRecorder, extensions: Readon
   const newHandle = (tag: string): object => ({ __fake: tag, id: handleSeq++ });
 
   let activeUnit = 0;
+  // The bindings `getParameter` is asked to report. A colour-normalization pass
+  // saves and restores exactly this set, so answering from a model rather than
+  // from one constant is what turns "it restored the framebuffer" into an
+  // assertion that can fail.
+  let framebufferBinding: object | null = null;
+  let currentProgram: object | null = null;
+  let vertexArrayBinding: object | null = null;
+  let arrayBufferBinding: object | null = null;
+  let blendEnabled = false;
+  const viewportRect = new Int32Array([0, 0, 300, 150]);
   // Texture bound per unit, and the set of handles allocated as a transform row
   // store - an upload is attributed by identity rather than by guessing from
   // the rectangle it writes. Per UNIT because the backend rebinds through a
@@ -452,10 +470,51 @@ export const createFakeWebGl2Context = (recorder: GlRecorder, extensions: Readon
     getShaderInfoLog: (): string => '',
     getProgramInfoLog: (): string => '',
     getExtension: (name: string): object | null => extensions[name] ?? null,
-    getParameter: (pname: number): number => (pname === C.MAX_TEXTURE_SIZE ? fakeMaxTextureSize : 16),
+    getParameter: (pname: number): unknown => {
+      switch (pname) {
+        case C.MAX_TEXTURE_SIZE:
+          return fakeMaxTextureSize;
+        case C.FRAMEBUFFER_BINDING:
+          return framebufferBinding;
+        case C.VIEWPORT:
+          // A copy, as real GL returns: handing out the live array would let a
+          // `gl.viewport` write inside a save/restore silently rewrite the value
+          // it thought it had saved.
+          return new Int32Array(viewportRect);
+        case C.CURRENT_PROGRAM:
+          return currentProgram;
+        case C.VERTEX_ARRAY_BINDING:
+          return vertexArrayBinding;
+        case C.ARRAY_BUFFER_BINDING:
+          return arrayBufferBinding;
+        case C.ACTIVE_TEXTURE:
+          return C.TEXTURE0 + activeUnit;
+        case C.BLEND:
+          return blendEnabled;
+        default:
+          return 16;
+      }
+    },
     getError: (): number => C.NO_ERROR,
     checkFramebufferStatus: (): number => C.FRAMEBUFFER_COMPLETE,
     isContextLost: (): boolean => false,
+    // Explicit rather than Proxy no-ops: the only state a save/restore can be
+    // checked against is state the fake actually keeps.
+    bindFramebuffer: (_target: number, framebuffer: object | null): void => {
+      framebufferBinding = framebuffer;
+    },
+    viewport: (x: number, y: number, width: number, height: number): void => {
+      viewportRect.set([x, y, width, height]);
+    },
+    enable: (cap: number): void => {
+      if (cap === C.BLEND) blendEnabled = true;
+    },
+    disable: (cap: number): void => {
+      if (cap === C.BLEND) blendEnabled = false;
+    },
+    bindBuffer: (target: number, buffer: object | null): void => {
+      if (target === C.ARRAY_BUFFER) arrayBufferBinding = buffer;
+    },
 
     // ── recorded draw / state ───────────────────────────────────────────
     drawArraysInstanced: (_mode: number, _first: number, _count: number, instanceCount: number): void => {
@@ -516,12 +575,16 @@ export const createFakeWebGl2Context = (recorder: GlRecorder, extensions: Readon
       }
     },
     useProgram: (program: object | null): void => {
+      currentProgram = program;
       recorder._recordProgram(program);
       note('useProgram', program);
     },
     // Explicit rather than a Proxy no-op: which vertex array a draw runs under
     // is part of the renderer state-ownership contract, so its order matters.
-    bindVertexArray: (vao: object | null): void => note('bindVertexArray', vao),
+    bindVertexArray: (vao: object | null): void => {
+      vertexArrayBinding = vao;
+      note('bindVertexArray', vao);
+    },
     blendFunc: (): void => {
       recorder.blendChanges++;
     },

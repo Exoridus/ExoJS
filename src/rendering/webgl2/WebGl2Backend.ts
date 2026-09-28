@@ -64,6 +64,7 @@ import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
 import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { DepthTexture } from '#rendering/texture/DepthTexture';
+import { isFullyOpaqueLevel } from '#rendering/texture/pixelPayload';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
@@ -90,6 +91,7 @@ import {
   type WebGl2RetainedNodeIndexRange,
 } from './WebGl2RetainedGroupResources';
 import { WebGl2StencilClipper } from './WebGl2StencilClipper';
+import { WebGl2TextureNormalizer } from './WebGl2TextureNormalizer';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
 // Inline GL debug helpers - replaces the webgl-debug vendor lib.
@@ -424,6 +426,12 @@ export class WebGl2Backend implements RenderBackend {
    * read would leave that cache describing something else.
    */
   private _readbackFramebuffer: WebGLFramebuffer | null = null;
+  /**
+   * The upload-time alpha normalization pass, created on the first managed colour
+   * upload that needs it. It owns GL objects, so it is dropped with the managed
+   * resources - on destruction and on context loss alike.
+   */
+  private _textureNormalizer: WebGl2TextureNormalizer | null = null;
   /** Live standing readbacks, drained at frame start and invalidated together on context loss. */
   private readonly _pixelReadbacks = new Set<WebGl2PixelReadback>();
   private _pixelReadbackHostInstance: WebGl2PixelReadbackHost | null = null;
@@ -2799,6 +2807,13 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._materialSamplers.clear();
+
+    // The pass holds a program, a framebuffer, a quad VAO and a staging texture
+    // on THIS context, so it has to go with the managed resources: on context
+    // loss those handles belong to a dead context, and a new one is built lazily
+    // against the restored one.
+    this._textureNormalizer?.destroy();
+    this._textureNormalizer = null;
   }
 
   /** Same hit/miss split as {@link _getTextureState}, and for the same reason. */
@@ -3561,11 +3576,22 @@ export class WebGl2Backend implements RenderBackend {
         this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
       }
     } else if (texture.pixels !== null) {
-      const internalFormat = texture.colorSpace === 'srgb' ? gl.SRGB8_ALPHA8 : gl.RGBA8;
+      const levels = texture.pixels.levels;
+      const internalFormat = this._managedColorInternalFormat(texture);
+      const needsNormalization = this._needsColorNormalization(texture);
       let uploadedBytes = 0;
 
-      for (const [level, { data, width, height }] of texture.pixels.levels.entries()) {
-        gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+      for (const [level, { data, width, height }] of levels.entries()) {
+        if (needsNormalization && !isFullyOpaqueLevel(data)) {
+          // Allocated uninitialized and filled by the pass, so the write path
+          // stays identical to the plain upload below: same destination, same
+          // storage format, same accounting.
+          gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          this._getTextureNormalizer().normalizePixels({ destination: state.handle, level, width, height, internalFormat }, data);
+        } else {
+          gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+        }
+
         uploadedBytes += data.byteLength;
       }
 
@@ -3596,23 +3622,37 @@ export class WebGl2Backend implements RenderBackend {
       state.accountedBytes = this._accountant.reallocate(state.accountedBytes, uploadedBytes);
       this._accountant.recordTextureUpload(uploadedBytes);
     } else if (texture.source) {
-      const internalFormat = texture.colorSpace === 'srgb' ? gl.SRGB8_ALPHA8 : gl.RGBA8;
+      const internalFormat = this._managedColorInternalFormat(texture);
+      const needsNormalization = this._needsColorNormalization(texture);
+      const needsAlloc = state.version === -1 || state.width !== texture.width || state.height !== texture.height;
 
-      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
-
-      try {
-        if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
-          gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+      if (needsNormalization) {
+        if (needsAlloc) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, texture.width, texture.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
           this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
-        } else {
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
         }
 
-        this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
-      } finally {
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+        this._getTextureNormalizer().normalizeImageSource(
+          { destination: state.handle, level: 0, width: texture.width, height: texture.height, internalFormat },
+          texture.source,
+        );
+      } else {
+        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
+
+        try {
+          if (needsAlloc) {
+            gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+            this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
+          } else {
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+          }
+
+          this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
+        } finally {
+          gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+          gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+        }
       }
     }
 
@@ -3633,6 +3673,84 @@ export class WebGl2Backend implements RenderBackend {
     state.height = texture.height;
 
     return state;
+  }
+
+  /**
+   * Whether `texture`'s colour content has to be premultiplied by a GPU pass.
+   *
+   * All three guards are load-bearing, and each one on its own rules the pass out:
+   *  - `premultiplyAlpha` is the upload-normalization request. False means the
+   *    caller wants straight storage, which is not the same thing as straight
+   *    *blending* downstream.
+   *  - `colorSpace === 'none'` is numeric data. Multiplying a normal map or an
+   *    SDF channel by alpha would corrupt it, which is also why
+   *    `setPremultiplyAlpha` rejects the combination outright.
+   *  - `alphaMode === 'premultiplied'` means the source is ALREADY associated. A
+   *    second multiply would darken every translucent texel by its own alpha.
+   *
+   * A browser source then needs the pass only for sRGB storage, because only an
+   * sRGB destination encodes on write: the pass exists to premultiply DECODED
+   * values, and `UNPACK_PREMULTIPLY_ALPHA_WEBGL` multiplies the same bytes by the
+   * same alpha into the same linear destination for free. Raw bytes have no such
+   * flag, so a straight colour payload always takes the pass.
+   */
+  private _needsColorNormalization(texture: Texture): boolean {
+    if (!texture.premultiplyAlpha || texture.colorSpace === 'none' || texture.alphaMode !== 'straight') {
+      return false;
+    }
+
+    return texture.source === null || texture.colorSpace === 'srgb';
+  }
+
+  /**
+   * Storage format for a managed colour texture, given its resolved interpretation.
+   *
+   * The staging texture of a normalization pass takes the same format, which is
+   * what puts the hardware sRGB decode on the read and the encode back on the
+   * write; the two must never disagree, or the pass would premultiply encoded
+   * values and store a differently-encoded result.
+   */
+  private _managedColorInternalFormat(texture: Texture): number {
+    return texture.colorSpace === 'srgb' ? this._context.SRGB8_ALPHA8 : this._context.RGBA8;
+  }
+
+  /**
+   * Part of {@link WebGl2ColorNormalizationHost}: hand the pass a destination
+   * that is safe to attach, and stop this backend from trusting its caches.
+   */
+  public releaseForColorNormalization(destination: WebGLTexture): void {
+    const boundHandles = this._boundHandles;
+    const activeUnit = this._textureUnit;
+
+    for (let unit = 0; unit < boundHandles.length; unit++) {
+      if (boundHandles[unit] === destination) {
+        this._setTextureUnit(unit);
+        this._bindTextureHandle(null);
+      }
+    }
+
+    this._setTextureUnit(activeUnit);
+
+    // The pass binds its own framebuffer, program, VAO and unit-0 texture, so
+    // every cache below now describes state GL no longer holds. Forgetting them
+    // costs one re-bind per upload; trusting them would cost a draw that samples
+    // the previous frame's texture.
+    this._boundHandles.length = 0;
+    this._boundFramebuffer = null;
+    this._shader = null;
+    this._vao = null;
+  }
+
+  /** Part of {@link WebGl2ColorNormalizationHost}: re-apply what this backend owns. */
+  public restoreAfterColorNormalization(): void {
+    this._bindRenderTarget(this._renderTarget);
+  }
+
+  private _getTextureNormalizer(): WebGl2TextureNormalizer {
+    return (this._textureNormalizer ??= new WebGl2TextureNormalizer(this._context, {
+      releaseForColorNormalization: destination => this.releaseForColorNormalization(destination),
+      restoreAfterColorNormalization: () => this.restoreAfterColorNormalization(),
+    }));
   }
 
   private _assertFramebufferComplete(): void {

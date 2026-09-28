@@ -181,6 +181,7 @@
     "bench:micro": "vitest bench --run",
     "gate:bench:structural": "pnpm --filter @codexo/exojs-bench gate:structural",
     "webgpu:probe": "tsx scripts/webgpu-probe.ts",
+    "fixtures:color": "tsx scripts/generate-color-fixtures.ts",
     "create:package": "tsx scripts/create-package.ts",
     "release:cut": "tsx ./scripts/release/cut.ts",
     "release:prepare": "tsx ./scripts/release/run.ts prepare",

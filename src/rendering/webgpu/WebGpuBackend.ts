@@ -77,6 +77,7 @@ import { WebGpuPixelReadback, type WebGpuPixelReadbackHost } from './WebGpuPixel
 import { WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
 import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
+import { WebGpuTextureNormalizer } from './WebGpuTextureNormalizer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
 /**
@@ -324,6 +325,12 @@ export class WebGpuBackend implements RenderBackend {
   private _backdropBlendCompositorConnected = false;
   /** Mipmap resources are format-specific because the render pipeline target is. */
   private readonly _mipmapResources: Map<GPUTextureFormat, MipmapResources> = new Map<GPUTextureFormat, MipmapResources>();
+  /**
+   * The upload-time alpha normalization pass, created with the device and reset
+   * with it: its staging textures, pipeline and uniform buffers all belong to one
+   * device, and a recovered device gets fresh ones.
+   */
+  private _textureNormalizer: WebGpuTextureNormalizer | null = null;
   private _context: GPUCanvasContext | null = null;
   private _device: GPUDevice | null = null;
   /**
@@ -1552,6 +1559,8 @@ export class WebGpuBackend implements RenderBackend {
     this._deviceLost = false;
     this._texture = null;
     this._mipmapResources.clear();
+    this._textureNormalizer?.reset();
+    this._textureNormalizer = null;
     this._renderTarget = this._rootRenderTarget;
     this._clearColor.destroy();
     this._rootRenderTarget.destroy();
@@ -1793,8 +1802,28 @@ export class WebGpuBackend implements RenderBackend {
     return this._getGpuTextureFormat(texture);
   }
 
+  /**
+   * Whether a draw of `texture` still has to associate its samples with alpha.
+   *
+   * The answer follows the STORED samples, not the backend: WebGPU's external
+   * image copy never premultiplies, so this backend has historically done it in
+   * the draw shader instead. Now that a managed colour upload may already have
+   * normalized the storage, doing both would multiply by alpha twice and darken
+   * every translucent texel by its own alpha. A premultiplied SOURCE is in the
+   * same position - the association is already in the bytes.
+   *
+   * Deriving this from the upload decision rather than from `premultiplyAlpha`
+   * alone is also what keeps the two backends in step: a texture normalized at
+   * upload on one and not the other is still a texture whose storage says which.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
   public shouldPremultiplyTextureSample(texture: Texture | RenderTexture): boolean {
-    return !(texture instanceof RenderTexture) && texture.premultiplyAlpha;
+    if (texture instanceof RenderTexture || !texture.premultiplyAlpha) {
+      return false;
+    }
+
+    return texture.alphaMode !== 'premultiplied' && !this._needsColorNormalization(texture);
   }
 
   /** Part of the renderer SDK contract for extension renderers. */
@@ -2731,6 +2760,9 @@ export class WebGpuBackend implements RenderBackend {
 
     // Mipmap pipeline cache is keyed to the dead device - drop it.
     this._mipmapResources.clear();
+    // Same for the normalization pass: its staging textures, pipeline and uniform
+    // buffers are all dead handles, and the recovered device gets fresh ones.
+    this._textureNormalizer?.reset();
     this._transformStorage?.destroy();
     this._transformStorage = null;
     this._activeDrawCommand = null;
@@ -3438,15 +3470,30 @@ export class WebGpuBackend implements RenderBackend {
         }
 
         state.hasContent = true;
-      } else if (rawPayload !== null) {
-        for (const [mipLevel, level] of rawPayload.levels.entries()) {
-          this.device.queue.writeTexture(
-            { texture: state.texture, mipLevel },
-            level.data,
-            { bytesPerRow: level.width * MANAGED_TEXTURE_BYTES_PER_PIXEL, rowsPerImage: level.height },
-            { width: level.width, height: level.height },
-          );
+      } else if (rawPayload !== null && texture instanceof Texture) {
+        if (this._needsColorNormalization(texture)) {
+          this._getTextureNormalizer().normalizeLevels(state.texture, gpuFormat, rawPayload.levels);
+        } else {
+          for (const [mipLevel, level] of rawPayload.levels.entries()) {
+            this.device.queue.writeTexture(
+              { texture: state.texture, mipLevel },
+              level.data,
+              { bytesPerRow: level.width * MANAGED_TEXTURE_BYTES_PER_PIXEL, rowsPerImage: level.height },
+              { width: level.width, height: level.height },
+            );
+          }
+        }
+
+        for (const level of rawPayload.levels) {
           this._accountant.recordTextureUpload(level.data.byteLength);
+        }
+
+        // A chain that arrived with fewer levels than the texture has still needs
+        // its mips built, and they have to be generated from the NORMALIZED level
+        // above them: a generated level of a straight texel would reintroduce
+        // exactly the fringe normalization removes.
+        if (state.mipLevelCount > rawPayload.levels.length) {
+          this._generateMipmaps(state.texture, state.mipLevelCount, state.format);
         }
 
         state.hasContent = true;
@@ -3505,7 +3552,19 @@ export class WebGpuBackend implements RenderBackend {
 
         const canvasReadbackContext = canvasSource !== null && this._canvasExternalImageCopySupported !== true ? get2dContext(canvasSource) : null;
 
-        if (canvasReadbackContext !== null) {
+        if (this._needsColorNormalization(texture)) {
+          // The Safari canvas workaround and the normalization pass both need CPU
+          // access to the pixels, so they compose: the 2D readback produces the
+          // straight bytes and the pass associates them. A raw byte upload never
+          // takes this branch - it has no external-image copy to work around.
+          if (canvasReadbackContext !== null) {
+            const { data } = canvasReadbackContext.getImageData(0, 0, texture.width, texture.height);
+
+            this._getTextureNormalizer().normalizeStagedBytes(state.texture, gpuFormat, texture.width, texture.height, data);
+          } else {
+            this._getTextureNormalizer().normalizeImageSource(state.texture, gpuFormat, texture.width, texture.height, source);
+          }
+        } else if (canvasReadbackContext !== null) {
           const { data } = canvasReadbackContext.getImageData(0, 0, texture.width, texture.height);
 
           this.device.queue.writeTexture(
@@ -3542,6 +3601,37 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     return state;
+  }
+
+  /**
+   * Whether `texture`'s colour content has to be premultiplied by a GPU pass.
+   *
+   * The same three guards as the WebGL2 half, each ruling the pass out on its own:
+   * `premultiplyAlpha` off means straight storage was requested;
+   * `colorSpace === 'none'` is numeric data, which must never be colour-converted
+   * (and which `setPremultiplyAlpha` rejects outright); `alphaMode ===
+   * 'premultiplied'` means the source is already associated, and a second multiply
+   * would darken every translucent texel by its own alpha.
+   *
+   * Unlike WebGL2 there is no free equivalent to narrow this by storage format:
+   * WebGPU's `copyExternalImageToTexture` declares the SOURCE's association rather
+   * than requesting a premultiply, so a linear browser source would still need the
+   * pass. It is excluded anyway, and for the same reason as on WebGL2 - an
+   * implicit browser source keeps its legacy straight storage until the pipeline
+   * is activated, and the legacy WebGPU upload premultiplied nothing at all. The
+   * two backends therefore agree on exactly which textures take the pass, and
+   * both multiply decoded values by the same alpha.
+   */
+  private _needsColorNormalization(texture: Texture): boolean {
+    if (!texture.premultiplyAlpha || texture.colorSpace === 'none' || texture.alphaMode !== 'straight') {
+      return false;
+    }
+
+    return texture.source === null || texture.colorSpace === 'srgb';
+  }
+
+  private _getTextureNormalizer(): WebGpuTextureNormalizer {
+    return (this._textureNormalizer ??= new WebGpuTextureNormalizer(this.device));
   }
 
   /**

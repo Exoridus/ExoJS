@@ -190,6 +190,8 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['stencil-clip.vert', 'stencil-clip.frag'],
   ['mask-compose.vert', 'mask-compose.frag'],
   ['backdrop-blend.vert', 'backdrop-blend.frag'],
+  // The upload-time colour normalization pass, on the same fullscreen quad.
+  ['default-vertex.vert', 'texture-normalize.frag'],
   // The built-in filters: one pass-through fullscreen-quad vertex stage, one
   // fragment stage each, exactly as `ShaderFilter` assembles them.
   ['default-vertex.vert', 'bloom-threshold.frag'],

@@ -58,3 +58,22 @@ export const validateRgba8Payload = ({ levels }: Rgba8TexturePayload): Rgba8Text
 
   return base;
 };
+
+/**
+ * Whether one RGBA8 level is fully opaque, in which case premultiplying it by
+ * its own alpha would change nothing.
+ *
+ * Only answerable for raw bytes: a browser image source cannot be inspected
+ * without decoding it, which is exactly the CPU round trip managed colour
+ * uploads exist to avoid.
+ * @internal
+ */
+export const isFullyOpaqueLevel = (data: Uint8Array): boolean => {
+  for (let index = 3; index < data.length; index += 4) {
+    if (data[index] !== 255) {
+      return false;
+    }
+  }
+
+  return true;
+};

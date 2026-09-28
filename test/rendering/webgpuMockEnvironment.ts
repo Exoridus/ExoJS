@@ -53,6 +53,12 @@ export interface MockWebGpuEnvironment {
   pipelineDepthWrites(): readonly boolean[];
   /** Format, usage and mip level count of every `device.createTexture` call, in call order. */
   textureDescriptors(): ReadonlyArray<{ readonly format: string; readonly usage: number; readonly mipLevelCount: number | undefined }>;
+  /** Label of every `beginRenderPass` descriptor, in call order. */
+  renderPassLabels(): readonly string[];
+  /** `bytesPerRow` of every `writeTexture` call, in call order. */
+  writeTextureRows(): readonly number[];
+  /** How many `createShaderModule` calls were made. */
+  shaderModuleCount(): number;
   restore(): void;
 }
 
@@ -82,6 +88,9 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const pipelineDepthWrites: boolean[] = [];
   const depthLoadOps: string[] = [];
   const textureDescriptors: Array<{ format: string; usage: number; mipLevelCount: number | undefined }> = [];
+  const renderPassLabels: string[] = [];
+  const writeTextureRows: number[] = [];
+  let shaderModuleCount = 0;
   let depthAttachmentPasses = 0;
 
   const pass = {
@@ -103,6 +112,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const encoder = {
     beginRenderPass: (descriptor: GPURenderPassDescriptor) => {
       renderPassAttachmentCounts.push([...descriptor.colorAttachments].length);
+      renderPassLabels.push(descriptor.label ?? '');
 
       if (descriptor.depthStencilAttachment !== undefined) {
         depthAttachmentPasses++;
@@ -124,15 +134,23 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     },
     submit: (): void => {},
     copyExternalImageToTexture: (): void => {},
-    writeTexture: (_destination: unknown, data: ArrayBufferView): void => {
+    writeTexture: (_destination: unknown, data: ArrayBufferView, dataLayout?: { bytesPerRow?: number }): void => {
       writeTextureData.push(data);
+
+      if (dataLayout?.bytesPerRow !== undefined) {
+        writeTextureRows.push(dataLayout.bytesPerRow);
+      }
     },
   };
   const device = {
     // The spec's default. The backend reads it to bound a MultiRenderTarget's
     // attachment count, and falls back to 1 when a device reports nothing.
     limits: { maxColorAttachments: 8 },
-    createShaderModule: () => ({}) as GPUShaderModule,
+    createShaderModule: () => {
+      shaderModuleCount++;
+
+      return {} as GPUShaderModule;
+    },
     createBindGroupLayout: () => ({}) as GPUBindGroupLayout,
     createPipelineLayout: () => ({}) as GPUPipelineLayout,
     createBindGroup: (descriptor: GPUBindGroupDescriptor): GPUBindGroup => {
@@ -228,6 +246,9 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     depthLoadOps: () => depthLoadOps,
     pipelineDepthWrites: () => pipelineDepthWrites,
     textureDescriptors: () => textureDescriptors,
+    renderPassLabels: () => renderPassLabels,
+    writeTextureRows: () => writeTextureRows,
+    shaderModuleCount: () => shaderModuleCount,
     restore: (): void => {
       if (previousGpu) {
         Object.defineProperty(navigator, 'gpu', previousGpu);
