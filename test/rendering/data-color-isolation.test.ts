@@ -52,8 +52,12 @@ describe('DataTexture stays outside colour conversion', () => {
   });
 });
 
-describe('Gradient produces linear-premultiplied samples for its numerical DataTexture', () => {
-  test("toTexture() output is tagged as the producer's own linear-PMA content, not a colour-managed upload", () => {
+describe('Gradient.toTexture() legacy output while the colour pipeline is inactive', () => {
+  // COLOR_PIPELINE_ENABLED defaults to false: Gradient's linear-PMA conversion
+  // is gated behind it (see gradient-color-pipeline-activation.test.ts for the
+  // gated-on behaviour), so this buffer must stay byte-identical to a
+  // pre-colour-pipeline build.
+  test('toTexture() output keeps its legacy metadata - colorSpace none, alphaMode straight, not premultiplied', () => {
     const gradient = new LinearGradient([
       { offset: 0, color: Color.red },
       { offset: 1, color: Color.blue },
@@ -61,27 +65,11 @@ describe('Gradient produces linear-premultiplied samples for its numerical DataT
     const texture = gradient.toTexture(2, 1);
 
     expect(texture.colorSpace).toBe('none');
-    expect(texture.alphaMode).toBe('premultiplied');
+    expect(texture.alphaMode).toBe('straight');
     expect(texture.premultiplyAlpha).toBe(false);
   });
 
-  test('fractional-alpha stops are converted to linear light and premultiplied before storage', () => {
-    const gradient = new LinearGradient([
-      { offset: 0, color: new Color(0xffffff, 0.5) },
-      { offset: 1, color: new Color(0xffffff, 0.5) },
-    ]);
-    const texture = gradient.toTexture(1, 1);
-
-    // Uniform half-alpha white: linear(1) * 0.5 = 0.5 in every channel.
-    const expected = Math.round(srgbToLinear(1) * 0.5 * 255);
-
-    expect(texture.buffer[0]).toBe(expected);
-    expect(texture.buffer[1]).toBe(expected);
-    expect(texture.buffer[2]).toBe(expected);
-    expect(texture.buffer[3]).toBe(Math.round(0.5 * 255));
-  });
-
-  test('rgba32f output matches the sRGB-to-linear conversion exactly for a mid-gray stop', () => {
+  test('rgba32f output is the straight sRGB-normalized stop value, not linearized', () => {
     const gray = 0x808080;
     const gradient = new LinearGradient([
       { offset: 0, color: new Color(gray) },
@@ -89,23 +77,24 @@ describe('Gradient produces linear-premultiplied samples for its numerical DataT
     ]);
     const texture = gradient.toTexture(1, 1, { format: TextureFormat.Rgba32F });
 
-    const expected = srgbToLinear(0x80 / 255);
+    const straight = 0x80 / 255;
 
-    expect(texture.buffer[0]).toBeCloseTo(expected, 6);
-    expect(texture.buffer[1]).toBeCloseTo(expected, 6);
-    expect(texture.buffer[2]).toBeCloseTo(expected, 6);
+    expect(texture.buffer[0]).toBeCloseTo(straight, 6);
+    expect(texture.buffer[1]).toBeCloseTo(straight, 6);
+    expect(texture.buffer[2]).toBeCloseTo(straight, 6);
+    // A linearized value would be well below the straight one; this is the
+    // discriminator between the gated-on and legacy paths.
+    expect(texture.buffer[0]).not.toBeCloseTo(srgbToLinear(straight), 2);
     expect(texture.buffer[3]).toBe(1);
   });
 
-  test('caller-supplied textureOptions cannot override the producer colour tags', () => {
+  test('caller-supplied textureOptions still apply (nothing forces them while the gate is closed)', () => {
     const gradient = new LinearGradient([
       { offset: 0, color: Color.red },
       { offset: 1, color: Color.blue },
     ]);
-    const texture = gradient.toTexture(2, 1, { textureOptions: { colorSpace: 'linear-srgb', alphaMode: 'straight', premultiplyAlpha: true } });
+    const texture = gradient.toTexture(2, 1, { textureOptions: { alphaMode: 'premultiplied' } });
 
-    expect(texture.colorSpace).toBe('none');
     expect(texture.alphaMode).toBe('premultiplied');
-    expect(texture.premultiplyAlpha).toBe(false);
   });
 });
