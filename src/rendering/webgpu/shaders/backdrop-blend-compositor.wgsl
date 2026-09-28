@@ -146,7 +146,12 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     let colorSource = unpremultiply(src);
     let colorBackdrop = unpremultiply(dst);
 
-    let blended = blendAdvanced(blend.mode, colorBackdrop, colorSource);
+    // The artistic blend functions (Darken..Luminosity, and Multiply/Screen when
+    // routed here) are bounded operations on [0, 1] straight colour, not a
+    // transparent HDR transport - an over-range input (e.g. additive-lit content
+    // premultiplied above 1) is clamped before evaluation. The un-clamped source
+    // still carries through the mix below when backdrop coverage is partial.
+    let blended = blendAdvanced(blend.mode, clamp(colorBackdrop, vec3<f32>(0.0), vec3<f32>(1.0)), clamp(colorSource, vec3<f32>(0.0), vec3<f32>(1.0)));
     // Cs' = (1 - αb)·Cs + αb·B(Cb, Cs)
     let mixedSource = mix(colorSource, blended, alphaBackdrop);
 
