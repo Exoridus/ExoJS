@@ -15,6 +15,7 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
+import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
@@ -110,6 +111,19 @@ const composedFragments: ReadonlyMap<string, string> = new Map([
   ['transport-filter.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
 ]);
 
+// Sprite stages that call the shared colour helpers directly (tint decode,
+// sample association) rather than through `composeSpriteMaterialFragmentGlsl`
+// (which already carries them as part of its prologue - splicing them again
+// here would redeclare every helper).
+const needsColorHelpers: ReadonlySet<string> = new Set([
+  'sprite.vert',
+  'sprite-indexed.vert',
+  'sprite-material.vert',
+  'sprite.frag',
+  'repeating-sprite-geo-path.vert',
+  'repeating-sprite-shader-path.vert',
+]);
+
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
 // handing a source to the driver, so a shader that reads the shared transform
 // store only compiles in its resolved form - the same form the renderer submits.
@@ -144,8 +158,9 @@ ${filled}`
   // its renderer and read a declared uniform block, and `lit-sprite.frag` does
   // both.
   const composed = declarations === undefined ? spliced : withGlslUniformDeclarations(spliced, declarations);
+  const withColorHelpers = needsColorHelpers.has(name) ? spliceGlslPrologue(composed, colorShaderSourcesGlsl) : composed;
 
-  return resolveTransformTextureGlsl(composed);
+  return resolveTransformTextureGlsl(withColorHelpers);
 };
 
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)

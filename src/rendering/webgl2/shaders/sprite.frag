@@ -40,41 +40,46 @@ flat in uint v_textureSlot;
 layout(location = 0) out vec4 fragColor;
 
 void main(void) {
+    // Bits 0..7 select the batch texture slot; bit 8 asks the engine to
+    // convert this instance's straight sample to premultiplied alpha (see
+    // associateSampledColor). Mirrors the WGSL sprite path's packedSlotFlags.
+    uint slot = v_textureSlot & 0xffu;
+    bool premultiplySample = ((v_textureSlot >> 8u) & 1u) == 1u;
     vec4 sampleColor;
 
-    if (v_textureSlot == 0u) {
+    if (slot == 0u) {
         sampleColor = texture(u_texture0, v_texcoord);
-    } else if (v_textureSlot == 1u) {
+    } else if (slot == 1u) {
         sampleColor = texture(u_texture1, v_texcoord);
-    } else if (v_textureSlot == 2u) {
+    } else if (slot == 2u) {
         sampleColor = texture(u_texture2, v_texcoord);
-    } else if (v_textureSlot == 3u) {
+    } else if (slot == 3u) {
         sampleColor = texture(u_texture3, v_texcoord);
-    } else if (v_textureSlot == 4u) {
+    } else if (slot == 4u) {
         sampleColor = texture(u_texture4, v_texcoord);
-    } else if (v_textureSlot == 5u) {
+    } else if (slot == 5u) {
         sampleColor = texture(u_texture5, v_texcoord);
-    } else if (v_textureSlot == 6u) {
+    } else if (slot == 6u) {
         sampleColor = texture(u_texture6, v_texcoord);
-    } else if (v_textureSlot == 7u) {
+    } else if (slot == 7u) {
         sampleColor = texture(u_texture7, v_texcoord);
-    } else if (v_textureSlot == 8u) {
+    } else if (slot == 8u) {
         sampleColor = texture(u_texture8, v_texcoord);
-    } else if (v_textureSlot == 9u) {
+    } else if (slot == 9u) {
         sampleColor = texture(u_texture9, v_texcoord);
-    } else if (v_textureSlot == 10u) {
+    } else if (slot == 10u) {
         sampleColor = texture(u_texture10, v_texcoord);
-    } else if (v_textureSlot == 11u) {
+    } else if (slot == 11u) {
         sampleColor = texture(u_texture11, v_texcoord);
-    } else if (v_textureSlot == 12u) {
+    } else if (slot == 12u) {
         sampleColor = texture(u_texture12, v_texcoord);
-    } else if (v_textureSlot == 13u) {
+    } else if (slot == 13u) {
         sampleColor = texture(u_texture13, v_texcoord);
-    } else if (v_textureSlot == 14u) {
+    } else if (slot == 14u) {
         sampleColor = texture(u_texture14, v_texcoord);
     } else {
         sampleColor = texture(u_texture15, v_texcoord);
     }
 
-    fragColor = sampleColor * v_color;
+    fragColor = associateSampledColor(sampleColor, premultiplySample) * v_color;
 }

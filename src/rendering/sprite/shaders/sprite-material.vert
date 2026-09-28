@@ -95,7 +95,12 @@ void main(void) {
     float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;
     v_texcoord = vec2(u, v);
 
-    v_color = vec4(m2.rgb * m2.a, m2.a);
+    // m2.rgb is the authored sRGB tint byte-for-byte (hardware-normalized, not
+    // yet decoded); decode it to linear before it is premultiplied and
+    // interpolated, identical to the default sprite vertex stage. Gated on
+    // colorPipelineEnabled: see colorShaderSources.ts.
+    highp vec3 linearTint = colorPipelineEnabled ? srgbToLinear(m2.rgb) : m2.rgb;
+    v_color = vec4(linearTint * m2.a, m2.a);
     v_textureSlot = a_textureSlot;
     v_worldPosition = vec2(worldX, worldY);
     v_basis = m0;

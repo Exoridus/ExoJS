@@ -48,7 +48,7 @@ import { compositorShaderSource as backdropBlendCompositorWgsl } from '#renderin
 import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
 import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/WebGpuMaskCompositor';
 import { instancedMeshShaderSource, meshShaderSource } from '#rendering/webgpu/WebGpuMeshRenderer';
-import { commonWgsl, geoPathEntries, shaderPathEntries } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
+import { scalableSpriteShaderSource } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
 import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
@@ -76,7 +76,7 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuMeshRenderer (instanced)', source: instancedMeshShaderSource },
   // Combined exactly as `onConnect` feeds `createShaderModule`: shared struct/
   // binding declarations + both entry-point sets in one module.
-  { name: 'WebGpuScalableSpriteRenderer (combined)', source: commonWgsl + shaderPathEntries + geoPathEntries },
+  { name: 'WebGpuScalableSpriteRenderer (combined)', source: scalableSpriteShaderSource },
   // The sprite shader is generated per slot tier from the device limits
   // Every tier that can ever ship is compiled here.
   ...spriteBatchTextureSlotTiers.map(tier => ({ name: `WebGpuSpriteRenderer (${tier} texture slots)`, source: buildSpriteShaderSource(tier) })),

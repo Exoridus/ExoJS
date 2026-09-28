@@ -68,6 +68,14 @@ const COLOR_BY_ALPHA = /[\w.]+\.rgb\s*\*\s*[\w.]+\.a/g;
  */
 const AUTHORED_TINT = 'tint.rgb * tint.a';
 
+/**
+ * The one `srgbToLinear` call a sprite draw stage is allowed to keep: the
+ * authored packed tint, decoded once in the shared vertex core before it is
+ * premultiplied ({@link AUTHORED_TINT}) and interpolated. Anything else
+ * decoding is a hardware sRGB sample being decoded a second time.
+ */
+const AUTHORED_TINT_DECODE = 'srgbToLinear(rawTint.rgb)';
+
 describe('shared colour shader contract', () => {
   test('both languages declare the same helpers', () => {
     for (const helper of SHARED_HELPERS) {
@@ -155,9 +163,11 @@ describe('alpha association has one application point', () => {
   test('no draw path decodes a hardware sRGB sample a second time', () => {
     // A sample through an sRGB view is already linear. Calling the transfer
     // function on it is the double decode; the resolved storage format decides,
-    // and no sprite draw stage has a reason to.
+    // and no sprite draw stage has a reason to - only the authored tint does.
     for (const [name, composed] of wgslStages()) {
-      expect(ownCode(composed), `${name} decodes an already-linear sample`).not.toContain('srgbToLinear(');
+      const decodeCalls = ownCode(composed).match(/srgbToLinear\([^)]*\)/g) ?? [];
+      const unexpected = decodeCalls.filter(call => call !== AUTHORED_TINT_DECODE);
+      expect(unexpected, `${name} decodes something other than the authored tint`).toEqual([]);
     }
     expect(ownGlslCode(spriteMaterialPrologueGlsl)).not.toContain('srgbToLinear(');
   });

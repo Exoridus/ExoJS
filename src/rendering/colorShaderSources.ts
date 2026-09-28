@@ -25,12 +25,24 @@
  * @internal - not part of the public package surface.
  */
 
+import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
+
 import colorShaderSourcesGlslModule from './shaders/color-transfer.frag';
 import colorShaderSourcesWgslModule from './shaders/color-transfer.wgsl';
 
 /**
  * WGSL colour helpers: `srgbToLinear`, `linearToSrgb`, `associateSampledColor`
- * and `forceOpaqueSampleAlpha`.
+ * and `forceOpaqueSampleAlpha`, plus a `colorPipelineEnabled` constant mirroring
+ * {@link COLOR_PIPELINE_ENABLED}.
+ *
+ * `colorPipelineEnabled` gates the one shader-side behaviour that has no
+ * per-resource opt-in the way a `Texture`'s `colorSpace` does: decoding an
+ * AUTHORED value (a packed vertex tint, not a sampled texel) is either always
+ * correct or always wrong for a given draw, so it cannot be driven by
+ * anything the draw call carries. Compiled as a WGSL `const`, a driver folds
+ * `select(a, b, colorPipelineEnabled)` down to `a` while the constant is
+ * `false`, so the legacy path stays the exact bytes it always produced - not
+ * an equivalent computation, no computation at all.
  *
  * Compose this ahead of any WGSL that calls one of them, in both the vertex and
  * the fragment stage. Helpers are functions, so a stage only needs the ones it
@@ -38,14 +50,55 @@ import colorShaderSourcesWgslModule from './shaders/color-transfer.wgsl';
  * identical.
  * @internal
  */
-export const colorShaderSourcesWgsl: string = colorShaderSourcesWgslModule;
+export const colorShaderSourcesWgsl = `const colorPipelineEnabled: bool = ${String(COLOR_PIPELINE_ENABLED)};
+${colorShaderSourcesWgslModule}`;
 
 /**
  * GLSL ES 3.00 colour helpers with the same names, signatures and constants as
- * {@link colorShaderSourcesWgsl}.
+ * {@link colorShaderSourcesWgsl}, including `colorPipelineEnabled`.
  *
  * A chunk rather than a stage: it carries no `#version` and no `main`, because
  * the shader it is spliced into owns both.
  * @internal
  */
-export const colorShaderSourcesGlsl: string = colorShaderSourcesGlslModule;
+export const colorShaderSourcesGlsl = `const bool colorPipelineEnabled = ${String(COLOR_PIPELINE_ENABLED)};
+${colorShaderSourcesGlslModule}`;
+
+/**
+ * Splice `prologue` into a GLSL ES 3.00 source, after the run of leading
+ * `#version`/`#extension`/`#pragma`/`#line` directives and `precision`
+ * statements (plus blank lines and line comments) and before the first
+ * declaration.
+ *
+ * A GLSL ES 3.00 unit starts with its own `#version` directive, which must be
+ * the first token in the unit, so the prologue cannot simply be prepended.
+ * @internal
+ */
+export const spliceGlslPrologue = (source: string, prologue: string): string => {
+  const lines = source.split('\n');
+  let insertAt = 0;
+
+  for (let index = 0; index < lines.length; index++) {
+    // In-bounds: index < lines.length via the loop guard.
+    const line = lines[index]!.trim();
+
+    if (line === '' || line.startsWith('//')) {
+      continue;
+    }
+
+    if (
+      line.startsWith('#version') ||
+      line.startsWith('#extension') ||
+      line.startsWith('#pragma') ||
+      line.startsWith('#line') ||
+      line.startsWith('precision ')
+    ) {
+      insertAt = index + 1;
+      continue;
+    }
+
+    break;
+  }
+
+  return [...lines.slice(0, insertAt), prologue, ...lines.slice(insertAt)].join('\n');
+};

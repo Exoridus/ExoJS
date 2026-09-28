@@ -1499,6 +1499,38 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
+  /**
+   * Whether a draw of `texture` still has to associate its samples with alpha.
+   *
+   * The answer follows the STORED samples: a managed colour upload normalizes
+   * (premultiplies) straight sRGB/float sources on the GPU before this ever
+   * runs (see `_needsColorNormalization`), so doing it again in the draw
+   * shader would multiply every translucent texel by its own alpha twice. A
+   * premultiplied SOURCE is in the same position - the association is already
+   * in the bytes.
+   *
+   * Unlike WebGPU's external-image copy, which never premultiplies, a WebGL2
+   * browser-image/canvas source that skips the normalization pass still gets
+   * premultiplied for free at upload through `UNPACK_PREMULTIPLY_ALPHA_WEBGL`
+   * (see `_syncTexture`'s non-normalized `texture.source` branch) - resolving
+   * true for it here as well would associate those samples a second time and
+   * darken every translucent texel. `_needsColorNormalization` already
+   * resolves true for every non-browser-sourced straight payload (raw pixels
+   * always take the GPU pass), so the remaining `texture.source === null`
+   * guard only ever matters once a future backend change lets a non-browser
+   * payload skip that pass - a native compressed source is the intended
+   * beneficiary, and is otherwise unreachable here today.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
+  public shouldPremultiplyTextureSample(texture: Texture | RenderTexture): boolean {
+    if (texture instanceof RenderTexture || !texture.premultiplyAlpha || texture.alphaMode === 'premultiplied') {
+      return false;
+    }
+
+    return !this._needsColorNormalization(texture) && texture.source === null;
+  }
+
   /** Bind a material's base-texture sampler override to one texture unit. Part of the renderer SDK contract for extension renderers. */
   public bindMaterialSampler(options: SamplerOptions, unit: number): this {
     const key = samplerStateKey(options.scaleMode, options.wrapMode);

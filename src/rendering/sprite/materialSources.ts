@@ -36,7 +36,7 @@
  * {@link spriteMaterialTextureSlots}..N / WGSL group(2)).
  */
 
-import { colorShaderSourcesGlsl, colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
+import { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 
 import spriteFragmentMainWgslModule from './shaders/sprite-fragment-main.wgsl';
 import spriteVertexGlslModule from './shaders/sprite-material.vert';
@@ -93,7 +93,10 @@ export const buildSpriteMaterialSlotGlsl = (textureSlots: number, samplerPrecisi
   // qualifier goes between `uniform` and the type, not ahead of it.
   const samplers = Array.from({ length: textureSlots }, (_, slot) => `uniform ${samplerPrecision} sampler2D u_texture${slot};`).join('\n');
   // The last slot is the else branch so every uint value maps to a texture.
-  const dispatch = Array.from({ length: textureSlots - 1 }, (_, slot) => `    if (slot == ${slot}u) return texture(u_texture${slot}, uv);`).join('\n');
+  const dispatch = Array.from(
+    { length: textureSlots - 1 },
+    (_, slot) => `${slot === 0 ? '    if' : '    else if'} (slot == ${slot}u) sampleColor = texture(u_texture${slot}, uv);`,
+  ).join('\n');
 
   // Every FLOAT-typed declaration carries an explicit precision qualifier: a
   // GLSL ES 3.00 fragment shader has no default float precision, and the
@@ -102,15 +105,24 @@ export const buildSpriteMaterialSlotGlsl = (textureSlots: number, samplerPrecisi
   // fragment-stage default and stays unqualified.
   return `${samplers}
 
-// Engine-owned base-texture varying: the slot this instance's texture occupies
-// in the batch's slot table. Custom fragments must not redeclare it.
+// Engine-owned base-texture varying: bits 0..7 select the batch texture slot,
+// bit 8 asks the engine to convert this instance's straight sample to
+// premultiplied alpha. Custom fragments must not redeclare it or interpret it
+// themselves - pass it through sampleBase() unchanged.
 flat in uint v_textureSlot;
 
-// Sample this instance's base texture. \`slot\` is \`v_textureSlot\`; \`uv\` is
-// normally \`v_texcoord\` but may be any coordinate the effect derives from it.
-highp vec4 sampleBase(uint slot, highp vec2 uv) {
+// Sample this instance's base texture. \`packedSlotFlags\` is \`v_textureSlot\`;
+// \`uv\` is normally \`v_texcoord\` but may be any coordinate the effect derives
+// from it.
+highp vec4 sampleBase(uint packedSlotFlags, highp vec2 uv) {
+    uint slot = packedSlotFlags & 0xffu;
+    bool premultiplySample = ((packedSlotFlags >> 8u) & 1u) == 1u;
+    highp vec4 sampleColor;
 ${dispatch}
-    return texture(u_texture${textureSlots - 1}, uv);
+    else {
+        sampleColor = texture(u_texture${textureSlots - 1}, uv);
+    }
+    return associateSampledColor(sampleColor, premultiplySample);
 }`;
 };
 
@@ -138,34 +150,8 @@ ${buildSpriteMaterialSlotGlsl(spriteMaterialTextureSlots)}`;
  * `#extension` requires to sit.
  * @internal
  */
-export const composeSpriteMaterialFragmentGlsl = (fragment: string, prologue: string = spriteMaterialPrologueGlsl): string => {
-  const lines = fragment.split('\n');
-  let insertAt = 0;
-
-  for (let index = 0; index < lines.length; index++) {
-    // In-bounds: index < lines.length via the loop guard.
-    const line = lines[index]!.trim();
-
-    if (line === '' || line.startsWith('//')) {
-      continue;
-    }
-
-    if (
-      line.startsWith('#version') ||
-      line.startsWith('#extension') ||
-      line.startsWith('#pragma') ||
-      line.startsWith('#line') ||
-      line.startsWith('precision ')
-    ) {
-      insertAt = index + 1;
-      continue;
-    }
-
-    break;
-  }
-
-  return [...lines.slice(0, insertAt), prologue, ...lines.slice(insertAt)].join('\n');
-};
+export const composeSpriteMaterialFragmentGlsl = (fragment: string, prologue: string = spriteMaterialPrologueGlsl): string =>
+  spliceGlslPrologue(fragment, prologue);
 
 /**
  * The whole WGSL sprite vertex stage EXCEPT where the per-sprite record comes
