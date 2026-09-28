@@ -19,5 +19,10 @@ void main(void) {
     gl_Position = vec4((u_projection * u_systemTransform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
 
     v_texcoord = a_texcoord;
-    v_color = vec4(a_color.rgb * a_color.a, a_color.a);
+
+    // a_color.rgb is the authored sRGB tint byte-for-byte, not yet decoded;
+    // decode it to linear before it is premultiplied and interpolated,
+    // gated on colorPipelineEnabled (see colorShaderSources.ts).
+    vec3 linearTint = colorPipelineEnabled ? srgbToLinear(a_color.rgb) : a_color.rgb;
+    v_color = vec4(linearTint * a_color.a, a_color.a);
 }

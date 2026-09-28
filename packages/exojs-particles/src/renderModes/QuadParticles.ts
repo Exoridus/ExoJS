@@ -1,16 +1,19 @@
 import type { Material } from '@codexo/exojs';
 import { Shader } from '@codexo/exojs';
+import { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
 
 import fragmentSource from '../renderers/shaders/particle.frag';
-import vertexSource from '../renderers/shaders/particle.vert';
+import vertexSourceModule from '../renderers/shaders/particle.vert';
 import { ParticleBufferLayout } from './ParticleBufferLayout';
 import { instanceAttributes, instanceStrideBytes, ParticleInstanceWriter } from './ParticleInstanceWriter';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
 import quadParticleWgslModule from './shaders/quad-particles.wgsl';
+
+const vertexSource = spliceGlslPrologue(vertexSourceModule, colorShaderSourcesGlsl);
 
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
@@ -24,7 +27,7 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
  * it from `gl_VertexID`, so both backends need nothing beyond this mode's own
  * interleaved buffer and index buffer.
  */
-export const quadParticleWgsl: string = quadParticleWgslModule;
+export const quadParticleWgsl = `${colorShaderSourcesWgsl}${quadParticleWgslModule}`;
 
 /**
  * The default render mode: one textured, rotated, tinted quad per particle,

@@ -1,5 +1,6 @@
 import type { Material } from '@codexo/exojs';
 import { Shader } from '@codexo/exojs';
+import { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
@@ -8,8 +9,10 @@ import { ParticleBufferLayout } from './ParticleBufferLayout';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
 import fragmentSource from './shaders/ribbon.frag';
-import vertexSource from './shaders/ribbon.vert';
+import vertexSourceModule from './shaders/ribbon.vert';
 import ribbonParticleWgslModule from './shaders/ribbon-particles.wgsl';
+
+const vertexSource = spliceGlslPrologue(vertexSourceModule, colorShaderSourcesGlsl);
 
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / Float32Array.BYTES_PER_ELEMENT;
@@ -37,7 +40,7 @@ export interface RibbonParticlesOptions {
  * carries its own final positions and UVs, and only the projection, the system
  * transform and the premultiply flag are read.
  */
-export const ribbonParticleWgsl: string = ribbonParticleWgslModule;
+export const ribbonParticleWgsl = `${colorShaderSourcesWgsl}${ribbonParticleWgslModule}`;
 
 /**
  * A connected triangle strip through the system's particles: one ribbon per

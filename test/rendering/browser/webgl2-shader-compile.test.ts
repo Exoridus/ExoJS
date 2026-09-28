@@ -124,6 +124,10 @@ const needsColorHelpers: ReadonlySet<string> = new Set([
   'repeating-sprite-shader-path.vert',
   'mesh.frag',
   'tile-chunk.vert',
+  'particle.vert',
+  'mesh.vert',
+  'ribbon.vert',
+  'trail.vert',
 ]);
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before

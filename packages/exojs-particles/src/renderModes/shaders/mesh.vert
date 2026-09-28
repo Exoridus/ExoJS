@@ -37,5 +37,9 @@ void main(void) {
     // texture, so a mesh particle still selects an atlas frame.
     v_texcoord = mix(a_uvMin, a_uvMax, a_meshTexcoord);
 
-    v_color = vec4(a_color.rgb * a_color.a, a_color.a);
+    // a_color.rgb is the authored sRGB tint byte-for-byte, not yet decoded;
+    // decode it to linear before it is premultiplied and interpolated,
+    // gated on colorPipelineEnabled (see colorShaderSources.ts).
+    vec3 linearTint = colorPipelineEnabled ? srgbToLinear(a_color.rgb) : a_color.rgb;
+    v_color = vec4(linearTint * a_color.a, a_color.a);
 }
