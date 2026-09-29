@@ -28,6 +28,7 @@ interface WebGpuOutputConnection {
   readonly device: GPUDevice;
   readonly vertexBuffer: GPUBuffer;
   readonly uniformBuffer: GPUBuffer;
+  readonly uniformBindGroup: GPUBindGroup;
   readonly sourceBindGroupLayout: GPUBindGroupLayout;
   readonly uniformBindGroupLayout: GPUBindGroupLayout;
   readonly sampler: GPUSampler;
@@ -50,6 +51,8 @@ export class WebGpuOutputPass {
 
   private _connection: WebGpuOutputConnection | null = null;
   private _source: RenderTexture | null = null;
+  private _sourceBindGroup: GPUBindGroup | null = null;
+  private _sourceBindGroupView: GPUTextureView | null = null;
   private _targetFormat: GPUTextureFormat = 'rgba8unorm';
 
   /**
@@ -95,6 +98,9 @@ export class WebGpuOutputPass {
       this._connection.pipelines.clear();
       this._connection = null;
     }
+
+    this._sourceBindGroup = null;
+    this._sourceBindGroupView = null;
   }
 
   private _run(backend: RenderBackend): void {
@@ -105,24 +111,27 @@ export class WebGpuOutputPass {
     device.queue.writeBuffer(conn.uniformBuffer, 0, this._uniformScratch);
 
     const sourceBinding = gpu.getTextureBinding(this._source!);
-    const sourceBindGroup = device.createBindGroup({
-      layout: conn.sourceBindGroupLayout,
-      entries: [
-        { binding: 0, resource: sourceBinding.view },
-        { binding: 1, resource: conn.sampler },
-      ],
-    });
-    const uniformBindGroup = device.createBindGroup({
-      layout: conn.uniformBindGroupLayout,
-      entries: [{ binding: 0, resource: { buffer: conn.uniformBuffer } }],
-    });
+
+    // The working target normally keeps one view for the life of the frame
+    // loop, so the bind group is rebuilt only when a resize or a different
+    // source replaces it.
+    if (this._sourceBindGroup === null || this._sourceBindGroupView !== sourceBinding.view) {
+      this._sourceBindGroup = device.createBindGroup({
+        layout: conn.sourceBindGroupLayout,
+        entries: [
+          { binding: 0, resource: sourceBinding.view },
+          { binding: 1, resource: conn.sampler },
+        ],
+      });
+      this._sourceBindGroupView = sourceBinding.view;
+    }
 
     const pass = gpu.passCoordinator.acquirePass().pass;
 
     pass.setPipeline(conn.pipelines.get(this._targetFormat)!);
     pass.setVertexBuffer(0, conn.vertexBuffer);
-    pass.setBindGroup(0, sourceBindGroup);
-    pass.setBindGroup(1, uniformBindGroup);
+    pass.setBindGroup(0, this._sourceBindGroup);
+    pass.setBindGroup(1, conn.uniformBindGroup);
     pass.draw(4);
 
     gpu.passCoordinator.markPassDraws();
@@ -158,6 +167,11 @@ export class WebGpuOutputPass {
 
     const uniformBuffer = device.createBuffer({ size: uniformBufferBytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
 
+    const uniformBindGroup = device.createBindGroup({
+      layout: uniformBindGroupLayout,
+      entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    });
+
     const sampler = device.createSampler({
       magFilter: 'linear',
       minFilter: 'linear',
@@ -169,6 +183,7 @@ export class WebGpuOutputPass {
       device,
       vertexBuffer,
       uniformBuffer,
+      uniformBindGroup,
       sourceBindGroupLayout,
       uniformBindGroupLayout,
       sampler,

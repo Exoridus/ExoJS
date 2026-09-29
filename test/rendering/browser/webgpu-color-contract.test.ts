@@ -38,6 +38,33 @@ test('WebGpuOutputPass round-trips an sRGB gray through the linear working targe
   }
 });
 
+test('WebGpuOutputPass samples the replacement texture after its source is resized', async () => {
+  const backend = await createWebGpuTestBackend(2);
+  const source = new RenderTexture(2, 2, { format: TextureFormat.Rgba8Srgb });
+  const outputTransform = new OutputTransform();
+
+  try {
+    backend.setRenderTarget(source).clear(new Color(128, 128, 128, 1));
+    backend.flush();
+    outputTransform.present(backend, source, false, Color.black);
+    backend.flush();
+
+    source.resize(4, 4);
+    backend.setRenderTarget(source).clear(new Color(200, 200, 200, 1));
+    backend.flush();
+    outputTransform.present(backend, source, false, Color.black);
+    backend.flush();
+
+    const [r] = readWebGpuPixels(backend, 2)(0, 0);
+
+    expect(r).toBeCloseTo(200, 0);
+  } finally {
+    source.destroy();
+    outputTransform.destroy();
+    backend.destroy();
+  }
+});
+
 test('WebGpuOutputPass overwrites the canvas exactly on a repeated present - no blend-driven accumulation', async () => {
   const backend = await createWebGpuTestBackend(2);
   const source = new RenderTexture(2, 2, { format: TextureFormat.Rgba8Srgb });
