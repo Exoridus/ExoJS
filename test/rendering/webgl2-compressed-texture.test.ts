@@ -283,6 +283,29 @@ describe('WebGl2Backend compressed upload', () => {
     texture.destroy();
   });
 
+  test('refuses the sRGB variant when only the linear extension is enabled, and still uploads the linear one', () => {
+    harness = createHarness(['WEBGL_compressed_texture_s3tc']);
+
+    const srgb = new CompressedTexture({
+      format: CompressedTextureFormat.Bc3RgbaUnormSrgb,
+      levels: chain(CompressedTextureFormat.Bc3RgbaUnormSrgb, 8, 8, 1),
+    });
+    const linear = new CompressedTexture({
+      format: CompressedTextureFormat.Bc3RgbaUnorm,
+      levels: chain(CompressedTextureFormat.Bc3RgbaUnorm, 8, 8, 1),
+    });
+
+    expect(() => harness?.backend.bindTexture(srgb, 0)).toThrow(/cannot sample the compressed texture format "bc3-rgba-unorm-srgb"/);
+    expect(harness.uploads).toEqual([]);
+
+    harness.backend.bindTexture(linear, 0);
+
+    expect(harness.uploads.map(({ internalFormat }) => internalFormat)).toEqual([GL_COMPRESSED_RGBA_S3TC_DXT5]);
+
+    srgb.destroy();
+    linear.destroy();
+  });
+
   test('carries the machine-readable failure class', () => {
     harness = createHarness([]);
 
