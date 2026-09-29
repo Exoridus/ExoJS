@@ -567,7 +567,7 @@ describe('lightmap renderer WebGPU browser', () => {
     // Quarter brightness, so what reaches the canvas says what the filter was
     // handed: a quarter of 2.0 is half, a quarter of a field clipped at 1.0 is
     // a quarter.
-    const grade = new ColorMatrixFilter().brightness(0.25);
+    const grade = new ColorMatrixFilter(undefined, { colorSpace: 'linear-srgb' }).brightness(0.25);
     const lighting = new LightmapLighting(host.app, {
       ambient: Color.black,
       lightResolution: 1,
@@ -614,8 +614,9 @@ describe('lightmap renderer WebGPU browser', () => {
         return;
       }
 
-      expect(at(2, 2)).toBeGreaterThan(100);
-      expect(at(2, 2)).toBeLessThan(160);
+      // The canvas holds linear light here: an authored 128 is 0.216, byte 55.
+      expect(at(2, 2)).toBeGreaterThan(45);
+      expect(at(2, 2)).toBeLessThan(65);
     } finally {
       lighting.destroy();
       host.destroy();

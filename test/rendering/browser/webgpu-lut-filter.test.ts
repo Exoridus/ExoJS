@@ -7,7 +7,7 @@ import { describe, test } from 'vitest';
 
 import { LutFilter } from '#rendering/filters/LutFilter';
 
-import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
+import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import { CLEAR, expectedProbeOutput, LUT_SCENE_SIZE, lutScene, PROBE_COLOURS, probeLut, SAMPLE_POINT } from './_lutFilterFixture';
 import { expectPixelNear } from './_pixels';
 
@@ -19,7 +19,7 @@ describe('LutFilter rgb1d grading (WebGPU)', () => {
       const { root, texture } = lutScene(css, filter);
 
       try {
-        if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+        if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
 
         expectPixelNear(readWebGpuPixels(backend, LUT_SCENE_SIZE)(SAMPLE_POINT, SAMPLE_POINT), [rgb[0], rgb[1], rgb[2], 255]);
       } finally {
@@ -37,7 +37,7 @@ describe('LutFilter rgb1d grading (WebGPU)', () => {
       const { root, texture } = lutScene(css, filter);
 
       try {
-        if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+        if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
 
         expectPixelNear(readWebGpuPixels(backend, LUT_SCENE_SIZE)(SAMPLE_POINT, SAMPLE_POINT), expectedProbeOutput(rgb[0], rgb[1], rgb[2]));
       } finally {
@@ -57,7 +57,7 @@ describe('LutFilter rgb1d grading (WebGPU)', () => {
     const { root, texture } = lutScene('#40a0c0', filter);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+      if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
 
       expectPixelNear(readWebGpuPixels(backend, LUT_SCENE_SIZE)(SAMPLE_POINT, SAMPLE_POINT), [0x40, 0xa0, 0xc0, 255], 8);
     } finally {

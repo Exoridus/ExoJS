@@ -24,7 +24,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots, resolveSpriteBatchTextureSlots } from '#rendering/webgpu/WebGpuSpriteRenderer';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { drawWebGpuEncoded, readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -170,6 +170,10 @@ describe('WebGPU sprite batcher texture-slot capacity (real device)', () => {
       // Pixel probes prove the upper slots sample the RIGHT texture: cell 8
       // is the first slot past the legacy 8-slot layout, cell slots-1 is the
       // last slot of the generated layout.
+      if (!(await drawWebGpuEncoded(ctx, backend, () => fullBatch.render(backend)))) {
+        return;
+      }
+
       const readFull = readWebGpuPixels(backend, canvasSize);
       const probe = (read: (x: number, y: number) => RgbaTuple, index: number): void => {
         expectPixelNear(
@@ -189,6 +193,10 @@ describe('WebGPU sprite batcher texture-slot capacity (real device)', () => {
       }
 
       expect(backend.stats.drawCalls).toBe(2);
+
+      if (!(await drawWebGpuEncoded(ctx, backend, () => overflow.render(backend)))) {
+        return;
+      }
 
       const readOverflow = readWebGpuPixels(backend, canvasSize);
 

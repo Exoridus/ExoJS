@@ -248,8 +248,9 @@ describe('lighting WebGPU browser', () => {
 
       const ambientOnly = readWebGpuPixels(backend, canvasSize)(32, 32);
 
-      expect(ambientOnly[0]).toBeGreaterThan(50);
-      expect(ambientOnly[0]).toBeLessThan(80);
+      // The canvas holds linear light here: an authored 64 is 0.051, byte 13.
+      expect(ambientOnly[0]).toBeGreaterThan(8);
+      expect(ambientOnly[0]).toBeLessThan(20);
 
       lighting.add(new PointLight({ radius: 64, intensity: 1, height: 16 })).setPosition(32, 32);
       lighting.update();

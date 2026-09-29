@@ -179,14 +179,70 @@ export const renderWebGpuOnce = async (
   root: RenderNode,
   clear: Color = Color.black,
 ): Promise<boolean> => {
+  encodedWebGpuFrames.delete(backend);
+
+  return drawWebGpuFrame(ctx, backend, () => root.render(backend), clear, null);
+};
+
+const encodedWebGpuFrames = new WeakMap<WebGpuBackend, { width: number; pixels: Uint8ClampedArray }>();
+
+/**
+ * {@link renderWebGpuOnce} into an sRGB attachment the size of the default surface.
+ *
+ * The engine blends in linear light and encodes once on the way to the canvas;
+ * a raw canvas has no encode of its own, so a spec that reads authored bytes
+ * back draws into an attachment that encodes on write, exactly as the frame's
+ * working target does. The encoded frame is read back once and served by
+ * {@link readWebGpuPixels} and {@link readWebGpuFrame}. A spec that stores
+ * numeric data in colour channels keeps drawing to the raw canvas instead.
+ */
+export const renderWebGpuEncoded = (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  root: RenderNode,
+  clear: Color = Color.black,
+): Promise<boolean> => drawWebGpuEncoded(ctx, backend, () => root.render(backend), clear);
+
+/** {@link renderWebGpuEncoded} for a spec that issues its own draw calls between the clear and the flush. */
+export const drawWebGpuEncoded = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  draw: () => void,
+  clear: Color = Color.black,
+): Promise<boolean> => {
+  encodedWebGpuFrames.delete(backend);
+
+  const { width, height } = backend.renderTarget;
+  const target = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
+
+  try {
+    if (!(await drawWebGpuFrame(ctx, backend, draw, clear, target))) return false;
+
+    encodedWebGpuFrames.set(backend, { width, pixels: await backend.readPixels(target, 0, 0, width, height) });
+  } finally {
+    backend.setRenderTarget(null);
+    target.destroy();
+  }
+
+  return true;
+};
+
+const drawWebGpuFrame = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  draw: () => void,
+  clear: Color,
+  target: RenderTexture | null,
+): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
 
   try {
     backend.resetStats();
+    backend.setRenderTarget(target);
     backend.clear(clear);
-    root.render(backend);
+    draw();
     backend.flush();
     // Asserted on the message rather than the error: a bare `GPUValidationError`
     // prints as `{}`, which names neither the shader nor the rule it broke.
@@ -246,6 +302,16 @@ export const readWebGl2Frame = (backend: WebGl2Backend, size: number): Uint8Arra
  * as it stood at the call - render again and take a new sampler.
  */
 export const readWebGpuPixels = (backend: WebGpuBackend, size: number): ((x: number, y: number) => RgbaTuple) => {
+  const encoded = encodedWebGpuFrames.get(backend);
+
+  if (encoded !== undefined) {
+    return (x: number, y: number): RgbaTuple => {
+      const offset = (Math.floor(y) * encoded.width + Math.floor(x)) * 4;
+
+      return [encoded.pixels[offset]!, encoded.pixels[offset + 1]!, encoded.pixels[offset + 2]!, encoded.pixels[offset + 3]!];
+    };
+  }
+
   const readback = document.createElement('canvas');
 
   readback.width = size;
@@ -266,6 +332,10 @@ export const readWebGpuPixels = (backend: WebGpuBackend, size: number): ((x: num
 
 /** Top-left-indexed RGBA. Routing through a 2D canvas also normalises the platform canvas format. */
 export const readWebGpuFrame = (backend: WebGpuBackend, size: number): Uint8ClampedArray => {
+  const encoded = encodedWebGpuFrames.get(backend);
+
+  if (encoded !== undefined) return encoded.pixels;
+
   const readback = document.createElement('canvas');
 
   readback.width = size;
