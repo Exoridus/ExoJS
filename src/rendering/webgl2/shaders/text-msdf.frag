@@ -26,10 +26,9 @@ float median(float r, float g, float b) {
 
 // texel-fetched node colours are authored sRGB, straight alpha - the same
 // authoring convention as Color. Decode the RGB once at the point each colour
-// is read, gated on colorPipelineEnabled (see colorShaderSources.ts): alpha
-// is coverage/opacity, never gamma-transformed.
+// is read: alpha is coverage/opacity, never gamma-transformed.
 vec4 decodeAuthoredColor(vec4 raw) {
-  return vec4(colorPipelineEnabled ? srgbToLinear(raw.rgb) : raw.rgb, raw.a);
+  return vec4(srgbToLinear(raw.rgb), raw.a);
 }
 
 // ── Gradient ramp ────────────────────────────────────────────────────────────

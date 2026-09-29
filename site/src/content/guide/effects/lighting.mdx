@@ -54,6 +54,8 @@ Forward lighting reads normals from a `LitMaterial`; lightmap lighting uses `nor
 
 The default authored convention is OpenGL-style tangent space: red points right, green points toward the top of the image, and blue points out of the sprite plane. For a DirectX-style asset, declare `new NormalMap(texture, { convention: 'directx' })`. Flipping the green channel is not the same operation as flipping the texture vertically, and neither changes the engine's y-down world coordinates.
 
+A normal map is sampled as numeric data, so it must not resolve to sRGB colour: a loaded image declares that with `colorSpace: 'none'`, a `DataTexture` already is numeric, and a map that resolves to `'srgb'` is rejected, because an sRGB view would hardware-decode the normal itself.
+
 Use the same atlas layout for albedo and normals. A material binding is shared by the sprites using that material, so a second atlas generally needs its own corresponding material. `AlphaNormals` derives surface detail from a silhouette; it cannot reconstruct interior detail that the alpha channel does not contain.
 
 The lightmap normal prepass stores one normal per covered pixel. Overlapping registered surfaces resolve by registration order within that prepass, not by an inferred full scene ordering. Test layered surfaces rather than assuming that a single normal buffer describes every overlap.

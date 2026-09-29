@@ -35,7 +35,7 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -87,7 +87,7 @@ const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException 
 
 // Render a frame through the real plan path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).
-const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
+const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode, encoded = false): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
@@ -95,10 +95,15 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
   let validationError: GPUError | null;
 
   try {
-    backend.resetStats();
-    backend.clear(Color.black);
-    root.render(backend);
-    backend.flush();
+    if (encoded) {
+      if (!(await renderWebGpuEncoded(ctx, backend, root))) return false;
+    } else {
+      backend.resetStats();
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+    }
+
     validationError = await device.popErrorScope();
   } catch (error) {
     if (isDeviceLoss(error)) {
@@ -177,12 +182,12 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
       root.addChild(group);
 
       // F1: dirty collect + capture.
-      if (!(await renderScene(ctx, backend, root))) {
+      if (!(await renderScene(ctx, backend, root, true))) {
         return;
       }
 
       // F2: clean entry replay + record - this IS the slow path's output.
-      if (!(await renderScene(ctx, backend, root))) {
+      if (!(await renderScene(ctx, backend, root, true))) {
         return;
       }
 
@@ -206,7 +211,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
       }
 
       // F3: instruction replay - identical pixels.
-      if (!(await renderScene(ctx, backend, root))) {
+      if (!(await renderScene(ctx, backend, root, true))) {
         return;
       }
 

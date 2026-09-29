@@ -15,7 +15,6 @@ import { Vector } from '#math/Vector';
 import { getWebGl2Context, type RenderSurface } from '#platform/RenderSurface';
 import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
-import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
@@ -327,7 +326,6 @@ const nativeRowCopyThreshold = 48;
 
 export class WebGl2Backend implements RenderBackend {
   public readonly backendType = RenderBackendType.WebGl2;
-  public readonly colorPipelineEnabled = COLOR_PIPELINE_ENABLED;
   public readonly rendererRegistry: RendererRegistry<WebGl2Backend> = new RendererRegistry<WebGl2Backend>();
   public readonly onContextLost = new Signal();
   public readonly onContextRestored = new Signal();
@@ -4132,25 +4130,33 @@ export class WebGl2Backend implements RenderBackend {
 
     this._setTextureUnit(activeUnit);
 
-    // The pass binds its own framebuffer, program, VAO and unit-0 texture, so
-    // every cache below now describes state GL no longer holds. Forgetting them
-    // costs one re-bind per upload; trusting them would cost a draw that samples
-    // the previous frame's texture.
-    this._boundHandles.length = 0;
+    // The pass binds its own framebuffer, program and VAO, so the caches below
+    // describe state GL no longer holds. Forgetting them costs one re-bind per
+    // upload; trusting them would cost a draw that samples the previous frame's
+    // texture. The texture-unit cache is not among them: the pass hands back the
+    // two units it borrowed, and `restoreAfterColorNormalization` records them.
     this._boundFramebuffer = null;
     this._shader = null;
     this._vao = null;
   }
 
-  /** Part of {@link WebGl2ColorNormalizationHost}: re-apply what this backend owns. */
-  public restoreAfterColorNormalization(): void {
+  /**
+   * Part of {@link WebGl2ColorNormalizationHost}: re-apply what this backend
+   * owns, and record the texture bindings the pass put back so the unit cache
+   * keeps describing what GL holds - a render target the pass restored onto a
+   * unit has to stay releasable from it.
+   */
+  public restoreAfterColorNormalization(unitZeroBinding: WebGLTexture | null, activeUnit: number, activeBinding: WebGLTexture | null): void {
+    this._boundHandles[0] = unitZeroBinding;
+    this._boundHandles[activeUnit] = activeBinding;
     this._bindRenderTarget(this._renderTarget);
   }
 
   private _getTextureNormalizer(): WebGl2TextureNormalizer {
     return (this._textureNormalizer ??= new WebGl2TextureNormalizer(this._context, {
       releaseForColorNormalization: destination => this.releaseForColorNormalization(destination),
-      restoreAfterColorNormalization: () => this.restoreAfterColorNormalization(),
+      restoreAfterColorNormalization: (unitZeroBinding, activeUnit, activeBinding) =>
+        this.restoreAfterColorNormalization(unitZeroBinding, activeUnit, activeBinding),
     }));
   }
 

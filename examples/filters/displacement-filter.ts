@@ -48,7 +48,9 @@ const rippleMap = (): Texture => {
   context.putImageData(image, 0, 0);
 
   // Repeat, so a scrolling sampling offset never runs off the edge of the map.
-  return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.Repeat, generateMipMap: false });
+  // `colorSpace: 'none'`: the channels are a direction in [-1, 1], so they are
+  // numeric data, not colour.
+  return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.Repeat, generateMipMap: false, colorSpace: 'none' });
 };
 
 class DisplacementFilterScene extends Scene {

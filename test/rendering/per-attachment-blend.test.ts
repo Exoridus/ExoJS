@@ -544,9 +544,10 @@ describe('WebGPU per-attachment blend', () => {
       context.renderTo(mesh, { target });
       backend.flush();
 
-      const blends = environment.pipelineTargetBlends().at(-1);
+      const additive = getWebGpuBlendState(BlendModes.Additive);
+      const blends = environment.pipelineTargetBlends().find(targets => targets.length === 1 && JSON.stringify(targets[0]) === JSON.stringify(additive));
 
-      expect(blends![0]).toEqual(getWebGpuBlendState(BlendModes.Additive));
+      expect(blends).toBeDefined();
 
       mesh.destroy();
       material.destroy();

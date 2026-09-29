@@ -47,10 +47,9 @@ fn spriteVertexCore(
 
     // The packed word is the authored sRGB tint byte-for-byte; decode it to
     // linear before it is premultiplied and interpolated, so a non-white tint
-    // is a linear multiplicative colour rather than an extra gamma step. Gated
-    // on colorPipelineEnabled: see colorShaderSources.ts.
+    // is a linear multiplicative colour rather than an extra gamma step.
     let rawTint = unpack4x8unorm(tintWord);
-    let tint = vec4<f32>(select(rawTint.rgb, srgbToLinear(rawTint.rgb), colorPipelineEnabled), rawTint.a);
+    let tint = vec4<f32>(srgbToLinear(rawTint.rgb), rawTint.a);
 
     // Geometry boundary snap (m1.z == 2.0, axis-aligned only): round each local
     // corner to the device grid so the quad edges land on whole device pixels.

@@ -1,4 +1,5 @@
 import { Color } from '#core/Color';
+import { srgbToLinear } from '#core/colorTransfer';
 import { LinearGradient } from '#rendering/gradient/LinearGradient';
 import { RadialGradient } from '#rendering/gradient/RadialGradient';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -49,8 +50,9 @@ describe('Gradient toTexture()', () => {
 
     const mid = readPixel8(texture.buffer, 1);
 
-    expect(mid[0]).toBeGreaterThan(150);
-    expect(mid[2]).toBeGreaterThan(70);
+    // Interpolated in sRGB (2/3 red, 1/3 blue), stored as linear light.
+    expect(mid[0]).toBe(Math.round(srgbToLinear(2 / 3) * 255));
+    expect(mid[2]).toBe(Math.round(srgbToLinear(1 / 3) * 255));
   });
 
   test('rasterizes radial gradients to rgba8', () => {

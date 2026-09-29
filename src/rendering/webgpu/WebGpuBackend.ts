@@ -12,7 +12,6 @@ import { Vector } from '#math/Vector';
 import { get2dContext, getWebGpuContext, type RenderSurface } from '#platform/RenderSurface';
 import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
-import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateCompressedTextureBytes, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
@@ -277,7 +276,6 @@ const invalidateSharedAdapter = (gpu: GPU): void => {
  */
 export class WebGpuBackend implements RenderBackend {
   public readonly backendType = RenderBackendType.WebGpu;
-  public readonly colorPipelineEnabled = COLOR_PIPELINE_ENABLED;
   public readonly rendererRegistry: RendererRegistry<WebGpuBackend> = new RendererRegistry<WebGpuBackend>();
   public readonly onDeviceLost = new Signal<[GPUDeviceLostInfo]>();
   public readonly onDeviceRestored = new Signal();
@@ -3672,12 +3670,14 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Unlike WebGL2 there is no free equivalent to narrow this by storage format:
    * WebGPU's `copyExternalImageToTexture` declares the SOURCE's association rather
-   * than requesting a premultiply, so a linear browser source would still need the
-   * pass. It is excluded anyway, and for the same reason as on WebGL2 - an
-   * implicit browser source keeps its legacy straight storage until the pipeline
-   * is activated, and the legacy WebGPU upload premultiplied nothing at all. The
-   * two backends therefore agree on exactly which textures take the pass, and
-   * both multiply decoded values by the same alpha.
+   * than requesting a premultiply, so a browser-sourced payload that skips the
+   * pass is still straight in the texture. That is safe because
+   * `shouldPremultiplyTextureSample` resolves true for exactly the textures this
+   * method rules out, so their draw shader associates the samples once - the
+   * answer the WebGL2 half gets for free from `UNPACK_PREMULTIPLY_ALPHA_WEBGL`.
+   * A browser source resolved to sRGB takes the pass, as it must, since only an
+   * sRGB destination encodes on write. The two backends therefore resolve the
+   * same textures to the pass, and both multiply decoded values by the same alpha.
    */
   private _needsColorNormalization(texture: Texture): boolean {
     if (!texture.premultiplyAlpha || texture.colorSpace === 'none' || texture.alphaMode !== 'straight') {

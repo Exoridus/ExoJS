@@ -153,7 +153,7 @@ sprite.filters = [filter];
 filter.setLut(differentLutTexture);
 ```
 
-`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation.
+`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation. LUT textures are numeric data, not colour: `setLut()` throws for a texture that resolves to `colorSpace: 'srgb'` (the default of an ordinary loaded image), so build the texture with `fromImage()`, a `DataTexture`, or declare `colorSpace: 'none'` on it.
 
 ## DisplacementFilter
 
@@ -174,6 +174,8 @@ haze.offsetV += delta * 0.1;
 ```
 
 `scale` is the maximum displacement in logical units (one number for both axes, or `[x, y]`), so the distortion keeps its on-screen size at every pixel ratio. `offsetU`/`offsetV` move where the map is sampled, in the map's own UV units — give the map `WrapModes.Repeat` for a scroll that never runs off its edge. The filter reports the reach through `getOutputBounds`, so a subject at rest keeps the room its distortion needs; a fragment displaced past the edge of that domain comes out transparent rather than smearing the border texel.
+
+The map is sampled as numeric data, so it must not resolve to sRGB colour: an image `Texture` declares that with `colorSpace: 'none'` (a `DataTexture` already is numeric), and a map that resolves to `'srgb'` is rejected, because an sRGB view would hardware-decode the displacement direction itself.
 
 ## Custom shader filters
 

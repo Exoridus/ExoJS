@@ -778,7 +778,7 @@
         },
         {
           "name": "fromColor",
-          "signature": "fromColor(color: Color | string, size: number): Texture",
+          "signature": "fromColor(color: Color | string, size: number, options?: Partial<TextureOptions>): Texture",
           "signatureTokens": [
             {
               "text": "fromColor",
@@ -825,6 +825,38 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -847,10 +879,15 @@
               "name": "size",
               "type": "number",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Partial<TextureOptions>",
+              "optional": true
             }
           ],
           "returnType": "Texture",
-          "description": "Create a solid-colour texture of the given square size (default 1×1). Accepts a Color instance or any CSS colour string; a Color with alpha below 1 is rendered with that alpha. Generalizes the fixed Texture.black/Texture.white helpers. A color producer, not a numeric placeholder: the fill goes through an ordinary HTMLCanvasElement, so it gets the same browser sRGB, straight-alpha interpretation as any loaded image and matches a genuinely loaded color asset of the same value."
+          "description": "Create a solid-colour texture of the given square size (default 1×1). Accepts a Color instance or any CSS colour string; a Color with alpha below 1 is rendered with that alpha. Generalizes the fixed Texture.black/Texture.white helpers. A color producer by default, not a numeric placeholder: the fill goes through an ordinary HTMLCanvasElement, so it gets the same browser sRGB, straight-alpha interpretation as any loaded image and matches a genuinely loaded color asset of the same value. A solid texture standing for numeric data instead - a flat normal map, a constant mask - declares that in options."
         },
         {
           "name": "fromPixels",

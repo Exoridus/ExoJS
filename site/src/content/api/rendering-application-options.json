@@ -74,7 +74,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The application's output transform - exposure and the HDR-to-SDR mapping applied once, at the end of every frame, while COLOR_PIPELINE_ENABLED is active. See OutputTransformOptions."
+          "description": "The application's output transform - exposure and the HDR-to-SDR mapping applied once, at the end of every frame. See OutputTransformOptions."
         },
         {
           "name": "debug",

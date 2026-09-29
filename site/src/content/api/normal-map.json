@@ -1,6 +1,6 @@
 {
   "title": "NormalMap",
-  "description": "An authored tangent-space normal map. ```ts hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals) }); hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals, { convention: 'directx' }) }); ``` The default input convention is OpenGL: green above the midpoint means the normal leans towards the top of the image, and a flat texel is `(128, 128, 255)`. A map authored the other way up lights its vertical detail from the wrong side while its horizontal detail stays correct; declare it as `directx` rather than editing the texture.",
+  "description": "An authored tangent-space normal map. ```ts hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals) }); hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals, { convention: 'directx' }) }); ``` The default input convention is OpenGL: green above the midpoint means the normal leans towards the top of the image, and a flat texel is `(128, 128, 255)`. A map authored the other way up lights its vertical detail from the wrong side while its horizontal detail stays correct; declare it as `directx` rather than editing the texture. `texture` is sampled as numeric data, so it must not resolve to sRGB colour: its XYZ channels would be hardware-decoded on sample. Build it as a `DataTexture`, or as an image `Texture` declared `colorSpace: 'none'`, or the constructor throws.",
   "symbol": "NormalMap",
   "kind": "class",
   "subsystem": "lighting",
@@ -21,7 +21,8 @@
       "paragraphs": [
         "An authored tangent-space normal map.",
         "```ts hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals) }); hero.material = new LitMaterial({ lighting, normals: new NormalMap(heroNormals, { convention: 'directx' }) }); ```",
-        "The default input convention is OpenGL: green above the midpoint means the normal leans towards the top of the image, and a flat texel is `(128, 128, 255)`. A map authored the other way up lights its vertical detail from the wrong side while its horizontal detail stays correct; declare it as `directx` rather than editing the texture."
+        "The default input convention is OpenGL: green above the midpoint means the normal leans towards the top of the image, and a flat texel is `(128, 128, 255)`. A map authored the other way up lights its vertical detail from the wrong side while its horizontal detail stays correct; declare it as `directx` rather than editing the texture.",
+        "`texture` is sampled as numeric data, so it must not resolve to sRGB colour: its XYZ channels would be hardware-decoded on sample. Build it as a `DataTexture`, or as an image `Texture` declared `colorSpace: 'none'`, or the constructor throws."
       ],
       "importLine": "import { NormalMap } from '@codexo/exojs-lighting'",
       "sourceLink": null

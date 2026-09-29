@@ -52,12 +52,13 @@ describe('DataTexture stays outside colour conversion', () => {
   });
 });
 
-describe('Gradient.toTexture() legacy output while the colour pipeline is inactive', () => {
-  // COLOR_PIPELINE_ENABLED defaults to false: Gradient's linear-PMA conversion
-  // is gated behind it (see gradient-color-pipeline-activation.test.ts for the
-  // gated-on behaviour), so this buffer must stay byte-identical to a
-  // pre-colour-pipeline build.
-  test('toTexture() output keeps its legacy metadata - colorSpace none, alphaMode straight, not premultiplied', () => {
+describe('Gradient.toTexture() stays numerical, carrying linear premultiplied colour', () => {
+  // A gradient producer is a DataTexture: it declares `colorSpace: 'none'`, so
+  // the engine never colour-manages it, and it writes the linear premultiplied
+  // samples itself rather than relying on an upload-time normalization pass.
+  // What the buffer holds is therefore its own responsibility, and it is
+  // exactly the representation a colour shader expects to sample.
+  test('toTexture() output is linear-PMA content - colorSpace none, alphaMode premultiplied, not premultiplied again', () => {
     const gradient = new LinearGradient([
       { offset: 0, color: Color.red },
       { offset: 1, color: Color.blue },
@@ -65,11 +66,11 @@ describe('Gradient.toTexture() legacy output while the colour pipeline is inacti
     const texture = gradient.toTexture(2, 1);
 
     expect(texture.colorSpace).toBe('none');
-    expect(texture.alphaMode).toBe('straight');
+    expect(texture.alphaMode).toBe('premultiplied');
     expect(texture.premultiplyAlpha).toBe(false);
   });
 
-  test('rgba32f output is the straight sRGB-normalized stop value, not linearized', () => {
+  test('rgba32f output is the linearized stop value, not the straight sRGB-normalized one', () => {
     const gray = 0x808080;
     const gradient = new LinearGradient([
       { offset: 0, color: new Color(gray) },
@@ -79,22 +80,26 @@ describe('Gradient.toTexture() legacy output while the colour pipeline is inacti
 
     const straight = 0x80 / 255;
 
-    expect(texture.buffer[0]).toBeCloseTo(straight, 6);
-    expect(texture.buffer[1]).toBeCloseTo(straight, 6);
-    expect(texture.buffer[2]).toBeCloseTo(straight, 6);
-    // A linearized value would be well below the straight one; this is the
-    // discriminator between the gated-on and legacy paths.
-    expect(texture.buffer[0]).not.toBeCloseTo(srgbToLinear(straight), 2);
+    expect(texture.buffer[0]).toBeCloseTo(srgbToLinear(straight), 6);
+    expect(texture.buffer[1]).toBeCloseTo(srgbToLinear(straight), 6);
+    expect(texture.buffer[2]).toBeCloseTo(srgbToLinear(straight), 6);
+    // The straight authoring value would sit well above the linear one; this is
+    // the discriminator between a decoded buffer and an untouched one.
+    expect(texture.buffer[0]).not.toBeCloseTo(straight, 2);
     expect(texture.buffer[3]).toBe(1);
   });
 
-  test('caller-supplied textureOptions still apply (nothing forces them while the gate is closed)', () => {
+  test('caller-supplied textureOptions cannot mislabel the producer buffer', () => {
     const gradient = new LinearGradient([
       { offset: 0, color: Color.red },
       { offset: 1, color: Color.blue },
     ]);
-    const texture = gradient.toTexture(2, 1, { textureOptions: { alphaMode: 'premultiplied' } });
+    const texture = gradient.toTexture(2, 1, { textureOptions: { alphaMode: 'straight', premultiplyAlpha: true } });
 
+    // These flags describe the buffer's actual content, so they are forced: a
+    // caller that asked for straight, engine-normalized storage would have the
+    // linear premultiplied samples interpreted as something else entirely.
     expect(texture.alphaMode).toBe('premultiplied');
+    expect(texture.premultiplyAlpha).toBe(false);
   });
 });

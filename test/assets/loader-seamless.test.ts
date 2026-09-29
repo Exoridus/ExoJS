@@ -233,7 +233,7 @@ describe('Loader seamless get (Texture)', () => {
 
     await Promise.all([color.loaded, data.loaded]);
 
-    expect(color.colorSpace).toBe('linear-srgb');
+    expect(color.colorSpace).toBe('srgb');
     expect(data.colorSpace).toBe('none');
     expect(data.source).not.toBe(color.source);
   });

@@ -23,11 +23,12 @@ export interface DisplacementFilterOptions {
    * samples the map but does not own it - destroying the filter leaves the
    * texture alone.
    *
-   * Sampled as numeric data, never colour: an explicit `colorSpace: 'srgb'`
-   * texture is rejected, because that storage format is hardware-decoded on
-   * sample regardless of what the shader does with the result, which would
-   * corrupt the displacement vector. A `DataTexture` is accepted directly.
-   * @throws Error - `map.colorSpace` is `'srgb'`.
+   * Sampled as numeric data, never colour: a map that resolves to
+   * `colorSpace: 'srgb'` is rejected, because that storage format is
+   * hardware-decoded on sample regardless of what the shader does with the
+   * result, which would corrupt the displacement vector. A `DataTexture` is
+   * accepted directly, as is an image `Texture` declared `colorSpace: 'none'`.
+   * @throws Error - `map.colorSpace` resolves to `'srgb'`.
    */
   readonly map: Texture;
   /**
@@ -207,6 +208,8 @@ export class DisplacementFilter extends Filter {
 
 const assertNotSrgbMap = (map: Texture): void => {
   if (map.colorSpace === 'srgb') {
-    throw new Error("DisplacementFilter map cannot be an explicit colorSpace: 'srgb' texture - displacement channels are numeric, not colour.");
+    throw new Error(
+      "DisplacementFilter map resolved to colorSpace: 'srgb' - displacement channels are numeric, not colour. Build the map as a DataTexture, or declare it colorSpace: 'none'.",
+    );
   }
 };

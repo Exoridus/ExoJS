@@ -20,6 +20,18 @@ const overlaySpies = vi.hoisted(() => ({
   hide: vi.fn(),
 }));
 
+vi.mock('#rendering/OutputTransform', async importOriginal => {
+  const actual = await importOriginal<typeof import('#rendering/OutputTransform')>();
+
+  // The backends in this suite are hand-written stubs with no GPU device, so the
+  // real output pass has nothing to draw with.
+  class StubOutputTransform extends actual.OutputTransform {
+    public override present(): void {}
+  }
+
+  return { ...actual, OutputTransform: StubOutputTransform };
+});
+
 vi.mock('#core/devErrorOverlay', () => ({
   showDevErrorOverlay: overlaySpies.show,
   hideDevErrorOverlay: overlaySpies.hide,
@@ -60,6 +72,7 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
       execute: vi.fn().mockReturnThis(),
+      resolveRenderTarget: vi.fn(),
       clear: vi.fn().mockReturnThis(),
       pushScissorRect: vi.fn().mockReturnThis(),
       popScissorRect: vi.fn().mockReturnThis(),

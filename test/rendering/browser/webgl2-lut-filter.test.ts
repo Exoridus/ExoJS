@@ -13,7 +13,7 @@ import { describe, expect, test } from 'vitest';
 
 import { LutFilter } from '#rendering/filters/LutFilter';
 
-import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
+import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Encoded } from './_backendSetup';
 import { CLEAR, expectedProbeOutput, LUT_SCENE_SIZE, lutScene, PROBE_COLOURS, probeLut, SAMPLE_POINT } from './_lutFilterFixture';
 import { expectPixelNear } from './_pixels';
 
@@ -25,7 +25,7 @@ describe('LutFilter rgb1d grading (WebGL2)', () => {
       const { root, texture } = lutScene(css, filter);
 
       try {
-        renderWebGl2Once(backend, root, CLEAR);
+        renderWebGl2Encoded(backend, root, CLEAR);
 
         expectPixelNear(readWebGl2Pixel(backend, SAMPLE_POINT, SAMPLE_POINT), [rgb[0], rgb[1], rgb[2], 255]);
       } finally {
@@ -43,7 +43,7 @@ describe('LutFilter rgb1d grading (WebGL2)', () => {
       const { root, texture } = lutScene(css, filter);
 
       try {
-        renderWebGl2Once(backend, root, CLEAR);
+        renderWebGl2Encoded(backend, root, CLEAR);
 
         expectPixelNear(readWebGl2Pixel(backend, SAMPLE_POINT, SAMPLE_POINT), expectedProbeOutput(rgb[0], rgb[1], rgb[2]));
       } finally {
@@ -57,14 +57,15 @@ describe('LutFilter rgb1d grading (WebGL2)', () => {
   test('alpha survives the lookup', async () => {
     const backend = await createWebGl2TestBackend(LUT_SCENE_SIZE);
     const filter = new LutFilter({ mode: 'rgb1d' }).setLut(LutFilter.identityLut1D());
-    // Half-transparent white over black composites to mid-grey. A shader that
-    // dropped or overwrote alpha would leave full white instead.
+    // Half-transparent white over black composites to half linear light, which
+    // the encoding target stores as byte 188. A shader that dropped or
+    // overwrote alpha would leave full white instead.
     const { root, texture } = lutScene('rgba(255, 255, 255, 0.5)', filter);
 
     try {
-      renderWebGl2Once(backend, root, CLEAR);
+      renderWebGl2Encoded(backend, root, CLEAR);
 
-      expectPixelNear(readWebGl2Pixel(backend, SAMPLE_POINT, SAMPLE_POINT), [128, 128, 128, 255], 6);
+      expectPixelNear(readWebGl2Pixel(backend, SAMPLE_POINT, SAMPLE_POINT), [188, 188, 188, 255], 6);
     } finally {
       root.destroy();
       texture.destroy();

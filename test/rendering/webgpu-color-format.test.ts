@@ -59,7 +59,7 @@ describe('WebGpuBackend exact color formats', () => {
     texture.destroy();
   });
 
-  test('keeps a default external image destination on rgba8unorm before color-pipeline activation', async () => {
+  test('stores a default external image destination as rgba8unorm-srgb', async () => {
     environment = createMockWebGpuEnvironment();
     backend = await createMockBackend(environment);
     const destinations: GPUCopyExternalImageDestInfo[] = [];
@@ -82,7 +82,7 @@ describe('WebGpuBackend exact color formats', () => {
     backend.getTextureBinding(texture);
 
     expect(destinations).toHaveLength(1);
-    expect(backend.getTextureFormat(texture)).toBe('rgba8unorm');
+    expect(backend.getTextureFormat(texture)).toBe('rgba8unorm-srgb');
     expect(destinations[0]?.colorSpace).toBeUndefined();
 
     texture.destroy();

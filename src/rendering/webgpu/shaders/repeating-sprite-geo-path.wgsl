@@ -37,8 +37,8 @@ fn geoVert(input: GeoVIn, @builtin(vertex_index) vid: u32) -> VOut {
     out.uv    = vec2<f32>(u, v);
     // input.color.rgb is the authored sRGB tint byte-for-byte (unorm8x4 vertex
     // fetch, not yet decoded); decode it to linear before it is premultiplied
-    // and interpolated. Gated on colorPipelineEnabled: see colorShaderSources.ts.
-    let linearTint = select(input.color.rgb, srgbToLinear(input.color.rgb), colorPipelineEnabled);
+    // and interpolated.
+    let linearTint = srgbToLinear(input.color.rgb);
     out.color = vec4<f32>(linearTint * input.color.a, input.color.a);
     return out;
 }

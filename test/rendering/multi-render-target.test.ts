@@ -266,7 +266,8 @@ describe('WebGL2 multiple colour attachments', () => {
     context.renderTo(mesh, { target });
     harness.backend.flush();
 
-    expect(harness.attachments.map(({ slot }) => slot)).toEqual([0]);
+    // Every attachment, including the colour normalization pass's own, is slot 0.
+    expect(harness.attachments.every(({ slot }) => slot === 0)).toBe(true);
     expect(harness.drawBufferLists).toEqual([]);
 
     target.destroy();

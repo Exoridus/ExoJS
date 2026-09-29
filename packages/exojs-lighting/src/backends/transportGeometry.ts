@@ -1,5 +1,4 @@
 import type { Color, ReadonlyRectangle } from '@codexo/exojs';
-import { COLOR_PIPELINE_ENABLED } from '@codexo/exojs/renderer-sdk';
 
 import type { Light } from '../lights/Light';
 import { LineLight } from '../lights/LineLight';
@@ -14,22 +13,11 @@ const GRID_EPSILON = 1e-7;
 // allocates.
 const scratchLinearColor = new Float32Array(4);
 
-/**
- * `color`'s RGB, decoded to linear light when the colour pipeline is active
- * and left as authoring bytes normalized to 0..1 otherwise.
- */
+/** `color`'s RGB, decoded to linear light. */
 const emitterColorRgb = (color: Color): { r: number; g: number; b: number } => {
-  // COLOR_PIPELINE_ENABLED is `false` today, which is the only reason the
-  // linter can see this branch as dead - it flips exactly once, engine-wide,
-  // and this function has to hold both sides of that flip.
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (COLOR_PIPELINE_ENABLED) {
-    color.writeLinear(scratchLinearColor);
+  color.writeLinear(scratchLinearColor);
 
-    return { r: scratchLinearColor[0] ?? 0, g: scratchLinearColor[1] ?? 0, b: scratchLinearColor[2] ?? 0 };
-  }
-
-  return { r: color.r / 255, g: color.g / 255, b: color.b / 255 };
+  return { r: scratchLinearColor[0] ?? 0, g: scratchLinearColor[1] ?? 0, b: scratchLinearColor[2] ?? 0 };
 };
 
 /** Texels one occluder segment takes: `(ax, ay, bx, by)`. */

@@ -579,7 +579,7 @@ describe('RenderTo WebGL2 browser', () => {
     // into the target then formed a WebGL feedback loop: INVALID_OPERATION,
     // whole draw dropped, target left at its clear color.
     const backend = await createBackend();
-    const target = new RenderTexture(canvasSize, canvasSize);
+    const target = new RenderTexture(canvasSize, canvasSize, { format: TextureFormat.Rgba8Srgb });
     const palette: ReadonlyArray<readonly [number, number, number]> = [
       [255, 0, 0],
       [0, 255, 0],

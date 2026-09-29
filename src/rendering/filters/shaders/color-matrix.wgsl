@@ -8,22 +8,10 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let straightRgb = select(vec3<f32>(0.0), premultiplied.rgb / max(alpha, 1e-5), alpha > 0.0);
     let straight = vec4<f32>(straightRgb, alpha);
 
-    // Legacy (colorPipelineEnabled == false): the matrix applies directly to
-    // the straight sample with no domain conversion - byte-identical to
-    // before the colorSpace option existed.
-    let legacyTransformed = vec4<f32>(
-        dot(uniforms.uRows[0], straight),
-        dot(uniforms.uRows[1], straight),
-        dot(uniforms.uRows[2], straight),
-        dot(uniforms.uRows[3], straight),
-    ) + uniforms.uBias;
-    let legacyGraded = clamp(legacyTransformed, vec4<f32>(0.0), vec4<f32>(1.0));
-    let legacy = vec4<f32>(legacyGraded.rgb * legacyGraded.a, legacyGraded.a);
-
-    // Gated: the straight sample is already linear light under the active
-    // pipeline. uDomain selects which domain the matrix coefficients see -
-    // convert into it, apply, clamp, then convert back so the result stays
-    // linear PMA regardless of the caller's chosen domain.
+    // The straight sample is already linear light. uDomain selects which domain
+    // the matrix coefficients see - convert into it, apply, clamp, then convert
+    // back so the result stays linear PMA regardless of the caller's chosen
+    // domain.
     let domainSrgb = uniforms.uDomain > 0.5;
     let domainRgb = select(straight.rgb, linearToSrgb(straight.rgb), domainSrgb);
     let domainInput = vec4<f32>(domainRgb, straight.a);
@@ -35,7 +23,6 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     ) + uniforms.uBias;
     let graded = clamp(transformed, vec4<f32>(0.0), vec4<f32>(1.0));
     let outRgb = select(graded.rgb, srgbToLinear(graded.rgb), domainSrgb);
-    let gated = vec4<f32>(outRgb * graded.a, graded.a);
 
-    return select(legacy, gated, colorPipelineEnabled);
+    return vec4<f32>(outRgb * graded.a, graded.a);
 }

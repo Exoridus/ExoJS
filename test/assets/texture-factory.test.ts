@@ -72,7 +72,7 @@ describe('TextureFactory', () => {
       expect(texture.height).toBe(8);
     });
 
-    test('create() keeps default browser color on the legacy linear storage path before color-pipeline activation', async () => {
+    test('create() decodes default browser color as sRGB straight-alpha', async () => {
       const createBitmap = vi.fn(async () => ({ width: 8, height: 8 }));
 
       vi.stubGlobal('createImageBitmap', createBitmap);
@@ -83,7 +83,7 @@ describe('TextureFactory', () => {
         colorSpaceConversion: 'default',
         premultiplyAlpha: 'none',
       });
-      expect(texture.colorSpace).toBe('linear-srgb');
+      expect(texture.colorSpace).toBe('srgb');
       expect(texture.alphaMode).toBe('straight');
     });
 

@@ -75,19 +75,15 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     let sample = textureSample(meshTexture, meshSampler, input.texcoord);
     let resolvedSample = associateSampledColor(sample, input.premultiplySample == 1u);
 
-    // Legacy (colorPipelineEnabled == false): unchanged bit-for-bit, including
-    // its erroneous second `* alpha` - preserved verbatim until the gate opens.
-    let legacyModulated = resolvedSample * input.color * input.tint;
-    let legacy = vec4<f32>(legacyModulated.rgb * legacyModulated.a, legacyModulated.a);
-
-    // Gated: decode the authored per-vertex colour and per-node tint once,
-    // premultiply each, then combine with the sample by a single component-wise
-    // multiply - removing the legacy path's erroneous second `* alpha`.
-    let linearVertexRgb = select(input.color.rgb, srgbToLinear(input.color.rgb), colorPipelineEnabled);
+    // The authored per-vertex colour and per-instance tint are decoded once,
+    // premultiplied each, then combined with the sample by a single
+    // component-wise multiply. `resolvedSample` is already premultiplied, so
+    // multiplying the two premultiplied factors into it associates the result
+    // exactly once.
+    let linearVertexRgb = srgbToLinear(input.color.rgb);
     let vertexPremultiplied = vec4<f32>(linearVertexRgb * input.color.a, input.color.a);
-    let linearTintRgb = select(input.tint.rgb, srgbToLinear(input.tint.rgb), colorPipelineEnabled);
+    let linearTintRgb = srgbToLinear(input.tint.rgb);
     let tintPremultiplied = vec4<f32>(linearTintRgb * input.tint.a, input.tint.a);
-    let gated = resolvedSample * vertexPremultiplied * tintPremultiplied;
 
-    return select(legacy, gated, colorPipelineEnabled);
+    return resolvedSample * vertexPremultiplied * tintPremultiplied;
 }

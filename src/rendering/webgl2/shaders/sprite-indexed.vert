@@ -123,9 +123,8 @@ void main(void) {
     // m2.rgb is the authored sRGB tint byte-for-byte (hardware-normalized, not
     // yet decoded); decode it to linear before it is premultiplied and
     // interpolated, so a non-white tint is a linear multiplicative colour
-    // rather than an extra gamma step. Gated on colorPipelineEnabled: see
-    // colorShaderSources.ts.
-    highp vec3 linearTint = colorPipelineEnabled ? srgbToLinear(m2.rgb) : m2.rgb;
+    // rather than an extra gamma step.
+    highp vec3 linearTint = srgbToLinear(m2.rgb);
     v_color = vec4(linearTint * m2.a, m2.a);
     v_textureSlot = a_textureSlot;
 }

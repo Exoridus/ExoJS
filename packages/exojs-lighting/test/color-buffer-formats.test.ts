@@ -1,19 +1,18 @@
 import { Color, ColorMatrixFilter, Matrix, Rectangle, RenderPipeline, RenderTexture, Signal, TextureFormat } from '@codexo/exojs';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
 import type { LightingHost } from '../src/LightingHost';
 import { LightmapLighting } from '../src/LightmapLighting';
 import { RadianceLighting } from '../src/RadianceLighting';
 
 /**
- * The light-accumulation target's own format contract (R34): it holds linear
- * light, half-float where a device can render into one, and every numeric
- * transport around it (mask, normal prepass, shadow/transport tables) stays
- * raw regardless of the colour pipeline gate. `lightTexture`'s own
- * hdr/fallback behaviour is covered by `Lighting.test.ts`; this file covers
- * what is new here - the ambient clear's decode, the shaded/post target
- * matching the accumulation format, and every numeric transport staying
- * untouched.
+ * The light-accumulation target's own format contract: it holds linear light,
+ * half-float where a device can render into one, and every numeric transport
+ * around it (mask, normal prepass, shadow/transport tables) stays raw.
+ * `lightTexture`'s own hdr/fallback behaviour is covered by `Lighting.test.ts`;
+ * this file covers what is new here - the ambient clear's decode, the
+ * shaded/post target matching the accumulation format, and every numeric
+ * transport staying untouched.
  */
 const fakeApp = (floatTargets = true): LightingHost =>
   ({
@@ -36,28 +35,8 @@ const fakeApp = (floatTargets = true): LightingHost =>
     height: 64,
   }) as unknown as LightingHost;
 
-describe('light-accumulation ambient clear - gated decode', () => {
-  beforeEach(() => {
-    vi.resetModules();
-  });
-
-  test('with the colour pipeline closed, the clear stays the ambient authoring bytes', async () => {
-    const { LightmapLighting } = await import('../src/LightmapLighting');
-    const ambient = new Color(64, 96, 128);
-    const lighting = new LightmapLighting(fakeApp(), { ambient });
-
-    expect((lighting.backend as unknown as { ambientClear: Color }).ambientClear.equals(ambient)).toBe(true);
-    lighting.destroy();
-  });
-
-  test('with the colour pipeline active, the clear decodes to linear - the same conversion the forward renderer applies to the same ambient', async () => {
-    vi.doMock('@codexo/exojs/renderer-sdk', async () => {
-      const actual = await vi.importActual<typeof import('@codexo/exojs/renderer-sdk')>('@codexo/exojs/renderer-sdk');
-
-      return { ...actual, COLOR_PIPELINE_ENABLED: true };
-    });
-
-    const { LightmapLighting } = await import('../src/LightmapLighting');
+describe('light-accumulation ambient clear - linear decode', () => {
+  test('the clear decodes to linear light - the same conversion the forward renderer applies to the same ambient', () => {
     const ambient = new Color(64, 96, 128);
     const lighting = new LightmapLighting(fakeApp(), { ambient });
     const clear = (lighting.backend as unknown as { ambientClear: Color }).ambientClear;
@@ -71,20 +50,13 @@ describe('light-accumulation ambient clear - gated decode', () => {
     expect(Math.abs(clear.r - linear[0]! * 255)).toBeLessThan(1);
     expect(Math.abs(clear.g - linear[1]! * 255)).toBeLessThan(1);
     expect(Math.abs(clear.b - linear[2]! * 255)).toBeLessThan(1);
-    // And measurably different from the closed-gate (undecoded) byte, so this
-    // is proof of a decode, not an accidental no-op.
+    // And measurably different from the ambient's authoring byte, so this is
+    // proof of a decode, not an accidental no-op.
     expect(clear.r).not.toBe(ambient.r);
     lighting.destroy();
   });
 
-  test('a black ambient is unaffected by the gate - it decodes to itself', async () => {
-    vi.doMock('@codexo/exojs/renderer-sdk', async () => {
-      const actual = await vi.importActual<typeof import('@codexo/exojs/renderer-sdk')>('@codexo/exojs/renderer-sdk');
-
-      return { ...actual, COLOR_PIPELINE_ENABLED: true };
-    });
-
-    const { LightmapLighting } = await import('../src/LightmapLighting');
+  test('a black ambient decodes to itself', () => {
     const lighting = new LightmapLighting(fakeApp(), { ambient: Color.black });
 
     expect((lighting.backend as unknown as { ambientClear: Color }).ambientClear.equals(Color.black)).toBe(true);

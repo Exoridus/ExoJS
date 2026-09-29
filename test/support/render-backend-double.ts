@@ -64,7 +64,6 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     renderTarget,
     stats,
     clearColor: new Color(0, 0, 0, 0),
-    colorPipelineEnabled: false,
     rootResolution: options.rootResolution ?? 1,
     maxTextureSize: options.maxTextureSize ?? 4096,
     supportedTextureFormats: options.supportedTextureFormats ?? [],

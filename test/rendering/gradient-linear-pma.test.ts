@@ -1,16 +1,14 @@
 /**
- * Gradient.toTexture()'s linear-PMA conversion is gated behind
- * COLOR_PIPELINE_ENABLED (see the Activation ruling in the colour pipeline
- * handoff): while closed, its output stays byte-identical to the legacy
- * straight-sRGB buffer (data-color-isolation.test.ts covers that default).
- * This file flips the gate to prove the linear-PMA path the plan actually
- * requires once colour pipeline activation lands.
+ * Gradient.toTexture()'s linear-PMA conversion: stops are authored and
+ * interpolated in sRGB, and the interpolated sample is decoded to linear light
+ * and premultiplied by alpha before it is stored, so the buffer holds the same
+ * representation a colour shader samples at draw time. The buffer is a
+ * DataTexture, so it stays outside colour management and the producer declares
+ * what it wrote rather than relying on an upload-time normalization pass.
  */
 import { srgbToLinear } from '#core/colorTransfer';
 
-vi.mock('#rendering/colorPipelineActivation', () => ({ COLOR_PIPELINE_ENABLED: true }));
-
-describe('Gradient.toTexture() with the colour pipeline active', () => {
+describe('Gradient.toTexture() writes linear premultiplied samples', () => {
   test('output is tagged as linear-PMA content, not a colour-managed upload', async () => {
     const { Color } = await import('#core/Color');
     const { LinearGradient } = await import('#rendering/gradient/LinearGradient');

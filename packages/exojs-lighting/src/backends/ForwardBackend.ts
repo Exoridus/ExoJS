@@ -1,5 +1,4 @@
 import { type Color, DataTexture, type Filter, FilterPass, TextureFormat } from '@codexo/exojs';
-import { COLOR_PIPELINE_ENABLED } from '@codexo/exojs/renderer-sdk';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { LightingHost } from '../LightingHost';
@@ -17,23 +16,12 @@ const noCone = -1;
 
 /**
  * Write `color`'s RGB into `buffer` at `offset..offset+2`, decoded to linear
- * light when the colour pipeline is active and left as authoring bytes
- * normalized to 0..1 otherwise. Writes `offset + 3` too when decoding (the
- * colour's own alpha) - every caller here packs a numeric field (a flag, a
- * height) into that slot instead, and overwrites it immediately after.
+ * light. Writes `offset + 3` too (the colour's own alpha) - every caller here
+ * packs a numeric field (a flag, a height) into that slot instead, and
+ * overwrites it immediately after.
  */
 const writeLightColorRgb = (buffer: Float32Array, offset: number, color: Color): void => {
-  // COLOR_PIPELINE_ENABLED is `false` today, which is the only reason the
-  // linter can see this branch as dead - it flips exactly once, engine-wide,
-  // and this function has to hold both sides of that flip.
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (COLOR_PIPELINE_ENABLED) {
-    color.writeLinear(buffer, offset);
-  } else {
-    buffer[offset] = color.r / 255;
-    buffer[offset + 1] = color.g / 255;
-    buffer[offset + 2] = color.b / 255;
-  }
+  color.writeLinear(buffer, offset);
 };
 
 const scratchPosition = { x: 0, y: 0 };

@@ -19,6 +19,18 @@ import { frameClockOf, lastFrameTimestampOf, setFrameLoopActive, setLastFrameTim
 // any variable declarations in the file.
 // ---------------------------------------------------------------------------
 
+vi.mock('#rendering/OutputTransform', async importOriginal => {
+  const actual = await importOriginal<typeof import('#rendering/OutputTransform')>();
+
+  // The backends in this suite are hand-written stubs with no GPU device, so the
+  // real output pass has nothing to draw with.
+  class StubOutputTransform extends actual.OutputTransform {
+    public override present(): void {}
+  }
+
+  return { ...actual, OutputTransform: StubOutputTransform };
+});
+
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {
     return {
@@ -49,7 +61,15 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       backendType: 'webgl2',
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
-      execute: vi.fn().mockReturnThis(),
+      // Runs the pass body the way a coordinator-less backend does, so the
+      // frame's own clear and draw still happen.
+      execute: vi.fn().mockImplementation(function (this: unknown, pass: { execute(backend: unknown): void }) {
+        pass.execute(this);
+
+        return this;
+      }),
+      setRenderTarget: vi.fn().mockReturnThis(),
+      resolveRenderTarget: vi.fn(),
       // Stand-in for the backend's live clear colour - identity is all the
       // auto-clear specs below compare, so a plain object is enough.
       clearColor: { red: 100, green: 149, blue: 237, alpha: 1 },
@@ -94,6 +114,7 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
       execute: vi.fn().mockReturnThis(),
+      resolveRenderTarget: vi.fn(),
       // Stand-in for the backend's live clear colour - identity is all the
       // auto-clear specs below compare, so a plain object is enough.
       clearColor: { red: 100, green: 149, blue: 237, alpha: 1 },

@@ -11,9 +11,9 @@
  * lands in the same linear space the `texture_2d` fallback's hardware decode
  * already produces. The renderer only takes the external-texture path for a
  * video whose resolved `colorSpace` is `'srgb'` (browser-decoded video's
- * default), so this decode is unconditionally correct wherever it runs -
- * gated only on `colorPipelineEnabled`, the same way an authored vertex tint
- * decode is, because the source kind is fixed for this whole shader.
+ * default), so this decode is correct wherever it runs - the same authored-value
+ * decode an authored vertex tint gets, because the source kind is fixed for
+ * this whole shader.
  * @internal
  */
 export const videoExternalTextureGroupWgsl = `
@@ -22,7 +22,7 @@ export const videoExternalTextureGroupWgsl = `
 
 fn sampleTexture(slot: u32, uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> vec4<f32> {
     let sampleColor = textureSampleBaseClampToEdge(videoTexture, videoSampler, uv);
-    let linearRgb = select(sampleColor.rgb, srgbToLinear(sampleColor.rgb), colorPipelineEnabled);
+    let linearRgb = srgbToLinear(sampleColor.rgb);
 
     return vec4<f32>(linearRgb, sampleColor.a);
 }

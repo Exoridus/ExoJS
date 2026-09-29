@@ -2,7 +2,6 @@ import { Color } from '#core/Color';
 import { SRGB_BYTE_TO_LINEAR } from '#core/colorTransfer';
 import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
-import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -181,15 +180,9 @@ export class DropShadowFilter extends Filter {
 
     // Decoded once here rather than in the shader per tap: the silhouette pass
     // reads this uniform, not the authored bytes, so a straight sRGB->linear
-    // decode costs nothing per frame. Gated the same as every other colour
-    // pipeline behavioural change - legacy byte-identical output until
-    // COLOR_PIPELINE_ENABLED activates the linear-light contract this filter's
-    // draw target eventually expects.
-    if (COLOR_PIPELINE_ENABLED) {
-      this._silhouette.uniforms.uColor.set(SRGB_BYTE_TO_LINEAR[r]!, SRGB_BYTE_TO_LINEAR[g]!, SRGB_BYTE_TO_LINEAR[b]!, a);
-    } else {
-      this._silhouette.uniforms.uColor.set(r / 255, g / 255, b / 255, a);
-    }
+    // decode costs nothing per frame, and the linear-light draw target it
+    // eventually composites into expects linear RGB.
+    this._silhouette.uniforms.uColor.set(SRGB_BYTE_TO_LINEAR[r]!, SRGB_BYTE_TO_LINEAR[g]!, SRGB_BYTE_TO_LINEAR[b]!, a);
   }
 
   /**

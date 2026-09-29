@@ -66,7 +66,11 @@ const createAlbedo = (): Texture => {
   return new Texture(source);
 };
 
-/** Flat normal map: every texel is (0, 0, 1), so mirroring must not change shading. */
+/**
+ * Flat normal map: every texel is (0, 0, 1), so mirroring must not change
+ * shading. Its channels are numeric, so the map declares itself non-colour -
+ * an sRGB view would hardware-decode the normal on sample.
+ */
 const createFlatNormalMap = (): Texture => {
   const source = document.createElement('canvas');
 
@@ -80,7 +84,7 @@ const createFlatNormalMap = (): Texture => {
   context.fillStyle = 'rgb(128, 128, 255)';
   context.fillRect(0, 0, 4, 4);
 
-  return new Texture(source);
+  return new Texture(source, { colorSpace: 'none' });
 };
 
 describe('lighting WebGL2 browser', () => {
@@ -208,8 +212,9 @@ describe('lighting WebGL2 browser', () => {
 
       const ambientOnly = readWebGl2Pixel(backend, 32, 32);
 
-      expect(ambientOnly[0]).toBeGreaterThan(50);
-      expect(ambientOnly[0]).toBeLessThan(80);
+      // The canvas holds linear light here: an authored 64 is 0.051, byte 13.
+      expect(ambientOnly[0]).toBeGreaterThan(8);
+      expect(ambientOnly[0]).toBeLessThan(20);
 
       lighting.add(new PointLight({ radius: 64, intensity: 1, height: 16 })).setPosition(32, 32);
       lighting.update();

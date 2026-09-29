@@ -49,7 +49,7 @@ const runCase = async (scenario: ReceiverCase): Promise<void> => {
     },
   });
   // The finest cascade, one constant everywhere: the filter's own input.
-  const texture = Texture.fromColor(new Color(FINEST_LEVEL, FINEST_LEVEL, FINEST_LEVEL), RECEIVER_PROBES * RECEIVER_TILE);
+  const texture = Texture.fromColor(new Color(FINEST_LEVEL, FINEST_LEVEL, FINEST_LEVEL), RECEIVER_PROBES * RECEIVER_TILE, { colorSpace: 'none' });
   const root = new Container();
   const sprite = new Sprite(texture);
 

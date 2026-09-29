@@ -137,8 +137,7 @@ export interface RenderingApplicationOptions {
   spriteRendererBatchSize?: number;
   /**
    * The application's output transform - exposure and the HDR-to-SDR mapping
-   * applied once, at the end of every frame, while
-   * {@link COLOR_PIPELINE_ENABLED} is active. See {@link OutputTransformOptions}.
+   * applied once, at the end of every frame. See {@link OutputTransformOptions}.
    */
   color?: OutputTransformOptions;
 }

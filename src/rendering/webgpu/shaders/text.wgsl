@@ -101,11 +101,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 
 // Node-row colours are authored sRGB, straight alpha - the same authoring
-// convention as Color. Decode the RGB once at the point each colour is read,
-// gated on colorPipelineEnabled (see colorShaderSources.ts): alpha is
-// coverage/opacity, never gamma-transformed.
+// convention as Color. Decode the RGB once at the point each colour is read:
+// alpha is coverage/opacity, never gamma-transformed.
 fn decodeAuthoredColor(raw: vec4<f32>) -> vec4<f32> {
-    return vec4<f32>(select(raw.rgb, srgbToLinear(raw.rgb), colorPipelineEnabled), raw.a);
+    return vec4<f32>(srgbToLinear(raw.rgb), raw.a);
 }
 
 // ── Gradient ramp ────────────────────────────────────────────────────────────
@@ -323,17 +322,12 @@ fn fragmentColor(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let sample = sampleTexture(in.textureSlot, in.texcoord, dpdx(in.texcoord), dpdy(in.texcoord));
 
-    // Legacy (colorPipelineEnabled == false): unchanged bit-for-bit - tint is
-    // authored straight and was never decoded or premultiplied before this
-    // modulate, so white ((1,1,1,1)) is the only tint that leaves sample alone.
-    let legacy = sample * tint;
-
-    // Gated: decode the authored tint once and premultiply it, matching the
-    // sprite tint convention, before combining with the already-associated
-    // sample by a single component-wise multiply.
-    let linearTintRgb = select(tint.rgb, srgbToLinear(tint.rgb), colorPipelineEnabled);
+    // Decode the authored tint once and premultiply it, matching the sprite
+    // tint convention, before combining with the already-associated sample by a
+    // single component-wise multiply. An authored tint is never sampled through
+    // a storage format, so this is the only decode it gets.
+    let linearTintRgb = srgbToLinear(tint.rgb);
     let tintPremultiplied = vec4<f32>(linearTintRgb * tint.a, tint.a);
-    let gated = sample * tintPremultiplied;
 
-    return select(legacy, gated, colorPipelineEnabled);
+    return sample * tintPremultiplied;
 }

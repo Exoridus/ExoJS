@@ -85,7 +85,10 @@ describe('Lighting', () => {
 
     expect(buffer[0]).toBe(2);
     expect(lighting.activeLightCount).toBe(2);
-    expect(buffer[textureOf(lighting).width * channels]).toBeCloseTo(51 / 255, 6);
+    // The accumulation is linear light, so the ambient reaches the shader
+    // decoded from its authoring byte (srgbToLinear(51/255)), not normalized as
+    // one.
+    expect(buffer[textureOf(lighting).width * channels]).toBeCloseTo(0.03310476616024971, 6);
   });
 
   test('a light publishes the world position its transform gives it', () => {
@@ -488,8 +491,8 @@ describe('Lighting', () => {
       getLocalBounds: () => new Rectangle(),
       getWorldTransform: () => new Matrix(),
     };
-    const first = new NormalMap(Texture.fromColor(Color.white, 1));
-    const second = new NormalMap(Texture.fromColor(Color.black, 1));
+    const first = new NormalMap(Texture.fromColor(Color.white, 1, { colorSpace: 'none' }));
+    const second = new NormalMap(Texture.fromColor(Color.black, 1, { colorSpace: 'none' }));
 
     expect(lighting.normalsFrom(drawable, first)).toBe(drawable);
     lighting.normalsFrom(drawable, second);
@@ -511,7 +514,7 @@ describe('Lighting', () => {
       getWorldTransform: () => new Matrix(),
     };
 
-    lighting.normalsFrom(drawable, new NormalMap(Texture.fromColor(Color.white, 1)));
+    lighting.normalsFrom(drawable, new NormalMap(Texture.fromColor(Color.white, 1, { colorSpace: 'none' })));
     lighting.update();
 
     // The gather averages a probe's rays into one arriving colour, so there is
@@ -534,7 +537,7 @@ describe('Lighting', () => {
       getWorldTransform: () => new Matrix(),
     };
 
-    lighting.normalsFrom(drawable, new NormalMap(Texture.fromColor(Color.white, 1)));
+    lighting.normalsFrom(drawable, new NormalMap(Texture.fromColor(Color.white, 1, { colorSpace: 'none' })));
     lighting.destroy();
 
     expect(lighting.surfaces).toHaveLength(0);

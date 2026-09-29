@@ -1,7 +1,7 @@
 /**
  * Scene serialization keeps `Color` as its authored bytes and resolves the
  * same resource interpretation on load - it is not a place the colour
- * pipeline gate reaches. `colorToArray`/`arrayToColor` are the one pair every
+ * pipeline reaches. `colorToArray`/`arrayToColor` are the one pair every
  * serializer in `uiSerializers.ts` (fill, outline, shadow, decoration,
  * gradient stop colours) round-trips a `Color` through; this suite pins that
  * pair directly rather than through every call site that happens to use it.

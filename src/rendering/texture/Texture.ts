@@ -4,7 +4,6 @@ import type { TextureSource } from '#core/types';
 import { getTextureSourceSize } from '#core/utils';
 import { Size } from '#math/Size';
 import { isPowerOfTwo } from '#math/utils';
-import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 import { createCanvas, createCheckerCanvas } from '#rendering/utils';
 
@@ -93,12 +92,14 @@ export class Texture {
    * alpha below 1 is rendered with that alpha. Generalizes the fixed
    * {@link Texture.black}/{@link Texture.white} helpers.
    *
-   * A color producer, not a numeric placeholder: the fill goes through an
-   * ordinary `HTMLCanvasElement`, so it gets the same browser sRGB, straight-alpha
-   * interpretation as any loaded image and matches a genuinely loaded color
-   * asset of the same value.
+   * A color producer by default, not a numeric placeholder: the fill goes
+   * through an ordinary `HTMLCanvasElement`, so it gets the same browser sRGB,
+   * straight-alpha interpretation as any loaded image and matches a genuinely
+   * loaded color asset of the same value. A solid texture standing for numeric
+   * data instead - a flat normal map, a constant mask - declares that in
+   * `options`.
    */
-  public static fromColor(color: Color | string, size = 1): Texture {
+  public static fromColor(color: Color | string, size = 1, options?: Partial<TextureOptions>): Texture {
     let fillStyle: string;
 
     if (typeof color === 'string') {
@@ -109,7 +110,7 @@ export class Texture {
       fillStyle = color.toString();
     }
 
-    return new Texture(createCanvas({ fillStyle, width: size, height: size }));
+    return new Texture(createCanvas({ fillStyle, width: size, height: size }), options);
   }
 
   /**
@@ -693,12 +694,18 @@ export class Texture {
     sourceMetadata: DecodedImageMetadata = browserImageMetadata,
   ): ResolvedTextureMetadata {
     if (source !== null) {
-      const useExactSourceColor = COLOR_PIPELINE_ENABLED || this._requestedColorSpace === 'srgb';
-      const payloadColorSpace = !useExactSourceColor && sourceMetadata.colorSpace !== 'none' ? 'linear-srgb' : sourceMetadata.colorSpace;
-      const resolved = resolveTextureFormat(useExactSourceColor && sourceMetadata.colorSpace === 'srgb' ? TextureFormat.Rgba8Srgb : TextureFormat.Rgba8, {
+      // A decoded image's own colour space is a fact about how the browser
+      // decoded it, not a contract the caller has to agree with: an explicitly
+      // requested interpretation replaces it, and the storage format follows
+      // whichever interpretation won - sRGB storage being what decodes the
+      // sample on every read and encodes it on every write. The payload routes
+      // below are the opposite case, where a raw payload's declared meaning
+      // and the caller's options have to agree.
+      const colorSpace = this._requestedColorSpace ?? sourceMetadata.colorSpace;
+      const resolved = resolveTextureFormat(colorSpace === 'srgb' ? TextureFormat.Rgba8Srgb : TextureFormat.Rgba8, {
         ...(this._requestedColorSpace === undefined ? {} : { colorSpace: this._requestedColorSpace }),
         ...(this._requestedAlphaMode === undefined ? {} : { alphaMode: this._requestedAlphaMode }),
-        payloadColorSpace,
+        colorSpace,
         payloadAlphaMode: sourceMetadata.alphaMode,
       });
 

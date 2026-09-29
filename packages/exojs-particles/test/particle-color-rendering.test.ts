@@ -21,15 +21,17 @@ const ribbonVertexGlsl = shaderSource('../src/renderModes/shaders/ribbon.vert');
 const trailFragmentGlsl = shaderSource('../src/renderModes/shaders/trail.frag');
 const trailVertexGlsl = shaderSource('../src/renderModes/shaders/trail.vert');
 
-/** The gated GLSL tint decode every render mode's vertex stage carries. */
+/** The unconditional GLSL tint decode every render mode's vertex stage carries. */
 const decodesGlslTint = (source: string): void => {
-  expect(source).toContain('colorPipelineEnabled ? srgbToLinear(a_color.rgb) : a_color.rgb');
+  expect(source).toContain('srgbToLinear(a_color.rgb)');
+  expect(source).not.toContain('colorPipelineEnabled');
   expect(source).toContain('v_color = vec4(linearTint * a_color.a, a_color.a);');
 };
 
-/** The gated WGSL tint decode every render mode's vertex stage carries. */
+/** The unconditional WGSL tint decode every render mode's vertex stage carries. */
 const decodesWgslTint = (source: string): void => {
-  expect(source).toContain('select(input.color.rgb, srgbToLinear(input.color.rgb), colorPipelineEnabled)');
+  expect(source).toContain('srgbToLinear(input.color.rgb)');
+  expect(source).not.toContain('colorPipelineEnabled');
   expect(source).toContain('output.color = vec4(linearTint * input.color.a, input.color.a);');
 };
 

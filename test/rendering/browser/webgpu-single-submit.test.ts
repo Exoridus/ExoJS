@@ -31,7 +31,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { drawWebGpuEncoded, readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -279,6 +279,12 @@ describe('WebGPU single-submit frame', () => {
       // every batch reads the last batch's bytes would still submit once, but
       // these cells would paint the wrong colour/position - so the probes are
       // what actually guard the merge. Cell i centre = (col*10+5, row*10+5).
+      // The probes read an encoded copy of the frame: the measured frame above
+      // drew into the raw canvas, which holds linear light.
+      if (!(await drawWebGpuEncoded(ctx, backend, () => root.render(backend)))) {
+        return;
+      }
+
       const readPixel = readWebGpuPixels(backend, canvasSize);
       const probeCell = (index: number): void => {
         expectPixelNear(readPixel((index % 6) * 10 + 5, Math.floor(index / 6) * 10 + 5), hexToRgba(palette36[index]!));
@@ -519,16 +525,18 @@ describe('WebGPU single-submit frame', () => {
     trailingSprite.width = cell;
     trailingSprite.height = cell;
 
-    const renderAlternating = (): void => {
-      backend.resetStats();
-      backend.clear(Color.black);
-
+    const renderAlternatingBody = (): void => {
       for (let i = 0; i < alternations; i++) {
         sprites[i]!.render(backend);
         meshes[i]!.render(backend);
       }
 
       trailingSprite.render(backend);
+    };
+    const renderAlternating = (): void => {
+      backend.resetStats();
+      backend.clear(Color.black);
+      renderAlternatingBody();
       backend.flush();
     };
 
@@ -548,6 +556,10 @@ describe('WebGPU single-submit frame', () => {
       expect(backend.stats.drawCalls).toBe(alternations * 2 + 1);
       expect(backend.stats.renderPasses).toBe(1);
       expect(submits).toBe(1);
+
+      if (!(await drawWebGpuEncoded(ctx, backend, renderAlternatingBody))) {
+        return;
+      }
 
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
@@ -689,13 +701,16 @@ describe('WebGPU single-submit frame', () => {
       return root;
     };
 
+    const renderFrameBody = (planTwo: Container): void => {
+      planOne.render(backend); // 36 distinct textures (> max slot tier) → batch break → pass open
+      planTwo.render(backend); // reserve() grows the storage while that pass is open
+    };
     const renderFrame = (planTwoCount: number): void => {
       const planTwo = buildPlanTwo(planTwoCount);
 
       backend.resetStats();
       backend.clear(Color.black);
-      planOne.render(backend); // 36 distinct textures (> max slot tier) → batch break → pass open
-      planTwo.render(backend); // reserve() grows the storage while that pass is open
+      renderFrameBody(planTwo);
       backend.flush();
       planTwo.destroy();
     };
@@ -714,6 +729,16 @@ describe('WebGPU single-submit frame', () => {
       // storage buffer trips exactly that.
       if (!(await renderGuarded(ctx, backend, () => renderFrame(200)))) {
         return;
+      }
+
+      const encodedPlanTwo = buildPlanTwo(200);
+
+      try {
+        if (!(await drawWebGpuEncoded(ctx, backend, () => renderFrameBody(encodedPlanTwo)))) {
+          return;
+        }
+      } finally {
+        encodedPlanTwo.destroy();
       }
 
       const readPixel = readWebGpuPixels(backend, canvasSize);

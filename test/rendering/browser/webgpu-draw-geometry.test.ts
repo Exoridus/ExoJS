@@ -25,7 +25,7 @@ import { Shader } from '#rendering/shader/Shader';
 import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { drawWebGpuEncoded, readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -119,6 +119,7 @@ const drawGeometries = async (
   backend: WebGpuBackend,
   context: RenderingContext,
   calls: readonly DrawCall[],
+  encoded = false,
 ): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
@@ -127,11 +128,18 @@ const drawGeometries = async (
   let validationError: GPUError | null;
 
   try {
-    backend.resetStats();
-    backend.clear(Color.black);
+    const drawAll = (): void => {
+      for (const call of calls) {
+        context.drawGeometry(call.geometry, call.transform, { ...(call.tint !== undefined && { tint: call.tint }), view: screenView() });
+      }
+    };
 
-    for (const call of calls) {
-      context.drawGeometry(call.geometry, call.transform, { ...(call.tint !== undefined && { tint: call.tint }), view: screenView() });
+    if (encoded) {
+      if (!(await drawWebGpuEncoded(ctx, backend, drawAll))) return false;
+    } else {
+      backend.resetStats();
+      backend.clear(Color.black);
+      drawAll();
     }
 
     validationError = await device.popErrorScope();
@@ -202,7 +210,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
     const geometry = coloredQuad(16, 16, 48, 48, [255, 255, 255, 255]);
 
     try {
-      if (!(await drawGeometries(ctx, backend, context, [{ geometry, transform: new Matrix(), tint: new Color(96, 160, 224) }]))) {
+      if (!(await drawGeometries(ctx, backend, context, [{ geometry, transform: new Matrix(), tint: new Color(96, 160, 224) }], true))) {
         return;
       }
 

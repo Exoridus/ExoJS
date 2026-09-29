@@ -4,7 +4,8 @@ import { Rectangle } from '#math/Rectangle';
 import { DisplacementFilter } from '#rendering/filters/DisplacementFilter';
 import { Texture } from '#rendering/texture/Texture';
 
-const map = (): Texture => new Texture(document.createElement('canvas'));
+/** A displacement map is numeric data, so it declares itself as such. */
+const map = (): Texture => new Texture(document.createElement('canvas'), { colorSpace: 'none' });
 
 const boundsOf = (filter: DisplacementFilter, input: Rectangle): readonly number[] => {
   const output = new Rectangle();
@@ -83,21 +84,29 @@ describe('DisplacementFilter options', () => {
 });
 
 describe('DisplacementFilter numeric-only map', () => {
-  test('rejects an explicit colorSpace srgb map at construction', () => {
+  test('rejects a colorSpace srgb map at construction', () => {
     const srgbMap = new Texture(document.createElement('canvas'), { colorSpace: 'srgb' });
 
-    expect(() => new DisplacementFilter({ map: srgbMap })).toThrow(/cannot be an explicit colorSpace: 'srgb'/);
+    expect(() => new DisplacementFilter({ map: srgbMap })).toThrow(/colorSpace: 'srgb'/);
   });
 
-  test('rejects an explicit colorSpace srgb map assigned later', () => {
+  test('rejects a colorSpace srgb map assigned later', () => {
     const filter = new DisplacementFilter({ map: map() });
     const srgbMap = new Texture(document.createElement('canvas'), { colorSpace: 'srgb' });
 
-    expect(() => (filter.map = srgbMap)).toThrow(/cannot be an explicit colorSpace: 'srgb'/);
+    expect(() => (filter.map = srgbMap)).toThrow(/colorSpace: 'srgb'/);
     filter.destroy();
   });
 
-  test('an ordinary implicit-colour map is accepted (default legacy interpretation, not srgb)', () => {
-    expect(() => new DisplacementFilter({ map: map() })).not.toThrow();
+  test('rejects an ordinary image map, which resolves to sRGB colour unless it declares itself numeric', () => {
+    const imageMap = new Texture(document.createElement('canvas'));
+
+    expect(() => new DisplacementFilter({ map: imageMap })).toThrow(/colorSpace: 'srgb'/);
+  });
+
+  test('accepts a map declared as numeric data', () => {
+    const numericMap = new Texture(document.createElement('canvas'), { colorSpace: 'none' });
+
+    expect(() => new DisplacementFilter({ map: numericMap })).not.toThrow();
   });
 });

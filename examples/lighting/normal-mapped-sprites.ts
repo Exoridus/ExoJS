@@ -23,14 +23,16 @@ const TILE_SIZE = 96;
 
 // Draw into a canvas and wrap it as a texture. Both textures below are
 // generated so the example carries no asset files.
-const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) => void): Texture => {
+const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) => void, colorSpace?: 'none'): Texture => {
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
   if (context === null) throw new Error('2D canvas context unavailable.');
   paint(context);
-  return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
+  // `colorSpace: 'none'` is for the normal map, whose channels are numeric:
+  // sampled as colour, an sRGB view would hardware-decode the normal itself.
+  return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false, ...(colorSpace === undefined ? {} : { colorSpace }) });
 };
 
 // Base colour: a matte disc with a checker so rotation and flips read clearly.
@@ -58,26 +60,30 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
 // convention the engine reads - green above the midpoint means the normal
 // leans towards the TOP of the image, so the image-space gradient is negated
 // on the way into the green channel.
-const normalTexture = canvasTexture(TILE_SIZE, context => {
-  const image = context.createImageData(TILE_SIZE, TILE_SIZE);
-  const half = TILE_SIZE / 2;
-  for (let y = 0; y < TILE_SIZE; y++) {
-    for (let x = 0; x < TILE_SIZE; x++) {
-      const dx = (x + 0.5 - half) / (half - 2);
-      const dy = (y + 0.5 - half) / (half - 2);
-      const inside = dx * dx + dy * dy;
-      const nz = inside < 1 ? Math.sqrt(1 - inside) : 1;
-      const nx = inside < 1 ? dx : 0;
-      const ny = inside < 1 ? -dy : 0;
-      const offset = (y * TILE_SIZE + x) * 4;
-      image.data[offset] = (nx * 0.5 + 0.5) * 255;
-      image.data[offset + 1] = (ny * 0.5 + 0.5) * 255;
-      image.data[offset + 2] = (nz * 0.5 + 0.5) * 255;
-      image.data[offset + 3] = 255;
+const normalTexture = canvasTexture(
+  TILE_SIZE,
+  context => {
+    const image = context.createImageData(TILE_SIZE, TILE_SIZE);
+    const half = TILE_SIZE / 2;
+    for (let y = 0; y < TILE_SIZE; y++) {
+      for (let x = 0; x < TILE_SIZE; x++) {
+        const dx = (x + 0.5 - half) / (half - 2);
+        const dy = (y + 0.5 - half) / (half - 2);
+        const inside = dx * dx + dy * dy;
+        const nz = inside < 1 ? Math.sqrt(1 - inside) : 1;
+        const nx = inside < 1 ? dx : 0;
+        const ny = inside < 1 ? -dy : 0;
+        const offset = (y * TILE_SIZE + x) * 4;
+        image.data[offset] = (nx * 0.5 + 0.5) * 255;
+        image.data[offset + 1] = (ny * 0.5 + 0.5) * 255;
+        image.data[offset + 2] = (nz * 0.5 + 0.5) * 255;
+        image.data[offset + 3] = 255;
+      }
     }
-  }
-  context.putImageData(image, 0, 0);
-});
+    context.putImageData(image, 0, 0);
+  },
+  'none',
+);
 
 const lightColors = [new Color(255, 180, 120), new Color(120, 180, 255), new Color(160, 255, 160), new Color(255, 120, 200)];
 
