@@ -442,7 +442,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       backend.flush();
       validationError = await device.popErrorScope();
     } catch (error) {
-      // The software (swiftshader) adapter used in CI can drop the device
+      // The software (lavapipe) adapter used in CI can drop the device
       // mid-test ("Instance dropped in popErrorScope"); treat that as an
       // unavailable-adapter skip rather than a failure.
       if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {

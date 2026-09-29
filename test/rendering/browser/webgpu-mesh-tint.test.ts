@@ -64,7 +64,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
 
-// On the software (swiftshader) adapter the WebGPU device can drop mid-test;
+// On the software (lavapipe) adapter the WebGPU device can drop mid-test;
 // treat that as an unavailable-adapter skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 

@@ -19,16 +19,11 @@
  * decoded frame, `texture.width === 0`) - a different early-out inside
  * `render()` itself, before either draw path is ever attempted.
  *
- * Fixture strategy: a `<canvas>` painted a solid or two-tone colour is turned
- * into a `MediaStream` via `captureStream()`, assigned to a `<video>` element's
- * `srcObject`, and played (muted, so no user-gesture is required). We poll
- * `videoWidth`/`readyState` for the first decoded frame instead of relying on
- * `requestVideoFrameCallback` - empirically, in this headless Chromium
- * configuration `requestVideoFrameCallback` never fires (even with the video
- * attached to the DOM and a `requestAnimationFrame` pump kept alive for the
- * full test). The bounded wait starts before `video.play()`: under full-lane
- * load that promise can stay pending indefinitely even though isolated runs
- * decode in under a second. A *second*,
+ * Fixture strategy: see `_videoFixture.ts` - a painted `<canvas>` becomes a
+ * `MediaStream` via `captureStream()` and plays in a muted `<video>`; readiness
+ * is polled inside one deadline because `requestVideoFrameCallback` never fires
+ * in this headless Chromium configuration, and `video.play()` can stay pending
+ * indefinitely under load. A *second*,
  * dynamic scenario - repainting the source canvas after the first decoded
  * frame and asserting the video texture picks up the new colour - was
  * prototyped and found NOT to be reliably observable within a bounded window
@@ -59,6 +54,7 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
+import { createSolidColorVideo, createTwoToneVideo, disposeAllVideoFixtures } from './_videoFixture';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 // ---------------------------------------------------------------------------
@@ -90,122 +86,6 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   await backend.initialize();
 
   return backend;
-};
-
-/**
- * Budget for the first decoded frame. Generous on purpose: `video.play()` and
- * the decode behind it compete with every other file in the lane, and a
- * fixture that gives up early reports a timeout where the engine is not
- * involved at all. Still bounded, so a genuinely stuck fixture names itself
- * instead of running into the surrounding test timeout.
- */
-const decodeWaitMs = 12_000;
-
-/**
- * Create an `HTMLVideoElement` playing a `MediaStream` sourced from a
- * `<canvas>` `paint` leaves in whatever state, resolved once the first frame
- * has decoded.
- *
- * Polls `videoWidth`/`readyState` rather than `requestVideoFrameCallback` -
- * see the file header comment for why.
- */
-const createPaintedVideo = async (paint: (ctx: CanvasRenderingContext2D, size: number) => void, size = 16): Promise<HTMLVideoElement> => {
-  const source = document.createElement('canvas');
-
-  source.width = size;
-  source.height = size;
-
-  const ctx = source.getContext('2d')!;
-
-  paint(ctx, size);
-
-  const stream = (source as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(30);
-
-  const video = document.createElement('video');
-
-  video.muted = true;
-  video.playsInline = true;
-  video.srcObject = stream;
-
-  await new Promise<void>((resolve, reject) => {
-    let settled = false;
-
-    const cleanupFailedPlayback = (): void => {
-      video.pause();
-      stream.getTracks().forEach(track => track.stop());
-      video.srcObject = null;
-    };
-    const fail = (error: unknown): void => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      clearTimeout(timeout);
-      cleanupFailedPlayback();
-      reject(error instanceof Error ? error : new Error(String(error)));
-    };
-    const timeout = setTimeout(() => {
-      fail(new Error(`timed out waiting for video.play() / decoded frame (videoWidth=${video.videoWidth}, readyState=${video.readyState})`));
-    }, decodeWaitMs);
-
-    const poll = (): void => {
-      if (settled) {
-        return;
-      }
-
-      if (video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2) {
-        settled = true;
-        clearTimeout(timeout);
-        resolve();
-      } else {
-        // Repaint while waiting. `captureStream` emits a frame when the source
-        // canvas is drawn to, so a canvas painted once before the call can
-        // produce no frame at all once the capture misses that first paint -
-        // the decode then never starts, however long the wait.
-        paint(ctx, size);
-        setTimeout(poll, 16);
-      }
-    };
-
-    // `play()` may stay pending indefinitely under a fully loaded browser lane,
-    // so its promise must live inside the same bounded wait as first-frame
-    // readiness. Polling can still succeed before the play promise settles.
-    void video.play().catch(fail);
-    poll();
-  });
-
-  return video;
-};
-
-/** A video whose decoded frame is a single solid colour. */
-const createSolidColorVideo = (color: string, size = 16): Promise<HTMLVideoElement> =>
-  createPaintedVideo((ctx, fillSize) => {
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, fillSize, fillSize);
-  }, size);
-
-/**
- * A video whose decoded frame is split into a `topColor` top half and a
- * `bottomColor` bottom half - deliberately asymmetric under vertical flip, so
- * a test sampling one pixel from each half can catch a `flipY`/UV-orientation
- * regression that a solid-colour fixture cannot (a uniformly-coloured square
- * looks identical flipped or not).
- */
-const createTwoToneVideo = (topColor: string, bottomColor: string, size = 16): Promise<HTMLVideoElement> =>
-  createPaintedVideo((ctx, fillSize) => {
-    const half = fillSize / 2;
-
-    ctx.fillStyle = topColor;
-    ctx.fillRect(0, 0, fillSize, half);
-    ctx.fillStyle = bottomColor;
-    ctx.fillRect(0, half, fillSize, half);
-  }, size);
-
-const destroyVideo = (video: HTMLVideoElement): void => {
-  video.pause();
-  (video.srcObject as MediaStream | null)?.getTracks().forEach(track => track.stop());
-  video.srcObject = null;
 };
 
 /**
@@ -250,13 +130,15 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 // Tests
 // ---------------------------------------------------------------------------
 
+afterEach(disposeAllVideoFixtures);
+
 describe('WebGPU Video', { timeout: 30_000 }, () => {
   test('decoded video frame renders and fills its bounds', async ctx => {
+    const fixture = await createSolidColorVideo('#ff0000', 16);
     const backend = await setupBackend();
 
-    const video = await createSolidColorVideo('#ff0000', 16);
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     try {
       videoSprite.setPosition(8, 8);
@@ -273,17 +155,17 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
     } finally {
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
 
   test('tint is applied to the rendered video frame', async ctx => {
+    const fixture = await createSolidColorVideo('#ffffff', 16);
     const backend = await setupBackend();
 
-    const video = await createSolidColorVideo('#ffffff', 16);
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     try {
       videoSprite.setPosition(8, 8);
@@ -300,17 +182,17 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
     } finally {
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
 
   test('premultiply semantics hold for a translucent tint', async ctx => {
+    const fixture = await createSolidColorVideo('#ffffff', 16);
     const backend = await setupBackend();
 
-    const video = await createSolidColorVideo('#ffffff', 16);
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     try {
       videoSprite.setPosition(8, 8);
@@ -340,21 +222,21 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
     } finally {
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
 
   test('external-texture path renders the decoded frame in the correct orientation', async ctx => {
+    const fixture = await createTwoToneVideo('#0000ff', '#ffff00', 16);
     const backend = await setupBackend();
 
     // Top half blue, bottom half yellow: a solid-colour fixture is invariant
     // under vertical flip, so it cannot catch a flipY/UV regression on either
     // draw path - this one can, because top-blue-bottom-yellow-flipped reads
     // as top-yellow-bottom-blue instead.
-    const video = await createTwoToneVideo('#0000ff', '#ffff00', 16);
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     try {
       videoSprite.setPosition(8, 8);
@@ -374,12 +256,13 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
     } finally {
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
 
   test('fallback path renders the decoded frame in the correct orientation when the device has no importExternalTexture', async ctx => {
+    const fixture = await createTwoToneVideo('#0000ff', '#ffff00', 16);
     const backend = await setupBackend();
     const device = getBackendDevice(backend);
     const original = device.importExternalTexture;
@@ -394,9 +277,8 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
     // `textureSampleGrad` path specifically - the one most likely to diverge
     // from the external-texture path's orientation - so it needs the same
     // two-tone coverage, not a weaker one.
-    const video = await createTwoToneVideo('#0000ff', '#ffff00', 16);
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     try {
       videoSprite.setPosition(8, 8);
@@ -417,12 +299,13 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
       device.importExternalTexture = original;
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
 
   test('the external-texture path resolves its sampler without uploading the video frame', async ctx => {
+    const fixture = await createSolidColorVideo('#00ff00');
     const backend = await setupBackend();
     const device = getBackendDevice(backend);
     const queue = device.queue;
@@ -449,9 +332,8 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
     // One fixture for both phases: the scene, the texture and the decoded
     // stream stay identical, so the only variable across the two assertions is
     // which draw path the renderer took.
-    const video = await createSolidColorVideo('#00ff00');
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     try {
       videoSprite.setPosition(8, 8);
@@ -498,7 +380,7 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
       device.importExternalTexture = originalImport;
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
@@ -539,11 +421,11 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
  */
 describe('WebGPU Video composition', { timeout: 30_000 }, () => {
   test('a stencil clip discards the video fragments outside the shape', async ctx => {
+    const fixture = await createSolidColorVideo('#00ff00');
     const backend = await setupBackend();
-    const video = await createSolidColorVideo('#00ff00');
     const root = new Container();
     const clipped = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
     const clipShape = new Geometry({
       attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
       vertexData: new Float32Array([0, 0, 48, 0, 0, 48]),
@@ -573,18 +455,18 @@ describe('WebGPU Video composition', { timeout: 30_000 }, () => {
       root.destroy();
       clipShape.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
 
   test('a video drawn into a render texture composites back onto the canvas', async ctx => {
+    const fixture = await createSolidColorVideo('#00ff00');
     const backend = await setupBackend();
-    const video = await createSolidColorVideo('#00ff00');
     const target = new RenderTexture(32, 32);
     const offscreenRoot = new Container();
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
     const composited = new Sprite(target);
 
     try {
@@ -615,7 +497,7 @@ describe('WebGPU Video composition', { timeout: 30_000 }, () => {
       offscreenRoot.destroy();
       videoSprite.destroy();
       target.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
@@ -651,10 +533,10 @@ describe('WebGPU Video composition', { timeout: 30_000 }, () => {
  */
 describe('WebGPU Video device-loss teardown', { timeout: 30_000 }, () => {
   test('a genuine device loss tears down WebGpuVideoRenderer without throwing', async ctx => {
+    const fixture = await createSolidColorVideo('#ff0000', 16);
     const backend = await createWebGpuTestBackend(deviceLossCanvasSize);
-    const video = await createSolidColorVideo('#ff0000', 16);
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     videoSprite.setPosition(8, 8);
     root.addChild(videoSprite);
@@ -689,15 +571,15 @@ describe('WebGPU Video device-loss teardown', { timeout: 30_000 }, () => {
 
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
     }
   });
 
   test('a fresh backend renders the same Video correctly after a prior backend was lost', async ctx => {
+    const fixture = await createSolidColorVideo('#00ff00', 16);
     const first = await createWebGpuTestBackend(deviceLossCanvasSize);
-    const video = await createSolidColorVideo('#00ff00', 16);
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     videoSprite.setPosition(8, 8);
     root.addChild(videoSprite);
@@ -733,7 +615,7 @@ describe('WebGPU Video device-loss teardown', { timeout: 30_000 }, () => {
 
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       second?.destroy();
     }
   });

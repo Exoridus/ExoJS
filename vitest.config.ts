@@ -5,8 +5,9 @@ import { createShaderPlugin } from '@codexo/exojs-build';
 import { createJsdomTestProject, srcConditions, workerTransformPlugin, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';
-import { defineConfig, type Plugin } from 'vitest/config';
+import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
+import { CHROMIUM_WEBGL2_ARGS, CHROMIUM_WEBGPU_ARGS, FIREFOX_WEBGL2_PREFS } from './scripts/ci/browser-profiles.ts';
 import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands.ts';
 import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink.ts';
 
@@ -116,15 +117,29 @@ const browserBase = {
 //    because Firefox on Linux disables WebGL entirely in headless mode.
 //  - WebGPU Chromium: headless by default (safe for local dev with no display server).
 //    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 - Mesa lavapipe needs a
-//    real display to report a real Vulkan adapter instead of falling back to
-//    SwiftShader, and CI supplies one via xvfb (see `browser-tests-webgpu-chromium`
-//    in `scripts/ci/lanes.ts`). Without this gate, `headless: false` would pop a real,
+//    real display to report a Vulkan adapter instead of falling back to
+//    SwiftShader, and CI supplies one via xvfb (see the `webgpu` lane in
+//    `scripts/ci/lanes.ts`). Without this gate, `headless: false` would pop a real,
 //    visible Chromium window on every local `pnpm test:browser:webgpu` run.
 //  - WebGPU Firefox:  headed - Firefox only exposes a WebGPU adapter in a headed session.
+//
+// The launch options themselves live in `scripts/ci/browser-profiles.ts`, which
+// `pnpm qualify` also uses for its capability preflight.
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
 const webgl2Headless = !headed;
 const webgpuCiHeaded = process.env['EXOJS_WEBGPU_CI_HEADED'] === '1';
 const firefoxCiHeaded = process.env['EXOJS_FIREFOX_CI_HEADED'] === '1';
+
+// WebGPU specs whose ability to run depends on the browser media stack
+// (`captureStream`, `HTMLVideoElement` playback, `GPUExternalTexture`). They are
+// a project of their own so a media-stack failure cannot make the renderer
+// contract look broken, and so they run one file at a time: two concurrent
+// `captureStream` pipelines starve each other of decoded frames.
+// `test/ci/browser-project-split.test.ts` keeps the glob and the specs that use
+// media APIs in step.
+const webgpuMediaTests = ['test/rendering/browser/webgpu-*video*.test.ts'];
+const webgpuCoreTests = ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'];
+const webgpuCoreExclude = [...configDefaults.exclude, ...webgpuMediaTests];
 
 // Setup run in every browser project to install the `__DEV__` global (see the
 // browserBase note) before any engine module evaluates.
@@ -455,7 +470,7 @@ export default defineConfig({
             enabled: true,
             headless: webgl2Headless,
             provider: playwright({
-              launchOptions: { channel: 'chromium', args: ['--enable-webgl', '--use-angle=swiftshader'] },
+              launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGL2_ARGS] },
             }),
             instances: [{ browser: 'chromium' }],
           },
@@ -506,12 +521,7 @@ export default defineConfig({
             headless: !firefoxCiHeaded,
             provider: playwright({
               launchOptions: {
-                firefoxUserPrefs: {
-                  'webgl.force-enabled': true,
-                  'webgl.disabled': false,
-                  'gfx.webrender.software': true,
-                  'webgl.disable-angle': true,
-                },
+                firefoxUserPrefs: { ...FIREFOX_WEBGL2_PREFS },
               },
             }),
             instances: [{ browser: 'firefox' }],
@@ -519,47 +529,54 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgpu - WebGPU via Chromium (SwiftShader software backend) ──
-      // The `--enable-features=Vulkan` / `--disable-vulkan-surface` flags are the
-      // three.js-proven recipe for headless WebGPU on a free `ubuntu-latest`
-      // runner (confirmed against three.js's own CI recipe, which matches this
-      // baseline). Two later attempts to force real Mesa-lavapipe/Vulkan routing
-      // via `--use-angle=vulkan` (optionally combined with
-      // `--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`) both
-      // regressed `requestAdapter()` to returning `null` for almost every test -
-      // the WebGPU browser suite dropped from 100/100 tests actually exercised
-      // down to ~4/100, with the rest silently skip-passing. Reverted to this
-      // plain baseline, which runs the full suite against Chromium's bundled
-      // SwiftShader software WebGPU implementation - a real, working software
-      // backend, just not Mesa lavapipe. Locally these args are harmless
-      // (verified against a real Windows/NVIDIA adapter). `headless` stays true
-      // by default so local dev never pops a visible browser window; CI opts
-      // into `headless: false` via `EXOJS_WEBGPU_CI_HEADED=1` (see
-      // the `webgpu` lane in `scripts/ci/lanes.ts`).
+      // ── browser-webgpu - WebGPU Core via Chromium ────────────────────────
+      // The renderer contract on a real WebGPU adapter: adapter and device
+      // setup, textures and render targets, sprite/mesh/text/shader/filter
+      // renderers, blending, colour, readback, device lifecycle and the parity
+      // matrix. CI runs it headed under Xvfb against Mesa lavapipe (a software
+      // Vulkan implementation, so WGSL compilation, pipelines, bind groups and
+      // pixel results are real; NVIDIA/AMD/Intel behaviour and throughput are
+      // not covered). Locally it uses whatever GPU the machine has. The launch
+      // recipe is in `scripts/ci/browser-profiles.ts`; the media specs are the
+      // `browser-webgpu-media` project below.
       {
         ...browserBase,
         test: {
           name: 'browser-webgpu',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
-          include: ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'],
+          include: webgpuCoreTests,
+          exclude: webgpuCoreExclude,
           browser: {
             enabled: true,
             commands: parityCommands,
             headless: !webgpuCiHeaded,
             provider: playwright({
-              launchOptions: {
-                channel: 'chromium',
-                args: [
-                  '--enable-unsafe-webgpu',
-                  '--enable-features=Vulkan',
-                  '--disable-vulkan-surface',
-                  '--ignore-gpu-blocklist',
-                  '--no-sandbox',
-                  '--disable-gpu-watchdog',
-                  '--disable-gpu-driver-bug-workarounds',
-                ],
-              },
+              launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGPU_ARGS] },
+            }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-webgpu-media - WebGPU video through Chromium's media stack ─
+      // The `Video` drawable end to end: a `captureStream` fixture decoded by a
+      // real `<video>`, sampled through `GPUExternalTexture` and through the
+      // `copyExternalImageToTexture` fallback. Serial by construction (see
+      // `webgpuMediaTests`).
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-webgpu-media',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: webgpuMediaTests,
+          fileParallelism: false,
+          browser: {
+            enabled: true,
+            headless: !webgpuCiHeaded,
+            provider: playwright({
+              launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGPU_ARGS] },
             }),
             instances: [{ browser: 'chromium' }],
           },
@@ -601,42 +618,57 @@ export default defineConfig({
             commands: allocationCommands,
             headless: !webgpuCiHeaded,
             provider: playwright({
-              launchOptions: {
-                channel: 'chromium',
-                args: [
-                  '--enable-unsafe-webgpu',
-                  '--enable-features=Vulkan',
-                  '--disable-vulkan-surface',
-                  '--ignore-gpu-blocklist',
-                  '--no-sandbox',
-                  '--disable-gpu-watchdog',
-                  '--disable-gpu-driver-bug-workarounds',
-                ],
-              },
+              launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGPU_ARGS] },
             }),
             instances: [{ browser: 'chromium' }],
           },
         },
       },
 
-      // ── browser-webgpu-firefox - WebGPU via Firefox headed ───────────────
-      // `headless: false` is load-bearing, not a leftover: Firefox exposes
-      // `navigator.gpu` either way, but `requestAdapter()` resolves to `null`
-      // headless no matter which prefs are set (`dom.webgpu.enabled`,
-      // `gfx.webgpu.force-enabled`, ...). A window is the only configuration in
-      // which Firefox has a WebGPU adapter at all - so this lane needs a real
-      // display, which is why CI cannot run it and the matrix takes its Firefox
-      // rows from local runs instead.
+      // ── browser-webgpu-firefox - WebGPU Core via Firefox, headed ─────────
+      // `headless: false` is load-bearing: Firefox exposes `navigator.gpu`
+      // either way, but `requestAdapter()` resolves to `null` headless whatever
+      // the prefs say (`dom.webgpu.enabled`, `gfx.webgpu.force-enabled`, ...).
+      // A window is the only configuration with an adapter, so this needs a real
+      // display: Windows and macOS have one, Linux CI supplies Xvfb. Firefox on
+      // Linux may still expose no adapter at all; `pnpm qualify` probes that
+      // first and reports UNSUPPORTED HOST instead of running the suite. Not a
+      // blocking contract - the second-engine gate is `browser-webgl-firefox`.
+      //
+      // Files run in parallel on purpose. Serial files were measured against the
+      // same 12 specs and were worse: one long-lived page accumulates GPUDevices
+      // until Firefox answers `Not enough memory left` (440 s and 20 failures
+      // against 112 s and none). The complete project still does not finish in
+      // 12 minutes on a Windows host with a physical GPU, in either mode.
       {
         ...browserBase,
         test: {
           name: 'browser-webgpu-firefox',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
-          include: ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'],
+          include: webgpuCoreTests,
+          exclude: webgpuCoreExclude,
           browser: {
             enabled: true,
             commands: parityCommands,
+            headless: false,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
+      // ── browser-webgpu-firefox-media - the video specs on Firefox ────────
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-webgpu-firefox-media',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: webgpuMediaTests,
+          fileParallelism: false,
+          browser: {
+            enabled: true,
             headless: false,
             provider: playwright(),
             instances: [{ browser: 'firefox' }],
@@ -680,6 +712,7 @@ export default defineConfig({
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
+          exclude: webgpuCoreExclude,
           browser: {
             enabled: true,
             headless: false,

@@ -1,10 +1,9 @@
 /**
  * WebGPU RenderPipeline browser test - opt-in, capability-aware.
  *
- * Runs under the `browser-webgpu` project: new headless Chromium exposes a WebGPU
- * adapter via swiftshader (`--enable-unsafe-webgpu --ignore-gpu-blocklist`). CI
- * guarantees a real adapter (the required Chromium-WebGPU lane runs against Mesa
- * lavapipe); `withValidation` only skips when the software adapter drops the
+ * Runs under the `browser-webgpu` project. CI guarantees a WebGPU adapter (the
+ * required Chromium-WebGPU lane runs against Mesa lavapipe, a software Vulkan
+ * implementation); `withValidation` only skips when the software adapter drops the
  * device mid-test (the canonical `isDeviceLoss` model shared by every
  * webgpu-*.test.ts).
  *

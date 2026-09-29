@@ -191,7 +191,7 @@ const setupBackend = async (logicalSize = canvasSize): Promise<WebGpuBackend> =>
   return backend;
 };
 
-// On the software (swiftshader) adapter used in CI the WebGPU device can be
+// On the software (lavapipe) adapter used in CI the WebGPU device can be
 // dropped mid-test ("Instance dropped in popErrorScope"). Treat that as a
 // device-lost skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');

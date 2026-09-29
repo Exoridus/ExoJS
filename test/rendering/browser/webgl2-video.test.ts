@@ -9,16 +9,11 @@
  * used for any `TexImageSource` (canvas/image/video) - there is no
  * video-specific upload code in `WebGl2Backend`.
  *
- * Fixture strategy: a `<canvas>` painted a solid colour is turned into a
- * `MediaStream` via `captureStream()`, assigned to a `<video>` element's
- * `srcObject`, and played (muted, so no user-gesture is required). We poll
- * `videoWidth`/`readyState` for the first decoded frame instead of relying on
- * `requestVideoFrameCallback` - empirically, in this headless Chromium
- * configuration `requestVideoFrameCallback` never fires (even with the video
- * attached to the DOM and a `requestAnimationFrame` pump kept alive for the
- * full test). The bounded wait starts before `video.play()`: under full-lane
- * load that promise can stay pending indefinitely even though isolated runs
- * decode in under a second. A *second*,
+ * Fixture strategy: see `_videoFixture.ts` - a painted `<canvas>` becomes a
+ * `MediaStream` via `captureStream()` and plays in a muted `<video>`; readiness
+ * is polled inside one deadline because `requestVideoFrameCallback` never fires
+ * in this headless Chromium configuration, and `video.play()` can stay pending
+ * indefinitely under load. A *second*,
  * dynamic scenario - repainting the source canvas after the first decoded
  * frame and asserting the video texture picks up the new colour - was
  * prototyped and found NOT to be reliably observable within a bounded window
@@ -40,6 +35,7 @@ import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
+import { createSolidColorVideo, disposeAllVideoFixtures } from './_videoFixture';
 
 // ---------------------------------------------------------------------------
 // Infrastructure helpers
@@ -87,94 +83,18 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-/**
- * Create an `HTMLVideoElement` playing a solid-colour `MediaStream` sourced
- * from a painted `<canvas>`, resolved once the first frame has decoded.
- *
- * Polls `videoWidth`/`readyState` rather than `requestVideoFrameCallback` -
- * see the file header comment for why.
- */
-const createSolidColorVideo = async (color: string, size = 16): Promise<HTMLVideoElement> => {
-  const source = document.createElement('canvas');
-
-  source.width = size;
-  source.height = size;
-
-  const ctx = source.getContext('2d')!;
-
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, size, size);
-
-  const stream = (source as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(30);
-
-  const video = document.createElement('video');
-
-  video.muted = true;
-  video.playsInline = true;
-  video.srcObject = stream;
-
-  await new Promise<void>((resolve, reject) => {
-    let settled = false;
-
-    const cleanupFailedPlayback = (): void => {
-      video.pause();
-      stream.getTracks().forEach(track => track.stop());
-      video.srcObject = null;
-    };
-    const fail = (error: unknown): void => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      clearTimeout(timeout);
-      cleanupFailedPlayback();
-      reject(error instanceof Error ? error : new Error(String(error)));
-    };
-    const timeout = setTimeout(() => {
-      fail(new Error(`timed out waiting for video.play() / decoded frame (videoWidth=${video.videoWidth}, readyState=${video.readyState})`));
-    }, 5000);
-
-    const poll = (): void => {
-      if (settled) {
-        return;
-      }
-
-      if (video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2) {
-        settled = true;
-        clearTimeout(timeout);
-        resolve();
-      } else {
-        setTimeout(poll, 16);
-      }
-    };
-
-    // `play()` may stay pending indefinitely under a fully loaded browser lane,
-    // so its promise must live inside the same bounded wait as first-frame
-    // readiness. Polling can still succeed before the play promise settles.
-    void video.play().catch(fail);
-    poll();
-  });
-
-  return video;
-};
-
-const destroyVideo = (video: HTMLVideoElement): void => {
-  video.pause();
-  (video.srcObject as MediaStream | null)?.getTracks().forEach(track => track.stop());
-  video.srcObject = null;
-};
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('WebGL2 Video — solid color frame', () => {
+  afterEach(disposeAllVideoFixtures);
+
   test('decoded video frame uploads to the sprite texture and fills its bounds', async () => {
+    const fixture = await createSolidColorVideo('#ff0000', 16);
     const backend = await createBackend();
-    const video = await createSolidColorVideo('#ff0000', 16);
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     try {
       videoSprite.setPosition(8, 8);
@@ -189,16 +109,16 @@ describe('WebGL2 Video — solid color frame', () => {
     } finally {
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
 
   test('tint is applied to the rendered video frame', async () => {
+    const fixture = await createSolidColorVideo('#ffffff', 16);
     const backend = await createBackend();
-    const video = await createSolidColorVideo('#ffffff', 16);
     const root = new Container();
-    const videoSprite = new Video(video);
+    const videoSprite = new Video(fixture.video);
 
     try {
       videoSprite.setPosition(8, 8);
@@ -211,7 +131,7 @@ describe('WebGL2 Video — solid color frame', () => {
     } finally {
       root.destroy();
       videoSprite.destroy();
-      destroyVideo(video);
+      fixture.dispose();
       backend.destroy();
     }
   });
