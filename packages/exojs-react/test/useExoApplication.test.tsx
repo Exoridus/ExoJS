@@ -99,7 +99,7 @@ describe('useExoApplication — construction & wiring', () => {
     const app = onlyInstance();
 
     expect(app.options.clearColor).toBe(clearColor);
-    expect(app.options.rendering?.color).toEqual({ workingFormat: 'hdr', toneMapping: 'reinhard', exposure: 1 });
+    expect((app.options['rendering'] as { color?: unknown } | undefined)?.color).toEqual({ workingFormat: 'hdr', toneMapping: 'reinhard', exposure: 1 });
   });
 
   it('returns a canvasRef whose identity is stable across re-renders', () => {
