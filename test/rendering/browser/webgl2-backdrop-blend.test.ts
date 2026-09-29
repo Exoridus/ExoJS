@@ -212,6 +212,25 @@ describe('WebGL2 backdrop-aware blend (Darken spike)', () => {
     }
   });
 
+  test('an ordinary sRGB source is decoded to linear before the blend arithmetic', async () => {
+    const backend = await createBackend();
+    const source = createSolidTexture('rgb(90, 200, 150)');
+
+    try {
+      backend.clear(new Color(180, 110, 60));
+      composeBackdropBlend(backend, source, BlendModes.Multiply);
+
+      // The source decodes on sample: (90, 200, 150) is (0.102, 0.578, 0.305)
+      // linear. The plain canvas stores the backdrop bytes as they are, so
+      // Multiply yields (180, 110, 60) * (0.102, 0.578, 0.305) = (18.4, 63.6, 18.3).
+      // Blending the undecoded source would give (64, 86, 35) instead.
+      expectRgbNear(readPixel(backend, 32, 32), [18, 64, 18], 2);
+    } finally {
+      source.destroy();
+      backend.destroy();
+    }
+  });
+
   test('backdrop capture matches an sRGB render-texture target instead of blitting into a mismatched Rgba8 scratch', async () => {
     const backend = await createBackend();
     const target = new RenderTexture(canvasSize, canvasSize, { format: TextureFormat.Rgba8Srgb });
