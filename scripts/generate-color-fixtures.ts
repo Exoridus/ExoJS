@@ -13,7 +13,7 @@
  * as decoding to a constant, so the reference decode is derivable from the
  * specification without an encoder. See `manifest.json`'s `scope` field, which
  * the fixture suite asserts, for exactly which compressed formats are absent and
- * why. No third-party encoder is involved and no Khronos validator has been run
+ * why. No third-party encoder is involved; the Khronos validator is run over the output separately
  * against these files.
  *
  * Run with no arguments to write every fixture and its manifest.
@@ -100,6 +100,8 @@ interface DfdSample {
   readonly channelId: number;
   /** Qualifier bits, kept in the high nibble of the channel type (`KHR_DF_SAMPLE_DATATYPE_*`). */
   readonly qualifiers?: number;
+  /** Lower bound of the sample's range; absent means 0. */
+  readonly lower?: number;
   /** Upper bound of the sample's range; absent means `0xffffffff`. */
   readonly upper?: number;
 }
@@ -243,7 +245,7 @@ const buildDfd = (spec: FixtureSpec): Uint8Array => {
 
     view.setUint32(base, word, true);
     view.setUint32(base + 4, 0, true);
-    view.setUint32(base + 8, 0, true);
+    view.setUint32(base + 8, sample.lower ?? 0, true);
     view.setUint32(base + 12, sample.upper ?? 0xffffffff, true);
   }
 
@@ -262,17 +264,15 @@ const buildKtx2 = (spec: FixtureSpec): Uint8Array => {
   const dfd = buildDfd(spec);
   const indexBytes = levels.length * LEVEL_INDEX_ENTRY_BYTES;
   const dfdOffset = HEADER_BYTES + indexBytes;
-  // Sorted by key, as the container requires. Text values carry their terminating NUL; the vendor entry
-  // is arbitrary bytes that are not valid UTF-8, which a reader must carry past rather than decode.
-  const kvd = concat([
-    keyValueEntry('ExoJSBinaryProbe', new Uint8Array([0xff, 0xfe, 0x00, 0x01])),
-    keyValueEntry('KTXorientation', utf8('rd\0')),
-    keyValueEntry('KTXwriter', utf8('ExoJS colour fixture generator\0')),
-  ]);
+  // Sorted by key, as the container requires, and standard keys only so the Khronos validator reports
+  // nothing. Text values carry their terminating NUL; arbitrary-byte vendor entries are covered by the
+  // parser specs instead, because the validator flags every custom key.
+  const kvd = concat([keyValueEntry('KTXorientation', utf8('rd\0')), keyValueEntry('KTXwriter', utf8('ExoJS colour fixture generator\0'))]);
   const kvdOffset = dfdOffset + dfd.length;
-  // Every indexed region is 8-byte aligned, and every mip level starts at lcm(texelBlockSize, 4) -
-  // 4 for RGBA8, 16 for a 16-byte block. A ZLIB stream has no native texel data and only keeps the 8.
-  const levelAlignment = Math.max(8, leastCommonMultiple(spec.bytesPerBlock ?? RGBA8_BYTES_PER_TEXEL, 4));
+  // Every mip level starts at lcm(texelBlockSize, 4) - 4 for RGBA8, 16 for a 16-byte block - and the
+  // first one directly after the preceding regions. A ZLIB stream has no native texel data, so its
+  // levels are packed with no alignment at all.
+  const levelAlignment = spec.supercompression === 3 ? 1 : leastCommonMultiple(spec.bytesPerBlock ?? RGBA8_BYTES_PER_TEXEL, 4);
   const dataOffset = Math.ceil((kvdOffset + kvd.length) / levelAlignment) * levelAlignment;
 
   const encoded = levels.map(level => (spec.supercompression === 3 ? new Uint8Array(deflateSync(level.data)) : level.data));
@@ -626,12 +626,18 @@ const EAC_R11 = 153;
 const EAC_RG11 = 155;
 const ASTC_VK_BASE = 157;
 
+/** A signed sample spans the whole 32-bit signed range; an unsigned one keeps the default bounds. */
+const signedRange = (qualifiers: number): Pick<DfdSample, 'lower' | 'upper'> =>
+  qualifiers & KHR_DF_SAMPLE_SIGNED ? { lower: 0x80000000, upper: 0x7fffffff } : {};
+
 /** A single sample covering the whole block, as the registry describes it. */
-const singleSample = (bitLength: number, channelId: number, qualifiers = 0): readonly DfdSample[] => [{ bitOffset: 0, bitLength, channelId, qualifiers }];
+const singleSample = (bitLength: number, channelId: number, qualifiers = 0): readonly DfdSample[] => [
+  { bitOffset: 0, bitLength, channelId, qualifiers, ...signedRange(qualifiers) },
+];
 /** Two cosited samples, the second at bit 64 for a 16-byte block. */
-const twoSamples = (firstChannelId: number, secondChannelId: number, qualifiers = 0): readonly DfdSample[] => [
-  { bitOffset: 0, bitLength: 64, channelId: firstChannelId, qualifiers },
-  { bitOffset: 64, bitLength: 64, channelId: secondChannelId, qualifiers },
+const twoSamples = (firstChannelId: number, secondChannelId: number, qualifiers = 0, firstQualifiers = qualifiers): readonly DfdSample[] => [
+  { bitOffset: 0, bitLength: 64, channelId: firstChannelId, qualifiers: firstQualifiers, ...signedRange(firstQualifiers) },
+  { bitOffset: 64, bitLength: 64, channelId: secondChannelId, qualifiers, ...signedRange(qualifiers) },
 ];
 
 const ASTC_BLOCK_SIZES: readonly (readonly [number, number])[] = [
@@ -749,7 +755,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
     ...BC_BLOCK,
     bytesPerBlock: 16,
     transferFunction: KHR_DFTRANSFER_SRGB,
-    samples: twoSamples(15, 0),
+    samples: twoSamples(15, 0, 0, KHR_DF_SAMPLE_LINEAR),
     encode: color => {
       const block = new Uint8Array(16);
 
@@ -789,7 +795,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
     ...BC_BLOCK,
     bytesPerBlock: 16,
     transferFunction: KHR_DFTRANSFER_SRGB,
-    samples: twoSamples(15, 0),
+    samples: twoSamples(15, 0, 0, KHR_DF_SAMPLE_LINEAR),
     encode: color => {
       const block = new Uint8Array(16);
 
@@ -1029,7 +1035,7 @@ const buildManifest = (): ManifestEntry[] => {
 };
 
 const SCOPE =
-  'Covers native RGBA8 and the native block-compressed formats that have a spec-defined constant-colour encoding: BC1 RGB, BC1 RGBA, BC2, BC3, BC4, BC5, EAC R11, EAC RG11 and all fourteen exposed ASTC LDR block sizes, each in the transfer variants the engine advertises. NOT covered, and deliberately so: BC6H and BC7, which have no constant-colour encoding in their block layouts and would need a real encoder; and ETC2 RGB, RGB+A1 and RGBA8, whose encodings reinterpret chosen endpoint bit patterns as the T, H, A, E and P modes, so an endpoint chosen to mean one colour can silently select another mode and the reference decode would not be derivable from the specification. No Khronos ktx validator has been run against any fixture here; these files have not been confirmed by that tool. Every colour is authored with all-zero or all-one components so the expected decode does not depend on an endpoint rounding the specification does not fix.';
+  'Covers native RGBA8 and the native block-compressed formats that have a spec-defined constant-colour encoding: BC1 RGB, BC1 RGBA, BC2, BC3, BC4, BC5, EAC R11, EAC RG11 and all fourteen exposed ASTC LDR block sizes, each in the transfer variants the engine advertises. NOT covered, and deliberately so: BC6H and BC7, which have no constant-colour encoding in their block layouts and would need a real encoder; and ETC2 RGB, RGB+A1 and RGBA8, whose encodings reinterpret chosen endpoint bit patterns as the T, H, A, E and P modes, so an endpoint chosen to mean one colour can silently select another mode and the reference decode would not be derivable from the specification. Every fixture passes the Khronos `ktx validate` tool with warnings treated as errors (KTX-Software 4.4.2, `scripts/validate-color-fixtures.ts` reruns it), which checks the container, descriptor and metadata; it does not validate the block payloads, which are still derived from the published layouts rather than produced by a conforming encoder. Every colour is authored with all-zero or all-one components so the expected decode does not depend on an endpoint rounding the specification does not fix.';
 
 const main = (): void => {
   mkdirSync(FIXTURE_DIR, { recursive: true });

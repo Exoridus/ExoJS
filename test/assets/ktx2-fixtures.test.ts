@@ -106,7 +106,8 @@ describe('colour fixture manifest', () => {
     // which formats the manifest deliberately leaves out.
     expect(manifest.scope).toMatch(/BC6H and BC7/);
     expect(manifest.scope).toMatch(/ETC2 RGB, RGB\+A1 and RGBA8/);
-    expect(manifest.scope).toMatch(/No Khronos ktx validator has been run/i);
+    expect(manifest.scope).toMatch(/passes the Khronos `ktx validate` tool with warnings treated as errors/i);
+    expect(manifest.scope).toMatch(/does not validate the block payloads/i);
   });
 
   test('records level sizes derived independently of the engine table', () => {

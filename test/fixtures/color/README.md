@@ -95,13 +95,28 @@ the fact that no Khronos validator has been run.
 
 ## Validation
 
-**No Khronos `ktx` validator has been run against any fixture in this directory.**
-The tool is not a repository dependency, and no `ktx`, `ktx2`, `toktx` or `ktxsc`
-executable, and no Python `ktx` module, is present on the machine these were
-generated on. Nothing here should be read as validator output. These files have not
-been confirmed by that tool, and the block payloads in particular are derived from
-the published block layouts rather than from a conforming encoder, so a validator
-run is still the outstanding check before any of it is treated as qualified.
+Every fixture passes the Khronos validator with warnings treated as errors:
+
+```text
+ktx validate --format json --warnings-as-errors <fixture>
+```
+
+Recorded run: KTX-Software **4.4.2** (`ktx version: v4.4.2`), from the official release asset
+`KTX-Software-4.4.2-Windows-x64.exe` (SHA-256
+`1f323b0fec19794f5e6c0425a61d4b1da396872a10be862d105f4f4b2d2957fe`, the digest GitHub publishes for that
+asset), unpacked with 7-Zip rather than installed. `pnpm fixtures:color:validate --ktx <path to ktx>` reruns it
+over every file and writes the tool version, each fixture's SHA-256 and the validator's messages to
+`.workspace/output/color-fixture-validation.json`. The tool is not a repository dependency, so CI does not run it.
+
+What that proves and what it does not: the validator checks the container, level index, descriptor and
+metadata against the specification. It does **not** decode or validate the block payloads, which are still built
+from the published block layouts (constant-colour blocks) rather than produced by a conforming encoder, so an
+externally encoded BC7, ETC2 and ASTC corpus remains the open check for the payloads themselves.
+
+The first validator run over the earlier generator output failed on the level offsets, on the sample bounds of
+the signed BC formats and on the linear qualifier of the sRGB BC2/BC3 alpha sample - three defects the engine
+parser and this suite agreed with. They are fixed in the generator, which is the reason a validator result
+counts and a passing fixture suite alone does not.
 
 ### What the descriptors state
 
