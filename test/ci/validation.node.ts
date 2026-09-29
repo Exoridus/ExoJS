@@ -192,7 +192,7 @@ test.after(() => {
 void test('the shared lane budget is finite and preserves the longer bench timeout', async () => {
   const { LANES, laneTimeoutMinutes } = await import('../../scripts/ci/lanes.ts');
   assert.equal(typeof laneTimeoutMinutes, 'function');
-  assert.equal(laneTimeoutMinutes(LANES.find(lane => lane.id === 'webgpu')!), 20);
+  assert.equal(laneTimeoutMinutes(LANES.find(lane => lane.id === 'webgpu')!), 30);
   assert.equal(laneTimeoutMinutes(LANES.find(lane => lane.id === 'bench')!), 30);
 });
 
@@ -300,7 +300,7 @@ void test('CLI executes only the requested lane, passes its budget, and labels t
     .trim()
     .split('\n')
     .map(line => JSON.parse(line) as string[]);
-  assert.deepEqual(calls, [['test:browser:webgpu', '--no-file-parallelism']]);
+  assert.deepEqual(calls, [['test:browser:webgpu', '--no-file-parallelism'], ['test:browser:webgpu:media']]);
   const logs = join(cwd, '.workspace/logs');
   const summary = JSON.parse(
     readFileSync(
@@ -313,7 +313,7 @@ void test('CLI executes only the requested lane, passes its budget, and labels t
   ) as { completed: boolean; diagnostic: boolean; results: Array<{ result: { logPath: string } }> };
   assert.equal(summary.completed, true);
   assert.equal(summary.diagnostic, true);
-  assert.match(readFileSync(summary.results[0]!.result.logPath, 'utf8'), /timeoutMs=1200000/);
+  assert.match(readFileSync(summary.results[0]!.result.logPath, 'utf8'), /timeoutMs=1800000/);
   assert.throws(() => readFileSync(join(cwd, '.git/exojs-validation.lock')));
 });
 
@@ -383,7 +383,10 @@ void test('all existing stage selections, coverage mode and JUnit names remain a
     plan.test.map(lane => lane.id),
     ['unit', 'webgl', 'webgpu', 'firefox', 'bench'],
   );
-  assert.match(plan.test.find(lane => lane.id === 'unit')!.run, /node --test test\/ci\/validation.node.ts && EXOJS_REQUIRE_NAGA=1 pnpm test:coverage/);
+  assert.match(
+    plan.test.find(lane => lane.id === 'unit')!.run,
+    /node --test test\/ci\/validation.node.ts test\/ci\/qualify.node.ts && EXOJS_REQUIRE_NAGA=1 pnpm test:coverage/,
+  );
   assert.match(plan.test.find(lane => lane.id === 'webgpu')!.run, /test-results\/webgpu.junit.xml/);
   assert.ok(LANES.find(lane => lane.id === 'unit')!.run.endsWith('pnpm test && pnpm test:alloc && pnpm test:physics-perf'));
 });
