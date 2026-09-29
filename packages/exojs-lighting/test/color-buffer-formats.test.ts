@@ -43,11 +43,10 @@ describe('light-accumulation ambient clear - gated decode', () => {
 
   test('with the colour pipeline closed, the clear stays the ambient authoring bytes', async () => {
     const { LightmapLighting } = await import('../src/LightmapLighting');
-    const { FrameLightingBackend } = await import('../src/backends/FrameLightingBackend');
     const ambient = new Color(64, 96, 128);
     const lighting = new LightmapLighting(fakeApp(), { ambient });
 
-    expect((lighting.backend as InstanceType<typeof FrameLightingBackend>).ambientClear.equals(ambient)).toBe(true);
+    expect((lighting.backend as unknown as { ambientClear: Color }).ambientClear.equals(ambient)).toBe(true);
     lighting.destroy();
   });
 
@@ -59,10 +58,9 @@ describe('light-accumulation ambient clear - gated decode', () => {
     });
 
     const { LightmapLighting } = await import('../src/LightmapLighting');
-    const { FrameLightingBackend } = await import('../src/backends/FrameLightingBackend');
     const ambient = new Color(64, 96, 128);
     const lighting = new LightmapLighting(fakeApp(), { ambient });
-    const clear = (lighting.backend as InstanceType<typeof FrameLightingBackend>).ambientClear;
+    const clear = (lighting.backend as unknown as { ambientClear: Color }).ambientClear;
     const linear = new Float32Array(4);
 
     ambient.writeLinear(linear);
@@ -87,10 +85,9 @@ describe('light-accumulation ambient clear - gated decode', () => {
     });
 
     const { LightmapLighting } = await import('../src/LightmapLighting');
-    const { FrameLightingBackend } = await import('../src/backends/FrameLightingBackend');
     const lighting = new LightmapLighting(fakeApp(), { ambient: Color.black });
 
-    expect((lighting.backend as InstanceType<typeof FrameLightingBackend>).ambientClear.equals(Color.black)).toBe(true);
+    expect((lighting.backend as unknown as { ambientClear: Color }).ambientClear.equals(Color.black)).toBe(true);
     lighting.destroy();
   });
 });
@@ -99,7 +96,7 @@ describe('numeric transport and mask/normal targets stay untouched by the colour
   test('mask and normal-prepass targets are plain rgba8, whether or not float targets are available', () => {
     for (const floatTargets of [true, false]) {
       const lighting = new LightmapLighting(fakeApp(floatTargets));
-      const backend = lighting.backend as { maskTexture: RenderTexture; normalTexture: RenderTexture };
+      const backend = lighting.backend as unknown as { maskTexture: RenderTexture; normalTexture: RenderTexture };
 
       expect(backend.maskTexture.format).toBe(TextureFormat.Rgba8);
       expect(backend.normalTexture.format).toBe(TextureFormat.Rgba8);
@@ -109,7 +106,7 @@ describe('numeric transport and mask/normal targets stay untouched by the colour
 
   test('the radiance transport tables stay rgba32f numeric storage, never a colour format', () => {
     const lighting = new RadianceLighting(fakeApp(), { ambient: Color.black });
-    const backend = lighting.backend as {
+    const backend = lighting.backend as unknown as {
       transport: {
         segments: { format: TextureFormat };
         emitters: { format: TextureFormat };
