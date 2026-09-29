@@ -161,7 +161,12 @@ export abstract class Lighting {
    * down instead would change the scene being looked at. Under `forward`,
    * where nothing is composited, it does nothing.
    *
-   * It is not a tone map: values still clip, one stop further along.
+   * It is not a tone map: values still clip, one stop further along. It also
+   * has nothing to do with the application's own output exposure/tone-mapping
+   * setting - that runs once, after this system has already composited into
+   * the frame, and stays the caller's decision about how the whole frame
+   * reaches the display; this one is a lighting-only debug multiplier with no
+   * effect on what gets published anywhere else.
    */
   public get debugExposure(): number {
     return this._backend.debugExposure;
