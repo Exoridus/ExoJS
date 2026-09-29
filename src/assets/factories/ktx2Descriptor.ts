@@ -8,8 +8,13 @@ const dfdModelRgbSda = 1;
 const dfdPrimariesBt709 = 1;
 const dfdTransferLinear = 1;
 const dfdTransferSrgb = 2;
-const dfdAlphaStraight = 1;
-const dfdAlphaPremultiplied = 2;
+/**
+ * `KHR_DF_FLAG_ALPHA_PREMULTIPLIED` is bit 0 of the DFD flags byte, so the
+ * descriptor permits only 0 (straight, the default) and 1 (premultiplied). Any
+ * other bit belongs to a different registry flag and is rejected rather than
+ * guessed at, because guessing turns a malformed descriptor into wrong alpha.
+ */
+const dfdAlphaPremultiplied = 1;
 
 export interface Ktx2DataRange {
   readonly offset: number;
@@ -119,8 +124,8 @@ const validateDfdColorFields = (view: DataView, range: Ktx2DataRange, source: st
     return fail(source, `DFD uses unsupported DFD transfer ${transferFunction}.`);
   }
 
-  if (flags !== 0 && flags !== dfdAlphaStraight && flags !== dfdAlphaPremultiplied) {
-    return fail(source, `DFD uses unsupported alpha flags ${flags}.`);
+  if (flags !== 0 && flags !== dfdAlphaPremultiplied) {
+    return fail(source, `DFD uses unsupported alpha flags ${flags}; the descriptor defines only 0 (straight) and 1 (premultiplied).`);
   }
 
   return { colorPrimaries, transferFunction, flags };

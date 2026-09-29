@@ -15,11 +15,12 @@ interface Ktx2Spec {
   readonly vkFormat: number;
   readonly levelLengths: readonly number[];
   readonly transfer: number;
+  /** DFD flags byte: 0 straight, 1 for `KHR_DF_FLAG_ALPHA_PREMULTIPLIED`. */
   readonly alpha?: number;
   readonly fill?: number;
 }
 
-const buildKtx2 = ({ vkFormat, levelLengths, transfer, alpha = 1, fill = 1 }: Ktx2Spec): ArrayBuffer => {
+const buildKtx2 = ({ vkFormat, levelLengths, transfer, alpha = 0, fill = 1 }: Ktx2Spec): ArrayBuffer => {
   const dataBytes = levelLengths.reduce((total, length) => total + length, 0);
   const dfdOffset = headerBytes + levelLengths.length * levelIndexEntryBytes;
   const dataOffset = Math.ceil((dfdOffset + dfdBytes) / 8) * 8;
@@ -63,7 +64,7 @@ const buildKtx2 = ({ vkFormat, levelLengths, transfer, alpha = 1, fill = 1 }: Kt
 
 describe('KTX2 typed color metadata', () => {
   test('preserves every raw sRGB RGBA8 mip and premultiplied-alpha metadata through TextureFactory', async () => {
-    const source = buildKtx2({ vkFormat: 43, levelLengths: [64, 16, 4], transfer: 2, alpha: 2, fill: 41 });
+    const source = buildKtx2({ vkFormat: 43, levelLengths: [64, 16, 4], transfer: 2, alpha: 1, fill: 41 });
     const texture = await new TextureFactory().create(source, factoryContext());
 
     expect(texture.source).toBeNull();
