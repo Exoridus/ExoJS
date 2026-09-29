@@ -144,14 +144,14 @@
     },
     {
       "file": "alpha-pma-srgb.ktx2",
-      "sha256": "def5b85b164e4dfda4b763b89970ea1ae9f6247828d33ce661afac4962fc1915",
+      "sha256": "7f1d354ba1dd78e52c96f5d6735cd5691b55d36d9f4b9ff81999ca06321b2f4f",
       "byteLength": 432,
       "vkFormat": 43,
       "width": 8,
       "height": 8,
       "supercompression": 0,
       "transferFunction": 2,
-      "alphaFlags": 2,
+      "alphaFlags": 1,
       "levels": [
         {
           "level": 0,

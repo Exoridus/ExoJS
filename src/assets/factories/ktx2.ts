@@ -132,6 +132,16 @@ const fail = (source: string, message: string): never => {
 
 const isSrgbFormat = (format: Format | number): boolean => format === vkFormatRgba8Srgb || (typeof format === 'string' && format.endsWith('srgb'));
 
+/**
+ * `KHR_DF_FLAG_ALPHA_PREMULTIPLIED`, bit 0 of the DFD flags byte.
+ *
+ * The bit - not a private encoding of it - is what tells a reader that RGB has
+ * already been multiplied by alpha. Any other bit belongs to a different
+ * registry flag and is rejected by the descriptor rather than treated as a
+ * second spelling of premultiplied alpha.
+ */
+const dfdAlphaPremultiplied = 1;
+
 const resolveColorMetadata = (
   source: string,
   vkFormat: number,
@@ -154,7 +164,7 @@ const resolveColorMetadata = (
 
   return {
     colorSpace,
-    alphaMode: alphaFlags === 2 ? 'premultiplied' : 'straight',
+    alphaMode: alphaFlags === dfdAlphaPremultiplied ? 'premultiplied' : 'straight',
   };
 };
 

@@ -68,17 +68,13 @@ const KDF_DFTRANSFER_LINEAR = 1;
 const KDF_DFTRANSFER_SRGB = 2;
 const KDF_DFALPHA_STRAIGHT = 0;
 /**
- * The flags byte the engine reads as premultiplied.
+ * `KHR_DF_FLAG_ALPHA_PREMULTIPLIED`: bit 0 of the DFD flags byte, value 1.
  *
- * The KHR data format registry defines `KHR_DF_FLAG_ALPHA_PREMULTIPLIED` as bit 0
- * (value 1), while the parser's DFD handling tests for 2. This fixture therefore
- * uses the value the engine accepts, and the discrepancy is recorded rather than
- * papered over: a file written by a tool following the registry would be read as
- * STRAIGHT, which is a silent wrong-alpha bug in the opposite direction. The
- * descriptor work owns the fix; until then a fixture claiming otherwise would be
- * a fixture asserting the engine is wrong.
+ * The KTX 2.0 descriptor requires the flags byte to be this when RGB has been
+ * multiplied by alpha and 0 otherwise, so this is also the only premultiplied
+ * encoding a conforming writer can emit. The engine reads the same bit.
  */
-const KDF_DFALPHA_PREMULTIPLIED = 2;
+const KDF_DFALPHA_PREMULTIPLIED = 1;
 
 /** Bytes one RGBA8 texel occupies. */
 const RGBA8_BYTES_PER_TEXEL = 4;

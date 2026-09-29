@@ -215,6 +215,35 @@ describe('committed KTX2 colour fixtures', () => {
     expect(premultipliedData[transparent]).toBe(0);
   });
 
+  test('reads premultiplied alpha from the registry flag bit', () => {
+    const entry = findFixture('alpha-pma-srgb.ktx2');
+    const buffer = readFixture(entry.file);
+    const bytes = new Uint8Array(buffer);
+    const dfdOffset = new DataView(buffer).getUint32(48, true);
+
+    // KHR_DF_FLAG_ALPHA_PREMULTIPLIED is bit 0 of the DFD flags byte - value 1 -
+    // and the KTX descriptor requires the byte to be 0 otherwise. Every tool
+    // that follows the KHR data format registry writes the flag there, so a
+    // parser reading any other value silently reports straight alpha for a
+    // premultiplied image. Pinning the registry value is what stops that.
+    expect(entry.alphaFlags).toBe(1);
+    expect(bytes[dfdOffset + 15]).toBe(1);
+    expect(parseKtx2(buffer, entry.file)).toMatchObject({ alphaMode: 'premultiplied' });
+  });
+
+  test('rejects a DFD flags byte outside the two the descriptor defines', () => {
+    const entry = findFixture('alpha-pma-srgb.ktx2');
+
+    // Bit 1 is a separate registry flag, not a second spelling of
+    // premultiplied. Reading it as premultiplied would make the association
+    // depend on an encoding no conforming writer emits.
+    const mutated = readFixture(entry.file);
+
+    new Uint8Array(mutated)[new DataView(mutated).getUint32(48, true) + 15] = 2;
+
+    expect(() => parseKtx2(mutated, entry.file)).toThrow(/alpha/i);
+  });
+
   test('rejects a fixture whose DFD was edited into a contradiction', () => {
     const entry = findFixture('rgba8-srgb.ktx2');
     const buffer = readFixture(entry.file);
