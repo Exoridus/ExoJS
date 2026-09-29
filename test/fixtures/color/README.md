@@ -13,16 +13,21 @@ npx tsx scripts/generate-color-fixtures.ts
 
 The point of a fixture here is to be **independent of the engine**. The generator
 imports nothing from `src/`: the container layout, the level-index entry layout,
-the basic DFD layout and every level byte length are written out from the KTX 2.0
-specification inside the script itself. `manifest.json` then records those derived
-lengths, and `test/assets/ktx2-fixtures.test.ts` asserts the engine's parse agrees
-with them.
+the basic DFD layout, every level byte length and every block payload are written
+out from the KTX 2.0 specification and the Khronos data format registry inside the
+script itself. `manifest.json` then records those derived values, and
+`test/assets/ktx2-fixtures.test.ts` asserts the engine's parse agrees with them.
 
 A test that builds its containers with the engine's own `compressedLevelByteLength`
 cannot catch a wrong entry in that table - it would agree with itself. A committed
-file plus a manifest written by something that never read `src/` can.
+file plus a manifest written by something that never read `src/` can. Corrupting an
+entry in the engine's block table makes the fixture suite fail with the level's
+declared length disagreeing with its extent, which is the whole reason these files
+exist.
 
 ## What is here
+
+### Uncompressed
 
 | File                       | What it pins down                                                                                          |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -39,39 +44,95 @@ transfer function is concave with `E(0) = 0`, so the correct authoring is always
 the brighter of the two. That makes the difference measurable instead of a matter
 of taste.
 
+### Native block-compressed
+
+One file per advertised format and encoding, named `native-<engine-format>.ktx2`:
+BC1 RGB and BC1 RGBA, BC2, BC3, BC4, BC5, EAC R11, EAC RG11, and all fourteen
+exposed ASTC LDR block sizes, each in the transfer variants the engine advertises.
+Every extent is a whole number of blocks, and every level holds four blocks in a
+known raster order, two of them authored to a different colour from the other two
+so a level assembled in the wrong order is visible rather than averaging out.
+
+**These blocks are not compressed artwork.** Each is emitted in a form the
+specification defines as decoding to a single colour, which is what makes the
+reference decode a few lines of arithmetic on the stored fields instead of the
+output of an encoder:
+
+- **ASTC** uses a **void-extent block**, the encoding the ASTC specification
+  defines for a block of one colour, with every void-extent coordinate bit set so
+  the extent is ignored and the stored colour is read back with no interpolation.
+- **BC1, BC2, BC3** use two **equal RGB565 endpoints** with all-zero indices.
+  With both endpoints equal, every palette entry the decoder can select
+  interpolates back to that one colour.
+- **BC4, BC5, EAC** use **equal 8-bit endpoints** with all-zero indices, which
+  collapses the interpolated table to that one value.
+- **EAC R11** additionally uses a **zero multiplier table**, so the stored base
+  passes through unchanged whatever index a texel selects.
+
+A signed and an unsigned data format in the same family are given **byte-identical
+blocks on purpose**: `native-bc4-r-unorm.ktx2` and `native-bc4-r-snorm.ktx2` carry
+the same bytes, and the test asserts they resolve to different engine formats,
+because the same bytes decode to the opposite ends of the range and only the format
+identity can keep them apart.
+
+Colours are restricted to values a decoder must agree on. An endpoint expanded from
+a narrower component has more than one legal rounding, so pinning a mid value would
+make the fixture an oracle for a choice the specification does not fix; the channel
+sweeps therefore use endpoints the expansion is exact for.
+
 ## Manifest
 
-`manifest.json` records, per file: SHA-256, byte length, `vkFormat`, extent,
-supercompression scheme, DFD transfer function, DFD alpha flags, and every level's
-index, extent and byte length, plus the provenance of the pixels. The fixture suite
-checks each file against its recorded hash, so a hand-edited or half-regenerated
-fixture fails rather than passing quietly.
+`manifest.json` records, per file: SHA-256, byte length, `vkFormat`, extent, texel
+block geometry, supercompression scheme, DFD transfer function, DFD alpha flags, and
+every level's index, extent, byte length and per-block authored colour, plus the
+provenance of the pixels. The fixture suite checks each file against its recorded
+hash, so a hand-edited or half-regenerated fixture fails rather than passing
+quietly.
 
 `scope` in the manifest states what these fixtures do **not** cover, and the suite
-asserts that statement is present.
+asserts that statement is present, including the formats deliberately left out and
+the fact that no Khronos validator has been run.
+
+## Validation
+
+**No Khronos `ktx` validator has been run against any fixture in this directory.**
+The tool is not a repository dependency, and no `ktx`, `ktx2`, `toktx` or `ktxsc`
+executable, and no Python `ktx` module, is present on the machine these were
+generated on. Nothing here should be read as validator output. These files have not
+been confirmed by that tool, and the block payloads in particular are derived from
+the published block layouts rather than from a conforming encoder, so a validator
+run is still the outstanding check before any of it is treated as qualified.
 
 ## Not covered
 
-**Native block-compressed fixtures.** The plan calls for one file per advertised
-native format and encoding - BC1 RGB and RGBA, BC2/3/7, ETC2, and every exposed
-ASTC LDR block size, each in its linear and sRGB form. Those need an independent
-encoder for the block payloads and the Khronos `ktx` validator for confirmation,
-and neither is a repository dependency. A hand-rolled block encoder would be a
-worse oracle than no fixture, so that half stays open. The manifest's `scope` field
-says so in the same terms.
+**BC6H and BC7.** Neither has a constant-colour encoding in its block layout: both
+define their blocks entirely in terms of interpolated endpoints, weights and
+subsets, with no mode that stores a colour directly. A fixture for them would need
+a real BC6H or BC7 encoder, and a hand-rolled one would be a worse oracle than no
+fixture at all, because an encoder bug would be indistinguishable from a correct
+decode. The Khronos validator plus a conforming encoder is the right tool, and
+neither is available here.
+
+**ETC2 RGB, RGB+A1 and RGBA8.** ETC2's endpoint bit patterns are overloaded: chosen
+endpoints are reinterpreted as the T, H, A, E and P modes, so an endpoint selected
+to mean one colour can silently select a different mode instead. Making the
+reference decode derivable would mean deriving that mode selection too, which is
+the same problem BC6H and BC7 have. The `native-eac-r11-unorm.ktx2` and
+`native-eac-rg11-unorm.ktx2` fixtures do cover the EAC single- and dual-channel
+formats, which are the part of that family with a direct base-and-multiplier
+encoding.
 
 **PNG colour fixtures.** `gray-ramp.png`, `alpha-edge.png` and `normal-flat.png`
-from the plan's fixture list are not generated here. They are viewable, diffable
-artefacts whose value is being inspectable by eye, and writing a PNG encoder to
-produce them is a poor trade against simply authoring them in an image tool. The
-KTX2 fixtures above cover the same three cases in a format where every byte is
-verifiable from the manifest.
-
-**One open question, recorded rather than papered over.** The engine's DFD alpha
-handling reads the flags byte value `2` as premultiplied, while the KHR data format
-registry defines `KHR_DF_FLAG_ALPHA_PREMULTIPLIED` as bit 0, value `1`. The
-`alpha-pma-srgb.ktx2` fixture uses the value the engine accepts, because a fixture
-asserting the registry value would be asserting that the engine is wrong without
-proving it. A file written by a tool that follows the registry would currently be
-read as STRAIGHT - a silent wrong-alpha bug in the opposite direction - and the
-descriptor work owns the fix.
+from the plan's fixture list are not generated, and the KTX2 set does not fully
+replace them. The KTX2 fixtures cover the same three cases - a code ramp
+(`rgba8-linear`/`rgba8-srgb`), an alpha edge with a hidden colour
+(`alpha-straight-srgb`/`alpha-pma-srgb`) and a flat data-versus-colour
+distinction - but in a container where every byte is verifiable from a manifest.
+What the PNGs would add and the KTX2 files cannot is direct visual inspection of
+the artwork by a person, and the fact that a viewer opens them without this
+engine. That is a real difference, not a rounding error: a profile mistake that
+turns a mid-tone magenta is obvious in an image viewer and invisible in a byte
+comparison. The trade is that authoring them means writing a PNG encoder, whose
+output is then only as trustworthy as the encoder, and no independent check exists
+for it here. They stay absent rather than being faked, and the decision is recorded
+here rather than left implicit.

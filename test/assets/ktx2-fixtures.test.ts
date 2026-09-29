@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
 import { inflateKtx2Levels, parseKtx2 } from '#assets/factories/ktx2';
+import { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 
 const FIXTURE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../fixtures/color');
 
@@ -27,6 +28,8 @@ interface ManifestLevel {
   readonly width: number;
   readonly height: number;
   readonly byteLength: number;
+  /** The colour each block must decode to, in raster order. */
+  readonly blockColors?: readonly string[];
 }
 
 interface ManifestEntry {
@@ -39,6 +42,10 @@ interface ManifestEntry {
   readonly supercompression: number;
   readonly transferFunction: number;
   readonly alphaFlags: number;
+  /** Absent for the one-texel-per-block uncompressed family. */
+  readonly blockWidth?: number;
+  readonly blockHeight?: number;
+  readonly bytesPerBlock?: number;
   readonly levels: readonly ManifestLevel[];
   readonly provenance: string;
   readonly note: string;
@@ -95,8 +102,11 @@ describe('colour fixture manifest', () => {
     }
 
     // The scope statement is part of the evidence: a reader must not be able to
-    // mistake these for a qualified compressed-format matrix.
-    expect(manifest.scope).toMatch(/Uncompressed RGBA8 only/);
+    // mistake this for a qualified compressed matrix, and must be able to see
+    // which formats the manifest deliberately leaves out.
+    expect(manifest.scope).toMatch(/BC6H and BC7/);
+    expect(manifest.scope).toMatch(/ETC2 RGB, RGB\+A1 and RGBA8/);
+    expect(manifest.scope).toMatch(/No Khronos ktx validator has been run/i);
   });
 
   test('records level sizes derived independently of the engine table', () => {
@@ -106,12 +116,195 @@ describe('colour fixture manifest', () => {
           continue;
         }
 
-        // RGBA8: four bytes per texel, straight from the container layout.
-        expect(level.byteLength, `${entry.file} level ${level.level}`).toBe(level.width * level.height * 4);
+        if (entry.bytesPerBlock === undefined) {
+          // RGBA8: four bytes per texel, straight from the container layout.
+          expect(level.byteLength, `${entry.file} level ${level.level}`).toBe(level.width * level.height * 4);
+        } else {
+          // Block-compressed: whole blocks across times whole blocks down times
+          // bytes per block, with the extent rounded UP to the block. Computed
+          // from the fixture's own recorded block geometry, never from the
+          // engine's table, so a wrong entry there fails here.
+          expect(level.byteLength, `${entry.file} level ${level.level}`).toBe(
+            Math.ceil(level.width / entry.blockWidth!) * Math.ceil(level.height / entry.blockHeight!) * entry.bytesPerBlock!,
+          );
+        }
       }
     }
   });
+
+  test('enumerates one file per advertised native block-compressed format that has an identity encoding', () => {
+    const compressed = manifest.fixtures.filter(entry => entry.bytesPerBlock !== undefined);
+
+    // Every fixture's extent must be a whole number of blocks: a level that is
+    // not is padded on upload, which is a different question from this one.
+    for (const entry of compressed) {
+      const { blockWidth, blockHeight } = entry;
+
+      if (blockWidth === undefined || blockHeight === undefined) {
+        throw new Error(`${entry.file} records bytes per block but no block extent.`);
+      }
+
+      for (const level of entry.levels) {
+        expect(level.width % blockWidth, `${entry.file} width is a block multiple`).toBe(0);
+        expect(level.height % blockHeight, `${entry.file} height is a block multiple`).toBe(0);
+      }
+    }
+
+    // The two faces of each transfer pair: identical block bytes and extents,
+    // differing only in transfer. That is what makes transfer a carried
+    // property rather than something inferred from the format name.
+    for (const entry of compressed.filter(candidate => candidate.file.endsWith('-srgb.ktx2'))) {
+      const twin = compressed.find(candidate => candidate.file === entry.file.replace('-unorm-srgb.ktx2', '-unorm.ktx2').replace('-srgb.ktx2', '-unorm.ktx2'));
+
+      expect(twin, `${entry.file} has a linear twin`).toBeDefined();
+
+      if (twin === undefined) continue;
+
+      expect(twin.levels[0]?.byteLength, `${entry.file} matches its twin's size`).toBe(entry.levels[0]?.byteLength);
+      expect(new Uint8Array(readFixture(twin.file)).byteLength).toBe(new Uint8Array(readFixture(entry.file)).byteLength);
+      expect(twin.transferFunction).toBe(1);
+      expect(entry.transferFunction).toBe(2);
+    }
+  });
 });
+
+/**
+ * Every ASTC LDR block size the engine advertises, read from its own format
+ * vocabulary rather than a list written here, so a newly exposed block size makes
+ * this suite demand a fixture for it.
+ */
+const exposedAstcBlockSizes: readonly string[] = [
+  ...new Set(
+    Object.values(CompressedTextureFormat)
+      .map(format => /^astc-(\d+x\d+)-/.exec(format)?.[1])
+      .filter((size): size is string => size !== undefined),
+  ),
+].sort((a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10) || Number.parseInt(b.split('x')[1]!, 10) - Number.parseInt(a.split('x')[1]!, 10));
+
+describe('committed native block-compressed fixtures', () => {
+  const compressed = manifest.fixtures.filter(entry => entry.bytesPerBlock !== undefined);
+
+  test('covers the block families that have a spec-defined constant-colour encoding', () => {
+    // The expected inventory, written out rather than counted: a fixture silently
+    // dropped from the manifest fails here instead of quietly shrinking the
+    // matrix, and a format quietly added shows up as a new name.
+    expect(compressed.map(entry => entry.file).sort()).toEqual(
+      [
+        'native-bc1-rgb-unorm.ktx2',
+        'native-bc1-rgb-unorm-srgb.ktx2',
+        'native-bc1-rgba-unorm.ktx2',
+        'native-bc1-rgba-unorm-srgb.ktx2',
+        'native-bc2-rgba-unorm.ktx2',
+        'native-bc2-rgba-unorm-srgb.ktx2',
+        'native-bc3-rgba-unorm.ktx2',
+        'native-bc3-rgba-unorm-srgb.ktx2',
+        'native-bc4-r-unorm.ktx2',
+        'native-bc4-r-snorm.ktx2',
+        'native-bc5-rg-unorm.ktx2',
+        'native-bc5-rg-snorm.ktx2',
+        'native-eac-r11-unorm.ktx2',
+        'native-eac-rg11-unorm.ktx2',
+        ...exposedAstcBlockSizes.flatMap(size => [`native-astc-${size}-unorm.ktx2`, `native-astc-${size}-srgb.ktx2`]),
+      ].sort(),
+    );
+
+    // Every exposed ASTC LDR block size must appear, in both transfers. Derived
+    // from the engine's own list so a newly exposed block size fails here instead
+    // of going untested.
+    for (const blockSize of exposedAstcBlockSizes) {
+      for (const transfer of ['unorm', 'srgb']) {
+        expect(
+          compressed.map(entry => entry.file),
+          `native-astc-${blockSize}-${transfer}.ktx2`,
+        ).toContain(`native-astc-${blockSize}-${transfer}.ktx2`);
+      }
+    }
+  });
+
+  test.each(compressed.map(entry => [entry.file, entry] as const))('%s parses to its own format, extent and level size', (_file, entry) => {
+    const payload = parseKtx2(readFixture(entry.file), entry.file);
+
+    expect(payload.kind).toBe('compressed');
+
+    if (payload.kind !== 'compressed') return;
+
+    // The engine's own vkFormat mapping, so a file carrying a different format
+    // than its name claims cannot pass.
+    expect(payload.format).toBe(compressedFormatName(entry.file));
+    expect(payload.colorSpace).toBe(entry.transferFunction === 2 ? 'srgb' : 'linear-srgb');
+    expect(payload.alphaMode).toBe('straight');
+    expect(payload.levels).toHaveLength(entry.levels.length);
+
+    for (const [index, level] of payload.levels.entries()) {
+      const expected = entry.levels[index]!;
+
+      expect(level.width, `level ${index} width`).toBe(expected.width);
+      expect(level.height, `level ${index} height`).toBe(expected.height);
+      // The engine's block table must agree with the independently derived size.
+      expect(level.data.byteLength, `level ${index} bytes`).toBe(expected.byteLength);
+    }
+  });
+
+  test('records the colour each block was authored to decode to', () => {
+    for (const entry of compressed) {
+      const level = entry.levels[0]!;
+
+      // Two by two blocks, each carrying a recorded colour, so the manifest's
+      // expected values are per block rather than one average over the image.
+      expect(level.blockColors, `${entry.file} block colours`).toBeDefined();
+      expect(level.blockColors).toHaveLength(4);
+    }
+  });
+
+  test('emits four blocks whose bytes differ, so a reordered level is visible', () => {
+    for (const entry of compressed) {
+      const payload = parseKtx2(readFixture(entry.file), entry.file);
+
+      if (payload.kind !== 'compressed') continue;
+
+      const blocks: string[] = [];
+      const blockBytes = entry.bytesPerBlock!;
+
+      for (let offset = 0; offset < payload.levels[0]!.data.byteLength; offset += blockBytes) {
+        blocks.push([...payload.levels[0]!.data.subarray(offset, offset + blockBytes)].join(','));
+      }
+
+      expect(blocks, `${entry.file} block count`).toHaveLength(4);
+      // Every block is authored to a different colour, so no two may be the same
+      // bytes: a level assembled in the wrong order, or from a wrong extent,
+      // would then be indistinguishable from the right one.
+      expect(new Set(blocks).size, `${entry.file} blocks are distinct`).toBe(4);
+    }
+  });
+
+  test('keeps a signed and an unsigned data format as separate identities', () => {
+    const unsigned = parseKtx2(readFixture('native-bc4-r-unorm.ktx2'), 'native-bc4-r-unorm.ktx2');
+    const signed = parseKtx2(readFixture('native-bc4-r-snorm.ktx2'), 'native-bc4-r-snorm.ktx2');
+
+    // The blocks are byte-identical, so only the format identity can keep the
+    // two apart: the same bytes read as +1.0 unsigned and -1.0 signed.
+    if (unsigned.kind !== 'compressed' || signed.kind !== 'compressed') return;
+
+    expect(unsigned.format).not.toBe(signed.format);
+    expect(unsigned.levels[0]?.data).toEqual(signed.levels[0]?.data);
+  });
+});
+
+/** The engine's format name a fixture's file name claims, asserted rather than imported. */
+const compressedFormatName = (file: string): CompressedTextureFormat => {
+  const match = /^native-(bc1|bc2|bc3|bc4|bc5|eac|astc)-(.+?)-(unorm|unorm-srgb|srgb|snorm)\.ktx2$/.exec(file);
+
+  if (match === null) {
+    throw new Error(`${file} does not name a format and a transfer.`);
+  }
+
+  // The engine's own vocabulary: BC names separate the transfer with a hyphen,
+  // while EAC runs it on directly, so both spellings have to be handled rather
+  // than normalised into one guess.
+  const name = `${match[1]}-${match[2]}-${match[3]}`;
+
+  return (match[1] === 'eac' ? name.replace('-unorm', 'unorm') : name) as CompressedTextureFormat;
+};
 
 describe('committed KTX2 colour fixtures', () => {
   test('reads the linear and sRGB members of one pair as distinct storage', () => {
