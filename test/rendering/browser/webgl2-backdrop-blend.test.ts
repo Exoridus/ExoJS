@@ -231,6 +231,40 @@ describe('WebGL2 backdrop-aware blend (Darken spike)', () => {
     }
   });
 
+  test('composing leaves the bound target, viewport and raster state as the backend holds them', async () => {
+    const backend = await createBackend();
+    const gl = backend.context;
+    const target = new RenderTexture(canvasSize, canvasSize, { format: TextureFormat.Rgba8Srgb });
+    const source = createSolidTexture('#ffffff');
+
+    try {
+      backend.setRenderTarget(target);
+      backend.clear(new Color(60, 120, 200));
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(0, 0, canvasSize, canvasSize);
+
+      const framebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+      const viewport = [...(gl.getParameter(gl.VIEWPORT) as Int32Array)];
+      const scissor = [...(gl.getParameter(gl.SCISSOR_BOX) as Int32Array)];
+      const blend = gl.isEnabled(gl.BLEND);
+
+      composeBackdropBlend(backend, source, BlendModes.Multiply);
+
+      expect(gl.getError()).toBe(gl.NO_ERROR);
+      expect(gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING)).toBe(framebuffer);
+      expect(gl.getParameter(gl.READ_FRAMEBUFFER_BINDING)).toBe(framebuffer);
+      expect([...(gl.getParameter(gl.VIEWPORT) as Int32Array)]).toEqual(viewport);
+      expect([...(gl.getParameter(gl.SCISSOR_BOX) as Int32Array)]).toEqual(scissor);
+      expect(gl.isEnabled(gl.SCISSOR_TEST)).toBe(true);
+      expect(gl.isEnabled(gl.BLEND)).toBe(blend);
+    } finally {
+      backend.setRenderTarget(null);
+      source.destroy();
+      target.destroy();
+      backend.destroy();
+    }
+  });
+
   test('backdrop capture matches an sRGB render-texture target instead of blitting into a mismatched Rgba8 scratch', async () => {
     const backend = await createBackend();
     const target = new RenderTexture(canvasSize, canvasSize, { format: TextureFormat.Rgba8Srgb });
