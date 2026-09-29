@@ -1,3 +1,4 @@
+import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderError } from '#rendering/RenderError';
 import { isFullyOpaqueLevel } from '#rendering/texture/pixelPayload';
@@ -24,6 +25,7 @@ interface NormalizeStaging {
   texture: GPUTexture;
   width: number;
   height: number;
+  accountedBytes: number;
 }
 
 interface NormalizeResources {
@@ -61,6 +63,7 @@ interface PassLevel {
  */
 export class WebGpuTextureNormalizer {
   private readonly _device: GPUDevice;
+  private readonly _accountant: GpuResourceAccountant | null;
   /** Straight-source scratch, one per storage format, grown only. */
   private readonly _staging = new Map<GPUTextureFormat, NormalizeStaging>();
   /** Per-format pipeline and sampler, shaped like the mipmap resources. */
@@ -70,8 +73,13 @@ export class WebGpuTextureNormalizer {
   /** Reused per level so the uniform write allocates nothing. */
   private readonly _levelScaleData = new Float32Array(4);
 
-  public constructor(device: GPUDevice) {
+  /**
+   * @param accountant Books each staging texture, so scratch memory is part of the
+   * backend's owned-byte total for as long as it is resident.
+   */
+  public constructor(device: GPUDevice, accountant: GpuResourceAccountant | null = null) {
     this._device = device;
+    this._accountant = accountant;
   }
 
   /**
@@ -180,6 +188,7 @@ export class WebGpuTextureNormalizer {
   public reset(): void {
     for (const staging of this._staging.values()) {
       staging.texture.destroy();
+      this._accountant?.free(staging.accountedBytes);
     }
 
     for (const buffer of this._levelScales.values()) {
@@ -243,7 +252,10 @@ export class WebGpuTextureNormalizer {
     const nextWidth = exact ? width : Math.max(existing?.width ?? 0, width);
     const nextHeight = exact ? height : Math.max(existing?.height ?? 0, height);
 
-    existing?.texture.destroy();
+    if (existing !== undefined) {
+      existing.texture.destroy();
+      this._accountant?.free(existing.accountedBytes);
+    }
 
     const texture = this._device.createTexture({
       label: 'backend:color-normalize-staging',
@@ -253,7 +265,10 @@ export class WebGpuTextureNormalizer {
       // requires it on every destination it writes.
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
     });
-    const staging: NormalizeStaging = { texture, width: nextWidth, height: nextHeight };
+    const accountedBytes = nextWidth * nextHeight * RGBA8_BYTES_PER_TEXEL;
+    const staging: NormalizeStaging = { texture, width: nextWidth, height: nextHeight, accountedBytes };
+
+    this._accountant?.allocate(accountedBytes);
 
     this._staging.set(format, staging);
 

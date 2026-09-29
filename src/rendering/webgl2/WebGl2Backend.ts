@@ -4153,11 +4153,15 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   private _getTextureNormalizer(): WebGl2TextureNormalizer {
-    return (this._textureNormalizer ??= new WebGl2TextureNormalizer(this._context, {
-      releaseForColorNormalization: destination => this.releaseForColorNormalization(destination),
-      restoreAfterColorNormalization: (unitZeroBinding, activeUnit, activeBinding) =>
-        this.restoreAfterColorNormalization(unitZeroBinding, activeUnit, activeBinding),
-    }));
+    return (this._textureNormalizer ??= new WebGl2TextureNormalizer(
+      this._context,
+      {
+        releaseForColorNormalization: destination => this.releaseForColorNormalization(destination),
+        restoreAfterColorNormalization: (unitZeroBinding, activeUnit, activeBinding) =>
+          this.restoreAfterColorNormalization(unitZeroBinding, activeUnit, activeBinding),
+      },
+      this._accountant,
+    ));
   }
 
   private _assertFramebufferComplete(): void {

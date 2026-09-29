@@ -20,9 +20,14 @@ import { createRenderStats } from '#rendering/RenderStats';
 import { CompressedTexture } from '#rendering/texture/CompressedTexture';
 import { compressedLevelByteLength, CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
+import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { createFakeCanvas, createFakeWebGl2Context, GlRecorder, installFakeWebGl2Globals } from '../perf/rendering/fakeWebGl2';
+import { createWebGl2Harness, type WebGl2Harness } from '../perf/rendering/harness';
+import { createMockBackend, createMockWebGpuEnvironment, type MockWebGpuEnvironment } from './webgpuMockEnvironment';
 
 describe('estimateCompressedTextureBytes', () => {
   test('a mip tail smaller than one block reports the full block, not a fraction of it', () => {
@@ -251,5 +256,292 @@ describe('WebGl2Backend depth/stencil attachment accounting', () => {
     harness.backend.popStencilClip();
     target.destroy();
     shape.destroy();
+  });
+});
+
+/** Independent restatement of the byte formulas: one texel size per working format, a full chain summing each level. */
+const TEXEL_BYTES = { rgba8: 4, rgba8srgb: 4, rgba16f: 8, rgba32f: 16 } as const;
+
+const FLOAT_TARGETS = { EXT_color_buffer_float: {} };
+
+const chainBytes = (width: number, height: number, texelBytes: number, levels: number): number => {
+  let total = 0;
+
+  for (let level = 0; level < levels; level++) {
+    total += Math.max(width >> level, 1) * Math.max(height >> level, 1) * texelBytes;
+  }
+
+  return total;
+};
+
+const straightPayload = (width: number, height: number, alpha: number) => {
+  const data = new Uint8Array(width * height * 4);
+
+  for (let offset = 0; offset < data.length; offset += 4) {
+    data[offset] = 200;
+    data[offset + 1] = 100;
+    data[offset + 2] = 50;
+    data[offset + 3] = alpha;
+  }
+
+  return { colorSpace: 'srgb', alphaMode: 'straight', levels: [{ data, width, height }] } as const;
+};
+
+describe('WebGl2Backend working-format storage accounting', () => {
+  let harness: WebGl2Harness | null = null;
+
+  afterEach(() => {
+    harness?.destroy();
+    harness = null;
+  });
+
+  test.each([
+    [TextureFormat.Rgba8, TEXEL_BYTES.rgba8],
+    [TextureFormat.Rgba8Srgb, TEXEL_BYTES.rgba8srgb],
+    [TextureFormat.Rgba16F, TEXEL_BYTES.rgba16f],
+    [TextureFormat.Rgba32F, TEXEL_BYTES.rgba32f],
+  ] as const)('a %s working target owns exactly width * height * texel bytes and frees them on destroy', (format, texelBytes) => {
+    harness = createWebGl2Harness({ coreRenderers: false, extensions: FLOAT_TARGETS });
+
+    const baseline = harness.backend.stats.gpuMemoryBytes;
+    const target = new RenderTexture(96, 40, { format });
+
+    harness.backend.setRenderTarget(target);
+
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(96 * 40 * texelBytes);
+
+    target.destroy();
+
+    expect(harness.backend.stats.gpuMemoryBytes).toBe(baseline);
+  });
+
+  test('a resize replaces the working storage instead of adding to it', () => {
+    harness = createWebGl2Harness({ coreRenderers: false, extensions: FLOAT_TARGETS });
+
+    const baseline = harness.backend.stats.gpuMemoryBytes;
+    const target = new RenderTexture(64, 64, { format: TextureFormat.Rgba16F });
+
+    harness.backend.setRenderTarget(target);
+    target.setSize(128, 32);
+    harness.backend.setRenderTarget(target);
+
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(128 * 32 * TEXEL_BYTES.rgba16f);
+
+    target.destroy();
+  });
+
+  test('multisample storage adds width * height * samples * texel bytes on top of the resolve texture', () => {
+    harness = createWebGl2Harness({ coreRenderers: false, sampleCountSupport: [1, 2, 4] });
+
+    const baseline = harness.backend.stats.gpuMemoryBytes;
+    const target = new RenderTexture(64, 48, { format: TextureFormat.Rgba8Srgb });
+
+    target.sampleCount = 4;
+    harness.backend.setRenderTarget(target);
+
+    const resolveBytes = 64 * 48 * TEXEL_BYTES.rgba8srgb;
+    const multisampleBytes = 64 * 48 * 4 * TEXEL_BYTES.rgba8srgb;
+
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(resolveBytes + multisampleBytes);
+
+    target.destroy();
+
+    expect(harness.backend.stats.gpuMemoryBytes).toBe(baseline);
+  });
+
+  test('a filter intermediate leased from the pool stays owned while pooled and is reused without new storage', () => {
+    harness = createWebGl2Harness({ coreRenderers: false, extensions: FLOAT_TARGETS });
+
+    const baseline = harness.backend.stats.gpuMemoryBytes;
+    const first = harness.backend.acquireRenderTexture(64, 64, TextureFormat.Rgba16F);
+    const second = harness.backend.acquireRenderTexture(64, 64, TextureFormat.Rgba16F);
+
+    harness.backend.setRenderTarget(first);
+    harness.backend.setRenderTarget(second);
+
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(2 * 64 * 64 * TEXEL_BYTES.rgba16f);
+
+    harness.backend.releaseRenderTexture(first);
+    harness.backend.releaseRenderTexture(second);
+
+    // Pooled storage is retained for reuse, not returned to the device.
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(2 * 64 * 64 * TEXEL_BYTES.rgba16f);
+
+    const reused = harness.backend.acquireRenderTexture(64, 64, TextureFormat.Rgba16F);
+
+    harness.backend.setRenderTarget(reused);
+
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(2 * 64 * 64 * TEXEL_BYTES.rgba16f);
+
+    harness.backend.setRenderTarget(null);
+    first.destroy();
+    second.destroy();
+
+    expect(harness.backend.stats.gpuMemoryBytes).toBe(baseline);
+  });
+});
+
+describe('WebGl2Backend normalization staging accounting', () => {
+  let harness: WebGl2Harness | null = null;
+
+  afterEach(() => {
+    harness?.destroy();
+    harness = null;
+  });
+
+  test('a translucent upload owns its storage plus one resident staging texture that later uploads reuse', () => {
+    harness = createWebGl2Harness({ coreRenderers: false });
+
+    const baseline = harness.backend.stats.gpuMemoryBytes;
+    const first = Texture.fromPixels(straightPayload(32, 16, 128), { generateMipMap: false });
+
+    harness.backend.bindTexture(first, 0);
+
+    const staging = 32 * 16 * TEXEL_BYTES.rgba8srgb;
+
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(32 * 16 * 4 + staging);
+
+    const second = Texture.fromPixels(straightPayload(16, 16, 128), { generateMipMap: false });
+
+    harness.backend.bindTexture(second, 0);
+
+    // The 16x16 level fits inside the resident 32x16 scratch: only its own storage is added.
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(32 * 16 * 4 + staging + 16 * 16 * 4);
+
+    first.destroy();
+    second.destroy();
+
+    // Destroying the textures returns their storage; the scratch stays resident.
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(staging);
+  });
+
+  test('an opaque payload never allocates scratch', () => {
+    harness = createWebGl2Harness({ coreRenderers: false });
+
+    const baseline = harness.backend.stats.gpuMemoryBytes;
+    const texture = Texture.fromPixels(straightPayload(32, 16, 255), { generateMipMap: false });
+
+    harness.backend.bindTexture(texture, 0);
+
+    expect(harness.backend.stats.gpuMemoryBytes - baseline).toBe(32 * 16 * 4);
+
+    texture.destroy();
+  });
+
+  test('a context loss returns the scratch together with every other managed resource', () => {
+    harness = createWebGl2Harness({ coreRenderers: false });
+
+    const baseline = harness.backend.stats.gpuMemoryBytes;
+    const texture = Texture.fromPixels(straightPayload(32, 16, 128), { generateMipMap: false });
+
+    harness.backend.bindTexture(texture, 0);
+    (harness.backend as unknown as { _reinitializeDeviceState: () => void })._reinitializeDeviceState();
+
+    expect(harness.backend.stats.gpuMemoryBytes).toBe(baseline);
+
+    texture.destroy();
+  });
+});
+
+describe('WebGpuBackend color storage accounting', () => {
+  let environment: MockWebGpuEnvironment | null = null;
+  let backend: WebGpuBackend | null = null;
+
+  afterEach(() => {
+    backend?.destroy();
+    environment?.restore();
+    backend = null;
+    environment = null;
+  });
+
+  const create = async (): Promise<WebGpuBackend> => {
+    environment = createMockWebGpuEnvironment();
+    backend = await createMockBackend(environment);
+
+    return backend;
+  };
+
+  test.each([
+    [TextureFormat.Rgba8Srgb, TEXEL_BYTES.rgba8srgb],
+    [TextureFormat.Rgba16F, TEXEL_BYTES.rgba16f],
+    [TextureFormat.Rgba32F, TEXEL_BYTES.rgba32f],
+  ] as const)('a %s working target owns exactly width * height * texel bytes and frees them on destroy', async (format, texelBytes) => {
+    const gpu = await create();
+    const baseline = gpu.stats.gpuMemoryBytes;
+    const target = new RenderTexture(96, 40, { format });
+
+    gpu.getTextureBinding(target);
+
+    expect(gpu.stats.gpuMemoryBytes - baseline).toBe(96 * 40 * texelBytes);
+
+    target.destroy();
+
+    expect(gpu.stats.gpuMemoryBytes).toBe(baseline);
+  });
+
+  test('never books multisample storage: a requested sample count collapses to one', async () => {
+    const gpu = await create();
+    const baseline = gpu.stats.gpuMemoryBytes;
+    const target = new RenderTexture(64, 48, { format: TextureFormat.Rgba8Srgb });
+
+    target.sampleCount = 4;
+    gpu.getTextureBinding(target);
+    gpu.resolveRenderTarget(target);
+
+    expect(target.sampleCount).toBe(1);
+    expect(gpu.stats.gpuMemoryBytes - baseline).toBe(64 * 48 * TEXEL_BYTES.rgba8srgb);
+
+    target.destroy();
+  });
+
+  test('a translucent upload owns its storage plus one resident staging texture that later uploads reuse', async () => {
+    const gpu = await create();
+    const baseline = gpu.stats.gpuMemoryBytes;
+    const first = Texture.fromPixels(straightPayload(32, 16, 128), { generateMipMap: false });
+
+    gpu.getTextureBinding(first);
+
+    const staging = 32 * 16 * TEXEL_BYTES.rgba8srgb;
+
+    expect(gpu.stats.gpuMemoryBytes - baseline).toBe(32 * 16 * 4 + staging);
+
+    const second = Texture.fromPixels(straightPayload(16, 16, 128), { generateMipMap: false });
+
+    gpu.getTextureBinding(second);
+
+    expect(gpu.stats.gpuMemoryBytes - baseline).toBe(32 * 16 * 4 + staging + 16 * 16 * 4);
+
+    first.destroy();
+    second.destroy();
+
+    expect(gpu.stats.gpuMemoryBytes - baseline).toBe(staging);
+  });
+
+  test('an authored full chain books the summed level footprint plus the scratch sized for its base level', async () => {
+    const gpu = await create();
+    const baseline = gpu.stats.gpuMemoryBytes;
+    const levels = [
+      { data: new Uint8Array(8 * 8 * 4).fill(128), width: 8, height: 8 },
+      { data: new Uint8Array(4 * 4 * 4).fill(128), width: 4, height: 4 },
+      { data: new Uint8Array(2 * 2 * 4).fill(128), width: 2, height: 2 },
+      { data: new Uint8Array(1 * 1 * 4).fill(128), width: 1, height: 1 },
+    ];
+    const texture = Texture.fromPixels({ colorSpace: 'srgb', alphaMode: 'straight', levels }, { generateMipMap: false });
+
+    gpu.getTextureBinding(texture);
+
+    expect(gpu.stats.gpuMemoryBytes - baseline).toBe(chainBytes(8, 8, 4, 4) + 8 * 8 * 4);
+
+    texture.destroy();
+  });
+
+  test('a device teardown drops every owned byte, scratch included', async () => {
+    const gpu = await create();
+    const texture = Texture.fromPixels(straightPayload(32, 16, 128), { generateMipMap: false });
+
+    gpu.getTextureBinding(texture);
+    (gpu as unknown as { _teardownDeviceState: () => void })._teardownDeviceState();
+
+    expect(gpu.stats.gpuMemoryBytes).toBe(0);
   });
 });

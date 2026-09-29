@@ -153,6 +153,10 @@ const FIXED_HEADROOM_KB = 1.25;
  * bimodal at 14.6 vs 19.8 KB/frame between passes. See `ALLOCATION_REPORT_ONLY`.
  *
  * ── Ratchet history ─────────────────────────────────────────────
+ * `sprite/1000 colour-managed moving` was added with the linear-light pipeline as the default: normalized sRGB textures and a per-sprite tint
+ * rewritten every frame, at the harness floor. Its tints are opaque on purpose - a fractional alpha stored into a `Color` field that has
+ * held a small integer boxes one heap number per write (16 B per `setTint`), which would measure `Color`'s field representation and not the draw path.
+ *
  * 2026-08-16c: `filtered/100` ONLY, 229.59 → 102.98, after the effect path's
  * control plane stopped being rebuilt per frame - the redirect pass and its
  * descriptor, the clip/mask continuation closures, the barrier scope and its
@@ -195,6 +199,7 @@ const BASELINE_KB: Readonly<Record<string, number>> = {
   'filtered/100': 102.98,
   'blend/1000 plateau64': 0.93,
   'blend/1000 alternating': 1.19,
+  'sprite/1000 colour-managed moving': 1.2,
 };
 
 const ENV = `Node ${process.version} ${process.platform}/${process.arch}`;
