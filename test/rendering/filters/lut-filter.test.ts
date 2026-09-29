@@ -514,6 +514,22 @@ describe('LutFilter.setLut', () => {
     expect(filter.lut).toBe(custom);
   });
 
+  test('rejects a texture that resolves to colorSpace srgb and keeps the current LUT', () => {
+    const filter = new LutFilter();
+    const before = filter.lut;
+    const srgbLut = new Texture(document.createElement('canvas'), { colorSpace: 'srgb' });
+
+    expect(() => filter.setLut(srgbLut)).toThrow(/colorSpace: 'srgb'/);
+    expect(filter.lut).toBe(before);
+  });
+
+  test('accepts an image texture declared colorSpace none', () => {
+    const filter = new LutFilter();
+    const numeric = new Texture(document.createElement('canvas'), { colorSpace: 'none' });
+
+    expect(filter.setLut(numeric).lut).toBe(numeric);
+  });
+
   test('also updates the shader filter uniform', () => {
     const filter = new LutFilter({ mode: '3d' });
     const replacement = LutFilter.identityLut3D(9);

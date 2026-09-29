@@ -153,7 +153,7 @@ sprite.filters = [filter];
 filter.setLut(differentLutTexture);
 ```
 
-`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation.
+`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation. LUT textures are numeric data, not colour: `setLut()` throws for a texture that resolves to `colorSpace: 'srgb'` (the default of an ordinary loaded image), so build the texture with `fromImage()`, a `DataTexture`, or declare `colorSpace: 'none'` on it.
 
 ## DisplacementFilter
 
