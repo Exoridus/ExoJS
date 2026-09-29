@@ -196,7 +196,7 @@ const glowLinear = new Float32Array(4);
 glow.writeLinear(glowLinear);
 ```
 
-A texture you sample as data (a mask, normal map or lookup table) must not resolve to sRGB colour, or the sample is decoded before your shader sees it; declare `colorSpace: 'none'` on it. The engine-supplied `u_tint` is already the linear premultiplied tint.
+A texture you sample as data (a mask, normal map or lookup table) must resolve to `colorSpace: 'none'`; as `'srgb'` the sample is decoded before your shader sees it, and as `'linear-srgb'` it is still treated as colour. Declare `colorSpace: 'none'` on it. The engine-supplied `u_tint` is already the linear premultiplied tint.
 
 <Callout type="debug" title="Catch GLSL/WGSL uniform drift in CI">
 When a uniform is spelled differently across your two shader sources it silently misbinds on one backend. `material.shader.detectUniformDrift()` reports names present in only one language — assert both lists empty in CI to catch the typo before it ships.
