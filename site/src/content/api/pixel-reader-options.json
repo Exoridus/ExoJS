@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Defaults to uint8 for rgba8. Float textures require float32 and preserve their values."
+          "description": "Defaults to uint8 for rgba8/rgba8srgb - the attachment's own stored bytes, never decoded or tone-mapped. Float textures require float32 and preserve their values."
         },
         {
           "name": "region",
