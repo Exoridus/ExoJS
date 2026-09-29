@@ -250,12 +250,16 @@ test('WebGL2 blends into an sRGB working target in linear light', async () => {
     const blended = await backend.readPixels(working, 0, 0, 1, 1);
 
     // Mid-gray at half coverage over black: 0.2159 linear premultiplied by 0.5
-    // lands at 0.108 linear, which the sRGB attachment stores as byte 93 or 94.
-    expect(Math.abs(blended[0]! - 94)).toBeLessThanOrEqual(1);
-    // A plain RGBA8 target has no encode on write, so the same draw stores the
-    // linear value quantized - byte 28. Encoded-space blending on the sRGB
-    // target would have produced 64 instead.
-    expect((await backend.readPixels(unencoded, 0, 0, 1, 1))[0]).toBeCloseTo(28, 0);
+    // lands at 0.108 linear, which encodes to 92.4; the attachment's own
+    // rounding may store 92 or 93.
+    expect(Math.abs(blended[0]! - 92.5)).toBeLessThanOrEqual(1);
+
+    // A plain RGBA8 target has no encode on write, so the same draw stores
+    // 0.108 * 255 = 27.5 quantized to 27 or 28. Encoded-space blending on the
+    // sRGB target would have produced 64 instead.
+    const linearByte = (await backend.readPixels(unencoded, 0, 0, 1, 1))[0]!;
+
+    expect(Math.abs(linearByte - 27.5)).toBeLessThanOrEqual(1);
   } finally {
     image.destroy();
     working.destroy();
