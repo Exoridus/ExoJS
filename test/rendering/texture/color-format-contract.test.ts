@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
+import { CompressedTexture } from '#rendering/texture/CompressedTexture';
 import { compressedBlockLayout, compressedFormatPreference, CompressedTextureFormat as Compressed } from '#rendering/texture/CompressedTextureFormat';
 import { resolveTextureFormat } from '#rendering/texture/textureFormatInfo';
 import type { ColorTextureFormat, TextureFormat } from '#rendering/types';
@@ -31,6 +32,27 @@ describe('texture format contract', () => {
 
   test('rejects metadata that contradicts exact sRGB storage', () => {
     expect(() => resolveTextureFormat(Compressed.Bc7RgbaUnormSrgb, { colorSpace: 'none' })).toThrow(/sRGB/i);
+  });
+
+  test('rejects an sRGB label over a compressed format that does not decode sRGB', () => {
+    expect(() => resolveTextureFormat(Compressed.Bc1RgbUnorm, { colorSpace: 'srgb' })).toThrow(/contradicts a compressed format/);
+    expect(() => resolveTextureFormat(Compressed.Bc7RgbaUnorm, { payloadColorSpace: 'srgb' })).toThrow(/contradicts a compressed format/);
+    expect(() => resolveTextureFormat(Compressed.Bc4RUnorm, { colorSpace: 'srgb' })).toThrow(/contradicts a compressed format/);
+  });
+
+  test('a public CompressedTexture refuses an sRGB label over a UNORM block format', () => {
+    const levels = [{ data: new Uint8Array(8), width: 4, height: 4 }];
+
+    expect(() => new CompressedTexture({ format: Compressed.Bc1RgbUnorm, levels, colorSpace: 'srgb' })).toThrow(/contradicts a compressed format/);
+    expect(new CompressedTexture({ format: Compressed.Bc1RgbUnorm, levels, colorSpace: 'none' }).colorSpace).toBe('none');
+  });
+
+  test('keeps the consistent compressed and uncompressed pairings', () => {
+    expect(resolveTextureFormat(Compressed.Bc1RgbUnorm, { colorSpace: 'none' }).colorSpace).toBe('none');
+    expect(resolveTextureFormat(Compressed.Bc7RgbaUnorm, { colorSpace: 'linear-srgb' }).colorSpace).toBe('linear-srgb');
+    expect(resolveTextureFormat(Compressed.Bc7RgbaUnormSrgb, { colorSpace: 'srgb' }).colorSpace).toBe('srgb');
+    // A raw RGBA8 payload declares 'srgb' over the plain format; the backend realizes it as sRGB storage.
+    expect(resolveTextureFormat(Format.Rgba8, { colorSpace: 'srgb' }).colorSpace).toBe('srgb');
   });
 
   test('rejects source metadata that contradicts payload metadata', () => {

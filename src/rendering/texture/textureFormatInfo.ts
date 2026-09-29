@@ -88,6 +88,14 @@ export const resolveTextureFormat = (format: TextureFormat | CompressedTextureFo
     throw new TypeError('Texture color-space metadata contradicts the sRGB storage format');
   }
 
+  // An uncompressed RGBA8 payload may declare 'srgb' over the plain format, because the
+  // backend then realizes it as sRGB storage. A block-compressed format carries its transfer
+  // in its identity, so an 'srgb' label over a UNORM block format would be trusted by the
+  // shaders while the hardware never decodes it.
+  if (!srgbStorage && colorSpace === 'srgb' && isCompressedTextureFormat(format)) {
+    throw new TypeError("Texture color-space 'srgb' contradicts a compressed format that does not decode sRGB on sample");
+  }
+
   if (!hasAlpha && alphaMode === 'premultiplied') {
     throw new TypeError('Texture alpha-mode metadata contradicts a format without alpha');
   }
