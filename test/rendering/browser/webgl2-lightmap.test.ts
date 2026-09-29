@@ -264,6 +264,39 @@ describe('WebGL2 lightmap renderer', () => {
     }
   });
 
+  test('a filter in the default sRGB domain grades the light above 1.0 through its encoded extension', async () => {
+    const host = await createHost();
+    // Quarter brightness, so what reaches the canvas says what the filter was
+    // handed: a quarter of 2.0 is half, a quarter of a field clipped at 1.0 is
+    // a quarter.
+    const grade = new ColorMatrixFilter().brightness(0.25);
+    const lighting = new LightmapLighting(host.app, {
+      ambient: Color.black,
+      lightResolution: 1,
+      post: [grade],
+    });
+
+    lighting.add(new PointLight({ radius: 24, intensity: 2 })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      expect(lighting.hdr).toBe(true);
+      runFrame(host, lighting);
+
+      const centre = readPixel(host.backend, 32, 32)[0];
+
+      // The light reaches the filter as roughly 1.9 linear. The default sRGB
+      // domain scales the encoded value (about 1.32) to a quarter and decodes it
+      // back: 0.33 encoded is 0.089 linear, byte 23. The same brightness in the
+      // linear domain leaves 0.47, so the two domains differ by a factor of five.
+      expect(Math.abs(centre - 23)).toBeLessThanOrEqual(3);
+    } finally {
+      lighting.destroy();
+      grade.destroy();
+      host.destroy();
+    }
+  });
+
   test('a registered surface writes its normals into the prepass, rotated with the drawable', async () => {
     const host = await createHost();
     const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
