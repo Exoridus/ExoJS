@@ -5,6 +5,7 @@ import { assertNumericTexture } from '#rendering/texture/numericTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
+import { UniformType } from '#rendering/uniforms/UniformType';
 
 import { Filter } from './Filter';
 import { createFilterShader, ShaderFilter } from './ShaderFilter';
@@ -12,6 +13,9 @@ import glsl3dFragmentModule from './shaders/lut-3d.frag';
 import wgsl3dFragmentModule from './shaders/lut-3d.wgsl';
 import glslRgb1dFragmentModule from './shaders/lut-rgb1d.frag';
 import wgslRgb1dFragmentModule from './shaders/lut-rgb1d.wgsl';
+
+/** The slice of a schema-declared {@link ShaderFilter} the LUT filter drives after construction; the two modes declare different uniforms. */
+type LutShaderFilter = Pick<ShaderFilter, 'apply' | 'destroy' | '_setTexture'>;
 
 /** Storage layout for a Look-Up Table texture. */
 export type LutMode = 'rgb1d' | '3d';
@@ -57,13 +61,21 @@ const wgsl3dFragment = `${colorShaderSourcesWgsl}\n${wgsl3dFragmentModule}`;
  * the filter runs rather than a copy of it.
  * @internal
  */
-export const lutRgb1dShaderSource = createFilterShader({ glsl: { fragment: glslRgb1dFragment }, wgsl: wgslRgb1dFragment });
+export const lutRgb1dShaderSource = createFilterShader({
+  glsl: { fragment: glslRgb1dFragment },
+  wgsl: wgslRgb1dFragment,
+  uniforms: { uDomain: UniformType.Float },
+});
 
 /**
  * The cube-lookup source pair, built once and shared by every `'3d'` instance.
  * @internal
  */
-export const lut3dShaderSource = createFilterShader({ glsl: { fragment: glsl3dFragment }, wgsl: wgsl3dFragment });
+export const lut3dShaderSource = createFilterShader({
+  glsl: { fragment: glsl3dFragment },
+  wgsl: wgsl3dFragment,
+  uniforms: { uDomain: UniformType.Float, uLutSize: UniformType.Float },
+});
 
 /**
  * A {@link Filter} that maps every pixel of the input through a Look-Up Table texture.
@@ -175,7 +187,7 @@ export class LutFilter extends Filter {
   private readonly _mode: LutMode;
   private readonly _size: number;
   private readonly _colorSpace: LutDomain;
-  private readonly _shaderFilter: ShaderFilter;
+  private readonly _shaderFilter: LutShaderFilter;
   private _lut: Texture;
 
   public constructor(options: LutFilterOptions = {}) {
@@ -190,12 +202,9 @@ export class LutFilter extends Filter {
 
     const domain = this._colorSpace === 'srgb' ? 1 : 0;
 
-    // Insertion order matters on WebGPU: the packer lays each non-texture
-    // uniform out in a 16-byte slot, in declaration order - matching the
-    // `Uniforms` struct field order the shader source declares.
-    const uniforms: Record<string, Texture | number> = is3d ? { uDomain: domain, uLutSize: this._size, uLut: this._lut } : { uDomain: domain, uLut: this._lut };
-
-    this._shaderFilter = ShaderFilter.from(is3d ? lut3dShaderSource : lutRgb1dShaderSource, { uniforms });
+    this._shaderFilter = is3d
+      ? ShaderFilter.from(lut3dShaderSource, { uniforms: { uDomain: domain, uLutSize: this._size }, textures: { uLut: this._lut } })
+      : ShaderFilter.from(lutRgb1dShaderSource, { uniforms: { uDomain: domain }, textures: { uLut: this._lut } });
   }
 
   /** The LUT mode this filter was constructed with. */
@@ -234,8 +243,7 @@ export class LutFilter extends Filter {
     assertNumericLut(lut);
 
     this._lut = lut;
-    this._shaderFilter.setUniform('uLut', lut);
-    this.invalidate();
+    this._shaderFilter._setTexture('uLut', lut);
     return this;
   }
 

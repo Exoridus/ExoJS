@@ -3,17 +3,20 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { assertNumericTexture } from '#rendering/texture/numericTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
+import { UniformType } from '#rendering/uniforms/UniformType';
 
 import { Filter } from './Filter';
 import { createFilterShader, ShaderFilter } from './ShaderFilter';
 import glslFragment from './shaders/displacement.frag';
 import wgslFragment from './shaders/displacement.wgsl';
 
+const displacementUniforms = { uScale: UniformType.Vec4, uOffset: UniformType.Vec4 } as const;
+
 /**
  * The displacement source pair, built once and shared by every instance.
  * @internal
  */
-export const displacementShader = createFilterShader({ glsl: { fragment: glslFragment }, wgsl: wgslFragment });
+export const displacementShader = createFilterShader({ glsl: { fragment: glslFragment }, wgsl: wgslFragment, uniforms: displacementUniforms });
 
 /** Construction-time options for a {@link DisplacementFilter}. */
 export interface DisplacementFilterOptions {
@@ -78,13 +81,7 @@ export interface DisplacementFilterOptions {
  * works on either backend without the caller choosing one.
  */
 export class DisplacementFilter extends Filter {
-  /**
-   * Bound live: `uScale` is the displacement in UV units of the pass target,
-   * `uOffset` the map sampling offset. Insertion order is the WGSL struct order.
-   */
-  private readonly _scaleUniform: Float32Array;
-  private readonly _offsetUniform: Float32Array;
-  private readonly _shaderFilter: ShaderFilter;
+  private readonly _shaderFilter: ShaderFilter<typeof displacementUniforms>;
   private _map: Texture;
   private _scaleX: number;
   private _scaleY: number;
@@ -96,21 +93,13 @@ export class DisplacementFilter extends Filter {
 
     const scale = options.scale ?? 20;
     const offset = options.offset ?? [0, 0];
-    const scaleUniform = new Float32Array(4);
-    const offsetUniform = new Float32Array(4);
 
     this._map = options.map;
     this._scaleX = typeof scale === 'number' ? scale : scale[0];
     this._scaleY = typeof scale === 'number' ? scale : scale[1];
-    this._scaleUniform = scaleUniform;
-    this._offsetUniform = offsetUniform;
-    offsetUniform[0] = offset[0];
-    offsetUniform[1] = offset[1];
-
-    // Insertion order matters on WebGPU: the packer lays each non-texture
-    // uniform out in a 16-byte slot, in declaration order, and textures follow.
     this._shaderFilter = ShaderFilter.from(displacementShader, {
-      uniforms: { uScale: scaleUniform, uOffset: offsetUniform, uMap: this._map },
+      uniforms: { uOffset: [offset[0], offset[1], 0, 0] },
+      textures: { uMap: this._map },
     });
   }
 
@@ -123,8 +112,7 @@ export class DisplacementFilter extends Filter {
     if (this._map !== map) {
       assertNumericMap(map);
       this._map = map;
-      this._shaderFilter.setUniform('uMap', map);
-      this.invalidate();
+      this._shaderFilter._setTexture('uMap', map);
     }
   }
 
@@ -154,26 +142,20 @@ export class DisplacementFilter extends Filter {
 
   /** Horizontal map sampling offset, in the map's own UV units. */
   public get offsetU(): number {
-    return this._offsetUniform[0]!;
+    return this._shaderFilter.uniforms.uOffset.x;
   }
 
   public set offsetU(offsetU: number) {
-    if (this._offsetUniform[0] !== offsetU) {
-      this._offsetUniform[0] = offsetU;
-      this.invalidate();
-    }
+    this._shaderFilter.uniforms.uOffset.x = offsetU;
   }
 
   /** Vertical map sampling offset, in the map's own UV units. */
   public get offsetV(): number {
-    return this._offsetUniform[1]!;
+    return this._shaderFilter.uniforms.uOffset.y;
   }
 
   public set offsetV(offsetV: number) {
-    if (this._offsetUniform[1] !== offsetV) {
-      this._offsetUniform[1] = offsetV;
-      this.invalidate();
-    }
+    this._shaderFilter.uniforms.uOffset.y = offsetV;
   }
 
   /** Set both axes at once. Returns `this` for chaining. */
@@ -201,8 +183,7 @@ export class DisplacementFilter extends Filter {
     // Logical units become UV units of THIS target, which the caller sizes:
     // resolving it here is what keeps the distortion the same size on screen
     // whatever pixel ratio or filter resolution the pass runs at.
-    this._scaleUniform[0] = (this._scaleX * resolution) / output.width;
-    this._scaleUniform[1] = (this._scaleY * resolution) / output.height;
+    this._shaderFilter.uniforms.uScale.set((this._scaleX * resolution) / output.width, (this._scaleY * resolution) / output.height, 0, 0);
     this._shaderFilter.apply(backend, input, output, resolution);
   }
 

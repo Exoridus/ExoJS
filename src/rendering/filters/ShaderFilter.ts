@@ -460,6 +460,22 @@ export class ShaderFilter<F extends UniformFields | undefined = undefined, B ext
     return this;
   }
 
+  /**
+   * Replace a texture declared in `textures`. The passes read the record on
+   * every draw, so the next one samples the replacement.
+   * @internal
+   */
+  public _setTexture(name: string, texture: Texture | RenderTexture): void {
+    const textures = this._bindings.textures as Record<string, Texture | RenderTexture>;
+
+    if (!Object.prototype.hasOwnProperty.call(textures, name)) {
+      throw new Error(`ShaderFilter texture \`${name}\` was not declared in \`textures\`.`);
+    }
+
+    textures[name] = texture;
+    this.invalidate();
+  }
+
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
     this._attach(backend).apply(backend, input, output, resolution);
   }

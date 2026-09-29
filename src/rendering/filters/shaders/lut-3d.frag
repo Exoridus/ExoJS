@@ -2,13 +2,11 @@
 precision mediump float;
 uniform sampler2D uTexture;
 uniform sampler2D uLut;
-uniform float uDomain;
-uniform float uLutSize;
 in vec2 vUv;
 out vec4 fragColor;
 
 vec3 sampleLut3d(vec3 c) {
-    float n = uLutSize;
+    float n = uniforms.uLutSize;
     float scaled = clamp(c.b, 0.0, 1.0) * (n - 1.0);
     float bLow = floor(scaled);
     float bHigh = min(bLow + 1.0, n - 1.0);
@@ -32,10 +30,10 @@ void main() {
     // sample - see lut-rgb1d.frag for why.
     vec3 straight = src.a > 0.0 ? src.rgb / src.a : vec3(0.0);
 
-    // The straight sample is already linear light. uDomain selects which domain
+    // The straight sample is already linear light. uniforms.uDomain selects which domain
     // the LUT was authored in - convert into it before indexing, then convert
     // the graded result back so the output stays linear.
-    bool domainSrgb = uDomain > 0.5;
+    bool domainSrgb = uniforms.uDomain > 0.5;
     vec3 domainRgb = domainSrgb ? linearToSrgb(straight) : straight;
     vec3 result = sampleLut3d(domainRgb);
     vec3 graded = domainSrgb ? srgbToLinear(result) : result;

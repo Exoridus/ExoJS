@@ -1,13 +1,5 @@
-// Untyped number uniforms are packed one per 16-byte slot, so every field
-// after the first is explicitly aligned to its slot.
-struct Uniforms {
-    uDomain: f32,
-    @align(16) uLutSize: f32,
-};
-
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
-@group(1) @binding(0) var<uniform> uniforms: Uniforms;
 @group(1) @binding(1) var uLut: texture_2d<f32>;
 
 fn sampleLut3d(c: vec3<f32>) -> vec3<f32> {

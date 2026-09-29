@@ -132,6 +132,9 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     getActiveUniforms: vi.fn(() => []),
     getActiveUniformBlockName: vi.fn(() => null),
     getUniformBlockIndex: vi.fn(() => 0),
+    uniformBlockBinding: vi.fn(),
+    bindBufferBase: vi.fn(),
+    bufferSubData: vi.fn(),
     getShaderInfoLog: vi.fn(() => ''),
     getProgramInfoLog: vi.fn(() => ''),
     getAttribLocation: vi.fn((_prog: unknown, name: string) => (name === 'aPosition' ? 0 : name === 'aUv' ? 1 : -1)),
@@ -464,17 +467,17 @@ describe('LutFilter construction and options', () => {
     const filterRgb1d = new LutFilter({ mode: 'rgb1d', colorSpace: 'linear-srgb' });
 
     expect(filter3d.colorSpace).toBe('linear-srgb');
-    expect(shaderFilterOf(filter3d).uniforms['uDomain']).toBe(0);
+    expect(uniformsOf(filter3d)['uDomain']?.value).toBe(0);
     expect(filterRgb1d.colorSpace).toBe('linear-srgb');
-    expect(shaderFilterOf(filterRgb1d).uniforms['uDomain']).toBe(0);
+    expect(uniformsOf(filterRgb1d)['uDomain']?.value).toBe(0);
   });
 
   test('the srgb default writes uDomain as 1', () => {
     const filter3d = new LutFilter();
     const filterRgb1d = new LutFilter({ mode: 'rgb1d' });
 
-    expect(shaderFilterOf(filter3d).uniforms['uDomain']).toBe(1);
-    expect(shaderFilterOf(filterRgb1d).uniforms['uDomain']).toBe(1);
+    expect(uniformsOf(filter3d)['uDomain']?.value).toBe(1);
+    expect(uniformsOf(filterRgb1d)['uDomain']?.value).toBe(1);
   });
 
   test('rgb1d mode builds a 1D identity LUT', () => {
@@ -501,6 +504,16 @@ describe('LutFilter construction and options', () => {
 /** The backend-neutral shader filter LutFilter delegates to. */
 const shaderFilterOf = (filter: LutFilter): ShaderFilter => {
   return (filter as unknown as { _shaderFilter: ShaderFilter })._shaderFilter;
+};
+
+/** The declared uniform accessors, which differ per mode. */
+const uniformsOf = (filter: LutFilter): Record<string, { readonly value: number } | undefined> => {
+  return shaderFilterOf(filter).uniforms as unknown as Record<string, { readonly value: number } | undefined>;
+};
+
+/** The textures the filter's passes bind, read live on every draw. */
+const boundTexturesOf = (filter: LutFilter): Readonly<Record<string, Texture>> => {
+  return (shaderFilterOf(filter) as unknown as { _bindings: { textures: Record<string, Texture> } })._bindings.textures;
 };
 
 describe('LutFilter.setLut', () => {
@@ -561,7 +574,7 @@ describe('LutFilter.setLut', () => {
 
     filter.setLut(replacement);
 
-    expect(shaderFilterOf(filter).uniforms['uLut']).toBe(replacement);
+    expect(boundTexturesOf(filter)['uLut']).toBe(replacement);
 
     filter.destroy();
   });
@@ -575,7 +588,7 @@ describe('LutFilter — source selection', () => {
     expect(shaderFilter).toBeInstanceOf(ShaderFilter);
     expect(shaderFilter.supports(RenderBackendType.WebGl2)).toBe(true);
     expect(shaderFilter.supports(RenderBackendType.WebGpu)).toBe(true);
-    expect(shaderFilter.uniforms['uLutSize']).toBe(5);
+    expect(uniformsOf(filter)['uLutSize']?.value).toBe(5);
 
     filter.destroy();
   });
@@ -586,7 +599,7 @@ describe('LutFilter — source selection', () => {
 
     expect(shaderFilter.supports(RenderBackendType.WebGl2)).toBe(true);
     expect(shaderFilter.supports(RenderBackendType.WebGpu)).toBe(true);
-    expect(shaderFilter.uniforms['uLutSize']).toBeUndefined();
+    expect(uniformsOf(filter)['uLutSize']).toBeUndefined();
 
     filter.destroy();
   });
