@@ -315,7 +315,7 @@ const defaultRenderingSettings: Omit<Required<RenderingApplicationOptions>, 'col
   },
 };
 
-/** {@link RenderingApplicationOptions}, resolved against ExoJS's own defaults and with `color` validated. */
+/** {@link RenderingApplicationOptions}, resolved against ExoJS's own defaults and with `color` validated. @internal */
 export type ResolvedRenderingOptions = Omit<Required<RenderingApplicationOptions>, 'color'> & { color: ResolvedOutputTransformOptions };
 
 /**
