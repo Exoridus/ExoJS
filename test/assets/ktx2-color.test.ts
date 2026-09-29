@@ -5,10 +5,10 @@ import { TextureFactory } from '#assets/factories/TextureFactory';
 import { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 
 import { factoryContext } from './factory-context';
+import { ktx2BlockBytes, ktx2Dfd } from './ktx2-dfd';
 
 const headerBytes = 80;
 const levelIndexEntryBytes = 24;
-const dfdBytes = 44;
 const identifier = [0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a];
 
 interface Ktx2Spec {
@@ -22,8 +22,11 @@ interface Ktx2Spec {
 
 const buildKtx2 = ({ vkFormat, levelLengths, transfer, alpha = 0, fill = 1 }: Ktx2Spec): ArrayBuffer => {
   const dataBytes = levelLengths.reduce((total, length) => total + length, 0);
+  const dfd = ktx2Dfd(vkFormat, { transfer, alpha });
   const dfdOffset = headerBytes + levelLengths.length * levelIndexEntryBytes;
-  const dataOffset = Math.ceil((dfdOffset + dfdBytes) / 8) * 8;
+  const blockBytes = ktx2BlockBytes(vkFormat);
+  const levelAlignment = Math.max(8, blockBytes === 4 ? 4 : blockBytes);
+  const dataOffset = Math.ceil((dfdOffset + dfd.length) / levelAlignment) * levelAlignment;
   const bytes = new Uint8Array(dataOffset + dataBytes);
   const view = new DataView(bytes.buffer);
 
@@ -35,17 +38,8 @@ const buildKtx2 = ({ vkFormat, levelLengths, transfer, alpha = 0, fill = 1 }: Kt
   view.setUint32(36, 1, true);
   view.setUint32(40, levelLengths.length, true);
   view.setUint32(48, dfdOffset, true);
-  view.setUint32(52, dfdBytes, true);
-  view.setUint32(dfdOffset, dfdBytes, true);
-  view.setUint16(dfdOffset + 8, 2, true);
-  view.setUint16(dfdOffset + 10, dfdBytes - 4, true);
-  view.setUint8(dfdOffset + 12, 1);
-  view.setUint8(dfdOffset + 13, 1);
-  view.setUint8(dfdOffset + 14, transfer);
-  view.setUint8(dfdOffset + 15, alpha);
-  view.setUint8(dfdOffset + 16, 3);
-  view.setUint8(dfdOffset + 17, 3);
-  view.setUint8(dfdOffset + 20, 16);
+  view.setUint32(52, dfd.length, true);
+  bytes.set(dfd, dfdOffset);
 
   let offset = dataOffset + dataBytes;
 

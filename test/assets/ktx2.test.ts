@@ -14,9 +14,10 @@ import { describe, expect, test } from 'vitest';
 import { inflateKtx2Levels, isKtx2, parseKtx2 } from '#assets/factories/ktx2';
 import { compressedLevelByteLength, CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 
+import { ktx2BlockBytes, ktx2Dfd } from './ktx2-dfd';
+
 const HEADER_BYTES = 80;
 const LEVEL_ENTRY_BYTES = 24;
-const DFD_BYTES = 44;
 const IDENTIFIER = [0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a];
 
 interface Ktx2Spec {
@@ -51,8 +52,11 @@ const buildKtx2 = ({
 }: Ktx2Spec): ArrayBuffer => {
   const dataBytes = levelLengths.reduce((total, length) => total + length, 0);
   const indexBytes = levelLengths.length * LEVEL_ENTRY_BYTES;
+  const dfd = ktx2Dfd(vkFormat, { transfer });
   const dfdOffset = HEADER_BYTES + indexBytes;
-  const dataOffset = Math.ceil((dfdOffset + DFD_BYTES) / 8) * 8;
+  // Levels start on lcm(block size, 4); the descriptor and index regions on 8.
+  const levelAlignment = Math.max(8, (ktx2BlockBytes(vkFormat) * 4) / (ktx2BlockBytes(vkFormat) % 4 === 0 ? 4 : 1));
+  const dataOffset = Math.ceil((dfdOffset + dfd.length) / levelAlignment) * levelAlignment;
   const buffer = new ArrayBuffer(dataOffset + dataBytes);
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);
@@ -68,17 +72,8 @@ const buildKtx2 = ({
   view.setUint32(40, declaredLevelCount ?? levelLengths.length, true);
   view.setUint32(44, supercompressionScheme, true);
   view.setUint32(48, dfdOffset, true);
-  view.setUint32(52, DFD_BYTES, true);
-
-  view.setUint32(dfdOffset, DFD_BYTES, true);
-  view.setUint16(dfdOffset + 8, 2, true);
-  view.setUint16(dfdOffset + 10, DFD_BYTES - 4, true);
-  view.setUint8(dfdOffset + 12, 1);
-  view.setUint8(dfdOffset + 13, 1);
-  view.setUint8(dfdOffset + 14, transfer);
-  view.setUint8(dfdOffset + 16, 3);
-  view.setUint8(dfdOffset + 17, 3);
-  view.setUint8(dfdOffset + 20, 16);
+  view.setUint32(52, dfd.length, true);
+  bytes.set(dfd, dfdOffset);
 
   // KTX2 stores the image data smallest level first, so the offsets are laid out
   // in reverse mip order while the index entries stay in mip order.

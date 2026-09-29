@@ -3,12 +3,17 @@ import { describe, expect, test } from 'vitest';
 import { inflateKtx2Levels, parseKtx2 } from '#assets/factories/ktx2';
 import { compressedLevelByteLength, CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 
+import { ktx2Dfd } from './ktx2-dfd';
+
 const headerBytes = 80;
 const levelEntryBytes = 24;
-const dfdBytes = 44;
+const dfd = ktx2Dfd(145);
+const dfdBytes = dfd.length;
 const identifier = [0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a];
 
 const align8 = (value: number): number => Math.ceil(value / 8) * 8;
+// BC7 levels start on 16 bytes.
+const align16 = (value: number): number => Math.ceil(value / 16) * 16;
 
 const join = (chunks: readonly Uint8Array[]): Uint8Array => {
   const result = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0));
@@ -50,7 +55,7 @@ const buildPlain = (): ArrayBuffer => {
     compressedLevelByteLength(CompressedTextureFormat.Bc7RgbaUnorm, 4, 4),
   ];
   const dfdOffset = headerBytes + lengths.length * levelEntryBytes;
-  const dataOffset = align8(dfdOffset + dfdBytes);
+  const dataOffset = align16(dfdOffset + dfdBytes);
   const buffer = new ArrayBuffer(dataOffset + lengths.reduce((total, length) => total + length, 0));
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);
@@ -64,15 +69,7 @@ const buildPlain = (): ArrayBuffer => {
   view.setUint32(40, lengths.length, true);
   view.setUint32(48, dfdOffset, true);
   view.setUint32(52, dfdBytes, true);
-  view.setUint32(dfdOffset, dfdBytes, true);
-  view.setUint16(dfdOffset + 8, 2, true);
-  view.setUint16(dfdOffset + 10, dfdBytes - 4, true);
-  view.setUint8(dfdOffset + 12, 1);
-  view.setUint8(dfdOffset + 13, 1);
-  view.setUint8(dfdOffset + 14, 1);
-  view.setUint8(dfdOffset + 16, 3);
-  view.setUint8(dfdOffset + 17, 3);
-  view.setUint8(dfdOffset + 20, 16);
+  bytes.set(dfd, dfdOffset);
 
   let cursor = dataOffset + lengths.reduce((total, length) => total + length, 0);
 

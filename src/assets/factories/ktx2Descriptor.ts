@@ -1,10 +1,15 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 
+import { dfdSampleFloat, dfdSampleLinear, dfdSampleSigned, type Ktx2FormatProfile, ktx2FormatProfile, ktx2LevelAlignment } from './ktx2Profile';
+
 const headerBytes = 80;
 const levelIndexEntryBytes = 24;
 const requiredDfdBytes = 28;
 const dfdBasicFormatVersion = 2;
 const dfdModelRgbSda = 1;
+/** Bits of a sample's channel type that carry the channel id; the high nibble holds the qualifiers. */
+const dfdChannelIdMask = 0x0f;
+const dfdSampleQualifierMask = 0xf0;
 const dfdPrimariesBt709 = 1;
 const dfdTransferLinear = 1;
 const dfdTransferSrgb = 2;
@@ -106,14 +111,14 @@ const validateDfdBlockSize = (view: DataView, range: Ktx2DataRange, source: stri
   return descriptorBlockSize;
 };
 
-const validateDfdColorFields = (view: DataView, range: Ktx2DataRange, source: string): Ktx2DfdDescriptor => {
+const validateDfdColorFields = (view: DataView, range: Ktx2DataRange, source: string, expectedModel: number): Ktx2DfdDescriptor => {
   const colorModel = view.getUint8(range.offset + 12);
   const colorPrimaries = view.getUint8(range.offset + 13);
   const transferFunction = view.getUint8(range.offset + 14);
   const flags = view.getUint8(range.offset + 15);
 
-  if (colorModel !== dfdModelRgbSda) {
-    return fail(source, `DFD uses unsupported color model ${colorModel}.`);
+  if (colorModel !== expectedModel) {
+    return fail(source, `DFD describes color model ${colorModel}, but this vkFormat requires ${expectedModel}.`);
   }
 
   if (colorPrimaries !== 0 && colorPrimaries !== dfdPrimariesBt709) {
@@ -131,7 +136,7 @@ const validateDfdColorFields = (view: DataView, range: Ktx2DataRange, source: st
   return { colorPrimaries, transferFunction, flags };
 };
 
-const validateDfdSinglePlane = (view: DataView, range: Ktx2DataRange, source: string): void => {
+const validateDfdSinglePlane = (view: DataView, range: Ktx2DataRange, source: string, profile: Ktx2FormatProfile | undefined): void => {
   if (view.getUint8(range.offset + 18) !== 0 || view.getUint8(range.offset + 19) !== 0) {
     fail(source, 'DFD declares a depth or array texel block dimension.');
   }
@@ -153,9 +158,31 @@ const validateDfdSinglePlane = (view: DataView, range: Ktx2DataRange, source: st
   if (planeCount !== 1) {
     fail(source, 'DFD does not declare exactly one byte plane.');
   }
+
+  if (profile === undefined) {
+    return;
+  }
+
+  // The block dimensions are stored minus one.
+  const blockWidth = view.getUint8(range.offset + 16) + 1;
+  const blockHeight = view.getUint8(range.offset + 17) + 1;
+  const blockBytes = view.getUint8(range.offset + 20);
+
+  if (blockWidth !== profile.blockWidth || blockHeight !== profile.blockHeight || blockBytes !== profile.blockBytes) {
+    fail(
+      source,
+      `DFD declares a ${blockWidth}x${blockHeight} block of ${blockBytes} bytes, but this vkFormat uses ${profile.blockWidth}x${profile.blockHeight} blocks of ${profile.blockBytes} bytes.`,
+    );
+  }
 };
 
-const validateDfdSamples = (view: DataView, range: Ktx2DataRange, source: string, descriptorBlockSize: number): void => {
+const validateDfdSamples = (
+  view: DataView,
+  range: Ktx2DataRange,
+  source: string,
+  descriptorBlockSize: number,
+  profile: Ktx2FormatProfile | undefined,
+): void => {
   const sampleCount = (descriptorBlockSize - 24) / 16;
 
   if (sampleCount === 0) {
@@ -164,14 +191,26 @@ const validateDfdSamples = (view: DataView, range: Ktx2DataRange, source: string
 
   for (let index = 0; index < sampleCount; index++) {
     const channelType = view.getUint8(range.offset + 28 + index * 16 + 3);
+    const channelId = channelType & dfdChannelIdMask;
+    const qualifiers = channelType & dfdSampleQualifierMask;
 
-    if ((channelType & 0xf0) !== 0 || ![0, 1, 2, 3, 15].includes(channelType)) {
-      fail(source, `DFD sample ${index} uses unsupported channel flags ${channelType}.`);
+    if (![0, 1, 2, 3, 15].includes(channelId)) {
+      fail(source, `DFD sample ${index} uses unsupported channel ${channelId}.`);
+    }
+
+    // The linear bit is legitimate anywhere - a linear alpha channel beside sRGB colour is how
+    // the registry describes an sRGB texture. The signed and float bits state the data type, so
+    // they must agree with the format; the exponent bit belongs to no supported format.
+    const dataType = qualifiers & ~dfdSampleLinear;
+    const expected = profile === undefined ? 0 : profile.sampleQualifier & (dfdSampleSigned | dfdSampleFloat);
+
+    if (dataType !== expected) {
+      fail(source, `DFD sample ${index} carries qualifier bits 0x${qualifiers.toString(16)}, which do not describe this vkFormat's data type.`);
     }
   }
 };
 
-const validateDfd = (view: DataView, range: Ktx2DataRange, source: string): Ktx2DfdDescriptor => {
+const validateDfd = (view: DataView, range: Ktx2DataRange, source: string, vkFormat: number): Ktx2DfdDescriptor => {
   if (range.length < requiredDfdBytes) {
     return fail(source, `required DFD is ${range.length} bytes, shorter than its ${requiredDfdBytes}-byte basic descriptor.`);
   }
@@ -182,16 +221,39 @@ const validateDfd = (view: DataView, range: Ktx2DataRange, source: string): Ktx2
     return fail(source, `required DFD declares ${totalSize} bytes but its index names ${range.length}.`);
   }
 
+  // A format the engine cannot upload has no profile; it keeps the RGBSDA expectation so the
+  // failure that follows names the format rather than its descriptor.
+  const profile = ktx2FormatProfile(vkFormat);
   const descriptorBlockSize = validateDfdBlockSize(view, range, source, totalSize);
-  const descriptor = validateDfdColorFields(view, range, source);
+  const descriptor = validateDfdColorFields(view, range, source, profile?.dfdModel ?? dfdModelRgbSda);
 
-  validateDfdSinglePlane(view, range, source);
-  validateDfdSamples(view, range, source, descriptorBlockSize);
+  validateDfdSinglePlane(view, range, source, profile);
+  validateDfdSamples(view, range, source, descriptorBlockSize, profile);
 
   return descriptor;
 };
 
 const decodeUtf8 = (bytes: Uint8Array): string => new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+
+/** A known text value: UTF-8 with the single terminating NUL the container stores. */
+const decodeKtxTextValue = (bytes: Uint8Array, source: string, key: string): string => {
+  const end = bytes.length > 0 && bytes[bytes.length - 1] === 0 ? bytes.length - 1 : bytes.length;
+  const value = bytes.subarray(0, end);
+
+  if (value.includes(0)) {
+    return fail(source, `KVD ${key} contains an embedded NUL.`);
+  }
+
+  try {
+    return decodeUtf8(value);
+  } catch {
+    return fail(source, `KVD ${key} is not valid UTF-8.`);
+  }
+};
+
+/** `KTXorientation` values that name the top-down row order the engine's textures use. */
+const topDownOrientations: ReadonlySet<string> = new Set(['rd', 'S=r,T=d']);
+const bottomUpOrientations: ReadonlySet<string> = new Set(['ru', 'S=r,T=u']);
 
 const validateKeyValueData = (bytes: Uint8Array, range: Ktx2DataRange, source: string): void => {
   let cursor = range.offset;
@@ -219,27 +281,28 @@ const validateKeyValueData = (bytes: Uint8Array, range: Ktx2DataRange, source: s
     }
 
     let key: string;
-    let value: string;
 
     try {
       key = decodeUtf8(entry.subarray(0, keyEnd));
-      value = decodeUtf8(entry.subarray(keyEnd + 1));
     } catch {
-      return fail(source, 'KVD entry is not valid UTF-8.');
+      return fail(source, 'KVD entry has a key that is not valid UTF-8.');
     }
+
+    // Values are arbitrary bytes for every key this reader does not own; only the two it acts on are read as text.
+    const value = entry.subarray(keyEnd + 1);
 
     if (key === 'KTXorientation') {
       if (orientation !== undefined) {
         return fail(source, 'KVD contains KTXorientation more than once.');
       }
 
-      orientation = value;
+      orientation = decodeKtxTextValue(value, source, key);
     } else if (key === 'KTXswizzle') {
       if (swizzle !== undefined) {
         return fail(source, 'KVD contains KTXswizzle more than once.');
       }
 
-      swizzle = value;
+      swizzle = decodeKtxTextValue(value, source, key);
     }
 
     cursor += entryLength;
@@ -250,8 +313,13 @@ const validateKeyValueData = (bytes: Uint8Array, range: Ktx2DataRange, source: s
     }
   }
 
-  if (orientation !== undefined && orientation !== 'S=r,T=d' && orientation !== 'S=r,T=u') {
-    return fail(source, `KVD uses unsupported orientation "${orientation}".`);
+  if (orientation !== undefined && !topDownOrientations.has(orientation)) {
+    return fail(
+      source,
+      bottomUpOrientations.has(orientation)
+        ? `KVD declares the bottom-up orientation "${orientation}", which this engine does not flip; author the texture top-down ("rd").`
+        : `KVD uses unsupported orientation "${orientation}".`,
+    );
   }
 
   if (swizzle !== undefined && swizzle !== 'rgba') {
@@ -302,7 +370,7 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
     return fail(source, `declares ${levelCount} levels, but the file is too short to hold their index.`);
   }
 
-  const ranges: NamedRange[] = [];
+  const ranges: NamedRange[] = [{ name: 'header', offset: 0, length: headerBytes }];
   addRange(ranges, { name: 'level index', offset: headerBytes, length: levelIndexBytes }, buffer.byteLength, source, 4);
 
   const dfd: NamedRange = {
@@ -331,6 +399,10 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
   };
   addRange(ranges, sgd, buffer.byteLength, source, 8);
 
+  const vkFormat = view.getUint32(12, true);
+  const supercompressionScheme = view.getUint32(44, true);
+  // A supercompressed level is an opaque stream; only an uncompressed one has native texel data to align.
+  const levelAlignment = supercompressionScheme === 0 ? ktx2LevelAlignment(vkFormat) : 1;
   const levels: Ktx2LevelRange[] = [];
 
   for (let index = 0; index < levelCount; index++) {
@@ -345,19 +417,25 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
       return fail(source, `level ${index} has an empty byte range.`);
     }
 
-    addRange(ranges, range, buffer.byteLength, source, 8);
-    levels.push({
-      offset: range.offset,
-      length: range.length,
-      uncompressedByteLength: readUint64(view, entry + 16, source, `level ${index} uncompressed byte length`),
-    });
+    addRange(ranges, range, buffer.byteLength, source, levelAlignment);
+
+    const uncompressedByteLength = readUint64(view, entry + 16, source, `level ${index} uncompressed byte length`);
+
+    if (supercompressionScheme === 0 && uncompressedByteLength !== range.length) {
+      return fail(
+        source,
+        `level ${index} declares ${range.length} stored bytes but ${uncompressedByteLength} uncompressed bytes, which must agree without supercompression.`,
+      );
+    }
+
+    levels.push({ offset: range.offset, length: range.length, uncompressedByteLength });
   }
 
-  const dfdDescriptor = validateDfd(view, dfd, source);
+  const dfdDescriptor = validateDfd(view, dfd, source, vkFormat);
   const bytes = new Uint8Array(buffer);
   validateKeyValueData(bytes, kvd, source);
 
-  if (view.getUint32(44, true) === 0 && sgd.length > 0) {
+  if (supercompressionScheme === 0 && sgd.length > 0) {
     return fail(source, 'non-supercompressed payload has unexpected SGD data.');
   }
 
@@ -366,13 +444,13 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
   }
 
   return {
-    vkFormat: view.getUint32(12, true),
+    vkFormat,
     typeSize: view.getUint32(16, true),
     pixelWidth,
     pixelHeight,
     levelCount,
     declaredLevelCount,
-    supercompressionScheme: view.getUint32(44, true),
+    supercompressionScheme,
     levels,
     dfd: dfdDescriptor,
   };

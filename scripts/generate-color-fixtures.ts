@@ -57,8 +57,20 @@ const LEVEL_INDEX_ENTRY_BYTES = 24;
 const DFD_SAMPLE_BYTES = 16;
 const DFD_FIXED_BYTES = 28;
 
-/** `KHR_DF_MODEL_RGBSDA`, the colour model the engine's descriptor accepts. */
+/** `KHR_DF_MODEL_*` of the Khronos Data Format registry, as each format family's descriptor states it. */
 const KHR_DF_MODEL_RGBSDA = 1;
+const KHR_DF_MODEL_BC1A = 128;
+const KHR_DF_MODEL_BC2 = 129;
+const KHR_DF_MODEL_BC3 = 130;
+const KHR_DF_MODEL_BC4 = 131;
+const KHR_DF_MODEL_BC5 = 132;
+const KHR_DF_MODEL_ETC2 = 161;
+const KHR_DF_MODEL_ASTC = 162;
+/** `KHR_DF_CHANNEL_RGBSDA_ALPHA`. */
+const KHR_DF_CHANNEL_ALPHA = 15;
+/** `KHR_DF_SAMPLE_DATATYPE_LINEAR` and `_SIGNED`: qualifier bits in the high nibble of a sample's channel type. */
+const KHR_DF_SAMPLE_LINEAR = 0x10;
+const KHR_DF_SAMPLE_SIGNED = 0x40;
 const KHR_DF_PRIMARIES_BT709 = 1;
 const KHR_DFTRANSFER_LINEAR = 1;
 const KHR_DFTRANSFER_SRGB = 2;
@@ -84,8 +96,12 @@ interface DfdSample {
   readonly bitOffset: number;
   /** Width of the sample in bits, not the encoded `bitLength - 1`. */
   readonly bitLength: number;
-  /** Khronos data format channel id, which occupies the low nibble. */
+  /** Khronos data format channel id, which occupies the low nibble of the channel type. */
   readonly channelId: number;
+  /** Qualifier bits, kept in the high nibble of the channel type (`KHR_DF_SAMPLE_DATATYPE_*`). */
+  readonly qualifiers?: number;
+  /** Upper bound of the sample's range; absent means `0xffffffff`. */
+  readonly upper?: number;
 }
 
 interface FixtureLevel {
@@ -107,7 +123,9 @@ interface FixtureSpec {
   readonly blockWidth?: number;
   readonly blockHeight?: number;
   readonly bytesPerBlock?: number;
-  /** DFD samples; absent means the single 32-bit RGBA8 sample. */
+  /** `KHR_DF_MODEL_*` of the descriptor; absent means RGBSDA. */
+  readonly colorModel?: number;
+  /** DFD samples; absent means the four 8-bit RGBA8 samples. */
   readonly samples?: readonly DfdSample[];
   /** Pixel rows for level 0; smaller levels are authored explicitly. */
   readonly levels: readonly FixtureLevel[];
@@ -135,6 +153,18 @@ const levelByteLength = (level: FixtureLevel, bytesPerBlock: number | undefined,
 
 const utf8 = (value: string): Uint8Array => new TextEncoder().encode(value);
 
+const concat = (parts: readonly Uint8Array[]): Uint8Array => {
+  const result = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+  let offset = 0;
+
+  for (const part of parts) {
+    result.set(part, offset);
+    offset += part.length;
+  }
+
+  return result;
+};
+
 /**
  * One `KTXorientation` entry, padded so the next entry starts 4-byte aligned.
  *
@@ -142,7 +172,7 @@ const utf8 = (value: string): Uint8Array => new TextEncoder().encode(value);
  * from the key's terminator to the end of the declared length, so padding inside
  * it would append spaces to the value.
  */
-const keyValueEntry = (key: string, value: string): Uint8Array => {
+const keyValueEntry = (key: string, value: Uint8Array): Uint8Array => {
   // The entry body is exactly `key \0 value`: a reader takes everything from the
   // key's terminator to the end of `entryLength` as the value, so no spare byte
   // may sit in front of the key or behind the value either.
@@ -150,7 +180,7 @@ const keyValueEntry = (key: string, value: string): Uint8Array => {
 
   body.set(utf8(key), 0);
   body[key.length] = 0;
-  body.set(utf8(value), key.length + 1);
+  body.set(value, key.length + 1);
 
   // The declared length is the ENTRY BODY: a reader consumes its own 4-byte length
   // field, then the body this number counts, then rounds up to the next 4-byte
@@ -166,11 +196,22 @@ const keyValueEntry = (key: string, value: string): Uint8Array => {
   return entry;
 };
 
+/**
+ * The four 8-bit samples of an RGBA8 texel. The alpha sample is channel 15 and, beside sRGB colour,
+ * carries the linear qualifier: alpha is coverage, never an sRGB-encoded value.
+ */
+const rgba8Samples = (srgb: boolean): readonly DfdSample[] => [
+  { bitOffset: 0, bitLength: 8, channelId: 0, upper: 255 },
+  { bitOffset: 8, bitLength: 8, channelId: 1, upper: 255 },
+  { bitOffset: 16, bitLength: 8, channelId: 2, upper: 255 },
+  { bitOffset: 24, bitLength: 8, channelId: KHR_DF_CHANNEL_ALPHA, upper: 255, ...(srgb ? { qualifiers: KHR_DF_SAMPLE_LINEAR } : {}) },
+];
+
 const buildDfd = (spec: FixtureSpec): Uint8Array => {
   const blockWidth = spec.blockWidth ?? 1;
   const blockHeight = spec.blockHeight ?? 1;
   const bytesPerBlock = spec.bytesPerBlock ?? RGBA8_BYTES_PER_TEXEL;
-  const samples = spec.samples ?? [{ bitOffset: 0, bitLength: 32, channelId: 0 }];
+  const samples = spec.samples ?? rgba8Samples(spec.transferFunction === KHR_DFTRANSFER_SRGB);
   const totalBytes = DFD_FIXED_BYTES + samples.length * DFD_SAMPLE_BYTES;
   const dfd = new Uint8Array(totalBytes);
   const view = new DataView(dfd.buffer);
@@ -181,13 +222,13 @@ const buildDfd = (spec: FixtureSpec): Uint8Array => {
   view.setUint16(6, 0, true);
   view.setUint16(8, 2, true);
   view.setUint16(10, totalBytes - 4, true);
-  dfd[12] = KHR_DF_MODEL_RGBSDA;
+  dfd[12] = spec.colorModel ?? KHR_DF_MODEL_RGBSDA;
   dfd[13] = KHR_DF_PRIMARIES_BT709;
   dfd[14] = spec.transferFunction;
   dfd[15] = spec.alphaFlags;
-  // texelBlockDimension is stored as the exponent: a texel is 1 << 3 wide.
-  dfd[16] = Math.log2(blockWidth);
-  dfd[17] = Math.log2(blockHeight);
+  // texelBlockDimension is stored as the extent minus one.
+  dfd[16] = blockWidth - 1;
+  dfd[17] = blockHeight - 1;
   dfd[18] = 0;
   dfd[19] = 0;
   // bytesPlane[0..7]: exactly one plane, one block wide.
@@ -195,14 +236,15 @@ const buildDfd = (spec: FixtureSpec): Uint8Array => {
 
   for (const [index, sample] of samples.entries()) {
     const base = DFD_FIXED_BYTES + index * DFD_SAMPLE_BYTES;
-    const word = sample.channelId | ((sample.bitLength - 1) << 8) | (sample.bitOffset << 16);
+    const channelType = sample.channelId | (sample.qualifiers ?? 0);
+    // First sample word: bitOffset in bits 0-15, bitLength - 1 in bits 16-23, channel
+    // type in bits 24-27 and the qualifiers above it in bits 28-31.
+    const word = (sample.bitOffset | ((sample.bitLength - 1) << 16) | (channelType << 24)) >>> 0;
 
-    // bitOffset and bitLength share the first sample word with the channel id in
-    // its high byte; the qualifiers above that byte stay zero.
     view.setUint32(base, word, true);
     view.setUint32(base + 4, 0, true);
     view.setUint32(base + 8, 0, true);
-    view.setUint32(base + 12, 0xffffffff, true);
+    view.setUint32(base + 12, sample.upper ?? 0xffffffff, true);
   }
 
   return dfd;
@@ -220,15 +262,22 @@ const buildKtx2 = (spec: FixtureSpec): Uint8Array => {
   const dfd = buildDfd(spec);
   const indexBytes = levels.length * LEVEL_INDEX_ENTRY_BYTES;
   const dfdOffset = HEADER_BYTES + indexBytes;
-  const kvd = keyValueEntry('KTXorientation', 'S=r,T=d');
+  // Sorted by key, as the container requires. Text values carry their terminating NUL; the vendor entry
+  // is arbitrary bytes that are not valid UTF-8, which a reader must carry past rather than decode.
+  const kvd = concat([
+    keyValueEntry('ExoJSBinaryProbe', new Uint8Array([0xff, 0xfe, 0x00, 0x01])),
+    keyValueEntry('KTXorientation', utf8('rd\0')),
+    keyValueEntry('KTXwriter', utf8('ExoJS colour fixture generator\0')),
+  ]);
   const kvdOffset = dfdOffset + dfd.length;
-  // Every indexed region is 8-byte aligned, and the mip level array additionally
-  // starts at lcm(texelBlockSize, 4) - 16 for a 16-byte block, 8 for an 8-byte one.
-  const levelAlignment = Math.max(8, leastCommonMultiple(spec.bytesPerBlock ?? 1, 4));
+  // Every indexed region is 8-byte aligned, and every mip level starts at lcm(texelBlockSize, 4) -
+  // 4 for RGBA8, 16 for a 16-byte block. A ZLIB stream has no native texel data and only keeps the 8.
+  const levelAlignment = Math.max(8, leastCommonMultiple(spec.bytesPerBlock ?? RGBA8_BYTES_PER_TEXEL, 4));
   const dataOffset = Math.ceil((kvdOffset + kvd.length) / levelAlignment) * levelAlignment;
 
   const encoded = levels.map(level => (spec.supercompression === 3 ? new Uint8Array(deflateSync(level.data)) : level.data));
-  const dataBytes = encoded.reduce((total, level) => total + level.length, 0);
+  // Worst case: every level pads up to the alignment.
+  const dataBytes = encoded.reduce((total, level) => total + Math.ceil(level.length / levelAlignment) * levelAlignment, 0);
   const buffer = new Uint8Array(dataOffset + dataBytes);
   const view = new DataView(buffer.buffer);
 
@@ -251,25 +300,27 @@ const buildKtx2 = (spec: FixtureSpec): Uint8Array => {
   buffer.set(dfd, dfdOffset);
   buffer.set(kvd, kvdOffset);
 
-  let cursor = dataOffset + dataBytes;
+  // The container stores the smallest mip first, so the base level sits at the highest offset. Each level
+  // starts on the alignment above, with zero padding after the stream that precedes it.
+  let cursor = dataOffset;
 
   for (let index = levels.length - 1; index >= 0; index--) {
     const level = encoded[index]!;
     const entry = HEADER_BYTES + index * LEVEL_INDEX_ENTRY_BYTES;
 
-    cursor -= level.length;
+    cursor = Math.ceil(cursor / levelAlignment) * levelAlignment;
     // Each field is a 64-bit little-endian value written as two 32-bit halves; the
     // high halves stay zero because no fixture approaches 4 GiB.
     view.setUint32(entry, cursor, true);
     view.setUint32(entry + 4, 0, true);
     view.setUint32(entry + 8, level.length, true);
     view.setUint32(entry + 12, 0, true);
-    // uncompressedByteLength is what the level DECODES to, which is the same as
-    // byteLength for schemes 0 and 3 with a stored stream, and larger for a
-    // deflated one.
+    // uncompressedByteLength is what the level DECODES to: the stored length without
+    // supercompression, and the inflated length for a deflated stream.
     view.setUint32(entry + 16, spec.supercompression === 3 ? levels[index]!.data.length : level.length, true);
     view.setUint32(entry + 20, 0, true);
     buffer.set(level, cursor);
+    cursor += level.length;
   }
 
   return buffer;
@@ -547,6 +598,8 @@ const eacR11Block = (level: number): Uint8Array => {
 interface NativeSpec {
   readonly name: string;
   readonly vkFormat: number;
+  /** `KHR_DF_MODEL_*` that describes this family. */
+  readonly colorModel: number;
   readonly blockWidth: number;
   readonly blockHeight: number;
   readonly bytesPerBlock: number;
@@ -574,11 +627,11 @@ const EAC_RG11 = 155;
 const ASTC_VK_BASE = 157;
 
 /** A single sample covering the whole block, as the registry describes it. */
-const singleSample = (bitLength: number, channelId: number): readonly DfdSample[] => [{ bitOffset: 0, bitLength, channelId }];
+const singleSample = (bitLength: number, channelId: number, qualifiers = 0): readonly DfdSample[] => [{ bitOffset: 0, bitLength, channelId, qualifiers }];
 /** Two cosited samples, the second at bit 64 for a 16-byte block. */
-const twoSamples = (firstChannelId: number, secondChannelId: number): readonly DfdSample[] => [
-  { bitOffset: 0, bitLength: 64, channelId: firstChannelId },
-  { bitOffset: 64, bitLength: 64, channelId: secondChannelId },
+const twoSamples = (firstChannelId: number, secondChannelId: number, qualifiers = 0): readonly DfdSample[] => [
+  { bitOffset: 0, bitLength: 64, channelId: firstChannelId, qualifiers },
+  { bitOffset: 64, bitLength: 64, channelId: secondChannelId, qualifiers },
 ];
 
 const ASTC_BLOCK_SIZES: readonly (readonly [number, number])[] = [
@@ -623,6 +676,7 @@ const nativeLevel = (
 const NATIVE_SPECS: readonly NativeSpec[] = [
   {
     name: 'native-bc1-rgb-unorm.ktx2',
+    colorModel: KHR_DF_MODEL_BC1A,
     vkFormat: BC1_RGB.unorm,
     ...BC_BLOCK,
     bytesPerBlock: 8,
@@ -634,6 +688,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc1-rgb-unorm-srgb.ktx2',
+    colorModel: KHR_DF_MODEL_BC1A,
     vkFormat: BC1_RGB.srgb,
     ...BC_BLOCK,
     bytesPerBlock: 8,
@@ -645,6 +700,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc1-rgba-unorm.ktx2',
+    colorModel: KHR_DF_MODEL_BC1A,
     vkFormat: BC1_RGBA.unorm,
     ...BC_BLOCK,
     bytesPerBlock: 8,
@@ -656,6 +712,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc1-rgba-unorm-srgb.ktx2',
+    colorModel: KHR_DF_MODEL_BC1A,
     vkFormat: BC1_RGBA.srgb,
     ...BC_BLOCK,
     bytesPerBlock: 8,
@@ -667,6 +724,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc2-rgba-unorm.ktx2',
+    colorModel: KHR_DF_MODEL_BC2,
     vkFormat: BC2.unorm,
     ...BC_BLOCK,
     bytesPerBlock: 16,
@@ -686,6 +744,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc2-rgba-unorm-srgb.ktx2',
+    colorModel: KHR_DF_MODEL_BC2,
     vkFormat: BC2.srgb,
     ...BC_BLOCK,
     bytesPerBlock: 16,
@@ -704,6 +763,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc3-rgba-unorm.ktx2',
+    colorModel: KHR_DF_MODEL_BC3,
     vkFormat: BC3.unorm,
     ...BC_BLOCK,
     bytesPerBlock: 16,
@@ -724,6 +784,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc3-rgba-unorm-srgb.ktx2',
+    colorModel: KHR_DF_MODEL_BC3,
     vkFormat: BC3.srgb,
     ...BC_BLOCK,
     bytesPerBlock: 16,
@@ -743,6 +804,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc4-r-unorm.ktx2',
+    colorModel: KHR_DF_MODEL_BC4,
     vkFormat: BC4.unorm,
     ...BC_BLOCK,
     bytesPerBlock: 8,
@@ -754,17 +816,19 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc4-r-snorm.ktx2',
+    colorModel: KHR_DF_MODEL_BC4,
     vkFormat: BC4.snorm,
     ...BC_BLOCK,
     bytesPerBlock: 8,
     transferFunction: KHR_DFTRANSFER_LINEAR,
-    samples: singleSample(64, 0),
+    samples: singleSample(64, 0, KHR_DF_SAMPLE_SIGNED),
     encode: color => bc4ChannelBlock(color[1]),
     decoded: color => `${color[0] === 255 ? '+1.0' : '-1.0'} in [-1, 1]`,
     note: 'BC4, signed. The same block bytes as its unsigned twin decode to the opposite endpoints, so the two must stay distinct identities.',
   },
   {
     name: 'native-bc5-rg-unorm.ktx2',
+    colorModel: KHR_DF_MODEL_BC5,
     vkFormat: BC5.unorm,
     ...BC_BLOCK,
     bytesPerBlock: 16,
@@ -783,11 +847,12 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-bc5-rg-snorm.ktx2',
+    colorModel: KHR_DF_MODEL_BC5,
     vkFormat: BC5.snorm,
     ...BC_BLOCK,
     bytesPerBlock: 16,
     transferFunction: KHR_DFTRANSFER_LINEAR,
-    samples: twoSamples(0, 1),
+    samples: twoSamples(0, 1, KHR_DF_SAMPLE_SIGNED),
     encode: color => {
       const block = new Uint8Array(16);
 
@@ -801,6 +866,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-eac-r11-unorm.ktx2',
+    colorModel: KHR_DF_MODEL_ETC2,
     vkFormat: EAC_R11,
     ...BC_BLOCK,
     bytesPerBlock: 8,
@@ -812,6 +878,7 @@ const NATIVE_SPECS: readonly NativeSpec[] = [
   },
   {
     name: 'native-eac-rg11-unorm.ktx2',
+    colorModel: KHR_DF_MODEL_ETC2,
     vkFormat: EAC_RG11,
     ...BC_BLOCK,
     bytesPerBlock: 16,
@@ -841,6 +908,7 @@ const ASTC_SPECS: readonly NativeSpec[] = ASTC_BLOCK_SIZES.flatMap(([blockWidth,
     ] as const
   ).map(({ suffix, transferFunction }) => ({
     name: `native-astc-${size}-${suffix}.ktx2`,
+    colorModel: KHR_DF_MODEL_ASTC,
     // The registry numbers the ASTC block formats in this exact order, linear
     // first, which is why the pair above advances the vkFormat by one.
     vkFormat: ASTC_VK_BASE + index * 2 + (suffix === 'srgb' ? 1 : 0),
@@ -865,6 +933,7 @@ const toFixtureSpec = (spec: NativeSpec): FixtureSpec => {
     vkFormat: spec.vkFormat,
     transferFunction: spec.transferFunction,
     alphaFlags: KDF_DFALPHA_STRAIGHT,
+    colorModel: spec.colorModel,
     blockWidth: spec.blockWidth,
     blockHeight: spec.blockHeight,
     bytesPerBlock: spec.bytesPerBlock,
@@ -972,7 +1041,16 @@ const main = (): void => {
         'Generated by scripts/generate-color-fixtures.ts - do not hand-edit. Level byte lengths are derived from the KTX 2.0 layout in that script, not from the engine, so a wrong engine table fails the fixture suite instead of agreeing with it.',
       generator: GENERATOR,
       scope: SCOPE,
-      colorModels: { 1: 'KHR_DF_MODEL_RGBSDA' },
+      colorModels: {
+        1: 'KHR_DF_MODEL_RGBSDA',
+        128: 'KHR_DF_MODEL_BC1A',
+        129: 'KHR_DF_MODEL_BC2',
+        130: 'KHR_DF_MODEL_BC3',
+        131: 'KHR_DF_MODEL_BC4',
+        132: 'KHR_DF_MODEL_BC5',
+        161: 'KHR_DF_MODEL_ETC2',
+        162: 'KHR_DF_MODEL_ASTC',
+      },
       transferFunctions: { 1: 'linear', 2: 'srgb' },
       alphaFlags: { 0: 'straight', 1: 'KHR_DF_FLAG_ALPHA_PREMULTIPLIED' },
       supercompressionSchemes: { 0: 'none', 3: 'zlib' },

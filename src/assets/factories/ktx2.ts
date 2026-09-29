@@ -5,76 +5,10 @@ import type { Rgba8TextureLevel } from '#rendering/texture/pixelPayload';
 import type { TextureAlphaMode, TextureColorSpace } from '#rendering/texture/TextureOptions';
 
 import { parseKtx2Descriptor } from './ktx2Descriptor';
+import { formatByVkFormat, ktx2LevelAlignment, vkFormatRgba8Srgb, vkFormatRgba8Unorm } from './ktx2Profile';
 
 /** `«KTX 20»\r\n\x1A\n` - the 12-byte KTX2 file identifier. */
 const identifier = Object.freeze([0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-/**
- * `VkFormat` values a KTX2 payload may carry, mapped onto this engine's format
- * vocabulary.
- *
- * Each Vulkan format has its matching storage and transfer identity. A backend
- * may choose a compatible upload representation later, but parsing must retain
- * the authored format until that decision is made.
- */
-const formatByVkFormat = new Map<number, Format>([
-  [131, Format.Bc1RgbUnorm],
-  [132, Format.Bc1RgbUnormSrgb],
-  [133, Format.Bc1RgbaUnorm],
-  [134, Format.Bc1RgbaUnormSrgb],
-  [135, Format.Bc2RgbaUnorm],
-  [136, Format.Bc2RgbaUnormSrgb],
-  [137, Format.Bc3RgbaUnorm],
-  [138, Format.Bc3RgbaUnormSrgb],
-  [139, Format.Bc4RUnorm],
-  [140, Format.Bc4RSnorm],
-  [141, Format.Bc5RgUnorm],
-  [142, Format.Bc5RgSnorm],
-  [143, Format.Bc6hRgbUfloat],
-  [144, Format.Bc6hRgbFloat],
-  [145, Format.Bc7RgbaUnorm],
-  [146, Format.Bc7RgbaUnormSrgb],
-  [147, Format.Etc2Rgb8Unorm],
-  [148, Format.Etc2Rgb8Srgb],
-  [149, Format.Etc2Rgb8A1Unorm],
-  [150, Format.Etc2Rgb8A1Srgb],
-  [151, Format.Etc2Rgba8Unorm],
-  [152, Format.Etc2Rgba8Srgb],
-  [153, Format.EacR11Unorm],
-  [155, Format.EacRg11Unorm],
-  [157, Format.Astc4x4Unorm],
-  [158, Format.Astc4x4Srgb],
-  [159, Format.Astc5x4Unorm],
-  [160, Format.Astc5x4Srgb],
-  [161, Format.Astc5x5Unorm],
-  [162, Format.Astc5x5Srgb],
-  [163, Format.Astc6x5Unorm],
-  [164, Format.Astc6x5Srgb],
-  [165, Format.Astc6x6Unorm],
-  [166, Format.Astc6x6Srgb],
-  [167, Format.Astc8x5Unorm],
-  [168, Format.Astc8x5Srgb],
-  [169, Format.Astc8x6Unorm],
-  [170, Format.Astc8x6Srgb],
-  [171, Format.Astc8x8Unorm],
-  [172, Format.Astc8x8Srgb],
-  [173, Format.Astc10x5Unorm],
-  [174, Format.Astc10x5Srgb],
-  [175, Format.Astc10x6Unorm],
-  [176, Format.Astc10x6Srgb],
-  [177, Format.Astc10x8Unorm],
-  [178, Format.Astc10x8Srgb],
-  [179, Format.Astc10x10Unorm],
-  [180, Format.Astc10x10Srgb],
-  [181, Format.Astc12x10Unorm],
-  [182, Format.Astc12x10Srgb],
-  [183, Format.Astc12x12Unorm],
-  [184, Format.Astc12x12Srgb],
-]);
-
-/** `VK_FORMAT_R8G8B8A8_UNORM` and `..._SRGB` - the one uncompressed payload this parser accepts. */
-const vkFormatRgba8Unorm = 37;
-const vkFormatRgba8Srgb = 43;
 
 /** Supercompression schemes, by their KTX2 numeric id. */
 const supercompressionNames = new Map<number, string>([
@@ -88,7 +22,7 @@ const zlibSupercompression = 3;
 const headerBytes = 80;
 const levelIndexEntryBytes = 24;
 const supercompressionSchemeOffset = 44;
-const align8 = (value: number): number => Math.ceil(value / 8) * 8;
+const alignTo = (value: number, alignment: number): number => Math.ceil(value / alignment) * alignment;
 const maxInflatedKtx2Bytes = 256 * 1024 * 1024;
 
 /** A KTX2 payload whose levels are already in a hardware format. */
@@ -333,8 +267,10 @@ export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string, sig
   // before the first level and is referenced by absolute offset, so that prefix
   // is copied verbatim and only the levels move.
   const { levels } = descriptor;
+  // The rebuilt container is uncompressed, so its levels sit on the native alignment of the format.
+  const alignment = ktx2LevelAlignment(descriptor.vkFormat);
   const prefixBytes = Math.min(...levels.map(({ offset }) => offset));
-  const alignedPrefixBytes = align8(prefixBytes);
+  const alignedPrefixBytes = alignTo(prefixBytes, alignment);
   let decodedBytes = 0;
   let resultBytes = alignedPrefixBytes;
 
@@ -344,7 +280,7 @@ export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string, sig
     }
 
     decodedBytes += level.uncompressedByteLength;
-    resultBytes = align8(resultBytes + level.uncompressedByteLength);
+    resultBytes = alignTo(resultBytes + level.uncompressedByteLength, alignment);
 
     if (
       !Number.isSafeInteger(decodedBytes) ||
@@ -387,7 +323,7 @@ export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string, sig
     );
     resultView.setUint32(entry, cursor, true);
     resultView.setUint32(entry + 8, level.uncompressedByteLength, true);
-    cursor = align8(cursor + level.uncompressedByteLength);
+    cursor = alignTo(cursor + level.uncompressedByteLength, alignment);
   }
 
   return result.buffer;

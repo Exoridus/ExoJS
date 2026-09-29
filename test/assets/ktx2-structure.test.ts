@@ -3,9 +3,12 @@ import { describe, expect, test } from 'vitest';
 import { parseKtx2 } from '#assets/factories/ktx2';
 import { compressedLevelByteLength, CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 
+import { ktx2Dfd } from './ktx2-dfd';
+
 const headerBytes = 80;
 const levelIndexEntryBytes = 24;
-const dfdBytes = 44;
+const bc7Vk = 145;
+const dfdBytes = ktx2Dfd(bc7Vk).length;
 const identifier = [0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a];
 
 interface Ktx2StructureSpec {
@@ -18,24 +21,11 @@ interface Ktx2StructureSpec {
   readonly kvd?: Uint8Array;
 }
 
-const writeDfd = (view: DataView, offset: number, transfer: number): void => {
-  view.setUint32(offset, dfdBytes, true);
-  view.setUint16(offset + 4, 0, true);
-  view.setUint16(offset + 6, 0, true);
-  view.setUint16(offset + 8, 2, true);
-  view.setUint16(offset + 10, dfdBytes - 4, true);
-  view.setUint8(offset + 12, 1);
-  view.setUint8(offset + 13, 1);
-  view.setUint8(offset + 14, transfer);
-  view.setUint8(offset + 15, 0);
-  view.setUint8(offset + 16, 3);
-  view.setUint8(offset + 17, 3);
-  view.setUint8(offset + 20, 16);
-  view.setUint8(offset + 30, 127);
-  view.setUint8(offset + 31, 0);
+const writeDfd = (bytes: Uint8Array, offset: number, transfer: number): void => {
+  bytes.set(ktx2Dfd(bc7Vk, { transfer }), offset);
 };
 
-const align8 = (value: number): number => Math.ceil(value / 8) * 8;
+const align16 = (value: number): number => Math.ceil(value / 16) * 16;
 
 const buildKtx2 = ({ layerCount = 0, levelCount = 1, dfdOffset, dfdLength, levelOffset, transfer = 1, kvd }: Ktx2StructureSpec = {}): ArrayBuffer => {
   const levelLength = compressedLevelByteLength(CompressedTextureFormat.Bc7RgbaUnorm, 8, 8);
@@ -43,7 +33,7 @@ const buildKtx2 = ({ layerCount = 0, levelCount = 1, dfdOffset, dfdLength, level
   const storageDfdOffset = headerBytes + indexBytes;
   const actualDfdOffset = dfdOffset ?? storageDfdOffset;
   const actualDfdLength = dfdLength ?? dfdBytes;
-  const actualLevelOffset = levelOffset ?? align8(storageDfdOffset + dfdBytes + (kvd?.byteLength ?? 0));
+  const actualLevelOffset = levelOffset ?? align16(storageDfdOffset + dfdBytes + (kvd?.byteLength ?? 0));
   const buffer = new ArrayBuffer(actualLevelOffset + levelLength);
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);
@@ -70,7 +60,7 @@ const buildKtx2 = ({ layerCount = 0, levelCount = 1, dfdOffset, dfdLength, level
   view.setUint32(headerBytes + 16, levelLength, true);
 
   if (storageDfdOffset + dfdBytes <= buffer.byteLength) {
-    writeDfd(view, storageDfdOffset, transfer);
+    writeDfd(bytes, storageDfdOffset, transfer);
   }
 
   return buffer;
@@ -90,7 +80,7 @@ describe('KTX2 structure', () => {
   });
 
   test('rejects a level range that overlaps the DFD', () => {
-    expect(() => parseKtx2(buildKtx2({ levelOffset: headerBytes + levelIndexEntryBytes }), 'overlap.ktx2')).toThrow(/overlaps DFD/);
+    expect(() => parseKtx2(buildKtx2({ levelOffset: headerBytes + levelIndexEntryBytes + 8 }), 'overlap.ktx2')).toThrow(/overlaps DFD/);
   });
 
   test('rejects unsupported DFD transfer functions as a profile error', () => {

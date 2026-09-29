@@ -103,6 +103,21 @@ been confirmed by that tool, and the block payloads in particular are derived fr
 the published block layouts rather than from a conforming encoder, so a validator
 run is still the outstanding check before any of it is treated as qualified.
 
+### What the descriptors state
+
+The generator writes each descriptor the way the registry defines it, and the parser is
+checked against exactly that: the colour model of the format family (RGBSDA for RGBA8,
+BC1A/BC2/BC3/BC4/BC5 for the BC blocks, ETC2 for ETC2 and EAC, ASTC for ASTC), the texel
+block stored as its extent minus one, one byte plane of the block size, samples with their
+channel type in bits 24-27 and their qualifiers in bits 28-31 (a linear alpha sample beside
+sRGB colour, the signed bit on the signed BC formats), mip levels on `lcm(block size, 4)`
+with the smallest level first, and key/value data made of a NUL-terminated `rd`
+orientation, a writer string and a vendor entry of bytes that are not valid UTF-8. An
+earlier revision wrote a single RGBSDA sample for every family, exponents instead of
+extents, and swapped sample fields, and the parser accepted exactly that - which is why
+agreement between this generator and the engine is not evidence of conformance, and why a
+real validator remains the open check.
+
 ## Not covered
 
 **BC6H and BC7.** Neither has a constant-colour encoding in its block layout: both

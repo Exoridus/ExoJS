@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
-import { TextureFormat } from '#rendering/types';
+import { type ColorTextureFormat, TextureFormat } from '#rendering/types';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { createMockBackend, createMockWebGpuEnvironment, type MockWebGpuEnvironment } from '../webgpuMockEnvironment';
@@ -26,7 +26,7 @@ describe('WebGpuShaderFilterPass connection', () => {
     return { environment, backend };
   };
 
-  const targets = (format: TextureFormat): { input: RenderTexture; output: RenderTexture } => {
+  const targets = (format: ColorTextureFormat): { input: RenderTexture; output: RenderTexture } => {
     const input = new RenderTexture(8, 8, { format });
     const output = new RenderTexture(8, 8, { format });
 
@@ -44,7 +44,7 @@ describe('WebGpuShaderFilterPass connection', () => {
 
     disposers.push(() => filter.destroy());
 
-    const run = (format: TextureFormat): void => {
+    const run = (format: ColorTextureFormat): void => {
       const { input, output } = targets(format);
 
       filter.apply(backend, input, output);
