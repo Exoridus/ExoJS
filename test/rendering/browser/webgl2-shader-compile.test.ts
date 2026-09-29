@@ -19,7 +19,9 @@ import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShad
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { displacementShader } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
+import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { INSTANCE_TRANSFORM_GLSL } from '#rendering/shader/instanceContract';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
@@ -87,7 +89,10 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['bloom-threshold.frag', generateGlslUniformDeclarations(bloomThresholdShader.uniformSchema!)],
   ['blur.frag', generateGlslUniformDeclarations(blurShader.uniformSchema!)],
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
+  ['displacement.frag', generateGlslUniformDeclarations(displacementShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
+  ['lut-3d.frag', generateGlslUniformDeclarations(lut3dShaderSource.uniformSchema!)],
+  ['lut-rgb1d.frag', generateGlslUniformDeclarations(lutRgb1dShaderSource.uniformSchema!)],
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
   ['angular-average.frag', generateGlslUniformDeclarations(angularAverageShader.uniformSchema!)],
   ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],

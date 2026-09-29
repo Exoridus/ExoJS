@@ -41,7 +41,9 @@ import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { displacementShader } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
+import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
 import { filterUniformGroup } from '#rendering/uniforms/uniformLayout';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
@@ -98,6 +100,9 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'BlurFilter (generated uniform block)', source: blurShader._resolveWgsl(filterUniformGroup)! },
   { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShader._resolveWgsl(filterUniformGroup)! },
   { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'DisplacementFilter (generated uniform block)', source: displacementShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'LutFilter 3D (generated uniform block)', source: lut3dShaderSource._resolveWgsl(filterUniformGroup)! },
+  { name: 'LutFilter 1D (generated uniform block)', source: lutRgb1dShaderSource._resolveWgsl(filterUniformGroup)! },
   // The lighting package's shadow march is a filter of the same shape, and the
   // only WGSL in that package this suite can reach as a fixed string.
   { name: 'lighting shadow march (generated uniform block)', source: shadowMarchShader._resolveWgsl(filterUniformGroup)! },
