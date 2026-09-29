@@ -58,13 +58,8 @@ const quadVertices = new Float32Array([-1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1
 const quadVertexStride = 16;
 const quadVertexCount = 4;
 
-/** Fixed-function tests that would clip or reject a full-level write. */
-const passThroughRasterState: ReadonlyArray<(gl: WebGL2RenderingContext) => number> = [
-  gl => gl.SCISSOR_TEST,
-  gl => gl.STENCIL_TEST,
-  gl => gl.DEPTH_TEST,
-  gl => gl.CULL_FACE,
-];
+/** Scissor, stencil, depth and cull: the fixed-function tests that would clip or reject a full-level write. */
+const passThroughRasterCapabilities = 4;
 
 /** Reused per level, so the uniform setters allocate nothing. */
 const unitScratch = new Int32Array(1);
@@ -101,6 +96,9 @@ export class WebGl2TextureNormalizer {
   private _levelScaleLocation: WebGLUniformLocation | null = null;
 
   /** Straight-source scratch holding the base level; smaller levels share its corner. */
+  private readonly _rasterCapabilities: Int32Array;
+  private readonly _rasterEnabled = new Uint8Array(passThroughRasterCapabilities);
+
   private _staging: WebGLTexture | null = null;
   private _stagingFormat = 0;
   private _stagingWidth = 0;
@@ -109,6 +107,7 @@ export class WebGl2TextureNormalizer {
   public constructor(gl: WebGL2RenderingContext, host: WebGl2ColorNormalizationHost) {
     this._gl = gl;
     this._host = host;
+    this._rasterCapabilities = new Int32Array([gl.SCISSOR_TEST, gl.STENCIL_TEST, gl.DEPTH_TEST, gl.CULL_FACE]);
   }
 
   /**
@@ -211,8 +210,12 @@ export class WebGl2TextureNormalizer {
     const previousArray = gl.getParameter(gl.VERTEX_ARRAY_BINDING) as WebGLVertexArrayObject | null;
     const previousBuffer = gl.getParameter(gl.ARRAY_BUFFER_BINDING) as WebGLBuffer | null;
     const previousMask = gl.getParameter(gl.COLOR_WRITEMASK) as boolean[] | null;
-    const rasterState = passThroughRasterState;
-    const enabled = rasterState.map(capability => gl.isEnabled(capability(gl)));
+    const capabilities = this._rasterCapabilities;
+    const enabled = this._rasterEnabled;
+
+    for (let index = 0; index < passThroughRasterCapabilities; index++) {
+      enabled[index] = gl.isEnabled(capabilities[index]!) ? 1 : 0;
+    }
 
     // After the captures: building the program leaves the vertex array and array
     // buffer unbound, which would otherwise be recorded as what the caller had.
@@ -228,7 +231,7 @@ export class WebGl2TextureNormalizer {
       gl.disable(gl.BLEND);
       // The frame in progress may have a clip, a stencil test or a colour mask
       // live; any of them would cut the level being written short.
-      for (const capability of rasterState) gl.disable(capability(gl));
+      for (let index = 0; index < passThroughRasterCapabilities; index++) gl.disable(capabilities[index]!);
       gl.colorMask(true, true, true, true);
       gl.viewport(0, 0, target.width, target.height);
       gl.activeTexture(gl.TEXTURE0);
@@ -253,9 +256,9 @@ export class WebGl2TextureNormalizer {
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, quadVertexCount);
     } finally {
       this._restore(previousFramebuffer, previousViewport, previousProgram, previousArray, previousBuffer, previousUnit, previousBinding, unitZeroBinding);
-      for (const [index, capability] of rasterState.entries()) {
-        if (enabled[index]) {
-          gl.enable(capability(gl));
+      for (let index = 0; index < passThroughRasterCapabilities; index++) {
+        if (enabled[index] === 1) {
+          gl.enable(capabilities[index]!);
         }
       }
 
@@ -331,43 +334,49 @@ export class WebGl2TextureNormalizer {
   }
 
   /**
-   * Keep one staging texture large enough for the level being staged, reallocating
-   * only when the level does not fit. `exact` reallocates at the requested extent
-   * even when it fits, which is what a single-level image source needs because
-   * `texImage2D` sizes the texture to its source anyway.
+   * Keep one staging texture large enough for the level being staged, and leave
+   * it bound to the active unit for the upload that follows. The texture is
+   * reallocated only when the level does not fit or the format changed. `exact`
+   * additionally tracks the requested extent, which is what a single-level image
+   * source needs: `texImage2D` sizes the texture to its source anyway, so no
+   * separate allocation is made for it.
    */
   private _ensureStaging(gl: WebGL2RenderingContext, internalFormat: number, width: number, height: number, exact = false): void {
-    const formatChanged = this._staging !== null && this._stagingFormat !== internalFormat;
-    const tooSmall = this._stagingWidth < width || this._stagingHeight < height;
+    if (this._staging === null) {
+      const handle = gl.createTexture();
 
-    if (this._staging !== null && !formatChanged && !tooSmall && !exact) {
+      if (handle === null) {
+        throw new Error('WebGL2: could not create the colour-normalization staging texture.');
+      }
+
+      // A single complete level, sampled through this state rather than the
+      // sampler's, so the pass cannot be handed a mip-aware filter that would
+      // blur the one-to-one mapping it depends on.
+      gl.bindTexture(gl.TEXTURE_2D, handle);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      this._staging = handle;
+    } else {
+      gl.bindTexture(gl.TEXTURE_2D, this._staging);
+    }
+
+    const formatChanged = this._stagingFormat !== internalFormat;
+    const tooSmall = this._stagingWidth < width || this._stagingHeight < height;
+    const resized = exact && (this._stagingWidth !== width || this._stagingHeight !== height);
+
+    if (!formatChanged && !tooSmall && !resized) {
       return;
     }
 
     const nextWidth = exact || formatChanged ? width : Math.max(this._stagingWidth, width);
     const nextHeight = exact || formatChanged ? height : Math.max(this._stagingHeight, height);
 
-    if (this._staging !== null) {
-      gl.deleteTexture(this._staging);
+    if (!exact) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, nextWidth, nextHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     }
 
-    const handle = gl.createTexture();
-
-    if (handle === null) {
-      throw new Error('WebGL2: could not create the colour-normalization staging texture.');
-    }
-
-    // A single complete level, sampled through this state rather than the
-    // sampler's, so the pass cannot be handed a mip-aware filter that would
-    // blur the one-to-one mapping it depends on.
-    gl.bindTexture(gl.TEXTURE_2D, handle);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, nextWidth, nextHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-
-    this._staging = handle;
     this._stagingFormat = internalFormat;
     this._stagingWidth = nextWidth;
     this._stagingHeight = nextHeight;
