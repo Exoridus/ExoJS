@@ -20,6 +20,7 @@ const outputHuge: f32 = 3.0e38;
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let src = textureSample(uSource, uSampler, vUv);
     let transparent = uniforms.uTransparentCanvas > 0.5;
+    let premultiplyOutput = uniforms.uTransparentCanvas < 1.5;
 
     // Transparent target: unassociate before the transform, re-associate the
     // encoded result afterwards. Opaque target: composite the linear PMA
@@ -39,7 +40,7 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
 
     let encoded = linearToSrgb(mapped);
     let outAlpha = select(1.0, src.a, transparent);
-    let finalRgb = select(encoded, encoded * src.a, transparent);
+    let finalRgb = select(encoded, encoded * src.a, transparent && premultiplyOutput);
 
     return vec4<f32>(finalRgb, outAlpha);
 }

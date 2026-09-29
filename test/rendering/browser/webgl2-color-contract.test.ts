@@ -19,7 +19,9 @@ import { TextureFormat } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { createWebGl2TestBackend, readWebGl2Pixel } from './_backendSetup';
+import { openWebGl2ColorHarness } from './_colorProbeHarness';
 import { wireCoreRenderers } from './_coreRenderers';
+import { defineColorContractProbes } from './color-probe-fixtures';
 
 /** A premultiplied (alpha-carrying) canvas - `readWebGl2Pixel`'s alpha channel is otherwise always 255. */
 const createTransparentCanvasBackend = async (size: number): Promise<WebGl2Backend> => {
@@ -267,3 +269,5 @@ test('WebGL2 blends into an sRGB working target in linear light', async () => {
     backend.destroy();
   }
 });
+
+defineColorContractProbes('WebGL2', openWebGl2ColorHarness);

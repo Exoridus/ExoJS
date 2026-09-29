@@ -6,6 +6,8 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { TextureFormat } from '#rendering/types';
 
 import { createWebGpuTestBackend, readWebGpuPixels } from './_backendSetup';
+import { openWebGpuColorHarness } from './_colorProbeHarness';
+import { defineColorContractProbes } from './color-probe-fixtures';
 
 test('WebGpuOutputPass round-trips an sRGB gray through the linear working target back to the same byte', async () => {
   const backend = await createWebGpuTestBackend(2);
@@ -60,3 +62,5 @@ test('WebGpuOutputPass overwrites the canvas exactly on a repeated present - no 
     backend.destroy();
   }
 });
+
+defineColorContractProbes('WebGPU', openWebGpuColorHarness);

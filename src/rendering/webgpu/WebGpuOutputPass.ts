@@ -63,6 +63,7 @@ export class WebGpuOutputPass {
     transparent: boolean,
     matte: Color,
     target?: RenderTexture,
+    straightAlpha = false,
   ): void {
     const gpu = backend as WebGpuBackend;
 
@@ -74,7 +75,12 @@ export class WebGpuOutputPass {
 
     this._uniformScratch[0] = 2 ** options.exposure;
     this._uniformScratch[4] = options.toneMapping === 'reinhard' ? 1 : 0;
-    this._uniformScratch[8] = transparent ? 1 : 0;
+    this._uniformScratch[8] = 0;
+
+    if (transparent) {
+      this._uniformScratch[8] = straightAlpha ? 2 : 1;
+    }
+
     this._uniformScratch[12] = this._matteScratch[0]!;
     this._uniformScratch[13] = this._matteScratch[1]!;
     this._uniformScratch[14] = this._matteScratch[2]!;

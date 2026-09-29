@@ -60,13 +60,19 @@ export class WebGl2OutputPass {
     transparent: boolean,
     matte: Color,
     target?: RenderTexture,
+    straightAlpha = false,
   ): void {
     this._ensureConnected(backend as WebGl2Backend);
 
     this._source = source;
     this._exposureScale = 2 ** options.exposure;
     this._toneMapping = options.toneMapping === 'reinhard' ? 1 : 0;
-    this._transparentCanvas = transparent ? 1 : 0;
+    this._transparentCanvas = 0;
+
+    if (transparent) {
+      this._transparentCanvas = straightAlpha ? 2 : 1;
+    }
+
     matte.writeLinear(this._matteScratch);
 
     backend.execute(this._pass.retarget(target ?? null, target !== undefined ? target.view : null, Color.transparentBlack));

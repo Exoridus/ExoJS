@@ -18,6 +18,7 @@ const float outputHuge = 3.0e38;
 void main() {
     vec4 src = texture(uSource, vUv);
     bool transparent = uTransparentCanvas > 0.5;
+    bool premultiplyOutput = uTransparentCanvas < 1.5;
 
     // Transparent target: unassociate before the transform, re-associate the
     // encoded result afterwards. Opaque target: composite the linear PMA
@@ -37,7 +38,7 @@ void main() {
 
     vec3 encoded = linearToSrgb(mapped);
     float outAlpha = transparent ? src.a : 1.0;
-    vec3 finalRgb = transparent ? encoded * src.a : encoded;
+    vec3 finalRgb = transparent && premultiplyOutput ? encoded * src.a : encoded;
 
     fragColor = vec4(finalRgb, outAlpha);
 }

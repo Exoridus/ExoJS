@@ -459,7 +459,7 @@ export class RenderingContext implements DrawContext {
     const scratch = this._backend.acquireRenderTexture(source.width, source.height, TextureFormat.Rgba8);
 
     try {
-      displayTransform.present(this._backend, source, transparent, matte, scratch);
+      displayTransform.present(this._backend, source, transparent, matte, scratch, true);
 
       return { width, height, data: await this._backend.readPixels(scratch, x, y, width, height, 'uint8') };
     } finally {
