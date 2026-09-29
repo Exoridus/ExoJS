@@ -1,5 +1,6 @@
 #version 300 es
-precision lowp float;
+precision highp float;
+precision highp sampler2D;
 
 uniform sampler2D u_content;
 uniform sampler2D u_mask;

@@ -1,5 +1,6 @@
 #version 300 es
-precision lowp float;
+precision highp float;
+precision highp sampler2D;
 precision lowp int;
 
 // Multi-texture sprite batching: up to 16 textures bound per draw call,
@@ -32,7 +33,7 @@ uniform sampler2D u_texture15;
 
 // UVs need full precision on mobile GLES: the file-level lowp default would
 // quantise texture coordinates (visible as swimming/snapping texels on large
-// atlases). The color varying stays lowp — 8-bit output needs no more.
+// atlases). Colour is linear and may exceed 1 in an HDR working format, so the stage runs at full precision throughout.
 in highp vec2 v_texcoord;
 in vec4 v_color;
 flat in uint v_textureSlot;

@@ -1,5 +1,6 @@
 #version 300 es
-precision mediump float;
+precision highp float;
+precision highp sampler2D;
 uniform sampler2D uTexture;
 in vec2 vUv;
 out vec4 fragColor;
