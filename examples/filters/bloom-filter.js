@@ -5,6 +5,13 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
  * Six discs of rising luminance on a dark backdrop. Only the ones above the
  * threshold glow, so dragging Threshold walks the glow along the row and shows
  * what the filter is actually selecting on.
+ *
+ * The threshold is measured on linear luminance, where 1 is display white, not
+ * on the encoded value the Colors below are written in: an encoded channel value
+ * of 128 is only about 0.22 in linear light. This scene runs on the
+ * default 8-bit SDR working target, where nothing can exceed 1; an application
+ * that opts into `rendering.color.workingFormat: 'hdr'` can bloom values above 1
+ * with a threshold above 1.
  */
 const DISCS = [
   new Color(40, 46, 70),
@@ -43,7 +50,7 @@ class BloomFilterScene extends Scene {
     this.hud = mountControls({
       title: 'Bloom Filter',
       controls: [
-        { keys: 'Threshold', action: 'luminance a pixel needs before it glows' },
+        { keys: 'Threshold', action: 'linear luminance to glow (1 = white)' },
         { keys: 'Intensity', action: 'how much of the extracted highlight is added back' },
         { keys: 'Strength', action: 'how far the glow spreads, in logical units' },
         { keys: 'Levels', action: 'halvings before the blur - wider and cheaper, or tighter' },

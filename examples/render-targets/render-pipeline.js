@@ -12,6 +12,7 @@ import {
   RenderTexture,
   Scene,
   Sprite,
+  TextureFormat,
 } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A composable frame, configured once: the world renders off-screen, a blur step turns it into its
@@ -36,8 +37,10 @@ class RenderPipelineScene extends Scene {
     const app = this.app;
     const screenView = app.rendering.screenView;
     const { width, height } = app;
-    this.sceneRt = new RenderTexture(width, height);
-    this.blurredRt = new RenderTexture(width, height);
+    // Intermediate scene colour uses the sRGB colour format: the blur runs in
+    // linear light and the canvas is the only place the result is encoded.
+    this.sceneRt = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
+    this.blurredRt = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
     this.composite = new Sprite(this.blurredRt);
     this.blur = new BlurFilter({ strength: 4 });
     this.world = new Container();

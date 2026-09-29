@@ -88,11 +88,17 @@ class ColorTransformsScene extends Scene {
       .setPosition(width * 0.72, height / 2);
     this.referenceLabel = new Text('ORIGINAL', { fontSize: 22, fillColor: Color.white }).setAnchor(0.5).setPosition(width * 0.28, height * 0.72);
     this.processedLabel = new Text('TRANSFORMED', { fontSize: 22, fillColor: Color.white }).setAnchor(0.5).setPosition(width * 0.72, height * 0.72);
-    this.matrix = new ColorMatrixFilter();
+    // Grading is display-referred: the matrix and both lookups run on encoded
+    // sRGB values, which is what the numbers below were written against, and
+    // the result returns to linear premultiplied colour. `'linear-srgb'` would
+    // apply the same numbers to linear light instead. The LUT images are
+    // numeric tables (`fromImage` never decodes them), and a neutral matrix or
+    // identity table leaves colour and alpha untouched.
+    this.matrix = new ColorMatrixFilter(undefined, { colorSpace: 'srgb' });
     this.ramp = LutFilter.fromImage(makeRamp());
-    this.rampFilter = new LutFilter({ mode: 'rgb1d' }).setLut(this.ramp);
+    this.rampFilter = new LutFilter({ mode: 'rgb1d', colorSpace: 'srgb' }).setLut(this.ramp);
     this.cube = LutFilter.fromImage(makeCoolLut());
-    this.cubeFilter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this.cube);
+    this.cubeFilter = new LutFilter({ mode: '3d', size: LUT_SIZE, colorSpace: 'srgb' }).setLut(this.cube);
 
     this.hud = mountControls({
       title: 'Color Transforms',

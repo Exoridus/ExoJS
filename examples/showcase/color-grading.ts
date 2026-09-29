@@ -78,7 +78,11 @@ class ColorGradingScene extends Scene {
     const { width, height } = app;
 
     this.luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
-    this.filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this.luts[0]);
+    // Each look was written in display-referred sRGB, so the lookup runs on
+    // encoded values and returns linear premultiplied colour. The tables are
+    // numeric (`fromImage` never decodes them), and the identity baseline
+    // leaves colour and fractional alpha unchanged.
+    this.filter = new LutFilter({ mode: '3d', size: LUT_SIZE, colorSpace: 'srgb' }).setLut(this.luts[0]);
 
     this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(3.5);
     this.sprite.setPosition(width / 2, height / 2);
