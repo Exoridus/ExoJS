@@ -28,7 +28,7 @@ const MAX_LIGHTS = 48;
 const TILE_SIZE = 128;
 const HUE_STEP = 360 / 7;
 
-const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) => void): Texture => {
+const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) => void, colorSpace?: 'none'): Texture => {
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -37,7 +37,9 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
     throw new Error('2D canvas context unavailable.');
   }
   paint(context);
-  return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
+  // `colorSpace: 'none'` is for the normal map, whose channels are numeric:
+  // sampled as colour, an sRGB view would hardware-decode the normal itself.
+  return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false, ...(colorSpace === undefined ? {} : { colorSpace }) });
 };
 
 // Flat stone albedo with a mortar cross, so the tiling is visible even unlit.
@@ -54,29 +56,33 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
 // Both are built with image-space y, which grows downwards, and the green
 // channel is negated on the way out: the engine reads the OpenGL convention,
 // where green above the midpoint leans towards the top of the image.
-const normalTexture = canvasTexture(TILE_SIZE, context => {
-  const image = context.createImageData(TILE_SIZE, TILE_SIZE);
-  const half = TILE_SIZE / 2;
-  const bevel = 14;
-  for (let y = 0; y < TILE_SIZE; y++) {
-    for (let x = 0; x < TILE_SIZE; x++) {
-      const edge = Math.min(x, y, TILE_SIZE - 1 - x, TILE_SIZE - 1 - y);
-      const slope = edge < bevel ? 1 - edge / bevel : 0;
-      const towardsX = x < half ? -1 : 1;
-      const towardsY = y < half ? -1 : 1;
-      const horizontal = Math.min(x, TILE_SIZE - 1 - x) <= Math.min(y, TILE_SIZE - 1 - y);
-      const nx = horizontal ? towardsX * slope : ((x - half) / half) * 0.25;
-      const ny = horizontal ? ((y - half) / half) * 0.25 : towardsY * slope;
-      const length = Math.hypot(nx, ny, 1);
-      const offset = (y * TILE_SIZE + x) * 4;
-      image.data[offset] = ((nx / length) * 0.5 + 0.5) * 255;
-      image.data[offset + 1] = ((-ny / length) * 0.5 + 0.5) * 255;
-      image.data[offset + 2] = (1 / length) * 0.5 * 255 + 127.5;
-      image.data[offset + 3] = 255;
+const normalTexture = canvasTexture(
+  TILE_SIZE,
+  context => {
+    const image = context.createImageData(TILE_SIZE, TILE_SIZE);
+    const half = TILE_SIZE / 2;
+    const bevel = 14;
+    for (let y = 0; y < TILE_SIZE; y++) {
+      for (let x = 0; x < TILE_SIZE; x++) {
+        const edge = Math.min(x, y, TILE_SIZE - 1 - x, TILE_SIZE - 1 - y);
+        const slope = edge < bevel ? 1 - edge / bevel : 0;
+        const towardsX = x < half ? -1 : 1;
+        const towardsY = y < half ? -1 : 1;
+        const horizontal = Math.min(x, TILE_SIZE - 1 - x) <= Math.min(y, TILE_SIZE - 1 - y);
+        const nx = horizontal ? towardsX * slope : ((x - half) / half) * 0.25;
+        const ny = horizontal ? ((y - half) / half) * 0.25 : towardsY * slope;
+        const length = Math.hypot(nx, ny, 1);
+        const offset = (y * TILE_SIZE + x) * 4;
+        image.data[offset] = ((nx / length) * 0.5 + 0.5) * 255;
+        image.data[offset + 1] = ((-ny / length) * 0.5 + 0.5) * 255;
+        image.data[offset + 2] = (1 / length) * 0.5 * 255 + 127.5;
+        image.data[offset + 3] = 255;
+      }
     }
-  }
-  context.putImageData(image, 0, 0);
-});
+    context.putImageData(image, 0, 0);
+  },
+  'none',
+);
 
 // Evenly spaced hues at a fixed lightness, so neighbouring pools of light stay
 // distinguishable without any of them blowing out to white.
