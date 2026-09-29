@@ -88,7 +88,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Sampling and upload state forwarded to the Texture constructor; any subset. A KTX2 payload in a hardware format takes the sampling half only - premultiplication and mip generation cannot apply to compressed blocks."
+          "description": "Sampling and upload state forwarded to the Texture constructor; any subset. A KTX2 payload keeps the transfer and alpha meaning its descriptor declares: a request that contradicts it is refused, except that a LINEAR payload may be declared colorSpace: 'none' to use it as numeric data. Upload options that cannot apply to block-compressed data (premultiplyAlpha, generateMipMap) or to any KTX2 payload (flipY) are refused rather than ignored."
         }
       ],
       "paragraphs": [],
