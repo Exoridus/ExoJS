@@ -158,7 +158,10 @@ test('WebGl2OutputPass computes E(C/a)*a for a transparent target, collapsing to
 
     const [r, , , a] = readWebGl2Pixel(backend, 0, 0);
 
-    expect(a).toBeCloseTo(128, 0); // alpha 0.5 -> byte ~128
+    // Alpha 0.5 is exactly 127.5 in bytes: a tie the 8-bit unorm conversion may
+    // round either way, so drivers legitimately disagree by one. Only the alpha
+    // byte is exposed to it; the colour channel below is not, and stays exact.
+    expect(Math.abs(a - 128)).toBeLessThanOrEqual(1);
     // Unassociate (0.21586 / 0.5 = 0.43172), encode, re-associate by 0.5.
     const straightEncoded = 1.055 * 0.43172 ** (1 / 2.4) - 0.055;
 
