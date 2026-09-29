@@ -90,6 +90,13 @@ export interface DataTextureOptions {
  * `Texture` (filter uniforms, mesh textures, custom shader uniforms)
  * accepts a `DataTexture` unchanged.
  *
+ * # Numeric samples
+ *
+ * The texels are data, never colour: they are sampled exactly as stored, with
+ * no sRGB decode, alpha premultiplication or output transform, and the format
+ * list has no sRGB entry. A producer that stores colour in a `DataTexture`
+ * (such as `Gradient.toTexture`) does its own conversion first.
+ *
  * # Default sampler
  *
  * `DataTexture` defaults to nearest filtering, clamp-to-edge wrap, no mip

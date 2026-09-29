@@ -64,6 +64,10 @@ Death records contain the result of the final integration step and every update 
 
 Bound secondary emissions so one burst cannot recursively create an unbounded effect. Setting a spawn rate to zero stops future rate-based spawning; existing particles continue until they expire or are explicitly cleared. Destroying the system ends its lifetime rather than merely fading its current population.
 
+## Colour
+
+Particle colours are authored sRGB `Color` values. Keyframes in `ColorGradient` and the colour modules interpolate the authored components, so the CPU and both GPU paths agree numerically, and each particle's colour is converted to linear light and premultiplied once, in the render vertex stage. The particle texture is ordinary colour, and a system without a texture draws solid quads from a white colour default. Additive blending sums linear light, so overlapping particles accumulate in the same domain the rest of the scene is lit in; the sum is only carried above display white when the application uses an HDR working format. See [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/).
+
 ## Own textures and systems separately
 
 A texture acquired through `this.loader` remains scene-loader-owned. The particle system uses it but is not permission to destroy a resource shared by another scope. Conversely, destroying a texture claim does not stand in for releasing a caller-owned system or custom render mode.

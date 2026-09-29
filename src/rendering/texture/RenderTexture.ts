@@ -8,7 +8,10 @@ import type { TextureOptions } from './TextureOptions';
 /** Construction options for {@link RenderTexture}. */
 export interface RenderTextureOptions extends Partial<TextureOptions> {
   /**
-   * Color attachment format. Defaults to {@link TextureFormat.Rgba8}.
+   * Color attachment format. Defaults to {@link TextureFormat.Rgba8}, which stores
+   * values as written; choose {@link TextureFormat.Rgba8Srgb} for a surface that
+   * holds scene colour, so dark values keep their precision and sampling and
+   * blending happen in linear light.
    * The float formats ({@link TextureFormat.Rgba16F} / {@link TextureFormat.Rgba32F})
    * allocate a floating-point offscreen target for rendering values outside `[0, 1]` - they require
    * `EXT_color_buffer_float` at render time (throws otherwise) and default to

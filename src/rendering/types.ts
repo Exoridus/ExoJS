@@ -142,11 +142,11 @@ export enum TextureFormat {
   R8 = 'r8',
   /** Single-channel 32-bit float. */
   R32F = 'r32f',
-  /** 4-channel 8-bit unsigned - the universally supported default. */
+  /** 4-channel 8-bit unsigned - the universally supported default. Stores values as written, with no sRGB transfer: the right choice for data and masks, and for a colour surface only when linear values may be quantized to eight bits. */
   Rgba8 = 'rgba8',
-  /** 4-channel 8-bit unsigned with sRGB transfer on RGB channels. */
+  /** 4-channel 8-bit unsigned with sRGB transfer on RGB channels: writes encode, and sampling or blending decodes to linear light. Alpha stays linear. The storage format for colour surfaces. */
   Rgba8Srgb = 'rgba8-srgb',
-  /** 4-channel half-float. Stores values outside `[0, 1]` at reduced precision; usually enough for feedback/state buffers. */
+  /** 4-channel half-float. Stores values outside `[0, 1]` at reduced precision, without any transfer function: usable for scene-linear HDR colour as well as for numeric feedback and state buffers, which are not colour. */
   Rgba16F = 'rgba16f',
   /** 4-channel full-float. Highest precision, 16 bytes per pixel. */
   Rgba32F = 'rgba32f',

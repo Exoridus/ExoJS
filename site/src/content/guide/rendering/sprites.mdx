@@ -65,6 +65,8 @@ hero.tint = new Color(255, 128, 128, 1); // reddish tint
 hero.tint = new Color(128, 128, 255, 0.8); // blue tint, 80% opacity
 ```
 
+A tint is an authored sRGB `Color` like any other: it is converted to linear light once and multiplied with the texture sample there, and its alpha scales coverage. The [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/) chapter covers the full colour contract.
+
 ## Texture frames
 
 A sprite can display a sub-region of its texture through `textureFrame`. This is the mechanism behind spritesheet frame selection:
@@ -104,13 +106,13 @@ glow.blendMode = BlendModes.Additive;
 
 Blend modes are per-sprite. Combined with tinting they cover common glow, shadow, and knock-out compositing without needing custom shaders.
 
-`BlendModes` implements the full W3C compositing/blending set. `Normal`, `Additive`, `Subtract`, `Multiply`, and `Screen` are fixed-function GPU blends with no extra draw cost. The remaining "advanced" modes go through a backdrop-aware compositor that copies the current render target before drawing each sprite, so they carry a small per-draw backdrop-copy cost — reach for them deliberately in draw-call-heavy scenes. `isAdvancedBlendMode(mode)` reports which category a given mode falls into.
+`BlendModes` implements the full W3C compositing/blending set, evaluated in linear light on premultiplied colour, so a blend reads the way light adds rather than the way encoded numbers add. `Normal`, `Additive`, `Subtract`, and `Screen` are fixed-function GPU blends with no extra draw cost, and so is `Multiply` over an opaque backdrop; `Multiply` over a partly transparent backdrop takes the backdrop-aware path. The remaining "advanced" modes go through a backdrop-aware compositor that copies the current render target before drawing each sprite, so they carry a small per-draw backdrop-copy cost — reach for them deliberately in draw-call-heavy scenes. `isAdvancedBlendMode(mode)` reports which category a given mode falls into.
 
 | Mode | Visual effect |
 | --- | --- |
 | `Normal` | Standard alpha compositing — source drawn over the backdrop. |
-| `Additive` | Adds source and backdrop colors; brightens. Good for glows, light, fire, particles. |
-| `Subtract` | Subtracts source from backdrop; darkens toward black. |
+| `Additive` | Adds source and backdrop colors without clamping; brightens. Good for glows, light, fire, particles. Alpha follows ordinary source-over coverage. |
+| `Subtract` | Attenuates the backdrop, `backdrop * (1 - source)`; darkens toward black. This is not arithmetic subtraction despite the name, and it leaves the backdrop's alpha untouched. |
 | `Multiply` | Multiplies channel values; darkens, like stacking transparencies. |
 | `Screen` | Inverse of multiply; lightens, like projecting two images onto the same surface. |
 | `Darken` * | Keeps the darker of source and backdrop, per channel. |
@@ -128,6 +130,8 @@ Blend modes are per-sprite. Combined with tinting they cover common glow, shadow
 | `Luminosity` * | Source luminosity with backdrop hue and saturation; inverse of `Color`. |
 
 \* Advanced mode — routed through the backdrop-aware compositor (`isAdvancedBlendMode` returns `true`).
+
+The artistic modes apply their named function to clamped straight RGB, so they do not carry values above display white through. Blends in linear light, and the coverage rules above, differ visibly from an encoded-space blend: 50% white over black shows as the encoded value 188, not 128.
 
 ## Spritesheets
 
@@ -177,6 +181,8 @@ const rt = new RenderTexture(256, 256);
 // ... render something into rt ...
 const offscreenSprite = new Sprite(rt);
 ```
+
+The source decides how the samples are read. Image, canvas, SVG and video sources are sRGB colour: a video frame is SDR content, and the engine has no HDR video path. A `DataTexture` is numeric and is never colour-converted, so a lookup table, mask or normal map belongs there or in a `Texture` declared `colorSpace: 'none'`. A `RenderTexture` is colour or data according to its `format`; see [Render targets](/ExoJS/en/guide/rendering/render-targets/).
 
 ## Sprite transforms in the graph
 
