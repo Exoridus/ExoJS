@@ -261,8 +261,19 @@ export class RenderRootSource {
    *
    * Only the content key may differ. A structure, ancestry or transform change
    * has its own tier and is refused here.
+   *
+   * `destinationOpaque` is the coverage guarantee of the target being collected
+   * into, and therefore part of whether a node is a live entry at all - see
+   * {@link changeBelongsToLiveEntry}.
    */
-  public reconcileContent(contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number, root: RenderNode): boolean {
+  public reconcileContent(
+    contentRevision: number,
+    structureRevision: number,
+    ancestryStamp: number,
+    transformRevision: number,
+    root: RenderNode,
+    destinationOpaque: boolean,
+  ): boolean {
     if (
       this._rootScope === null ||
       this._structureRevision !== structureRevision ||
@@ -286,7 +297,7 @@ export class RenderRootSource {
         return true;
       }
 
-      return changeBelongsToLiveEntry(changed, root, marked, candidate => liveEntries.has(candidate));
+      return changeBelongsToLiveEntry(changed, root, marked, candidate => liveEntries.has(candidate), destinationOpaque);
     });
 
     if (!tolerable) {

@@ -15,6 +15,7 @@ import { BlendModes } from '#rendering/types';
 import { getWebGpuBlendState } from '#rendering/webgpu/blendState';
 
 import { createWebGl2Harness } from '../perf/rendering/harness';
+import { w3cBlend } from './browser/_blendReference';
 
 /** One RGBA sample. Components are straight (unassociated) for the oracle's own arithmetic. */
 interface Sample {
@@ -261,5 +262,117 @@ describe('blend equation colour contract (D4)', () => {
 
     expect(actual).toBeCloseTo(dst.r * (1 - src.r), 10);
     expect(actual).not.toBeCloseTo(naiveSubtraction, 3);
+  });
+});
+
+/**
+ * What the installed factor pairs are worth against a destination the engine
+ * cannot prove fully covered.
+ *
+ * {@link BlendModes.Multiply} and {@link BlendModes.Screen} keep a
+ * fixed-function shortcut instead of capturing the backdrop, and the shortcut
+ * is a stand-in for the backdrop compositor's W3C formula rather than a
+ * different operation. These cases hold the REAL factor pairs both backends
+ * install against that formula, in the premultiplied domain the GPU blends in,
+ * and locate the exact coverage at which the two stop being the same
+ * expression - which is what decides the routing (`blendModeNeedsBackdrop`).
+ */
+describe('fixed-function shortcut coverage contract', () => {
+  /** W3C source-over with a blend function, premultiplied, as the compositor shaders evaluate it. */
+  const compositorRgb = (mode: BlendModes, src: Sample, dst: Sample): [number, number, number] => {
+    const blended = w3cBlend(mode, [dst.r, dst.g, dst.b], [src.r, src.g, src.b]);
+
+    return [0, 1, 2].map(
+      channel =>
+        (1 - src.a) * dst.a * [dst.r, dst.g, dst.b][channel]! + (1 - dst.a) * src.a * [src.r, src.g, src.b][channel]! + src.a * dst.a * blended[channel]!,
+    ) as [number, number, number];
+  };
+
+  const SHORTCUT_MODES = [BlendModes.Multiply, BlendModes.Screen] as const;
+
+  test.each(SHORTCUT_MODES)('%s factors are the compositor formula at a fully covered destination', mode => {
+    const gl = captureGlFactors(mode);
+    const wgpu = captureWgpuFactors(mode);
+    const src: Sample = { r: 0.8, g: 0.2, b: 0.6, a: 0.7 };
+    const dst: Sample = { r: 0.3, g: 0.9, b: 0.1, a: 1 };
+    const expected = compositorRgb(mode, src, dst);
+
+    for (const channel of ['r', 'g', 'b'] as const) {
+      const premultipliedSrc = src[channel] * src.a;
+      const premultipliedDst = dst[channel] * dst.a;
+
+      expect(applyGlRgb(gl, premultipliedSrc, src, dst, premultipliedDst), `${modeName(mode)} ${channel}: WebGL2 factors`).toBeCloseTo(
+        expected[channel === 'r' ? 0 : channel === 'g' ? 1 : 2],
+        10,
+      );
+      expect(applyWgpuRgb(wgpu, premultipliedSrc, src, premultipliedDst), `${modeName(mode)} ${channel}: WebGPU factors`).toBeCloseTo(
+        expected[channel === 'r' ? 0 : channel === 'g' ? 1 : 2],
+        10,
+      );
+    }
+  });
+
+  test('Multiply factors stop being the compositor formula below full coverage', () => {
+    const gl = captureGlFactors(BlendModes.Multiply);
+    const wgpu = captureWgpuFactors(BlendModes.Multiply);
+    const src: Sample = { r: 0.8, g: 0.2, b: 0.6, a: 0.7 };
+
+    // Every destination below full coverage, from a nearly covered one to the
+    // fully transparent case the shortcut multiplies the source by nothing
+    // through. Compared per channel and reported as the largest gap: an
+    // individual channel can coincide by accident at a given coverage, and it
+    // is the RGB result as a whole that has to be the compositor's.
+    for (const destinationAlpha of [0.85, 0.4, 0]) {
+      const dst: Sample = { r: 0.3, g: 0.9, b: 0.1, a: destinationAlpha };
+      const expected = compositorRgb(BlendModes.Multiply, src, dst);
+      let glGap = 0;
+      let wgpuGap = 0;
+
+      for (const channel of ['r', 'g', 'b'] as const) {
+        const premultipliedSrc = src[channel] * src.a;
+        const premultipliedDst = dst[channel] * dst.a;
+
+        glGap = Math.max(
+          glGap,
+          Math.abs(applyGlRgb(gl, premultipliedSrc, src, dst, premultipliedDst) - expected[channel === 'r' ? 0 : channel === 'g' ? 1 : 2]),
+        );
+        wgpuGap = Math.max(
+          wgpuGap,
+          Math.abs(applyWgpuRgb(wgpu, premultipliedSrc, src, premultipliedDst) - expected[channel === 'r' ? 0 : channel === 'g' ? 1 : 2]),
+        );
+      }
+
+      expect(glGap, `WebGL2 factors at destination alpha ${destinationAlpha}`).toBeGreaterThan(1e-3);
+      expect(wgpuGap, `WebGPU factors at destination alpha ${destinationAlpha}`).toBeGreaterThan(1e-3);
+    }
+  });
+
+  test('Screen factors are the compositor formula at EVERY destination alpha, so its shortcut needs no backdrop', () => {
+    const gl = captureGlFactors(BlendModes.Screen);
+    const wgpu = captureWgpuFactors(BlendModes.Screen);
+
+    // The whole coverage space of both alphas, on a colour grid: `as*Cs +
+    // Cd*(1 - as*Cs)` IS the W3C screen formula, so nothing here may drift. This
+    // is what keeps Screen off the backdrop compositor - a route that would cost
+    // a capture per draw and change no pixel.
+    for (let sourceAlphaStep = 1; sourceAlphaStep <= 9; sourceAlphaStep++) {
+      for (let destinationAlphaStep = 1; destinationAlphaStep <= 9; destinationAlphaStep++) {
+        const as = sourceAlphaStep / 10;
+        const ab = destinationAlphaStep / 10;
+
+        for (let colourStep = 1; colourStep <= 9; colourStep++) {
+          const cs = colourStep / 10;
+          const cb = (10 - colourStep) / 10;
+          const src: Sample = { r: cs, g: cs, b: cs, a: as };
+          const dst: Sample = { r: cb, g: cb, b: cb, a: ab };
+          const expected = compositorRgb(BlendModes.Screen, src, dst);
+
+          expect(applyGlRgb(gl, cs * as, src, dst, cb * ab), `WebGL2 factors at as=${as} ab=${ab} cs=${cs}`).toBeCloseTo(expected[0], 10);
+          expect(applyWgpuRgb(wgpu, cs * as, src, cb * ab), `WebGPU factors at as=${as} ab=${ab} cs=${cs}`).toBeCloseTo(expected[0], 10);
+          expect(applyGlAlpha(gl, src, dst), `WebGL2 alpha at as=${as} ab=${ab}`).toBeCloseTo(as + ab * (1 - as), 10);
+          expect(applyWgpuAlpha(wgpu, src, dst), `WebGPU alpha at as=${as} ab=${ab}`).toBeCloseTo(as + ab * (1 - as), 10);
+        }
+      }
+    }
   });
 });

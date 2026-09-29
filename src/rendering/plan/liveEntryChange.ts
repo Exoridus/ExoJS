@@ -1,5 +1,6 @@
 import { DirtyChannel } from '#core/nodeDirtyIndex';
 import type { RenderNode } from '#rendering/RenderNode';
+import { blendModeNeedsBackdrop } from '#rendering/types';
 
 /**
  * Whether a marked change is the business of a live entry rather than of the
@@ -25,16 +26,33 @@ import type { RenderNode } from '#rendering/RenderNode';
  * where the scene now has ordinary content, and has to rebuild. A node that
  * became a live entry never reaches here as one, because the product does not
  * hold it that way yet.
+ *
+ * `destinationOpaque` is the coverage guarantee of the target being collected
+ * into (see `RenderPlanBuilder._destinationOpaque`). It is part of the
+ * first-shape test because whether a node is a live entry at all can depend on
+ * it: a {@link BlendModes.Multiply} draw is one only
+ * where its destination is not provably fully covered.
  * @internal
  */
-export const changeBelongsToLiveEntry = (node: RenderNode, root: RenderNode, marked: number, isLiveEntry: (node: RenderNode) => boolean): boolean => {
+export const changeBelongsToLiveEntry = (
+  node: RenderNode,
+  root: RenderNode,
+  marked: number,
+  isLiveEntry: (node: RenderNode) => boolean,
+  destinationOpaque: boolean,
+): boolean => {
   if (node === root) {
     return (marked & DirtyChannel.Effect) !== 0 && (marked & ~DirtyChannel.Effect) === 0;
   }
 
   for (let current: RenderNode | null = node; current !== null && current !== root; current = current.parent) {
     if (isLiveEntry(current)) {
-      return current !== node || current._renderPlanHasBarrierEffects() || current._isTransformGroupBoundary;
+      return (
+        current !== node ||
+        current._renderPlanHasBarrierEffects() ||
+        blendModeNeedsBackdrop(current._renderPlanGetBlendMode(), destinationOpaque) ||
+        current._isTransformGroupBoundary
+      );
     }
   }
 

@@ -310,7 +310,8 @@ export interface RenderBackend {
    * (backdrop-aware) blend mode. Captures the target's `[x, y, width, height]`
    * region, runs the W3C blend formula in a shader, and draws the result back
    * with normal premultiplied source-over. Used internally by the render-effect
-   * executor for modes where {@link isAdvancedBlendMode} is `true`.
+   * executor for the modes {@link blendModeNeedsBackdrop} reports for the
+   * destination being composited into.
    */
   composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this;
 

@@ -2,10 +2,11 @@
  * Compositing blend modes applied when drawing a {@link Drawable} over the current render target.
  *
  * Modes 0-4 are implemented as fixed-function GPU blend equations (no texture
- * capture required). Modes 5-17 use a backdrop-aware compositor: the content is
- * first rendered off-screen, then composited over the captured backdrop via a
- * W3C-compliant blend shader. Use {@link isAdvancedBlendMode} to test whether a
- * mode requires the compositor path.
+ * capture required), mode 3 only while the destination is provably opaque.
+ * Modes 5-17 use a backdrop-aware compositor: the content is first rendered
+ * off-screen, then composited over the captured backdrop via a W3C-compliant
+ * blend shader. {@link isAdvancedBlendMode} answers the destination-independent
+ * question; {@link blendModeNeedsBackdrop} adds the destination's coverage.
  */
 export enum BlendModes {
   /** Source-over: `Cs + Cd*(1-as)`; alpha `as + ad*(1-as)`. */
@@ -21,11 +22,11 @@ export enum BlendModes {
   Subtract = 2,
   /**
    * `Cs*Cd + Cd*(1-as)` with source-over alpha. Exact only against an opaque
-   * destination; a translucent destination needs the backdrop-aware
-   * compositor's full W3C formula (see {@link isAdvancedBlendMode}).
+   * destination; any lower destination alpha needs the backdrop-aware
+   * compositor's full W3C formula (see {@link blendModeNeedsBackdrop}).
    */
   Multiply = 3,
-  /** `Cs + Cd*(1-Cs)` with source-over alpha. */
+  /** `Cs + Cd*(1-Cs)` with source-over alpha - the W3C screen blend at any destination alpha, so it never needs the backdrop compositor. */
   Screen = 4,
   /** `min(src, dst)` per channel - coverage-correct via backdrop-aware shader. */
   Darken = 5,
@@ -61,6 +62,34 @@ export enum BlendModes {
  * and return `false`. Modes 5-17 return `true`.
  */
 export const isAdvancedBlendMode = (mode: BlendModes): boolean => mode >= BlendModes.Darken;
+
+/**
+ * Whether `mode` has to be evaluated by the backdrop-aware compositor for a
+ * destination whose alpha is `destinationOpaque`.
+ *
+ * {@link BlendModes.Darken} and above always do. {@link BlendModes.Multiply}
+ * does only when the destination is not provably fully covered: its
+ * fixed-function equation is `Cd*(as*Cs + 1 - as)`, which is what the
+ * compositor's W3C formula reduces to at a destination alpha of exactly 1 and
+ * diverges from it at any lower value - including the fully transparent one,
+ * where the compositor leaves the source untouched and the shortcut multiplies
+ * it by nothing.
+ *
+ * {@link BlendModes.Screen} is never in this set, and not by omission: its
+ * fixed-function equation is `as*Cs + Cd*(1 - as*Cs)`, which is the W3C formula
+ * for that mode at EVERY destination alpha, fractional ones included. Routing it
+ * would cost a backdrop capture and change no pixel.
+ *
+ * `destinationOpaque` is a {@link RenderTarget.opaqueDestination} guarantee,
+ * not an observation: a target that cannot prove full coverage reports `false`
+ * and pays for the backdrop capture.
+ *
+ * {@link isAdvancedBlendMode} keeps answering the mode-only question the
+ * barrier, escape and retention machinery asks; use this where the
+ * destination is known.
+ */
+export const blendModeNeedsBackdrop = (mode: BlendModes, destinationOpaque: boolean): boolean =>
+  isAdvancedBlendMode(mode) || (!destinationOpaque && mode === BlendModes.Multiply);
 
 /**
  * Texture magnification and minification filter modes.

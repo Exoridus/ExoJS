@@ -21,8 +21,22 @@
  * only the compositing formula around them - the part under test
  * fractional destination-alpha coverage for - is independent here.
  */
-import { BlendModes } from '#rendering/types';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import { Filter } from '#rendering/filters/Filter';
+import { RenderEntryKind } from '#rendering/plan/renderCommand';
+import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
+import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
+import type { GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderNode } from '#rendering/RenderNode';
+import { RenderTarget } from '#rendering/RenderTarget';
+import { RetainedContainer } from '#rendering/RetainedContainer';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { blendModeNeedsBackdrop, BlendModes } from '#rendering/types';
 
+import { createRenderBackendDouble } from '../support/render-backend-double';
 import { ADVANCED_BLEND_MODES, type Rgb, w3cBlend } from './browser/_blendReference';
 
 interface Sample {
@@ -117,7 +131,7 @@ describe('backdrop-aware compositor artistic blend reference (D4)', () => {
       { label: 'equal fractional coverage', src: { r: 0.25, g: 0.75, b: 0.35, a: 0.5 }, dst: { r: 0.6, g: 0.4, b: 0.8, a: 0.5 } },
     ];
 
-    test.each(cases)('$label: Multiply and Screen reduce to the fixed-function shortcut only when the destination is opaque', ({ src }) => {
+    test.each(cases)('$label: Multiply and Screen are only the same operation over an opaque destination', ({ src }) => {
       const opaqueDst: Sample = { ...src, r: 0.6, g: 0.3, b: 0.9, a: 1 };
       const translucentDst: Sample = { ...opaqueDst, a: 0.5 };
 
@@ -125,12 +139,274 @@ describe('backdrop-aware compositor artistic blend reference (D4)', () => {
         const opaqueResult = compositeOverBackdrop(mode, src, opaqueDst);
         const translucentResult = compositeOverBackdrop(mode, src, translucentDst);
 
-        // The fixed-function shortcut (blendState.ts / WebGl2Backend.ts) is
-        // documented as exact only against an opaque destination - the two
-        // results below diverge once destination alpha is fractional, which is
-        // exactly the gap the backdrop-aware compositor exists to close.
+        // The compositor's own answer moves with the destination coverage in
+        // both modes. Only for one of them does that make the fixed-function
+        // shortcut wrong - see the coverage contract in
+        // `blend-color-contract.test.ts`, which holds the installed factor
+        // pairs against this formula and finds Screen's exact at every alpha.
         expect([opaqueResult.r, opaqueResult.g, opaqueResult.b]).not.toEqual([translucentResult.r, translucentResult.g, translucentResult.b]);
       }
     });
+
+    test.each(cases)(
+      '$label: at full coverage the shortcut is the compositor formula, which is why a provably opaque destination pays nothing',
+      ({ src, dst }) => {
+        const opaqueDst: Sample = { ...dst, a: 1 };
+
+        for (const mode of [BlendModes.Multiply, BlendModes.Screen]) {
+          const composited = compositeOverBackdrop(mode, src, opaqueDst);
+          const channels: readonly [number, number, number] = [src.r, src.g, src.b];
+          const backdrop: readonly [number, number, number] = [opaqueDst.r, opaqueDst.g, opaqueDst.b];
+
+          // The fixed-function RGB equation of each shortcut mode, written here
+          // from the blend state rather than imported, so the two oracles stay
+          // independent. Premultiplied inputs, which is what the GPU blends: over
+          // full coverage the destination colour IS the premultiplied one.
+          const shortcut = (channel: 0 | 1 | 2): number => {
+            const cs = channels[channel];
+            const cd = backdrop[channel];
+
+            return mode === BlendModes.Multiply ? cs * src.a * cd + cd * (1 - src.a) : cs * src.a + cd * (1 - cs * src.a);
+          };
+
+          expect(composited.r).toBeCloseTo(shortcut(0), 10);
+          expect(composited.g).toBeCloseTo(shortcut(1), 10);
+          expect(composited.b).toBeCloseTo(shortcut(2), 10);
+          expect(composited.a, 'source-over alpha at full coverage').toBeCloseTo(1, 10);
+        }
+      },
+    );
   });
+});
+
+/**
+ * Where a {@link BlendModes.Multiply} draw is actually evaluated, decided by
+ * the plan builder from the coverage the destination target can guarantee
+ * (`RenderTarget.opaqueDestination`).
+ *
+ * The oracle above proves the two paths agree exactly when the destination is
+ * fully covered and diverge below that; these cases pin the decision that turns
+ * that fact into a route, and prove the cheap path survives for a target that
+ * can promise coverage. Screen is in none of them: its fixed-function factors
+ * are the W3C formula at every destination alpha (`blend-color-contract.test.ts`
+ * sweeps the whole coverage space to prove it), so there is no route to take.
+ */
+describe('backdrop blend routing by destination coverage', () => {
+  class BlendBox extends Drawable {
+    public constructor(blendMode: BlendModes) {
+      super();
+
+      this.setLocalBounds(0, 0, 16, 16);
+      this.blendMode = blendMode;
+    }
+  }
+
+  class NoopFilter extends Filter {
+    public override apply(): void {
+      // no-op
+    }
+  }
+
+  const createRuntime = (destination: RenderTarget) => {
+    const composited: BlendModes[] = [];
+    const drawn: Drawable[] = [];
+    const backend: RenderBackend = {
+      ...createRenderBackendDouble({ renderTarget: destination }),
+      composeWithBackdropBlend(_source, _x, _y, _width, _height, mode) {
+        composited.push(mode);
+
+        return this;
+      },
+      draw(drawable) {
+        drawn.push(drawable);
+
+        return this;
+      },
+    };
+
+    return { backend, composited, drawn };
+  };
+
+  /** Build, optimize and play one frame, the way `RenderNode.render()` does. */
+  const render = (root: RenderNode, backend: RenderBackend): void => {
+    const builder = RenderPlanBuilder.acquire();
+
+    try {
+      const plan = builder.build(root, backend);
+
+      RenderPlanOptimizer.optimize(plan);
+      RenderPlanPlayer.play(plan, backend);
+    } finally {
+      RenderPlanBuilder.release(builder);
+    }
+  };
+
+  const flatten = (scope: GroupScope, into: ScopeEntry[] = []): ScopeEntry[] => {
+    for (const entry of scope.entries) {
+      into.push(entry);
+
+      if (entry.kind === RenderEntryKind.Group) {
+        flatten(entry.scope, into);
+      } else if (entry.kind === RenderEntryKind.Barrier && entry.scope.childPlan !== null) {
+        flatten(entry.scope.childPlan, into);
+      }
+    }
+
+    return into;
+  };
+
+  /**
+   * The nodes a collect resolved through the backdrop compositor, read off the
+   * plan's effect descriptors - the same flag the effect executor branches on
+   * when it composites a barrier's output.
+   */
+  const backdropCompositedNodes = (root: RenderNode, backend: RenderBackend): RenderNode[] => {
+    const builder = RenderPlanBuilder.acquire();
+
+    try {
+      const pass = builder.build(root, backend).passes[0];
+
+      if (pass === undefined) {
+        return [];
+      }
+
+      return flatten(pass.root)
+        .filter(entry => entry.kind === RenderEntryKind.Barrier)
+        .map(entry => (entry as { scope: { node: RenderNode; effect: { needsBackdropBlend?: boolean } } }).scope)
+        .filter(scope => scope.effect.needsBackdropBlend === true)
+        .map(scope => scope.node);
+    } finally {
+      RenderPlanBuilder.release(builder);
+    }
+  };
+
+  /** A root canvas that composites without an alpha channel, as both backends report it. */
+  const opaqueCanvas = (): RenderTarget => {
+    const target = new RenderTarget(64, 64, true);
+
+    target.opaqueDestination = true;
+
+    return target;
+  };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test('Multiply over a provably opaque destination keeps the fixed-function path', () => {
+    const { backend, composited, drawn } = createRuntime(opaqueCanvas());
+    const root = new Container();
+    const box = new BlendBox(BlendModes.Multiply);
+
+    root.addChild(box);
+    render(root, backend);
+
+    expect(composited, 'backdrop compositor').toEqual([]);
+    expect(drawn).toEqual([box]);
+  });
+
+  test('Multiply over a destination that cannot promise coverage is composited against the backdrop', () => {
+    // An offscreen colour target: every format carries an alpha channel, so the
+    // engine cannot prove full coverage however opaque the application clears it.
+    const { backend, composited } = createRuntime(new RenderTexture(64, 64));
+    const root = new Container();
+
+    root.addChild(new BlendBox(BlendModes.Multiply));
+    render(root, backend);
+
+    expect(composited).toEqual([BlendModes.Multiply]);
+  });
+
+  test.each([BlendModes.Normal, BlendModes.Additive, BlendModes.Subtract, BlendModes.Screen])(
+    '%s never pays for a backdrop capture, whatever the destination',
+    mode => {
+      // Screen is here on evidence, not convenience: its fixed-function factors
+      // reproduce the compositor's formula at every coverage, so a route would
+      // cost a capture and change nothing.
+      const { backend, composited, drawn } = createRuntime(new RenderTexture(64, 64));
+      const root = new Container();
+      const box = new BlendBox(mode);
+
+      root.addChild(box);
+      render(root, backend);
+
+      expect(composited).toEqual([]);
+      expect(drawn).toEqual([box]);
+    },
+  );
+
+  test.each(ADVANCED_BLEND_MODES.filter(mode => mode >= BlendModes.Darken))('%s is composited against the backdrop over an opaque destination too', mode => {
+    const { backend, composited } = createRuntime(opaqueCanvas());
+    const root = new Container();
+
+    root.addChild(new BlendBox(mode));
+    render(root, backend);
+
+    expect(composited).toEqual([mode]);
+  });
+
+  test('Multiply inside a barrier is composited against the backdrop even when the canvas is opaque', () => {
+    // A barrier renders its content into an intermediate colour target, so the
+    // destination of a draw inside it is never the canvas and never provably
+    // covered - whatever the canvas itself promises. The filtered container
+    // composites back over the opaque canvas with its own (source-over) mode, so
+    // only the draw inside it may reach for the backdrop.
+    const { backend } = createRuntime(opaqueCanvas());
+    const root = new Container();
+    const group = new Container();
+    const box = new BlendBox(BlendModes.Multiply);
+
+    group.filters = [new NoopFilter()];
+    group.addChild(box);
+    root.addChild(group);
+
+    expect(backdropCompositedNodes(root, backend)).toEqual([box]);
+  });
+
+  test('Multiply below a transform-group boundary leaves the group exactly while its destination needs the compositor', () => {
+    const opaque = new RetainedContainer();
+    const fractional = new RetainedContainer();
+    const onOpaque = new BlendBox(BlendModes.Multiply);
+    const onFractional = new BlendBox(BlendModes.Multiply);
+
+    opaque.addChild(onOpaque);
+    fractional.addChild(onFractional);
+
+    // The composite a backdrop blend produces is a world-space one, so a child
+    // that needs it cannot stay under the group's matrix.
+    expect(backdropCompositedNodes(opaque, createRuntime(opaqueCanvas()).backend), 'opaque destination').toEqual([]);
+    expect(backdropCompositedNodes(fractional, createRuntime(new RenderTexture(64, 64)).backend), 'fractional destination').toEqual([onFractional]);
+  });
+
+  test('the same subtree routes by the destination it is collected into', () => {
+    // Nothing on the node changes between the two frames - only the target the
+    // render goes to, and with it the coverage it can promise.
+    const root = new Container();
+    const box = new BlendBox(BlendModes.Multiply);
+
+    root.addChild(box);
+
+    const onCanvas = createRuntime(opaqueCanvas());
+
+    render(root, onCanvas.backend);
+
+    expect(onCanvas.composited, 'opaque canvas').toEqual([]);
+    expect(onCanvas.drawn).toEqual([box]);
+
+    const intoTexture = createRuntime(new RenderTexture(64, 64));
+
+    render(root, intoTexture.backend);
+
+    expect(intoTexture.composited, 'offscreen target').toEqual([BlendModes.Multiply]);
+  });
+
+  test.each([BlendModes.Normal, BlendModes.Additive, BlendModes.Subtract, BlendModes.Multiply, BlendModes.Screen, BlendModes.Darken, BlendModes.Luminosity])(
+    'blendModeNeedsBackdrop(%s) follows the destination guarantee',
+    mode => {
+      const isAdvanced = mode >= BlendModes.Darken;
+
+      expect(blendModeNeedsBackdrop(mode, true), 'opaque destination').toBe(isAdvanced);
+      expect(blendModeNeedsBackdrop(mode, false), 'fractional destination').toBe(isAdvanced || mode === BlendModes.Multiply);
+    },
+  );
 });

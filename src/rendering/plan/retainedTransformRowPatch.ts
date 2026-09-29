@@ -293,7 +293,12 @@ export const reconcileRetainedTransformRows = (
  * both kinds of change bump.
  * @internal
  */
-export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, root: RenderNode, owns: (node: RenderNode) => boolean): boolean => {
+export const reconcileRetainedTintRows = (
+  fragment: RetainedGroupFragment,
+  root: RenderNode,
+  owns: (node: RenderNode) => boolean,
+  destinationOpaque: boolean,
+): boolean => {
   const set = fragment.instructions;
   const bundle = set?.hasRecording === true ? set.ownedBundle : null;
   const patchable = bundle !== null && typeof bundle.patchTintRow === 'function' && bundle.transformRowBase !== undefined;
@@ -314,7 +319,7 @@ export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, root:
 
     // A change on or below a node the capture re-dispatches live is that
     // dispatch's to pick up; the records hold nothing about it.
-    if (rowIndex === undefined && changeBelongsToLiveEntry(changed, root, marked, candidate => fragment.hasLiveRecordFor(candidate))) {
+    if (rowIndex === undefined && changeBelongsToLiveEntry(changed, root, marked, candidate => fragment.hasLiveRecordFor(candidate), destinationOpaque)) {
       return true;
     }
 

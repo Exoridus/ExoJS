@@ -12,6 +12,8 @@ export interface SourceRederivationHost {
   _resolvePreserveDrawOrder(node: RenderNode): boolean;
   /** Whether `node` was observed reading the view during the current walk. */
   _sourceReadsView(node: RenderNode): boolean;
+  /** Whether the target the walk's content is played into is guaranteed fully covered. */
+  _destinationOpaque(): boolean;
 }
 
 /**
