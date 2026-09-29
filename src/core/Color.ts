@@ -8,6 +8,17 @@ import type { Cloneable } from './types';
 /** Clamp a value into the 0..255 integer channel range (saturating, not wrapping). */
 const toChannel = (value: number): number => clamp(value, 0, 255) | 0;
 
+// Not `clamp`, and not Math.min/Math.max: both make V8 box every fractional
+// result - one heap number per alpha write, which a per-frame tint animation
+// pays per sprite. Comparisons keep the value unboxed.
+const toAlpha = (value: number): number => {
+  if (value < 0) {
+    return 0;
+  }
+
+  return value > 1 ? 1 : value;
+};
+
 /** Largest packed value the numeric colour form can express: `0xRRGGBB`, alpha excluded by design. */
 const MAX_PACKED_RGB = 0xffffff;
 
@@ -73,7 +84,7 @@ export class Color implements Cloneable<Color> {
       this._r = (r >> 16) & 0xff;
       this._g = (r >> 8) & 0xff;
       this._b = r & 0xff;
-      this._a = clamp(g ?? 1, 0, 1);
+      this._a = toAlpha(g ?? 1);
 
       return;
     }
@@ -81,7 +92,7 @@ export class Color implements Cloneable<Color> {
     this._r = toChannel(r);
     this._g = toChannel(g ?? 0);
     this._b = toChannel(b);
-    this._a = clamp(a, 0, 1);
+    this._a = toAlpha(a);
   }
 
   /**
@@ -172,7 +183,7 @@ export class Color implements Cloneable<Color> {
   }
 
   public set a(alpha: number) {
-    this._a = clamp(alpha, 0, 1);
+    this._a = toAlpha(alpha);
     this._rgba = null;
   }
 
@@ -185,7 +196,7 @@ export class Color implements Cloneable<Color> {
     this._r = toChannel(r);
     this._g = toChannel(g);
     this._b = toChannel(b);
-    this._a = clamp(a, 0, 1);
+    this._a = toAlpha(a);
 
     this._rgba = null;
 

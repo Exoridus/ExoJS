@@ -249,14 +249,14 @@ export const ALLOCATION_ARCHETYPES: readonly AllocationArchetype[] = [
   {
     id: 'sprite/1000 colour-managed moving',
     rationale:
-      'Translucent sRGB pixel textures (already normalized at upload) drawn with a per-sprite opaque tint that is rewritten every frame alongside ' +
+      'Translucent sRGB pixel textures (already normalized at upload) drawn with a per-sprite tint, fractional alpha included, that is rewritten every frame alongside ' +
       'the transform. Reaches the colour-authoring and tint-invalidation path no other archetype touches, so a per-draw colour conversion that ' +
       'allocates cannot hide behind default-white sprites.',
     build: () => {
       const textures = Array.from({ length: 4 }, () => makeTranslucentSrgbTexture(16));
       const { root, sprites } = buildSpriteScene({ count: 1000, textures, viewW: VIEW.w, viewH: VIEW.h });
       const nudge = nudgeEveryNth(sprites, 1);
-      const palette = Array.from({ length: 16 }, (_unused, index) => new Color(index * 16, 255 - index * 16, (index * 47) % 256));
+      const palette = Array.from({ length: 16 }, (_unused, index) => new Color(index * 16, 255 - index * 16, (index * 47) % 256, 0.25 + (index % 4) * 0.25));
       let frame = 0;
 
       return {

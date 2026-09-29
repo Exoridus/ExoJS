@@ -154,8 +154,8 @@ const FIXED_HEADROOM_KB = 1.25;
  *
  * ── Ratchet history ─────────────────────────────────────────────
  * `sprite/1000 colour-managed moving` was added with the linear-light pipeline as the default: normalized sRGB textures and a per-sprite tint
- * rewritten every frame, at the harness floor. Its tints are opaque on purpose - a fractional alpha stored into a `Color` field that has
- * held a small integer boxes one heap number per write (16 B per `setTint`), which would measure `Color`'s field representation and not the draw path.
+ * rewritten every frame, at the harness floor. Its tints carry fractional alpha on purpose: alpha writes used to box one heap number each
+ * (16 B per `setTint`, ~16 KB/frame at 1000 tints) because `Color` clamped alpha through the same `clamp` as its integer channels.
  *
  * 2026-08-16c: `filtered/100` ONLY, 229.59 → 102.98, after the effect path's
  * control plane stopped being rebuilt per frame - the redirect pass and its
