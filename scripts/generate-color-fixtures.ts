@@ -19,6 +19,7 @@
  * Run with no arguments to write every fixture and its manifest.
  */
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { deflateSync } from 'node:zlib';
@@ -905,6 +906,20 @@ interface ManifestEntry {
 
 const GENERATOR = 'scripts/generate-color-fixtures.ts';
 
+/**
+ * Reformat generated JSON through the repository's own prettier.
+ *
+ * The commit hook formats this file, so emitting unformatted JSON would make
+ * every regeneration look like a change and train reviewers to ignore the diff.
+ * Formatting with the same tool the hook uses means a regeneration that changes
+ * nothing changes no bytes, which is the property worth having.
+ */
+const formatJson = (json: string): string =>
+  execFileSync(process.execPath, [join(REPO_ROOT, 'node_modules/prettier/bin/prettier.cjs'), '--parser', 'json'], {
+    input: json,
+    encoding: 'utf8',
+  });
+
 const buildManifest = (): ManifestEntry[] => {
   const entries: ManifestEntry[] = [];
 
@@ -968,7 +983,7 @@ const main = (): void => {
     2,
   )}\n`;
 
-  writeFileSync(join(FIXTURE_DIR, 'manifest.json'), json);
+  writeFileSync(join(FIXTURE_DIR, 'manifest.json'), formatJson(json));
 
   for (const entry of entries) {
     process.stdout.write(`wrote ${entry.file} (${entry.byteLength} bytes, sha256 ${entry.sha256.slice(0, 16)}...)\n`);
