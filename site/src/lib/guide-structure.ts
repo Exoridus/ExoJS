@@ -308,6 +308,14 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['render-target', 'render-texture', 'multi-render-target', 'mesh-material'],
       },
       {
+        path: 'rendering/color-pipeline',
+        level: 'advanced',
+        learningGoals: ['Tell colour from numeric data and declare each at its source', 'Choose target formats, the output transform and the right readback'],
+        prerequisites: ['rendering/sprites', 'rendering/render-targets'],
+        examples: ['render-targets/color-pipeline', 'sprites-textures/blendmodes'],
+        apiLinks: ['texture', 'render-texture', 'color'],
+      },
+      {
         path: 'rendering/retained-containers',
         level: 'advanced',
         learningGoals: [

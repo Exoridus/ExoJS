@@ -14,6 +14,9 @@ import {
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
+// Colour textures are stored as sRGB and filtered in linear light, so the mips
+// of the checker average to the correct mid-grey rather than a darkened one.
+// Data textures (`colorSpace: 'none'`) filter their raw numeric values instead.
 const MODES = [
   { label: 'Nearest', scaleMode: ScaleModes.Nearest, mipmaps: false },
   { label: 'Linear', scaleMode: ScaleModes.Linear, mipmaps: false },

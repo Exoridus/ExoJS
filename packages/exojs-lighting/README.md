@@ -48,6 +48,8 @@ Register and start `LitScene` in an `Application`. Construct host-bound lighting
 
 Authored `NormalMap` sources default to the OpenGL tangent-space convention. Set `{ convention: 'directx' }` for the opposite green-channel convention. A normal map changes shading, not the shadow silhouette.
 
+Colour and data stay separate. Albedo textures are sRGB colour, and light and ambient `Color` values are authored sRGB, converted to linear light once, with the light term accumulated and multiplied against albedo there. Normal maps, lightmap accumulation buffers and radiance records are numeric and never colour-transformed: declare a loaded normal image `colorSpace: 'none'`, or the map is rejected. Lighting can accumulate above display white internally (`lighting.hdr`), but the frame carries that headroom to the output transform only when the application sets `rendering.color.workingFormat: 'hdr'`; on the default SDR working target it clips when the lit frame is written. Exposure and tone mapping belong to the application's output transform, not to a post filter.
+
 Occluder sources can read physics, tilemap, alpha, mesh, or explicit polygon geometry. Rendering an object does not automatically register an occluder. Alpha extraction cannot synchronously trace a GPU-only render texture, and cached silhouettes do not automatically follow arbitrary pixel or mesh deformation.
 
 The lighting system owns its renderer resources. Registered lights remain owned by their scene tree; supplied occluder sources, post filters, normal sources, and textures remain caller-owned. Uncapped light counts do not mean zero per-light or per-scene cost.

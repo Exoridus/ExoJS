@@ -58,6 +58,8 @@ The WebGL2 GPU path supports `QuadParticles`. Mesh remains CPU-simulated on WebG
 
 Update modules may change while running. A change from GPU to CPU execution clears live particles because CPU storage does not contain the device's latest integrated state. Backend replacement or context/device loss also clears device-integrated particles. `clearParticles()` cancels pending death callbacks while retaining simulation allocations. Capacity is fixed at construction; choose it from rate, lifetime, bursts, and expected peak occupancy.
 
+Particle colours are authored sRGB `Color` values. Gradient keyframes and the colour modules interpolate the authored components, identically on the CPU and both GPU paths, and each particle's colour is converted to linear light and premultiplied once in the render vertex stage. The particle texture is ordinary sRGB colour, and additive blending sums linear light; the sum is carried above display white only when the application uses `rendering.color.workingFormat: 'hdr'`.
+
 A scene system registry advances and destroys a registered system. A system outside such an owner needs explicit cleanup. The texture has its own ownership, and a custom render mode passed to a system is owned by that system; do not share the same owned mode between independent systems.
 
 Use `createParticlesExtension({ batchSize })` only when you need a deliberate renderer-batch configuration. Choose that descriptor instead of installing a second particle descriptor beside the default one.

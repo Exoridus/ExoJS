@@ -2,6 +2,11 @@
 import { Application, Color, createFilterShader, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite, UniformType } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const UV_GRID = assets.technical.filtering.uvGrid256;
+// The filter input is linear, premultiplied colour, and the fragment returns
+// colour in that same representation, so a shader that only moves samples
+// (as this one does) needs no colour conversion. Only the numeric inputs - the
+// pointer, the orientation and the UV maths - are plain numbers.
+//
 // Neither source declares the user uniforms: the schema below generates the
 // GLSL block and the WGSL struct from one layout, and both bodies read them
 // through the same `uniforms` instance. `uPointer` is top-down across the

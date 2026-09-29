@@ -38,6 +38,22 @@ const browserImageMetadata: DecodedImageMetadata = Object.freeze({ colorSpace: '
  * Static helpers {@link Texture.black}, {@link Texture.white}, and {@link Texture.empty}
  * provide ready-made placeholder textures. Default sampler options are configurable via
  * {@link Texture.defaultOptions}.
+ *
+ * # Colour and alpha
+ *
+ * Image, canvas and video sources are colour by default: RGB is sRGB-encoded,
+ * stored in an sRGB format and decoded to linear light when sampled, while
+ * alpha stays linear coverage. Declare `colorSpace: 'none'` for numeric data
+ * so it is never decoded, and `'linear-srgb'` for colour already in linear
+ * light. A straight-alpha colour source is premultiplied once at upload, in
+ * linear light and before filtering, unless `premultiplyAlpha` is `false` or
+ * `alphaMode` says it already is. A borrowed canvas or `ImageBitmap` may have
+ * lost low-alpha precision before the engine sees it.
+ *
+ * Compressed KTX2 blocks are never recompressed. A straight-alpha compressed
+ * source is filtered straight and premultiplied in the draw shader, so it does
+ * not have the edge guarantee of premultiplied storage; use premultiplied
+ * compressed assets or dilated edges for quality-sensitive transparency.
  * @stable
  */
 export class Texture {

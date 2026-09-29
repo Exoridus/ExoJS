@@ -588,6 +588,16 @@
       "level": "intermediate"
     },
     {
+      "slug": "color-pipeline",
+      "path": "render-targets/color-pipeline.js",
+      "language": "typescript",
+      "title": "Colour Pipeline",
+      "description": "Compare colour and data textures, linear-light blending, alpha edges, raw and display readback, and an optional HDR value mapped to SDR.",
+      "backend": "core",
+      "tags": ["rendering", "color", "advanced"],
+      "level": "intermediate"
+    },
+    {
       "slug": "water-mirror",
       "path": "render-targets/water-mirror.js",
       "language": "typescript",

@@ -29,7 +29,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 class CustomTriangleRenderer {
   renderManager;
   device;
-  pipeline;
+  pipeline = null;
+  pipelineFormat = null;
   vertexBuffer;
   constructor(backend) {
     if (!(backend instanceof WebGpuBackend)) {
@@ -37,28 +38,25 @@ class CustomTriangleRenderer {
     }
     this.renderManager = backend;
     this.device = backend.device;
-    this.pipeline = this.createPipeline();
     this.vertexBuffer = this.createVertexBuffer();
   }
   draw() {
     // Submit ExoJS's pending clear before the raw command buffer, or the
     // application's end-of-frame flush clears over this triangle afterwards.
     this.renderManager.flush();
+    // The frame renders into the application's working target, not the canvas,
+    // and the output transform presents it afterwards. Draw into the attachment
+    // the backend has bound, and build the pipeline for that attachment's
+    // format. The vertex colours are linear, and the sRGB attachment encodes
+    // them on write.
+    const format = this.renderManager.renderTargetFormat;
+    if (this.pipeline === null || this.pipelineFormat !== format) {
+      this.pipeline = this.createPipeline(format);
+      this.pipelineFormat = format;
+    }
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: this.renderManager.context.getCurrentTexture().createView(),
-          clearValue: {
-            r: 0.05,
-            g: 0.06,
-            b: 0.09,
-            a: 1.0,
-          },
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      ],
+      colorAttachments: [this.renderManager.createColorAttachment()],
     });
     pass.setPipeline(this.pipeline);
     pass.setVertexBuffer(0, this.vertexBuffer);
@@ -70,7 +68,7 @@ class CustomTriangleRenderer {
   destroy() {
     this.vertexBuffer.destroy();
   }
-  createPipeline() {
+  createPipeline(format) {
     const shaderModule = this.device.createShaderModule({
       code: SHADER_SOURCE,
     });
@@ -102,7 +100,7 @@ class CustomTriangleRenderer {
         entryPoint: 'fragmentMain',
         targets: [
           {
-            format: this.renderManager.format,
+            format,
           },
         ],
       },

@@ -16,6 +16,12 @@ import {
 const UV_GRID = assets.technical.filtering.uvGrid256;
 const SIZE = 420;
 
+// Uniforms declared here are numeric: `time`, `warp` and `uvTransform` reach
+// the shader exactly as written, with no colour conversion. Colour comes from
+// the texture (decoded to linear light on sampling) and the engine-supplied
+// `u_tint` (an authored Color, already converted to linear premultiplied). A
+// Color passed through a plain number uniform would stay in authoring space.
+//
 // The declaration is the single source of truth for names, types and layout.
 // The engine lays the block out once - a nested struct aligned to 16 bytes, a
 // mat3 as three 16-byte columns - and generates a matching GLSL block and WGSL

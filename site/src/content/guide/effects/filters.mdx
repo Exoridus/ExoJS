@@ -88,6 +88,17 @@ grade.matrix = [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0];
 
 The transform runs on straight alpha — the shader divides the premultiplied sample by its alpha, transforms, and multiplies it back — so a half-transparent edge grades the same way an opaque pixel does.
 
+The matrix is applied in an explicit domain, chosen with the `colorSpace` option and defaulting to `'srgb'`. That keeps display-grading intent: the sample is converted to encoded sRGB, transformed and clamped to the displayable range there, and converted back to linear premultiplied colour. Pass `'linear-srgb'` to apply the same numbers to linear light instead. The clamp is deliberate, so a matrix cannot carry values above display white through:
+
+```ts
+import { ColorMatrixFilter } from '@codexo/exojs';
+
+const display = new ColorMatrixFilter().grayscale();
+const linear = new ColorMatrixFilter(undefined, { colorSpace: 'linear-srgb' }).grayscale();
+```
+
+A neutral matrix returns colour and alpha unchanged in either domain.
+
 For a plain per-drawable multiply, prefer [`Drawable.tint`](/ExoJS/en/guide/rendering/sprites/): it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image.
 
 ## DropShadowFilter
@@ -132,7 +143,7 @@ The glow is added **light**, not coverage: it carries no alpha of its own. A hal
 
 `strength` is the Gaussian standard deviation in logical units, exactly as `BlurFilter` defines it. `levels` is purely a cost knob: the same `strength` covers the same distance at every setting, and each halving buys that distance at a quarter of the fill rate, at the price of a softer and coarser base as the blur runs on fewer texels. A node too small to take every halving takes as many as it can. The filter declares the reach it needs — `strength * 3` for the blur plus what the halving chain spreads on its own — so a glow is never clipped by the subject's own bounds.
 
-Everything in the chain is eight-bit sRGB; there is no HDR and no tone mapping. The extraction leaves headroom for an `intensity` of roughly `1 / (1 - threshold)` before the glow saturates to white, past which the effect stops getting brighter and starts getting flatter. Colour grading is [`LutFilter`](#lutfilter)'s job, before or after this one.
+`threshold` is measured on linear luminance, where `1` is display white, not on encoded values: an encoded channel value of 128 is only about 0.22 in linear light. Every intermediate matches the input's own format. On the default eight-bit SDR working target nothing can exceed `1`, and the extraction leaves headroom for an `intensity` of roughly `1 / (1 - threshold)` before the glow saturates to white, past which the effect stops getting brighter and starts getting flatter. With `rendering.color.workingFormat: 'hdr'` the working target holds values above `1`, a `threshold` above `1` selects only those highlights, and the intermediates keep that energy until the output transform maps it for display. Colour grading is [`LutFilter`](#lutfilter)'s job, before or after this one.
 
 ## LutFilter
 
@@ -153,7 +164,7 @@ sprite.filters = [filter];
 filter.setLut(differentLutTexture);
 ```
 
-`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation. LUT textures are numeric data, not colour: `setLut()` throws for a texture that resolves to `colorSpace: 'srgb'` (the default of an ordinary loaded image), so build the texture with `fromImage()`, a `DataTexture`, or declare `colorSpace: 'none'` on it.
+`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation. Like `ColorMatrixFilter`, the lookup runs in a `colorSpace` domain, `'srgb'` by default: the input is encoded to sRGB to index the table, the table's texels are the graded output in that domain, and the result returns to linear premultiplied colour. The filter unassociates alpha before the lookup and re-associates it afterwards, so an identity LUT stays an identity at fractional alpha. LUT textures are numeric data, not colour: `setLut()` throws for a texture that resolves to `colorSpace: 'srgb'` (the default of an ordinary loaded image), so build the texture with `fromImage()`, a `DataTexture`, or declare `colorSpace: 'none'` on it.
 
 ## DisplacementFilter
 
@@ -193,6 +204,8 @@ Both sources are optional on their own, but a filter is only portable when it ca
 The WGSL side is one module. Name the fragment entry point `fragmentMain`; a module without a `@vertex` stage gets the default fullscreen-quad vertex stage (`vertexMain`) prepended, and one that declares its own must name it `vertexMain` and emit `@location(0) vUv: vec2<f32>`.
 
 WGSL user uniforms live in `@group(1)`: every non-texture uniform packs into one buffer at `@binding(0)`, each in a 16-byte slot **in the order you passed them**, and textures follow from `@binding(1)`, each with its sampler in the next slot. The GLSL side binds by name instead, with texture uniforms taking slots 1..N.
+
+The filter input is linear, premultiplied colour, and the fragment must return colour in that same representation: no decode on the way in, no encode on the way out. A shader that only moves samples needs no colour conversion at all. Numeric inputs such as UVs, pointer positions and orientation are plain numbers, and a texture you sample as data must not resolve to sRGB colour.
 
 Both auto-bind `uTexture` (the filter input), `uResolution` (output dimensions) and `uOrientation` (the v-axis sign, below) — you don't declare these in your fragment source unless you want to read them. Write custom uniforms with `setUniform(name, value)` or `setUniforms({ ... })`: they are flushed before each pass AND they invalidate the nodes rendering the filter, which writing into the read-only `uniforms` view could not do. Accepted value types: `number`, `[n, n]`/`[n, n, n]`/`[n, n, n, n]` tuples, `Float32Array`, `Int32Array`, `Texture`, and `RenderTexture`.
 

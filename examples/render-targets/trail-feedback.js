@@ -9,6 +9,7 @@ import {
   RenderTexture,
   Scene,
   Sprite,
+  TextureFormat,
 } from '@codexo/exojs';
 class TrailFeedbackScene extends Scene {
   // Two render targets, ping-ponged each frame. Reading from and writing to
@@ -28,8 +29,10 @@ class TrailFeedbackScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.rtA = new RenderTexture(width, height);
-    this.rtB = new RenderTexture(width, height);
+    // The trail accumulates in linear light, so the targets use the sRGB colour
+    // format: eight bits of linear storage quantize the dark end of the fade coarsely.
+    this.rtA = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
+    this.rtB = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
     this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5);
     this.decayA = new Sprite(this.rtA);
     this.decayB = new Sprite(this.rtB);
