@@ -28,7 +28,7 @@ import type { Light } from '../lights/Light';
 import { lightFalloff, lightHalfLength, lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 import { SunLight } from '../lights/SunLight';
-import { normalGreenSign } from '../normals/NormalSource';
+import { assertNumericNormalTexture, normalGreenSign } from '../normals/NormalSource';
 import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
@@ -1231,6 +1231,7 @@ ${sunQuadWgsl}`,
       scratchSurface.a_basis[2] = world.c;
       scratchSurface.a_basis[3] = world.d * greenSign;
 
+      assertNumericNormalTexture(normals.texture);
       this._normalBatch(albedo, normals.texture).add(this._transform, Color.white, scratchSurface);
       written++;
     }

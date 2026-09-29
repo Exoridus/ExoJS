@@ -2,7 +2,7 @@ import { type BlendModes, type SamplerOptions, Shader, SpriteMaterial, UniformTy
 
 import type { ForwardBackend } from './backends/ForwardBackend';
 import type { Lighting } from './Lighting';
-import { flatNormalSource, normalGreenSign, type NormalSource } from './normals/NormalSource';
+import { assertNumericNormalTexture, flatNormalSource, normalGreenSign, type NormalSource } from './normals/NormalSource';
 import glslFragment from './shaders/lit-sprite.frag';
 import wgslSource from './shaders/lit-sprite.wgsl';
 
@@ -117,8 +117,21 @@ export class LitMaterial extends SpriteMaterial<LitUniforms> {
 
     this.lighting = options.lighting;
     this._normals = options.normals ?? flatNormalSource();
+    assertNumericNormalTexture(this._normals.texture);
     this.emissive = options.emissive ?? 0;
     this.uniforms.normalY.set(normalGreenSign(this._normals));
+  }
+
+  /**
+   * Read once per queued draw, which makes it the per-draw point to re-check
+   * that the bound normal texture is still numeric: a `Texture` can be
+   * reinterpreted after it was accepted, and nothing else in the material runs
+   * between assignment and sampling.
+   */
+  public override get bindKey(): number {
+    assertNumericNormalTexture(this._normals.texture);
+
+    return super.bindKey;
   }
 
   /** How much light the surface emits of its own. See {@link LitMaterialOptions.emissive}. */
@@ -139,6 +152,7 @@ export class LitMaterial extends SpriteMaterial<LitUniforms> {
   }
 
   public set normals(normals: NormalSource) {
+    assertNumericNormalTexture(normals.texture);
     this._normals = normals;
     this.setTexture('u_normalMap', normals.texture);
     this.uniforms.normalY.set(normalGreenSign(normals));

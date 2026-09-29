@@ -2,7 +2,11 @@ import { describe, expect, test } from 'vitest';
 
 import { Rectangle } from '#math/Rectangle';
 import { DisplacementFilter } from '#rendering/filters/DisplacementFilter';
+import type { RenderBackend } from '#rendering/RenderBackend';
+import { DataTexture } from '#rendering/texture/DataTexture';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 
 /** A displacement map is numeric data, so it declares itself as such. */
 const map = (): Texture => new Texture(document.createElement('canvas'), { colorSpace: 'none' });
@@ -102,6 +106,38 @@ describe('DisplacementFilter numeric-only map', () => {
     const imageMap = new Texture(document.createElement('canvas'));
 
     expect(() => new DisplacementFilter({ map: imageMap })).toThrow(/colorSpace: 'srgb'/);
+  });
+
+  test('rejects a linear-srgb map, which is colour and keeps colour alpha handling', () => {
+    const linearMap = new Texture(document.createElement('canvas'), { colorSpace: 'linear-srgb' });
+
+    expect(() => new DisplacementFilter({ map: linearMap })).toThrow(/colorSpace: 'linear-srgb'/);
+
+    const filter = new DisplacementFilter({ map: map() });
+
+    expect(() => (filter.map = linearMap)).toThrow(/colorSpace: 'linear-srgb'/);
+    filter.destroy();
+  });
+
+  test('accepts a DataTexture', () => {
+    const data = new DataTexture({ width: 1, height: 1, format: TextureFormat.Rgba8 });
+
+    expect(() => new DisplacementFilter({ map: data })).not.toThrow();
+  });
+
+  test('refuses to apply once the accepted map has been reinterpreted as colour', () => {
+    const reinterpreted = map();
+    const filter = new DisplacementFilter({ map: reinterpreted });
+    const input = new RenderTexture(4, 4);
+    const output = new RenderTexture(4, 4);
+    const backend = {} as RenderBackend;
+
+    reinterpreted.colorSpace = 'srgb';
+
+    expect(() => filter.apply(backend, input, output)).toThrow(/DisplacementFilter map resolved to colorSpace: 'srgb'/);
+    filter.destroy();
+    input.destroy();
+    output.destroy();
   });
 
   test('accepts a map declared as numeric data', () => {

@@ -1,5 +1,6 @@
 import type { ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { assertNumericTexture } from '#rendering/texture/numericTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -23,12 +24,15 @@ export interface DisplacementFilterOptions {
    * samples the map but does not own it - destroying the filter leaves the
    * texture alone.
    *
-   * Sampled as numeric data, never colour: a map that resolves to
-   * `colorSpace: 'srgb'` is rejected, because that storage format is
-   * hardware-decoded on sample regardless of what the shader does with the
-   * result, which would corrupt the displacement vector. A `DataTexture` is
-   * accepted directly, as is an image `Texture` declared `colorSpace: 'none'`.
-   * @throws Error - `map.colorSpace` resolves to `'srgb'`.
+   * Sampled as numeric data, never colour: the map must resolve to
+   * `colorSpace: 'none'`. `'srgb'` storage is hardware-decoded on sample
+   * regardless of what the shader does with the result, and `'linear-srgb'`
+   * still gets colour alpha handling, either of which would corrupt the
+   * displacement vector. A `DataTexture` is accepted directly, as is an image
+   * `Texture` declared `colorSpace: 'none'`. The check repeats on every
+   * {@link DisplacementFilter.apply}, so a texture reinterpreted after
+   * assignment fails there instead of sampling corrupted vectors.
+   * @throws Error - `map.colorSpace` does not resolve to `'none'`.
    */
   readonly map: Texture;
   /**
@@ -88,7 +92,7 @@ export class DisplacementFilter extends Filter {
   public constructor(options: DisplacementFilterOptions) {
     super();
 
-    assertNotSrgbMap(options.map);
+    assertNumericMap(options.map);
 
     const scale = options.scale ?? 20;
     const offset = options.offset ?? [0, 0];
@@ -117,7 +121,7 @@ export class DisplacementFilter extends Filter {
 
   public set map(map: Texture) {
     if (this._map !== map) {
-      assertNotSrgbMap(map);
+      assertNumericMap(map);
       this._map = map;
       this._shaderFilter.setUniform('uMap', map);
       this.invalidate();
@@ -192,6 +196,8 @@ export class DisplacementFilter extends Filter {
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
+    assertNumericMap(this._map);
+
     // Logical units become UV units of THIS target, which the caller sizes:
     // resolving it here is what keeps the distortion the same size on screen
     // whatever pixel ratio or filter resolution the pass runs at.
@@ -206,10 +212,6 @@ export class DisplacementFilter extends Filter {
   }
 }
 
-const assertNotSrgbMap = (map: Texture): void => {
-  if (map.colorSpace === 'srgb') {
-    throw new Error(
-      "DisplacementFilter map resolved to colorSpace: 'srgb' - displacement channels are numeric, not colour. Build the map as a DataTexture, or declare it colorSpace: 'none'.",
-    );
-  }
+const assertNumericMap = (map: Texture): void => {
+  assertNumericTexture(map, 'DisplacementFilter map', "Build the map as a DataTexture, or declare it colorSpace: 'none'.");
 };

@@ -1,9 +1,10 @@
-import { Color, Texture } from '@codexo/exojs';
+import { Color, DataTexture, Texture, TextureFormat } from '@codexo/exojs';
 import { describe, expect, test } from 'vitest';
 
 import type { ForwardBackend } from '../src/backends/ForwardBackend';
 import { ForwardLighting } from '../src/ForwardLighting';
 import { PointLight } from '../src/lights/PointLight';
+import { LitMaterial } from '../src/LitMaterial';
 import { NormalMap } from '../src/normals/NormalMap';
 
 const channels = 4;
@@ -19,6 +20,38 @@ describe('lighting colour contract', () => {
     const dataTexture = new Texture({ width: 2, height: 2 } as unknown as HTMLCanvasElement, { colorSpace: 'none' });
 
     expect(() => new NormalMap(dataTexture)).not.toThrow();
+  });
+
+  test('NormalMap rejects linear-srgb, which is colour, not numeric data', () => {
+    const linearTexture = new Texture({ width: 2, height: 2 } as unknown as HTMLCanvasElement, { colorSpace: 'linear-srgb' });
+
+    expect(() => new NormalMap(linearTexture)).toThrow(/colorSpace "linear-srgb"/);
+  });
+
+  test('NormalMap accepts a DataTexture', () => {
+    const data = new DataTexture({ width: 1, height: 1, format: TextureFormat.Rgba8 });
+
+    expect(() => new NormalMap(data)).not.toThrow();
+  });
+
+  test('a lit draw refuses a normal texture reinterpreted as colour after the NormalMap was built', () => {
+    const texture = new Texture({ width: 2, height: 2 } as unknown as HTMLCanvasElement, { colorSpace: 'none' });
+    const lighting = new ForwardLighting({ maxLights: 1 });
+    const material = new LitMaterial({ lighting, normals: new NormalMap(texture) });
+
+    expect(() => material.bindKey).not.toThrow();
+
+    texture.colorSpace = 'srgb';
+
+    expect(() => material.bindKey).toThrow(/colorSpace "srgb"/);
+  });
+
+  test('assigning a colour texture through LitMaterial.normals is refused', () => {
+    const lighting = new ForwardLighting({ maxLights: 1 });
+    const material = new LitMaterial({ lighting });
+    const srgbTexture = new Texture({ width: 2, height: 2 } as unknown as HTMLCanvasElement, { colorSpace: 'srgb' });
+
+    expect(() => (material.normals = { texture: srgbTexture })).toThrow(/colorSpace "srgb"/);
   });
 });
 

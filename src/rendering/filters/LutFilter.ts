@@ -1,6 +1,7 @@
 import { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { DataTexture } from '#rendering/texture/DataTexture';
+import { assertNumericTexture } from '#rendering/texture/numericTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
@@ -220,19 +221,17 @@ export class LutFilter extends Filter {
   /**
    * Replace the LUT texture. Returns `this` for chaining.
    *
-   * The LUT is sampled as numeric data in the filter's own colour domain, so a
-   * texture that resolves to `colorSpace: 'srgb'` is rejected: its hardware
-   * decode on sample would be applied on top of the domain conversion the filter
-   * already performs. Use {@link LutFilter.fromImage}, a `DataTexture`, or an
-   * image `Texture` declared `colorSpace: 'none'`.
-   * @throws Error - `lut.colorSpace` resolves to `'srgb'`.
+   * The LUT is sampled as numeric data in the filter's own colour domain, so
+   * it must resolve to `colorSpace: 'none'`: `'srgb'` storage would apply its
+   * hardware decode on top of the domain conversion the filter already performs,
+   * and `'linear-srgb'` still gets colour alpha handling. Use
+   * {@link LutFilter.fromImage}, a `DataTexture`, or an image `Texture` declared
+   * `colorSpace: 'none'`. The check repeats on every {@link LutFilter.apply}, so
+   * a texture reinterpreted after assignment fails there.
+   * @throws Error - `lut.colorSpace` does not resolve to `'none'`.
    */
   public setLut(lut: Texture): this {
-    if (lut.colorSpace === 'srgb') {
-      throw new Error(
-        "LutFilter LUT resolved to colorSpace: 'srgb' - LUT entries are numeric, not colour. Use LutFilter.fromImage(), a DataTexture, or declare the texture colorSpace: 'none'.",
-      );
-    }
+    assertNumericLut(lut);
 
     this._lut = lut;
     this._shaderFilter.setUniform('uLut', lut);
@@ -241,6 +240,7 @@ export class LutFilter extends Filter {
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
+    assertNumericLut(this._lut);
     this._shaderFilter.apply(backend, input, output, resolution);
   }
 
@@ -249,3 +249,7 @@ export class LutFilter extends Filter {
     this._shaderFilter.destroy();
   }
 }
+
+const assertNumericLut = (lut: Texture): void => {
+  assertNumericTexture(lut, 'LutFilter LUT', "Use LutFilter.fromImage(), a DataTexture, or declare the texture colorSpace: 'none'.");
+};

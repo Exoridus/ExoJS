@@ -523,6 +523,31 @@ describe('LutFilter.setLut', () => {
     expect(filter.lut).toBe(before);
   });
 
+  test('rejects a linear-srgb texture and keeps the current LUT', () => {
+    const filter = new LutFilter();
+    const before = filter.lut;
+    const linearLut = new Texture(document.createElement('canvas'), { colorSpace: 'linear-srgb' });
+
+    expect(() => filter.setLut(linearLut)).toThrow(/colorSpace: 'linear-srgb'/);
+    expect(filter.lut).toBe(before);
+  });
+
+  test('refuses to apply once the accepted LUT has been reinterpreted as colour', () => {
+    const filter = new LutFilter();
+    const reinterpreted = new Texture(document.createElement('canvas'), { colorSpace: 'none' });
+    const input = new RenderTexture(16, 16);
+    const output = new RenderTexture(16, 16);
+
+    filter.setLut(reinterpreted);
+    reinterpreted.colorSpace = 'srgb';
+
+    expect(() => filter.apply(makeWebGl2Backend(), input, output)).toThrow(/LutFilter LUT resolved to colorSpace: 'srgb'/);
+
+    filter.destroy();
+    input.destroy();
+    output.destroy();
+  });
+
   test('accepts an image texture declared colorSpace none', () => {
     const filter = new LutFilter();
     const numeric = new Texture(document.createElement('canvas'), { colorSpace: 'none' });

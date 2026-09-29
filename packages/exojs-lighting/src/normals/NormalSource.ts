@@ -38,6 +38,26 @@ export interface NormalSource {
 }
 
 /**
+ * Throws unless the texture a normal source hands out is exact numeric data.
+ *
+ * Runs wherever a source's texture is consumed, not only when a source is built,
+ * because a `Texture` can be reinterpreted after it was accepted. `'linear-srgb'`
+ * is rejected as well as `'srgb'`: it is still colour, so it would be
+ * premultiplied by alpha before filtering.
+ * @internal
+ */
+export const assertNumericNormalTexture = (texture: Texture): void => {
+  const colorSpace = texture.colorSpace;
+
+  if (colorSpace !== 'none') {
+    throw new Error(
+      `Normal map texture resolved to colorSpace "${colorSpace}", but a normal map's XYZ channels are numeric data, not colour - ` +
+        "sampling it as colour would decode or premultiply the normal itself. Construct the Texture with colorSpace: 'none' (or a DataTexture).",
+    );
+  }
+};
+
+/**
  * The factor a tangent normal's `y` is scaled by to bring a source into the
  * canonical convention, ready to hand to a shader.
  * @internal
