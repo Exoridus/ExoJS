@@ -113,12 +113,12 @@ export class RetainedCaptureSlot {
    * geometry or blend mode changes which batch a node belongs to, and no row
    * write expresses that.
    */
-  public reconcileContent(contentRevision: number, root: RenderNode): boolean {
+  public reconcileContent(contentRevision: number, root: RenderNode, destinationOpaque: boolean): boolean {
     if (this._contentRevision === contentRevision) {
       return true;
     }
 
-    if (!this._hasCapture || !reconcileRetainedTintRows(this.fragment, root, node => isUnder(node, root))) {
+    if (!this._hasCapture || !reconcileRetainedTintRows(this.fragment, root, node => isUnder(node, root), destinationOpaque)) {
       return false;
     }
 

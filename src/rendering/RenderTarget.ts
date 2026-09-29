@@ -32,6 +32,21 @@ export class RenderTarget {
    */
   public needsStencil = false;
 
+  /**
+   * Whether every pixel of this target is guaranteed to carry full coverage
+   * (alpha 1), so a blend whose shortcut is exact only over an opaque
+   * destination - {@link BlendModes.Multiply} - can be evaluated by the
+   * fixed-function pipeline without capturing the backdrop.
+   *
+   * Set by the backend for the root target when the canvas composites without
+   * an alpha channel, and left `false` everywhere else: every offscreen colour
+   * format carries an alpha channel, and a target the application renders into
+   * can hold partial coverage at any pixel. Set it to `true` yourself only for
+   * a target whose whole surface you keep fully covered - a value that is
+   * wrong here silently blends against coverage that is not there.
+   */
+  public opaqueDestination = false;
+
   private readonly _root: boolean;
   private _depthTexture: DepthTexture | null = null;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();

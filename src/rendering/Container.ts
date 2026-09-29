@@ -4,6 +4,7 @@ import { removeArrayItems } from '#core/utils';
 import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
+import { blendModeNeedsBackdrop } from '#rendering/types';
 
 import { RenderNode } from './RenderNode';
 
@@ -563,6 +564,10 @@ export class Container extends RenderNode {
     // starts already-begun.
     this._retainedPlan?._beginCapture();
 
+    // Hoisted: every child of this scope is collected at the same depth, so the
+    // coverage guarantee is one read for the whole loop.
+    const destinationOpaque = builder._destinationOpaque();
+
     for (let index = 0; index < this._childList.length; index++) {
       // In-bounds: index < length.
       const child = this._childList[index]!;
@@ -570,8 +575,14 @@ export class Container extends RenderNode {
       // Only a plain, non-barrier drawable can ever produce a retained slot
       // (exactly one Draw entry for itself). Every other child skips the
       // peek/capture bookkeeping entirely -- most containers have no direct
-      // drawable children and would otherwise pay pure overhead here.
-      if (!child._isDrawableForRenderPlan() || child._renderPlanHasBarrierEffects()) {
+      // drawable children and would otherwise pay pure overhead here. A child
+      // whose blend mode only the backdrop compositor can evaluate for this
+      // destination is such a child even though it carries no barrier effect.
+      if (
+        !child._isDrawableForRenderPlan() ||
+        child._renderPlanHasBarrierEffects() ||
+        (!destinationOpaque && blendModeNeedsBackdrop(child._renderPlanGetBlendMode(), destinationOpaque))
+      ) {
         child.collect(builder, index);
 
         continue;

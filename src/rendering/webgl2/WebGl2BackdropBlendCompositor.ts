@@ -123,7 +123,7 @@ export class WebGl2BackdropBlendCompositor {
     const ch = Math.min(backdrop.height, Math.max(0, Math.round(height * scaleY)));
     // An opaque framebuffer (the default alpha-less root canvas) reports a
     // captured backdrop alpha of 0; treat such a backdrop as fully covered.
-    const opaqueBackdrop = target.root && !(gl.getContextAttributes()?.alpha ?? false);
+    const opaqueBackdrop = target.opaqueDestination;
 
     try {
       // Capture the target region into the backdrop via blit; copyTexSubImage2D

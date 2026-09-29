@@ -539,6 +539,11 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._rootRenderTarget = new RenderTarget(width, height, true);
+    // An alpha-less drawing buffer is fully covered by construction, so the
+    // blend equations that are exact only over an opaque destination may keep
+    // their fixed-function shortcut here. The compositor reads the same fact
+    // for its backdrop coverage, so the two cannot disagree.
+    this._rootRenderTarget.opaqueDestination = !(this._context.getContextAttributes()?.alpha ?? false);
     this._renderTarget = this._rootRenderTarget;
 
     this._onContextLostHandler = this._onContextLost.bind(this);

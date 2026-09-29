@@ -127,8 +127,8 @@ export class RetainedRootRepresentation {
     return this._capture.fragment;
   }
 
-  public reconcileContent(contentRevision: number, root: RenderNode): boolean {
-    if (!this._capture.reconcileContent(contentRevision, root)) {
+  public reconcileContent(contentRevision: number, root: RenderNode, destinationOpaque: boolean): boolean {
+    if (!this._capture.reconcileContent(contentRevision, root, destinationOpaque)) {
       return false;
     }
 

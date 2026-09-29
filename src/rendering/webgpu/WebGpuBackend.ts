@@ -442,6 +442,11 @@ export class WebGpuBackend implements RenderBackend {
     this._canvas = app.canvas;
     this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._rootRenderTarget = new RenderTarget(width, height, true);
+    // The configured mode is what decides whether the canvas carries real alpha
+    // (see `_rootCanvasOpaque`), so it is also what lets a blend whose shortcut
+    // is exact only over an opaque destination stay on the fixed-function path
+    // here. The compositor reads the same fact for its backdrop coverage.
+    this._rootRenderTarget.opaqueDestination = this._alphaMode === 'opaque';
     this._renderTarget = this._rootRenderTarget;
 
     if (clearColor) {
