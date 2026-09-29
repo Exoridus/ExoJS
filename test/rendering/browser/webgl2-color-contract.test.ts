@@ -1,3 +1,11 @@
+/**
+ * WebGL2 colour contract, on the default routes.
+ *
+ * The first two cases pin the storage/sampling pair; the rest pin what a
+ * default source and a default working surface add up to - an ordinary image
+ * decoded on sample, premultiplied in linear light, blended in linear light into
+ * an sRGB attachment, and encoded once on the way to the canvas.
+ */
 import { expect, test } from 'vitest';
 
 import type { Application } from '#core/Application';
@@ -164,6 +172,94 @@ test('WebGl2OutputPass computes E(C/a)*a for a transparent target, collapsing to
   } finally {
     source.destroy();
     outputTransform.destroy();
+    backend.destroy();
+  }
+});
+
+/** An ordinary browser-rasterized image: sRGB colour, no explicit interpretation. */
+const grayImage = (byte: number, alpha = 1): Texture => {
+  const source = document.createElement('canvas');
+
+  source.width = 1;
+  source.height = 1;
+
+  const context = source.getContext('2d');
+
+  if (context === null) throw new Error('A 2D context is required to build test textures.');
+
+  context.fillStyle = `rgba(${byte}, ${byte}, ${byte}, ${alpha})`;
+  context.fillRect(0, 0, 1, 1);
+
+  return new Texture(source);
+};
+
+const spriteOf = (texture: Texture, size: number, alpha = 1): Container => {
+  const root = new Container();
+  const sprite = new Sprite(texture);
+
+  sprite.width = size;
+  sprite.height = size;
+  sprite.tint = new Color(0xffffff, alpha);
+  root.addChild(sprite);
+
+  return root;
+};
+
+test('WebGL2 gives an ordinary image sRGB storage and decodes it on sample', async () => {
+  const backend = await createWebGl2TestBackend(2);
+  const target = new RenderTexture(2, 2, { format: TextureFormat.Rgba8Srgb });
+  const image = grayImage(128);
+
+  try {
+    expect(image.resolvedMetadata.storageFormat).toBe(TextureFormat.Rgba8Srgb);
+    expect(image.colorSpace).toBe('srgb');
+
+    const root = spriteOf(image, 2);
+
+    backend.setRenderTarget(target).clear(Color.black);
+    root.render(backend);
+    backend.flush();
+    root.destroy();
+
+    // The sample decoded to linear 0.2159 and the sRGB attachment re-encoded it
+    // on write, so the stored byte is the authored one again.
+    expect(await backend.readPixels(target, 0, 0, 1, 1)).toEqual(new Uint8ClampedArray([128, 128, 128, 255]));
+  } finally {
+    image.destroy();
+    target.destroy();
+    backend.destroy();
+  }
+});
+
+test('WebGL2 blends into an sRGB working target in linear light', async () => {
+  const backend = await createWebGl2TestBackend(2);
+  const working = new RenderTexture(2, 2, { format: TextureFormat.Rgba8Srgb });
+  const unencoded = new RenderTexture(2, 2, { format: TextureFormat.Rgba8 });
+  const image = grayImage(128);
+
+  try {
+    for (const target of [working, unencoded]) {
+      const root = spriteOf(image, 2, 0.5);
+
+      backend.setRenderTarget(target).clear(Color.black);
+      root.render(backend);
+      backend.flush();
+      root.destroy();
+    }
+
+    const blended = await backend.readPixels(working, 0, 0, 1, 1);
+
+    // Mid-gray at half coverage over black: 0.2159 linear premultiplied by 0.5
+    // lands at 0.108 linear, which the sRGB attachment stores as byte 93 or 94.
+    expect(Math.abs(blended[0]! - 94)).toBeLessThanOrEqual(1);
+    // A plain RGBA8 target has no encode on write, so the same draw stores the
+    // linear value quantized - byte 28. Encoded-space blending on the sRGB
+    // target would have produced 64 instead.
+    expect((await backend.readPixels(unencoded, 0, 0, 1, 1))[0]).toBeCloseTo(28, 0);
+  } finally {
+    image.destroy();
+    working.destroy();
+    unencoded.destroy();
     backend.destroy();
   }
 });

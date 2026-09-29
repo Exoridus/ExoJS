@@ -843,15 +843,15 @@ describe('WebGpuBackend', () => {
       const manager = new WebGpuBackend(app);
       installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
-      const texture = new Texture(sourceCanvas);
+      const texture = new Texture(sourceCanvas, { colorSpace: 'none' });
       const first = new Sprite(texture);
       const second = new Sprite(texture);
 
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
-      // Disable mipmaps so the only render passes are content passes - mipmap
-      // generation legitimately opens its own (non-coordinator) passes against
-      // mip-level targets, which would otherwise inflate the raw mock counts.
+      // Disable mipmaps and the colour normalization pass so the only render
+      // passes are content passes - both legitimately open their own
+      // (non-coordinator) passes, which would otherwise inflate the raw mock counts.
       texture.generateMipMap = false;
       texture.updateSource();
       second.x = 20;

@@ -112,23 +112,26 @@ describe('WebGl2Backend sRGB textures', () => {
 
     harness.backend.bindTexture(texture, 0);
 
+    // A default browser source is uploaded straight and unconverted into the
+    // normalization pass, which premultiplies it; the state does not outlive it.
     expect(harness.pixelStores).toEqual([
-      [gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE],
-      [gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true],
       [gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false],
+      [gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE],
       [gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL],
     ]);
 
     texture.destroy();
   });
 
-  test('keeps a default browser source on RGBA8 before color-pipeline activation', () => {
+  test('stores a default browser source as sRGB and premultiplies it through the normalization pass', () => {
     harness = createHarness();
     const texture = new Texture({ width: 1, height: 1 } as unknown as HTMLCanvasElement);
+    const gl = harness.backend.context;
 
     harness.backend.bindTexture(texture, 0);
 
-    expect(harness.allocations).toEqual([{ internalFormat: harness.backend.context.RGBA8, width: 1, height: 1, data: null }]);
+    expect(harness.allocations.length).toBeGreaterThan(0);
+    expect(harness.allocations.every(allocation => allocation.internalFormat === gl.SRGB8_ALPHA8)).toBe(true);
 
     texture.destroy();
   });

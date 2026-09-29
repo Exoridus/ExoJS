@@ -181,8 +181,9 @@ describe('WebGL2 lightmap renderer', () => {
 
       const corner = readPixel(host.backend, 2, 2);
 
-      expect(corner[0]).toBeGreaterThan(100);
-      expect(corner[0]).toBeLessThan(160);
+      // The canvas holds linear light here: an authored 128 is 0.216, byte 55.
+      expect(corner[0]).toBeGreaterThan(45);
+      expect(corner[0]).toBeLessThan(65);
     } finally {
       lighting.destroy();
       host.destroy();
@@ -238,7 +239,7 @@ describe('WebGL2 lightmap renderer', () => {
     // Quarter brightness, so what reaches the canvas says what the filter was
     // handed: a quarter of 2.0 is half, a quarter of a field clipped at 1.0 is
     // a quarter.
-    const grade = new ColorMatrixFilter().brightness(0.25);
+    const grade = new ColorMatrixFilter(undefined, { colorSpace: 'linear-srgb' }).brightness(0.25);
     const lighting = new LightmapLighting(host.app, {
       ambient: Color.black,
       lightResolution: 1,
@@ -268,7 +269,7 @@ describe('WebGL2 lightmap renderer', () => {
     const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     // A normal leaning along the drawable's own +x, which is the one encoding
     // that says something different once the drawable turns.
-    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1, { colorSpace: 'none' }));
     const crate = new Sprite(Texture.fromColor(Color.white, 1));
 
     crate.width = 32;
@@ -317,7 +318,7 @@ describe('WebGL2 lightmap renderer', () => {
     const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     // Leaning along +x, so the ground faces the light more on the light's own
     // left than on its right.
-    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1, { colorSpace: 'none' }));
     const ground = new Sprite(Texture.fromColor(Color.white, 1));
 
     ground.width = canvasSize;
@@ -964,7 +965,7 @@ describe('WebGL2 lightmap renderer', () => {
     // canonical OpenGL convention, and the top of a drawable is local -y, so
     // this is the axis a renderer gets wrong without anyone noticing: left and
     // right stay right either way.
-    const normals = new NormalMap(Texture.fromColor(new Color(128, 218, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(128, 218, 218), 1, { colorSpace: 'none' }));
     const ground = new Sprite(Texture.fromColor(Color.white, 1));
 
     ground.width = canvasSize;
@@ -1013,7 +1014,7 @@ describe('WebGL2 lightmap renderer', () => {
     test.each(cases)('a normal facing $faces is lit from $lit and black at $dark', async ({ encoded, lit, dark }) => {
       const host = await createHost();
       const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
-      const normals = new NormalMap(Texture.fromColor(encoded, 1));
+      const normals = new NormalMap(Texture.fromColor(encoded, 1, { colorSpace: 'none' }));
       const ground = new Sprite(Texture.fromColor(Color.white, 1));
 
       ground.width = canvasSize;
@@ -1048,7 +1049,7 @@ describe('WebGL2 lightmap renderer', () => {
       ground.width = canvasSize;
       ground.height = canvasSize;
       lighting.add(new PointLight({ radius: 60, intensity: 1, height: 0 })).setPosition(32, 32);
-      lighting.normalsFrom(ground, new NormalMap(Texture.fromColor(new Color(128, 128, 255), 1)));
+      lighting.normalsFrom(ground, new NormalMap(Texture.fromColor(new Color(128, 128, 255), 1, { colorSpace: 'none' })));
       drawWhiteFrame(host);
 
       try {

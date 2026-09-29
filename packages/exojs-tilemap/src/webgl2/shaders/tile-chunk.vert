@@ -66,8 +66,7 @@ void main(void) {
 
     // a_color.rgb is the authored sRGB tint byte-for-byte (hardware-
     // normalized, not yet decoded); decode it to linear before it is
-    // premultiplied and interpolated, gated on colorPipelineEnabled (see
-    // colorShaderSources.ts).
-    highp vec3 linearTint = colorPipelineEnabled ? srgbToLinear(a_color.rgb) : a_color.rgb;
+    // premultiplied and interpolated.
+    highp vec3 linearTint = srgbToLinear(a_color.rgb);
     v_color = vec4(linearTint * a_color.a, a_color.a);
 }

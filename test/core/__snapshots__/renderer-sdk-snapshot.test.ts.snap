@@ -8,7 +8,6 @@ exports[`renderer-sdk export surface snapshot > sorted runtime export names matc
   "BlendModes",
   "BufferTypes",
   "BufferUsage",
-  "COLOR_PIPELINE_ENABLED",
   "DataTexture",
   "Drawable",
   "PixelSnapMode",

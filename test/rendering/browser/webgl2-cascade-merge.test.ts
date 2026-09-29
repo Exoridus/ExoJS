@@ -24,7 +24,7 @@ const size = MERGE_PROBES * MERGE_TILE;
 const mergeShader = transportCascadeShader(cascadeUniforms);
 
 /** The level above, as the filter's own input: one constant everywhere. */
-const coarseTexture = (level: number): Texture => Texture.fromColor(new Color(level, level, level), size);
+const coarseTexture = (level: number): Texture => Texture.fromColor(new Color(level, level, level), size, { colorSpace: 'none' });
 
 /**
  * Which canvas pixel one probe's direction wrote. A fragment's row counts from

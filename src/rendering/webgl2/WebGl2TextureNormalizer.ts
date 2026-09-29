@@ -23,8 +23,12 @@ export interface WebGl2ColorNormalizationHost {
    * while reporting only an `INVALID_OPERATION`.
    */
   releaseForColorNormalization(destination: WebGLTexture): void;
-  /** Re-establish the backend's framebuffer, viewport, program, VAO and unit state. */
-  restoreAfterColorNormalization(): void;
+  /**
+   * Re-establish the backend's framebuffer, viewport, program and VAO, and take
+   * note of the two texture-unit bindings the pass put back: unit 0, which it
+   * stages through, and the unit that was active.
+   */
+  restoreAfterColorNormalization(unitZeroBinding: WebGLTexture | null, activeUnit: number, activeBinding: WebGLTexture | null): void;
 }
 
 /** Where one authored mip level is written. */
@@ -52,7 +56,15 @@ export interface WebGl2ColorNormalizationTarget {
  */
 const quadVertices = new Float32Array([-1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1, 1, 1, 1]);
 const quadVertexStride = 16;
-const quadVertexCount = 6;
+const quadVertexCount = 4;
+
+/** Fixed-function tests that would clip or reject a full-level write. */
+const passThroughRasterState: ReadonlyArray<(gl: WebGL2RenderingContext) => number> = [
+  gl => gl.SCISSOR_TEST,
+  gl => gl.STENCIL_TEST,
+  gl => gl.DEPTH_TEST,
+  gl => gl.CULL_FACE,
+];
 
 /** Reused per level, so the uniform setters allocate nothing. */
 const unitScratch = new Int32Array(1);
@@ -128,7 +140,12 @@ export class WebGl2TextureNormalizer {
       // time to colour that is already linear.
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
       gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-      gl.texImage2D(gl.TEXTURE_2D, 0, target.internalFormat, gl.RGBA, gl.UNSIGNED_BYTE, source);
+
+      try {
+        gl.texImage2D(gl.TEXTURE_2D, 0, target.internalFormat, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      } finally {
+        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+      }
     });
   }
 
@@ -169,7 +186,22 @@ export class WebGl2TextureNormalizer {
 
   private _run(target: WebGl2ColorNormalizationTarget, upload: (gl: WebGL2RenderingContext) => void): void {
     const gl = this._gl;
-    const program = this._ensureProgram();
+
+    // Captured before the host releases the destination: the upload path
+    // continues to work on it after this pass returns (mip generation, sampler
+    // parameters), so the binding the backend had is the one it must get back -
+    // the host's own release leaves that unit empty, and restoring *that* would
+    // send every later `texImage2D`/`texParameteri` to a null binding.
+    const previousUnit = gl.getParameter(gl.ACTIVE_TEXTURE);
+    const previousBinding = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+
+    // The pass stages through unit 0, which a batch may already have filled with
+    // an earlier texture of the same draw.
+    gl.activeTexture(gl.TEXTURE0);
+
+    const unitZeroBinding = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+
+    gl.activeTexture(typeof previousUnit === 'number' ? previousUnit : gl.TEXTURE0);
 
     this._host.releaseForColorNormalization(target.destination);
 
@@ -178,8 +210,13 @@ export class WebGl2TextureNormalizer {
     const previousProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
     const previousArray = gl.getParameter(gl.VERTEX_ARRAY_BINDING) as WebGLVertexArrayObject | null;
     const previousBuffer = gl.getParameter(gl.ARRAY_BUFFER_BINDING) as WebGLBuffer | null;
-    const previousUnit = gl.getParameter(gl.ACTIVE_TEXTURE);
-    const previousBinding = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+    const previousMask = gl.getParameter(gl.COLOR_WRITEMASK) as boolean[] | null;
+    const rasterState = passThroughRasterState;
+    const enabled = rasterState.map(capability => gl.isEnabled(capability(gl)));
+
+    // After the captures: building the program leaves the vertex array and array
+    // buffer unbound, which would otherwise be recorded as what the caller had.
+    const program = this._ensureProgram();
 
     try {
       gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
@@ -189,10 +226,23 @@ export class WebGl2TextureNormalizer {
       // The level is written in full, so blending would mix the normalized texel
       // with whatever the level held instead of replacing it.
       gl.disable(gl.BLEND);
+      // The frame in progress may have a clip, a stencil test or a colour mask
+      // live; any of them would cut the level being written short.
+      for (const capability of rasterState) gl.disable(capability(gl));
+      gl.colorMask(true, true, true, true);
       gl.viewport(0, 0, target.width, target.height);
       gl.activeTexture(gl.TEXTURE0);
 
       upload(gl);
+
+      // The upload wrote through the staging texture and the draw samples it,
+      // so it has to be the active unit's binding at this point. A pass that
+      // reuses the staging texture without re-binding it would sample whatever
+      // the caller's unit held, and one that unbind it at the end of the upload
+      // would leave the draw reading a null texture - the destination then keeps
+      // whatever its allocation held, and GL reports only an `INVALID_OPERATION`
+      // from the upload itself.
+      gl.bindTexture(gl.TEXTURE_2D, this._staging);
 
       unitScratch[0] = 0;
       gl.uniform1i(this._sourceLocation, unitScratch[0]);
@@ -200,9 +250,18 @@ export class WebGl2TextureNormalizer {
       levelScaleScratch[1] = target.height / this._stagingHeight;
       gl.uniform2f(this._levelScaleLocation, levelScaleScratch[0], levelScaleScratch[1]);
 
-      gl.drawArrays(gl.TRIANGLES, 0, quadVertexCount);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, quadVertexCount);
     } finally {
-      this._restore(previousFramebuffer, previousViewport, previousProgram, previousArray, previousBuffer, previousUnit, previousBinding);
+      this._restore(previousFramebuffer, previousViewport, previousProgram, previousArray, previousBuffer, previousUnit, previousBinding, unitZeroBinding);
+      for (const [index, capability] of rasterState.entries()) {
+        if (enabled[index]) {
+          gl.enable(capability(gl));
+        }
+      }
+
+      if (previousMask !== null && previousMask.length === 4) {
+        gl.colorMask(previousMask[0]!, previousMask[1]!, previousMask[2]!, previousMask[3]!);
+      }
     }
   }
 
@@ -216,11 +275,12 @@ export class WebGl2TextureNormalizer {
    *
    * The borrowed unit's texture binding is restored too, and it is the one
    * omission that is not merely a cache inconsistency. The staging texture
-   * overwrote the destination on that unit, and the upload path applies its
-   * sampler parameters AFTER this pass returns: with nothing bound there,
-   * `gl.texParameteri` is an `INVALID_OPERATION` that silently leaves the texture
-   * on GL's default mip-aware `MIN_FILTER` with `MAX_LEVEL` still at 1000, and a
-   * texture with one level is then mip-INCOMPLETE and samples as black.
+   * replaced the destination on that unit, and the upload path applies its
+   * sampler parameters AFTER this pass returns: left on the staging texture,
+   * `gl.texParameteri` succeeds against the wrong texture and the destination
+   * keeps GL's default mip-aware `MIN_FILTER` with `MAX_LEVEL` still at 1000,
+   * and a texture with one level is then mip-INCOMPLETE and samples as black.
+   * Left on nothing at all, the same calls are an `INVALID_OPERATION` instead.
    *
    * Each saved value is re-applied only when the query answered with the shape the
    * call needs, so a context that does not track the state cannot turn a restore
@@ -235,6 +295,7 @@ export class WebGl2TextureNormalizer {
     buffer: WebGLBuffer | null,
     unit: unknown,
     binding: WebGLTexture | null,
+    unitZeroBinding: WebGLTexture | null,
   ): void {
     const gl = this._gl;
 
@@ -252,15 +313,21 @@ export class WebGl2TextureNormalizer {
       gl.viewport(viewport[0]!, viewport[1]!, viewport[2]!, viewport[3]!);
     }
 
-    if (typeof unit === 'number') {
-      gl.activeTexture(unit);
+    if (unit !== gl.TEXTURE0) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, unitZeroBinding);
     }
 
-    if (binding !== null) {
+    if (typeof unit === 'number') {
+      gl.activeTexture(unit);
+      // Unconditional, `null` included: the pass borrowed this unit for its
+      // staging texture, so a caller whose unit was empty must get the empty
+      // binding back rather than the staging texture its own
+      // `texParameteri`/`generateMipmap` calls would then retarget.
       gl.bindTexture(gl.TEXTURE_2D, binding);
     }
 
-    this._host.restoreAfterColorNormalization();
+    this._host.restoreAfterColorNormalization(unitZeroBinding, typeof unit === 'number' ? unit - gl.TEXTURE0 : 0, binding);
   }
 
   /**
@@ -299,7 +366,6 @@ export class WebGl2TextureNormalizer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, nextWidth, nextHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.bindTexture(gl.TEXTURE_2D, null);
 
     this._staging = handle;
     this._stagingFormat = internalFormat;

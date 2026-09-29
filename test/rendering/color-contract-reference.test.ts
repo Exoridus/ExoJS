@@ -1,12 +1,6 @@
-import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
-
 import { decodeSrgb, displayOutput, encodeSrgb, formatBytesPerPixel, premultiply, sourceOver, textureBytes } from './color-contract-reference';
 
 describe('color contract reference', () => {
-  test('keeps the color pipeline inactive until every renderer is integrated', () => {
-    expect(COLOR_PIPELINE_ENABLED).toBe(false);
-  });
-
   test.each([
     [0, 0],
     [0.04044, 0.003130030959752322],

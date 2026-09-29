@@ -26,8 +26,6 @@ import { GlEventLog } from '../perf/rendering/fakeWebGl2';
 import { createWebGl2Harness, type WebGl2Harness } from '../perf/rendering/harness';
 import { createRenderBackendDouble } from '../support/render-backend-double';
 
-vi.mock('#rendering/colorPipelineActivation', () => ({ COLOR_PIPELINE_ENABLED: true }));
-
 /** One recorded step of the frame, in the order the engine performed it. */
 type FrameEvent = 'target:offscreen' | 'target:root' | 'scene' | 'resolve' | 'passes' | 'present';
 

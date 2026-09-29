@@ -11,7 +11,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { readWebGl2Pixel } from './_backendSetup';
+import { readWebGl2Pixel, useEncodedFrameTarget } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
@@ -60,8 +60,14 @@ const createBackend = async (): Promise<WebGl2Backend> => {
   return backend;
 };
 
-const render = (backend: WebGl2Backend, node: RenderNode): void => {
+/** `encoded: false` draws to the raw surface, where a shader's numeric output reads back as written. */
+const render = (backend: WebGl2Backend, node: RenderNode, encoded = true): void => {
   backend.resetStats();
+
+  if (encoded) {
+    useEncodedFrameTarget(backend);
+  }
+
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
@@ -163,10 +169,12 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       const blended = readWebGl2Pixel(backend, 31, 24);
 
       expect(replay).toHaveBeenCalledTimes(1);
-      expect(blended[0]).toBeGreaterThan(100);
-      expect(blended[0]).toBeLessThan(200);
-      expect(blended[2]).toBeGreaterThan(50);
-      expect(blended[2]).toBeLessThan(160);
+      // Filtering blends in linear light: the midpoint of red and blue is 0.5
+      // linear, which the encoding attachment stores as byte 188.
+      expect(blended[0]).toBeGreaterThan(150);
+      expect(blended[0]).toBeLessThan(220);
+      expect(blended[2]).toBeGreaterThan(150);
+      expect(blended[2]).toBeLessThan(220);
       replay.mockRestore();
     } finally {
       group.destroy();
@@ -278,7 +286,8 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
   test('renders a custom fragment sampling the base texture and a user uniform', async () => {
     const backend = await createBackend();
     // Mid-gray base proves the texture is sampled; the per-channel uniform
-    // proves uniform binding. (0.5,0.5,0.5) * (1,0,0.5) → (128, 0, 64).
+    // proves uniform binding. The sample decodes to 0.216 linear; the uniform
+    // multiplies it in shader space: (0.216, 0, 0.108), stored as (128, 0, 92).
     const texture = createSolidTexture(128, 128, 128);
     const material = createTintMaterial([1, 0, 0.5, 1]);
     const sprite = new Sprite(texture);
@@ -289,7 +298,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
 
       render(backend, sprite);
 
-      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [128, 0, 64, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [128, 0, 92, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
       expect(backend.stats.drawCalls).toBe(1);
     } finally {
@@ -540,12 +549,12 @@ void main() {
       sprite.setPosition(16, 16).setScale(16, 16);
       group.addChild(sprite);
 
-      render(backend, group);
+      render(backend, group, false);
       expectPixelNear(readWebGl2Pixel(backend, 40, 24), [161, 98, 255, 255], 6);
 
       // Mirroring flips the basis x column; the quad now extends to the left.
       sprite.setScale(-16, 16);
-      render(backend, group);
+      render(backend, group, false);
       expectPixelNear(readWebGl2Pixel(backend, 8, 24), [34, 98, 0, 255], 6);
     } finally {
       group.destroy();

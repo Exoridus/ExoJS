@@ -44,7 +44,6 @@ import { OffscreenPlatform } from '#platform/OffscreenPlatform';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
-import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { OutputTransform, validateWorkingColorFormatSupport, workingColorTextureFormat } from '#rendering/OutputTransform';
 import type { RenderBackend } from '#rendering/RenderBackend';
@@ -350,8 +349,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _frameRedirect: BackendTargetPass | null = null;
   /**
    * The output transform's linear-PMA source and the engine's dispatcher for
-   * it, alive only while {@link COLOR_PIPELINE_ENABLED} is active - see
-   * {@link _drawFrameColorManaged}.
+   * it - see {@link _drawFrame}.
    */
   private readonly _outputTransform: OutputTransform;
   private _outputTexture: RenderTexture | null = null;
@@ -867,10 +865,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public get frameTexture(): RenderTexture {
     if (this._frameTexture === null) {
       // Under the color pipeline this doubles as the engine's linear working
-      // storage - see `_drawFrameColorManaged`. `COLOR_PIPELINE_ENABLED` and the
-      // resolved `workingFormat` are both fixed for the application's life, so
-      // this never changes for a texture's lifetime.
-      this._frameTexture = new RenderTexture(1, 1, COLOR_PIPELINE_ENABLED ? { format: this._workingColorFormat() } : {});
+      // storage - see `_drawFrame`. The resolved `workingFormat` is fixed for
+      // the application's life, so this never changes for a texture's lifetime.
+      this._frameTexture = new RenderTexture(1, 1, { format: this._workingColorFormat() });
       this._frameTexture.sampleCount = this._workingSampleCount();
       this._resizeFrameTexture();
     }
@@ -906,7 +903,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this._workingSampleCountCache;
     }
 
-    const requested = COLOR_PIPELINE_ENABLED && this.options.rendering?.webglAttributes?.antialias === true;
+    const requested = this.options.rendering?.webglAttributes?.antialias === true;
     const supported = requested ? this._backend.getColorFormatCapabilities(this._workingColorFormat()).sampleCounts : [];
     // The conventional MSAA level rather than the driver's maximum: 8x and 16x
     // cost real bandwidth for an antialias request that did not name them.
@@ -1485,65 +1482,31 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Draw the frame: the scene, the systems' draw hooks and any transition, into
-   * the canvas - or, while {@link framePasses} holds passes, into
-   * {@link frameTexture}, with the pipeline played against the frame afterwards.
+   * an engine-owned linear working target, then out to the canvas through the
+   * output transform exactly once.
    *
-   * The redirect wraps the whole block rather than the scene alone so a pass
-   * sees the finished frame. A system that draws a debug overlay and a scene
-   * transition are both part of the picture an effect is applied to; a caller
-   * who wants an overlay left unfiltered adds it as a frame pass instead, after
-   * the effect.
-   */
-  private _drawFrame(): void {
-    if (COLOR_PIPELINE_ENABLED) {
-      this._drawFrameColorManaged();
-
-      return;
-    }
-
-    const passes = this._framePasses;
-
-    if (passes === null || passes.size === 0) {
-      // The frame starts from `clearColor`, so a scene's `draw()` never has to
-      // open with a clear of its own. Opt out with `autoClear: false` when the
-      // pipeline wants the previous frame preserved or clears it itself.
-      if (this._autoClear) {
-        this._rendering.clear(this.clearColor);
-      }
-
-      this._drawSceneAndSystems();
-
-      return;
-    }
-
-    const texture = this.frameTexture;
-
-    this._frameRedirect ??= new BackendTargetPass(() => this._drawSceneAndSystems());
-    this._backend.execute(this._frameRedirect.retarget(texture, texture.view, this._autoClear ? this.clearColor : null));
-
-    passes.execute(this._rendering);
-  }
-
-  /**
-   * The gated counterpart of {@link _drawFrame}: the scene always renders into
-   * an engine-owned linear working target - {@link frameTexture} while
-   * {@link framePasses} holds passes, {@link _outputTexture} otherwise, reused
-   * as the pipeline's own final target so the two paths share one texture
-   * rather than each owning a screen-sized allocation.
-   *
-   * `framePasses` therefore runs with the active target already redirected to
-   * `_outputTexture`, so a `FilterPass` ending in a `target: null` blit -
-   * the documented idiom - lands there instead of on the canvas. The output
-   * transform then samples `_outputTexture` exactly once, whichever path ran,
-   * so an identical scene with and without an identity frame pass matches by
+   * The scene always renders into {@link frameTexture} while
+   * {@link framePasses} holds passes and into the output target otherwise, so
+   * both paths share one texture rather than each owning a screen-sized
+   * allocation. `framePasses` runs with the active target already redirected to
+   * the output target, so a `FilterPass` ending in a `target: null` blit - the
+   * documented idiom - lands there instead of on the canvas; the output
+   * transform then samples that target exactly once whichever path ran, so an
+   * identical scene with and without an identity frame pass matches by
    * construction.
+   *
+   * The redirect wraps the scene, the systems and the transition together so a
+   * pass sees the finished frame. A system that draws a debug overlay and a
+   * scene transition are both part of the picture an effect is applied to; a
+   * caller who wants an overlay left unfiltered adds it as a frame pass
+   * instead, after the effect.
    *
    * An antialias request resolved for the working targets reaches the storage
    * as a sample count rather than a target flag: a multisample target is only
    * readable once resolved, so the scene's frame is published into the texture
    * the rest of the pipeline samples before anything filters or presents it.
    */
-  private _drawFrameColorManaged(): void {
+  private _drawFrame(): void {
     const output = this._ensureOutputTexture();
     const passes = this._framePasses;
     const clear = this._autoClear ? this.clearColor : null;
@@ -1612,12 +1575,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * The output transform's own working target - see {@link _drawFrameColorManaged}.
-   * Built lazily and independently of {@link framePasses}: it is needed the
-   * moment {@link COLOR_PIPELINE_ENABLED} is active, whether or not the
-   * application ever adds a frame pass. Its sample count is not fixed here - a
-   * frame without passes draws straight into it, a frame with passes hands it
-   * to the pipeline - see {@link _drawFrameColorManaged}.
+   * The output transform's own working target - see {@link _drawFrame}. Built
+   * lazily and independently of {@link framePasses}: it is needed whether or not
+   * the application ever adds a frame pass. Its sample count is not fixed here -
+   * a frame without passes draws straight into it, a frame with passes hands it
+   * to the pipeline - see {@link _drawFrame}.
    */
   private _ensureOutputTexture(): RenderTexture {
     if (this._outputTexture === null) {
@@ -2014,14 +1976,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Validate the resolved working format against the now-initialized backend's
-   * actual capability. A no-op while the color pipeline gate is closed - an
-   * unreachable `'hdr'` request never allocates anything and should not block
-   * startup.
+   * actual capability, before the first frame allocates the target it names.
    */
   private _validateWorkingColorFormatCapability(): void {
-    if (COLOR_PIPELINE_ENABLED) {
-      validateWorkingColorFormatSupport(this._backend, this.options.rendering?.color?.workingFormat ?? 'sdr');
-    }
+    validateWorkingColorFormatSupport(this._backend, this.options.rendering?.color?.workingFormat ?? 'sdr');
   }
 
   /**

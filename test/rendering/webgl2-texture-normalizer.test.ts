@@ -369,20 +369,17 @@ describe('WebGL2 managed-colour alpha normalization', () => {
     texture.destroy();
   });
 
-  test('leaves an implicit browser source on the pre-activation upload path', () => {
+  test('normalizes an implicit browser source, the same as an explicitly sRGB one', () => {
     harness = createHarness();
     const texture = new Texture({ width: 2, height: 2 } as unknown as HTMLCanvasElement);
 
     harness.backend.bindTexture(texture, 0);
 
-    // The activation gate stays closed until the pipeline is activated, so an ordinary decoded image
-    // keeps legacy RGBA8 storage and the browser's own premultiply: the pass
-    // would decode and re-encode for a destination that has no transfer function
-    // to begin with.
-    expect(harness.draws()).toBe(0);
-    expect(harness.allocations).toEqual([{ level: 0, internalFormat: harness.gl.RGBA8, width: 2, height: 2, data: null }]);
-    expect(harness.pixelStores).toContainEqual([harness.gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true]);
-    expect(harness.textureCreates()).toBe(1);
+    // An ordinary decoded image is sRGB colour, so its storage encodes on write
+    // and the pass has to premultiply the decoded values itself.
+    expect(harness.draws()).toBe(1);
+    expect(harness.allocations[0]?.internalFormat).toBe(harness.gl.SRGB8_ALPHA8);
+    expect(harness.pixelStores).toContainEqual([harness.gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false]);
 
     texture.destroy();
   });

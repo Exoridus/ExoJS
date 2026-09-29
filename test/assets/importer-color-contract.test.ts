@@ -12,11 +12,10 @@
  * This suite locks that in at the source level: every `Asset.type('texture',
  * ...)` request an importer package makes passes no second (options)
  * argument, so it always takes `TextureFactory`'s default resolution -
- * `colorSpace: 'linear-srgb'` while COLOR_PIPELINE_ENABLED is closed,
- * `'srgb'` once it activates - exactly as any other browser-sourced Texture
- * does. An importer that started passing `colorSpace: 'none'` or any other
- * override would silently opt its images out of that contract; this fails
- * the moment that happens instead of only failing when a screenshot drifts.
+ * `colorSpace: 'srgb'` - exactly as any other browser-sourced Texture does. An
+ * importer that started passing `colorSpace: 'none'` or any other override
+ * would silently opt its images out of that contract; this fails the moment
+ * that happens instead of only failing when a screenshot drifts.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

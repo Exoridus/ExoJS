@@ -320,7 +320,7 @@ describe('lightmap renderer WebGPU browser', () => {
     const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     // A normal leaning along the drawable's own +x, which is the one encoding
     // that says something different once the drawable turns.
-    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1, { colorSpace: 'none' }));
     const crate = new Sprite(Texture.fromColor(Color.white, 1));
 
     crate.width = 32;
@@ -532,7 +532,7 @@ describe('lightmap renderer WebGPU browser', () => {
     const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     // Leaning along +x, so the ground faces the light more on the light's own
     // left than on its right.
-    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1, { colorSpace: 'none' }));
     const ground = new Sprite(Texture.fromColor(Color.white, 1));
 
     ground.width = canvasSize;

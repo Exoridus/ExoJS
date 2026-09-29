@@ -215,7 +215,7 @@ describe('WebGPU managed-colour alpha normalization', () => {
     backend.destroy();
   });
 
-  test('leaves an implicit browser source on the pre-activation upload path', async () => {
+  test('normalizes an implicit browser source, the same as an explicitly sRGB one', async () => {
     environment = createMockWebGpuEnvironment();
     const backend = await createMockBackend(environment);
     const canvas = document.createElement('canvas');
@@ -227,10 +227,10 @@ describe('WebGPU managed-colour alpha normalization', () => {
 
     backend.getTextureBinding(texture);
 
-    // The activation gate stays closed until the pipeline is activated, so an ordinary decoded image
-    // keeps linear storage rather than acquiring sRGB storage and a pass.
-    expect(environment.renderPassLabels()).not.toContain(NORMALIZE_PASS);
-    expect(environment.textureDescriptors().some(entry => entry.format === 'rgba8unorm-srgb')).toBe(false);
+    // An ordinary decoded image is sRGB colour, so it acquires sRGB storage and
+    // the pass that premultiplies the decoded values.
+    expect(environment.renderPassLabels()).toContain(NORMALIZE_PASS);
+    expect(environment.textureDescriptors().some(entry => entry.format === 'rgba8unorm-srgb')).toBe(true);
 
     texture.destroy();
     backend.destroy();
@@ -342,9 +342,10 @@ describe('WebGPU managed-colour alpha normalization', () => {
     canvas.width = 2;
     canvas.height = 2;
 
-    // Pre-activation this texture is uploaded straight, because the legacy
-    // WebGPU path premultiplied nothing at upload.
-    const texture = new Texture(canvas);
+    // An image that declares itself linear colour is uploaded straight, because
+    // `copyExternalImageToTexture` premultiplies nothing, and the association
+    // moves to the draw instead of the upload.
+    const texture = new Texture(canvas, { colorSpace: 'linear-srgb' });
 
     expect(backend.shouldPremultiplyTextureSample(texture)).toBe(true);
 

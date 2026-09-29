@@ -1,17 +1,16 @@
 /**
- * SDR input boundary contract for video textures (R39): under the
- * color-managed pipeline, a browser-decoded video is a color source like any
- * other, so its two WebGPU draw paths - the zero-copy `GPUExternalTexture`
- * import and the `texture_2d` copy-upload fallback - must land on the same
- * linear-light sample despite `texture_external` never getting the hardware
- * sRGB decode a `rgba8unorm-srgb` view gives the fallback path (see
+ * SDR input boundary contract for video textures: a browser-decoded video is a
+ * color source like any other, so its two WebGPU draw paths - the zero-copy
+ * `GPUExternalTexture` import and the `texture_2d` copy-upload fallback - must
+ * land on the same linear-light sample despite `texture_external` never getting
+ * the hardware sRGB decode a `rgba8unorm-srgb` view gives the fallback path (see
  * `src/rendering/video/webgpuVideoMaterialSources.ts`). Comparing the two
  * paths against each other, rather than against an absolute expected value,
  * keeps this test independent of whether anything downstream re-encodes for
  * display - it only needs to hold that neither path decodes twice or skips
  * the decode the other one applies.
  */
-import { expect, test, vi } from 'vitest';
+import { expect, test } from 'vitest';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -23,8 +22,6 @@ import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import type { RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
-
-vi.mock('#rendering/colorPipelineActivation', () => ({ COLOR_PIPELINE_ENABLED: true }));
 
 const canvasSize = 32;
 const decodeWaitMs = 12_000;
@@ -194,8 +191,8 @@ const expectParity = async (ctx: SkipCtx, color: string): Promise<void> => {
     }
 
     // Both paths must land on the same linear-light sample: the external path's
-    // explicit srgbToLinear (gated on colorPipelineEnabled) stands in for the
-    // hardware sRGB decode the fallback's rgba8unorm-srgb view applies for free.
+    // explicit srgbToLinear stands in for the hardware sRGB decode the
+    // fallback's rgba8unorm-srgb view applies for free.
     for (let channel = 0; channel < 4; channel++) {
       expect(Math.abs(externalPixel[channel]! - fallbackPixel[channel]!)).toBeLessThanOrEqual(1);
     }
@@ -210,11 +207,11 @@ const expectParity = async (ctx: SkipCtx, color: string): Promise<void> => {
 };
 
 describe('WebGPU video color pipeline - SDR input boundary parity', { timeout: 30_000 }, () => {
-  test('external-texture and texture_2d fallback agree on a gray frame under the color pipeline', async ctx => {
+  test('external-texture and texture_2d fallback agree on a gray frame', async ctx => {
     await expectParity(ctx, '#808080');
   });
 
-  test('external-texture and texture_2d fallback agree on a color frame under the color pipeline', async ctx => {
+  test('external-texture and texture_2d fallback agree on a color frame', async ctx => {
     await expectParity(ctx, '#3c8cd6');
   });
 });

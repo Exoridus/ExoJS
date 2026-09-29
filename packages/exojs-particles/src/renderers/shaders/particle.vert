@@ -43,8 +43,7 @@ void main(void) {
     v_texcoord = vec2(u, v);
 
     // a_color.rgb is the authored sRGB tint byte-for-byte, not yet decoded;
-    // decode it to linear before it is premultiplied and interpolated,
-    // gated on colorPipelineEnabled (see colorShaderSources.ts).
-    vec3 linearTint = colorPipelineEnabled ? srgbToLinear(a_color.rgb) : a_color.rgb;
+    // decode it to linear before it is premultiplied and interpolated.
+    vec3 linearTint = srgbToLinear(a_color.rgb);
     v_color = vec4(linearTint * a_color.a, a_color.a);
 }

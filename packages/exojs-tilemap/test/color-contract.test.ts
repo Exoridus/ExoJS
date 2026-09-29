@@ -7,13 +7,15 @@ const tileVertexGlsl = shaderSource('../src/webgl2/shaders/tile-chunk.vert');
 const tileShaderWgsl = shaderSource('../src/webgpu/shaders/tile-chunk.wgsl');
 
 describe('tilemap colour contract', () => {
-  test('the GLSL tile vertex stage decodes the authored tint, gated on colorPipelineEnabled', () => {
-    expect(tileVertexGlsl).toContain('colorPipelineEnabled ? srgbToLinear(a_color.rgb) : a_color.rgb');
+  test('the GLSL tile vertex stage decodes the authored tint to linear light', () => {
+    expect(tileVertexGlsl).toContain('srgbToLinear(a_color.rgb)');
+    expect(tileVertexGlsl).not.toContain('colorPipelineEnabled');
     expect(tileVertexGlsl).toContain('v_color = vec4(linearTint * a_color.a, a_color.a);');
   });
 
-  test('the WGSL tile vertex stage decodes the authored tint, gated on colorPipelineEnabled', () => {
-    expect(tileShaderWgsl).toContain('select(input.color.rgb, srgbToLinear(input.color.rgb), colorPipelineEnabled)');
+  test('the WGSL tile vertex stage decodes the authored tint to linear light', () => {
+    expect(tileShaderWgsl).toContain('srgbToLinear(input.color.rgb)');
+    expect(tileShaderWgsl).not.toContain('colorPipelineEnabled');
     expect(tileShaderWgsl).toContain('output.color = vec4(linearTint * input.color.a, input.color.a);');
   });
 

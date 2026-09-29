@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { Filter } from '#rendering/filters/Filter';
 
-import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
+import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Encoded } from './_backendSetup';
 import {
   backdropScene,
   bloom,
@@ -25,7 +25,7 @@ const withScene = async (filters: readonly Filter[], read: (pixel: (x: number, y
   const { root, texture } = blurScene(filters);
 
   try {
-    renderWebGl2Once(backend, root, CLEAR);
+    renderWebGl2Encoded(backend, root, CLEAR);
     read((x, y) => readWebGl2Pixel(backend, x, y));
   } finally {
     root.destroy();
@@ -40,7 +40,7 @@ const withPlateau = async (levels: number, read: (pixel: (x: number, y: number) 
   const { root, texture, filter } = plateauScene(levels);
 
   try {
-    renderWebGl2Once(backend, root, CLEAR);
+    renderWebGl2Encoded(backend, root, CLEAR);
     read((x, y) => readWebGl2Pixel(backend, x, y));
   } finally {
     root.destroy();
@@ -55,7 +55,7 @@ const withBackdrop = async (read: (pixel: (x: number, y: number) => RgbaTuple) =
   const { root, textures, filter } = backdropScene();
 
   try {
-    renderWebGl2Once(backend, root, CLEAR);
+    renderWebGl2Encoded(backend, root, CLEAR);
     read((x, y) => readWebGl2Pixel(backend, x, y));
   } finally {
     root.destroy();

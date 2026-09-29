@@ -59,8 +59,8 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.texcoord = input.uvMin + ((input.uvMax - input.uvMin) * unitPosition);
     // input.color.rgb is the authored sRGB tint byte-for-byte, not yet
     // decoded; decode it to linear before it is premultiplied and
-    // interpolated, gated on colorPipelineEnabled (see colorShaderSources.ts).
-    let linearTint = select(input.color.rgb, srgbToLinear(input.color.rgb), colorPipelineEnabled);
+    // interpolated.
+    let linearTint = srgbToLinear(input.color.rgb);
     output.color = vec4(linearTint * input.color.a, input.color.a);
 
     return output;

@@ -175,6 +175,8 @@ haze.offsetV += delta * 0.1;
 
 `scale` is the maximum displacement in logical units (one number for both axes, or `[x, y]`), so the distortion keeps its on-screen size at every pixel ratio. `offsetU`/`offsetV` move where the map is sampled, in the map's own UV units — give the map `WrapModes.Repeat` for a scroll that never runs off its edge. The filter reports the reach through `getOutputBounds`, so a subject at rest keeps the room its distortion needs; a fragment displaced past the edge of that domain comes out transparent rather than smearing the border texel.
 
+The map is sampled as numeric data, so it must not resolve to sRGB colour: an image `Texture` declares that with `colorSpace: 'none'` (a `DataTexture` already is numeric), and a map that resolves to `'srgb'` is rejected, because an sRGB view would hardware-decode the displacement direction itself.
+
 ## Custom shader filters
 
 `ShaderFilter` takes a fragment shader source per language and an optional uniforms map. It renders a fullscreen quad and executes the shader against the filter input texture, picking the source the active backend speaks:

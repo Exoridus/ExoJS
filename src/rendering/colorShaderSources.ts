@@ -13,6 +13,11 @@
  * - **A transfer function runs only for an undecoded authoring byte.** A sample
  *   taken through an sRGB view is already linear, so `srgbToLinear` must not
  *   follow one. The resolved storage format decides, not the shader.
+ * - **An authored value is decoded where it is read.** A packed vertex tint or
+ *   a node colour is never sampled through a storage format, so nothing decodes
+ *   it on the way to the shader: each draw stage calls `srgbToLinear` on that
+ *   RGB exactly once, and never on its alpha, which is coverage rather than
+ *   colour.
  *
  * `forceOpaqueSampleAlpha` covers the one format that cannot be answered by
  * association alone: a native block format with no alpha channel is stored as
@@ -29,42 +34,28 @@
  * of that surface.
  */
 
-import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
-
 import colorShaderSourcesGlslModule from './shaders/color-transfer.frag';
 import colorShaderSourcesWgslModule from './shaders/color-transfer.wgsl';
 
 /**
  * WGSL colour helpers: `srgbToLinear`, `linearToSrgb`, `associateSampledColor`
- * and `forceOpaqueSampleAlpha`, plus a `colorPipelineEnabled` constant mirroring
- * {@link COLOR_PIPELINE_ENABLED}.
- *
- * `colorPipelineEnabled` gates the one shader-side behaviour that has no
- * per-resource opt-in the way a `Texture`'s `colorSpace` does: decoding an
- * AUTHORED value (a packed vertex tint, not a sampled texel) is either always
- * correct or always wrong for a given draw, so it cannot be driven by
- * anything the draw call carries. Compiled as a WGSL `const`, a driver folds
- * `select(a, b, colorPipelineEnabled)` down to `a` while the constant is
- * `false`, so the legacy path stays the exact bytes it always produced - not
- * an equivalent computation, no computation at all.
+ * and `forceOpaqueSampleAlpha`.
  *
  * Compose this ahead of any WGSL that calls one of them, in both the vertex and
  * the fragment stage. Helpers are functions, so a stage only needs the ones it
  * calls; composing the whole source keeps every stage's colour contract
  * identical.
  */
-export const colorShaderSourcesWgsl = `const colorPipelineEnabled: bool = ${String(COLOR_PIPELINE_ENABLED)};
-${colorShaderSourcesWgslModule}`;
+export const colorShaderSourcesWgsl = colorShaderSourcesWgslModule;
 
 /**
- * GLSL ES 3.00 colour helpers with the same names, signatures and constants as
- * {@link colorShaderSourcesWgsl}, including `colorPipelineEnabled`.
+ * GLSL ES 3.00 colour helpers with the same names and signatures as
+ * {@link colorShaderSourcesWgsl}.
  *
  * A chunk rather than a stage: it carries no `#version` and no `main`, because
  * the shader it is spliced into owns both.
  */
-export const colorShaderSourcesGlsl = `const bool colorPipelineEnabled = ${String(COLOR_PIPELINE_ENABLED)};
-${colorShaderSourcesGlslModule}`;
+export const colorShaderSourcesGlsl = colorShaderSourcesGlslModule;
 
 /**
  * Splice `prologue` into a GLSL ES 3.00 source, after the run of leading

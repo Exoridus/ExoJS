@@ -22,17 +22,12 @@ void main(void) {
 
   vec4 texel = sampleBase(v_textureSlot, v_texcoord);
 
-  // Legacy (colorPipelineEnabled == false): unchanged bit-for-bit - tint is
-  // authored straight and was never decoded or premultiplied before this
-  // modulate, so white ((1,1,1,1)) is the only tint that leaves texel alone.
-  vec4 legacy = texel * tint;
-
-  // Gated: decode the authored tint once and premultiply it, matching the
-  // sprite tint convention, before combining with the already-associated
-  // sample by a single component-wise multiply.
+  // Decode the authored tint once and premultiply it, matching the sprite tint
+  // convention, before combining with the already-associated sample by a single
+  // component-wise multiply. An authored tint is never sampled through a
+  // storage format, so this is the only decode it gets.
   vec3 linearTintRgb = srgbToLinear(tint.rgb);
   vec4 tintPremultiplied = vec4(linearTintRgb * tint.a, tint.a);
-  vec4 gated = texel * tintPremultiplied;
 
-  fragColor = colorPipelineEnabled ? gated : legacy;
+  fragColor = texel * tintPremultiplied;
 }

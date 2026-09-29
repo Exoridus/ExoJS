@@ -110,7 +110,12 @@ const createLeftOpaqueTexture = (color: string): Texture => {
   return new Texture(source);
 };
 
-const createSolidTexture = (color: string): Texture => {
+/**
+ * A solid full-canvas texture. `numeric` reads the bytes without sRGB decoding,
+ * for specs that compare blend arithmetic against byte-valued reference
+ * formulas on the raw surface.
+ */
+const createSolidTexture = (color: string, numeric = false): Texture => {
   const source = document.createElement('canvas');
 
   source.width = canvasSize;
@@ -125,7 +130,7 @@ const createSolidTexture = (color: string): Texture => {
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, canvasSize, canvasSize);
 
-  return new Texture(source);
+  return new Texture(source, numeric ? { colorSpace: 'none' } : {});
 };
 
 describe('WebGL2 backdrop-aware blend (Darken spike)', () => {
@@ -186,7 +191,7 @@ describe('WebGL2 backdrop-aware blend (Darken spike)', () => {
     expect(expectedOpaqueBlend(BlendModes.Difference, backdropColor, sourceColor)).toEqual([90, 90, 90]);
     expect(expectedOpaqueBlend(BlendModes.Luminosity, backdropColor, sourceColor)).toEqual([216, 146, 96]);
 
-    const source = createSolidTexture(`rgb(${sourceColor[0]}, ${sourceColor[1]}, ${sourceColor[2]})`);
+    const source = createSolidTexture(`rgb(${sourceColor[0]}, ${sourceColor[1]}, ${sourceColor[2]})`, true);
     const compositor = new WebGl2BackdropBlendCompositor();
 
     compositor.connect(backend);
@@ -240,7 +245,7 @@ describe('WebGL2 backdrop-aware blend — root coverage follows alphaMode', () =
 
   const composeOverEmptyRoot = async (alphaMode: CanvasAlphaMode): Promise<RgbaTuple> => {
     const backend = await createBackend(alphaMode);
-    const source = createSolidTexture(`rgb(${sourceColor[0]}, ${sourceColor[1]}, ${sourceColor[2]})`);
+    const source = createSolidTexture(`rgb(${sourceColor[0]}, ${sourceColor[1]}, ${sourceColor[2]})`, true);
 
     try {
       backend.clear(new Color(0, 0, 0, 0));

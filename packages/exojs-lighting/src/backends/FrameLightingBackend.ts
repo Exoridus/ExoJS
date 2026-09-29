@@ -21,7 +21,6 @@ import {
   UniformType,
   View,
 } from '@codexo/exojs';
-import { COLOR_PIPELINE_ENABLED } from '@codexo/exojs/renderer-sdk';
 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { LightingHost } from '../LightingHost';
@@ -260,12 +259,12 @@ export abstract class FrameLightingBackend implements LightingBackend {
    * What `_lightPass` actually clears to - kept separate from {@link _ambient}
    * because the two need different decodes. `_target` is never `rgba8srgb`
    * (see its own doc), so the generic sRGB-target clear decode in the backend
-   * never fires for it; under the colour pipeline the accumulation itself is
-   * linear, so this field carries `_ambient` pre-decoded to linear light
-   * instead - the same conversion {@link ForwardBackend}'s own ambient packing
-   * applies, just through the `Color`-typed clear API a render pass takes
-   * rather than a numeric buffer, which is why it goes through a byte
-   * (quantized) rather than the exact float `ForwardBackend` writes.
+   * never fires for it; the accumulation itself is linear, so this field carries
+   * `_ambient` pre-decoded to linear light instead - the same conversion
+   * {@link ForwardBackend}'s own ambient packing applies, just through the
+   * `Color`-typed clear API a render pass takes rather than a numeric buffer,
+   * which is why it goes through a byte (quantized) rather than the exact float
+   * `ForwardBackend` writes.
    * {@link _ambient} itself stays a plain copy of what `publish()` was given -
    * the cascades decode it their own way, and decoding it twice here would be
    * wrong for them.
@@ -805,18 +804,8 @@ ${sunQuadWgsl}`,
    * {@link _ambient}.
    */
   private _writeAmbientClear(ambient: Color): void {
-    // COLOR_PIPELINE_ENABLED is `false` today, which is the only reason the
-    // linter can see this branch as dead - it flips exactly once, engine-wide,
-    // and this function has to hold both sides of that flip.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (COLOR_PIPELINE_ENABLED) {
-      ambient.writeLinear(scratchLinearAmbient);
-      this._ambientClear.set(scratchLinearAmbient[0]! * 255, scratchLinearAmbient[1]! * 255, scratchLinearAmbient[2]! * 255, scratchLinearAmbient[3]);
-
-      return;
-    }
-
-    this._ambientClear.copy(ambient);
+    ambient.writeLinear(scratchLinearAmbient);
+    this._ambientClear.set(scratchLinearAmbient[0]! * 255, scratchLinearAmbient[1]! * 255, scratchLinearAmbient[2]! * 255, scratchLinearAmbient[3]);
   }
 
   /**

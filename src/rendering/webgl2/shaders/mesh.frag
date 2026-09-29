@@ -18,19 +18,15 @@ layout(location = 0) out vec4 fragColor;
 void main(void) {
     highp vec4 sampleColor = texture(u_texture, v_texcoord);
 
-    // Legacy (colorPipelineEnabled == false): unchanged bit-for-bit, including
-    // its erroneous second `* alpha` - preserved verbatim until the gate opens.
-    highp vec4 legacyBase = sampleColor * v_color * v_tint;
-    highp vec4 legacy = vec4(legacyBase.rgb * legacyBase.a, legacyBase.a);
-
-    // Gated: decode the authored per-vertex colour and per-node tint once,
-    // premultiply each, then combine with the sample by a single component-wise
-    // multiply - removing the legacy path's erroneous second `* alpha`.
-    highp vec3 linearVertexRgb = colorPipelineEnabled ? srgbToLinear(v_color.rgb) : v_color.rgb;
+    // The authored per-vertex colour and per-node tint are decoded once,
+    // premultiplied each, then combined with the sample by a single
+    // component-wise multiply. `sampleColor` is already premultiplied, so
+    // multiplying the two premultiplied factors into it associates the result
+    // exactly once.
+    highp vec3 linearVertexRgb = srgbToLinear(v_color.rgb);
     highp vec4 vertexPremultiplied = vec4(linearVertexRgb * v_color.a, v_color.a);
-    highp vec3 linearTintRgb = colorPipelineEnabled ? srgbToLinear(v_tint.rgb) : v_tint.rgb;
+    highp vec3 linearTintRgb = srgbToLinear(v_tint.rgb);
     highp vec4 tintPremultiplied = vec4(linearTintRgb * v_tint.a, v_tint.a);
-    highp vec4 gated = sampleColor * vertexPremultiplied * tintPremultiplied;
 
-    fragColor = colorPipelineEnabled ? gated : legacy;
+    fragColor = sampleColor * vertexPremultiplied * tintPremultiplied;
 }

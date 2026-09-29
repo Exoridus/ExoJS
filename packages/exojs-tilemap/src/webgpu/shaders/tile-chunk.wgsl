@@ -82,9 +82,8 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
 
     // input.color.rgb is the authored sRGB tint byte-for-byte (unorm8x4
     // vertex fetch, not yet decoded); decode it to linear before it is
-    // premultiplied and interpolated, gated on colorPipelineEnabled (see
-    // colorShaderSources.ts).
-    let linearTint = select(input.color.rgb, srgbToLinear(input.color.rgb), colorPipelineEnabled);
+    // premultiplied and interpolated.
+    let linearTint = srgbToLinear(input.color.rgb);
     output.color = vec4(linearTint * input.color.a, input.color.a);
 
     return output;

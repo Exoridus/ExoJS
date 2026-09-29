@@ -2,7 +2,6 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
-import { COLOR_PIPELINE_ENABLED } from '#rendering/colorPipelineActivation';
 import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/materialSources';
 import { Texture } from '#rendering/texture/Texture';
@@ -282,17 +281,13 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       // this flush isn't going to touch the texture cache at all.
       //
       // The external-texture shader's sampleTexture linearizes its sample
-      // under the same colorPipelineEnabled gate (see
-      // videoExternalTextureGroupWgsl), because texture_external never gets a
-      // hardware sRGB decode the way an srgb-view texture_2d does. While the
-      // pipeline is enabled, that decode is only correct for a source the
-      // engine resolves to sRGB colour, so a texture requesting a different
-      // interpretation - raw data, or already-linear content - must take the
-      // texture_2d fallback instead, whose format-driven decode (or lack of
-      // one) matches its colorSpace. While the pipeline is disabled the
-      // shader-side decode is inert (folds to the sampled bytes unchanged),
-      // so the legacy unconditional external-texture attempt is preserved.
-      const sourceElement = texture.source instanceof HTMLVideoElement && (!COLOR_PIPELINE_ENABLED || texture.colorSpace === 'srgb') ? texture.source : null;
+      // (see videoExternalTextureGroupWgsl), because texture_external never gets
+      // a hardware sRGB decode the way an srgb-view texture_2d does. That decode
+      // is only correct for a source the engine resolves to sRGB colour, so a
+      // texture requesting a different interpretation - raw data, or already
+      // linear content - takes the texture_2d fallback instead, whose
+      // format-driven decode (or lack of one) matches its colorSpace.
+      const sourceElement = texture.source instanceof HTMLVideoElement && texture.colorSpace === 'srgb' ? texture.source : null;
       const externalTexture = sourceElement !== null ? this._tryImportExternalTexture(device, sourceElement) : null;
 
       const coordinator = backend.passCoordinator;

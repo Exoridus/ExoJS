@@ -7,7 +7,7 @@ import { Color } from '#core/Color';
  * LutFilter is a thin wrapper: its identity-LUT factories write raw numeric
  * `DataTexture` bytes directly (no canvas 2D involved - a LUT texel is a
  * coordinate, not a colour image), `fromImage` wraps a caller-supplied
- * image/canvas through the ordinary colour-image path, and `apply()`
+ * image/canvas as numeric data, and `apply()`
  * delegates to a `ShaderFilter` carrying both language sources (covered by
  * its own dedicated test files). These tests focus on LutFilter's own logic:
  * texture generation, option defaults/clamping, `setLut`, source selection,
@@ -407,6 +407,7 @@ describe('LutFilter static texture factories', () => {
 
     expect(texture).toBeInstanceOf(Texture);
     expect(texture.source).toBe(canvas);
+    expect(texture.colorSpace).toBe('none');
   });
 
   test('identityLut1D and identityLut3D build numeric DataTextures, not colour images', () => {

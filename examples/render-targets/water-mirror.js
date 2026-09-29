@@ -38,7 +38,9 @@ const createRippleMap = () => {
     }
   }
   context.putImageData(image, 0, 0);
-  return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.Repeat, generateMipMap: false });
+  // `colorSpace: 'none'`: the map's red and green channels are a direction in
+  // [-1, 1], so they are numeric data, not colour.
+  return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.Repeat, generateMipMap: false, colorSpace: 'none' });
 };
 class WaterMirrorScene extends Scene {
   target;

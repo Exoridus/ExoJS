@@ -162,14 +162,13 @@ export class LutFilter extends Filter {
    *
    * Accepts the standard LUT image conventions exported by Photoshop,
    * DaVinci Resolve, OBS, and similar tools - typically a `289×17` or
-   * `1024×32` strip for 3D LUTs, or a `256×1` strip for 1D. An imported image
-   * decodes through the ordinary browser colour-image path (unlike the
-   * generated identity LUTs above, which are numeric data) - its authoring
-   * tool wrote the strip as sRGB pixels for a human to inspect, not as
-   * pre-encoded coordinate data.
+   * `1024×32` strip for 3D LUTs, or a `256×1` strip for 1D. The image is read
+   * as numeric data: its bytes are the LUT entries in the filter's own colour
+   * domain, which is what the authoring tool wrote, so no sRGB decode is applied
+   * on sample (unlike an ordinary colour image).
    */
   public static fromImage(image: HTMLImageElement | HTMLCanvasElement): Texture {
-    return new Texture(image, LutFilter._lutSamplerOptions);
+    return new Texture(image, { ...LutFilter._lutSamplerOptions, colorSpace: 'none' });
   }
 
   private readonly _mode: LutMode;

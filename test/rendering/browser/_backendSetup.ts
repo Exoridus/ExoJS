@@ -17,6 +17,8 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import type { RenderSurface } from '#platform/RenderSurface';
 import type { RenderNode } from '#rendering/RenderNode';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { TextureFormat } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -127,6 +129,40 @@ export const createWebGpuTestBackend = async (size: number, pixelRatio?: number)
   await backend.initialize();
 
   return backend;
+};
+
+const encodedFrameTargets = new WeakMap<WebGl2Backend, RenderTexture>();
+
+/**
+ * Point the backend at an sRGB attachment the size of its default surface.
+ *
+ * The engine blends in linear light and encodes once on the way to the canvas;
+ * a raw canvas has no encode of its own, so a spec that reads authored bytes
+ * back draws into an attachment that encodes on write, exactly as the frame's
+ * working target does. The attachment stays bound after the frame, so
+ * `readWebGl2Pixel` and `readWebGl2Frame` read it directly. A spec that stores
+ * numeric data in colour channels keeps drawing to the raw surface instead.
+ */
+export const useEncodedFrameTarget = (backend: WebGl2Backend): void => {
+  const existing = encodedFrameTargets.get(backend);
+  const { width, height } = backend.renderTarget;
+  const target = existing?.width === width && existing.height === height ? existing : new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
+
+  if (target !== existing) {
+    existing?.destroy();
+    encodedFrameTargets.set(backend, target);
+  }
+
+  backend.setRenderTarget(target);
+};
+
+/** {@link renderWebGl2Once} into the encoding attachment of {@link useEncodedFrameTarget}. */
+export const renderWebGl2Encoded = (backend: WebGl2Backend, root: RenderNode, clear: Color = Color.black): void => {
+  backend.resetStats();
+  useEncodedFrameTarget(backend);
+  backend.clear(clear);
+  root.render(backend);
+  backend.flush();
 };
 
 export const renderWebGl2Once = (backend: WebGl2Backend, root: RenderNode, clear: Color = Color.black): void => {
