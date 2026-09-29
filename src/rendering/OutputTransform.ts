@@ -200,16 +200,18 @@ export class OutputTransform {
    * Sample the linear-PMA `source` and write the sRGB-encoded, canvas-ready
    * result to `target`, or the canvas when omitted (the per-frame path).
    * `transparent` selects the D3 alpha rule; `matte` is the clear color
-   * composited under an opaque result.
+   * composited under an opaque result. `straightAlpha` leaves a transparent
+   * result unassociated (the layout `ImageData` expects) instead of
+   * premultiplied like a canvas.
    */
-  public present(backend: RenderBackend, source: RenderTexture, transparent: boolean, matte: Color, target?: RenderTexture): void {
+  public present(backend: RenderBackend, source: RenderTexture, transparent: boolean, matte: Color, target?: RenderTexture, straightAlpha = false): void {
     if (backend.backendType === RenderBackendType.WebGpu) {
-      (this._webgpuPass ??= new WebGpuOutputPass()).present(backend, source, this._options, transparent, matte, target);
+      (this._webgpuPass ??= new WebGpuOutputPass()).present(backend, source, this._options, transparent, matte, target, straightAlpha);
 
       return;
     }
 
-    (this._webgl2Pass ??= new WebGl2OutputPass()).present(backend, source, this._options, transparent, matte, target);
+    (this._webgl2Pass ??= new WebGl2OutputPass()).present(backend, source, this._options, transparent, matte, target, straightAlpha);
   }
 
   public destroy(): void {

@@ -4001,6 +4001,17 @@ export class WebGpuBackend implements RenderBackend {
       return dataTextureBytesPerPixel(format);
     }
 
+    if (texture instanceof RenderTexture) {
+      switch (texture.format) {
+        case TextureFormat.Rgba16F:
+          return 8;
+        case TextureFormat.Rgba32F:
+          return 16;
+        default:
+          return MANAGED_TEXTURE_BYTES_PER_PIXEL;
+      }
+    }
+
     return MANAGED_TEXTURE_BYTES_PER_PIXEL;
   }
 
