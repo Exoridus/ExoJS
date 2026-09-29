@@ -1,0 +1,71 @@
+{
+  "title": "WorkingColorFormat",
+  "description": "The internal storage the scene renders into before the output transform. `'sdr'` (the default) is the existing eight-bit `Rgba8Srgb` working target. `'hdr'` allocates an `Rgba16F` working target instead, so a value above display white survives every intermediate pass instead of clamping before the tone map ever sees it - it does not change the output transform's own math, which already operates on unbounded linear input.",
+  "symbol": "WorkingColorFormat",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The internal storage the scene renders into before the output transform. `'sdr'` (the default) is the existing eight-bit `Rgba8Srgb` working target. `'hdr'` allocates an `Rgba16F` working target instead, so a value above display white survives every intermediate pass instead of clamping before the tone map ever sees it - it does not change the output transform's own math, which already operates on unbounded linear input."
+      ],
+      "importLine": "import { WorkingColorFormat } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "WorkingColorFormat",
+          "signature": "\"hdr\" | \"sdr\"",
+          "signatureTokens": [
+            {
+              "text": "\"hdr\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sdr\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/OutputTransform.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/OutputTransform.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/OutputTransform.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/OutputTransform.ts"
+}
