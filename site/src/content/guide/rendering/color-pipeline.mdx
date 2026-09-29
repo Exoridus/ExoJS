@@ -1,0 +1,113 @@
+---
+title: 'Colour pipeline'
+description: 'How ExoJS reads, blends and presents colour: linear-light working space, colour versus data, alpha, the output transform and readback.'
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
+
+# Colour pipeline
+
+ExoJS separates three questions that are easy to blur together: what a sample **means** (sRGB colour, linear colour, or numeric data), how it is **stored** (which texture format), and how it is **presented** (the single transform between the finished frame and the canvas). Getting the first answer right at the source is what lets blending, filtering and lighting behave the same way for every image you load.
+
+The working space is linear light with premultiplied alpha. Colour you author or load is decoded into it, everything is composed there, and a single output transform encodes the result for the display once.
+
+## Colour and data
+
+Every texture sample is one of three things, and `colorSpace` says which:
+
+| `colorSpace` | Meaning | Typical sources |
+| --- | --- | --- |
+| `'srgb'` | Encoded colour. RGB is decoded to linear light when sampled; alpha stays linear coverage. | PNG, JPEG, WebP, SVG, canvas, video, sRGB KTX2 |
+| `'linear-srgb'` | Colour that is already in linear light. No transfer decode. | Linear-transfer KTX2, procedurally generated linear colour |
+| `'none'` | Numeric data. Never decoded, premultiplied or tone mapped. | Normal maps, displacement maps, masks, lookup tables, index and parameter tables |
+
+An image, canvas or video source is sRGB colour unless you say otherwise, so ordinary sprites, tilemaps and UI art need nothing extra. Anything that carries numbers rather than colour must be declared, because an sRGB view would hardware-decode the value before your shader or filter reads it. A loaded image declares it in its texture options:
+
+```ts
+import { Asset } from '@codexo/exojs';
+
+export const brickNormals = Asset.type('texture', 'normals/brick.png', { textureOptions: { colorSpace: 'none' } });
+```
+
+For a loaded image, `'none'` also decodes the file without the browser's own colour conversion, so the bytes reach the GPU exactly as stored. A `DataTexture` already is numeric. `NormalMap`, `DisplacementFilter` and `LutFilter` sample their maps as data and reject a texture that resolves to `'srgb'` instead of silently misreading it.
+
+A generated texture is classified where it is created. White, black and missing-texture placeholders and canvas-drawn glyphs are colour; SDF glyph atlases, masks, normal maps and transform, index and particle tables are numeric. `Gradient.toTexture` is a colour producer even though it writes through a `DataTexture`: it converts the interpolated sRGB gradient to linear premultiplied samples itself, so the texture holds what a colour shader would have sampled.
+
+## Alpha
+
+`alphaMode` states whether a source's RGB is already multiplied by its alpha (`'premultiplied'`) or not (`'straight'`). It describes the data, not how the canvas composites. `premultiplyAlpha` is the upload request that goes with it: a straight-alpha colour source is premultiplied once when it is uploaded, in linear light and before filtering and mip generation, so a bilinear sample at a transparent edge blends colour and coverage together instead of dragging in the colour hidden under transparent pixels. It defaults to on for colour textures, does nothing to a source already premultiplied, and is unavailable for `'none'` data.
+
+Two limits are worth knowing. A `Canvas` or `ImageBitmap` you hand over may already have lost low-alpha precision, and the engine cannot recover it. And compressed KTX2 blocks are never recompressed: a straight-alpha compressed texture is filtered straight and premultiplied in the draw shader, after filtering, so it does not have the edge guarantee above. For quality-sensitive transparency, ship premultiplied compressed assets or dilate the colour under transparent pixels and author correct mips.
+
+## Authored colour
+
+`Color`, CSS and hex strings, tints, gradient stops and text colours are **sRGB-authored**. `Color.toArray()` still returns the authored components. The engine converts to linear light where it needs to: a tint is decoded before it multiplies a sample, and a gradient interpolates its stops in sRGB and converts each result to linear light, so a gradient looks the way its stops read. `Color.writeLinear` gives you the linear form without allocating, for CPU-side constants such as a light colour handed to your own shader.
+
+A custom shader that produces colour must return **linear, premultiplied RGB with linear alpha**. Numeric shader arrays stay numeric, and a shader that samples data reads it without any decode. A custom renderer that draws into the frame must draw into the render target the backend currently has bound, using that target's format, and never straight into the canvas.
+
+## Blending and filters
+
+Compositing runs in linear light on premultiplied colour, which is why blends read like light adding instead of encoded numbers adding: 50% white over black is the encoded value 188, where an encoded-space blend gives 128. The named modes follow the W3C equations with a fractional destination alpha:
+
+- `Normal` is source-over on colour and alpha.
+- `Additive` sums colour without clamping and takes ordinary source-over alpha.
+- `Multiply` and `Screen` use the linear blend function with source-over alpha.
+- `Subtract` keeps its historic attenuation equation, `backdrop * (1 - source)`. It is not arithmetic subtraction.
+- The remaining artistic modes apply their named function to clamped straight RGB. They do not carry values above display white.
+
+Filters follow the same rule. Blur, resampling and mip generation weight colour and alpha together in linear light. `DisplacementFilter` reads its map as data. `BloomFilter` thresholds linear luminance, and its intermediates follow the input's working format: with the HDR working format they are float and keep values above `1`, while the default SDR format keeps its eight-bit range. `ColorMatrixFilter` and `LutFilter` are display-grading tools: they take a `colorSpace` option that defaults to `'srgb'`, convert into that domain, apply and clamp there, and return to linear premultiplied colour, so a matrix written against encoded values keeps its look. Pass `'linear-srgb'` to grade in linear light. A custom `ShaderFilter` receives linear premultiplied colour and returns the same.
+
+## Working format and output
+
+Every frame has exactly one output transform, including a frame drawn straight to the canvas. Scene passes and filters run before it, and it runs last: exposure, then a mapping to the displayable range, then the sRGB encode. The default is an eight-bit `Rgba8Srgb` working target, exposure `0` and no tone operator, which reproduces authored colour on an SDR canvas. Configure it through `rendering.color`:
+
+```ts
+import { Application } from '@codexo/exojs';
+
+const app = new Application({
+  rendering: { color: { exposure: 0.5, toneMapping: 'reinhard' } },
+});
+```
+
+`toneMapping: 'none'` clamps at display white and `'reinhard'` applies `x / (1 + x)` per channel, never to alpha. Exposure is in stops and must be finite and within `[-32, 32]`. Negative values clamp to zero and NaN becomes zero.
+
+`workingFormat: 'hdr'` switches the working target to `Rgba16F`, so a value above display white survives every intermediate pass until the tone mapping sees it. It needs a backend that can render, sample and blend that format, and requesting it where that is unavailable throws during initialization rather than quietly clipping into eight bits. Read `app.backend.getColorFormatCapabilities(TextureFormat.Rgba16F)` first if the choice is optional. Internal HDR needs an opaque canvas: unassociated emission over arbitrary page content is not a portable transparent-canvas promise. This is internal headroom mapped to an SDR canvas; actual HDR display output is not part of the contract and is deferred.
+
+A transparent canvas is encoded correctly for the browser, but the browser, not ExoJS, composites the page, and it does not do so in linear light.
+
+An `Rgba16F` or `Rgba32F` texture is not HDR by virtue of its format. Feedback, state and lookup buffers use them for plain numbers, and the output transform never touches them.
+
+## Reading pixels back
+
+There are two readbacks with different meanings. `readPixels` and `PixelReader` are raw: they return the attachment's stored representation with no hidden transform, so an `Rgba8Srgb` target gives its encoded bytes, an `Rgba8` target gives the bytes that were written, and a float target gives the linear values, including any above one. `readImageData` is display-referred: it runs the output transform once against the source and returns straight-alpha sRGB bytes suitable for `ImageData`, with optional `exposure`, `toneMapping` and `background`. Use raw reads for data and tests, and `readImageData` for what a viewer would see.
+
+## Compressed textures
+
+KTX2 files are read to the native profile described in [Compressed textures and device variants](/ExoJS/en/guide/assets/device-variants/): the data format descriptor supplies the transfer function and alpha association, and a file that contradicts itself or falls outside the profile fails at load instead of being guessed at.
+
+## Migrating
+
+The linear-light pipeline is the only path; there is no switch to restore the previous behaviour. Expect these visible changes.
+
+- Blends, gradients as textures, blur halos, lighting and bloom look different, generally brighter and less muddy, because they are computed in linear light. This is a change of contract, not a regression to baseline away.
+- `Additive` and `Multiply` alpha follow the equations above, and `Subtract` is documented as attenuation.
+- `BloomFilter.threshold` is linear luminance, so a threshold tuned against encoded values sits at a different point.
+- `ColorMatrixFilter` and `LutFilter` gained a `colorSpace` option that defaults to `'srgb'`, and `LutFilter` now handles premultiplied input correctly.
+- A normal, displacement or lookup image must declare `colorSpace: 'none'`; a texture that resolves to `'srgb'` is rejected where the engine reads it as data.
+- A `RenderTexture` you create holding scene colour should pass `format: TextureFormat.Rgba8Srgb`. The default `Rgba8` still stores values as written.
+- A custom WebGPU or WebGL renderer draws into the bound target and its format, not the canvas, and custom shaders return linear premultiplied colour.
+- KTX2 loading is strict. A missing or malformed descriptor, unsupported primaries or transfer, a transfer that contradicts the format, and inconsistent level data now throw an `AssetDecodeError`. Raw RGBA8 payloads keep every supplied mip level and no longer pass through a browser image decode.
+
+## Examples
+
+<a id="color-pipeline"></a>
+<ExamplePreview chapter="render-targets" slug="color-pipeline" />
+
+Colour against data, linear against encoded blending, alpha edges, normal-map interpretation, raw against display readback, and an optional HDR value mapped to SDR.
+
+<TryIt examples={['render-targets/color-pipeline', 'sprites-textures/blendmodes']} api={['texture', 'render-texture', 'color']} />
+
+## Where to go next
+
+[Render targets](/ExoJS/en/guide/rendering/render-targets/) covers choosing a target format, and [Filters](/ExoJS/en/guide/effects/filters/) covers the grading domains in more detail.

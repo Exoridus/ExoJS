@@ -425,7 +425,13 @@ export class RetainedGroupFragment {
    * Structure and backend must already match: this settles the content key
    * only.
    */
-  public reconcileLiveEntryChanges(contentRevision: number, structureRevision: number, backend: RenderBackend, root: RenderNode): boolean {
+  public reconcileLiveEntryChanges(
+    contentRevision: number,
+    structureRevision: number,
+    backend: RenderBackend,
+    root: RenderNode,
+    destinationOpaque: boolean,
+  ): boolean {
     if (!this._hasCapture || this._structureRevision !== structureRevision || this._backend !== backend) {
       return false;
     }
@@ -441,7 +447,7 @@ export class RetainedGroupFragment {
         return true;
       }
 
-      return changeBelongsToLiveEntry(changed, root, marked, candidate => this.hasLiveRecordFor(candidate));
+      return changeBelongsToLiveEntry(changed, root, marked, candidate => this.hasLiveRecordFor(candidate), destinationOpaque);
     });
 
     if (!tolerable) {

@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -33,6 +33,56 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "alphaMode",
+          "signature": "alphaMode?: TextureAlphaMode",
+          "signatureTokens": [
+            {
+              "text": "alphaMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureAlphaMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Source association retained by a container when it provides one."
+        },
+        {
+          "name": "colorSpace",
+          "signature": "colorSpace?: TextureColorSpace",
+          "signatureTokens": [
+            {
+              "text": "colorSpace",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureColorSpace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Interpretation retained by a container when its format does not fix it."
+        },
         {
           "name": "format",
           "signature": "format: CompressedTextureFormat",

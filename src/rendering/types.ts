@@ -2,16 +2,31 @@
  * Compositing blend modes applied when drawing a {@link Drawable} over the current render target.
  *
  * Modes 0-4 are implemented as fixed-function GPU blend equations (no texture
- * capture required). Modes 5-17 use a backdrop-aware compositor: the content is
- * first rendered off-screen, then composited over the captured backdrop via a
- * W3C-compliant blend shader. Use {@link isAdvancedBlendMode} to test whether a
- * mode requires the compositor path.
+ * capture required), mode 3 only while the destination is provably opaque.
+ * Modes 5-17 use a backdrop-aware compositor: the content is first rendered
+ * off-screen, then composited over the captured backdrop via a W3C-compliant
+ * blend shader. {@link isAdvancedBlendMode} answers the destination-independent
+ * question; {@link blendModeNeedsBackdrop} adds the destination's coverage.
  */
 export enum BlendModes {
+  /** Source-over: `Cs + Cd*(1-as)`; alpha `as + ad*(1-as)`. */
   Normal = 0,
+  /** `Cs + Cd`, unclamped - preserve for emissive/glow accumulation. Alpha is ordinary source-over coverage, not `as + ad`. */
   Additive = 1,
+  /**
+   * `Cd*(1-Cs)` - an attenuation compatibility mode, not arithmetic
+   * subtraction, despite the name. Destination alpha is preserved exactly:
+   * this mode has no coverage of its own to composite over the destination
+   * with.
+   */
   Subtract = 2,
+  /**
+   * `Cs*Cd + Cd*(1-as)` with source-over alpha. Exact only against an opaque
+   * destination; any lower destination alpha needs the backdrop-aware
+   * compositor's full W3C formula (see {@link blendModeNeedsBackdrop}).
+   */
   Multiply = 3,
+  /** `Cs + Cd*(1-Cs)` with source-over alpha - the W3C screen blend at any destination alpha, so it never needs the backdrop compositor. */
   Screen = 4,
   /** `min(src, dst)` per channel - coverage-correct via backdrop-aware shader. */
   Darken = 5,
@@ -47,6 +62,34 @@ export enum BlendModes {
  * and return `false`. Modes 5-17 return `true`.
  */
 export const isAdvancedBlendMode = (mode: BlendModes): boolean => mode >= BlendModes.Darken;
+
+/**
+ * Whether `mode` has to be evaluated by the backdrop-aware compositor for a
+ * destination whose alpha is `destinationOpaque`.
+ *
+ * {@link BlendModes.Darken} and above always do. {@link BlendModes.Multiply}
+ * does only when the destination is not provably fully covered: its
+ * fixed-function equation is `Cd*(as*Cs + 1 - as)`, which is what the
+ * compositor's W3C formula reduces to at a destination alpha of exactly 1 and
+ * diverges from it at any lower value - including the fully transparent one,
+ * where the compositor leaves the source untouched and the shortcut multiplies
+ * it by nothing.
+ *
+ * {@link BlendModes.Screen} is never in this set, and not by omission: its
+ * fixed-function equation is `as*Cs + Cd*(1 - as*Cs)`, which is the W3C formula
+ * for that mode at EVERY destination alpha, fractional ones included. Routing it
+ * would cost a backdrop capture and change no pixel.
+ *
+ * `destinationOpaque` is a {@link RenderTarget.opaqueDestination} guarantee,
+ * not an observation: a target that cannot prove full coverage reports `false`
+ * and pays for the backdrop capture.
+ *
+ * {@link isAdvancedBlendMode} keeps answering the mode-only question the
+ * barrier, escape and retention machinery asks; use this where the
+ * destination is known.
+ */
+export const blendModeNeedsBackdrop = (mode: BlendModes, destinationOpaque: boolean): boolean =>
+  isAdvancedBlendMode(mode) || (!destinationOpaque && mode === BlendModes.Multiply);
 
 /**
  * Texture magnification and minification filter modes.
@@ -99,9 +142,11 @@ export enum TextureFormat {
   R8 = 'r8',
   /** Single-channel 32-bit float. */
   R32F = 'r32f',
-  /** 4-channel 8-bit unsigned - the universally supported default. */
+  /** 4-channel 8-bit unsigned - the universally supported default. Stores values as written, with no sRGB transfer: the right choice for data and masks, and for a colour surface only when linear values may be quantized to eight bits. */
   Rgba8 = 'rgba8',
-  /** 4-channel half-float. Stores values outside `[0, 1]` at reduced precision; usually enough for feedback/state buffers. */
+  /** 4-channel 8-bit unsigned with sRGB transfer on RGB channels: writes encode, and sampling or blending decodes to linear light. Alpha stays linear. The storage format for colour surfaces. */
+  Rgba8Srgb = 'rgba8-srgb',
+  /** 4-channel half-float. Stores values outside `[0, 1]` at reduced precision, without any transfer function: usable for scene-linear HDR colour as well as for numeric feedback and state buffers, which are not colour. */
   Rgba16F = 'rgba16f',
   /** 4-channel full-float. Highest precision, 16 bytes per pixel. */
   Rgba32F = 'rgba32f',
@@ -116,7 +161,7 @@ export enum TextureFormat {
  * render-target preparation. Float render targets default to `nearest`
  * sampling; linear filtering additionally requires `OES_texture_float_linear`.
  */
-export type ColorTextureFormat = TextureFormat.Rgba8 | TextureFormat.Rgba16F | TextureFormat.Rgba32F;
+export type ColorTextureFormat = TextureFormat.Rgba8 | TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F | TextureFormat.Rgba32F;
 
 /**
  * Resolution an internal render target is rasterized at, in device pixels per

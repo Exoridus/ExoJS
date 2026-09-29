@@ -20,6 +20,10 @@ class CustomRenderPassScene extends Scene {
       .setScale(2.2)
       .setTint(new Color(255, 180, 120));
     this.between = new Graphics();
+    // Every pass here draws scene colour into the frame's working target; the
+    // application applies its single output transform afterwards, so nothing in
+    // this pipeline encodes for the display itself.
+    //
     // A callback pass slots procedural geometry between two scene nodes - same frame order
     // as the imperative version, now a named, inspectable step.
     this.pipeline = new RenderPipeline()

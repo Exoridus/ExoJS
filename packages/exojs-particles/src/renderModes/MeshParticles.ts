@@ -1,5 +1,6 @@
 import type { AttributeType, GeometryAttribute, Material } from '@codexo/exojs';
 import { Geometry, Shader } from '@codexo/exojs';
+import { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
@@ -9,8 +10,10 @@ import { assertVertexGeometryCompatible, ParticleBufferLayout } from './Particle
 import { instanceAttributes, instanceStrideBytes, ParticleInstanceWriter } from './ParticleInstanceWriter';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
-import vertexSource from './shaders/mesh.vert';
+import vertexSourceModule from './shaders/mesh.vert';
 import meshParticleWgslModule from './shaders/mesh-particles.wgsl';
+
+const vertexSource = spliceGlslPrologue(vertexSourceModule, colorShaderSourcesGlsl);
 
 /** Floats one entry of the normalised mesh vertex table occupies: x, y, u, v. */
 const floatsPerMeshVertex = 4;
@@ -135,7 +138,7 @@ const readMeshTable = (mesh: Geometry, out: Float32Array | null = null): Float32
  * mode, so `localBounds` and `uvBounds` are declared but unused here: a mesh
  * carries its own local footprint rather than taking it from the texture frame.
  */
-export const meshParticleWgsl: string = meshParticleWgslModule;
+export const meshParticleWgsl = `${colorShaderSourcesWgsl}${meshParticleWgslModule}`;
 
 /**
  * One caller-supplied mesh per particle, drawn as a single instanced draw.

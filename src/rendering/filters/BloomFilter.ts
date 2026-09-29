@@ -44,8 +44,11 @@ export const bloomThresholdShader = createFilterShader({
 /** Construction-time options for a {@link BloomFilter}. */
 export interface BloomFilterOptions {
   /**
-   * Luminance a pixel needs before it glows, in `0..1`. Rec. 709 luma of the
-   * premultiplied input, so a half-transparent white glows like an opaque grey.
+   * Luminance a pixel needs before it glows. Rec. 709 luma of the premultiplied
+   * input, so a half-transparent white glows like an opaque grey. `0..1` for an
+   * SDR working target; an HDR working target's luminance can exceed `1`, and a
+   * threshold above `1` restricts the glow to highlights brighter than display
+   * white.
    *
    * The knee is soft, which puts this value in the MIDDLE of the transition
    * rather than at a hard cut: light a little below it still contributes a
@@ -103,11 +106,12 @@ export interface BloomFilterOptions {
  *
  * ## Range
  *
- * There is no HDR anywhere in the chain: the input, every intermediate and the
- * result are eight-bit sRGB. The extraction keeps headroom for an
- * {@link intensity} of roughly `1 / (1 - threshold)` before the glow saturates
- * to white, which is where the effect stops getting brighter and starts getting
- * flatter. Grading belongs to {@link LutFilter}, before or after this one.
+ * Every intermediate matches the input's own format, so an HDR working target's
+ * headroom survives the chain unclipped; an SDR (eight-bit sRGB) input keeps
+ * headroom for an {@link intensity} of roughly `1 / (1 - threshold)` before the
+ * glow saturates to white, which is where the effect stops getting brighter and
+ * starts getting flatter. Grading belongs to {@link LutFilter}, before or after
+ * this one.
  *
  * Runs on a {@link ShaderFilter} carrying both a GLSL and a WGSL source, so it
  * works on either backend without the caller choosing one.
@@ -146,19 +150,19 @@ export class BloomFilter extends Filter {
     super();
 
     this._levels = clampLevels(options.levels);
-    this._threshold = clamp01(options.threshold ?? 0.8);
+    this._threshold = clampNonNegative(options.threshold ?? 0.8);
     this._intensity = Math.max(0, options.intensity ?? 1);
     this._blur = new BlurFilter({ strength: options.strength ?? 8, ...(options.quality !== undefined && { quality: options.quality }) });
     this._writeExtraction();
   }
 
-  /** Luminance a pixel needs before it glows, in `0..1` - the middle of a soft transition, not a hard cut. */
+  /** Luminance a pixel needs before it glows - the middle of a soft transition, not a hard cut. */
   public get threshold(): number {
     return this._threshold;
   }
 
   public set threshold(threshold: number) {
-    const next = clamp01(threshold);
+    const next = clampNonNegative(threshold);
 
     if (this._threshold !== next) {
       this._threshold = next;
@@ -284,7 +288,10 @@ export class BloomFilter extends Filter {
 
         width = Math.max(1, width >> 1);
         height = Math.max(1, height >> 1);
-        held[level] = backend.acquireRenderTexture(width, height);
+        // Match the input's own format so an HDR working target's headroom
+        // survives the chain - an Rgba8 scratch would clip every level to 1.0
+        // before the composite ever sees it.
+        held[level] = backend.acquireRenderTexture(width, height, input.format);
         built = level + 1;
       }
 
@@ -299,7 +306,7 @@ export class BloomFilter extends Filter {
 
       const smallest = held[built - 1]!;
 
-      blurred = backend.acquireRenderTexture(smallest.width, smallest.height);
+      blurred = backend.acquireRenderTexture(smallest.width, smallest.height, smallest.format);
       // `strength` is logical units of the FINAL image, while the level it runs
       // on carries fewer texels per logical unit by exactly the factor it was
       // shrunk by. Measured from the sizes rather than assumed to be `2^built`:
@@ -395,7 +402,7 @@ export class BloomFilter extends Filter {
   }
 }
 
-const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+const clampNonNegative = (value: number): number => Math.max(0, value);
 
 /** A whole number of halvings inside the range the chain is built for. */
 const clampLevels = (levels: number | undefined): number => (levels === undefined ? 3 : Math.min(MAX_LEVELS, Math.max(1, Math.floor(levels))));

@@ -1,4 +1,5 @@
 import type { Color } from '#core/Color';
+import { srgbToLinear } from '#core/colorTransfer';
 import type { Cloneable, Destroyable } from '#core/types';
 import { clamp } from '#math/utils';
 import { DataTexture } from '#rendering/texture/DataTexture';
@@ -15,6 +16,11 @@ export interface GradientStop {
 
 export interface GradientToTextureOptions {
   readonly format?: TextureFormat.Rgba8 | TextureFormat.Rgba32F;
+  /**
+   * Sampler and upload overrides. `colorSpace`, `alphaMode` and
+   * `premultiplyAlpha` describe the produced buffer's actual content and are
+   * not overridable here.
+   */
   readonly textureOptions?: Partial<TextureOptions>;
 }
 
@@ -34,6 +40,11 @@ const sortedStopOffset = (left: InternalGradientStop, right: InternalGradientSto
  *
  * Convert a gradient into a sampleable {@link DataTexture} with
  * {@link Gradient.toTexture}; wrap that texture in a `Sprite`/`Mesh` to draw it.
+ * Stops are always authored and interpolated in sRGB. The interpolated result
+ * is converted to linear light and premultiplied by alpha before it is written
+ * into the texture buffer, so the texture holds the same representation a
+ * colour shader samples at draw time, and {@link Gradient.toTexture} marks that
+ * buffer `colorSpace: 'none'` and `alphaMode: 'premultiplied'` accordingly.
  */
 export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
   /** Concrete gradient kind, e.g. `'linear'` or `'radial'`. */
@@ -186,7 +197,7 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
       width,
       height,
       format: TextureFormat.Rgba8,
-      ...(options.textureOptions !== undefined && { textureOptions: options.textureOptions }),
+      textureOptions: { ...options.textureOptions, ...producerTextureOptions },
     });
     const buffer = texture.buffer;
 
@@ -199,6 +210,7 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
         const u = width === 1 ? 0 : x / (width - 1);
 
         this.sampleAt(this.resolveT(u, v), this._sample);
+        toLinearPremultiplied(this._sample);
 
         // _sample is a fixed 4-element Float32Array.
         buffer[offset] = toUnorm8(this._sample[0]!);
@@ -219,7 +231,7 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
       width,
       height,
       format: TextureFormat.Rgba32F,
-      ...(options.textureOptions !== undefined && { textureOptions: options.textureOptions }),
+      textureOptions: { ...options.textureOptions, ...producerTextureOptions },
     });
     const buffer = texture.buffer;
 
@@ -232,6 +244,7 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
         const u = width === 1 ? 0 : x / (width - 1);
 
         this.sampleAt(this.resolveT(u, v), this._sample);
+        toLinearPremultiplied(this._sample);
 
         // _sample is a fixed 4-element Float32Array.
         buffer[offset] = this._sample[0]!;
@@ -248,4 +261,26 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
   }
 }
 
+/**
+ * The DataTexture this producer writes into carries linear-premultiplied
+ * samples, not upload-time-normalized straight sRGB - forced regardless of any
+ * sampler overrides the caller passes, since these flags describe the buffer's
+ * actual content rather than a preference. `colorSpace: 'none'` is already
+ * DataTexture's own default; the association and normalization request are what
+ * would mislabel the buffer without them.
+ */
+const producerTextureOptions = { colorSpace: 'none', alphaMode: 'premultiplied', premultiplyAlpha: false } as const;
+
 const toUnorm8 = (value: number): number => (clamp(value, 0, 1) * 255 + 0.5) | 0;
+
+/**
+ * Convert an sRGB-interpolated, straight-alpha sample in place to linear,
+ * premultiplied.
+ */
+const toLinearPremultiplied = (sample: Float32Array): void => {
+  const alpha = sample[3]!;
+
+  sample[0] = srgbToLinear(sample[0]!) * alpha;
+  sample[1] = srgbToLinear(sample[1]!) * alpha;
+  sample[2] = srgbToLinear(sample[2]!) * alpha;
+};

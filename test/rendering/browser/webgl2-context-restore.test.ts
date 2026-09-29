@@ -16,9 +16,12 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { OutputTransform } from '#rendering/OutputTransform';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureFormat } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { readWebGl2Pixel } from './_backendSetup';
@@ -166,6 +169,36 @@ describe('WebGL2 real context lose/restore', () => {
     } finally {
       root.destroy();
       texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('the output transform presents identically after a real lose/restore cycle', async () => {
+    const backend = await createBackend();
+    const source = new RenderTexture(canvasSize, canvasSize, { format: TextureFormat.Rgba8Srgb });
+    const outputTransform = new OutputTransform();
+
+    // The presentation pass is the last thing every frame runs, so it has to come
+    // back with the rest of the device state.
+    const present = (): void => {
+      backend.setRenderTarget(source).clear(new Color(128, 128, 128, 1));
+      outputTransform.present(backend, source, false, Color.black);
+      backend.flush();
+      backend.setRenderTarget(null);
+    };
+
+    try {
+      present();
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [128, 128, 128, 255]);
+
+      await loseAndRestoreContext(backend);
+
+      present();
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [128, 128, 128, 255]);
+      expect(backend.context.getError()).toBe(backend.context.NO_ERROR);
+    } finally {
+      source.destroy();
+      outputTransform.destroy();
       backend.destroy();
     }
   });

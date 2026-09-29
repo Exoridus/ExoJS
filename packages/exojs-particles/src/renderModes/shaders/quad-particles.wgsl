@@ -57,7 +57,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
     output.position = uniforms.projection * uniforms.translation * vec4<f32>(rotated, 0.0, 1.0);
     output.texcoord = input.uvMin + ((input.uvMax - input.uvMin) * unitPosition);
-    output.color = vec4(input.color.rgb * input.color.a, input.color.a);
+    // input.color.rgb is the authored sRGB tint byte-for-byte, not yet
+    // decoded; decode it to linear before it is premultiplied and
+    // interpolated.
+    let linearTint = srgbToLinear(input.color.rgb);
+    output.color = vec4(linearTint * input.color.a, input.color.a);
 
     return output;
 }

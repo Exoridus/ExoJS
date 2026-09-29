@@ -11,6 +11,18 @@ const backendCalls = {
   execute: 0,
 };
 
+vi.mock('#rendering/OutputTransform', async importOriginal => {
+  const actual = await importOriginal<typeof import('#rendering/OutputTransform')>();
+
+  // The backends in this suite are hand-written stubs with no GPU device, so the
+  // real output pass has nothing to draw with.
+  class StubOutputTransform extends actual.OutputTransform {
+    public override present(): void {}
+  }
+
+  return { ...actual, OutputTransform: StubOutputTransform };
+});
+
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {
     return {
@@ -40,8 +52,10 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       setView: vi.fn().mockReturnThis(),
       setRenderTarget: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
-      execute: vi.fn().mockImplementation(function (this: unknown) {
+      resolveRenderTarget: vi.fn(),
+      execute: vi.fn().mockImplementation(function (this: unknown, pass: { execute(backend: unknown): void }) {
         backendCalls.execute++;
+        pass.execute(this);
 
         return this;
       }),
@@ -100,14 +114,14 @@ describe('Application — frame passes', () => {
 
     expect(internals['_framePasses']).toBeNull();
     expect(internals['_frameTexture']).toBeNull();
-    // The plain path still clears the canvas itself.
+    // The frame is one redirect into the output target, which carries the clear.
     expect(backendCalls.clear).toBe(1);
-    expect(backendCalls.execute).toBe(0);
+    expect(backendCalls.execute).toBe(1);
 
     void app.destroy();
   });
 
-  test('an empty pipeline leaves the frame on the canvas', () => {
+  test('an empty pipeline draws straight into the output target', () => {
     const app = new Application({ backend: { type: 'webgl2' } });
 
     expect(app.framePasses.size).toBe(0);
@@ -115,7 +129,7 @@ describe('Application — frame passes', () => {
     drawFrame(app);
 
     expect(backendCalls.clear).toBe(1);
-    expect(backendCalls.execute).toBe(0);
+    expect(backendCalls.execute).toBe(1);
     expect((app as unknown as Record<string, unknown>)['_frameTexture']).toBeNull();
 
     void app.destroy();
@@ -128,9 +142,9 @@ describe('Application — frame passes', () => {
     app.framePasses.addPass(pass);
     drawFrame(app);
 
-    // The redirect carries the clear, so the canvas is not cleared separately.
-    expect(backendCalls.clear).toBe(0);
-    expect(backendCalls.execute).toBe(1);
+    // One redirect draws the frame, a second plays the pipeline into the output target; each clears its target.
+    expect(backendCalls.clear).toBe(2);
+    expect(backendCalls.execute).toBe(2);
     expect(pass.executions).toBe(1);
 
     void app.destroy();

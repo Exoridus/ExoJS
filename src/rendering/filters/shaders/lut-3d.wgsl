@@ -1,10 +1,5 @@
-struct Uniforms {
-    uLutSize: f32,
-};
-
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
-@group(1) @binding(0) var<uniform> uniforms: Uniforms;
 @group(1) @binding(1) var uLut: texture_2d<f32>;
 
 fn sampleLut3d(c: vec3<f32>) -> vec3<f32> {
@@ -29,5 +24,17 @@ fn sampleLut3d(c: vec3<f32>) -> vec3<f32> {
 @fragment
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let src = textureSample(uTexture, uSampler, vUv);
-    return vec4<f32>(sampleLut3d(src.rgb), src.a);
+    // The lookup coordinate is the straight colour, not the premultiplied
+    // sample - see lut-rgb1d.wgsl for why.
+    let straight = select(vec3<f32>(0.0), src.rgb / src.a, src.a > 0.0);
+
+    // The straight sample is already linear light. uDomain selects which domain
+    // the LUT was authored in - convert into it before indexing, then convert
+    // the graded result back so the output stays linear.
+    let domainSrgb = uniforms.uDomain > 0.5;
+    let domainRgb = select(straight, linearToSrgb(straight), domainSrgb);
+    let result = sampleLut3d(domainRgb);
+    let graded = select(result, srgbToLinear(result), domainSrgb);
+
+    return vec4<f32>(graded * src.a, src.a);
 }

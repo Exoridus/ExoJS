@@ -22,6 +22,27 @@ import type { RenderTarget } from './RenderTarget';
 import type { BlendModes } from './types';
 import type { View } from './View';
 
+/** Independent support properties of one render-target color format. */
+export interface ColorFormatCapabilities {
+  /** Whether the format can be used as a color attachment. */
+  readonly renderable: boolean;
+  /** Whether the format accepts linear sampling. */
+  readonly filterable: boolean;
+  /** Whether fixed-function blending can write the format. */
+  readonly blendable: boolean;
+  /**
+   * Render-target sample counts this backend can allocate storage for on
+   * `format`, ascending and always containing `1`.
+   *
+   * A count above `1` is a promise the backend keeps end to end: reading it as
+   * support and then setting {@link RenderTarget.sampleCount} makes the target
+   * render multisampled and resolve into its own sampled texture. A backend
+   * whose pipelines cannot carry a sample count reports `1` alone rather than
+   * a count it cannot deliver.
+   */
+  readonly sampleCounts: readonly number[];
+}
+
 /**
  * Common interface implemented by both rendering backends
  * ({@link WebGl2Backend}, {@link WebGpuBackend}). Owns the canvas root
@@ -178,12 +199,24 @@ export interface RenderBackend {
    */
   popStencilClip(): this;
 
-  /**
-   * Whether a {@link RenderTexture} of the given color format can be rendered
-   * into on this backend/context. `'rgba8'` is always supported; float formats
-   * depend on hardware/extension support. Check before allocating a float target.
-   */
+  /** Independent render-target capabilities for the requested color format. */
+  getColorFormatCapabilities(format: ColorTextureFormat): ColorFormatCapabilities;
+
+  /** Whether a {@link RenderTexture} of the given color format can be rendered into on this backend/context. */
   supportsColorFormat(format: ColorTextureFormat): boolean;
+
+  /**
+   * Publish a {@link RenderTarget.sampleCount} target's current frame into the
+   * single-sample texture everything samples that target through.
+   *
+   * A no-op for a target at one sample, and for one that was never rendered
+   * into. Call it once per frame after the last draw into a multisample target
+   * and before anything filters or samples it - the engine's own frame path
+   * resolves the working target here. Depth and stencil are not resolved: a
+   * multisample depth/stencil attachment has no single-sample counterpart to
+   * resolve into, and nothing downstream reads it.
+   */
+  resolveRenderTarget(target: RenderTarget): void;
 
   /** Whether the format supports lossless typed readback on this backend. */
   supportsReadbackFormat(format: ColorTextureFormat): boolean;
@@ -235,12 +268,17 @@ export interface RenderBackend {
   ): PixelReadback<PixelArray>;
 
   /**
-   * Borrow a temporary {@link RenderTexture} of exactly `width × height` from
-   * the backend's pool, allocating one if no pooled entry matches. Hand it back
-   * with {@link releaseRenderTexture} - destroying a borrowed texture instead
-   * corrupts the pool.
+   * Borrow a temporary {@link RenderTexture} of exactly `width × height` and
+   * `format` from the backend's pool, allocating one if no pooled entry
+   * matches. Hand it back with {@link releaseRenderTexture} - destroying a
+   * borrowed texture instead corrupts the pool.
+   *
+   * `format` defaults to `Rgba8`. Pass the working color
+   * format explicitly for a scratch surface that carries color through a
+   * filter, cache or compositor - the pool keys on it, so a mismatched
+   * request never aliases a differently-formatted entry.
    */
-  acquireRenderTexture(width: number, height: number): RenderTexture;
+  acquireRenderTexture(width: number, height: number, format?: ColorTextureFormat): RenderTexture;
 
   /**
    * Return a borrowed render texture for reuse. The pool is bounded in both
@@ -283,7 +321,8 @@ export interface RenderBackend {
    * (backdrop-aware) blend mode. Captures the target's `[x, y, width, height]`
    * region, runs the W3C blend formula in a shader, and draws the result back
    * with normal premultiplied source-over. Used internally by the render-effect
-   * executor for modes where {@link isAdvancedBlendMode} is `true`.
+   * executor for the modes {@link blendModeNeedsBackdrop} reports for the
+   * destination being composited into.
    */
   composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this;
 

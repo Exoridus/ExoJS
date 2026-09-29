@@ -100,7 +100,7 @@ describe('the tangent-space convention derived maps are written in', () => {
 });
 
 describe('a source declares which convention its channels are in', () => {
-  const texture = { width: 1, height: 1 } as Texture;
+  const texture = { width: 1, height: 1, colorSpace: 'none' } as Texture;
 
   test('an authored map is OpenGL unless it says otherwise', () => {
     expect(new NormalMap(texture).convention).toBe('opengl');

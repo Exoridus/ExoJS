@@ -1,0 +1,150 @@
+{
+  "title": "ResolvedTextureMetadata",
+  "description": "Resolved source interpretation retained while a texture handle changes payloads.",
+  "symbol": "ResolvedTextureMetadata",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Resolved source interpretation retained while a texture handle changes payloads."
+      ],
+      "importLine": "import { ResolvedTextureMetadata } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "alphaMode",
+          "signature": "alphaMode: TextureAlphaMode",
+          "signatureTokens": [
+            {
+              "text": "alphaMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureAlphaMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "colorSpace",
+          "signature": "colorSpace: TextureColorSpace",
+          "signatureTokens": [
+            {
+              "text": "colorSpace",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureColorSpace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mipLevelCount",
+          "signature": "mipLevelCount: number",
+          "signatureTokens": [
+            {
+              "text": "mipLevelCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "storageFormat",
+          "signature": "storageFormat: CompressedTextureFormat | TextureFormat | null",
+          "signatureTokens": [
+            {
+              "text": "storageFormat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/Texture.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Texture.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/Texture.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Texture.ts"
+}

@@ -181,6 +181,17 @@ describe('Color — numeric and string output', () => {
     expect(color.toRgb()).toBe(0xff0000);
     expect(color.toRgba8()).toBe(0xff0000ff);
   });
+
+  test('writeLinear writes sRGB-decoded RGB and unchanged alpha at an offset', () => {
+    const color = new Color(128, 0, 255, 0.25);
+    const out = new Float32Array([9, 9, 9, 9, 9, 9]);
+
+    color.writeLinear(out, 1);
+
+    expect([...out]).toEqual([9, expect.closeTo(0.2158605001, 7), 0, 1, 0.25, 9]);
+    expect([...color.toArray(true)]).toEqual([expect.closeTo(128 / 255, 6), 0, 1, 0.25]);
+    expect(color.toRgba8()).toBe(0x3fff0080);
+  });
 });
 
 describe('Color — named constants', () => {

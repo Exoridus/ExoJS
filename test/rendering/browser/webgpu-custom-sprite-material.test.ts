@@ -25,7 +25,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -345,11 +345,13 @@ describe('custom SpriteMaterial WebGPU browser', () => {
 
     const device = getBackendDevice(backend);
     // Browser-source pixels are unpremultiplied. The default-true texture must
-    // therefore resolve (200, 100, 50, .5) to roughly (100, 50, 25, .5), while
-    // the false texture already stores those premultiplied RGB channels.
+    // therefore premultiply in linear light: (200, 100, 50) decodes to
+    // (0.578, 0.127, 0.032), halves to (0.290, 0.064, 0.016) and is stored by the
+    // encoding target as (147, 72, 34). The false texture already carries those
+    // channels, authored as the encoded values they should land on.
     const defaultTexture = createSolidTexture(200, 100, 50, 128);
     const customPremultiplyTexture = createSolidTexture(200, 100, 50, 128);
-    const customAlreadyPremultipliedTexture = createSolidTexture(100, 50, 25, 128);
+    const customAlreadyPremultipliedTexture = createSolidTexture(147, 72, 34, 128);
 
     customAlreadyPremultipliedTexture.setPremultiplyAlpha(false);
 
@@ -380,14 +382,11 @@ describe('custom SpriteMaterial WebGPU browser', () => {
     device.pushErrorScope('validation');
 
     try {
-      backend.resetStats();
-      backend.clear(Color.black);
-      root.render(backend);
-      backend.flush();
+      await renderWebGpuEncoded(ctx, backend, root);
 
       const validationError = await device.popErrorScope();
       const readPixel = readWebGpuPixels(backend, 64);
-      const expected = [100, 50, 25, 255] as const;
+      const expected = [147, 72, 34, 255] as const;
 
       expect(validationError).toBeNull();
       expect(backend.stats.drawCalls).toBe(2);

@@ -63,7 +63,7 @@ const engineHashImports = () => ({
   name: 'exojs-bench-engine-hash-imports',
   enforce: 'pre',
   resolveId(source: string, importer: string | undefined) {
-    if (!source.startsWith('#') || source.endsWith('.vert') || source.endsWith('.frag')) {
+    if (!source.startsWith('#') || source.endsWith('.vert') || source.endsWith('.frag') || source.endsWith('.wgsl')) {
       return null;
     }
 
@@ -284,9 +284,9 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // wildcard exactly. Engine modules imported through it still resolve their OWN
     // internal `#*` imports via the root package.json map + `@codexo/exojs-source`
     // condition below, so the engine graph is measured exactly as it ships.
-    // `.vert`/`.frag` specifiers carry their extension and are handled by
+    // `.vert`/`.frag`/`.wgsl` specifiers carry their extension and are handled by
     // `realShaderPlugin`'s transform.
-    resolve: { alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag)$/, replacement: `${ENGINE_SRC}/$1.$2` }], conditions: srcConditions },
+    resolve: { alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` }], conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
     // `noDiscovery` keeps the automatic dep scanner OFF - it runs esbuild over
     // the whole import graph, which would choke on the engine's `.vert`/`.frag`

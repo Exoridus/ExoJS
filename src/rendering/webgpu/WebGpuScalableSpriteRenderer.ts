@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
@@ -51,6 +52,14 @@ export const shaderPathEntries: string = shaderPathEntriesModule;
 
 /** WGSL entry points for the geometry (N-quads-per-sprite) repeating-sprite path. @internal */
 export const geoPathEntries: string = geoPathEntriesModule;
+
+/**
+ * The whole WGSL module {@link WebGpuScalableSpriteRenderer} compiles: the
+ * shared colour helpers ahead of {@link commonWgsl}, {@link shaderPathEntries}
+ * and {@link geoPathEntries}, in that order.
+ * @internal
+ */
+export const scalableSpriteShaderSource = `${colorShaderSourcesWgsl}${commonWgsl}${shaderPathEntries}${geoPathEntries}`;
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -181,7 +190,7 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
 
     this._shaderModule = device.createShaderModule({
       label: 'repeating-sprite:shader',
-      code: commonWgsl + shaderPathEntries + geoPathEntries,
+      code: scalableSpriteShaderSource,
     });
 
     this._uniformBindGroupLayout = device.createBindGroupLayout({

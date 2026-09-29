@@ -54,6 +54,10 @@ Forward lighting reads normals from a `LitMaterial`; lightmap lighting uses `nor
 
 The default authored convention is OpenGL-style tangent space: red points right, green points toward the top of the image, and blue points out of the sprite plane. For a DirectX-style asset, declare `new NormalMap(texture, { convention: 'directx' })`. Flipping the green channel is not the same operation as flipping the texture vertically, and neither changes the engine's y-down world coordinates.
 
+A normal map is sampled as numeric data, so it must resolve to exactly `colorSpace: 'none'`: a loaded image declares that itself, and a `DataTexture` already is numeric. A map that resolves to `'srgb'` is rejected, because an sRGB view would hardware-decode the normal, and so is `'linear-srgb'`, which is still colour. The check repeats when a lit draw consumes the map, so a texture reinterpreted after the `NormalMap` was built fails there.
+
+Colour and data stay separate throughout. Albedo textures are ordinary sRGB colour. Light and ambient `Color` values are authored sRGB and are converted to linear light once, and the light term is accumulated and multiplied against albedo in linear light. Normal maps, the lightmap's own accumulation buffers and radiance transport records are numeric and never pass through a colour transform.
+
 Use the same atlas layout for albedo and normals. A material binding is shared by the sprites using that material, so a second atlas generally needs its own corresponding material. `AlphaNormals` derives surface detail from a silhouette; it cannot reconstruct interior detail that the alpha channel does not contain.
 
 The lightmap normal prepass stores one normal per covered pixel. Overlapping registered surfaces resolve by registration order within that prepass, not by an inferred full scene ordering. Test layered surfaces rather than assuming that a single normal buffer describes every overlap.
@@ -80,7 +84,7 @@ Bounced light uses prior-frame information. Setting `bounce` to zero removes tha
 
 `lighting.hdr` reports whether the active path accumulates with headroom above one. Lightmap lighting can fall back to an `rgba8` target where its float target is unavailable; that clips earlier and changes what a thresholded bloom can detect. Radiance has its own float-target requirement. Inspect capabilities rather than assuming that one model's fallback applies to another.
 
-A post filter operates on the shaded frame. More exposure is not tone mapping, and a bloom does not supply an sRGB/linear color-management pipeline by itself. Keep source color interpretation, lighting accumulation, and display conversion conceptually separate.
+A post filter operates on the shaded frame, and the application's output transform still runs after it. Lighting accumulation headroom and the application's working format are separate switches: lighting can accumulate above one internally, but the frame only carries values above display white to the output transform when `rendering.color.workingFormat` is `'hdr'`; on the default SDR working target they clip when the lit frame is written. Exposure and tone mapping belong to the output transform, not to a bloom or a filter. Keep source colour interpretation, lighting accumulation, and display conversion conceptually separate, and read [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/) for the output side.
 
 The lighting system owns its renderer resources. Light nodes, occluder sources, the host, normal sources, and filters supplied by the caller retain their own ownership. Track or dispose caller-created resources at their actual lifetime boundary; do not destroy a shared loader texture to remove one light.
 

@@ -45,7 +45,11 @@ fn shaderVert(input: ShaderVIn, @builtin(vertex_index) vid: u32) -> VOut {
     let u = select(input.uvParams.z, ((lx - x0) / destW) * input.uvParams.x + input.uvParams.z, destW > 0.0);
     let v = select(input.uvParams.w, ((ly - y0) / destH) * input.uvParams.y + input.uvParams.w, destH > 0.0);
     out.uv    = vec2<f32>(u, v);
-    out.color = vec4<f32>(input.color.rgb * input.color.a, input.color.a);
+    // input.color.rgb is the authored sRGB tint byte-for-byte (unorm8x4 vertex
+    // fetch, not yet decoded); decode it to linear before it is premultiplied
+    // and interpolated.
+    let linearTint = srgbToLinear(input.color.rgb);
+    out.color = vec4<f32>(linearTint * input.color.a, input.color.a);
     return out;
 }
 

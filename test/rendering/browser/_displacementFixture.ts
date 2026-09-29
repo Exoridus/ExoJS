@@ -64,7 +64,9 @@ export const constantDisplacementMap = (size = 4): Texture => {
 
   context.putImageData(image, 0, 0);
 
-  return new Texture(source, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, generateMipMap: false });
+  // The channels are a direction in [-1, 1], not colour, so the map declares
+  // itself numeric: an sRGB view would hardware-decode them on sample.
+  return new Texture(source, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, generateMipMap: false, colorSpace: 'none' });
 };
 
 export const displacement = (map: Texture): DisplacementFilter => new DisplacementFilter({ map });

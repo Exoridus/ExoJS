@@ -73,7 +73,17 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     let sample = textureSample(meshTexture, meshSampler, input.texcoord);
-    let resolvedSample = select(sample, vec4(sample.rgb * sample.a, sample.a), input.premultiplySample == 1u);
-    let modulated = resolvedSample * input.color * input.tint;
-    return vec4<f32>(modulated.rgb * modulated.a, modulated.a);
+    let resolvedSample = associateSampledColor(sample, input.premultiplySample == 1u);
+
+    // The authored per-vertex colour and per-instance tint are decoded once,
+    // premultiplied each, then combined with the sample by a single
+    // component-wise multiply. `resolvedSample` is already premultiplied, so
+    // multiplying the two premultiplied factors into it associates the result
+    // exactly once.
+    let linearVertexRgb = srgbToLinear(input.color.rgb);
+    let vertexPremultiplied = vec4<f32>(linearVertexRgb * input.color.a, input.color.a);
+    let linearTintRgb = srgbToLinear(input.tint.rgb);
+    let tintPremultiplied = vec4<f32>(linearTintRgb * input.tint.a, input.tint.a);
+
+    return resolvedSample * vertexPremultiplied * tintPremultiplied;
 }

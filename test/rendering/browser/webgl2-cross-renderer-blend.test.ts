@@ -10,7 +10,7 @@
  * Run via:  pnpm test:browser:webgl2
  */
 
-import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
+import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Encoded } from './_backendSetup';
 import { blendClearColor, blendExpected, blendSamples, buildCrossRendererBlendScene } from './_crossRendererBlendScene';
 import { expectPixelNear } from './_pixels';
 
@@ -22,7 +22,7 @@ describe('WebGL2 blend state across renderer types', () => {
     const scene = buildCrossRendererBlendScene();
 
     try {
-      renderWebGl2Once(backend, scene.root, blendClearColor);
+      renderWebGl2Encoded(backend, scene.root, blendClearColor);
 
       // One draw call per node: a scene that merged them could not observe a
       // renderer inheriting another renderer's blend state.

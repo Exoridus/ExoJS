@@ -42,7 +42,7 @@ import { compositorShaderSource as backdropBlendCompositorWgsl } from '#renderin
 import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
 import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/WebGpuMaskCompositor';
 import { instancedMeshShaderSource, meshShaderSource } from '#rendering/webgpu/WebGpuMeshRenderer';
-import { commonWgsl, geoPathEntries, shaderPathEntries } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
+import { scalableSpriteShaderSource } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
 import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
@@ -54,7 +54,7 @@ const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   ['WebGpuMaskCompositor', maskCompositorWgsl],
   ['WebGpuMeshRenderer (default)', meshShaderSource],
   ['WebGpuMeshRenderer (instanced)', instancedMeshShaderSource],
-  ['WebGpuScalableSpriteRenderer (combined)', commonWgsl + shaderPathEntries + geoPathEntries],
+  ['WebGpuScalableSpriteRenderer (combined)', scalableSpriteShaderSource],
   ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [`WebGpuSpriteRenderer (${tier} texture slots)`, buildSpriteShaderSource(tier)]),
   ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [
     `WebGpuSpriteRenderer persistent-indexed (${tier} texture slots)`,

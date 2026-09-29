@@ -50,6 +50,7 @@ const mockBuilder = (
 
   return {
     _isViewCullSuppressed: true,
+    _destinationOpaque: (): boolean => false,
     backend: {},
     view: {
       updateId: 1,

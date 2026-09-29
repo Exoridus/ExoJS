@@ -1,11 +1,12 @@
 #version 300 es
-precision lowp float;
+precision highp float;
+precision highp sampler2D;
 
 uniform sampler2D u_texture;
 
 // UVs need full precision on mobile GLES — especially on the shader path,
 // whose tiling UVs can span many repeats and would quantise visibly at lowp.
-// The color varying stays lowp for 8-bit output.
+// Colour is linear and may exceed 1 in an HDR working format, so the stage runs at full precision throughout.
 in highp vec2 v_texcoord;
 in vec4 v_color;
 

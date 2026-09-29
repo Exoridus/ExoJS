@@ -20,9 +20,9 @@ void main() {
     // threshold does not show the hard line a step() leaves behind.
     float soft = clamp(luma - uniforms.uThreshold + knee, 0.0, 2.0 * knee);
     soft = soft * soft / (4.0 * knee + 1e-5);
-    // Only the EXCESS over the threshold blooms, not the whole pixel. An 8-bit
-    // target has no headroom above one, so extracting the full colour would let
-    // any intensity above one saturate the halo at the first bright pixel.
+    // Only the EXCESS over the threshold blooms, not the whole pixel: excess is
+    // a fraction of the input color, so an HDR value above one still passes
+    // through at its own magnitude instead of being clamped to display white.
     float excess = clamp(max(soft, luma - uniforms.uThreshold) / max(luma, 1e-5), 0.0, 1.0);
 
     // Zero alpha, on purpose: a glow is light the scene EMITS, not coverage it

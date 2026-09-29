@@ -1,4 +1,5 @@
 import { packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
@@ -153,8 +154,8 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
   public constructor(batchSize: number) {
     super();
     this._batchSize = batchSize;
-    this._shaderPathShader = new WebGl2Shader(shaderPathVertSource, sharedFragSource);
-    this._geoPathShader = new WebGl2Shader(geoPathVertSource, sharedFragSource);
+    this._shaderPathShader = new WebGl2Shader(spliceGlslPrologue(shaderPathVertSource, colorShaderSourcesGlsl), sharedFragSource);
+    this._geoPathShader = new WebGl2Shader(spliceGlslPrologue(geoPathVertSource, colorShaderSourcesGlsl), sharedFragSource);
 
     this._shaderData = new ArrayBuffer(batchSize * shaderStrideBytes);
     this._shaderF32 = new Float32Array(this._shaderData);

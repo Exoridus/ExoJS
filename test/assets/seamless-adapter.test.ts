@@ -2,6 +2,7 @@ import { soundSeamlessAdapter, textureSeamlessAdapter } from '#assets/seamless';
 import { Sound } from '#audio/Sound';
 import { logger, LogSeverity } from '#core/Logger';
 import { Texture } from '#rendering/texture/Texture';
+import { ScaleModes } from '#rendering/types';
 
 const bufferStub = (duration = 2): AudioBuffer => {
   return { duration } as AudioBuffer;
@@ -48,6 +49,24 @@ describe('textureSeamlessAdapter', () => {
     await expect(handle.loaded).resolves.toBe(handle);
   });
 
+  test('fill preserves the donor browser-source interpretation without copying its sampler', () => {
+    const handle = textureSeamlessAdapter.createPlaceholder({ textureOptions: { scaleMode: ScaleModes.Nearest } });
+    const canvas = document.createElement('canvas');
+
+    canvas.width = 16;
+    canvas.height = 16;
+
+    const donor = new Texture();
+
+    donor._setDecodedImageSource(canvas, 'none');
+
+    textureSeamlessAdapter.fill(handle, donor);
+
+    expect(handle.colorSpace).toBe('none');
+    expect(handle.alphaMode).toBe('straight');
+    expect(handle.scaleMode).toBe(ScaleModes.Nearest);
+  });
+
   test('fail shows the missing checker and rejects loaded', async () => {
     const handle = textureSeamlessAdapter.createPlaceholder();
 
@@ -56,6 +75,16 @@ describe('textureSeamlessAdapter', () => {
     expect(handle.loadState).toBe('failed');
     expect(handle.source).toBe(Texture.missing.source);
     expect(handle.width).toBe(8);
+    await expect(handle.loaded).rejects.toThrow('404');
+  });
+
+  test('fail preserves a numeric placeholder interpretation while showing the missing checker', async () => {
+    const handle = textureSeamlessAdapter.createPlaceholder({ textureOptions: { colorSpace: 'none' } });
+
+    textureSeamlessAdapter.fail(handle, new Error('404'));
+
+    expect(handle.source).toBe(Texture.missing.source);
+    expect(handle.colorSpace).toBe('none');
     await expect(handle.loaded).rejects.toThrow('404');
   });
 

@@ -12,6 +12,9 @@ const unsupportedMode: RenderingApplicationOptions = { alphaMode: 'transparent' 
 // @ts-expect-error - alphaMode is a closed union, not a free-form string
 const looseMode: RenderingApplicationOptions = { alphaMode: freeform };
 
+// The canvas composite mode is independent of the output transform: both are set together.
+const withOutput: RenderingApplicationOptions = { alphaMode: 'premultiplied', color: { toneMapping: 'reinhard' } };
+
 // `webglAttributes` no longer expresses the composite contract: `alpha` and
 // `premultipliedAlpha` are derived from `alphaMode` for both backends, so a
 // WebGL-only spelling of the same thing would silently diverge from WebGPU.
@@ -38,4 +41,4 @@ const keptAttributes: RenderingApplicationOptions = {
   },
 };
 
-export { keptAttributes, legacyAlpha, legacyPremultiplied, legacyStencil, looseMode, mode, opaque, premultiplied, unsupportedMode };
+export { keptAttributes, legacyAlpha, legacyPremultiplied, legacyStencil, looseMode, mode, opaque, premultiplied, unsupportedMode, withOutput };

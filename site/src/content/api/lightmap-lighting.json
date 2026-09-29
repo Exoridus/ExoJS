@@ -669,7 +669,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scale applied to the shaded output, 1 by default. It moves the exposure only: the lights, the transport and the bounce history are all untouched, so raising it shows what a light field holds above 1.0 without changing what any of it computed. That is what makes it the right knob for looking at an overbright scene - turning a light down instead would change the scene being looked at. Under forward, where nothing is composited, it does nothing. It is not a tone map: values still clip, one stop further along."
+          "description": "Scale applied to the shaded output, 1 by default. It moves the exposure only: the lights, the transport and the bounce history are all untouched, so raising it shows what a light field holds above 1.0 without changing what any of it computed. That is what makes it the right knob for looking at an overbright scene - turning a light down instead would change the scene being looked at. Under forward, where nothing is composited, it does nothing. It is not a tone map: values still clip, one stop further along. It also has nothing to do with the application's own output exposure/tone-mapping setting - that runs once, after this system has already composited into the frame, and stays the caller's decision about how the whole frame reaches the display; this one is a lighting-only debug multiplier with no effect on what gets published anywhere else."
         },
         {
           "name": "hdr",

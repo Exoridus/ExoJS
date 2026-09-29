@@ -45,7 +45,11 @@ fn spriteVertexCore(
     var localX = select(localBounds.x, localBounds.z, cornerX == 1u);
     var localY = select(localBounds.y, localBounds.w, cornerY == 1u);
 
-    let tint = unpack4x8unorm(tintWord);
+    // The packed word is the authored sRGB tint byte-for-byte; decode it to
+    // linear before it is premultiplied and interpolated, so a non-white tint
+    // is a linear multiplicative colour rather than an extra gamma step.
+    let rawTint = unpack4x8unorm(tintWord);
+    let tint = vec4<f32>(srgbToLinear(rawTint.rgb), rawTint.a);
 
     // Geometry boundary snap (m1.z == 2.0, axis-aligned only): round each local
     // corner to the device grid so the quad edges land on whole device pixels.

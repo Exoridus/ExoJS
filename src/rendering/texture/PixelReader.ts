@@ -11,7 +11,11 @@ import type { RenderTexture } from './RenderTexture';
 
 /** Options for {@link RenderingContext.createPixelReader}. */
 export interface PixelReaderOptions<T extends PixelDataType = 'uint8'> {
-  /** Defaults to `uint8` for rgba8. Float textures require `float32` and preserve their values. */
+  /**
+   * Defaults to `uint8` for `rgba8`/`rgba8srgb` - the attachment's own stored
+   * bytes, never decoded or tone-mapped. Float textures require `float32` and
+   * preserve their values.
+   */
   dataType?: T;
   /** Sub-rectangle to read, in pixels from the texture's top-left corner. Defaults to the whole texture. */
   region?: ReadonlyRectangle;
@@ -35,25 +39,14 @@ export interface PixelRegion {
 }
 
 /**
- * Check a readback's format and rectangle against `source`, naming `method`
- * in the error. Shared by the one-shot and the standing reader so both refuse
- * the same inputs with the same words.
+ * Check a read rectangle against `source`'s own size, naming `method` in the
+ * error. Format-agnostic - shared by {@link resolvePixelRegion} (a raw read,
+ * which also checks the format/dataType pairing) and
+ * `RenderingContext.readImageData` (whose output transform accepts any
+ * working format as its source).
  * @internal
  */
-export const resolvePixelRegion = (
-  method: string,
-  source: RenderTexture,
-  region: ReadonlyRectangle | undefined,
-  dataType: PixelDataType = 'uint8',
-): PixelRegion => {
-  const valid =
-    dataType === 'uint8'
-      ? source.format === TextureFormat.Rgba8
-      : dataType === 'float32' && (source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F);
-  if (!valid) {
-    throw new Error(`${method} cannot read '${source.format}' as '${dataType}'. Use uint8 for rgba8 or float32 for rgba16f/rgba32f.`);
-  }
-
+export const resolvePixelRegionBounds = (method: string, source: RenderTexture, region: ReadonlyRectangle | undefined): PixelRegion => {
   const x = region !== undefined ? Math.trunc(region.left) : 0;
   const y = region !== undefined ? Math.trunc(region.top) : 0;
   const width = region !== undefined ? Math.trunc(region.width) : source.width;
@@ -64,6 +57,33 @@ export const resolvePixelRegion = (
   }
 
   return { x, y, width, height };
+};
+
+/**
+ * Check a raw readback's format and rectangle against `source`, naming
+ * `method` in the error. Shared by the one-shot and the standing reader so
+ * both refuse the same inputs with the same words.
+ * @internal
+ */
+export const resolvePixelRegion = (
+  method: string,
+  source: RenderTexture,
+  region: ReadonlyRectangle | undefined,
+  dataType: PixelDataType = 'uint8',
+): PixelRegion => {
+  // A raw read never decodes: `rgba8srgb` is accepted here on exactly the same
+  // terms as `rgba8` - the caller gets the attachment's own stored bytes,
+  // sRGB-encoded or not, never unassociated or tone-mapped. Only
+  // `RenderingContext.readImageData` performs that transform.
+  const valid =
+    dataType === 'uint8'
+      ? source.format === TextureFormat.Rgba8 || source.format === TextureFormat.Rgba8Srgb
+      : dataType === 'float32' && (source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F);
+  if (!valid) {
+    throw new Error(`${method} cannot read '${source.format}' as '${dataType}'. Use uint8 for rgba8/rgba8srgb or float32 for rgba16f/rgba32f.`);
+  }
+
+  return resolvePixelRegionBounds(method, source, region);
 };
 
 /**

@@ -178,7 +178,9 @@ export class BlurFilter extends Filter {
     // vertical sweep reads every texel of it, so the two cannot share a target.
     // Borrowed from the backend's pool rather than allocated: a blurred node
     // would otherwise create and destroy a full-size render texture per frame.
-    const scratch = backend.acquireRenderTexture(output.width, output.height);
+    // Same colour format as the destination the two sweeps write into, so an
+    // HDR-working chain does not clip through an 8-bit scratch mid-blur.
+    const scratch = backend.acquireRenderTexture(output.width, output.height, output.format);
 
     try {
       this._stageTaps(this._tapSpacing / output.width, 0);

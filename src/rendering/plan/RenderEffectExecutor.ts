@@ -4,6 +4,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { MaskSource, RenderNode } from '#rendering/RenderNode';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { type ColorTextureFormat, TextureFormat } from '#rendering/types';
 
 import { type BarrierScope, ClipKind, type GroupScope } from './RenderScope';
 import { targetTexels } from './targetResolution';
@@ -96,6 +97,19 @@ export class RenderEffectExecutor {
     frame.maskSource!.render(frame.backend!);
   };
 
+  /**
+   * The colour format a scratch or cache surface has to carry to stay in the
+   * same working representation as what it will be composited back into -
+   * the currently bound target's format when that target is itself a
+   * {@link RenderTexture}, `Rgba8` for the canvas. Only for surfaces that
+   * hold colour; coverage masks stay raw `Rgba8` regardless.
+   */
+  private static _workingColorFormat(backend: RenderBackend): ColorTextureFormat {
+    const target = backend.renderTarget;
+
+    return target instanceof RenderTexture ? target.format : TextureFormat.Rgba8;
+  }
+
   public static play(barrier: BarrierScope, backend: RenderBackend, playScope: (scope: GroupScope) => void): void {
     const depth = RenderEffectExecutor._depth;
     const frame = (RenderEffectExecutor._frames[depth] ??= createFrame());
@@ -154,11 +168,12 @@ export class RenderEffectExecutor {
       return;
     }
 
-    const cacheTexture = needsTextureCache ? node._renderPlanEnsureCacheTexture(texelWidth, texelHeight) : null;
+    const colorFormat = this._workingColorFormat(backend);
+    const cacheTexture = needsTextureCache ? node._renderPlanEnsureCacheTexture(texelWidth, texelHeight, colorFormat) : null;
     let pooledTexture: RenderTexture | null = null;
 
     try {
-      const sourceTexture = needsTextureCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(texelWidth, texelHeight);
+      const sourceTexture = needsTextureCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(texelWidth, texelHeight, colorFormat);
 
       if (sourceTexture !== cacheTexture) {
         pooledTexture = sourceTexture;
@@ -171,7 +186,7 @@ export class RenderEffectExecutor {
       if (hasFilters) {
         for (let index = 0; index < effect.filters.length; index++) {
           const isLast = index === effect.filters.length - 1;
-          const output = isLast && needsTextureCache ? cacheTexture! : backend.acquireRenderTexture(texelWidth, texelHeight);
+          const output = isLast && needsTextureCache ? cacheTexture! : backend.acquireRenderTexture(texelWidth, texelHeight, colorFormat);
 
           try {
             // In-bounds: index < effect.filters.length.
@@ -277,7 +292,11 @@ export class RenderEffectExecutor {
       return;
     }
 
-    const contentTexture = backend.acquireRenderTexture(targetTexels(barrier.width, barrier.resolution), targetTexels(barrier.height, barrier.resolution));
+    const contentTexture = backend.acquireRenderTexture(
+      targetTexels(barrier.width, barrier.resolution),
+      targetTexels(barrier.height, barrier.resolution),
+      this._workingColorFormat(backend),
+    );
     const releasePool: RenderTexture[] = [contentTexture];
 
     try {

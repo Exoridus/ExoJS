@@ -60,6 +60,8 @@ You can also hand the loaded face to the node directly through the `font` style 
 
 `font` takes precedence over `fontFamily` when both are set.
 
+Text colours (`fillColor`, outline and shadow colours) are authored sRGB `Color` values, converted to linear light once like every other authored colour. Glyph coverage held in a signed-distance-field atlas is numeric data, not colour, and is never decoded; only colour glyphs rasterized through a canvas are colour. See [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/).
+
 ## Style properties
 
 The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-options/). All properties are optional:

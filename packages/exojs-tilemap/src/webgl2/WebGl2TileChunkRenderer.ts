@@ -14,10 +14,12 @@ import {
   BlendModes,
   BufferTypes,
   BufferUsage,
+  colorShaderSourcesGlsl,
   createWebGl2ShaderProgram,
   fillShaderSource,
   packedGroupChanged,
   RenderingPrimitives,
+  spliceGlslPrologue,
   uploadBufferRange,
   uploadBufferStore,
   WebGl2RenderBuffer,
@@ -39,7 +41,10 @@ const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const transformTextureUnit = 1;
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
-const tileVertexSource = fillShaderSource(tileVertexTemplate, { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT });
+const tileVertexSource = spliceGlslPrologue(
+  fillShaderSource(tileVertexTemplate, { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT }),
+  colorShaderSourcesGlsl,
+);
 
 interface TileRendererConnection {
   readonly gl: WebGL2RenderingContext;

@@ -80,7 +80,11 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let v = select(input.uvBounds.y, input.uvBounds.w, sv == 1u);
     output.texcoord = vec2<f32>(u, v);
 
-    output.color = vec4(input.color.rgb * input.color.a, input.color.a);
+    // input.color.rgb is the authored sRGB tint byte-for-byte (unorm8x4
+    // vertex fetch, not yet decoded); decode it to linear before it is
+    // premultiplied and interpolated.
+    let linearTint = srgbToLinear(input.color.rgb);
+    output.color = vec4(linearTint * input.color.a, input.color.a);
 
     return output;
 }

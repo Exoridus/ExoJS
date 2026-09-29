@@ -19,6 +19,7 @@ import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { useEncodedFrameTarget } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
@@ -82,6 +83,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     mesh.tint = new Color(255, 255, 0, 1); // yellow
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       mesh.render(backend);
       backend.flush();
@@ -103,6 +105,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     graphics.drawRectangle(8, 8, 48, 48);
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       graphics.render(backend);
       backend.flush();
@@ -170,6 +173,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     graphics.lineTo(56, 32);
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       graphics.render(backend);
       backend.flush();
@@ -198,6 +202,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     graphics.lineTo(8, 8);
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       graphics.render(backend);
       backend.flush();
@@ -241,6 +246,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     });
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       for (const mesh of meshes) {
         mesh.render(backend);
@@ -322,6 +328,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     graphics.drawRectangle(8, 8, 48, 48);
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       graphics.render(backend);
       backend.flush();

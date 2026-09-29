@@ -10,6 +10,7 @@ import {
   Scene,
   type Seconds,
   Sprite,
+  TextureFormat,
 } from '@codexo/exojs';
 
 class TrailFeedbackScene extends Scene {
@@ -32,8 +33,10 @@ class TrailFeedbackScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.rtA = new RenderTexture(width, height);
-    this.rtB = new RenderTexture(width, height);
+    // The trail accumulates in linear light, so the targets use the sRGB colour
+    // format: eight bits of linear storage quantize the dark end of the fade coarsely.
+    this.rtA = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
+    this.rtB = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
     this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5);
 
     this.decayA = new Sprite(this.rtA);

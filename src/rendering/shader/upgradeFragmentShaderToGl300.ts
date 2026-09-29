@@ -5,7 +5,7 @@
  *
  * Transformations applied (1.00 → 3.00):
  *   - Adds `#version 300 es` header
- *   - Adds `precision highp float;` (always - required because the
+ *   - Adds `precision highp float;` and `precision highp sampler2D;` (always - required because the
  *     `out vec4 fragColor;` declaration immediately below uses a
  *     float-typed variable; GLSL ES 3.00 requires precision to be
  *     declared before any float-typed declaration). User precision
@@ -53,7 +53,7 @@ export const upgradeFragmentShaderToGl300 = (source: string): string => {
   // float-typed declaration. If the user has their own precision later
   // in the source, GLSL's last-precision-wins rule means their
   // preference applies to their own code; ours just covers fragColor.
-  const header = '#version 300 es\n' + 'precision highp float;\n' + 'out vec4 fragColor;\n';
+  const header = '#version 300 es\n' + 'precision highp float;\n' + 'precision highp sampler2D;\n' + 'out vec4 fragColor;\n';
 
   return header + transformed;
 };

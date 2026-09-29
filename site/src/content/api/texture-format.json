@@ -6,7 +6,7 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -89,6 +89,19 @@
           "signatureTokens": [
             {
               "text": "Rgba8",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Rgba8Srgb",
+          "signature": "Rgba8Srgb",
+          "signatureTokens": [
+            {
+              "text": "Rgba8Srgb",
               "kind": "name"
             }
           ],

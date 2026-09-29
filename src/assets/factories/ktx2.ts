@@ -1,81 +1,14 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import type { CompressedTextureLevel } from '#rendering/texture/compressedPayload';
 import { compressedLevelByteLength, CompressedTextureFormat as Format } from '#rendering/texture/CompressedTextureFormat';
+import type { Rgba8TextureLevel } from '#rendering/texture/pixelPayload';
+import type { TextureAlphaMode, TextureColorSpace } from '#rendering/texture/TextureOptions';
+
+import { parseKtx2Descriptor } from './ktx2Descriptor';
+import { formatByVkFormat, ktx2LevelAlignment, vkFormatRgba8Srgb, vkFormatRgba8Unorm } from './ktx2Profile';
 
 /** `«KTX 20»\r\n\x1A\n` - the 12-byte KTX2 file identifier. */
 const identifier = Object.freeze([0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-/**
- * `VkFormat` values a KTX2 payload may carry, mapped onto this engine's format
- * vocabulary.
- *
- * The sRGB and UNORM variants of one block format map to the same entry: the
- * blocks are bit-identical and the engine's managed textures are linear-sampled
- * `rgba8unorm` throughout, so honouring the distinction here would make
- * compressed textures the only ones on a different transfer function.
- *
- * `BC1_RGB` maps to the RGBA form because that is the only BC1 format WebGPU
- * exposes, and the two differ solely in whether the punch-through alpha bit is
- * honoured.
- */
-const formatByVkFormat = new Map<number, Format>([
-  [131, Format.Bc1RgbaUnorm],
-  [132, Format.Bc1RgbaUnorm],
-  [133, Format.Bc1RgbaUnorm],
-  [134, Format.Bc1RgbaUnorm],
-  [135, Format.Bc2RgbaUnorm],
-  [136, Format.Bc2RgbaUnorm],
-  [137, Format.Bc3RgbaUnorm],
-  [138, Format.Bc3RgbaUnorm],
-  [139, Format.Bc4RUnorm],
-  [140, Format.Bc4RSnorm],
-  [141, Format.Bc5RgUnorm],
-  [142, Format.Bc5RgSnorm],
-  [143, Format.Bc6hRgbUfloat],
-  [144, Format.Bc6hRgbFloat],
-  [145, Format.Bc7RgbaUnorm],
-  [146, Format.Bc7RgbaUnorm],
-  [147, Format.Etc2Rgb8Unorm],
-  [148, Format.Etc2Rgb8Unorm],
-  [149, Format.Etc2Rgb8A1Unorm],
-  [150, Format.Etc2Rgb8A1Unorm],
-  [151, Format.Etc2Rgba8Unorm],
-  [152, Format.Etc2Rgba8Unorm],
-  [153, Format.EacR11Unorm],
-  [155, Format.EacRg11Unorm],
-  [157, Format.Astc4x4Unorm],
-  [158, Format.Astc4x4Unorm],
-  [159, Format.Astc5x4Unorm],
-  [160, Format.Astc5x4Unorm],
-  [161, Format.Astc5x5Unorm],
-  [162, Format.Astc5x5Unorm],
-  [163, Format.Astc6x5Unorm],
-  [164, Format.Astc6x5Unorm],
-  [165, Format.Astc6x6Unorm],
-  [166, Format.Astc6x6Unorm],
-  [167, Format.Astc8x5Unorm],
-  [168, Format.Astc8x5Unorm],
-  [169, Format.Astc8x6Unorm],
-  [170, Format.Astc8x6Unorm],
-  [171, Format.Astc8x8Unorm],
-  [172, Format.Astc8x8Unorm],
-  [173, Format.Astc10x5Unorm],
-  [174, Format.Astc10x5Unorm],
-  [175, Format.Astc10x6Unorm],
-  [176, Format.Astc10x6Unorm],
-  [177, Format.Astc10x8Unorm],
-  [178, Format.Astc10x8Unorm],
-  [179, Format.Astc10x10Unorm],
-  [180, Format.Astc10x10Unorm],
-  [181, Format.Astc12x10Unorm],
-  [182, Format.Astc12x10Unorm],
-  [183, Format.Astc12x12Unorm],
-  [184, Format.Astc12x12Unorm],
-]);
-
-/** `VK_FORMAT_R8G8B8A8_UNORM` and `..._SRGB` - the one uncompressed payload this parser accepts. */
-const vkFormatRgba8Unorm = 37;
-const vkFormatRgba8Srgb = 43;
 
 /** Supercompression schemes, by their KTX2 numeric id. */
 const supercompressionNames = new Map<number, string>([
@@ -89,21 +22,30 @@ const zlibSupercompression = 3;
 const headerBytes = 80;
 const levelIndexEntryBytes = 24;
 const supercompressionSchemeOffset = 44;
-const levelCountOffset = 40;
+const alignTo = (value: number, alignment: number): number => Math.ceil(value / alignment) * alignment;
+const maxInflatedKtx2Bytes = 256 * 1024 * 1024;
 
 /** A KTX2 payload whose levels are already in a hardware format. */
 export interface Ktx2CompressedPayload {
   readonly kind: 'compressed';
   readonly format: Format;
   readonly levels: readonly CompressedTextureLevel[];
+  readonly colorSpace: TextureColorSpace;
+  readonly alphaMode: TextureAlphaMode;
 }
 
-/** A KTX2 payload storing plain 8-bit RGBA texels, level 0 only. */
+/** A KTX2 payload storing plain 8-bit RGBA texels. */
 export interface Ktx2UncompressedPayload {
   readonly kind: 'rgba8';
+  /** @deprecated Use `levels[0]`. Kept for existing parser consumers. */
   readonly width: number;
+  /** @deprecated Use `levels[0]`. Kept for existing parser consumers. */
   readonly height: number;
+  /** @deprecated Use `levels[0]`. Kept for existing parser consumers. */
   readonly data: Uint8Array;
+  readonly levels: readonly Rgba8TextureLevel[];
+  readonly colorSpace: TextureColorSpace;
+  readonly alphaMode: TextureAlphaMode;
 }
 
 /** What {@link parseKtx2} produces. */
@@ -120,6 +62,54 @@ export const isKtx2 = (bytes: Uint8Array): boolean => bytes.length >= identifier
 
 const fail = (source: string, message: string): never => {
   throw new AssetDecodeError({ message: `KTX2 file "${source}": ${message}`, assetType: 'ktx2' });
+};
+
+const isSrgbFormat = (format: Format | number): boolean => format === vkFormatRgba8Srgb || (typeof format === 'string' && format.endsWith('srgb'));
+
+/**
+ * `KHR_DF_FLAG_ALPHA_PREMULTIPLIED`, bit 0 of the DFD flags byte.
+ *
+ * The bit - not a private encoding of it - is what tells a reader that RGB has
+ * already been multiplied by alpha. Any other bit belongs to a different
+ * registry flag and is rejected by the descriptor rather than treated as a
+ * second spelling of premultiplied alpha.
+ */
+const dfdAlphaPremultiplied = 1;
+
+const resolveColorMetadata = (
+  source: string,
+  vkFormat: number,
+  format: Format | number,
+  transferFunction: number,
+  alphaFlags: number,
+): { colorSpace: TextureColorSpace; alphaMode: TextureAlphaMode } => {
+  const srgbStorage = isSrgbFormat(format);
+
+  if ((srgbStorage && transferFunction !== 2) || (!srgbStorage && transferFunction === 2)) {
+    return fail(source, `DFD transfer ${transferFunction} contradicts vkFormat ${vkFormat}.`);
+  }
+
+  let colorSpace: TextureColorSpace = 'none';
+  if (transferFunction === 2) {
+    colorSpace = 'srgb';
+  } else if (transferFunction === 1) {
+    colorSpace = 'linear-srgb';
+  }
+
+  return {
+    colorSpace,
+    alphaMode: alphaFlags === dfdAlphaPremultiplied ? 'premultiplied' : 'straight',
+  };
+};
+
+const rgba8LevelByteLength = (source: string, width: number, height: number, index: number): number => {
+  const length = width * height * 4;
+
+  if (!Number.isSafeInteger(length)) {
+    return fail(source, `level ${index} RGBA8 byte length is outside JavaScript's safe integer range.`);
+  }
+
+  return length;
 };
 
 /**
@@ -147,18 +137,8 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
     return fail(source, 'file does not start with the KTX2 identifier.');
   }
 
-  const view = new DataView(buffer);
-  const vkFormat = view.getUint32(12, true);
-  const pixelWidth = view.getUint32(20, true);
-  const pixelHeight = view.getUint32(24, true);
-  const pixelDepth = view.getUint32(28, true);
-  const layerCount = view.getUint32(32, true);
-  const faceCount = view.getUint32(36, true);
-  // A stored `levelCount` of 0 means "the mip chain is to be generated", which
-  // for a compressed payload is not possible - so it is read as the single level
-  // the file does contain rather than rejected.
-  const levelCount = Math.max(view.getUint32(levelCountOffset, true), 1);
-  const supercompressionScheme = view.getUint32(supercompressionSchemeOffset, true);
+  const descriptor = parseKtx2Descriptor(buffer, source);
+  const { vkFormat, pixelWidth, pixelHeight, levelCount, supercompressionScheme } = descriptor;
 
   if (supercompressionScheme === zlibSupercompression) {
     return fail(source, 'payload is still ZLIB-supercompressed. Run inflateKtx2Levels over the bytes before parsing them.');
@@ -174,56 +154,40 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
     );
   }
 
-  if (pixelDepth > 1 || layerCount > 1 || faceCount > 1) {
-    return fail(source, `only 2D single-layer textures are supported, but the file declares depth ${pixelDepth}, ${layerCount} layers and ${faceCount} faces.`);
-  }
+  const sliceLevel = (index: number, expected: number): Uint8Array => {
+    const level = descriptor.levels[index];
 
-  if (pixelWidth === 0 || pixelHeight === 0) {
-    return fail(source, `declares an empty extent of ${pixelWidth}x${pixelHeight}.`);
-  }
-
-  const levelIndexBytes = levelCount * levelIndexEntryBytes;
-
-  if (buffer.byteLength < headerBytes + levelIndexBytes) {
-    return fail(source, `declares ${levelCount} levels, but the file is too short to hold their index.`);
-  }
-
-  const readLevel = (index: number): { readonly offset: number; readonly length: number } => {
-    const entry = headerBytes + index * levelIndexEntryBytes;
-    // Both fields are 64-bit. A level beyond 2^53 bytes cannot exist, so reading
-    // them as `BigUint64` and narrowing is pointless - but the high word still
-    // has to be checked, or a corrupt header would silently truncate to a
-    // plausible offset.
-    const offsetHigh = view.getUint32(entry + 4, true);
-    const lengthHigh = view.getUint32(entry + 12, true);
-
-    if (offsetHigh !== 0 || lengthHigh !== 0) {
-      fail(source, `level ${index} declares an offset or length above 4 GiB.`);
+    if (level === undefined) {
+      return fail(source, `level ${index} is missing from the validated index.`);
     }
 
-    return { offset: view.getUint32(entry, true), length: view.getUint32(entry + 8, true) };
-  };
-
-  const sliceLevel = (index: number, expected: number): Uint8Array => {
-    const { offset, length } = readLevel(index);
+    const { offset, length } = level;
 
     if (length !== expected) {
       fail(source, `level ${index} declares ${length} bytes but its extent needs exactly ${expected}.`);
-    }
-
-    if (offset + length > buffer.byteLength) {
-      fail(source, `level ${index} runs past the end of the file.`);
     }
 
     return bytes.subarray(offset, offset + length);
   };
 
   if (vkFormat === vkFormatRgba8Unorm || vkFormat === vkFormatRgba8Srgb) {
-    if (levelCount > 1) {
-      return fail(source, 'an uncompressed RGBA8 payload is only read as a single level, but the file declares a mip chain.');
+    const metadata = resolveColorMetadata(source, vkFormat, vkFormat, descriptor.dfd.transferFunction, descriptor.dfd.flags);
+    const levels: Rgba8TextureLevel[] = [];
+
+    for (let index = 0; index < levelCount; index++) {
+      const width = Math.max(Math.floor(pixelWidth / 2 ** index), 1);
+      const height = Math.max(Math.floor(pixelHeight / 2 ** index), 1);
+
+      levels.push({ data: sliceLevel(index, rgba8LevelByteLength(source, width, height, index)), width, height });
     }
 
-    return { kind: 'rgba8', width: pixelWidth, height: pixelHeight, data: sliceLevel(0, pixelWidth * pixelHeight * 4) };
+    const base = levels[0];
+
+    if (base === undefined) {
+      return fail(source, 'has no base RGBA8 level.');
+    }
+
+    return { kind: 'rgba8', width: base.width, height: base.height, data: base.data, levels, ...metadata };
   }
 
   const format = formatByVkFormat.get(vkFormat);
@@ -232,18 +196,28 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
     return fail(source, `vkFormat ${vkFormat} is not a texture format this engine can upload.`);
   }
 
+  const metadata = resolveColorMetadata(source, vkFormat, format, descriptor.dfd.transferFunction, descriptor.dfd.flags);
+
+  if ((format === Format.Bc1RgbUnorm || format === Format.Bc1RgbUnormSrgb) && metadata.alphaMode === 'premultiplied') {
+    return fail(source, `DFD alpha association contradicts opaque vkFormat ${vkFormat}.`);
+  }
+
+  if (descriptor.declaredLevelCount === 0) {
+    return fail(source, 'compressed payload declares levelCount 0, which requests generated mips that cannot be represented by compressed data.');
+  }
+
   const levels: CompressedTextureLevel[] = [];
 
   // The level index runs mip 0 first, so it is read forwards; the mip extents
   // halve and never drop below one texel.
   for (let index = 0; index < levelCount; index++) {
-    const width = Math.max(pixelWidth >> index, 1);
-    const height = Math.max(pixelHeight >> index, 1);
+    const width = Math.max(Math.floor(pixelWidth / 2 ** index), 1);
+    const height = Math.max(Math.floor(pixelHeight / 2 ** index), 1);
 
     levels.push({ data: sliceLevel(index, compressedLevelByteLength(format, width, height)), width, height });
   }
 
-  return { kind: 'compressed', format, levels };
+  return { kind: 'compressed', format, levels, ...metadata };
 };
 
 /**
@@ -256,15 +230,16 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
  *
  * Returns `buffer` itself when the container is not ZLIB-supercompressed, so it
  * can sit in front of {@link parseKtx2} unconditionally. The result is an
- * equivalent container with scheme 0 and its level index rewritten, which keeps
- * the parser synchronous and testable without I/O.
+ * equivalent container with scheme 0 and its level index rewritten, while each
+ * stream writes directly into its prevalidated destination range.
  *
  * `source` only names the file in error messages.
  *
- * @throws AssetDecodeError - a level whose inflated size does not match the one
- *   the container declares, or a runtime without `DecompressionStream`.
+ * @throws AssetDecodeError - a level whose inflated size exceeds or does not
+ *   match the declared range, a decoded payload over the byte budget, or a
+ *   runtime without `DecompressionStream`.
  */
-export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string): Promise<ArrayBuffer> => {
+export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string, signal?: AbortSignal): Promise<ArrayBuffer> => {
   if (buffer.byteLength < headerBytes) {
     return buffer;
   }
@@ -281,52 +256,44 @@ export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string): Pr
     return buffer;
   }
 
+  const descriptor = parseKtx2Descriptor(buffer, source);
+
   if (typeof DecompressionStream === 'undefined') {
     return fail(source, 'payload is ZLIB-supercompressed, which needs DecompressionStream. Ship the container uncompressed for this runtime.');
-  }
-
-  const levelCount = Math.max(view.getUint32(levelCountOffset, true), 1);
-  const levelIndexBytes = levelCount * levelIndexEntryBytes;
-
-  if (buffer.byteLength < headerBytes + levelIndexBytes) {
-    return fail(source, `declares ${levelCount} levels, but the file is too short to hold their index.`);
-  }
-
-  const levels: Array<{ readonly offset: number; readonly length: number; readonly inflatedLength: number }> = [];
-
-  for (let index = 0; index < levelCount; index++) {
-    const entry = headerBytes + index * levelIndexEntryBytes;
-
-    if (view.getUint32(entry + 4, true) !== 0 || view.getUint32(entry + 12, true) !== 0 || view.getUint32(entry + 20, true) !== 0) {
-      return fail(source, `level ${index} declares an offset or length above 4 GiB.`);
-    }
-
-    const offset = view.getUint32(entry, true);
-    const length = view.getUint32(entry + 8, true);
-
-    if (offset < headerBytes + levelIndexBytes || offset + length > buffer.byteLength) {
-      return fail(source, `level ${index} runs outside the file.`);
-    }
-
-    levels.push({ offset, length, inflatedLength: view.getUint32(entry + 16, true) });
   }
 
   // Everything the header points at other than level data - the format
   // descriptor, the key/value data, the supercompression global data - lives
   // before the first level and is referenced by absolute offset, so that prefix
   // is copied verbatim and only the levels move.
+  const { levels } = descriptor;
+  // The rebuilt container is uncompressed, so its levels sit on the native alignment of the format.
+  const alignment = ktx2LevelAlignment(descriptor.vkFormat);
   const prefixBytes = Math.min(...levels.map(({ offset }) => offset));
-  const inflated = await Promise.all(levels.map(async ({ offset, length }) => inflateZlib(bytes.subarray(offset, offset + length))));
+  const alignedPrefixBytes = alignTo(prefixBytes, alignment);
+  let decodedBytes = 0;
+  let resultBytes = alignedPrefixBytes;
 
-  for (const [index, level] of inflated.entries()) {
-    const declared = levels[index]?.inflatedLength ?? 0;
+  for (const [index, level] of levels.entries()) {
+    if (level.uncompressedByteLength === 0) {
+      return fail(source, `level ${index} declares an empty inflated byte range.`);
+    }
 
-    if (level.byteLength !== declared) {
-      return fail(source, `level ${index} inflates to ${level.byteLength} bytes but declares ${declared}.`);
+    decodedBytes += level.uncompressedByteLength;
+    resultBytes = alignTo(resultBytes + level.uncompressedByteLength, alignment);
+
+    if (
+      !Number.isSafeInteger(decodedBytes) ||
+      !Number.isSafeInteger(resultBytes) ||
+      decodedBytes > maxInflatedKtx2Bytes ||
+      resultBytes > maxInflatedKtx2Bytes
+    ) {
+      return fail(source, `declares ${decodedBytes} decoded bytes, exceeding the ${maxInflatedKtx2Bytes}-byte ZLIB safety budget.`);
     }
   }
 
-  const result = new Uint8Array(prefixBytes + inflated.reduce((total, level) => total + level.byteLength, 0));
+  throwIfAborted(signal);
+  const result = new Uint8Array(resultBytes);
 
   result.set(bytes.subarray(0, prefixBytes));
 
@@ -336,65 +303,105 @@ export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string): Pr
 
   // Written back in the container's own storage order (smallest level first), so
   // the rewritten offsets stay monotonic with the bytes they name.
-  let cursor = prefixBytes;
+  let cursor = alignedPrefixBytes;
 
   const storageOrder = levels.map((level, index) => ({ index, offset: level.offset })).sort((a, b) => a.offset - b.offset);
 
   for (const { index } of storageOrder) {
-    const data = inflated[index];
+    const level = levels[index];
 
-    if (data === undefined) {
-      return fail(source, `level ${index} has no inflated payload.`);
-    }
+    if (level === undefined) return fail(source, `level ${index} is missing from the validated index.`);
 
     const entry = headerBytes + index * levelIndexEntryBytes;
 
-    result.set(data, cursor);
+    await inflateZlib(
+      bytes.subarray(level.offset, level.offset + level.length),
+      result.subarray(cursor, cursor + level.uncompressedByteLength),
+      source,
+      index,
+      signal,
+    );
     resultView.setUint32(entry, cursor, true);
-    resultView.setUint32(entry + 8, data.byteLength, true);
-    cursor += data.byteLength;
+    resultView.setUint32(entry + 8, level.uncompressedByteLength, true);
+    cursor = alignTo(cursor + level.uncompressedByteLength, alignment);
   }
 
   return result.buffer;
 };
 
+const abortError = (signal: AbortSignal): Error => {
+  if (signal.reason instanceof Error && signal.reason.name === 'AbortError') {
+    return signal.reason;
+  }
+
+  return new DOMException('The operation was aborted.', 'AbortError');
+};
+
+const throwIfAborted = (signal: AbortSignal | undefined): void => {
+  if (signal?.aborted === true) {
+    throw abortError(signal);
+  }
+};
+
 // The buffer generic is explicit because DecompressionStream only accepts a view
 // over a plain ArrayBuffer, which a Uint8Array is not required to be.
-const inflateZlib = async (data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> => {
-  const decompressor = new DecompressionStream('deflate');
-  // Written through the writer rather than piped from a source stream: the
-  // whole level is already in memory, and this keeps the chunk types the
-  // DecompressionStream declares on both ends.
-  const pump = (async (): Promise<void> => {
-    const writer = decompressor.writable.getWriter();
+const ignoreRejection = (): void => undefined;
 
+const inflateZlib = async (data: Uint8Array<ArrayBuffer>, destination: Uint8Array, source: string, index: number, signal?: AbortSignal): Promise<void> => {
+  throwIfAborted(signal);
+
+  const decompressor = new DecompressionStream('deflate');
+  const writer = decompressor.writable.getWriter();
+  const reader = decompressor.readable.getReader();
+  const pump = (async (): Promise<void> => {
     await writer.write(data);
     await writer.close();
   })();
-  const reader = decompressor.readable.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-
-  for (;;) {
-    const { done, value } = await reader.read();
-
-    if (done) {
-      break;
-    }
-
-    chunks.push(value);
-    total += value.byteLength;
-  }
-
-  await pump;
-
-  const result = new Uint8Array(total);
+  void pump.catch(ignoreRejection);
+  const cancel = (): void => {
+    void reader.cancel().catch(ignoreRejection);
+    void writer.abort().catch(ignoreRejection);
+  };
+  const onAbort = (): void => cancel();
   let cursor = 0;
 
-  for (const chunk of chunks) {
-    result.set(chunk, cursor);
-    cursor += chunk.byteLength;
-  }
+  signal?.addEventListener('abort', onAbort, { once: true });
 
-  return result;
+  try {
+    throwIfAborted(signal);
+
+    for (;;) {
+      const { done, value } = await reader.read();
+
+      throwIfAborted(signal);
+
+      if (done) break;
+
+      if (value.byteLength > destination.byteLength - cursor) {
+        cancel();
+        return fail(source, `level ${index} inflates to ${cursor + value.byteLength} bytes but declares ${destination.byteLength}.`);
+      }
+
+      destination.set(value, cursor);
+      cursor += value.byteLength;
+    }
+
+    await pump;
+
+    if (cursor !== destination.byteLength) {
+      return fail(source, `level ${index} inflates to ${cursor} bytes but declares ${destination.byteLength}.`);
+    }
+  } catch (error) {
+    cancel();
+    await pump.catch(ignoreRejection);
+
+    if (signal?.aborted === true) throw abortError(signal);
+    if (error instanceof AssetDecodeError) throw error;
+
+    return fail(source, `level ${index} cannot be inflated as a complete ZLIB stream.`);
+  } finally {
+    signal?.removeEventListener('abort', onAbort);
+    reader.releaseLock();
+    writer.releaseLock();
+  }
 };

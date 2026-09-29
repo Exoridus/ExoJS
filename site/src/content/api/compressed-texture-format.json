@@ -6,7 +6,7 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 29,
+  "memberCount": 52,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -31,11 +31,37 @@
       "title": "Members",
       "members": [
         {
+          "name": "Astc10x10Srgb",
+          "signature": "Astc10x10Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc10x10Srgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Astc10x10Unorm",
           "signature": "Astc10x10Unorm",
           "signatureTokens": [
             {
               "text": "Astc10x10Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc10x5Srgb",
+          "signature": "Astc10x5Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc10x5Srgb",
               "kind": "name"
             }
           ],
@@ -57,11 +83,37 @@
           "description": ""
         },
         {
+          "name": "Astc10x6Srgb",
+          "signature": "Astc10x6Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc10x6Srgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Astc10x6Unorm",
           "signature": "Astc10x6Unorm",
           "signatureTokens": [
             {
               "text": "Astc10x6Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc10x8Srgb",
+          "signature": "Astc10x8Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc10x8Srgb",
               "kind": "name"
             }
           ],
@@ -83,11 +135,37 @@
           "description": ""
         },
         {
+          "name": "Astc12x10Srgb",
+          "signature": "Astc12x10Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc12x10Srgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Astc12x10Unorm",
           "signature": "Astc12x10Unorm",
           "signatureTokens": [
             {
               "text": "Astc12x10Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc12x12Srgb",
+          "signature": "Astc12x12Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc12x12Srgb",
               "kind": "name"
             }
           ],
@@ -109,11 +187,37 @@
           "description": ""
         },
         {
+          "name": "Astc4x4Srgb",
+          "signature": "Astc4x4Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc4x4Srgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Astc4x4Unorm",
           "signature": "Astc4x4Unorm",
           "signatureTokens": [
             {
               "text": "Astc4x4Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc5x4Srgb",
+          "signature": "Astc5x4Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc5x4Srgb",
               "kind": "name"
             }
           ],
@@ -135,11 +239,37 @@
           "description": ""
         },
         {
+          "name": "Astc5x5Srgb",
+          "signature": "Astc5x5Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc5x5Srgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Astc5x5Unorm",
           "signature": "Astc5x5Unorm",
           "signatureTokens": [
             {
               "text": "Astc5x5Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc6x5Srgb",
+          "signature": "Astc6x5Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc6x5Srgb",
               "kind": "name"
             }
           ],
@@ -161,11 +291,37 @@
           "description": ""
         },
         {
+          "name": "Astc6x6Srgb",
+          "signature": "Astc6x6Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc6x6Srgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Astc6x6Unorm",
           "signature": "Astc6x6Unorm",
           "signatureTokens": [
             {
               "text": "Astc6x6Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc8x5Srgb",
+          "signature": "Astc8x5Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc8x5Srgb",
               "kind": "name"
             }
           ],
@@ -187,11 +343,37 @@
           "description": ""
         },
         {
+          "name": "Astc8x6Srgb",
+          "signature": "Astc8x6Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc8x6Srgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Astc8x6Unorm",
           "signature": "Astc8x6Unorm",
           "signatureTokens": [
             {
               "text": "Astc8x6Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc8x8Srgb",
+          "signature": "Astc8x8Srgb",
+          "signatureTokens": [
+            {
+              "text": "Astc8x8Srgb",
               "kind": "name"
             }
           ],
@@ -226,6 +408,45 @@
           "description": ""
         },
         {
+          "name": "Bc1RgbaUnormSrgb",
+          "signature": "Bc1RgbaUnormSrgb",
+          "signatureTokens": [
+            {
+              "text": "Bc1RgbaUnormSrgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc1RgbUnorm",
+          "signature": "Bc1RgbUnorm",
+          "signatureTokens": [
+            {
+              "text": "Bc1RgbUnorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc1RgbUnormSrgb",
+          "signature": "Bc1RgbUnormSrgb",
+          "signatureTokens": [
+            {
+              "text": "Bc1RgbUnormSrgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Bc2RgbaUnorm",
           "signature": "Bc2RgbaUnorm",
           "signatureTokens": [
@@ -239,11 +460,37 @@
           "description": ""
         },
         {
+          "name": "Bc2RgbaUnormSrgb",
+          "signature": "Bc2RgbaUnormSrgb",
+          "signatureTokens": [
+            {
+              "text": "Bc2RgbaUnormSrgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Bc3RgbaUnorm",
           "signature": "Bc3RgbaUnorm",
           "signatureTokens": [
             {
               "text": "Bc3RgbaUnorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc3RgbaUnormSrgb",
+          "signature": "Bc3RgbaUnormSrgb",
+          "signatureTokens": [
+            {
+              "text": "Bc3RgbaUnormSrgb",
               "kind": "name"
             }
           ],
@@ -343,6 +590,19 @@
           "description": ""
         },
         {
+          "name": "Bc7RgbaUnormSrgb",
+          "signature": "Bc7RgbaUnormSrgb",
+          "signatureTokens": [
+            {
+              "text": "Bc7RgbaUnormSrgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "EacR11Unorm",
           "signature": "EacR11Unorm",
           "signatureTokens": [
@@ -369,6 +629,19 @@
           "description": ""
         },
         {
+          "name": "Etc2Rgb8A1Srgb",
+          "signature": "Etc2Rgb8A1Srgb",
+          "signatureTokens": [
+            {
+              "text": "Etc2Rgb8A1Srgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Etc2Rgb8A1Unorm",
           "signature": "Etc2Rgb8A1Unorm",
           "signatureTokens": [
@@ -382,11 +655,37 @@
           "description": ""
         },
         {
+          "name": "Etc2Rgb8Srgb",
+          "signature": "Etc2Rgb8Srgb",
+          "signatureTokens": [
+            {
+              "text": "Etc2Rgb8Srgb",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Etc2Rgb8Unorm",
           "signature": "Etc2Rgb8Unorm",
           "signatureTokens": [
             {
               "text": "Etc2Rgb8Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Etc2Rgba8Srgb",
+          "signature": "Etc2Rgba8Srgb",
+          "signatureTokens": [
+            {
+              "text": "Etc2Rgba8Srgb",
               "kind": "name"
             }
           ],

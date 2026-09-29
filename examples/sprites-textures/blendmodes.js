@@ -2,6 +2,12 @@
 import { Application, Asset, BlendModes, Color, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
+// Blending runs in linear light on premultiplied colour, so a mode reads
+// brighter and less muddy than the same equation on encoded values would. The
+// result alpha follows source-over coverage for the coverage-preserving modes
+// (Additive keeps its RGB sum, Subtract attenuates the destination rather than
+// subtracting arithmetically).
+//
 // Every public blend mode, in enum order, paired with a display name.
 const BLEND_MODES = [
   { mode: BlendModes.Normal, name: 'Normal' },

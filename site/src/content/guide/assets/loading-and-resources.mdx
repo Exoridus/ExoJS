@@ -31,6 +31,16 @@ export const loadPortrait = (scope: LoaderScope, name: string) =>
 
 `Asset.type(...)` describes an asset; constructing it does not fetch anything. Per-asset options belong in that descriptor. Streamed music, video, bitmap fonts, and browser fonts require explicit descriptors and awaited loading rather than pretending that every resource supports placeholder access.
 
+One per-asset option changes what the bytes mean. A texture is sRGB colour by default; an image that carries numbers rather than colour, such as a normal map, a displacement map or a lookup table, is loaded with `textureOptions: { colorSpace: 'none' }` so it is decoded without colour conversion and never treated as colour:
+
+```ts
+import { Asset } from '@codexo/exojs';
+
+export const heightMap = Asset.type('texture', 'terrain/height.png', { textureOptions: { colorSpace: 'none' } });
+```
+
+The [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/) chapter explains colour, data and alpha.
+
 ## Use a placeholder deliberately
 
 `get()` returns synchronously and acquires a claim. It is **not** a passive cache lookup. For supported resource types it returns a handle that can be used while loading and is filled in place. For value types such as JSON it returns an `AssetRef`; read `.value` only after it is ready.

@@ -23,6 +23,15 @@ describe('RenderTexture color format', () => {
     expect(new RenderTexture(8, 8, { format: TextureFormat.Rgba32F }).scaleMode).toBe(ScaleModes.Nearest);
   });
 
+  test('carries the requested sRGB format and keeps the default linear scale mode', () => {
+    const rt = new RenderTexture(8, 8, { format: TextureFormat.Rgba8Srgb });
+
+    // Rgba8Srgb is exactly as filterable as Rgba8, so it does not fall into the
+    // float-format nearest default.
+    expect(rt.format).toBe(TextureFormat.Rgba8Srgb);
+    expect(rt.scaleMode).toBe(ScaleModes.Linear);
+  });
+
   test('an explicit scaleMode overrides the float nearest default', () => {
     expect(new RenderTexture(8, 8, { format: TextureFormat.Rgba32F, scaleMode: ScaleModes.Linear }).scaleMode).toBe(ScaleModes.Linear);
   });

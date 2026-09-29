@@ -10,7 +10,7 @@ import { Color } from '#core/Color';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
 
-import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
+import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import { CLEAR, MATRIX_SCENE_SIZE, matrixScene, SAMPLE } from './_colorMatrixFixture';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
@@ -19,7 +19,7 @@ const render = async (ctx: { skip: (reason: string) => void }, css: string, filt
   const { root, textures } = matrixScene(css, filters);
 
   try {
-    if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
 
     expectPixelNear(readWebGpuPixels(backend, MATRIX_SCENE_SIZE)(SAMPLE, SAMPLE), expected, tolerance);
   } finally {
@@ -45,7 +45,9 @@ describe('ColorMatrixFilter grading (WebGPU)', () => {
   });
 
   test('a half-transparent edge grades on straight alpha, not on the stored sample', async ctx => {
-    // Applying the inversion to the stored premultiplied sample reads 204.
-    await render(ctx, 'rgba(102, 102, 102, 0.5)', [new ColorMatrixFilter().invert()], [77, 77, 77, 255]);
+    // Inverted on straight alpha, 0.4 grey becomes 0.6 (0.318 linear); half
+    // coverage over black in linear light is 0.159, stored as byte 111.
+    // Inverting the stored premultiplied sample would read visibly brighter.
+    await render(ctx, 'rgba(102, 102, 102, 0.5)', [new ColorMatrixFilter().invert()], [111, 111, 111, 255]);
   });
 });

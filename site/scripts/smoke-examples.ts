@@ -20,7 +20,8 @@
  * Usage:
  *   pnpm --filter @codexo/exojs-examples examples:smoke      # from repo: pnpm test:examples:smoke
  *   ... --only camera-basic        # smoke a single example (path substring)
- *   ... --sample                   # one example per category (the PR-stage subset)
+ *   ... --sample                   # one example per category plus the colour canaries (the PR-stage subset)
+ *   ... --canary                   # only the colour canaries (see `COLOR_CANARY_PATHS`)
  *   ... --renderer webgl2          # withhold the WebGPU adapter (see `forceWebGl2`)
  *   ... --concurrency 4            # parallel pages (default: half the cores, at most 4)
  *   ... --browser firefox          # run under Firefox headed (cross-browser)
@@ -915,6 +916,22 @@ const runExample = async (
 };
 
 /**
+ * Examples whose failure is a colour-contract violation rather than a crash:
+ * numeric data sampled as colour, alpha association, blend arithmetic, HDR
+ * headroom. A category sample can pass over every one of them, so the sample
+ * always includes them. Every path must exist in the catalog - a rename fails
+ * the run instead of silently shrinking the set.
+ */
+const COLOR_CANARY_PATHS: readonly string[] = [
+  'render-targets/color-pipeline.js',
+  'sprites-textures/blendmodes.js',
+  'filters/bloom-filter.js',
+  'lighting/many-lights.js',
+  'lighting/lightmap-normals.js',
+  'render-targets/water-mirror.js',
+];
+
+/**
  * One example per catalog category, in catalog order.
  *
  * The trade for a fraction of the wall time: a defect confined to a single
@@ -942,7 +959,8 @@ const main = async (): Promise<void> => {
     args: process.argv.slice(2),
     options: {
       only: { type: 'string' },
-      sample: { type: 'boolean' }, // one example per category (see `sampleByCategory`)
+      sample: { type: 'boolean' }, // one example per category plus the colour canaries
+      canary: { type: 'boolean' }, // only the colour canaries
       renderer: { type: 'string' }, // 'auto' (default) | 'webgl2' (see `forceWebGl2`)
       concurrency: { type: 'string' },
       'timeout-ms': { type: 'string' },
@@ -977,8 +995,21 @@ const main = async (): Promise<void> => {
     entries = entries.filter(entry => entry.path.includes(values.only!));
   }
 
-  if (values.sample) {
-    entries = sampleByCategory(entries);
+  if (values.sample || values.canary) {
+    const paths = new Set(entries.map(entry => entry.path));
+    const missing = COLOR_CANARY_PATHS.filter(path => !paths.has(path));
+
+    if (missing.length > 0 && !values.only) {
+      console.error(`[smoke] Colour canaries missing from the catalog: ${missing.join(', ')}. Update COLOR_CANARY_PATHS.`);
+      process.exitCode = 1;
+
+      return;
+    }
+
+    const canaries = new Set(COLOR_CANARY_PATHS);
+    const sampled = values.canary ? new Set<string>() : new Set(sampleByCategory(entries).map(entry => entry.path));
+
+    entries = entries.filter(entry => canaries.has(entry.path) || sampled.has(entry.path));
   }
 
   // Half the cores, at most four: every page runs a main thread and a renderer

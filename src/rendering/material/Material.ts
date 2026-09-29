@@ -17,6 +17,14 @@ import { deriveBindKey, derivePipelineKey } from './MaterialKey';
  * `Float32Array`/`Int32Array` for the backend's uniform call.
  * `Texture`/`RenderTexture` values are bound to texture slots starting at slot
  * 1 - slot 0 is reserved for the drawable's own `texture`.
+ *
+ * A numeric tuple uniform is passed to the shader exactly as written - there
+ * is no `Color` value type here, and none is inferred from a tuple that
+ * happens to hold four numbers. `Color`'s own channels are sRGB-authored
+ * (see `src/core/Color.ts`), so a custom fragment that treats such a uniform
+ * as a color to multiply/blend needs it in linear light first -
+ * `Color.writeLinear` produces that, allocation-free, into a `Float32Array`
+ * this uniform kind accepts directly.
  */
 export type UniformValue =
   | number

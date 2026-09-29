@@ -39,7 +39,7 @@ export interface AssetDefinitions {
     };
   };
   json: { resource: unknown; config: { source: string } };
-  image: { resource: HTMLImageElement; config: { source: string; mimeType?: string } };
+  image: { resource: HTMLImageElement; config: { source: string; mimeType?: string; colorSpace?: 'none' } };
   video: {
     resource: Video;
     config: {

@@ -104,6 +104,23 @@ describe('RenderTexturePool', () => {
     expect(pool.size).toBe(0);
   });
 
+  test('linear rgba8, sRGB rgba8 and rgba16f at the same size never alias', () => {
+    const pool = new RenderTexturePool();
+    const linear = new RenderTexture(64, 64, { format: TextureFormat.Rgba8 });
+    const srgb = new RenderTexture(64, 64, { format: TextureFormat.Rgba8Srgb });
+    const float16 = new RenderTexture(64, 64, { format: TextureFormat.Rgba16F });
+
+    pool.release(linear);
+    pool.release(srgb);
+    pool.release(float16);
+
+    expect(pool.size).toBe(3);
+    expect(pool.acquire(64, 64, TextureFormat.Rgba8)).toBe(linear);
+    expect(pool.acquire(64, 64, TextureFormat.Rgba8Srgb)).toBe(srgb);
+    expect(pool.acquire(64, 64, TextureFormat.Rgba16F)).toBe(float16);
+    expect(pool.size).toBe(0);
+  });
+
   test('acquire defaults to Rgba8, matching a released Rgba8 texture', () => {
     const pool = new RenderTexturePool();
     const rgba8 = new RenderTexture(64, 64);
@@ -204,6 +221,24 @@ describe('WebGl2Backend render texture pool', () => {
     backend.destroy();
   });
 
+  test('acquireRenderTexture(width, height, format) forwards the requested format to the pool', () => {
+    const backend = createFakeWebGl2Backend();
+    const srgb = backend.acquireRenderTexture(32, 32, TextureFormat.Rgba8Srgb);
+
+    expect(srgb.format).toBe(TextureFormat.Rgba8Srgb);
+
+    backend.releaseRenderTexture(srgb);
+
+    // A same-size linear request must not receive the sRGB entry back.
+    const linear = backend.acquireRenderTexture(32, 32);
+
+    expect(linear.format).toBe(TextureFormat.Rgba8);
+    expect(linear).not.toBe(srgb);
+
+    backend.releaseRenderTexture(linear);
+    backend.destroy();
+  });
+
   test('trimRenderTexturePool() destroys pooled entries and leaves the pool usable', () => {
     const backend = createFakeWebGl2Backend();
     const pooled = backend.acquireRenderTexture(32, 32);
@@ -251,6 +286,23 @@ describe('WebGpuBackend render texture pool', () => {
     expect(reacquired.destroyed).toBe(false);
     expect(live).toContain(reacquired);
 
+    backend.destroy();
+  });
+
+  test('acquireRenderTexture(width, height, format) forwards the requested format to the pool', async () => {
+    const backend = await createMockBackend(createMockWebGpuEnvironment());
+    const float16 = backend.acquireRenderTexture(32, 32, TextureFormat.Rgba16F);
+
+    expect(float16.format).toBe(TextureFormat.Rgba16F);
+
+    backend.releaseRenderTexture(float16);
+
+    const linear = backend.acquireRenderTexture(32, 32);
+
+    expect(linear.format).toBe(TextureFormat.Rgba8);
+    expect(linear).not.toBe(float16);
+
+    backend.releaseRenderTexture(linear);
     backend.destroy();
   });
 

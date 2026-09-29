@@ -19,9 +19,14 @@ export interface CompressedTextureOptions extends CompressedTexturePayload {
  * @stable
  */
 export class CompressedTexture extends Texture {
-  public constructor({ format, levels, samplerOptions }: CompressedTextureOptions) {
+  public constructor({ format, levels, colorSpace, alphaMode, samplerOptions }: CompressedTextureOptions) {
     super(null, { ...samplerOptions, premultiplyAlpha: false, generateMipMap: false });
 
-    this.setCompressed({ format, levels });
+    this.setCompressed({
+      format,
+      levels,
+      ...(colorSpace === undefined ? {} : { colorSpace }),
+      ...(alphaMode === undefined ? {} : { alphaMode }),
+    });
   }
 }

@@ -16,6 +16,7 @@
  */
 
 import { Color } from '#core/Color';
+import { srgbToLinear } from '#core/colorTransfer';
 import { Container } from '#rendering/Container';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { LinearGradient } from '#rendering/gradient/LinearGradient';
@@ -187,14 +188,15 @@ export const computedColourScenes: readonly Scene[] = [
       return rooted(graphics);
     },
     oracle: {
-      reason: 'a two-stop black-to-white ramp across the shape bounds: channel = 255 * (x + 0.5) / 64',
+      reason:
+        'a two-stop black-to-white ramp across the shape bounds, interpolated in sRGB and stored as linear light: channel = 255 * srgbToLinear((x + 0.5) / 64)',
       // The ramp is rasterized to a 256px texture and sampled with linear
       // filtering, so the expectation carries a texel of slack on either side.
       // A reversed or misaligned gradient is off by tens of steps, not four.
       tolerance: 4,
       samples: () =>
         [16, 32, 48].map(x => {
-          const value = Math.round((255 * (x + 0.5)) / CANVAS);
+          const value = Math.round(255 * srgbToLinear((x + 0.5) / CANVAS));
 
           return { x, y: 32, expect: [value, value, value, 255] as const, describe: `ramp at x=${x}` };
         }),

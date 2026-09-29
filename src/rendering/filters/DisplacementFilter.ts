@@ -1,18 +1,22 @@
 import type { ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { assertNumericTexture } from '#rendering/texture/numericTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
+import { UniformType } from '#rendering/uniforms/UniformType';
 
 import { Filter } from './Filter';
 import { createFilterShader, ShaderFilter } from './ShaderFilter';
 import glslFragment from './shaders/displacement.frag';
 import wgslFragment from './shaders/displacement.wgsl';
 
+const displacementUniforms = { uScale: UniformType.Vec4, uOffset: UniformType.Vec4 } as const;
+
 /**
  * The displacement source pair, built once and shared by every instance.
  * @internal
  */
-export const displacementShader = createFilterShader({ glsl: { fragment: glslFragment }, wgsl: wgslFragment });
+export const displacementShader = createFilterShader({ glsl: { fragment: glslFragment }, wgsl: wgslFragment, uniforms: displacementUniforms });
 
 /** Construction-time options for a {@link DisplacementFilter}. */
 export interface DisplacementFilterOptions {
@@ -22,6 +26,16 @@ export interface DisplacementFilterOptions {
    * area and read with the texture's own filtering and wrap mode. The filter
    * samples the map but does not own it - destroying the filter leaves the
    * texture alone.
+   *
+   * Sampled as numeric data, never colour: the map must resolve to
+   * `colorSpace: 'none'`. `'srgb'` storage is hardware-decoded on sample
+   * regardless of what the shader does with the result, and `'linear-srgb'`
+   * still gets colour alpha handling, either of which would corrupt the
+   * displacement vector. A `DataTexture` is accepted directly, as is an image
+   * `Texture` declared `colorSpace: 'none'`. The check repeats on every
+   * {@link DisplacementFilter.apply}, so a texture reinterpreted after
+   * assignment fails there instead of sampling corrupted vectors.
+   * @throws Error - `map.colorSpace` does not resolve to `'none'`.
    */
   readonly map: Texture;
   /**
@@ -67,13 +81,7 @@ export interface DisplacementFilterOptions {
  * works on either backend without the caller choosing one.
  */
 export class DisplacementFilter extends Filter {
-  /**
-   * Bound live: `uScale` is the displacement in UV units of the pass target,
-   * `uOffset` the map sampling offset. Insertion order is the WGSL struct order.
-   */
-  private readonly _scaleUniform: Float32Array;
-  private readonly _offsetUniform: Float32Array;
-  private readonly _shaderFilter: ShaderFilter;
+  private readonly _shaderFilter: ShaderFilter<typeof displacementUniforms>;
   private _map: Texture;
   private _scaleX: number;
   private _scaleY: number;
@@ -81,23 +89,17 @@ export class DisplacementFilter extends Filter {
   public constructor(options: DisplacementFilterOptions) {
     super();
 
+    assertNumericMap(options.map);
+
     const scale = options.scale ?? 20;
     const offset = options.offset ?? [0, 0];
-    const scaleUniform = new Float32Array(4);
-    const offsetUniform = new Float32Array(4);
 
     this._map = options.map;
     this._scaleX = typeof scale === 'number' ? scale : scale[0];
     this._scaleY = typeof scale === 'number' ? scale : scale[1];
-    this._scaleUniform = scaleUniform;
-    this._offsetUniform = offsetUniform;
-    offsetUniform[0] = offset[0];
-    offsetUniform[1] = offset[1];
-
-    // Insertion order matters on WebGPU: the packer lays each non-texture
-    // uniform out in a 16-byte slot, in declaration order, and textures follow.
     this._shaderFilter = ShaderFilter.from(displacementShader, {
-      uniforms: { uScale: scaleUniform, uOffset: offsetUniform, uMap: this._map },
+      uniforms: { uOffset: [offset[0], offset[1], 0, 0] },
+      textures: { uMap: this._map },
     });
   }
 
@@ -108,9 +110,9 @@ export class DisplacementFilter extends Filter {
 
   public set map(map: Texture) {
     if (this._map !== map) {
+      assertNumericMap(map);
       this._map = map;
-      this._shaderFilter.setUniform('uMap', map);
-      this.invalidate();
+      this._shaderFilter._setTexture('uMap', map);
     }
   }
 
@@ -140,26 +142,20 @@ export class DisplacementFilter extends Filter {
 
   /** Horizontal map sampling offset, in the map's own UV units. */
   public get offsetU(): number {
-    return this._offsetUniform[0]!;
+    return this._shaderFilter.uniforms.uOffset.x;
   }
 
   public set offsetU(offsetU: number) {
-    if (this._offsetUniform[0] !== offsetU) {
-      this._offsetUniform[0] = offsetU;
-      this.invalidate();
-    }
+    this._shaderFilter.uniforms.uOffset.x = offsetU;
   }
 
   /** Vertical map sampling offset, in the map's own UV units. */
   public get offsetV(): number {
-    return this._offsetUniform[1]!;
+    return this._shaderFilter.uniforms.uOffset.y;
   }
 
   public set offsetV(offsetV: number) {
-    if (this._offsetUniform[1] !== offsetV) {
-      this._offsetUniform[1] = offsetV;
-      this.invalidate();
-    }
+    this._shaderFilter.uniforms.uOffset.y = offsetV;
   }
 
   /** Set both axes at once. Returns `this` for chaining. */
@@ -182,11 +178,12 @@ export class DisplacementFilter extends Filter {
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
+    assertNumericMap(this._map);
+
     // Logical units become UV units of THIS target, which the caller sizes:
     // resolving it here is what keeps the distortion the same size on screen
     // whatever pixel ratio or filter resolution the pass runs at.
-    this._scaleUniform[0] = (this._scaleX * resolution) / output.width;
-    this._scaleUniform[1] = (this._scaleY * resolution) / output.height;
+    this._shaderFilter.uniforms.uScale.set((this._scaleX * resolution) / output.width, (this._scaleY * resolution) / output.height, 0, 0);
     this._shaderFilter.apply(backend, input, output, resolution);
   }
 
@@ -195,3 +192,7 @@ export class DisplacementFilter extends Filter {
     this._shaderFilter.destroy();
   }
 }
+
+const assertNumericMap = (map: Texture): void => {
+  assertNumericTexture(map, 'DisplacementFilter map', "Build the map as a DataTexture, or declare it colorSpace: 'none'.");
+};

@@ -42,7 +42,7 @@ import {
   type RetainedInstructionSet,
   stampRetainedBatchGeneration,
 } from '#rendering/plan/RetainedInstructionSet';
-import type { RenderBackend } from '#rendering/RenderBackend';
+import type { ColorFormatCapabilities, RenderBackend } from '#rendering/RenderBackend';
 import { sanitizeSurfacePixelRatio } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { InstanceDataView } from '#rendering/RenderBatch';
@@ -64,11 +64,12 @@ import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
 import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { DepthTexture } from '#rendering/texture/DepthTexture';
+import { isFullyOpaqueLevel } from '#rendering/texture/pixelPayload';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import { TransformBuffer } from '#rendering/TransformBuffer';
-import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
+import { BlendModes, type ColorTextureFormat, ScaleModes, TextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
 import type { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
@@ -90,6 +91,7 @@ import {
   type WebGl2RetainedNodeIndexRange,
 } from './WebGl2RetainedGroupResources';
 import { WebGl2StencilClipper } from './WebGl2StencilClipper';
+import { WebGl2TextureNormalizer } from './WebGl2TextureNormalizer';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
 // Inline GL debug helpers - replaces the webgl-debug vendor lib.
@@ -197,6 +199,36 @@ interface ManagedRenderTargetState {
   depthStencilTexture: WebGLTexture | null;
   stencilWidth: number;
   stencilHeight: number;
+  /** Sample count {@link stencilRenderbuffer} is allocated at; 0 while single-sample. */
+  stencilSamples: number;
+  /** Bytes booked with the accountant for whichever of the two above is allocated. */
+  stencilAccountedBytes: number;
+  /**
+   * Multisample colour storage, attached in place of {@link attachedTextures}
+   * while the target's {@link RenderTarget.sampleCount} is above `1`. Its
+   * samples are resolved into the target's own colour texture, which is why
+   * that texture is not attached to this framebuffer in the meantime.
+   */
+  multisampleColor: WebGLRenderbuffer | null;
+  multisampleWidth: number;
+  multisampleHeight: number;
+  multisampleSamples: number;
+  /** Bytes booked with the accountant for {@link multisampleColor}. */
+  multisampleAccountedBytes: number;
+  /**
+   * Frames holding `COLOR_ATTACHMENT0` on the target's colour texture - the
+   * destination {@link multisampleColor} resolves into. Distinct from the
+   * target's own framebuffer, which carries the renderbuffer while multisampling.
+   */
+  resolveFramebuffer: WebGLFramebuffer | null;
+  /** Colour texture currently attached to {@link resolveFramebuffer}. */
+  resolveTexture: WebGLTexture | null;
+  /**
+   * Whether a draw or a clear has landed in {@link multisampleColor} since the
+   * last resolve, so a readback of the target's texture can be served a fresh
+   * resolve instead of the previous frame's.
+   */
+  multisampleDirty: boolean;
 }
 
 interface StencilClipEntry {
@@ -364,6 +396,10 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _loseContextExtension: WEBGL_lose_context | null;
   /** Whether `EXT_color_buffer_float` is available (float RenderTexture targets are renderable). */
   private _floatRenderable = false;
+  /** Whether float32 textures can use linear sampler state. */
+  private _float32Filterable = false;
+  /** Whether float32 color attachments can use fixed-function blending. */
+  private _float32Blendable = false;
   // This context's `gl.MAX_TEXTURE_SIZE`. Caps both dimensions of the shared
   // transform/tint textures, so the transform store's layout consults it to
   // reject an impossible capacity up front instead of letting `texImage2D` fail
@@ -378,6 +414,8 @@ export class WebGl2Backend implements RenderBackend {
    */
   private _compressedFormats: Webgl2CompressedFormatSupport = { formats: [], internalFormats: new Map() };
   private _maxColorAttachments = 1;
+  /** Per-format multisample support this context reported, see `_sampleCountsFor`. */
+  private readonly _sampleCountsByFormat = new Map<ColorTextureFormat, readonly number[]>();
   /**
    * `OES_draw_buffers_indexed`, or `null` on a device without it. Re-fetched
    * with the context, whose extension enablement does not survive a loss.
@@ -412,6 +450,10 @@ export class WebGl2Backend implements RenderBackend {
   private _textureUnit = 0;
   private _vao: WebGl2VertexArrayObject | null = null;
   private _clearColor: Color = new Color();
+  /** Whether the GL clear color currently bound was resolved for an sRGB target - see {@link setClearColor}. */
+  private _clearColorSrgb = false;
+  /** Reused scratch for the linear-decoded clear color on an sRGB target - see {@link setClearColor}. */
+  private readonly _clearColorLinearScratch = new Float32Array(4);
   private _boundFramebuffer: WebGLFramebuffer | null = null;
   /**
    * The framebuffer `readPixels` attaches its source to, created on first
@@ -420,6 +462,12 @@ export class WebGl2Backend implements RenderBackend {
    * read would leave that cache describing something else.
    */
   private _readbackFramebuffer: WebGLFramebuffer | null = null;
+  /**
+   * The upload-time alpha normalization pass, created on the first managed colour
+   * upload that needs it. It owns GL objects, so it is dropped with the managed
+   * resources - on destruction and on context loss alike.
+   */
+  private _textureNormalizer: WebGl2TextureNormalizer | null = null;
   /** Live standing readbacks, drained at frame start and invalidated together on context loss. */
   private readonly _pixelReadbacks = new Set<WebGl2PixelReadback>();
   private _pixelReadbackHostInstance: WebGl2PixelReadbackHost | null = null;
@@ -471,6 +519,12 @@ export class WebGl2Backend implements RenderBackend {
     this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._canvas = app.canvas;
 
+    // `webglAttributes.antialias` reaches the device twice. The attribute below
+    // asks the browser to multisample the default framebuffer; the colour-
+    // managed pipeline routes the frame through an offscreen working target the
+    // browser cannot multisample, so that target negotiates its own storage
+    // from the same request (see `Application._workingSampleCount`).
+
     const gl = this._createContext(webglAttributes, alphaMode);
 
     if (!gl) {
@@ -483,6 +537,8 @@ export class WebGl2Backend implements RenderBackend {
     // Enable + cache float color-buffer renderability. getExtension() is the
     // enable call; without it, RGBA16F/RGBA32F are not color-renderable in WebGL2.
     this._floatRenderable = this._context.getExtension('EXT_color_buffer_float') !== null;
+    this._float32Filterable = this._context.getExtension('OES_texture_float_linear') !== null;
+    this._float32Blendable = this._context.getExtension('EXT_float_blend') !== null;
     this._maxTextureSize = this._context.getParameter(this._context.MAX_TEXTURE_SIZE) as number;
     this._compressedFormats = probeWebgl2CompressedFormats(this._context);
     this._maxColorAttachments = readMaxColorAttachments(this._context);
@@ -503,6 +559,11 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._rootRenderTarget = new RenderTarget(width, height, true);
+    // An alpha-less drawing buffer is fully covered by construction, so the
+    // blend equations that are exact only over an opaque destination may keep
+    // their fixed-function shortcut here. The compositor reads the same fact
+    // for its backdrop coverage, so the two cannot disagree.
+    this._rootRenderTarget.opaqueDestination = !(this._context.getContextAttributes()?.alpha ?? false);
     this._renderTarget = this._rootRenderTarget;
 
     this._onContextLostHandler = this._onContextLost.bind(this);
@@ -1280,6 +1341,10 @@ export class WebGl2Backend implements RenderBackend {
    * @internal
    */
   public _rebindActiveTarget(): void {
+    // The compositor issued raw gl.bindFramebuffer calls for the blit, so the
+    // cached binding no longer reflects GL state; force `_bindRenderTarget` to
+    // reissue the bind instead of skipping it as a no-op.
+    this._boundFramebuffer = null;
     this._bindRenderTarget(this._renderTarget);
   }
 
@@ -1289,8 +1354,103 @@ export class WebGl2Backend implements RenderBackend {
    * the `EXT_color_buffer_float` WebGL2 extension. Callers should check this
    * before allocating a float target and fall back to `'rgba8'` themselves.
    */
+  public getColorFormatCapabilities(format: ColorTextureFormat): ColorFormatCapabilities {
+    switch (format) {
+      case TextureFormat.Rgba8:
+      case TextureFormat.Rgba8Srgb:
+        return colorFormatCapabilities(true, true, true, this._sampleCountsFor(format, true));
+      case TextureFormat.Rgba16F:
+        return colorFormatCapabilities(this._floatRenderable, true, this._floatRenderable, this._sampleCountsFor(format, this._floatRenderable));
+      case TextureFormat.Rgba32F:
+        return colorFormatCapabilities(
+          this._floatRenderable,
+          this._float32Filterable,
+          this._floatRenderable && this._float32Blendable,
+          this._sampleCountsFor(format, this._floatRenderable),
+        );
+    }
+  }
+
+  /**
+   * Sample counts this context reports for `format` as a multisample colour
+   * attachment, ascending and always containing `1`.
+   *
+   * Asked of the driver once per format through `getInternalformatParameter`,
+   * the query the spec defines for sized renderbuffer formats, and cached until
+   * the context is lost - a restored context can report a different set. A
+   * format this context cannot render into is not queried at all: the query is
+   * an error for a non-renderable internal format, and the answer would be
+   * `1` regardless.
+   */
+  private _sampleCountsFor(format: ColorTextureFormat, renderable: boolean): readonly number[] {
+    if (!renderable) {
+      return singleSampleCount;
+    }
+
+    const cached = this._sampleCountsByFormat.get(format);
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const gl = this._context;
+
+    // A lost context answers nothing worth caching; the restore path drops the
+    // cache and the next query re-probes the fresh device.
+    if (this._contextLost) {
+      return singleSampleCount;
+    }
+
+    const counts = normalizeSampleCounts(gl.getInternalformatParameter(gl.RENDERBUFFER, webgl2DataTextureFormat(format).internalFormat, gl.SAMPLES));
+
+    this._sampleCountsByFormat.set(format, counts);
+
+    return counts;
+  }
+
+  /**
+   * Publish a multisample target's current frame into the texture everything
+   * samples it through.
+   *
+   * A no-op for a single-sample target, for one that was never drawn into, and
+   * for one already resolved since its last draw. Depth and stencil stay
+   * multisample: `blitFramebuffer` cannot resolve them - a depth/stencil blit
+   * requires both sides at the same sample count - and nothing downstream of
+   * the resolve reads either, so the scene's own clipping is all that depends
+   * on them.
+   */
+  public resolveRenderTarget(target: RenderTarget): void {
+    const state = this._renderTargetStates.get(target);
+
+    if (state === null || state === undefined) {
+      return;
+    }
+
+    if (state.multisampleColor === null || state.resolveFramebuffer === null || state.framebuffer === null || !state.multisampleDirty) {
+      return;
+    }
+
+    const gl = this._context;
+
+    // Draws into the target are batched against its own framebuffer, so the
+    // batch has to reach the renderbuffer before it is read.
+    this._flushActiveRenderer();
+
+    const width = state.multisampleWidth;
+    const height = state.multisampleHeight;
+    const previousFramebuffer = this._boundFramebuffer;
+
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, state.framebuffer);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, state.resolveFramebuffer);
+    gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+    this._boundFramebuffer = previousFramebuffer;
+    state.multisampleDirty = false;
+  }
+
   public supportsColorFormat(format: ColorTextureFormat): boolean {
-    return format === TextureFormat.Rgba8 || this._floatRenderable;
+    return this.getColorFormatCapabilities(format).renderable;
   }
 
   public supportsReadbackFormat(format: ColorTextureFormat): boolean {
@@ -1370,10 +1530,14 @@ export class WebGl2Backend implements RenderBackend {
    * the previous binding. A read borrows its own framebuffer rather than a
    * render target's: the target states cache which textures are attached to
    * theirs, and attaching for a read would leave that cache describing
-   * something else.
+   * something else. A multisample target is resolved first - the texture a
+   * read attaches to is its resolve destination, not what was drawn into.
    */
   private _withReadFramebuffer(source: RenderTexture, body: () => void): void {
     const gl = this._context;
+    // A multisample target's texture only holds the last resolve, so a read
+    // that skipped an un-resolved frame would answer with the previous one.
+    this.resolveRenderTarget(source);
     const handle = this._syncTexture(source).handle;
     const framebuffer = (this._readbackFramebuffer ??= gl.createFramebuffer());
     const previousFramebuffer = this._boundFramebuffer;
@@ -1390,8 +1554,8 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
-  public acquireRenderTexture(width: number, height: number): RenderTexture {
-    return this._renderTexturePool.acquire(width, height);
+  public acquireRenderTexture(width: number, height: number, format?: ColorTextureFormat): RenderTexture {
+    return this._renderTexturePool.acquire(width, height, format);
   }
 
   public releaseRenderTexture(texture: RenderTexture): this {
@@ -1473,6 +1637,38 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
+  /**
+   * Whether a draw of `texture` still has to associate its samples with alpha.
+   *
+   * The answer follows the STORED samples: a managed colour upload normalizes
+   * (premultiplies) straight sRGB/float sources on the GPU before this ever
+   * runs (see `_needsColorNormalization`), so doing it again in the draw
+   * shader would multiply every translucent texel by its own alpha twice. A
+   * premultiplied SOURCE is in the same position - the association is already
+   * in the bytes.
+   *
+   * Unlike WebGPU's external-image copy, which never premultiplies, a WebGL2
+   * browser-image/canvas source that skips the normalization pass still gets
+   * premultiplied for free at upload through `UNPACK_PREMULTIPLY_ALPHA_WEBGL`
+   * (see `_syncTexture`'s non-normalized `texture.source` branch) - resolving
+   * true for it here as well would associate those samples a second time and
+   * darken every translucent texel. `_needsColorNormalization` already
+   * resolves true for every non-browser-sourced straight payload (raw pixels
+   * always take the GPU pass), so the remaining `texture.source === null`
+   * guard only ever matters once a future backend change lets a non-browser
+   * payload skip that pass - a native compressed source is the intended
+   * beneficiary, and is otherwise unreachable here today.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
+  public shouldPremultiplyTextureSample(texture: Texture | RenderTexture): boolean {
+    if (texture instanceof RenderTexture || !texture.premultiplyAlpha || texture.alphaMode === 'premultiplied') {
+      return false;
+    }
+
+    return !this._needsColorNormalization(texture) && texture.source === null;
+  }
+
   /** Bind a material's base-texture sampler override to one texture unit. Part of the renderer SDK contract for extension renderers. */
   public bindMaterialSampler(options: SamplerOptions, unit: number): this {
     const key = samplerStateKey(options.scaleMode, options.wrapMode);
@@ -1486,7 +1682,7 @@ export class WebGl2Backend implements RenderBackend {
         throw new Error('WebGl2Backend: could not create a material sampler.');
       }
 
-      gl.samplerParameteri(created, gl.TEXTURE_MAG_FILTER, options.scaleMode);
+      gl.samplerParameteri(created, gl.TEXTURE_MAG_FILTER, baseScaleFilter(options.scaleMode));
       gl.samplerParameteri(created, gl.TEXTURE_MIN_FILTER, options.scaleMode);
       gl.samplerParameteri(created, gl.TEXTURE_WRAP_S, options.wrapMode);
       gl.samplerParameteri(created, gl.TEXTURE_WRAP_T, options.wrapMode);
@@ -1653,6 +1849,10 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public setBlendMode(blendMode: BlendModes | null): this {
+    if (blendMode !== null) {
+      this._assertTargetBlendable(this._renderTarget);
+    }
+
     if (blendMode !== this._blendMode) {
       this._blendMode = blendMode;
       this._applyBlendMode(blendMode, null, 0);
@@ -1681,6 +1881,8 @@ export class WebGl2Backend implements RenderBackend {
    * Part of the renderer SDK contract for extension renderers.
    */
   public setAttachmentBlendModes(modes: readonly BlendModes[] | null, fallback: BlendModes): this {
+    this._assertTargetBlendable(this._renderTarget);
+
     if (modes === null) {
       // `fallback` and not only the cached mode: a renderer that set indexed
       // state without a whole-draw `setBlendMode` first leaves the cache at
@@ -1743,41 +1945,63 @@ export class WebGl2Backend implements RenderBackend {
    */
   private _applyBlendMode(blendMode: BlendModes | null, extension: OES_draw_buffers_indexed | null, attachment: number): void {
     const gl = this._context;
-    let src: GLenum;
-    let dst: GLenum;
+    let srcRgb: GLenum;
+    let dstRgb: GLenum;
+    let srcAlpha: GLenum;
+    let dstAlpha: GLenum;
 
+    // RGB and alpha need independent factors - fixed-function source-over
+    // coverage (as + ad*(1-as)) is not the same expression as most of these
+    // modes' RGB equations - so every case is `blendFuncSeparate`, never the
+    // single-pair `blendFunc` that applies one factor pair to both.
     switch (blendMode) {
       case BlendModes.Additive:
-        src = gl.ONE;
-        dst = gl.ONE;
+        srcRgb = gl.ONE;
+        dstRgb = gl.ONE;
+        srcAlpha = gl.ONE;
+        dstAlpha = gl.ONE_MINUS_SRC_ALPHA;
         break;
       case BlendModes.Subtract:
-        src = gl.ZERO;
-        dst = gl.ONE_MINUS_SRC_COLOR;
+        srcRgb = gl.ZERO;
+        dstRgb = gl.ONE_MINUS_SRC_COLOR;
+        // Destination alpha is preserved exactly: this mode only attenuates
+        // RGB (Cd*(1-Cs), not arithmetic subtraction), and has no coverage of
+        // its own to composite over the destination with.
+        srcAlpha = gl.ZERO;
+        dstAlpha = gl.ONE;
         break;
       case BlendModes.Multiply:
-        src = gl.DST_COLOR;
-        dst = gl.ONE_MINUS_SRC_ALPHA;
+        srcRgb = gl.DST_COLOR;
+        dstRgb = gl.ONE_MINUS_SRC_ALPHA;
+        // Source-over coverage. This RGB shortcut (Cs*Cd + Cd*(1-as)) is exact
+        // only against an opaque destination; a translucent destination needs
+        // the backdrop-aware compositor's full W3C formula.
+        srcAlpha = gl.ONE;
+        dstAlpha = gl.ONE_MINUS_SRC_ALPHA;
         break;
       case BlendModes.Screen:
-        src = gl.ONE;
-        dst = gl.ONE_MINUS_SRC_COLOR;
+        srcRgb = gl.ONE;
+        dstRgb = gl.ONE_MINUS_SRC_COLOR;
+        srcAlpha = gl.ONE;
+        dstAlpha = gl.ONE_MINUS_SRC_ALPHA;
         break;
       default:
-        src = gl.ONE;
-        dst = gl.ONE_MINUS_SRC_ALPHA;
+        srcRgb = gl.ONE;
+        dstRgb = gl.ONE_MINUS_SRC_ALPHA;
+        srcAlpha = gl.ONE;
+        dstAlpha = gl.ONE_MINUS_SRC_ALPHA;
         break;
     }
 
     if (extension === null) {
       gl.blendEquation(gl.FUNC_ADD);
-      gl.blendFunc(src, dst);
+      gl.blendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
 
       return;
     }
 
     extension.blendEquationSeparateiOES(attachment, gl.FUNC_ADD, gl.FUNC_ADD);
-    extension.blendFuncSeparateiOES(attachment, src, dst, src, dst);
+    extension.blendFuncSeparateiOES(attachment, srcRgb, dstRgb, srcAlpha, dstAlpha);
   }
 
   private _setTextureUnit(unit: number): void {
@@ -1868,13 +2092,41 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
+  /**
+   * A render-target write into an `Rgba8Srgb` attachment - including a clear -
+   * hardware-encodes its input, exactly as a fragment shader output does (see
+   * `colorShaderSourcesGlsl`'s `linearToSrgb`). `Color`'s RGB fields are
+   * sRGB-authored bytes, so an unconverted `gl.clearColor` call would be
+   * hardware-encoded a SECOND time - decode first so a clear and an authored
+   * draw of the same nominal color agree.
+   */
+  private _isSrgbTarget(target: RenderTarget): boolean {
+    return target instanceof RenderTexture && target.format === TextureFormat.Rgba8Srgb;
+  }
+
+  private _applyClearColor(color: Color, isSrgb: boolean): void {
+    const gl = this._context;
+
+    this._clearColor.copy(color);
+    this._clearColorSrgb = isSrgb;
+
+    if (isSrgb) {
+      const linear = this._clearColorLinearScratch;
+
+      color.writeLinear(linear);
+      gl.clearColor(linear[0]!, linear[1]!, linear[2]!, linear[3]!);
+
+      return;
+    }
+
+    gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+  }
+
   public setClearColor(color: Color): this {
-    if (!this._clearColor.equals(color)) {
-      const gl = this._context;
+    const isSrgb = this._isSrgbTarget(this._renderTarget);
 
-      this._clearColor.copy(color);
-
-      gl.clearColor(color.r / 255, color.g / 255, color.b / 255, color.a);
+    if (!this._clearColor.equals(color) || isSrgb !== this._clearColorSrgb) {
+      this._applyClearColor(color, isSrgb);
     }
 
     return this;
@@ -1885,6 +2137,15 @@ export class WebGl2Backend implements RenderBackend {
 
     if (color) {
       this.setClearColor(color);
+    } else {
+      // No new color, but the active target's sRGB-ness may have changed
+      // since the last resolved `gl.clearColor` (e.g. a `setRenderTarget`
+      // with no accompanying `clear(color)`) - re-resolve against it.
+      const isSrgb = this._isSrgbTarget(this._renderTarget);
+
+      if (isSrgb !== this._clearColorSrgb) {
+        this._applyClearColor(this._clearColor, isSrgb);
+      }
     }
 
     this._bindRenderTarget(this._renderTarget);
@@ -2452,6 +2713,7 @@ export class WebGl2Backend implements RenderBackend {
     this._activeDrawCommand = null;
     this._transformTextureCount = -1;
     this._transformTextureHash = 0;
+    this._sampleCountsByFormat.clear();
   }
 
   private _createContext(options: RenderingApplicationOptions['webglAttributes'], alphaMode: CanvasAlphaMode): WebGL2RenderingContext | null {
@@ -2504,7 +2766,6 @@ export class WebGl2Backend implements RenderBackend {
 
   private _setupContext(): void {
     const gl = this._context;
-    const { r, g, b, a } = this._clearColor;
 
     gl.disable(gl.DEPTH_TEST);
     gl.depthMask(false);
@@ -2515,7 +2776,9 @@ export class WebGl2Backend implements RenderBackend {
     gl.enable(gl.BLEND);
 
     gl.blendEquation(gl.FUNC_ADD);
-    gl.clearColor(r / 255, g / 255, b / 255, a);
+    // Through the same path `clear` uses, so the cached "clear colour already applied for an
+    // sRGB target" flag describes what the fresh context holds rather than the lost one.
+    this._applyClearColor(this._clearColor, this._isSrgbTarget(this._renderTarget));
   }
 
   private _addEvents(): void {
@@ -2577,6 +2840,8 @@ export class WebGl2Backend implements RenderBackend {
     // not survive a context loss, so RGBA16F/RGBA32F render targets would stop
     // being color-renderable until this is re-fetched on the fresh context.
     this._floatRenderable = gl.getExtension('EXT_color_buffer_float') !== null;
+    this._float32Filterable = gl.getExtension('OES_texture_float_linear') !== null;
+    this._float32Blendable = gl.getExtension('EXT_float_blend') !== null;
 
     // Same reason: the timer's extension and its queries died with the context.
     if (this._gpuTimingRequested) {
@@ -2587,6 +2852,9 @@ export class WebGl2Backend implements RenderBackend {
     this._compressedFormats = probeWebgl2CompressedFormats(gl);
     this._maxColorAttachments = readMaxColorAttachments(gl);
     this._indexedBlendExtension = gl.getExtension('OES_draw_buffers_indexed');
+    // Drop the cached per-format multisample support too: it was this device's
+    // answer, and the restored one may support a different set.
+    this._sampleCountsByFormat.clear();
     // Drop the cached transform layout: it was derived from the LOST context's
     // limit, and the restored one may report a different one.
     this._transformTextureLayout = null;
@@ -2736,6 +3004,29 @@ export class WebGl2Backend implements RenderBackend {
     return Math.floor(Math.log2(maxSize)) + 1;
   }
 
+  /**
+   * The number of mip levels actually present on `texture`'s GL object after
+   * upload: an authored compressed/raw chain's own level count, the full
+   * pyramid `gl.generateMipmap` produces for an auto-mipped browser source, or
+   * 1 for everything else. Drives TEXTURE_MAX_LEVEL so a partial or absent
+   * chain does not silently fail mip completeness.
+   */
+  private _uploadedMipLevelCount(texture: Texture | RenderTexture): number {
+    if (texture instanceof RenderTexture) {
+      return texture.generateMipMap ? this._textureMipLevelCount(texture) : 1;
+    }
+
+    if (texture.mipLevelCount > 1) {
+      return texture.mipLevelCount;
+    }
+
+    if (texture.generateMipMap && texture.pixels === null && texture.source !== null) {
+      return this._textureMipLevelCount(texture);
+    }
+
+    return 1;
+  }
+
   private _destroyManagedResources(): void {
     for (const renderTarget of [...this._renderTargetStates.keys()]) {
       this._evictRenderTarget(renderTarget, false);
@@ -2750,6 +3041,13 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._materialSamplers.clear();
+
+    // The pass holds a program, a framebuffer, a quad VAO and a staging texture
+    // on THIS context, so it has to go with the managed resources: on context
+    // loss those handles belong to a dead context, and a new one is built lazily
+    // against the restored one.
+    this._textureNormalizer?.destroy();
+    this._textureNormalizer = null;
   }
 
   /** Same hit/miss split as {@link _getTextureState}, and for the same reason. */
@@ -2770,6 +3068,16 @@ export class WebGl2Backend implements RenderBackend {
       depthStencilTexture: null,
       stencilWidth: 0,
       stencilHeight: 0,
+      stencilSamples: 0,
+      stencilAccountedBytes: 0,
+      multisampleColor: null,
+      multisampleWidth: 0,
+      multisampleHeight: 0,
+      multisampleSamples: 0,
+      multisampleAccountedBytes: 0,
+      resolveFramebuffer: null,
+      resolveTexture: null,
+      multisampleDirty: false,
     };
 
     this._renderTargetStates.set(target, state);
@@ -2869,6 +3177,18 @@ export class WebGl2Backend implements RenderBackend {
         this._context.deleteFramebuffer(state.framebuffer);
       }
 
+      if (state.resolveFramebuffer !== null) {
+        this._context.deleteFramebuffer(state.resolveFramebuffer);
+        state.resolveFramebuffer = null;
+      }
+
+      if (state.multisampleColor !== null) {
+        this._context.deleteRenderbuffer(state.multisampleColor);
+        state.multisampleColor = null;
+        this._accountant.free(state.multisampleAccountedBytes);
+        state.multisampleAccountedBytes = 0;
+      }
+
       if (state.stencilRenderbuffer !== null) {
         this._context.deleteRenderbuffer(state.stencilRenderbuffer);
         state.stencilRenderbuffer = null;
@@ -2879,6 +3199,9 @@ export class WebGl2Backend implements RenderBackend {
         this._context.deleteTexture(state.depthStencilTexture);
         state.depthStencilTexture = null;
       }
+
+      this._accountant.free(state.stencilAccountedBytes);
+      state.stencilAccountedBytes = 0;
 
       this._renderTargetStates.delete(target);
     }
@@ -2984,7 +3307,7 @@ export class WebGl2Backend implements RenderBackend {
 
   /** Reject a colour format this context cannot render into. */
   private _assertColorFormatRenderable(format: ColorTextureFormat): void {
-    if (format !== TextureFormat.Rgba8 && !this._floatRenderable) {
+    if (format !== TextureFormat.Rgba8 && format !== TextureFormat.Rgba8Srgb && !this._floatRenderable) {
       throw new Error(
         `Render target: format '${format}' requires the WebGL2 extension 'EXT_color_buffer_float', which this context does not support. Check backend.supportsColorFormat() and fall back to TextureFormat.Rgba8.`,
       );
@@ -3042,6 +3365,8 @@ export class WebGl2Backend implements RenderBackend {
       gl.drawBuffers(buffers);
     }
 
+    this._assertFramebufferComplete();
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
 
     attached.length = handles.length;
@@ -3095,12 +3420,31 @@ export class WebGl2Backend implements RenderBackend {
 
         this._setTextureUnit(previousUnit);
 
-        if (state.attachedTextures[0] !== textureState.handle) {
+        if (this._effectiveSampleCount(single!) > 1) {
+          this._syncMultisampleColorAttachment(single!, state, textureState.handle);
+        } else if (state.attachedTextures[0] !== textureState.handle || state.multisampleColor !== null) {
           const gl = this._context;
           const previousFramebuffer = this._boundFramebuffer;
 
           gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+
+          if (state.multisampleColor !== null) {
+            // Back to one sample: the renderbuffer's storage is released here
+            // rather than parked, and the target's own texture takes the slot
+            // back so the framebuffer and the cached slot list agree again.
+            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, null);
+            gl.deleteRenderbuffer(state.multisampleColor);
+            state.multisampleColor = null;
+            state.multisampleWidth = 0;
+            state.multisampleHeight = 0;
+            state.multisampleSamples = 0;
+            state.multisampleDirty = false;
+            this._accountant.free(state.multisampleAccountedBytes);
+            state.multisampleAccountedBytes = 0;
+          }
+
           gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureState.handle, 0);
+          this._assertFramebufferComplete();
           gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
 
           state.attachedTextures.length = 1;
@@ -3152,6 +3496,117 @@ export class WebGl2Backend implements RenderBackend {
     this._syncDepthStencilAttachment(target, this._getRenderTargetState(target));
   }
 
+  /**
+   * The sample count this target's attachments are actually allocated at.
+   *
+   * A target that opted into a sampleable depth attachment cannot be
+   * multisampled at all - multisample `DEPTH24_STENCIL8` storage is a
+   * renderbuffer, and a renderbuffer cannot be sampled. Framebuffer
+   * completeness is a whole-framebuffer property, so a target that asked for
+   * both is served single-sample rather than a half-multisampled framebuffer
+   * that no driver would accept. The root target is the browser's to
+   * multisample.
+   */
+  private _effectiveSampleCount(target: RenderTarget): number {
+    if (target.root || target.depthTexture !== null) {
+      return 1;
+    }
+
+    return target.sampleCount > 1 ? target.sampleCount : 1;
+  }
+
+  /** Reject a sample count this context never reported for `format`. */
+  private _assertSupportedSampleCount(format: ColorTextureFormat, samples: number): void {
+    if (this._sampleCountsFor(format, true).includes(samples)) {
+      return;
+    }
+
+    throw new RenderError({
+      code: 'unsupported-format',
+      backendType: RenderBackendType.WebGl2,
+      message: `This context does not support ${samples}x multisampling for color format '${format}'. Check backend.getColorFormatCapabilities('${format}').sampleCounts.`,
+    });
+  }
+
+  /**
+   * Colour storage for a target rendered at more than one sample per pixel.
+   *
+   * The samples live in a renderbuffer attached where the target's texture
+   * would be, and resolve into that texture - which stays out of the target's
+   * own framebuffer while multisampling, so a pass that samples the target is
+   * not reading its own colour attachment. Storage is (re)allocated only when
+   * the count or the extent changes; a resize reuses the handle, as does every
+   * frame in between.
+   */
+  private _syncMultisampleColorAttachment(target: RenderTarget, state: ManagedRenderTargetState, resolveTexture: WebGLTexture): void {
+    if (state.framebuffer === null || !(target instanceof RenderTexture)) {
+      return;
+    }
+
+    const gl = this._context;
+    const format = target.format;
+    const width = Math.max(1, target.width);
+    const height = Math.max(1, target.height);
+    const samples = this._effectiveSampleCount(target);
+    const descriptor = webgl2DataTextureFormat(format);
+
+    this._assertSupportedSampleCount(format, samples);
+
+    if (
+      state.multisampleColor !== null &&
+      state.resolveFramebuffer !== null &&
+      state.multisampleSamples === samples &&
+      state.multisampleWidth === width &&
+      state.multisampleHeight === height &&
+      state.resolveTexture === resolveTexture
+    ) {
+      state.multisampleDirty = true;
+
+      return;
+    }
+
+    if (state.multisampleColor === null) {
+      state.multisampleColor = gl.createRenderbuffer();
+    }
+
+    if (state.resolveFramebuffer === null) {
+      state.resolveFramebuffer = this._createFramebuffer();
+    }
+
+    gl.bindRenderbuffer(gl.RENDERBUFFER, state.multisampleColor);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, descriptor.internalFormat, width, height);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+    const previousFramebuffer = this._boundFramebuffer;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, state.multisampleColor);
+
+    // Skipped while an allocated depth/stencil attachment is still at the
+    // previous count: the framebuffer is legitimately incomplete between the
+    // two re-allocations, and `_syncDepthStencilAttachment`'s own check - which
+    // runs next, once the counts agree - is the authoritative one.
+    if (state.stencilRenderbuffer === null || state.stencilSamples === samples) {
+      this._assertFramebufferComplete();
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, state.resolveFramebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, resolveTexture, 0);
+    this._assertFramebufferComplete();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+
+    // The texture is not this framebuffer's colour attachment while
+    // multisampling, so the cached slot list must not claim that it is - it
+    // drives the feedback-loop sweep in `_releaseSampledAttachments`.
+    state.attachedTextures.length = 0;
+    state.resolveTexture = resolveTexture;
+    state.multisampleWidth = width;
+    state.multisampleHeight = height;
+    state.multisampleSamples = samples;
+    state.multisampleDirty = true;
+    state.multisampleAccountedBytes = this._accountant.reallocate(state.multisampleAccountedBytes, width * height * samples * descriptor.bytesPerPixel);
+  }
+
   private _syncDepthStencilAttachment(target: RenderTarget, state: ManagedRenderTargetState): void {
     if (state.framebuffer === null) {
       return;
@@ -3166,8 +3621,12 @@ export class WebGl2Backend implements RenderBackend {
     // nothing extra for opting in.
     const sampleable = target.depthTexture !== null;
     const allocated = sampleable ? state.depthStencilTexture !== null : state.stencilRenderbuffer !== null;
+    // Depth and stencil travel with the colour attachment's sample count: GL
+    // completeness requires every attachment of a framebuffer to agree, and a
+    // stencil clip has to cover the same pixels the colour samples do.
+    const samples = this._effectiveSampleCount(target);
 
-    if (allocated && state.stencilWidth === width && state.stencilHeight === height) {
+    if (allocated && state.stencilWidth === width && state.stencilHeight === height && state.stencilSamples === samples) {
       return;
     }
 
@@ -3195,6 +3654,7 @@ export class WebGl2Backend implements RenderBackend {
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, state.depthStencilTexture, 0);
+      this._assertFramebufferComplete();
       gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
     } else {
       if (state.stencilRenderbuffer === null) {
@@ -3202,16 +3662,25 @@ export class WebGl2Backend implements RenderBackend {
       }
 
       gl.bindRenderbuffer(gl.RENDERBUFFER, state.stencilRenderbuffer);
-      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
+
+      if (samples > 1) {
+        gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.DEPTH24_STENCIL8, width, height);
+      } else {
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
+      }
+
       gl.bindRenderbuffer(gl.RENDERBUFFER, null);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, state.stencilRenderbuffer);
+      this._assertFramebufferComplete();
       gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
     }
 
     state.stencilWidth = width;
     state.stencilHeight = height;
+    state.stencilSamples = samples;
+    state.stencilAccountedBytes = this._accountant.reallocate(state.stencilAccountedBytes, width * height * DEPTH_STENCIL8_BYTES_PER_PIXEL * samples);
   }
 
   private _getStencilState(target: RenderTarget): StencilTargetState {
@@ -3356,14 +3825,47 @@ export class WebGl2Backend implements RenderBackend {
    * never land on a steady-state frame.
    */
   private _applySamplerParameters(texture: Texture | RenderTexture, state: ManagedTextureState, samplerKey: number): void {
+    this._assertTextureFilterable(texture);
     const gl = this._context;
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, baseScaleFilter(texture.scaleMode));
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture.scaleMode);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapMode);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
 
     state.samplerKey = samplerKey;
+  }
+
+  private _assertTextureFilterable(texture: Texture | RenderTexture): void {
+    if (!scaleModeRequiresLinearFiltering(texture.scaleMode) || !isFloat32Texture(texture) || this._float32Filterable) {
+      return;
+    }
+
+    const format = floatTextureFormat(texture);
+
+    throw new RenderError({
+      code: 'unsupported-format',
+      backendType: RenderBackendType.WebGl2,
+      message: `Texture format '${format}' requires 'OES_texture_float_linear' for linear sampling on this context. Use nearest sampling or check backend.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable.`,
+    });
+  }
+
+  private _assertTargetBlendable(target: RenderTarget): void {
+    if (target.root) {
+      return;
+    }
+
+    const attachments = target instanceof MultiRenderTarget ? target.attachments : [target as RenderTexture];
+
+    for (const attachment of attachments) {
+      if (!this.getColorFormatCapabilities(attachment.format).blendable) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGl2,
+          message: `Render target format '${attachment.format}' does not support fixed-function blending on this context. Check backend.getColorFormatCapabilities(format).blendable.`,
+        });
+      }
+    }
   }
 
   /**
@@ -3374,8 +3876,6 @@ export class WebGl2Backend implements RenderBackend {
   private _syncTextureUpload(texture: Texture | RenderTexture, state: ManagedTextureState, version: number): ManagedTextureState {
     const gl = this._context;
     const compressedPayload = compressedPayloadOf(texture);
-
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
 
     if (texture instanceof DataTexture) {
       // `instanceof DataTexture` narrows to `DataTexture<any>` (the generic is
@@ -3475,6 +3975,28 @@ export class WebGl2Backend implements RenderBackend {
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, info.format, info.type, texture.source);
         this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
       }
+    } else if (texture.pixels !== null) {
+      const levels = texture.pixels.levels;
+      const internalFormat = this._managedColorInternalFormat(texture);
+      const needsNormalization = this._needsColorNormalization(texture);
+      let uploadedBytes = 0;
+
+      for (const [level, { data, width, height }] of levels.entries()) {
+        if (needsNormalization && !isFullyOpaqueLevel(data)) {
+          // Allocated uninitialized and filled by the pass, so the write path
+          // stays identical to the plain upload below: same destination, same
+          // storage format, same accounting.
+          gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          this._getTextureNormalizer().normalizePixels({ destination: state.handle, level, width, height, internalFormat }, data);
+        } else {
+          gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+        }
+
+        uploadedBytes += data.byteLength;
+      }
+
+      state.accountedBytes = this._accountant.reallocate(state.accountedBytes, uploadedBytes);
+      this._accountant.recordTextureUpload(uploadedBytes);
     } else if (compressedPayload !== null) {
       const { format, levels } = compressedPayload;
       const internalFormat = this._compressedFormats.internalFormats.get(format);
@@ -3500,38 +4022,160 @@ export class WebGl2Backend implements RenderBackend {
       state.accountedBytes = this._accountant.reallocate(state.accountedBytes, uploadedBytes);
       this._accountant.recordTextureUpload(uploadedBytes);
     } else if (texture.source) {
-      if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-        this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
+      const internalFormat = this._managedColorInternalFormat(texture);
+      const needsNormalization = this._needsColorNormalization(texture);
+      const needsAlloc = state.version === -1 || state.width !== texture.width || state.height !== texture.height;
+
+      if (needsNormalization) {
+        if (needsAlloc) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, texture.width, texture.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
+        }
+
+        this._getTextureNormalizer().normalizeImageSource(
+          { destination: state.handle, level: 0, width: texture.width, height: texture.height, internalFormat },
+          texture.source,
+        );
       } else {
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
+
+        try {
+          if (needsAlloc) {
+            gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+            this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
+          } else {
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
+          }
+
+          this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
+        } finally {
+          gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+          gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+        }
       }
-
-      this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
     }
 
-    // Pixel-store state is upload-local, never inherited - the same discipline
-    // the UNPACK_ALIGNMENT restore above follows. GL keeps
-    // UNPACK_PREMULTIPLY_ALPHA_WEBGL globally, so leaving it set lets the NEXT
-    // upload multiply its RGB channels by its alpha channel. A renderer-private
-    // raw upload that never calls pixelStorei itself - the text renderer's
-    // RGBA32F node-data texture is the only one today - then inherits it, and
-    // in a float payload the "alpha" slot carries real data (a transform's
-    // `ty`, an ink-bounds height), so the result is arbitrary geometry rather
-    // than merely darker pixels.
-    if (texture.premultiplyAlpha) {
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    }
-
-    if (texture.generateMipMap && (texture instanceof RenderTexture || texture.source !== null)) {
+    if (texture.generateMipMap && (texture instanceof RenderTexture || (texture.pixels === null && texture.source !== null))) {
       gl.generateMipmap(gl.TEXTURE_2D);
     }
+
+    // Mip completeness requires every level from 0 to TEXTURE_MAX_LEVEL to be
+    // present, or the texture samples as incomplete (undefined/black) under a
+    // mip-aware MIN filter. Clamp it to what was actually uploaded instead of
+    // leaving the GL default (1000), which only an auto-generated full pyramid
+    // satisfies.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, this._uploadedMipLevelCount(texture) - 1);
 
     state.version = version;
     state.width = texture.width;
     state.height = texture.height;
 
     return state;
+  }
+
+  /**
+   * Whether `texture`'s colour content has to be premultiplied by a GPU pass.
+   *
+   * All three guards are load-bearing, and each one on its own rules the pass out:
+   *  - `premultiplyAlpha` is the upload-normalization request. False means the
+   *    caller wants straight storage, which is not the same thing as straight
+   *    *blending* downstream.
+   *  - `colorSpace === 'none'` is numeric data. Multiplying a normal map or an
+   *    SDF channel by alpha would corrupt it, which is also why
+   *    `setPremultiplyAlpha` rejects the combination outright.
+   *  - `alphaMode === 'premultiplied'` means the source is ALREADY associated. A
+   *    second multiply would darken every translucent texel by its own alpha.
+   *
+   * A browser source then needs the pass only for sRGB storage, because only an
+   * sRGB destination encodes on write: the pass exists to premultiply DECODED
+   * values, and `UNPACK_PREMULTIPLY_ALPHA_WEBGL` multiplies the same bytes by the
+   * same alpha into the same linear destination for free. Raw bytes have no such
+   * flag, so a straight colour payload always takes the pass.
+   */
+  private _needsColorNormalization(texture: Texture): boolean {
+    if (!texture.premultiplyAlpha || texture.colorSpace === 'none' || texture.alphaMode !== 'straight') {
+      return false;
+    }
+
+    return texture.source === null || texture.colorSpace === 'srgb';
+  }
+
+  /**
+   * Storage format for a managed colour texture, given its resolved interpretation.
+   *
+   * The staging texture of a normalization pass takes the same format, which is
+   * what puts the hardware sRGB decode on the read and the encode back on the
+   * write; the two must never disagree, or the pass would premultiply encoded
+   * values and store a differently-encoded result.
+   */
+  private _managedColorInternalFormat(texture: Texture): number {
+    return texture.colorSpace === 'srgb' ? this._context.SRGB8_ALPHA8 : this._context.RGBA8;
+  }
+
+  /**
+   * Part of {@link WebGl2ColorNormalizationHost}: hand the pass a destination
+   * that is safe to attach, and stop this backend from trusting its caches.
+   */
+  public releaseForColorNormalization(destination: WebGLTexture): void {
+    const boundHandles = this._boundHandles;
+    const activeUnit = this._textureUnit;
+
+    for (let unit = 0; unit < boundHandles.length; unit++) {
+      if (boundHandles[unit] === destination) {
+        this._setTextureUnit(unit);
+        this._bindTextureHandle(null);
+      }
+    }
+
+    this._setTextureUnit(activeUnit);
+
+    // The pass binds its own framebuffer, program and VAO, so the caches below
+    // describe state GL no longer holds. Forgetting them costs one re-bind per
+    // upload; trusting them would cost a draw that samples the previous frame's
+    // texture. The texture-unit cache is not among them: the pass hands back the
+    // two units it borrowed, and `restoreAfterColorNormalization` records them.
+    this._boundFramebuffer = null;
+    this._shader = null;
+    this._vao = null;
+  }
+
+  /**
+   * Part of {@link WebGl2ColorNormalizationHost}: re-apply what this backend
+   * owns, and record the texture bindings the pass put back so the unit cache
+   * keeps describing what GL holds - a render target the pass restored onto a
+   * unit has to stay releasable from it.
+   */
+  public restoreAfterColorNormalization(unitZeroBinding: WebGLTexture | null, activeUnit: number, activeBinding: WebGLTexture | null): void {
+    this._boundHandles[0] = unitZeroBinding;
+    this._boundHandles[activeUnit] = activeBinding;
+    this._bindRenderTarget(this._renderTarget);
+  }
+
+  private _getTextureNormalizer(): WebGl2TextureNormalizer {
+    return (this._textureNormalizer ??= new WebGl2TextureNormalizer(
+      this._context,
+      {
+        releaseForColorNormalization: destination => this.releaseForColorNormalization(destination),
+        restoreAfterColorNormalization: (unitZeroBinding, activeUnit, activeBinding) =>
+          this.restoreAfterColorNormalization(unitZeroBinding, activeUnit, activeBinding),
+      },
+      this._accountant,
+    ));
+  }
+
+  private _assertFramebufferComplete(): void {
+    const gl = this._context;
+    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      throw new RenderError({
+        code: 'unsupported-format',
+        backendType: RenderBackendType.WebGl2,
+        message: `WebGL framebuffer is incomplete (status ${status}).`,
+      });
+    }
   }
 
   /** Writes into `out` and returns it - see {@link _clipPixelStack} for why nothing here allocates. */
@@ -3598,6 +4242,76 @@ export class WebGl2Backend implements RenderBackend {
 
 // Content + render textures upload as gl.RGBA / gl.UNSIGNED_BYTE = 4 bytes/px.
 const RGBA8_BYTES_PER_PIXEL = 4;
+// DEPTH24_STENCIL8 packs a 24-bit depth value and an 8-bit stencil value into
+// one 32-bit texel, for both the sampleable-texture and renderbuffer forms of
+// a target's depth/stencil attachment.
+const DEPTH_STENCIL8_BYTES_PER_PIXEL = 4;
+const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blendable: boolean, sampleCounts: readonly number[]): ColorFormatCapabilities => ({
+  renderable,
+  filterable,
+  blendable,
+  sampleCounts,
+});
+
+/** The answer every format falls back to: one sample per pixel. */
+const singleSampleCount: readonly number[] = [1];
+
+/** Whether a `SAMPLES` answer can be walked as a list of counts. */
+const isIndexable = (value: unknown): value is ArrayLike<unknown> =>
+  typeof value === 'object' && value !== null && typeof (value as { length?: unknown }).length === 'number';
+
+/**
+ * Normalize a `SAMPLES` query answer into an ascending list of usable counts.
+ *
+ * The spec types the answer as an `Int32Array`, but a driver that reports a
+ * bare count still means one supported count and anything unrecognized means
+ * none this engine can act on - so both collapse to `1` rather than to a count
+ * a `renderbufferStorageMultisample` call would then reject.
+ */
+const normalizeSampleCounts = (reported: unknown): readonly number[] => {
+  const unique = new Set<number>([1]);
+
+  if (typeof reported === 'number') {
+    if (Number.isInteger(reported) && reported > 0) {
+      unique.add(reported);
+    }
+  } else if (isIndexable(reported)) {
+    for (let index = 0; index < reported.length; index++) {
+      const value = reported[index];
+
+      if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+        unique.add(value);
+      }
+    }
+  }
+
+  return unique.size === 1 ? singleSampleCount : [...unique].sort((a, b) => a - b);
+};
+
+// TEXTURE_MAG_FILTER only accepts NEAREST/LINEAR; the mip-aware ScaleModes
+// variants are valid for TEXTURE_MIN_FILTER alone and raise GL_INVALID_ENUM
+// on MAG. ScaleModes reserves its low bit for this: 0 selects the nearest
+// family, 1 the linear family, independent of the mip suffix.
+const baseScaleFilter = (scaleMode: ScaleModes): ScaleModes => ((scaleMode & 1) === 1 ? ScaleModes.Linear : ScaleModes.Nearest);
+
+const scaleModeRequiresLinearFiltering = (scaleMode: ScaleModes): boolean =>
+  scaleMode === ScaleModes.Linear ||
+  scaleMode === ScaleModes.LinearMipmapNearest ||
+  scaleMode === ScaleModes.NearestMipmapLinear ||
+  scaleMode === ScaleModes.LinearMipmapLinear;
+
+const isFloat32Texture = (texture: Texture | RenderTexture): boolean =>
+  texture instanceof RenderTexture
+    ? texture.format === TextureFormat.Rgba32F
+    : texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
+
+const floatTextureFormat = (texture: Texture | RenderTexture): string => {
+  if (texture instanceof RenderTexture || texture instanceof DataTexture) {
+    return String(texture.format);
+  }
+
+  return 'unknown';
+};
 
 interface WebGl2DataTextureFormatInfo {
   readonly internalFormat: number; // gl.R8 / gl.R32F / gl.RGBA8 / gl.RGBA16F / gl.RGBA32F
@@ -3632,6 +4346,7 @@ const buildWebgl2DataTextureFormatTable = (gl: typeof WebGL2RenderingContext): W
   [TextureFormat.R8]: Object.freeze({ internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1, bytesPerPixel: 1 }),
   [TextureFormat.R32F]: Object.freeze({ internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1, bytesPerPixel: 4 }),
   [TextureFormat.Rgba8]: Object.freeze({ internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 }),
+  [TextureFormat.Rgba8Srgb]: Object.freeze({ internalFormat: gl.SRGB8_ALPHA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 }),
   [TextureFormat.Rgba16F]: Object.freeze({ internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT, channels: 4, bytesPerPixel: 8 }),
   [TextureFormat.Rgba32F]: Object.freeze({ internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4, bytesPerPixel: 16 }),
 });

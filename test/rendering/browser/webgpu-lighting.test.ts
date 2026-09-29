@@ -14,6 +14,7 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { readWebGpuPixels } from './_backendSetup';
@@ -45,7 +46,7 @@ const createBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const createSolidTexture = (fillStyle: string): Texture => {
+const createSolidTexture = (fillStyle: string, options?: Partial<TextureOptions>): Texture => {
   const source = document.createElement('canvas');
 
   source.width = 4;
@@ -58,14 +59,16 @@ const createSolidTexture = (fillStyle: string): Texture => {
   context.fillStyle = fillStyle;
   context.fillRect(0, 0, 4, 4);
 
-  return new Texture(source);
+  return new Texture(source, options);
 };
 
 /** Opaque white albedo, so the framebuffer reads back the light term alone. */
 const createAlbedo = (): Texture => createSolidTexture('#ffffff');
 
 /** Flat normal map: every texel is (0, 0, 1), so mirroring must not change shading. */
-const createFlatNormalMap = (): Texture => createSolidTexture('rgb(128, 128, 255)');
+// Numeric channels, so the map declares itself non-colour: an sRGB view would
+// hardware-decode the normal on sample.
+const createFlatNormalMap = (): Texture => createSolidTexture('rgb(128, 128, 255)', { colorSpace: 'none' });
 
 describe('lighting WebGPU browser', () => {
   test('shades a batch by distance and treats a mirrored sprite identically', async ctx => {
@@ -245,8 +248,9 @@ describe('lighting WebGPU browser', () => {
 
       const ambientOnly = readWebGpuPixels(backend, canvasSize)(32, 32);
 
-      expect(ambientOnly[0]).toBeGreaterThan(50);
-      expect(ambientOnly[0]).toBeLessThan(80);
+      // The canvas holds linear light here: an authored 64 is 0.051, byte 13.
+      expect(ambientOnly[0]).toBeGreaterThan(8);
+      expect(ambientOnly[0]).toBeLessThan(20);
 
       lighting.add(new PointLight({ radius: 64, intensity: 1, height: 16 })).setPosition(32, 32);
       lighting.update();

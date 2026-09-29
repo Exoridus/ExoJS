@@ -100,5 +100,9 @@ void main(void) {
         : a_uvParams.w;
     v_texcoord = vec2(u, v);
 
-    v_color = vec4(a_color.rgb * a_color.a, a_color.a);
+    // a_color.rgb is the authored sRGB tint byte-for-byte (hardware-
+    // normalized, not yet decoded); decode it to linear before it is
+    // premultiplied and interpolated.
+    highp vec3 linearTint = srgbToLinear(a_color.rgb);
+    v_color = vec4(linearTint * a_color.a, a_color.a);
 }

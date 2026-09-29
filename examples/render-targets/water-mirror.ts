@@ -3,6 +3,7 @@ import {
   CallbackRenderPass,
   Color,
   ColorMatrixFilter,
+  DataTexture,
   DisplacementFilter,
   FixedResolutionCanvasSizing,
   Graphics,
@@ -14,7 +15,8 @@ import {
   Scene,
   type Seconds,
   Sprite,
-  Texture,
+  type Texture,
+  TextureFormat,
   WrapModes,
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
@@ -22,27 +24,26 @@ import { mountControls } from '@examples/runtime';
 const MAP_SIZE = 256;
 
 const createRippleMap = (): Texture => {
-  const canvas = document.createElement('canvas');
-  canvas.width = MAP_SIZE;
-  canvas.height = MAP_SIZE;
-  const context = canvas.getContext('2d');
-  if (!context) {
-    throw new Error('2D canvas context unavailable.');
-  }
-
-  const image = context.createImageData(MAP_SIZE, MAP_SIZE);
+  const data = new Uint8Array(MAP_SIZE * MAP_SIZE * 4);
   for (let y = 0; y < MAP_SIZE; y++) {
     for (let x = 0; x < MAP_SIZE; x++) {
       const offset = (y * MAP_SIZE + x) * 4;
       const u = (x / MAP_SIZE) * Math.PI * 2;
       const v = (y / MAP_SIZE) * Math.PI * 2;
-      image.data[offset] = Math.round((Math.sin(v * 3) * 0.5 + 0.5) * 255);
-      image.data[offset + 1] = Math.round((Math.sin(u * 2) * 0.5 + 0.5) * 255);
-      image.data[offset + 3] = 255;
+      data[offset] = Math.round((Math.sin(v * 3) * 0.5 + 0.5) * 255);
+      data[offset + 1] = Math.round((Math.sin(u * 2) * 0.5 + 0.5) * 255);
+      data[offset + 3] = 255;
     }
   }
-  context.putImageData(image, 0, 0);
-  return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.Repeat, generateMipMap: false });
+  // The red and green channels are a direction in [-1, 1], so they are numeric
+  // data, not colour: a DataTexture is never colour-managed.
+  return new DataTexture({
+    width: MAP_SIZE,
+    height: MAP_SIZE,
+    format: TextureFormat.Rgba8,
+    data,
+    textureOptions: { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.Repeat, generateMipMap: false },
+  });
 };
 
 class WaterMirrorScene extends Scene {

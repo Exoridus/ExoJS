@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { Asset, coreAssetTypes, Loader } from '@codexo/exojs';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -120,6 +121,39 @@ describe('exo assets pack round trip', () => {
     await loader.loadContainer('assets/pack.exoa');
 
     expect(new Uint8Array(loader.get(Asset.type('binary', 'data/noise.bin')).value)).toEqual(random);
+  });
+
+  test('a packed KTX2 texture keeps its bytes and its DFD transfer and alpha meaning, whatever the file is called', async () => {
+    const fixture = (name: string): Uint8Array => new Uint8Array(readFileSync(fileURLToPath(new URL(`../../../test/fixtures/color/${name}`, import.meta.url))));
+    const srgbStraight = fixture('alpha-straight-srgb.ktx2');
+    const linear = fixture('rgba8-linear.ktx2');
+
+    // Names that claim the opposite of what the bytes say: nothing may infer
+    // transfer or alpha from a file name.
+    write('linear-looking.dat', srgbStraight);
+    write('srgb-looking.dat', linear);
+
+    const container = pack({
+      output: 'out.exoa',
+      assets: [
+        { source: 'art/a.ktx2', type: 'binary', file: 'linear-looking.dat' },
+        { source: 'art/b.ktx2', type: 'binary', file: 'srgb-looking.dat' },
+        { source: 'art/c.ktx2', type: 'texture', file: 'linear-looking.dat' },
+        { source: 'art/d.ktx2', type: 'texture', file: 'srgb-looking.dat' },
+      ],
+    });
+
+    const loader = loaderReading(container);
+    await loader.loadContainer('assets/pack.exoa');
+
+    expect(new Uint8Array(loader.get(Asset.type('binary', 'art/a.ktx2')).value)).toEqual(srgbStraight);
+    expect(new Uint8Array(loader.get(Asset.type('binary', 'art/b.ktx2')).value)).toEqual(linear);
+
+    const sRgbTexture = await loader.load(Asset.type('texture', 'art/c.ktx2'));
+    const linearTexture = await loader.load(Asset.type('texture', 'art/d.ktx2'));
+
+    expect([sRgbTexture.colorSpace, sRgbTexture.alphaMode]).toEqual(['srgb', 'straight']);
+    expect(linearTexture.colorSpace).toBe('linear-srgb');
   });
 
   test('every entry records a SHA-256 of the asset bytes', () => {

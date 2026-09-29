@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,56 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "alphaMode",
+          "signature": "alphaMode?: TextureAlphaMode",
+          "signatureTokens": [
+            {
+              "text": "alphaMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureAlphaMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the source RGB is already multiplied by alpha. This describes the data, not canvas compositing. Omit when the payload determines it."
+        },
+        {
+          "name": "colorSpace",
+          "signature": "colorSpace?: TextureColorSpace",
+          "signatureTokens": [
+            {
+              "text": "colorSpace",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureColorSpace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Interpretation of RGB values. 'srgb' is colour that is decoded to linear light on sampling and is what image, canvas and video sources default to; 'linear-srgb' is colour already in linear light; 'none' is numeric data (normal maps, displacement maps, masks, lookup tables) that is never transformed. Omit when the source or exact format determines it."
+        },
         {
           "name": "depth",
           "signature": "depth?: boolean",
@@ -159,7 +209,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether pixel values are premultiplied by their alpha before uploading to the GPU."
+          "description": "Whether a straight-alpha colour source is premultiplied once at upload, in linear light and before filtering and mip generation, so edges do not fringe. Defaults to true for colour textures. It normalizes storage and never multiplies a source that is already premultiplied; a 'none' source cannot request it."
         },
         {
           "name": "scaleMode",

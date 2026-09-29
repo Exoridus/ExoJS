@@ -62,6 +62,16 @@ const MAX_CASCADES = 6;
 const SUN_SIZE = 0.05 * Math.PI;
 
 const scratchDirection = { x: 0, y: 0 };
+// Reused across every ambient/sun colour write per frame so decoding a
+// colour never allocates.
+const scratchLinearColor = new Float32Array(4);
+
+/** `color`'s RGB, decoded to linear light. */
+const radianceColorRgb = (color: Color): { r: number; g: number; b: number } => {
+  color.writeLinear(scratchLinearColor);
+
+  return { r: scratchLinearColor[0] ?? 0, g: scratchLinearColor[1] ?? 0, b: scratchLinearColor[2] ?? 0 };
+};
 
 /**
  * Describe this frame's tables and occluder mask to one filter that walks them.
@@ -321,7 +331,8 @@ export class RadianceField {
       gather.uProbes.set(this._probesX, this._probesY);
       gather.uSpacing.set(spacing);
       gather.uTile.set(1);
-      gather.uAmbient.set(ambient.r / 255, ambient.g / 255, ambient.b / 255);
+      const ambientRgb = radianceColorRgb(ambient);
+      gather.uAmbient.set(ambientRgb.r, ambientRgb.g, ambientRgb.b);
 
       if (walking !== null) {
         writeTransportUniforms(gather, walking, toField);
@@ -446,7 +457,8 @@ export class RadianceField {
 
     sun.getWorldDirection(scratchDirection);
     cascade.uniforms.uSun.set(scratchDirection.x, scratchDirection.y, radius, (sun.intensity * Math.PI) / radius);
-    cascade.uniforms.uSunColor.set(sun.color.r / 255, sun.color.g / 255, sun.color.b / 255);
+    const sunRgb = radianceColorRgb(sun.color);
+    cascade.uniforms.uSunColor.set(sunRgb.r, sunRgb.g, sunRgb.b);
   }
 
   /**

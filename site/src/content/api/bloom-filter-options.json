@@ -151,7 +151,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Luminance a pixel needs before it glows, in 0..1. Rec. 709 luma of the premultiplied input, so a half-transparent white glows like an opaque grey. The knee is soft, which puts this value in the MIDDLE of the transition rather than at a hard cut: light a little below it still contributes a little glow, and a gradient crossing it shows no edge. Default 0.8."
+          "description": "Luminance a pixel needs before it glows. Rec. 709 luma of the premultiplied input, so a half-transparent white glows like an opaque grey. 0..1 for an SDR working target; an HDR working target's luminance can exceed 1, and a threshold above 1 restricts the glow to highlights brighter than display white. The knee is soft, which puts this value in the MIDDLE of the transition rather than at a hard cut: light a little below it still contributes a little glow, and a gradient crossing it shows no edge. Default 0.8."
         }
       ],
       "paragraphs": [],

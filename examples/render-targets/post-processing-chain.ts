@@ -13,6 +13,7 @@ import {
   Scene,
   type Seconds,
   Sprite,
+  TextureFormat,
 } from '@codexo/exojs';
 
 class PostProcessingChainScene extends Scene {
@@ -31,9 +32,12 @@ class PostProcessingChainScene extends Scene {
     const { width, height } = app;
 
     this.scene = new Graphics();
-    this.a = new RenderTexture(width, height);
-    this.b = new RenderTexture(width, height);
-    this.c = new RenderTexture(width, height);
+    // Every stage of the chain holds scene colour, so all three targets use the
+    // sRGB colour format and the chain stays linear until the final output.
+    const colorTarget = { format: TextureFormat.Rgba8Srgb } as const;
+    this.a = new RenderTexture(width, height, colorTarget);
+    this.b = new RenderTexture(width, height, colorTarget);
+    this.c = new RenderTexture(width, height, colorTarget);
     this.blur = new BlurFilter({ strength: 3 });
     this.color = new ColorMatrixFilter().tint(new Color(140, 190, 255));
     this.final = new Sprite(this.c);

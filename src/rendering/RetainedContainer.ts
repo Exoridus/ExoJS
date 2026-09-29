@@ -6,6 +6,7 @@ import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import { reconcileRetainedTransformRows } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { blendModeNeedsBackdrop } from '#rendering/types';
 
 import { Container } from './Container';
 import type { RenderNode } from './RenderNode';
@@ -209,7 +210,7 @@ export class RetainedContainer extends Container {
     for (let index = 0; index < this._liveBoundsChildren.length; index++) {
       const child = this._liveBoundsChildren[index]!;
 
-      if (child._renderPlanHasBarrierEffects() || this._escapedBranches.has(child)) {
+      if (child._renderPlanHasBarrierEffects() || this._backdropEscapedChildren.has(child) || this._escapedBranches.has(child)) {
         // World-space escape (own barrier, or a deep-barrier branch): no lift.
         this._bounds.addRect(child.getBounds());
       } else {
@@ -252,7 +253,13 @@ export class RetainedContainer extends Container {
       // Escaped branches are world-space: they follow the container's own
       // moves, which bump no revision - like barrier children they must be
       // re-read live. Nested groups decouple their own moves the same way.
-      if (child._renderPlanHasBarrierEffects() || this._escapedBranches.has(child) || child instanceof RetainedContainer || child._isTransformGroupBoundary) {
+      if (
+        child._renderPlanHasBarrierEffects() ||
+        this._backdropEscapedChildren.has(child) ||
+        this._escapedBranches.has(child) ||
+        child instanceof RetainedContainer ||
+        child._isTransformGroupBoundary
+      ) {
         this._liveBoundsChildren.push(child);
       } else {
         this._groupAggregate.addRect(child.getBounds());
@@ -275,7 +282,7 @@ export class RetainedContainer extends Container {
     // mask's rect moved - which the capture holds nothing about.
     if (
       this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend) ||
-      this._fragment.reconcileLiveEntryChanges(this._contentRevision, this._structureRevision, builder.backend, this)
+      this._fragment.reconcileLiveEntryChanges(this._contentRevision, this._structureRevision, builder.backend, this, builder._destinationOpaque())
     ) {
       // A content/structure-clean frame may still carry transform-only
       // descendant moves, since an own-transform move no longer content-
@@ -411,6 +418,7 @@ export class RetainedContainer extends Container {
     this._groupAggregate.destroy();
     this._liveBoundsChildren.length = 0;
     this._escapedBranches.clear();
+    this._backdropEscapedChildren.clear();
 
     super.destroy();
   }
@@ -454,6 +462,14 @@ export class RetainedContainer extends Container {
 
   private _escapeCheckContent = -1;
   private _escapeCheckStructure = -1;
+  /**
+   * The destination coverage guarantee {@link _refreshBranchEscapes} last
+   * observed, and the key the refresh is held to. `true` until a collect
+   * reports otherwise, so a boundary that has never been collected answers as
+   * it did before backdrop routing existed.
+   */
+  private _escapeDestinationOpaque = true;
+  private _escapeDestinationKey = true;
 
   private _deepBarrierWarned = false;
   /**
@@ -464,13 +480,25 @@ export class RetainedContainer extends Container {
    * {@link _refreshBranchEscapes}.
    */
   private readonly _escapedBranches = new Set<RenderNode>();
+  /**
+   * Direct children that have no barrier effect of their own but do draw under
+   * a {@link BlendModes.Multiply} equation the
+   * destination cannot be trusted to make exact - the backdrop compositor has to
+   * evaluate them, and its composite happens in world space, so they escape the
+   * group for as long as that holds. Held here rather than on the node because
+   * the answer belongs to the target being collected into, which only a collect
+   * knows, while the escape is read from transform resolution and world-space
+   * queries at any time. Re-derived by {@link _refreshBranchEscapes} whenever
+   * the revisions or the observed coverage guarantee move.
+   */
+  private readonly _backdropEscapedChildren = new Set<RenderNode>();
 
   /** @internal */
   public override collect(builder: RenderPlanBuilder, seq?: number): void {
     // Re-evaluate branch escapes BEFORE culling/bounds run, so an escape
     // flip never mixes spaces within one frame. Skipped entirely
     // while the subtree revisions are unchanged.
-    this._refreshBranchEscapes();
+    this._refreshBranchEscapes(builder);
     super.collect(builder, seq);
   }
 
@@ -483,7 +511,7 @@ export class RetainedContainer extends Container {
   public override _childEscapesTransformGroup(child: RenderNode): boolean {
     this._refreshBranchEscapes();
 
-    return this._escapedBranches.has(child);
+    return this._escapedBranches.has(child) || this._backdropEscapedChildren.has(child);
   }
 
   /**
@@ -491,15 +519,31 @@ export class RetainedContainer extends Container {
    * content/structure revisions changed since the last check - every effect
    * toggle and attach/detach bumps them, so the runtime-toggle path
    * invalidates for free, and the scan cost lands only on frames that
-   * already pay an O(subtree) re-collect.
+   * already pay an O(subtree) re-collect. The destination coverage guarantee is
+   * part of the key for the same reason: it is what decides whether a
+   * {@link BlendModes.Multiply} child is drawn
+   * through the backdrop compositor at all.
+   *
+   * `builder` is the collect in progress. Without it - a transform resolution
+   * or a world-space query calling in - the guarantee observed by the last
+   * collect is kept, which is the one that is still true of the frame being
+   * resolved: a target is only ever drawn into by a collect.
    */
-  private _refreshBranchEscapes(): void {
-    if (this._escapeCheckContent === this._contentRevision && this._escapeCheckStructure === this._structureRevision) {
+  private _refreshBranchEscapes(builder?: RenderPlanBuilder): void {
+    const destinationOpaque = builder === undefined ? this._escapeDestinationOpaque : builder._destinationOpaque();
+
+    if (
+      this._escapeCheckContent === this._contentRevision &&
+      this._escapeCheckStructure === this._structureRevision &&
+      this._escapeDestinationKey === destinationOpaque
+    ) {
       return;
     }
 
     this._escapeCheckContent = this._contentRevision;
     this._escapeCheckStructure = this._structureRevision;
+    this._escapeDestinationKey = destinationOpaque;
+    this._escapeDestinationOpaque = destinationOpaque;
 
     let changed = false;
     let escapedCount = 0;
@@ -507,9 +551,26 @@ export class RetainedContainer extends Container {
     for (let index = 0; index < this._children.length; index++) {
       const child = this._children[index]!;
       // A direct barrier child escapes on its own (supported, world-space
-      // wholesale), so its subtree is skipped. Only Containers can hold a
-      // deep barrier.
-      const escapes = !child._renderPlanHasBarrierEffects() && child instanceof Container && this._scanForBarriers(child);
+      // wholesale), so its subtree is skipped, and so is one already out of the
+      // group over this destination. Only Containers can hold a deep barrier.
+      const escapes =
+        !child._renderPlanHasBarrierEffects() &&
+        !this._needsBackdropCompositor(child, destinationOpaque) &&
+        child instanceof Container &&
+        this._scanForBarriers(child, destinationOpaque);
+
+      const backdropEscapes = this._needsBackdropCompositor(child, destinationOpaque);
+
+      if (backdropEscapes !== this._backdropEscapedChildren.has(child)) {
+        if (backdropEscapes) {
+          this._backdropEscapedChildren.add(child);
+        } else {
+          this._backdropEscapedChildren.delete(child);
+        }
+
+        this._notifyBranchSpaceFlipped(child);
+        changed = true;
+      }
 
       if (escapes) {
         escapedCount++;
@@ -534,6 +595,15 @@ export class RetainedContainer extends Container {
           this._escapedBranches.delete(branch);
           changed = true;
         }
+      }
+    }
+
+    // Same for the backdrop set, which has no count to compare against - its
+    // membership is a per-child test rather than a branch's subtree scan.
+    for (const child of this._backdropEscapedChildren) {
+      if (child.parent !== this) {
+        this._backdropEscapedChildren.delete(child);
+        changed = true;
       }
     }
 
@@ -595,19 +665,29 @@ export class RetainedContainer extends Container {
     }
   }
 
-  private _scanForBarriers(container: Container): boolean {
+  private _scanForBarriers(container: Container, destinationOpaque: boolean): boolean {
     // Uses the public `children` getter: protected `_children` of OTHER
     // Container instances is not accessible from a subclass in TypeScript.
     for (const child of container.children) {
-      if (child._renderPlanHasBarrierEffects()) {
+      if (child._renderPlanHasBarrierEffects() || this._needsBackdropCompositor(child, destinationOpaque)) {
         return true;
       }
 
-      if (child instanceof Container && this._scanForBarriers(child)) {
+      if (child instanceof Container && this._scanForBarriers(child, destinationOpaque)) {
         return true;
       }
     }
 
     return false;
+  }
+
+  /**
+   * Whether `child` is drawn through the backdrop compositor rather than the
+   * fixed-function pipeline, because of what it is (a barrier effect) or where
+   * it is going (a destination that cannot prove full coverage under a
+   * {@link BlendModes.Multiply} equation).
+   */
+  private _needsBackdropCompositor(child: RenderNode, destinationOpaque: boolean): boolean {
+    return blendModeNeedsBackdrop(child._renderPlanGetBlendMode(), destinationOpaque);
   }
 }

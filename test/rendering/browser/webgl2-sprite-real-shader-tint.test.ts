@@ -22,7 +22,7 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { readWebGl2Pixel } from './_backendSetup';
+import { readWebGl2Pixel, useEncodedFrameTarget } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
@@ -67,6 +67,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
 
 const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.resetStats();
+  useEncodedFrameTarget(backend);
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
@@ -142,14 +143,14 @@ describe('WebGL2 Sprite — real sprite.vert tint', () => {
       // Correct path: the vertex shader premultiplies (m2.rgb * m2.a, m2.a) =
       // (0.5, 0, 0, 0.5). Normal blend (ONE, ONE_MINUS_SRC_ALPHA) against the
       // black clear colour then yields src + dst*(1 - srcA) = (0.5,0,0) + 0 =
-      // (0.5, 0, 0) -> ~(128, 0, 0).
+      // (0.5, 0, 0) linear, which the encoding target stores as ~(188, 0, 0).
       //
       // This specifically catches two classes of shader regression that the
       // full-opaque case above cannot, because alpha == 1 makes them a no-op:
       //  - dropping the `* m2.a` multiply (would read back ~(255, 0, 0) instead)
       //  - a channel swizzle on the tint texel (would shift the 128 into the
       //    wrong channel, e.g. `m2.gbr` moves it to blue)
-      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [128, 0, 0, 255], 10);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 16), [188, 0, 0, 255], 10);
     } finally {
       root.destroy();
       texture.destroy();

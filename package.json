@@ -72,6 +72,7 @@
   "imports": {
     "#*.vert": "./src/*.vert",
     "#*.frag": "./src/*.frag",
+    "#*.wgsl": "./src/*.wgsl",
     "#*": {
       "@codexo/exojs-source": "./src/*.ts",
       "types": "./dist/esm/*.d.ts",
@@ -181,6 +182,8 @@
     "bench:micro": "vitest bench --run",
     "gate:bench:structural": "pnpm --filter @codexo/exojs-bench gate:structural",
     "webgpu:probe": "tsx scripts/webgpu-probe.ts",
+    "fixtures:color": "tsx scripts/generate-color-fixtures.ts",
+    "fixtures:color:validate": "tsx scripts/validate-color-fixtures.ts",
     "create:package": "tsx scripts/create-package.ts",
     "release:cut": "tsx ./scripts/release/cut.ts",
     "release:prepare": "tsx ./scripts/release/run.ts prepare",
@@ -211,12 +214,12 @@
     },
     {
       "path": "dist/exo.iife.min.js",
-      "limit": "345 KB",
+      "limit": "360 KB",
       "gzip": true
     },
     {
       "path": "dist/exo.full.iife.min.js",
-      "limit": "600 KB",
+      "limit": "620 KB",
       "gzip": true
     },
     {

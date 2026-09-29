@@ -13,6 +13,7 @@ import {
   Scene,
   type Seconds,
   Sprite,
+  TextureFormat,
 } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -40,8 +41,10 @@ class RenderPipelineScene extends Scene {
     const screenView = app.rendering.screenView;
     const { width, height } = app;
 
-    this.sceneRt = new RenderTexture(width, height);
-    this.blurredRt = new RenderTexture(width, height);
+    // Intermediate scene colour uses the sRGB colour format: the blur runs in
+    // linear light and the canvas is the only place the result is encoded.
+    this.sceneRt = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
+    this.blurredRt = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
     this.composite = new Sprite(this.blurredRt);
     this.blur = new BlurFilter({ strength: 4 });
 

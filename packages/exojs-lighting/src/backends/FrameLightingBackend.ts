@@ -28,7 +28,7 @@ import type { Light } from '../lights/Light';
 import { lightFalloff, lightHalfLength, lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 import { SunLight } from '../lights/SunLight';
-import { normalGreenSign } from '../normals/NormalSource';
+import { assertNumericNormalTexture, normalGreenSign } from '../normals/NormalSource';
 import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
@@ -79,6 +79,7 @@ const scratchDirection = { x: 0, y: 0 };
 const scratchInstance = { a_light: [noCone, noCone, 1, 0], a_shadow: [noShadow, 0], a_surface: [1, 0, 1, 0] };
 const scratchSurface = { a_frame: [0, 0, 1, 1], a_basis: [1, 0, 0, 1] };
 const scratchSun = { a_box: [0, 0, 1, 1], a_sun: [1, 0, 1, noShadow], a_range: [0, 1, 0, 1], a_beam: [1, 0] };
+const scratchLinearAmbient = new Float32Array(4);
 
 /** Unit quad in `-1..1`, which is the light's own space: distance from its centre in radii. */
 const unitQuad = (): Geometry =>
@@ -254,6 +255,21 @@ export abstract class FrameLightingBackend implements LightingBackend {
   private readonly _shaded: RenderTexture | null;
   private readonly _postPass: FilterPass | null;
   protected readonly _ambient: Color = Color.black.clone();
+  /**
+   * What `_lightPass` actually clears to - kept separate from {@link _ambient}
+   * because the two need different decodes. `_target` is never `rgba8srgb`
+   * (see its own doc), so the generic sRGB-target clear decode in the backend
+   * never fires for it; the accumulation itself is linear, so this field carries
+   * `_ambient` pre-decoded to linear light instead - the same conversion
+   * {@link ForwardBackend}'s own ambient packing applies, just through the
+   * `Color`-typed clear API a render pass takes rather than a numeric buffer,
+   * which is why it goes through a byte (quantized) rather than the exact float
+   * `ForwardBackend` writes.
+   * {@link _ambient} itself stays a plain copy of what `publish()` was given -
+   * the cascades decode it their own way, and decoding it twice here would be
+   * wrong for them.
+   */
+  private readonly _ambientClear: Color = Color.black.clone();
   private _shadowMap: DataTexture<TextureFormat.R32F>;
   /**
    * The directional lights' rows, in a texture of their own. A sun's row is
@@ -385,7 +401,7 @@ ${sunQuadWgsl}`,
     });
     this._lightPass = new CallbackRenderPass(pass => this._drawLights(pass), {
       target: this._target,
-      clear: this._ambient,
+      clear: this._ambientClear,
       label: 'lighting:accumulate',
     });
     // A filter reads a texture, so a chain needs the shaded frame to land in
@@ -527,6 +543,11 @@ ${sunQuadWgsl}`,
     return this._target;
   }
 
+  /** What the last {@link publish} actually clears {@link lightTexture} to - see {@link _ambientClear}. @internal */
+  public get ambientClear(): Color {
+    return this._ambientClear;
+  }
+
   /**
    * This frame's occluders as coverage, for what walks them: the block level
    * reduced from it and the transport walk that reads both. Holds nothing
@@ -602,6 +623,7 @@ ${sunQuadWgsl}`,
     this._resize();
     this._followCamera();
     this._ambient.copy(ambient);
+    this._writeAmbientClear(ambient);
 
     const marching = !this._cascading && this._writeLights(lights, occluders);
 
@@ -774,6 +796,16 @@ ${sunQuadWgsl}`,
     this._fieldView.width = view.width * scale;
     this._fieldView.height = view.height * scale;
     this._fieldView.rotation = view.rotation;
+  }
+
+  /**
+   * Decode `ambient` into {@link _ambientClear}, the value `_lightPass`
+   * actually clears to - see that field's own doc for why it differs from
+   * {@link _ambient}.
+   */
+  private _writeAmbientClear(ambient: Color): void {
+    ambient.writeLinear(scratchLinearAmbient);
+    this._ambientClear.set(scratchLinearAmbient[0]! * 255, scratchLinearAmbient[1]! * 255, scratchLinearAmbient[2]! * 255, scratchLinearAmbient[3]);
   }
 
   /**
@@ -1199,6 +1231,7 @@ ${sunQuadWgsl}`,
       scratchSurface.a_basis[2] = world.c;
       scratchSurface.a_basis[3] = world.d * greenSign;
 
+      assertNumericNormalTexture(normals.texture);
       this._normalBatch(albedo, normals.texture).add(this._transform, Color.white, scratchSurface);
       written++;
     }

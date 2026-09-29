@@ -4,11 +4,14 @@ import { mountControls } from '@examples/runtime';
 // Every video in the asset catalog, switchable at runtime with the number
 // keys. Only the first entry is fetched up front - the others lazy-load on
 // first selection so startup stays fast.
+//
+// The list is SDR video only. A video frame is imported as an external texture
+// in the browser's own display encoding and sampled as sRGB colour; the engine
+// makes no HDR-video promise, so no HDR clip is offered.
 const VIDEOS = [
   { name: 'demoLoop', label: 'Demo loop (webm)', url: assets.demo.video.demoLoop },
   { name: 'highRes', label: 'High-res (mp4)', url: assets.demo.video.highRes },
   { name: 'highFps', label: 'High-fps (webm)', url: assets.demo.video.highFps },
-  { name: 'hdr10', label: 'HDR10 (webm)', url: assets.demo.video.hdr10 },
 ];
 class VideoDrawableScene extends Scene {
   video;
@@ -38,7 +41,7 @@ class VideoDrawableScene extends Scene {
       title: 'Video Drawable',
       controls: [
         { keys: 'Tap', action: 'play / pause' },
-        { keys: '1–4', action: 'switch video' },
+        { keys: '1–3', action: 'switch video' },
       ],
       status: `Playing — ${VIDEOS[0].label}`,
       hint: 'The video streams as a live GPU texture with a sprite composited over it.',
@@ -48,7 +51,7 @@ class VideoDrawableScene extends Scene {
       this.hud.setStatus(this.video.playing ? `Playing — ${VIDEOS[this.videoIdx].label}` : 'Paused');
     });
     app.input.onKeyDown.add(channel => {
-      const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three, Keyboard.Four].indexOf(channel);
+      const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three].indexOf(channel);
       if (idx !== -1) {
         void this.switchVideo(idx);
       }

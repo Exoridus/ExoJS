@@ -9,6 +9,10 @@ class GradientScene extends Scene {
     const app = this.app;
     const centerX = app.width / 2;
     const centerY = app.height / 2;
+    // Stops are authored, and interpolated, in sRGB like every Color. toTexture()
+    // then converts each interpolated sample to linear light and premultiplies
+    // it, so the sprite draws the same ramp the CPU sampled and the output stage
+    // encodes it exactly once.
     this.backgroundGradient = new LinearGradient(
       [
         { offset: 0, color: new Color(255, 90, 40, 1) },

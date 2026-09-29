@@ -1,5 +1,6 @@
 import type { Material } from '@codexo/exojs';
 import { Shader } from '@codexo/exojs';
+import { colorShaderSourcesGlsl, colorShaderSourcesWgsl, spliceGlslPrologue } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
@@ -8,8 +9,10 @@ import { ParticleBufferLayout } from './ParticleBufferLayout';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
 import fragmentSource from './shaders/trail.frag';
-import vertexSource from './shaders/trail.vert';
+import vertexSourceModule from './shaders/trail.vert';
 import trailParticleWgslModule from './shaders/trail-particles.wgsl';
+
+const vertexSource = spliceGlslPrologue(vertexSourceModule, colorShaderSourcesGlsl);
 
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / Float32Array.BYTES_PER_ELEMENT;
@@ -73,7 +76,7 @@ export interface TrailParticlesOptions {
  * trails carry their own final positions and UVs, and only the projection, the
  * system transform and the premultiply flag are read.
  */
-export const trailParticleWgsl: string = trailParticleWgslModule;
+export const trailParticleWgsl = `${colorShaderSourcesWgsl}${trailParticleWgslModule}`;
 
 /**
  * A motion trail behind every particle: each one drags a strip through the

@@ -1,3 +1,4 @@
+import { compressedLevelByteLength, type CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import type { DataTextureFormat } from '#rendering/texture/DataTexture';
 import { TextureFormat } from '#rendering/types';
 
@@ -76,6 +77,23 @@ export class GpuResourceAccountant {
     return nextBytes;
   }
 
+  /**
+   * Drop the running total straight to zero, bypassing the normal
+   * allocate/free pairing.
+   *
+   * For the one case an explicit per-resource `free` cannot cover: a lost
+   * GPU device invalidates every live resource's handle at once, so nothing
+   * can be individually destroyed or booked out - the dead device silently
+   * reclaims all of it. A backend's device-loss recovery calls this once
+   * after clearing its own resource caches, so the tally does not carry
+   * stale bytes for resources that no longer exist into the recovered
+   * device's fresh accounting.
+   */
+  public resetLiveBytes(): void {
+    this._liveBytes = 0;
+    this._stats.gpuMemoryBytes = 0;
+  }
+
   /** Record `bytes` of content-texture pixel data uploaded this frame (CPU → GPU). */
   public recordTextureUpload(bytes: number): void {
     if (bytes <= 0) {
@@ -135,6 +153,26 @@ export const estimateTextureBytes = (width: number, height: number, bytesPerPixe
 
   return total;
 };
+
+/**
+ * Exact GPU storage bytes for a compressed texture, summing each mip level's
+ * own block-padded footprint ({@link compressedLevelByteLength}) rather than
+ * treating `bytesPerBlock / (blockWidth * blockHeight)` as a uniform
+ * bytes-per-pixel figure and multiplying it by `width * height`. That
+ * shortcut is only correct for a level whose extent is an exact multiple of
+ * the block size; a mip tail smaller than one block - or any level not
+ * block-aligned - is padded up to whole blocks on the GPU, so the shortcut
+ * silently undercounts it (a 1x1 BC1 mip tail is one full 8-byte block, not
+ * 0.5 bytes). `validateCompressedPayload` guarantees each level's `data`
+ * already has this exact length, so this stays byte-identical to what a
+ * backend actually uploads.
+ *
+ * @internal
+ */
+export const estimateCompressedTextureBytes = (
+  format: CompressedTextureFormat,
+  levels: ReadonlyArray<{ readonly width: number; readonly height: number }>,
+): number => levels.reduce((total, level) => total + compressedLevelByteLength(format, level.width, level.height), 0);
 
 /** Bytes per pixel for the {@link DataTexture} formats (shared by both backends). @internal */
 export const dataTextureBytesPerPixel = (format: DataTextureFormat): number => {

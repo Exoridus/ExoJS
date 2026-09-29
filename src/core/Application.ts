@@ -45,12 +45,14 @@ import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAd
 import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
+import { OutputTransform, validateWorkingColorFormatSupport, workingColorTextureFormat } from '#rendering/OutputTransform';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { type CaptureOptions, RenderingContext } from '#rendering/RenderingContext';
 import { type RenderNode } from '#rendering/RenderNode';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import type { TextureFormat } from '#rendering/types';
 
 import { Capabilities } from './Capabilities';
 import { Color } from './Color';
@@ -345,6 +347,21 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _framePasses: RenderPipeline | null = null;
   private _frameTexture: RenderTexture | null = null;
   private _frameRedirect: BackendTargetPass | null = null;
+  /**
+   * The output transform's linear-PMA source and the engine's dispatcher for
+   * it - see {@link _drawFrame}.
+   */
+  private readonly _outputTransform: OutputTransform;
+  private _outputTexture: RenderTexture | null = null;
+  private _outputPassesRedirect: BackendTargetPass | null = null;
+  /**
+   * Samples per pixel the engine-owned working targets are rendered at, or
+   * `null` while undecided - see {@link _workingSampleCount}. Decided once and
+   * never revisited: it costs a driver query, and neither the request nor the
+   * backend that answers it can change for the application's life.
+   */
+  private _workingSampleCountCache: number | null = null;
+  private readonly _transparentCanvas: boolean;
   private _cursor = 'default';
   private readonly _errors: ApplicationErrorReporter;
   /** Whether {@link onAppInitialized} has already announced this application. */
@@ -512,6 +529,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       };
 
       this._autoClear = this.options.autoClear ?? true;
+      this._transparentCanvas = this.options.rendering?.alphaMode === 'premultiplied';
+      this._outputTransform = new OutputTransform(this.options.rendering?.color);
 
       // Capture extension snapshot before constructing extension-sensitive subsystems.
       this._snapshot = buildSnapshot([...(appSettings.extensions ?? [])]);
@@ -845,11 +864,61 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public get frameTexture(): RenderTexture {
     if (this._frameTexture === null) {
-      this._frameTexture = new RenderTexture(1, 1);
+      // Under the color pipeline this doubles as the engine's linear working
+      // storage - see `_drawFrame`. The resolved `workingFormat` is fixed for
+      // the application's life, so this never changes for a texture's lifetime.
+      this._frameTexture = new RenderTexture(1, 1, { format: this._workingColorFormat() });
+      this._frameTexture.sampleCount = this._workingSampleCount();
       this._resizeFrameTexture();
     }
 
     return this._frameTexture;
+  }
+
+  /**
+   * The color-managed working target's storage format: `Rgba16F` when
+   * `rendering.color.workingFormat` asked for `'hdr'` (validated against the
+   * backend's actual capability in {@link initializeBackend}), `Rgba8Srgb`
+   * otherwise.
+   */
+  private _workingColorFormat(): TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F {
+    return workingColorTextureFormat(this.options.rendering?.color?.workingFormat ?? 'sdr');
+  }
+
+  /**
+   * Samples per pixel the engine-owned working targets are rendered at.
+   *
+   * `1` unless `rendering.webglAttributes.antialias` asked for antialiasing and
+   * the backend reports multisample storage for the working format. The
+   * browser's own default-framebuffer multisampling does not follow the scene
+   * into an offscreen attachment, so the working target negotiates its own
+   * storage from the same request.
+   *
+   * A request this backend cannot honor is reported once and answered with `1`
+   * rather than quietly dropped - `backend.getColorFormatCapabilities` already
+   * carries the counts that were on offer.
+   */
+  private _workingSampleCount(): number {
+    if (this._workingSampleCountCache !== null) {
+      return this._workingSampleCountCache;
+    }
+
+    const requested = this.options.rendering?.webglAttributes?.antialias === true;
+    const supported = requested ? this._backend.getColorFormatCapabilities(this._workingColorFormat()).sampleCounts : [];
+    // The conventional MSAA level rather than the driver's maximum: 8x and 16x
+    // cost real bandwidth for an antialias request that did not name them.
+    const count = supported.reduce((best, value) => (value > 1 && value <= 4 && value > best ? value : best), 1);
+
+    if (requested && count === 1) {
+      logger.warn(
+        `rendering.webglAttributes.antialias was requested but this backend has no multisample render-target storage for the working color format '${this._workingColorFormat()}'. The frame renders at one sample per pixel; read backend.getColorFormatCapabilities('${this._workingColorFormat()}').sampleCounts for what this device reports.`,
+        { source: 'Application', once: `application:working-antialias-unsupported:${this._workingColorFormat()}` },
+      );
+    }
+
+    this._workingSampleCountCache = count;
+
+    return count;
   }
 
   /**
@@ -1413,37 +1482,59 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Draw the frame: the scene, the systems' draw hooks and any transition, into
-   * the canvas - or, while {@link framePasses} holds passes, into
-   * {@link frameTexture}, with the pipeline played against the frame afterwards.
+   * an engine-owned linear working target, then out to the canvas through the
+   * output transform exactly once.
    *
-   * The redirect wraps the whole block rather than the scene alone so a pass
-   * sees the finished frame. A system that draws a debug overlay and a scene
-   * transition are both part of the picture an effect is applied to; a caller
-   * who wants an overlay left unfiltered adds it as a frame pass instead, after
-   * the effect.
+   * The scene always renders into {@link frameTexture} while
+   * {@link framePasses} holds passes and into the output target otherwise, so
+   * both paths share one texture rather than each owning a screen-sized
+   * allocation. `framePasses` runs with the active target already redirected to
+   * the output target, so a `FilterPass` ending in a `target: null` blit - the
+   * documented idiom - lands there instead of on the canvas; the output
+   * transform then samples that target exactly once whichever path ran, so an
+   * identical scene with and without an identity frame pass matches by
+   * construction.
+   *
+   * The redirect wraps the scene, the systems and the transition together so a
+   * pass sees the finished frame. A system that draws a debug overlay and a
+   * scene transition are both part of the picture an effect is applied to; a
+   * caller who wants an overlay left unfiltered adds it as a frame pass
+   * instead, after the effect.
+   *
+   * An antialias request resolved for the working targets reaches the storage
+   * as a sample count rather than a target flag: a multisample target is only
+   * readable once resolved, so the scene's frame is published into the texture
+   * the rest of the pipeline samples before anything filters or presents it.
    */
   private _drawFrame(): void {
+    const output = this._ensureOutputTexture();
     const passes = this._framePasses;
-
-    if (passes === null || passes.size === 0) {
-      // The frame starts from `clearColor`, so a scene's `draw()` never has to
-      // open with a clear of its own. Opt out with `autoClear: false` when the
-      // pipeline wants the previous frame preserved or clears it itself.
-      if (this._autoClear) {
-        this._rendering.clear(this.clearColor);
-      }
-
-      this._drawSceneAndSystems();
-
-      return;
-    }
-
-    const texture = this.frameTexture;
+    const clear = this._autoClear ? this.clearColor : null;
 
     this._frameRedirect ??= new BackendTargetPass(() => this._drawSceneAndSystems());
-    this._backend.execute(this._frameRedirect.retarget(texture, texture.view, this._autoClear ? this.clearColor : null));
 
-    passes.execute(this._rendering);
+    if (passes === null || passes.size === 0) {
+      // No filter pipeline, so the output target is the working frame itself and
+      // is the one that carries the sample count. With passes in the chain it is
+      // the pipeline's own target instead - every pass writes into it, and a
+      // multisample chain would pay the sample cost on filters too.
+      output.sampleCount = this._workingSampleCount();
+      this._backend.execute(this._frameRedirect.retarget(output, output.view, clear));
+      this._backend.resolveRenderTarget(output);
+    } else {
+      const texture = this.frameTexture;
+
+      this._backend.execute(this._frameRedirect.retarget(texture, texture.view, clear));
+      // Before the passes, which read the frame: a multisample working target
+      // only holds the frame in its resolve destination, and every filter in
+      // the pipeline samples the texture it was given.
+      this._backend.resolveRenderTarget(texture);
+
+      this._outputPassesRedirect ??= new BackendTargetPass(() => this._framePasses!.execute(this._rendering));
+      this._backend.execute(this._outputPassesRedirect.retarget(output, output.view, Color.transparentBlack));
+    }
+
+    this._outputTransform.present(this._backend, output, this._transparentCanvas, this.clearColor);
   }
 
   /** The frame's own drawing, in the order the transition placement asks for. */
@@ -1480,15 +1571,47 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * logical units so a pass reads the coordinates the scene was drawn in.
    */
   private _resizeFrameTexture(): void {
-    const texture = this._frameTexture;
+    Application._resizeWorkingTexture(this._frameTexture, this._geometry);
+  }
 
+  /**
+   * The output transform's own working target - see {@link _drawFrame}. Built
+   * lazily and independently of {@link framePasses}: it is needed whether or not
+   * the application ever adds a frame pass. Its sample count is not fixed here -
+   * a frame without passes draws straight into it, a frame with passes hands it
+   * to the pipeline - see {@link _drawFrame}.
+   */
+  private _ensureOutputTexture(): RenderTexture {
+    if (this._outputTexture === null) {
+      this._outputTexture = new RenderTexture(1, 1, { format: this._workingColorFormat() });
+      this._resizeOutputTexture();
+    }
+
+    return this._outputTexture;
+  }
+
+  /** Bring {@link _outputTexture} onto the current geometry - see {@link _resizeFrameTexture}. */
+  private _resizeOutputTexture(): void {
+    Application._resizeWorkingTexture(this._outputTexture, this._geometry);
+  }
+
+  /** Release the output transform's own resources - independent of {@link _releaseFramePasses}. */
+  private _releaseOutputTarget(): void {
+    this._outputTransform.destroy();
+    this._outputPassesRedirect = null;
+    this._outputTexture?.destroy();
+    this._outputTexture = null;
+  }
+
+  /** Shared resize body for a screen-sized working {@link RenderTexture} - see {@link _resizeFrameTexture}, {@link _resizeOutputTexture}. */
+  private static _resizeWorkingTexture(texture: RenderTexture | null, geometry: ApplicationSizing): void {
     if (texture === null) {
       return;
     }
 
-    const logicalWidth = Math.max(1, this._geometry.width);
-    const logicalHeight = Math.max(1, this._geometry.height);
-    const ratio = this._geometry.pixelRatio;
+    const logicalWidth = Math.max(1, geometry.width);
+    const logicalHeight = Math.max(1, geometry.height);
+    const ratio = geometry.pixelRatio;
 
     texture.setSize(Math.max(1, Math.round(logicalWidth * ratio)), Math.max(1, Math.round(logicalHeight * ratio)));
     texture.view.resize(logicalWidth, logicalHeight);
@@ -1510,6 +1633,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._backend.resize(logicalWidth, logicalHeight);
     this._rendering.resize(logicalWidth, logicalHeight);
     this._resizeFrameTexture();
+    this._resizeOutputTexture();
     this._framePasses?.resize(logicalWidth, logicalHeight);
     this.onResize.dispatch(logicalWidth, logicalHeight, this);
   }
@@ -1710,6 +1834,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this.systems.destroy();
 
+    this._releaseOutputTarget();
     this._releaseFramePasses();
     this._rendering.destroy();
     this.animations.destroy();
@@ -1813,6 +1938,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     try {
       await this._backend.initialize();
       this.publishAssetVariantProfile();
+      this._validateWorkingColorFormatCapability();
     } catch (error) {
       if (this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
         throw error;
@@ -1844,7 +1970,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       await this._backend.initialize();
       this.publishAssetVariantProfile();
+      this._validateWorkingColorFormatCapability();
     }
+  }
+
+  /**
+   * Validate the resolved working format against the now-initialized backend's
+   * actual capability, before the first frame allocates the target it names.
+   */
+  private _validateWorkingColorFormatCapability(): void {
+    validateWorkingColorFormatSupport(this._backend, this.options.rendering?.color?.workingFormat ?? 'sdr');
   }
 
   /**

@@ -24,7 +24,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { readWebGl2Pixel } from './_backendSetup';
+import { readWebGl2Pixel, useEncodedFrameTarget } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
@@ -72,8 +72,14 @@ const createBackend = async (): Promise<WebGl2Backend> => {
   return backend;
 };
 
-const renderMesh = (backend: WebGl2Backend, mesh: Mesh): void => {
+/** `encoded: false` draws to the raw surface, where numeric levels read back as stored. */
+const renderMesh = (backend: WebGl2Backend, mesh: Mesh, encoded = true): void => {
   backend.resetStats();
+
+  if (encoded) {
+    useEncodedFrameTarget(backend);
+  }
+
   backend.clear(Color.black);
   mesh.render(backend);
   backend.flush();
@@ -98,7 +104,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
     try {
-      renderMesh(backend, mesh);
+      renderMesh(backend, mesh, false);
 
       levels.forEach((level, i) => {
         const x = Math.floor(((i + 0.5) * canvasSize) / width);

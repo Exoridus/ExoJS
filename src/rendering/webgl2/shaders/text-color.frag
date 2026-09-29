@@ -1,5 +1,6 @@
 #version 300 es
-precision mediump float;
+precision highp float;
+precision highp sampler2D;
 
 uniform sampler2D u_nodeData;  // RGBA32F per-node data
 
@@ -20,6 +21,14 @@ void main(void) {
     tint = texelFetch(u_nodeData, ivec2(8, v_nodeIndex), 0);
   }
 
-  vec4 texel  = sampleBase(v_textureSlot, v_texcoord);
-  fragColor   = texel * tint;
+  vec4 texel = sampleBase(v_textureSlot, v_texcoord);
+
+  // Decode the authored tint once and premultiply it, matching the sprite tint
+  // convention, before combining with the already-associated sample by a single
+  // component-wise multiply. An authored tint is never sampled through a
+  // storage format, so this is the only decode it gets.
+  vec3 linearTintRgb = srgbToLinear(tint.rgb);
+  vec4 tintPremultiplied = vec4(linearTintRgb * tint.a, tint.a);
+
+  fragColor = texel * tintPremultiplied;
 }

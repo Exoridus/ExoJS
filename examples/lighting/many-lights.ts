@@ -2,6 +2,7 @@ import {
   Application,
   Color,
   Container,
+  DataTexture,
   FixedResolutionCanvasSizing,
   type RenderingContext,
   ScaleModes,
@@ -9,6 +10,7 @@ import {
   type Seconds,
   Sprite,
   Texture,
+  TextureFormat,
 } from '@codexo/exojs';
 import { ForwardLighting, Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -40,6 +42,20 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
 
+// Numeric data is generated straight into a DataTexture: it is never
+// colour-managed, and no canvas round trip can touch its bytes.
+const dataTexture = (size: number, fill: (data: Uint8Array) => void): Texture => {
+  const data = new Uint8Array(size * size * 4);
+  fill(data);
+  return new DataTexture({
+    width: size,
+    height: size,
+    format: TextureFormat.Rgba8,
+    data,
+    textureOptions: { scaleMode: ScaleModes.Linear, generateMipMap: false },
+  });
+};
+
 // Flat stone albedo with a mortar cross, so the tiling is visible even unlit.
 const albedoTexture = canvasTexture(TILE_SIZE, context => {
   context.fillStyle = '#9a958c';
@@ -54,8 +70,7 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
 // Both are built with image-space y, which grows downwards, and the green
 // channel is negated on the way out: the engine reads the OpenGL convention,
 // where green above the midpoint leans towards the top of the image.
-const normalTexture = canvasTexture(TILE_SIZE, context => {
-  const image = context.createImageData(TILE_SIZE, TILE_SIZE);
+const normalTexture = dataTexture(TILE_SIZE, data => {
   const half = TILE_SIZE / 2;
   const bevel = 14;
   for (let y = 0; y < TILE_SIZE; y++) {
@@ -69,13 +84,12 @@ const normalTexture = canvasTexture(TILE_SIZE, context => {
       const ny = horizontal ? ((y - half) / half) * 0.25 : towardsY * slope;
       const length = Math.hypot(nx, ny, 1);
       const offset = (y * TILE_SIZE + x) * 4;
-      image.data[offset] = ((nx / length) * 0.5 + 0.5) * 255;
-      image.data[offset + 1] = ((-ny / length) * 0.5 + 0.5) * 255;
-      image.data[offset + 2] = (1 / length) * 0.5 * 255 + 127.5;
-      image.data[offset + 3] = 255;
+      data[offset] = Math.round(((nx / length) * 0.5 + 0.5) * 255);
+      data[offset + 1] = Math.round(((-ny / length) * 0.5 + 0.5) * 255);
+      data[offset + 2] = Math.round((1 / length) * 0.5 * 255 + 127.5);
+      data[offset + 3] = 255;
     }
   }
-  context.putImageData(image, 0, 0);
 });
 
 // Evenly spaced hues at a fixed lightness, so neighbouring pools of light stay
