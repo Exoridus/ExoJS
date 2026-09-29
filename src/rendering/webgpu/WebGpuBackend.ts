@@ -3688,7 +3688,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _getTextureNormalizer(): WebGpuTextureNormalizer {
-    return (this._textureNormalizer ??= new WebGpuTextureNormalizer(this.device));
+    return (this._textureNormalizer ??= new WebGpuTextureNormalizer(this.device, this._accountant));
   }
 
   /**

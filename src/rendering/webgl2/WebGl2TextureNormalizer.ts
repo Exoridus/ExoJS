@@ -1,4 +1,5 @@
 import vertexSource from '#rendering/filters/shaders/default-vertex.vert';
+import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderError } from '#rendering/RenderError';
 import fragmentSource from '#rendering/webgl2/shaders/texture-normalize.frag';
@@ -61,6 +62,9 @@ const quadVertexCount = 4;
 /** Scissor, stencil, depth and cull: the fixed-function tests that would clip or reject a full-level write. */
 const passThroughRasterCapabilities = 4;
 
+/** Both staging formats (RGBA8 and SRGB8_ALPHA8) store four bytes per texel. */
+const STAGING_BYTES_PER_TEXEL = 4;
+
 /** Reused per level, so the uniform setters allocate nothing. */
 const unitScratch = new Int32Array(1);
 const levelScaleScratch = new Float32Array(2);
@@ -87,6 +91,7 @@ const levelScaleScratch = new Float32Array(2);
 export class WebGl2TextureNormalizer {
   private readonly _gl: WebGL2RenderingContext;
   private readonly _host: WebGl2ColorNormalizationHost;
+  private readonly _accountant: GpuResourceAccountant | null;
 
   private _program: WebGLProgram | null = null;
   private _framebuffer: WebGLFramebuffer | null = null;
@@ -103,10 +108,16 @@ export class WebGl2TextureNormalizer {
   private _stagingFormat = 0;
   private _stagingWidth = 0;
   private _stagingHeight = 0;
+  private _stagingAccountedBytes = 0;
 
-  public constructor(gl: WebGL2RenderingContext, host: WebGl2ColorNormalizationHost) {
+  /**
+   * @param accountant Books the staging texture, so scratch memory is part of the
+   * backend's owned-byte total for as long as it is resident.
+   */
+  public constructor(gl: WebGL2RenderingContext, host: WebGl2ColorNormalizationHost, accountant: GpuResourceAccountant | null = null) {
     this._gl = gl;
     this._host = host;
+    this._accountant = accountant;
     this._rasterCapabilities = new Int32Array([gl.SCISSOR_TEST, gl.STENCIL_TEST, gl.DEPTH_TEST, gl.CULL_FACE]);
   }
 
@@ -181,6 +192,7 @@ export class WebGl2TextureNormalizer {
     this._stagingFormat = 0;
     this._stagingWidth = 0;
     this._stagingHeight = 0;
+    this._accountStaging();
   }
 
   private _run(target: WebGl2ColorNormalizationTarget, upload: (gl: WebGL2RenderingContext) => void): void {
@@ -380,6 +392,12 @@ export class WebGl2TextureNormalizer {
     this._stagingFormat = internalFormat;
     this._stagingWidth = nextWidth;
     this._stagingHeight = nextHeight;
+    this._accountStaging();
+  }
+
+  private _accountStaging(): void {
+    this._stagingAccountedBytes =
+      this._accountant?.reallocate(this._stagingAccountedBytes, this._stagingWidth * this._stagingHeight * STAGING_BYTES_PER_TEXEL) ?? 0;
   }
 
   private _ensureProgram(): WebGLProgram {

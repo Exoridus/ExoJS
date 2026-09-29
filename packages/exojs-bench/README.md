@@ -23,6 +23,10 @@ Use the platform declaration required by your host, as described in the [results
 
 [Publish a machine profile](results/README.md) only after the required runs pass compatibility and provenance checks. Diagnostic runs with a narrowed workload are useful locally but do not become an unrestricted published profile merely by changing their filename.
 
+## Results and the colour pipeline
+
+Every profile in `results/` and both baselines were measured before the linear-light colour pipeline became the engine default, and they remain labelled by the engine version and timestamp in their provenance. They are preserved as evidence of the earlier pipeline and are not regenerated to reflect the current one. A colour-pipeline run is written to its own output directory and stays a diagnostic run until it has passed the same three-run acquisition as any profile. How its cost is split into deterministic counts, steady-state timing and estimated owned GPU bytes is described in [Measuring colour-pipeline cost](docs/harness.md#measuring-colour-pipeline-cost).
+
 ## Read before changing a comparison
 
 The [harness methodology](docs/harness.md) owns measurement regions, pooling, workload selection, fairness, and publication rules. The [adapter contract](src/rendering/adapters/README.md) owns how another rendering library joins the harness. The [results README](results/README.md) owns acquisition and profile provenance. The site reads their generated results; do not copy volatile ratios into unrelated documentation.
