@@ -141,6 +141,11 @@ export class WebGpuOutputPass {
   }
 
   private _ensureConnected(backend: WebGpuBackend, targetFormat: GPUTextureFormat): void {
+    // A replaced device leaves the buffers, bind groups and pipelines of the old one unusable.
+    if (this._connection !== null && this._connection.device !== backend.device) {
+      this.destroy();
+    }
+
     if (this._connection !== null) {
       if (!this._connection.pipelines.has(targetFormat)) {
         this._connection.pipelines.set(targetFormat, this._createPipeline(backend, this._connection, targetFormat));

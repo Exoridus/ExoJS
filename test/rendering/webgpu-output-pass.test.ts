@@ -70,4 +70,34 @@ describe('WebGpuOutputPass bind groups', () => {
     first.destroy();
     second.destroy();
   });
+  test('the same transform presenting on a backend with another device builds that device its own resources', async () => {
+    const first = createMockWebGpuEnvironment();
+    const firstBackend = await createMockBackend(first);
+    const second = createMockWebGpuEnvironment();
+    const secondBackend = await createMockBackend(second);
+    const transform = new OutputTransform();
+    const source = new RenderTexture(8, 8, { format: TextureFormat.Rgba8Srgb });
+
+    try {
+      transform.present(firstBackend, source, false, Color.black);
+      firstBackend.flush();
+
+      const before = second.bindGroupCount();
+
+      transform.present(secondBackend, source, false, Color.black);
+      secondBackend.flush();
+
+      // A stale connection would present through the first device's cached bind groups
+      // and create nothing on the second.
+      expect(second.bindGroupCount()).toBeGreaterThan(before);
+      expect(second.createBufferLabels().length).toBeGreaterThan(0);
+    } finally {
+      source.destroy();
+      transform.destroy();
+      secondBackend.destroy();
+      firstBackend.destroy();
+      second.restore();
+      first.restore();
+    }
+  });
 });

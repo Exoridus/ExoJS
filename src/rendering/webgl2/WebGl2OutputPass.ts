@@ -43,6 +43,9 @@ export class WebGl2OutputPass {
 
   private _shader: WebGl2Shader | null = null;
   private _connection: WebGl2Connection | null = null;
+  /** The backend whose context loss this pass listens to while it holds GL objects. */
+  private _backend: WebGl2Backend | null = null;
+  private readonly _onContextLost = (): void => this.destroy();
 
   private _source: RenderTexture | null = null;
   private _exposureScale = 1;
@@ -79,6 +82,9 @@ export class WebGl2OutputPass {
   }
 
   public destroy(): void {
+    this._backend?.onContextLost.remove(this._onContextLost);
+    this._backend = null;
+
     if (this._connection !== null) {
       this._connection.vertexBuffer.destroy();
       this._connection.vao.destroy();
@@ -147,6 +153,10 @@ export class WebGl2OutputPass {
 
     this._shader = shader;
     this._connection = { vertexBuffer, vao };
+
+    // Every GL object above dies with the context; the next present rebuilds them.
+    this._backend = backend;
+    backend.onContextLost.add(this._onContextLost);
   }
 
   private _createVertexBuffer(gl: WebGL2RenderingContext): WebGl2RenderBuffer {

@@ -2766,7 +2766,6 @@ export class WebGl2Backend implements RenderBackend {
 
   private _setupContext(): void {
     const gl = this._context;
-    const { r, g, b, a } = this._clearColor;
 
     gl.disable(gl.DEPTH_TEST);
     gl.depthMask(false);
@@ -2777,7 +2776,9 @@ export class WebGl2Backend implements RenderBackend {
     gl.enable(gl.BLEND);
 
     gl.blendEquation(gl.FUNC_ADD);
-    gl.clearColor(r / 255, g / 255, b / 255, a);
+    // Through the same path `clear` uses, so the cached "clear colour already applied for an
+    // sRGB target" flag describes what the fresh context holds rather than the lost one.
+    this._applyClearColor(this._clearColor, this._isSrgbTarget(this._renderTarget));
   }
 
   private _addEvents(): void {
