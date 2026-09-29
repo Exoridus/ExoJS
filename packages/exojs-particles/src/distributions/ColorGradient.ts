@@ -31,10 +31,10 @@ const compareT = (a: ColorGradientKey, b: ColorGradientKey): number => a.t - b.t
  *
  * @example
  * const fire = new ColorGradient([
- *     { t: 0,   color: new Color(1, 1, 1, 1) },     // white
- *     { t: 0.3, color: new Color(1, 0.7, 0.1, 1) }, // orange
- *     { t: 0.7, color: new Color(0.4, 0.1, 0, 0.6) },
- *     { t: 1,   color: new Color(0, 0, 0, 0) },     // transparent black
+ *     { t: 0,   color: new Color(255, 255, 255, 1) }, // white
+ *     { t: 0.3, color: new Color(255, 179, 26, 1) },  // orange
+ *     { t: 0.7, color: new Color(102, 26, 0, 0.6) },
+ *     { t: 1,   color: new Color(0, 0, 0, 0) },       // transparent black
  * ]);
  */
 export class ColorGradient implements LifetimeFunction<Color> {

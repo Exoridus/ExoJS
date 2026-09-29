@@ -1,4 +1,4 @@
-import type { Application, PointLike } from '@codexo/exojs';
+import type { Application, Color, PointLike } from '@codexo/exojs';
 import { Graphics } from '@codexo/exojs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -44,6 +44,32 @@ const renderWith = (debug: PhysicsDebugDraw) => {
 
   return backend;
 };
+
+describe('PhysicsDebugDraw colours', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('outlines each collider kind in a visible colour, not black', () => {
+    const lineColors: Color[] = [];
+
+    vi.spyOn(Graphics.prototype, 'lineColor', 'set').mockImplementation(function (color: Color) {
+      lineColors.push(color.clone());
+    });
+
+    const world = new PhysicsWorld();
+
+    colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }, 0, 'dynamic');
+    renderWith(new PhysicsDebugDraw(fakeApp, world));
+
+    const outline = lineColors.at(-1)!;
+
+    // Authored as (1, 0.85, 0.3, 0.9) in unit range: a byte colour of zeros here
+    // would draw every body black at 90% alpha.
+    expect([outline.r, outline.g, outline.b]).toEqual([255, 217, 77]);
+    expect(outline.a).toBe(0.9);
+  });
+});
 
 describe('PhysicsDebugDraw', () => {
   it('defaults to drawing shapes only, in world space', () => {
