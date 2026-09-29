@@ -1322,6 +1322,19 @@ export class WebGpuBackend implements RenderBackend {
     return true;
   }
 
+  /**
+   * No-op: nothing this backend renders into is ever multisampled, so there is
+   * no multisample storage to publish. A `RenderTarget.sampleCount` above `1`
+   * stays inert here for the reason {@link colorFormatCapabilities} records -
+   * WebGPU has no antialias request to honor and no pipeline carrying a sample
+   * count - rather than resolving an attachment that does not exist.
+   */
+  public resolveRenderTarget(target: RenderTarget): void {
+    if (target.sampleCount > 1) {
+      target.sampleCount = 1;
+    }
+  }
+
   public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType?: 'uint8'): Promise<Uint8ClampedArray>;
   public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: 'float32'): Promise<Float32Array>;
   public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
@@ -4211,6 +4224,17 @@ const webgpuDataTextureFormat = (format: DataTextureFormat): WebGpuDataTextureFo
   }
 };
 
+/**
+ * Capability record for one colour format.
+ *
+ * `sampleCounts` is `[1]` for every format, and that is the answer rather than
+ * a placeholder: WebGPU offers no way to ask a device which sample counts a
+ * format accepts, and a count only becomes real once every pipeline that can
+ * render into the target carries it in its `multisample` state. This backend
+ * has no such pipeline, so a higher count would be a promise it cannot keep.
+ * `rendering.webglAttributes.antialias` is a WebGL-only request with no WebGPU
+ * counterpart to honor.
+ */
 const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blendable: boolean): ColorFormatCapabilities => ({
   renderable,
   filterable,

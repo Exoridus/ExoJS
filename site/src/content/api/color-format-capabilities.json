@@ -122,7 +122,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Render-target sample counts this backend currently supports for the format."
+          "description": "Render-target sample counts this backend can allocate storage for on format, ascending and always containing 1. A count above 1 is a promise the backend keeps end to end: reading it as support and then setting RenderTarget.sampleCount makes the target render multisampled and resolve into its own sampled texture. A backend whose pipelines cannot carry a sample count reports 1 alone rather than a count it cannot deliver."
         }
       ],
       "paragraphs": [],

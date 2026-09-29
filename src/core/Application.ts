@@ -356,6 +356,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _outputTransform: OutputTransform;
   private _outputTexture: RenderTexture | null = null;
   private _outputPassesRedirect: BackendTargetPass | null = null;
+  /**
+   * Samples per pixel the engine-owned working targets are rendered at, or
+   * `null` while undecided - see {@link _workingSampleCount}. Decided once and
+   * never revisited: it costs a driver query, and neither the request nor the
+   * backend that answers it can change for the application's life.
+   */
+  private _workingSampleCountCache: number | null = null;
   private readonly _transparentCanvas: boolean;
   private _cursor = 'default';
   private readonly _errors: ApplicationErrorReporter;
@@ -864,6 +871,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // resolved `workingFormat` are both fixed for the application's life, so
       // this never changes for a texture's lifetime.
       this._frameTexture = new RenderTexture(1, 1, COLOR_PIPELINE_ENABLED ? { format: this._workingColorFormat() } : {});
+      this._frameTexture.sampleCount = this._workingSampleCount();
       this._resizeFrameTexture();
     }
 
@@ -878,6 +886,42 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private _workingColorFormat(): TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F {
     return workingColorTextureFormat(this.options.rendering?.color?.workingFormat ?? 'sdr');
+  }
+
+  /**
+   * Samples per pixel the engine-owned working targets are rendered at.
+   *
+   * `1` unless `rendering.webglAttributes.antialias` asked for antialiasing and
+   * the backend reports multisample storage for the working format. The
+   * browser's own default-framebuffer multisampling does not follow the scene
+   * into an offscreen attachment, so the working target negotiates its own
+   * storage from the same request.
+   *
+   * A request this backend cannot honor is reported once and answered with `1`
+   * rather than quietly dropped - `backend.getColorFormatCapabilities` already
+   * carries the counts that were on offer.
+   */
+  private _workingSampleCount(): number {
+    if (this._workingSampleCountCache !== null) {
+      return this._workingSampleCountCache;
+    }
+
+    const requested = COLOR_PIPELINE_ENABLED && this.options.rendering?.webglAttributes?.antialias === true;
+    const supported = requested ? this._backend.getColorFormatCapabilities(this._workingColorFormat()).sampleCounts : [];
+    // The conventional MSAA level rather than the driver's maximum: 8x and 16x
+    // cost real bandwidth for an antialias request that did not name them.
+    const count = supported.reduce((best, value) => (value > 1 && value <= 4 && value > best ? value : best), 1);
+
+    if (requested && count === 1) {
+      logger.warn(
+        `rendering.webglAttributes.antialias was requested but this backend has no multisample render-target storage for the working color format '${this._workingColorFormat()}'. The frame renders at one sample per pixel; read backend.getColorFormatCapabilities('${this._workingColorFormat()}').sampleCounts for what this device reports.`,
+        { source: 'Application', once: `application:working-antialias-unsupported:${this._workingColorFormat()}` },
+      );
+    }
+
+    this._workingSampleCountCache = count;
+
+    return count;
   }
 
   /**
@@ -1493,6 +1537,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * transform then samples `_outputTexture` exactly once, whichever path ran,
    * so an identical scene with and without an identity frame pass matches by
    * construction.
+   *
+   * An antialias request resolved for the working targets reaches the storage
+   * as a sample count rather than a target flag: a multisample target is only
+   * readable once resolved, so the scene's frame is published into the texture
+   * the rest of the pipeline samples before anything filters or presents it.
    */
   private _drawFrameColorManaged(): void {
     const output = this._ensureOutputTexture();
@@ -1502,11 +1551,21 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._frameRedirect ??= new BackendTargetPass(() => this._drawSceneAndSystems());
 
     if (passes === null || passes.size === 0) {
+      // No filter pipeline, so the output target is the working frame itself and
+      // is the one that carries the sample count. With passes in the chain it is
+      // the pipeline's own target instead - every pass writes into it, and a
+      // multisample chain would pay the sample cost on filters too.
+      output.sampleCount = this._workingSampleCount();
       this._backend.execute(this._frameRedirect.retarget(output, output.view, clear));
+      this._backend.resolveRenderTarget(output);
     } else {
       const texture = this.frameTexture;
 
       this._backend.execute(this._frameRedirect.retarget(texture, texture.view, clear));
+      // Before the passes, which read the frame: a multisample working target
+      // only holds the frame in its resolve destination, and every filter in
+      // the pipeline samples the texture it was given.
+      this._backend.resolveRenderTarget(texture);
 
       this._outputPassesRedirect ??= new BackendTargetPass(() => this._framePasses!.execute(this._rendering));
       this._backend.execute(this._outputPassesRedirect.retarget(output, output.view, Color.transparentBlack));
@@ -1556,7 +1615,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * The output transform's own working target - see {@link _drawFrameColorManaged}.
    * Built lazily and independently of {@link framePasses}: it is needed the
    * moment {@link COLOR_PIPELINE_ENABLED} is active, whether or not the
-   * application ever adds a frame pass.
+   * application ever adds a frame pass. Its sample count is not fixed here - a
+   * frame without passes draws straight into it, a frame with passes hands it
+   * to the pipeline - see {@link _drawFrameColorManaged}.
    */
   private _ensureOutputTexture(): RenderTexture {
     if (this._outputTexture === null) {

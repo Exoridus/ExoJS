@@ -120,6 +120,17 @@ export interface RenderingApplicationOptions {
    *   spelling of that contract both backends understand.
    * - `stencil` is always forced to `true` - geometric stencil clipping
    *   needs a stencil buffer on the root target unconditionally.
+   *
+   * `antialias: true` is honored twice over: it asks the browser to multisample
+   * the default framebuffer, and it asks the engine for multisample storage on
+   * the engine-owned target the color-managed frame is rendered into, because
+   * the browser's multisampling does not follow the scene into an offscreen
+   * attachment. That target runs at the highest count of `1`, `2` or `4` this
+   * device reports for the working color format
+   * (`backend.getColorFormatCapabilities(...).sampleCounts`); a request the
+   * device cannot honor is reported once and the frame renders at one sample
+   * per pixel. WebGPU has no equivalent request, so this attribute reaches
+   * nothing there.
    */
   webglAttributes?: Omit<WebGLContextAttributes, 'alpha' | 'premultipliedAlpha' | 'stencil'>;
   /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
