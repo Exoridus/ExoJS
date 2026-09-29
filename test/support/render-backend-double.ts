@@ -116,6 +116,9 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     supportsColorFormat() {
       return true;
     },
+    resolveRenderTarget() {
+      return undefined;
+    },
     getColorFormatCapabilities() {
       return { renderable: true, filterable: true, blendable: true, sampleCounts: [1] };
     },

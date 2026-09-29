@@ -178,7 +178,17 @@ export class GlEventLog {
   }
 }
 
-/** A single recorded GPU upload, classified by target. */
+/** One {@link GlRecorder.multisampleResolveBlits} entry. */
+export interface MultisampleResolveBlit {
+  /** Framebuffer the samples were read from. */
+  readonly from: object | null;
+  /** Framebuffer the resolved frame was written to. */
+  readonly to: object | null;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** One recorded GPU upload, classified by target. */
 export interface RecordedUpload {
   readonly kind: 'buffer' | 'texture';
   readonly bytes: number;
@@ -213,6 +223,23 @@ export class GlRecorder {
   public transformUploadBytes = 0;
   /** Number of transform-texture uploads (zero when the frame's transforms are unchanged). */
   public transformUploads = 0;
+  /**
+   * Multisample storage allocations, `SAMPLES` queries and resolves since this
+   * recorder was created. Deliberately not in {@link reset}: a scenario measures
+   * them across frames (did a resize re-allocate? did a second resolve happen?),
+   * which a per-frame reset would erase.
+   */
+  public multisampleAllocations = 0;
+  /** Sample count of the most recent {@link multisampleAllocations} allocation. */
+  public multisampleSamples = 0;
+  public sampleCountQueries = 0;
+  public multisampleResolves = 0;
+  /**
+   * Source and destination framebuffer of each colour blit, with the copied
+   * extent - a resolve is identified by reading a multisample framebuffer into
+   * a different, single-sample one, so the pair is the contract, not the count.
+   */
+  public readonly multisampleResolveBlits: MultisampleResolveBlit[] = [];
 
   /**
    * Ordered call trace, when a caller attached one. `null` (the default) is
@@ -325,6 +352,9 @@ const C = {
   MAX_TEXTURE_SIZE: constantFor('MAX_TEXTURE_SIZE'),
   RGBA32F: constantFor('RGBA32F'),
   FRAMEBUFFER_COMPLETE: constantFor('FRAMEBUFFER_COMPLETE'),
+  COLOR_BUFFER_BIT: constantFor('COLOR_BUFFER_BIT'),
+  READ_FRAMEBUFFER: constantFor('READ_FRAMEBUFFER'),
+  DRAW_FRAMEBUFFER: constantFor('DRAW_FRAMEBUFFER'),
   FRAMEBUFFER_BINDING: constantFor('FRAMEBUFFER_BINDING'),
   VIEWPORT: constantFor('VIEWPORT'),
   CURRENT_PROGRAM: constantFor('CURRENT_PROGRAM'),
@@ -362,8 +392,14 @@ interface FakeProgram {
  *
  * `extensions` maps an extension name to the object `getExtension` answers with;
  * anything absent from it reads as unsupported, which is the default.
+ * `sampleCountSupport` is what a `SAMPLES` query reports for a sized renderbuffer
+ * format, so a scenario can pose as a device with no multisample support at all.
  */
-export const createFakeWebGl2Context = (recorder: GlRecorder, extensions: Readonly<Record<string, object>> = {}): WebGL2RenderingContext => {
+export const createFakeWebGl2Context = (
+  recorder: GlRecorder,
+  extensions: Readonly<Record<string, object>> = {},
+  sampleCountSupport: readonly number[] = [1, 2, 4],
+): WebGL2RenderingContext => {
   let handleSeq = 1;
   const newHandle = (tag: string): object => ({ __fake: tag, id: handleSeq++ });
 
@@ -373,6 +409,8 @@ export const createFakeWebGl2Context = (recorder: GlRecorder, extensions: Readon
   // from one constant is what turns "it restored the framebuffer" into an
   // assertion that can fail.
   let framebufferBinding: object | null = null;
+  let drawFramebufferBinding: object | null = null;
+  let readFramebufferBinding: object | null = null;
   let currentProgram: object | null = null;
   let vertexArrayBinding: object | null = null;
   let arrayBufferBinding: object | null = null;
@@ -496,12 +534,45 @@ export const createFakeWebGl2Context = (recorder: GlRecorder, extensions: Readon
       }
     },
     getError: (): number => C.NO_ERROR,
+    getInternalformatParameter: (): Int32Array => {
+      recorder.sampleCountQueries++;
+
+      return new Int32Array(sampleCountSupport);
+    },
     checkFramebufferStatus: (): number => C.FRAMEBUFFER_COMPLETE,
+    renderbufferStorageMultisample: (_target: number, samples: number): void => {
+      recorder.multisampleAllocations++;
+      recorder.multisampleSamples = samples;
+    },
+    blitFramebuffer: (
+      _sx: number,
+      _sy: number,
+      sw: number,
+      sh: number,
+      _dx: number,
+      _dy: number,
+      _dw: number,
+      _dh: number,
+      mask: number,
+      _filter: number,
+    ): void => {
+      if ((mask & C.COLOR_BUFFER_BIT) !== 0) {
+        recorder.multisampleResolves++;
+        recorder.multisampleResolveBlits.push({ from: readFramebufferBinding, to: drawFramebufferBinding, width: sw, height: sh });
+      }
+    },
     isContextLost: (): boolean => false,
     // Explicit rather than Proxy no-ops: the only state a save/restore can be
-    // checked against is state the fake actually keeps.
-    bindFramebuffer: (_target: number, framebuffer: object | null): void => {
-      framebufferBinding = framebuffer;
+    // checked against is state the fake actually keeps. READ and DRAW are
+    // tracked apart because a multisample resolve binds them to different
+    // framebuffers, and which is which is the whole contract of a blit.
+    bindFramebuffer: (target: number, framebuffer: object | null): void => {
+      if (target === C.READ_FRAMEBUFFER) {
+        readFramebufferBinding = framebuffer;
+      } else {
+        drawFramebufferBinding = framebuffer;
+        framebufferBinding = framebuffer;
+      }
     },
     viewport: (x: number, y: number, width: number, height: number): void => {
       // Element by element, not `set([x, y, width, height])`: an array literal per

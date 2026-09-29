@@ -3,10 +3,26 @@ import { BlendModes, ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-const webGlBackend = (floatRenderable: boolean, float32Filterable: boolean, float32Blendable: boolean): WebGl2Backend => {
+import { createFakeWebGl2Context, GlRecorder, installFakeWebGl2Globals } from '../perf/rendering/fakeWebGl2';
+
+installFakeWebGl2Globals();
+
+const webGlBackend = (
+  floatRenderable: boolean,
+  float32Filterable: boolean,
+  float32Blendable: boolean,
+  sampleCountSupport?: readonly number[],
+): WebGl2Backend => {
   const backend = Object.create(WebGl2Backend.prototype) as WebGl2Backend;
 
-  Object.assign(backend as object, { _floatRenderable: floatRenderable, _float32Filterable: float32Filterable, _float32Blendable: float32Blendable });
+  Object.assign(backend as object, {
+    _floatRenderable: floatRenderable,
+    _float32Filterable: float32Filterable,
+    _float32Blendable: float32Blendable,
+    _context: createFakeWebGl2Context(new GlRecorder(), {}, sampleCountSupport),
+    _contextLost: false,
+    _sampleCountsByFormat: new Map(),
+  });
 
   return backend;
 };
@@ -21,9 +37,9 @@ const webGpuBackend = (features: readonly GPUFeatureName[] = []): WebGpuBackend 
 
 describe('color format capabilities', () => {
   test('WebGL2 keeps half-float filtering separate from float32 extension capabilities', () => {
-    const unavailable = webGlBackend(false, false, false);
-    const floatTargets = webGlBackend(true, false, false);
-    const float32FullyEnabled = webGlBackend(true, true, true);
+    const unavailable = webGlBackend(false, false, false, [1]);
+    const floatTargets = webGlBackend(true, false, false, [1]);
+    const float32FullyEnabled = webGlBackend(true, true, true, [1]);
 
     expect(unavailable.getColorFormatCapabilities(TextureFormat.Rgba16F)).toEqual({ renderable: false, filterable: true, blendable: false, sampleCounts: [1] });
     expect(floatTargets.getColorFormatCapabilities(TextureFormat.Rgba32F)).toEqual({
@@ -38,6 +54,29 @@ describe('color format capabilities', () => {
       blendable: true,
       sampleCounts: [1],
     });
+  });
+
+  test('WebGL2 reports the multisample support the driver declares for a renderable format', () => {
+    const multisampling = webGlBackend(false, false, false, [1, 2, 4, 8]);
+
+    expect(multisampling.getColorFormatCapabilities(TextureFormat.Rgba8Srgb)).toEqual({
+      renderable: true,
+      filterable: true,
+      blendable: true,
+      sampleCounts: [1, 2, 4, 8],
+    });
+    expect(multisampling.getColorFormatCapabilities(TextureFormat.Rgba8)).toEqual({
+      renderable: true,
+      filterable: true,
+      blendable: true,
+      sampleCounts: [1, 2, 4, 8],
+    });
+  });
+
+  test('WebGL2 answers a single sample for a format it cannot render into at all', () => {
+    const backend = webGlBackend(false, false, false, [1, 2, 4]);
+
+    expect(backend.getColorFormatCapabilities(TextureFormat.Rgba16F)).toEqual({ renderable: false, filterable: true, blendable: false, sampleCounts: [1] });
   });
 
   test('WebGPU reads float32 capabilities from features granted to the device', () => {

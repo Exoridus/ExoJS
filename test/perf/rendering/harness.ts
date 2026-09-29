@@ -35,6 +35,8 @@ export interface HarnessOptions {
    * backend probes a context that supports none of the optional ones.
    */
   readonly extensions?: Readonly<Record<string, object>>;
+  /** What a multisample render-target support query reports. `[1, 2, 4]` by default. */
+  readonly sampleCountSupport?: readonly number[];
 }
 
 /** A wired-up backend ready to render scenes against the recording fake context. */
@@ -102,7 +104,7 @@ export const createWebGl2Harness = (options: HarnessOptions = {}): WebGl2Harness
   const width = options.width ?? 1280;
   const height = options.height ?? 720;
   const recorder = new GlRecorder();
-  const context = createFakeWebGl2Context(recorder, options.extensions ?? {});
+  const context = createFakeWebGl2Context(recorder, options.extensions ?? {}, options.sampleCountSupport);
   const canvas = createFakeCanvas(width, height, context);
 
   const app = {

@@ -47,6 +47,25 @@ export class RenderTarget {
    */
   public opaqueDestination = false;
 
+  /**
+   * Samples per pixel this target's colour attachment is rendered at. `1`
+   * everywhere except an engine-owned working target an antialias request was
+   * honored for - see `RenderingApplicationOptions.webglAttributes`.
+   *
+   * A value above `1` makes the backend allocate multisample storage in place
+   * of the colour texture and keep the texture as the single-sample resolve
+   * destination, so everything that samples the target reads the resolved
+   * frame and needs no resolve of its own. Nothing is resolved until
+   * `RenderBackend.resolveRenderTarget` is called, so a caller that sets this
+   * itself must resolve before reading the target back.
+   *
+   * Ignored on a target that opted into a sampleable depth attachment
+   * ({@link depthTexture}): a multisample attachment cannot be sampled, so such
+   * a target stays single-sample. The root target is always single-sample - the
+   * browser owns its multisampling.
+   */
+  public sampleCount = 1;
+
   private readonly _root: boolean;
   private _depthTexture: DepthTexture | null = null;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();

@@ -8,7 +8,6 @@
 import type { Application } from '#core/Application';
 import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
-import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
@@ -201,8 +200,36 @@ interface ManagedRenderTargetState {
   depthStencilTexture: WebGLTexture | null;
   stencilWidth: number;
   stencilHeight: number;
+  /** Sample count {@link stencilRenderbuffer} is allocated at; 0 while single-sample. */
+  stencilSamples: number;
   /** Bytes booked with the accountant for whichever of the two above is allocated. */
   stencilAccountedBytes: number;
+  /**
+   * Multisample colour storage, attached in place of {@link attachedTextures}
+   * while the target's {@link RenderTarget.sampleCount} is above `1`. Its
+   * samples are resolved into the target's own colour texture, which is why
+   * that texture is not attached to this framebuffer in the meantime.
+   */
+  multisampleColor: WebGLRenderbuffer | null;
+  multisampleWidth: number;
+  multisampleHeight: number;
+  multisampleSamples: number;
+  /** Bytes booked with the accountant for {@link multisampleColor}. */
+  multisampleAccountedBytes: number;
+  /**
+   * Frames holding `COLOR_ATTACHMENT0` on the target's colour texture - the
+   * destination {@link multisampleColor} resolves into. Distinct from the
+   * target's own framebuffer, which carries the renderbuffer while multisampling.
+   */
+  resolveFramebuffer: WebGLFramebuffer | null;
+  /** Colour texture currently attached to {@link resolveFramebuffer}. */
+  resolveTexture: WebGLTexture | null;
+  /**
+   * Whether a draw or a clear has landed in {@link multisampleColor} since the
+   * last resolve, so a readback of the target's texture can be served a fresh
+   * resolve instead of the previous frame's.
+   */
+  multisampleDirty: boolean;
 }
 
 interface StencilClipEntry {
@@ -389,6 +416,8 @@ export class WebGl2Backend implements RenderBackend {
    */
   private _compressedFormats: Webgl2CompressedFormatSupport = { formats: [], internalFormats: new Map() };
   private _maxColorAttachments = 1;
+  /** Per-format multisample support this context reported, see `_sampleCountsFor`. */
+  private readonly _sampleCountsByFormat = new Map<ColorTextureFormat, readonly number[]>();
   /**
    * `OES_draw_buffers_indexed`, or `null` on a device without it. Re-fetched
    * with the context, whose extension enablement does not survive a loss.
@@ -492,18 +521,11 @@ export class WebGl2Backend implements RenderBackend {
     this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._canvas = app.canvas;
 
-    // `webglAttributes.antialias` only ever affected the default framebuffer.
-    // Under the color pipeline the scene always draws into an offscreen working
-    // target first (see `Application._drawFrameColorManaged`), where the
-    // browser's own multisampling has no effect - measured and reported rather
-    // than silently dropped, since an offscreen multisample resolve is not
-    // implemented yet.
-    if (COLOR_PIPELINE_ENABLED && webglAttributes?.antialias === true) {
-      logger.warn(
-        'rendering.webglAttributes.antialias has no effect while the color-managed rendering pipeline is active: the scene renders into an offscreen working target, which the browser cannot multisample. Offscreen antialiasing is not implemented yet.',
-        { source: 'WebGl2Backend', once: 'webgl2-backend:offscreen-antialias-unsupported' },
-      );
-    }
+    // `webglAttributes.antialias` reaches the device twice. The attribute below
+    // asks the browser to multisample the default framebuffer; the colour-
+    // managed pipeline routes the frame through an offscreen working target the
+    // browser cannot multisample, so that target negotiates its own storage
+    // from the same request (see `Application._workingSampleCount`).
 
     const gl = this._createContext(webglAttributes, alphaMode);
 
@@ -1338,12 +1360,95 @@ export class WebGl2Backend implements RenderBackend {
     switch (format) {
       case TextureFormat.Rgba8:
       case TextureFormat.Rgba8Srgb:
-        return colorFormatCapabilities(true, true, true);
+        return colorFormatCapabilities(true, true, true, this._sampleCountsFor(format, true));
       case TextureFormat.Rgba16F:
-        return colorFormatCapabilities(this._floatRenderable, true, this._floatRenderable);
+        return colorFormatCapabilities(this._floatRenderable, true, this._floatRenderable, this._sampleCountsFor(format, this._floatRenderable));
       case TextureFormat.Rgba32F:
-        return colorFormatCapabilities(this._floatRenderable, this._float32Filterable, this._floatRenderable && this._float32Blendable);
+        return colorFormatCapabilities(
+          this._floatRenderable,
+          this._float32Filterable,
+          this._floatRenderable && this._float32Blendable,
+          this._sampleCountsFor(format, this._floatRenderable),
+        );
     }
+  }
+
+  /**
+   * Sample counts this context reports for `format` as a multisample colour
+   * attachment, ascending and always containing `1`.
+   *
+   * Asked of the driver once per format through `getInternalformatParameter`,
+   * the query the spec defines for sized renderbuffer formats, and cached until
+   * the context is lost - a restored context can report a different set. A
+   * format this context cannot render into is not queried at all: the query is
+   * an error for a non-renderable internal format, and the answer would be
+   * `1` regardless.
+   */
+  private _sampleCountsFor(format: ColorTextureFormat, renderable: boolean): readonly number[] {
+    if (!renderable) {
+      return singleSampleCount;
+    }
+
+    const cached = this._sampleCountsByFormat.get(format);
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const gl = this._context;
+
+    // A lost context answers nothing worth caching; the restore path drops the
+    // cache and the next query re-probes the fresh device.
+    if (this._contextLost) {
+      return singleSampleCount;
+    }
+
+    const counts = normalizeSampleCounts(gl.getInternalformatParameter(gl.RENDERBUFFER, webgl2DataTextureFormat(format).internalFormat, gl.SAMPLES));
+
+    this._sampleCountsByFormat.set(format, counts);
+
+    return counts;
+  }
+
+  /**
+   * Publish a multisample target's current frame into the texture everything
+   * samples it through.
+   *
+   * A no-op for a single-sample target, for one that was never drawn into, and
+   * for one already resolved since its last draw. Depth and stencil stay
+   * multisample: `blitFramebuffer` cannot resolve them - a depth/stencil blit
+   * requires both sides at the same sample count - and nothing downstream of
+   * the resolve reads either, so the scene's own clipping is all that depends
+   * on them.
+   */
+  public resolveRenderTarget(target: RenderTarget): void {
+    const state = this._renderTargetStates.get(target);
+
+    if (state === null || state === undefined) {
+      return;
+    }
+
+    if (state.multisampleColor === null || state.resolveFramebuffer === null || state.framebuffer === null || !state.multisampleDirty) {
+      return;
+    }
+
+    const gl = this._context;
+
+    // Draws into the target are batched against its own framebuffer, so the
+    // batch has to reach the renderbuffer before it is read.
+    this._flushActiveRenderer();
+
+    const width = state.multisampleWidth;
+    const height = state.multisampleHeight;
+    const previousFramebuffer = this._boundFramebuffer;
+
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, state.framebuffer);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, state.resolveFramebuffer);
+    gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+    this._boundFramebuffer = previousFramebuffer;
+    state.multisampleDirty = false;
   }
 
   public supportsColorFormat(format: ColorTextureFormat): boolean {
@@ -1427,10 +1532,14 @@ export class WebGl2Backend implements RenderBackend {
    * the previous binding. A read borrows its own framebuffer rather than a
    * render target's: the target states cache which textures are attached to
    * theirs, and attaching for a read would leave that cache describing
-   * something else.
+   * something else. A multisample target is resolved first - the texture a
+   * read attaches to is its resolve destination, not what was drawn into.
    */
   private _withReadFramebuffer(source: RenderTexture, body: () => void): void {
     const gl = this._context;
+    // A multisample target's texture only holds the last resolve, so a read
+    // that skipped an un-resolved frame would answer with the previous one.
+    this.resolveRenderTarget(source);
     const handle = this._syncTexture(source).handle;
     const framebuffer = (this._readbackFramebuffer ??= gl.createFramebuffer());
     const previousFramebuffer = this._boundFramebuffer;
@@ -2606,6 +2715,7 @@ export class WebGl2Backend implements RenderBackend {
     this._activeDrawCommand = null;
     this._transformTextureCount = -1;
     this._transformTextureHash = 0;
+    this._sampleCountsByFormat.clear();
   }
 
   private _createContext(options: RenderingApplicationOptions['webglAttributes'], alphaMode: CanvasAlphaMode): WebGL2RenderingContext | null {
@@ -2743,6 +2853,9 @@ export class WebGl2Backend implements RenderBackend {
     this._compressedFormats = probeWebgl2CompressedFormats(gl);
     this._maxColorAttachments = readMaxColorAttachments(gl);
     this._indexedBlendExtension = gl.getExtension('OES_draw_buffers_indexed');
+    // Drop the cached per-format multisample support too: it was this device's
+    // answer, and the restored one may support a different set.
+    this._sampleCountsByFormat.clear();
     // Drop the cached transform layout: it was derived from the LOST context's
     // limit, and the restored one may report a different one.
     this._transformTextureLayout = null;
@@ -2956,7 +3069,16 @@ export class WebGl2Backend implements RenderBackend {
       depthStencilTexture: null,
       stencilWidth: 0,
       stencilHeight: 0,
+      stencilSamples: 0,
       stencilAccountedBytes: 0,
+      multisampleColor: null,
+      multisampleWidth: 0,
+      multisampleHeight: 0,
+      multisampleSamples: 0,
+      multisampleAccountedBytes: 0,
+      resolveFramebuffer: null,
+      resolveTexture: null,
+      multisampleDirty: false,
     };
 
     this._renderTargetStates.set(target, state);
@@ -3054,6 +3176,18 @@ export class WebGl2Backend implements RenderBackend {
 
       if (state.framebuffer !== null) {
         this._context.deleteFramebuffer(state.framebuffer);
+      }
+
+      if (state.resolveFramebuffer !== null) {
+        this._context.deleteFramebuffer(state.resolveFramebuffer);
+        state.resolveFramebuffer = null;
+      }
+
+      if (state.multisampleColor !== null) {
+        this._context.deleteRenderbuffer(state.multisampleColor);
+        state.multisampleColor = null;
+        this._accountant.free(state.multisampleAccountedBytes);
+        state.multisampleAccountedBytes = 0;
       }
 
       if (state.stencilRenderbuffer !== null) {
@@ -3287,11 +3421,29 @@ export class WebGl2Backend implements RenderBackend {
 
         this._setTextureUnit(previousUnit);
 
-        if (state.attachedTextures[0] !== textureState.handle) {
+        if (this._effectiveSampleCount(single!) > 1) {
+          this._syncMultisampleColorAttachment(single!, state, textureState.handle);
+        } else if (state.attachedTextures[0] !== textureState.handle || state.multisampleColor !== null) {
           const gl = this._context;
           const previousFramebuffer = this._boundFramebuffer;
 
           gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+
+          if (state.multisampleColor !== null) {
+            // Back to one sample: the renderbuffer's storage is released here
+            // rather than parked, and the target's own texture takes the slot
+            // back so the framebuffer and the cached slot list agree again.
+            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, null);
+            gl.deleteRenderbuffer(state.multisampleColor);
+            state.multisampleColor = null;
+            state.multisampleWidth = 0;
+            state.multisampleHeight = 0;
+            state.multisampleSamples = 0;
+            state.multisampleDirty = false;
+            this._accountant.free(state.multisampleAccountedBytes);
+            state.multisampleAccountedBytes = 0;
+          }
+
           gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureState.handle, 0);
           this._assertFramebufferComplete();
           gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
@@ -3345,6 +3497,117 @@ export class WebGl2Backend implements RenderBackend {
     this._syncDepthStencilAttachment(target, this._getRenderTargetState(target));
   }
 
+  /**
+   * The sample count this target's attachments are actually allocated at.
+   *
+   * A target that opted into a sampleable depth attachment cannot be
+   * multisampled at all - multisample `DEPTH24_STENCIL8` storage is a
+   * renderbuffer, and a renderbuffer cannot be sampled. Framebuffer
+   * completeness is a whole-framebuffer property, so a target that asked for
+   * both is served single-sample rather than a half-multisampled framebuffer
+   * that no driver would accept. The root target is the browser's to
+   * multisample.
+   */
+  private _effectiveSampleCount(target: RenderTarget): number {
+    if (target.root || target.depthTexture !== null) {
+      return 1;
+    }
+
+    return target.sampleCount > 1 ? target.sampleCount : 1;
+  }
+
+  /** Reject a sample count this context never reported for `format`. */
+  private _assertSupportedSampleCount(format: ColorTextureFormat, samples: number): void {
+    if (this._sampleCountsFor(format, true).includes(samples)) {
+      return;
+    }
+
+    throw new RenderError({
+      code: 'unsupported-format',
+      backendType: RenderBackendType.WebGl2,
+      message: `This context does not support ${samples}x multisampling for color format '${format}'. Check backend.getColorFormatCapabilities('${format}').sampleCounts.`,
+    });
+  }
+
+  /**
+   * Colour storage for a target rendered at more than one sample per pixel.
+   *
+   * The samples live in a renderbuffer attached where the target's texture
+   * would be, and resolve into that texture - which stays out of the target's
+   * own framebuffer while multisampling, so a pass that samples the target is
+   * not reading its own colour attachment. Storage is (re)allocated only when
+   * the count or the extent changes; a resize reuses the handle, as does every
+   * frame in between.
+   */
+  private _syncMultisampleColorAttachment(target: RenderTarget, state: ManagedRenderTargetState, resolveTexture: WebGLTexture): void {
+    if (state.framebuffer === null || !(target instanceof RenderTexture)) {
+      return;
+    }
+
+    const gl = this._context;
+    const format = target.format;
+    const width = Math.max(1, target.width);
+    const height = Math.max(1, target.height);
+    const samples = this._effectiveSampleCount(target);
+    const descriptor = webgl2DataTextureFormat(format);
+
+    this._assertSupportedSampleCount(format, samples);
+
+    if (
+      state.multisampleColor !== null &&
+      state.resolveFramebuffer !== null &&
+      state.multisampleSamples === samples &&
+      state.multisampleWidth === width &&
+      state.multisampleHeight === height &&
+      state.resolveTexture === resolveTexture
+    ) {
+      state.multisampleDirty = true;
+
+      return;
+    }
+
+    if (state.multisampleColor === null) {
+      state.multisampleColor = gl.createRenderbuffer();
+    }
+
+    if (state.resolveFramebuffer === null) {
+      state.resolveFramebuffer = this._createFramebuffer();
+    }
+
+    gl.bindRenderbuffer(gl.RENDERBUFFER, state.multisampleColor);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, descriptor.internalFormat, width, height);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+    const previousFramebuffer = this._boundFramebuffer;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, state.multisampleColor);
+
+    // Skipped while an allocated depth/stencil attachment is still at the
+    // previous count: the framebuffer is legitimately incomplete between the
+    // two re-allocations, and `_syncDepthStencilAttachment`'s own check - which
+    // runs next, once the counts agree - is the authoritative one.
+    if (state.stencilRenderbuffer === null || state.stencilSamples === samples) {
+      this._assertFramebufferComplete();
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, state.resolveFramebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, resolveTexture, 0);
+    this._assertFramebufferComplete();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+
+    // The texture is not this framebuffer's colour attachment while
+    // multisampling, so the cached slot list must not claim that it is - it
+    // drives the feedback-loop sweep in `_releaseSampledAttachments`.
+    state.attachedTextures.length = 0;
+    state.resolveTexture = resolveTexture;
+    state.multisampleWidth = width;
+    state.multisampleHeight = height;
+    state.multisampleSamples = samples;
+    state.multisampleDirty = true;
+    state.multisampleAccountedBytes = this._accountant.reallocate(state.multisampleAccountedBytes, width * height * samples * descriptor.bytesPerPixel);
+  }
+
   private _syncDepthStencilAttachment(target: RenderTarget, state: ManagedRenderTargetState): void {
     if (state.framebuffer === null) {
       return;
@@ -3359,8 +3622,12 @@ export class WebGl2Backend implements RenderBackend {
     // nothing extra for opting in.
     const sampleable = target.depthTexture !== null;
     const allocated = sampleable ? state.depthStencilTexture !== null : state.stencilRenderbuffer !== null;
+    // Depth and stencil travel with the colour attachment's sample count: GL
+    // completeness requires every attachment of a framebuffer to agree, and a
+    // stencil clip has to cover the same pixels the colour samples do.
+    const samples = this._effectiveSampleCount(target);
 
-    if (allocated && state.stencilWidth === width && state.stencilHeight === height) {
+    if (allocated && state.stencilWidth === width && state.stencilHeight === height && state.stencilSamples === samples) {
       return;
     }
 
@@ -3396,7 +3663,13 @@ export class WebGl2Backend implements RenderBackend {
       }
 
       gl.bindRenderbuffer(gl.RENDERBUFFER, state.stencilRenderbuffer);
-      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
+
+      if (samples > 1) {
+        gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.DEPTH24_STENCIL8, width, height);
+      } else {
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
+      }
+
       gl.bindRenderbuffer(gl.RENDERBUFFER, null);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
@@ -3407,7 +3680,8 @@ export class WebGl2Backend implements RenderBackend {
 
     state.stencilWidth = width;
     state.stencilHeight = height;
-    state.stencilAccountedBytes = this._accountant.reallocate(state.stencilAccountedBytes, width * height * DEPTH_STENCIL8_BYTES_PER_PIXEL);
+    state.stencilSamples = samples;
+    state.stencilAccountedBytes = this._accountant.reallocate(state.stencilAccountedBytes, width * height * DEPTH_STENCIL8_BYTES_PER_PIXEL * samples);
   }
 
   private _getStencilState(target: RenderTarget): StencilTargetState {
@@ -3961,12 +4235,47 @@ const RGBA8_BYTES_PER_PIXEL = 4;
 // one 32-bit texel, for both the sampleable-texture and renderbuffer forms of
 // a target's depth/stencil attachment.
 const DEPTH_STENCIL8_BYTES_PER_PIXEL = 4;
-const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blendable: boolean): ColorFormatCapabilities => ({
+const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blendable: boolean, sampleCounts: readonly number[]): ColorFormatCapabilities => ({
   renderable,
   filterable,
   blendable,
-  sampleCounts: [1],
+  sampleCounts,
 });
+
+/** The answer every format falls back to: one sample per pixel. */
+const singleSampleCount: readonly number[] = [1];
+
+/** Whether a `SAMPLES` answer can be walked as a list of counts. */
+const isIndexable = (value: unknown): value is ArrayLike<unknown> =>
+  typeof value === 'object' && value !== null && typeof (value as { length?: unknown }).length === 'number';
+
+/**
+ * Normalize a `SAMPLES` query answer into an ascending list of usable counts.
+ *
+ * The spec types the answer as an `Int32Array`, but a driver that reports a
+ * bare count still means one supported count and anything unrecognized means
+ * none this engine can act on - so both collapse to `1` rather than to a count
+ * a `renderbufferStorageMultisample` call would then reject.
+ */
+const normalizeSampleCounts = (reported: unknown): readonly number[] => {
+  const unique = new Set<number>([1]);
+
+  if (typeof reported === 'number') {
+    if (Number.isInteger(reported) && reported > 0) {
+      unique.add(reported);
+    }
+  } else if (isIndexable(reported)) {
+    for (let index = 0; index < reported.length; index++) {
+      const value = reported[index];
+
+      if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+        unique.add(value);
+      }
+    }
+  }
+
+  return unique.size === 1 ? singleSampleCount : [...unique].sort((a, b) => a - b);
+};
 
 // TEXTURE_MAG_FILTER only accepts NEAREST/LINEAR; the mip-aware ScaleModes
 // variants are valid for TEXTURE_MIN_FILTER alone and raise GL_INVALID_ENUM

@@ -30,7 +30,16 @@ export interface ColorFormatCapabilities {
   readonly filterable: boolean;
   /** Whether fixed-function blending can write the format. */
   readonly blendable: boolean;
-  /** Render-target sample counts this backend currently supports for the format. */
+  /**
+   * Render-target sample counts this backend can allocate storage for on
+   * `format`, ascending and always containing `1`.
+   *
+   * A count above `1` is a promise the backend keeps end to end: reading it as
+   * support and then setting {@link RenderTarget.sampleCount} makes the target
+   * render multisampled and resolve into its own sampled texture. A backend
+   * whose pipelines cannot carry a sample count reports `1` alone rather than
+   * a count it cannot deliver.
+   */
   readonly sampleCounts: readonly number[];
 }
 
@@ -206,6 +215,19 @@ export interface RenderBackend {
 
   /** Whether a {@link RenderTexture} of the given color format can be rendered into on this backend/context. */
   supportsColorFormat(format: ColorTextureFormat): boolean;
+
+  /**
+   * Publish a {@link RenderTarget.sampleCount} target's current frame into the
+   * single-sample texture everything samples that target through.
+   *
+   * A no-op for a target at one sample, and for one that was never rendered
+   * into. Call it once per frame after the last draw into a multisample target
+   * and before anything filters or samples it - the engine's own frame path
+   * resolves the working target here. Depth and stencil are not resolved: a
+   * multisample depth/stencil attachment has no single-sample counterpart to
+   * resolve into, and nothing downstream reads it.
+   */
+  resolveRenderTarget(target: RenderTarget): void;
 
   /** Whether the format supports lossless typed readback on this backend. */
   supportsReadbackFormat(format: ColorTextureFormat): boolean;
