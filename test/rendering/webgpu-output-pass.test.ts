@@ -100,4 +100,30 @@ describe('WebGpuOutputPass bind groups', () => {
       first.restore();
     }
   });
+  test('a 32-bit float source the device cannot filter is refused before any GPU work', async () => {
+    environment = createMockWebGpuEnvironment();
+    backend = await createMockBackend(environment);
+    transform = new OutputTransform();
+
+    const source = new RenderTexture(8, 8, { format: TextureFormat.Rgba32F });
+
+    // The mock device grants no optional features, so Rgba32F is not filterable on it.
+    expect(backend.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable).toBe(false);
+    expect(() => present(source)).toThrow(/cannot filter Rgba32F/);
+    expect(environment.bindGroupCount()).toBe(0);
+
+    source.destroy();
+  });
+
+  test('a 16-bit float source is presented', async () => {
+    environment = createMockWebGpuEnvironment();
+    backend = await createMockBackend(environment);
+    transform = new OutputTransform();
+
+    const source = new RenderTexture(8, 8, { format: TextureFormat.Rgba16F });
+
+    expect(() => present(source)).not.toThrow();
+
+    source.destroy();
+  });
 });

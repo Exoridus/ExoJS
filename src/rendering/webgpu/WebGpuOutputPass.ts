@@ -6,6 +6,8 @@ import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import { defaultWgslVertexSource } from '#rendering/filters/ShaderFilter';
 import type { ResolvedOutputTransformOptions } from '#rendering/OutputTransform';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { RenderError } from '#rendering/RenderError';
 import outputFragmentModule from '#rendering/shaders/output.wgsl';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
@@ -69,6 +71,17 @@ export class WebGpuOutputPass {
     straightAlpha = false,
   ): void {
     const gpu = backend as WebGpuBackend;
+
+    // The pass samples with a filtering sampler; a 32-bit float source can only be bound that way on a
+    // device with `float32-filterable`, and without it the failure would surface as a late validation error.
+    if (gpu.isNonFilterableTexture(source)) {
+      throw new RenderError({
+        code: 'unsupported-format',
+        backendType: RenderBackendType.WebGpu,
+        message:
+          'The output transform samples its source with a filtering sampler, but this device cannot filter Rgba32F (no float32-filterable). Read the raw values with readPixels instead, or render into an Rgba16F target.',
+      });
+    }
 
     this._targetFormat = target !== undefined ? webgpuColorTextureFormat(target.format) : gpu.format;
     this._ensureConnected(gpu, this._targetFormat);

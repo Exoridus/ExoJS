@@ -436,6 +436,11 @@ export class RenderingContext implements DrawContext {
    * `background` to composite over an opaque color instead, which always
    * succeeds and returns alpha `1` everywhere.
    *
+   * On WebGPU a 32-bit float source (`Rgba32F`) is only accepted on a device
+   * that can filter it (`float32-filterable`); elsewhere the call rejects with a
+   * `RenderError` of code `'unsupported-format'`. Read such a target's raw values
+   * with {@link readPixels}, or render into an `Rgba16F` target.
+   *
    * Same cost caveat as {@link readPixels}: this waits for the GPU and is not
    * a per-frame call.
    */

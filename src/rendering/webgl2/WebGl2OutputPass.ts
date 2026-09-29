@@ -40,6 +40,8 @@ export class WebGl2OutputPass {
   private readonly _slotScratch = new Int32Array(1);
   private readonly _scalarScratch = new Float32Array(1);
   private readonly _matteScratch = new Float32Array(4);
+  /** Stable view over the RGB part of the matte, so the per-frame uniform write allocates none. */
+  private readonly _matteRgb = this._matteScratch.subarray(0, 3);
 
   private _shader: WebGl2Shader | null = null;
   private _connection: WebGl2Connection | null = null;
@@ -114,7 +116,7 @@ export class WebGl2OutputPass {
     this._scalarScratch[0] = this._transparentCanvas;
     shader.getUniform('uTransparentCanvas').setValue(this._scalarScratch);
 
-    shader.getUniform('uMatteColor').setValue(this._matteScratch.subarray(0, 3));
+    shader.getUniform('uMatteColor').setValue(this._matteRgb);
 
     shader.sync();
 
