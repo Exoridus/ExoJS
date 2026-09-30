@@ -215,7 +215,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
       physicsPerf: true,
       needsDist: true,
     };
-  policy.gates = [...ALL_GATES.filter(name => gates.has(name)), ...[...gates].filter(name => !ALL_GATES.includes(name))];
+  policy.gates = [...ALL_GATES.filter(name => gates.has(name)), ...[...gates].filter(name => !ALL_GATES.some(gate => gate === name))];
   policy.packageTypechecks = [...typechecks].sort();
   policy.unitProjects = [...projects].sort();
   if (siteOnlyUnits && policy.unitProjects.length === 1 && policy.unitProjects[0] === 'exojs') policy.unitFilter = 'test/site';
