@@ -28,7 +28,8 @@ import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
 import { rolldown, watch, type OutputOptions, type Plugin, type PreRenderedChunk, type RolldownOptions } from 'rolldown';
 
-import { runNativeTsc } from './lib/typescript-cli.ts';
+import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
+
 import { writeSourceStamp } from './source-hash.ts';
 
 const rootDir = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
@@ -209,7 +210,7 @@ const runJob = async (options: RolldownOptions): Promise<void> => {
 };
 
 const emitDeclarations = async (): Promise<void> => {
-  const { status } = runNativeTsc(
+  const { status } = runTypeScriptCompiler(
     ['-p', 'tsconfig.json', '--emitDeclarationOnly', '--outDir', 'dist/esm', '--declarationDir', 'dist/esm', '--inlineSources', '--incremental', 'false'],
     { cwd: rootDir },
   );

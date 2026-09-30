@@ -28,7 +28,7 @@
   "scripts": {
     "build": "tsx ../../scripts/build-extension.ts",
     "build:dev": "tsx ../../scripts/build-extension.ts --dev",
-    "typecheck": "tsx ../../scripts/tsc7.ts --noEmit && tsx ../../scripts/tsc7.ts --noEmit -p tsconfig.test.json && tsx ../../scripts/tsc7.ts --noEmit -p tsconfig.worklets.json",
+    "typecheck": "exo-tsc --noEmit && exo-tsc --noEmit -p tsconfig.test.json && exo-tsc --noEmit -p tsconfig.worklets.json",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-audio-fx"
   },

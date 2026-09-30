@@ -14,7 +14,7 @@
     "bench:compare": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runComparison.ts",
     "timer": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runTimerProbe.ts",
     "probe:dpr": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/rendering/dpr-probe/serve.ts",
-    "typecheck": "tsx ../../scripts/tsc7.ts --noEmit",
+    "typecheck": "exo-tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-bench"
   },

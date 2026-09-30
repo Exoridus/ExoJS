@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { verifyRealConsumers } from './create-exo-app-consumers.ts';
-import { runNativeTsc } from './lib/typescript-cli.ts';
+import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
+
 // The package's public entry, by path: 'create-exo-app' is not a root
 // dependency, and this script is a root script.
 import { TEMPLATES as SCAFFOLDER_TEMPLATES } from '../packages/create-exo-app/src/scaffold.js';
@@ -241,7 +242,7 @@ check(
 // one.
 console.log('\n8. Template sources type-check against the workspace engine');
 {
-  const result = runNativeTsc(['--noEmit', '-p', 'tsconfig.templates.json'], { cwd: rootDir, stdio: 'pipe' });
+  const result = runTypeScriptCompiler(['--noEmit', '-p', 'tsconfig.templates.json'], { cwd: rootDir, stdio: 'pipe' });
   if (result.status === 0) {
     ok('tsc --noEmit -p tsconfig.templates.json');
   } else {

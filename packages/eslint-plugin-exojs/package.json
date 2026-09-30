@@ -38,11 +38,11 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
-    "build": "tsx ../../scripts/tsc7.ts -p tsconfig.build.json",
-    "typecheck": "tsx ../../scripts/tsc7.ts --noEmit && tsx ../../scripts/tsc7.ts --noEmit -p tsconfig.test.json",
+    "build": "exo-tsc -p tsconfig.build.json",
+    "typecheck": "exo-tsc --noEmit && exo-tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-eslint-plugin"
   },
