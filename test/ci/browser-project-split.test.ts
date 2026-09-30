@@ -45,4 +45,10 @@ describe('WebGPU Core / Media project split', () => {
     expect(config).toMatch(/name: 'browser-webgpu-firefox-media',[\s\S]*?fileParallelism: false/);
     expect(config).toContain('const webgpuCoreExclude = [...configDefaults.exclude, ...webgpuMediaTests];');
   });
+
+  it('keeps the specs that can wedge Firefox out of its Core project and in a project of their own', () => {
+    expect(config).toContain('const firefoxCoreExclude = [...webgpuCoreExclude, ...firefoxIsolatedTests];');
+    expect(config).toMatch(/name: 'browser-webgpu-firefox',[\s\S]*?exclude: firefoxCoreExclude/);
+    expect(config).toMatch(/name: 'browser-webgpu-firefox-isolated',[\s\S]*?include: firefoxIsolatedTests/);
+  });
 });

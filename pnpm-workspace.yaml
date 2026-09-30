@@ -38,3 +38,10 @@ allowBuilds:
 # cooldown (which only governs Dependabot's own PRs, not manual installs).
 # `--frozen-lockfile` installs of already-pinned versions are unaffected.
 minimumReleaseAge: 4320
+
+# Vitest 5.0.2 builds its jsdom Blob shim against jsdom 29 internals: under jsdom 30
+# `URL.createObjectURL(blob)` reads an implementation object that no longer exists.
+# Without this pin a workspace package that does not depend on jsdom itself gets
+# jsdom 30 through the optional peer and a second Vitest instance with it.
+overrides:
+  jsdom: ^29.1.1

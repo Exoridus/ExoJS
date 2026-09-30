@@ -62,6 +62,7 @@ export const PAGE_PROBE = `(async () => {
     if (adapter !== null) {
       const identity = adapter.info ?? {};
       info['webgpu adapter'] = [identity.vendor, identity.architecture, identity.device, identity.description].filter(Boolean).join(' / ') || 'not reported';
+      info['webgpu fallback adapter'] = String(identity.isFallbackAdapter ?? adapter.isFallbackAdapter ?? 'not reported');
       info['webgpu features'] = [...adapter.features].sort().join(', ');
       for (const feature of features) record('feature:' + feature, adapter.features.has(feature), feature);
       try {

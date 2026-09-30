@@ -32,6 +32,39 @@ const filledOffscreenCanvas = (edge = 16): OffscreenCanvas => {
   return canvas;
 };
 
+/**
+ * Whether the device's external-image copy takes a `VideoFrame` at all. The
+ * WebGPU specification lists it as a source, but Firefox's implementation
+ * accepts only an ImageBitmap, image, canvas or OffscreenCanvas and throws a
+ * `TypeError` for the rest: a missing capability of the host, not of the engine.
+ */
+const acceptsVideoFrame = (device: GPUDevice): boolean => {
+  const frame = new VideoFrame(filledCanvas(), { timestamp: 0 });
+  const texture = device.createTexture({
+    size: [frame.displayWidth, frame.displayHeight],
+    format: 'rgba8unorm',
+    usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
+  try {
+    device.queue.copyExternalImageToTexture({ source: frame }, { texture }, [frame.displayWidth, frame.displayHeight]);
+
+    return true;
+  } catch (error) {
+    if (error instanceof TypeError) return false;
+
+    throw error;
+  } finally {
+    frame.close();
+    texture.destroy();
+  }
+};
+
+/** Runtime skip, kept out of test bodies where a bare `ctx.skip` reads as a statically disabled test. */
+const skipWith = (ctx: { skip: (reason: string) => void }, reason: string): void => {
+  ctx.skip(reason);
+};
+
 /** Whether this browser ships WebCodecs at all. Recorded rather than failed. */
 const hasVideoFrame = (ctx: { skip: (reason: string) => void }): boolean => {
   if (typeof VideoFrame === 'function') {
@@ -112,6 +145,14 @@ describe('WebGPU uploads the surface-only texture sources', () => {
     if (!hasVideoFrame(ctx)) return;
 
     const backend = await createWebGpuTestBackend(SIZE);
+
+    if (!acceptsVideoFrame(backend.device)) {
+      backend.destroy();
+      skipWith(ctx, 'copyExternalImageToTexture on this browser does not accept a VideoFrame source.');
+
+      return;
+    }
+
     const root = new Container();
     const frame = new VideoFrame(filledCanvas(), { timestamp: 0 });
     const sprite = new Sprite(new Texture(frame));

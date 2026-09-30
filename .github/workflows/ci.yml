@@ -125,7 +125,10 @@ jobs:
     name: test (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.hasTest == 'true'
-    runs-on: ubuntu-latest
+    # Pinned: the browser lanes depend on the runner image's Mesa, Vulkan loader,
+    # Xvfb and browser libraries, so an image swap behind `ubuntu-latest` must be a
+    # deliberate change, not a Monday surprise.
+    runs-on: ubuntu-24.04
     timeout-minutes: ${{ matrix.timeoutMinutes }}
     strategy:
       fail-fast: false

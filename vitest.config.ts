@@ -141,6 +141,37 @@ const webgpuMediaTests = ['test/rendering/browser/webgpu-*video*.test.ts'];
 const webgpuCoreTests = ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'];
 const webgpuCoreExclude = [...configDefaults.exclude, ...webgpuMediaTests];
 
+// Specs that can take a Firefox process down or wedge it on Windows, so they run
+// in a browser of their own with a short deadline and cannot cost the whole Core
+// run: the device-churn regression (96 create/destroy cycles) crashes the GPU
+// process, after which `requestAdapter()` resolves `null` for every later file;
+// the OffscreenCanvas surface spec intermittently blocks the page inside native
+// WebGPU code, where no test timeout can fire. Chromium keeps both in Core, where
+// they pass.
+const firefoxIsolatedTests = ['test/rendering/browser/webgpu-device-lifecycle.test.ts', 'test/rendering/browser/webgpu-offscreen-surface.test.ts'];
+const firefoxCoreExclude = [...webgpuCoreExclude, ...firefoxIsolatedTests];
+
+// Options every automated browser project shares. Vitest injects its own UI into
+// the page by default outside CI, and tracing costs time and memory that would
+// distort a GPU measurement; a qualification run wants neither.
+const browserDefaults = { ui: false, trace: 'off' } as const;
+
+/**
+ * Worker cap of a WebGPU browser project, read from the environment here rather
+ * than from a `--maxWorkers` flag: the CLI value does not reach browser projects
+ * in Vitest, a project-level `maxWorkers` does. Every worker is one live browser
+ * context with its own GPU device, so this bounds peak GPU and memory use.
+ * `undefined` leaves the Vitest default (one worker per core).
+ */
+const browserWorkers = (variable: string, fallback?: number): { maxWorkers?: number } => {
+  const raw = process.env[variable];
+  const value = raw === undefined ? fallback : Number.parseInt(raw, 10);
+
+  if (value !== undefined && (!Number.isInteger(value) || value < 1)) throw new Error(`${variable} must be a positive integer.`);
+
+  return value === undefined ? {} : { maxWorkers: value };
+};
+
 // Setup run in every browser project to install the `__DEV__` global (see the
 // browserBase note) before any engine module evaluates.
 const browserSetupFiles = ['./test/rendering/browser/_setup-dev-global.ts'];
@@ -170,6 +201,14 @@ const maxWorkers = process.env['EXOJS_TEST_MAX_WORKERS'] ?? (process.env['CI'] ?
 export default defineConfig({
   test: {
     ...(maxWorkers === undefined ? {} : { maxWorkers }),
+    // A root-only option in Vitest (it cannot be set per project). The default
+    // 300 ms flags nearly every browser test: one GPU device, pipeline, render and
+    // readback per test costs a few hundred milliseconds on a healthy run, Firefox
+    // more. It only changes what the reporter marks slow, never a timeout or a verdict.
+    slowTestThreshold: 1_000,
+    // Call history and implementations reset before every test, so a spec cannot
+    // inherit a spy's state from an earlier test or a `beforeAll`.
+    clearMocks: true,
     coverage: {
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
@@ -467,6 +506,7 @@ export default defineConfig({
           // (near-zero) parallel speedup for not flaking under load.
           fileParallelism: false,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: webgl2Headless,
             provider: playwright({
@@ -517,6 +557,7 @@ export default defineConfig({
           // 15s timeout; sequentially none.
           fileParallelism: false,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: !firefoxCiHeaded,
             provider: playwright({
@@ -547,7 +588,9 @@ export default defineConfig({
           setupFiles: renderingBrowserSetupFiles,
           include: webgpuCoreTests,
           exclude: webgpuCoreExclude,
+          ...browserWorkers('EXOJS_CHROMIUM_WEBGPU_WORKERS', 4),
           browser: {
+            ...browserDefaults,
             enabled: true,
             commands: parityCommands,
             headless: !webgpuCiHeaded,
@@ -573,6 +616,7 @@ export default defineConfig({
           include: webgpuMediaTests,
           fileParallelism: false,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: !webgpuCiHeaded,
             provider: playwright({
@@ -614,6 +658,7 @@ export default defineConfig({
           testTimeout: 600_000,
           hookTimeout: 600_000,
           browser: {
+            ...browserDefaults,
             enabled: true,
             commands: allocationCommands,
             headless: !webgpuCiHeaded,
@@ -647,10 +692,31 @@ export default defineConfig({
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: webgpuCoreTests,
-          exclude: webgpuCoreExclude,
+          exclude: firefoxCoreExclude,
+          ...browserWorkers('EXOJS_FIREFOX_WEBGPU_WORKERS', 4),
           browser: {
+            ...browserDefaults,
             enabled: true,
             commands: parityCommands,
+            headless: false,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
+      // ── browser-webgpu-firefox-isolated - the specs that can wedge Firefox ─
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-webgpu-firefox-isolated',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: firefoxIsolatedTests,
+          fileParallelism: false,
+          browser: {
+            ...browserDefaults,
+            enabled: true,
             headless: false,
             provider: playwright(),
             instances: [{ browser: 'firefox' }],
@@ -668,6 +734,7 @@ export default defineConfig({
           include: webgpuMediaTests,
           fileParallelism: false,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: false,
             provider: playwright(),
@@ -695,6 +762,7 @@ export default defineConfig({
           setupFiles: browserSetupFiles,
           include: ['test/rendering/parity/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             commands: parityCommands,
             headless: false,
@@ -714,6 +782,7 @@ export default defineConfig({
           include: ['test/rendering/browser/webgpu-*.test.ts'],
           exclude: webgpuCoreExclude,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: false,
             provider: playwright({ contextOptions: { colorScheme: 'dark' } }),
@@ -736,6 +805,7 @@ export default defineConfig({
           setupFiles: browserSetupFiles,
           include: ['packages/exojs-audio-fx/test/browser/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),
@@ -757,6 +827,7 @@ export default defineConfig({
           setupFiles: browserSetupFiles,
           include: ['packages/exojs-tilemap/test/browser/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),
@@ -782,6 +853,7 @@ export default defineConfig({
           // modules that read the bare build-flag globals - see the setup file.
           setupFiles: browserSetupFiles,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),
@@ -803,6 +875,7 @@ export default defineConfig({
           setupFiles: browserSetupFiles,
           include: ['test/core/browser/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),
@@ -826,6 +899,7 @@ export default defineConfig({
           globals: true,
           include: ['packages/exojs-build/test/browser/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),

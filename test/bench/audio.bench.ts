@@ -1,4 +1,4 @@
-import { beforeAll, bench, describe } from 'vitest';
+import { beforeAll, describe, test } from 'vitest';
 
 // AudioContext mock must be in place before any ExoJS audio import.
 // Placed in beforeAll (module scope) so it runs before bench setup.
@@ -152,56 +152,62 @@ describe('audio', () => {
     installMocks();
   });
 
-  bench('50 Sound instances play() (1 iteration = 50 play() calls)', async () => {
-    const { getAudioContext } = await import('../../src/audio/audioContext');
-    const { AudioSystem } = await import('../../src/audio/AudioSystem');
-    // Nothing bootstraps the shared context eagerly, and a Sound whose context
-    // does not exist yet hands out a `NoopVoice` - the bench would then measure
-    // the silent path.
-    getAudioContext();
-    const { Sound } = await import('../../src/audio/Sound');
-    const system = new AudioSystem();
-    const sounds: Array<InstanceType<typeof Sound>> = [];
-    for (let i = 0; i < 50; i++) sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
-    // Stopping within the iteration returns each voice to its sound's pool, so
-    // the measured cost stays "50 plays" across iterations.
-    for (const s of sounds) system.play(s).stop();
-    for (const s of sounds) s.destroy();
-    system.destroy();
+  test('50 Sound instances play() (1 iteration = 50 play() calls)', async ({ bench }) => {
+    await bench('50 Sound instances play() (1 iteration = 50 play() calls)', async () => {
+      const { getAudioContext } = await import('../../src/audio/audioContext');
+      const { AudioSystem } = await import('../../src/audio/AudioSystem');
+      // Nothing bootstraps the shared context eagerly, and a Sound whose context
+      // does not exist yet hands out a `NoopVoice` - the bench would then measure
+      // the silent path.
+      getAudioContext();
+      const { Sound } = await import('../../src/audio/Sound');
+      const system = new AudioSystem();
+      const sounds: Array<InstanceType<typeof Sound>> = [];
+      for (let i = 0; i < 50; i++) sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
+      // Stopping within the iteration returns each voice to its sound's pool, so
+      // the measured cost stays "50 plays" across iterations.
+      for (const s of sounds) system.play(s).stop();
+      for (const s of sounds) s.destroy();
+      system.destroy();
+    }).run();
   });
 
-  bench('AudioListener._tick() (60 position updates)', async () => {
-    const { AudioListener } = await import('../../src/audio/AudioListener');
-    const listener = new AudioListener();
-    listener.target = { x: 0, y: 0 };
-    for (let j = 0; j < 60; j++) {
-      (listener.target as { x: number; y: number }).x = j * 0.5;
-      (listener.target as { x: number; y: number }).y = j * 0.3;
-      listener._tick();
-    }
-    listener.destroy();
-  });
-
-  bench('AudioBus filter chain add/remove (5 filters, 100 iterations)', async () => {
-    const { AudioBus } = await import('../../src/audio/AudioBus');
-    const { LowpassFilter } = await import('../../src/audio/filters/LowpassFilter');
-    const bus = new AudioBus('bench-bus');
-
-    for (let iter = 0; iter < 100; iter++) {
-      const filters = [
-        new LowpassFilter({ frequency: 1000 }),
-        new LowpassFilter({ frequency: 2000 }),
-        new LowpassFilter({ frequency: 4000 }),
-        new LowpassFilter({ frequency: 500 }),
-        new LowpassFilter({ frequency: 200 }),
-      ];
-      for (const f of filters) bus.addEffect(f);
-      for (const f of filters) {
-        bus.removeEffect(f);
-        f.destroy();
+  test('AudioListener._tick() (60 position updates)', async ({ bench }) => {
+    await bench('AudioListener._tick() (60 position updates)', async () => {
+      const { AudioListener } = await import('../../src/audio/AudioListener');
+      const listener = new AudioListener();
+      listener.target = { x: 0, y: 0 };
+      for (let j = 0; j < 60; j++) {
+        (listener.target as { x: number; y: number }).x = j * 0.5;
+        (listener.target as { x: number; y: number }).y = j * 0.3;
+        listener._tick();
       }
-    }
+      listener.destroy();
+    }).run();
+  });
 
-    bus.destroy();
+  test('AudioBus filter chain add/remove (5 filters, 100 iterations)', async ({ bench }) => {
+    await bench('AudioBus filter chain add/remove (5 filters, 100 iterations)', async () => {
+      const { AudioBus } = await import('../../src/audio/AudioBus');
+      const { LowpassFilter } = await import('../../src/audio/filters/LowpassFilter');
+      const bus = new AudioBus('bench-bus');
+
+      for (let iter = 0; iter < 100; iter++) {
+        const filters = [
+          new LowpassFilter({ frequency: 1000 }),
+          new LowpassFilter({ frequency: 2000 }),
+          new LowpassFilter({ frequency: 4000 }),
+          new LowpassFilter({ frequency: 500 }),
+          new LowpassFilter({ frequency: 200 }),
+        ];
+        for (const f of filters) bus.addEffect(f);
+        for (const f of filters) {
+          bus.removeEffect(f);
+          f.destroy();
+        }
+      }
+
+      bus.destroy();
+    }).run();
   });
 });

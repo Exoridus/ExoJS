@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 
 import type { RenderingContext } from '../../src/rendering/RenderingContext';
 import { RenderPass, type RenderPassOptions } from '../../src/rendering/RenderPass';
@@ -34,15 +34,19 @@ describe('RenderPipeline orchestration overhead', () => {
   // Snapshot of the same passes for a bare-loop baseline (execute ignores ownership).
   const baseline = [...pipeline];
 
-  bench('pipeline.execute (20 passes)', () => {
-    pipeline.execute(context);
+  test('pipeline.execute (20 passes)', async ({ bench }) => {
+    await bench('pipeline.execute (20 passes)', () => {
+      pipeline.execute(context);
+    }).run();
   });
 
-  bench('imperative loop baseline (20 passes)', () => {
-    for (const pass of baseline) {
-      if (pass.enabled) {
-        pass.execute(context);
+  test('imperative loop baseline (20 passes)', async ({ bench }) => {
+    await bench('imperative loop baseline (20 passes)', () => {
+      for (const pass of baseline) {
+        if (pass.enabled) {
+          pass.execute(context);
+        }
       }
-    }
+    }).run();
   });
 });
