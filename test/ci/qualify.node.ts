@@ -26,7 +26,8 @@ const options = (row: string, script: string, extra: Partial<QualifyOptions> = {
 });
 
 after(() => {
-  for (const path of temporary) rmSync(path, { recursive: true, force: true });
+  // Windows keeps a killed process's log open for a moment after it is gone.
+  for (const path of temporary) rmSync(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
 void test('a clean exit is recorded as PASS with the supervised log', async () => {
