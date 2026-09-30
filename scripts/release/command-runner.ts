@@ -9,8 +9,8 @@
  * partial-failure path is exercised without a real npm registry or network.
  */
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 export interface CommandInvocation {
   /** Executable, e.g. `'npm'` or `'git'`. */
@@ -82,10 +82,15 @@ export const createExecRunner = (options: ExecRunnerOptions = {}): CommandRunner
     if (options.echo) {
       process.stdout.write(`$ ${command} ${args.join(' ')}\n`);
     }
-    const spawned = spawnSync(command, [...args], {
+    const nodeCli =
+      process.platform === 'win32' && (command === 'npm' || command === 'pnpm')
+        ? resolve(dirname(process.execPath), 'node_modules', ...(command === 'npm' ? ['npm', 'bin', 'npm-cli.js'] : ['corepack', 'dist', 'pnpm.js']))
+        : undefined;
+    const executable = nodeCli && existsSync(nodeCli) ? process.execPath : command;
+    const argv = nodeCli && existsSync(nodeCli) ? [nodeCli, ...args] : [...args];
+    const spawned = spawnSync(executable, argv, {
       cwd,
       encoding: 'utf8',
-      shell: process.platform === 'win32',
       maxBuffer: 64 * 1024 * 1024,
     });
     const outcome: Omit<CommandResult, 'logPath'> = spawned.error

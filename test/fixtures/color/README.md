@@ -110,8 +110,9 @@ over every file and writes the tool version, each fixture's SHA-256 and the vali
 
 What that proves and what it does not: the validator checks the container, level index, descriptor and
 metadata against the specification. It does **not** decode or validate the block payloads, which are still built
-from the published block layouts (constant-colour blocks) rather than produced by a conforming encoder, so an
-externally encoded BC7, ETC2 and ASTC corpus remains the open check for the payloads themselves.
+from the published block layouts (constant-colour blocks) rather than produced by a conforming encoder. The payloads of BC7, ETC2 RGB, ETC2 RGBA8 and ASTC 4x4 are
+checked by the externally encoded corpus in `test/fixtures/color-external/`, which passes through the same validator and
+is decoded on a GPU by the browser suites.
 
 The first validator run over the earlier generator output failed on the level offsets, on the sample bounds of
 the signed BC formats and on the linear qualifier of the sRGB BC2/BC3 alpha sample - three defects the engine
@@ -130,8 +131,8 @@ with the smallest level first, and key/value data made of a NUL-terminated `rd`
 orientation, a writer string and a vendor entry of bytes that are not valid UTF-8. An
 earlier revision wrote a single RGBSDA sample for every family, exponents instead of
 extents, and swapped sample fields, and the parser accepted exactly that - which is why
-agreement between this generator and the engine is not evidence of conformance, and why a
-real validator remains the open check.
+agreement between this generator and the engine is not evidence of conformance, and why the Khronos
+validator runs over every fixture.
 
 ## Not covered
 
@@ -140,14 +141,15 @@ define their blocks entirely in terms of interpolated endpoints, weights and
 subsets, with no mode that stores a colour directly. A fixture for them would need
 a real BC6H or BC7 encoder, and a hand-rolled one would be a worse oracle than no
 fixture at all, because an encoder bug would be indistinguishable from a correct
-decode. The Khronos validator plus a conforming encoder is the right tool, and
-neither is available here.
+decode. BC7 is covered instead by the externally encoded corpus in
+`test/fixtures/color-external/`; BC6H stays uncovered: the Khronos `ktx` tool neither encodes nor transcodes to it from LDR sources.
 
 **ETC2 RGB, RGB+A1 and RGBA8.** ETC2's endpoint bit patterns are overloaded: chosen
 endpoints are reinterpreted as the T, H, A, E and P modes, so an endpoint selected
 to mean one colour can silently select a different mode instead. Making the
 reference decode derivable would mean deriving that mode selection too, which is
-the same problem BC6H and BC7 have. The `native-eac-r11-unorm.ktx2` and
+the same problem BC6H and BC7 have. ETC2 RGB and RGBA8 are covered by the externally
+encoded corpus. The `native-eac-r11-unorm.ktx2` and
 `native-eac-rg11-unorm.ktx2` fixtures do cover the EAC single- and dual-channel
 formats, which are the part of that family with a direct base-and-multiplier
 encoding.

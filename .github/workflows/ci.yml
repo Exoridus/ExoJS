@@ -22,6 +22,12 @@ on:
   pull_request:
     branches: [main, next]
   workflow_dispatch:
+    inputs:
+      runner:
+        description: Image for the browser and unit lanes (a manual run on a candidate image qualifies it before any migration)
+        type: choice
+        options: [ubuntu-24.04, ubuntu-26.04]
+        default: ubuntu-24.04
 
 permissions:
   contents: read
@@ -125,10 +131,12 @@ jobs:
     name: test (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.hasTest == 'true'
-    # Pinned: the browser lanes depend on the runner image's Mesa, Vulkan loader,
-    # Xvfb and browser libraries, so an image swap behind `ubuntu-latest` must be a
-    # deliberate change, not a Monday surprise.
-    runs-on: ubuntu-24.04
+    # Pinned: the browser lanes depend on the runner image's Xvfb, graphics stack and
+    # browser libraries, so an image swap behind `ubuntu-latest` must be a deliberate
+    # change, not a Monday surprise. ubuntu-24.04 is what `ubuntu-latest` resolves to
+    # today. A candidate image is qualified by dispatching this workflow with the
+    # `runner` input; ubuntu-26.04 ran every lane with the same outcomes.
+    runs-on: ${{ inputs.runner || 'ubuntu-24.04' }}
     timeout-minutes: ${{ matrix.timeoutMinutes }}
     strategy:
       fail-fast: false
@@ -158,8 +166,9 @@ jobs:
 
       # `.workspace` and its logs are hidden paths, which the upload skips
       # unless it is told otherwise. The supervisor writes one unique log per
-      # command there, so a transient failure stays diagnosable afterwards.
-      - name: Keep the command logs and qualification records on failure
+      # command there, so a transient failure stays diagnosable afterwards, and
+      # Vitest keeps the screenshots of failed browser tests under `.vitest`.
+      - name: Keep the command logs, qualification records and failure screenshots on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
@@ -167,6 +176,7 @@ jobs:
           path: |
             .workspace/logs/
             test-results/qualification/
+            .vitest/attachments/
           retention-days: 3
           include-hidden-files: true
           if-no-files-found: ignore

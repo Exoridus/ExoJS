@@ -5,10 +5,11 @@ import { describe, expect, it } from 'vitest';
 
 import { GATE_GROUPS, type GateGroup } from '../../scripts/ci/gate-groups';
 import { LANES } from '../../scripts/ci/lanes';
+import { selectLocalPolicy } from '../../scripts/ci/local-policy.ts';
 
 /**
- * The gate groups in `gate-groups.ts` are what the pre-push hook runs as
- * `verify:quick`. CI must run every one of them too, and exactly once: the
+ * The gate groups in `gate-groups.ts` are the complete gate inventory. CI
+ * must run every one of them too, and exactly once: the
  * `gates` matrix takes the ungated groups from the lane table, and the `site`
  * job runs the `site` group after the dist it needs has been built.
  */
@@ -45,9 +46,10 @@ describe('CI runs every gate group', () => {
   });
 });
 
-describe('the local pre-push hook runs the same gate set as CI', () => {
-  it('`verify:quick` runs every group via `pnpm gates all`', () => {
+describe('the local full fallback runs the same gate set as CI', () => {
+  it('keeps the explicit full command and the unknown-path fallback complete', () => {
     expect(packageJson.scripts['verify:quick']).toBe('pnpm gates all');
+    expect(selectLocalPolicy(['unknown/new-file.ts']).gates).toEqual(Object.values(GATE_GROUPS).flat());
   });
 
   it.each(Object.entries(GATE_GROUPS).flatMap(([group, scripts]) => scripts.map(script => [group, script] as const)))(

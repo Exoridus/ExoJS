@@ -43,8 +43,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "build": "tsx ../../scripts/tsc7.ts -p tsconfig.build.json",
+    "typecheck": "tsx ../../scripts/tsc7.ts --noEmit && tsx ../../scripts/tsc7.ts --noEmit -p tsconfig.test.json",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-cli"
   },

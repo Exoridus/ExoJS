@@ -20,7 +20,6 @@
  * pipeline did. The dev build and watch mode skip it: it is the slowest job of
  * the set and nothing in the inner loop reads it.
  */
-import { spawnSync } from 'node:child_process';
 import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,6 +27,8 @@ import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
 import { rolldown, watch, type OutputOptions, type Plugin, type PreRenderedChunk, type RolldownOptions } from 'rolldown';
+
+import { runNativeTsc } from './lib/typescript-cli.ts';
 import { writeSourceStamp } from './source-hash.ts';
 
 const rootDir = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
@@ -208,14 +209,12 @@ const runJob = async (options: RolldownOptions): Promise<void> => {
 };
 
 const emitDeclarations = async (): Promise<void> => {
-  const tsc = resolvePath(rootDir, 'node_modules/typescript/bin/tsc');
-  const result = spawnSync(
-    process.execPath,
-    [tsc, '-p', 'tsconfig.json', '--emitDeclarationOnly', '--outDir', 'dist/esm', '--declarationDir', 'dist/esm', '--inlineSources', '--incremental', 'false'],
-    { cwd: rootDir, stdio: 'inherit' },
+  const { status } = runNativeTsc(
+    ['-p', 'tsconfig.json', '--emitDeclarationOnly', '--outDir', 'dist/esm', '--declarationDir', 'dist/esm', '--inlineSources', '--incremental', 'false'],
+    { cwd: rootDir },
   );
-  if (result.status !== 0) {
-    throw new Error(`declaration emit failed (tsc exit ${result.status})`);
+  if (status !== 0) {
+    throw new Error(`declaration emit failed (tsc exit ${status})`);
   }
 };
 

@@ -12,12 +12,13 @@
  * `--dev` selects the dev build (`build:dev`), without relying on a
  * cross-platform env-var-setting mechanism.
  */
-import { spawnSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { rolldown, type OutputOptions, type RolldownOptions } from 'rolldown';
+
+import { runNativeTsc } from './lib/typescript-cli.ts';
 import { writeSourceStamp } from './source-hash.ts';
 
 const cwd = process.cwd();
@@ -33,26 +34,12 @@ await bundle.close();
 
 const buildTsconfig = resolvePath(cwd, 'tsconfig.build.json');
 if (existsSync(buildTsconfig)) {
-  const tsc = resolvePath(cwd, '../../node_modules/typescript/bin/tsc');
-  const result = spawnSync(
-    process.execPath,
-    [
-      tsc,
-      '-p',
-      'tsconfig.build.json',
-      '--emitDeclarationOnly',
-      '--outDir',
-      'dist/esm',
-      '--declarationDir',
-      'dist/esm',
-      '--inlineSources',
-      '--incremental',
-      'false',
-    ],
-    { cwd, stdio: 'inherit' },
+  const { status } = runNativeTsc(
+    ['-p', 'tsconfig.build.json', '--emitDeclarationOnly', '--outDir', 'dist/esm', '--declarationDir', 'dist/esm', '--inlineSources', '--incremental', 'false'],
+    { cwd },
   );
-  if (result.status !== 0) {
-    throw new Error(`declaration emit failed (tsc exit ${result.status})`);
+  if (status !== 0) {
+    throw new Error(`declaration emit failed (tsc exit ${status})`);
   }
 }
 

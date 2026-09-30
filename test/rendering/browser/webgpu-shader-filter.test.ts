@@ -56,7 +56,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-// On the software (swiftshader/lavapipe) adapter the WebGPU device can drop
+// On the software (SwiftShader) adapter the WebGPU device can drop
 // mid-test; treat that as a device-lost skip rather than a failure (mirrors
 // every other webgpu-*.test.ts in this suite).
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');

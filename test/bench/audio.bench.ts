@@ -1,5 +1,7 @@
 import { beforeAll, describe, test } from 'vitest';
 
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
+
 // AudioContext mock must be in place before any ExoJS audio import.
 // Placed in beforeAll (module scope) so it runs before bench setup.
 const makeParam = (): AudioParam =>
@@ -147,7 +149,7 @@ const makeAudioBuffer = (duration = 2, sampleRate = 44100): AudioBuffer =>
     getChannelData: () => new Float32Array(duration * sampleRate),
   }) as unknown as AudioBuffer;
 
-describe('audio', () => {
+describe('audio', { timeout: benchTimeoutMs }, () => {
   beforeAll(() => {
     installMocks();
   });
@@ -169,7 +171,7 @@ describe('audio', () => {
       for (const s of sounds) system.play(s).stop();
       for (const s of sounds) s.destroy();
       system.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('AudioListener._tick() (60 position updates)', async ({ bench }) => {
@@ -183,7 +185,7 @@ describe('audio', () => {
         listener._tick();
       }
       listener.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('AudioBus filter chain add/remove (5 filters, 100 iterations)', async ({ bench }) => {
@@ -208,6 +210,6 @@ describe('audio', () => {
       }
 
       bus.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 });

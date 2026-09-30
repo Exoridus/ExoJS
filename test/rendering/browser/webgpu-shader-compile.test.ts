@@ -110,7 +110,7 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'lighting radiance gather (composed, generated uniform block)', source: composedGather._resolveWgsl(filterUniformGroup)! },
 ];
 
-// On the software (swiftshader / lavapipe) adapter the WebGPU device can drop
+// On the software (SwiftShader) adapter the WebGPU device can drop
 // mid-test; treat that as an unavailable-adapter skip rather than a failure,
 // matching every other WebGPU browser spec in this directory.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
@@ -197,8 +197,7 @@ ${log}`,
   // versions and can be intentionally opaque for fingerprinting reasons - so this
   // is diagnostic logging only, not a pass/fail gate. The qualification preflight
   // (`pnpm qualify`) logs the same identity before the suite: on the CI runner
-  // it is Chromium's bundled SwiftShader fallback adapter, whatever
-  // `VK_DRIVER_FILES` points at.
+  // it is Chromium's bundled SwiftShader fallback adapter.
   test('logs the requested adapter identity (informational, non-blocking)', async () => {
     const adapter = await navigator.gpu.requestAdapter();
     const info = (adapter as GPUAdapter & { info?: GPUAdapterInfo }).info;
@@ -224,7 +223,7 @@ ${log}`,
     }
 
     console.info(
-      '[webgpu-shader-compile] adapter identity: neither adapter.info nor requestAdapterInfo() is available on this browser/version — cannot verify from inside the test whether lavapipe or SwiftShader served this run.',
+      '[webgpu-shader-compile] adapter identity: neither adapter.info nor requestAdapterInfo() is available on this browser/version — cannot verify from inside the test which adapter served this run.',
     );
   });
 });

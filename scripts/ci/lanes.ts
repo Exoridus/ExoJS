@@ -107,9 +107,11 @@ const chromiumHostRows: QualifiedRow[] = [
   { name: 'Chromium / Core Surfaces', timeoutMinutes: 6, command: `pnpm test:browser:core ${junit('webgl-core')}` },
 ];
 
-// `VK_DRIVER_FILES` points the Vulkan loader at Mesa lavapipe, but the preflight log shows that
-// Chromium's Dawn ends up on its bundled SwiftShader fallback adapter regardless.
-const webgpuEnv = 'VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json EXOJS_WEBGPU_CI_HEADED=1';
+// Chromium's Dawn brings its own SwiftShader Vulkan implementation, which is the adapter this lane
+// runs on. The runner installs no system Vulkan driver on purpose: with Mesa's lavapipe present and
+// no `VK_DRIVER_FILES` pin the loader offers a second implementation and roughly half of the Core
+// suite fails.
+const webgpuEnv = 'EXOJS_WEBGPU_CI_HEADED=1';
 const firefoxEnv = 'LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe';
 
 export const LANES: readonly Lane[] = [
@@ -171,7 +173,7 @@ export const LANES: readonly Lane[] = [
       },
     ),
     browser: 'chromium',
-    apt: ['mesa-vulkan-drivers', 'xvfb'],
+    apt: ['xvfb'],
     local: 'browser',
     junit: true,
     timeoutMinutes: 30,
@@ -270,7 +272,7 @@ export const LANES: readonly Lane[] = [
     ciRun: `pnpm typecheck:bench && ${qualifiedRow({ name: 'Chromium / Bench Structural', timeoutMinutes: 25, command: 'pnpm gate:bench:structural' })}`,
     browser: 'chromium',
     local: 'browser',
-    minimumOutput: 'normal',
+    minimumOutput: 'compact',
     timeoutMinutes: 30,
   },
 
@@ -278,7 +280,7 @@ export const LANES: readonly Lane[] = [
     id: 'package',
     stage: 'verify',
     when: 'packageVerify',
-    run: 'pnpm size && pnpm size:summary && pnpm verify:exports && pnpm verify:declaration-imports && pnpm verify:lockstep && pnpm verify:release-matrix && pnpm verify:publish',
+    run: 'pnpm size && pnpm size:summary && pnpm verify:exports && pnpm verify:declaration-imports && pnpm verify:declaration-semantics && pnpm verify:lockstep && pnpm verify:release-matrix && pnpm verify:publish',
     dist: true,
   },
   {
@@ -294,6 +296,13 @@ export const LANES: readonly Lane[] = [
     stage: 'verify',
     when: 'createExoAppVerify',
     run: 'pnpm verify:create-exo-app',
+    // The real-consumer step packs the built engine packages and installs them
+    // into each generated project, so this lane needs the dist trees. They come
+    // from the authoritative build job rather than from a build hidden inside the
+    // verifier - otherwise a scaffolder change would build the engine twice and
+    // a published consumer would be judged against a different tree than the one
+    // the release lane ships.
+    dist: true,
   },
 ];
 
@@ -397,7 +406,10 @@ export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan 
     gates: stage('gates'),
     test: stage('test'),
     verify: stage('verify'),
-    build: areas.engine || site,
+    // The scaffolder's real-consumer step resolves the built engine packages, so
+    // a create-exo-app change needs the dist trees even when no engine file
+    // changed.
+    build: areas.engine || areas.createExoApp || site,
     site,
     smoke: areas.exampleCatalog,
     smokeSample: isPullRequest,

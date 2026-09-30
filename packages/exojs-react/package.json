@@ -28,7 +28,7 @@
   "scripts": {
     "build": "tsx ../../scripts/build-extension.ts",
     "build:dev": "tsx ../../scripts/build-extension.ts --dev",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.examples.json",
+    "typecheck": "tsx ../../scripts/tsc7.ts --noEmit && tsx ../../scripts/tsc7.ts --noEmit -p tsconfig.test.json && tsx ../../scripts/tsc7.ts --noEmit -p tsconfig.examples.json",
     "lint": "eslint --max-warnings=0 ."
   },
   "peerDependencies": {

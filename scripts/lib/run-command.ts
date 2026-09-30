@@ -176,6 +176,10 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
         } else if (showProgress) process.stdout.write(`PASS ${options.label} ${duration(result.durationMs)}\n`);
         resolveResult(result);
       };
+      if (!log.destroyed)
+        log.write(
+          `\nexit=${result.status}\nsignal=${result.signal ?? 'none'}\nreason=${reason ?? (logError ? 'log' : 'exit')}\ndurationMs=${result.durationMs}\n`,
+        );
       if (log.destroyed) complete();
       else {
         log.once('close', complete);

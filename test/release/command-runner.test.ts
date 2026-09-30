@@ -70,4 +70,18 @@ describe('command logs', () => {
   it('adds no log when none was asked for', () => {
     expect(createExecRunner().run({ command: 'node', args: ['--version'] }).logPath).toBeUndefined();
   });
+
+  it('passes arguments containing shell metacharacters without invoking a shell', () => {
+    const expected = 'literal & | < >';
+    const result = createExecRunner().run({ command: process.execPath, args: ['-e', 'process.stdout.write(process.argv[1])', expected] });
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe(expected);
+  });
+
+  it.each(['npm', 'pnpm'])('runs the %s Windows shim through its Node entry point', command => {
+    if (process.platform !== 'win32') return;
+    const result = createExecRunner().run({ command, args: ['--version'] });
+    expect(result.code).toBe(0);
+    expect(result.stdout).toMatch(/\d+\.\d+\.\d+/);
+  });
 });

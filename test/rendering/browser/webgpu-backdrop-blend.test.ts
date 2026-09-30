@@ -18,8 +18,8 @@
  *
  * Pixel readback is real GPU-side readback (`copyTextureToBuffer` +
  * `mapAsync`), NOT `ctx.drawImage(webgpuCanvas)` into a 2D canvas - the
- * drawImage path silently reads back all-zero on the software (SwiftShader /
- * lavapipe) adapters CI runs on, which would make this spike pass without
+ * drawImage path silently reads back all-zero on the software (SwiftShader)
+ * adapter CI runs on, which would make this spike pass without
  * proving anything.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
@@ -94,8 +94,8 @@ const bytesPerRowAligned = (widthPx: number, bytesPerPixel: number): number => M
 // Read the presented WebGPU canvas back via a real GPU-side readback:
 // copyTextureToBuffer -> mapAsync -> getMappedRange, mirroring
 // `WebGpuStorageBuffer.read`. `ctx.drawImage(webgpuCanvas)` into a 2D canvas
-// looks like a readback but returns all-zero on the software (SwiftShader /
-// lavapipe) adapters CI runs the WebGPU lane on - it never actually exercises
+// looks like a readback but returns all-zero on the software (SwiftShader)
+// adapter CI runs the WebGPU lane on - it never actually exercises
 // the GPU-visible pixel data, so a real regression there would go undetected.
 const readGpuCanvas = async (backend: WebGpuBackend): Promise<(x: number, y: number) => RgbaTuple> => {
   const device = backend.device;

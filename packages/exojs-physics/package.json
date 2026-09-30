@@ -33,7 +33,7 @@
   "scripts": {
     "build": "tsx ../../scripts/build-extension.ts",
     "build:dev": "tsx ../../scripts/build-extension.ts --dev",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "typecheck": "tsx ../../scripts/tsc7.ts --noEmit && tsx ../../scripts/tsc7.ts --noEmit -p tsconfig.test.json",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-physics"
   },

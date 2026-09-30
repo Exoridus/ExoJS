@@ -11,6 +11,7 @@ import { createRenderStats, resetRenderStats } from '../../src/rendering/RenderS
 import { RenderTarget } from '../../src/rendering/RenderTarget';
 import { RenderTexture } from '../../src/rendering/texture/RenderTexture';
 import { createRenderBackendDouble } from '../support/render-backend-double';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const VIEWPORT_W = 800;
 const VIEWPORT_H = 600;
@@ -97,7 +98,7 @@ const createGridScene = (cols: number, rows: number, spacing: number, ox = 0, oy
   return root;
 };
 
-describe('rendering', () => {
+describe('rendering', { timeout: benchTimeoutMs }, () => {
   test('dense-visible (8k nodes, 240 frames)', async ({ bench }) => {
     await bench('dense-visible (8k nodes, 240 frames)', () => {
       const root = createGridScene(200, 40, 20);
@@ -111,7 +112,7 @@ describe('rendering', () => {
 
       root.destroy();
       runtime.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('dense-mostly-offscreen (8k nodes placed far off-screen, 240 frames)', async ({ bench }) => {
@@ -127,7 +128,7 @@ describe('rendering', () => {
 
       root.destroy();
       runtime.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('camera-pan (6k nodes, 240 frames, panning view)', async ({ bench }) => {
@@ -144,6 +145,6 @@ describe('rendering', () => {
 
       root.destroy();
       runtime.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 });

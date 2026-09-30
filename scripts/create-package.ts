@@ -15,7 +15,7 @@
  * NOT auto-wired (enumerated YAML / a different runtime / a manual bootstrap) -
  * printed as a concrete, copy-pasteable checklist at the end:
  *   - .github/workflows/ci.yml + release.yml `--filter` lines
- *   - vitest.config.ts createJsdomTestProject entry (+ aliasConfig if imported)
+ *   - vitest.config.ts createJsdomTestProject entry (+ aliasConfig entry if other tests import the source)
  *   - root package.json typecheck:packages / test / test:coverage lists
  *   - the npm placeholder publish + Trusted-Publisher (OIDC) bootstrap from
  *     scripts/release/RELEASING.md (do this BEFORE the package's first release)
@@ -469,7 +469,6 @@ MANUAL CHECKLIST — not auto-edited (enumerated YAML / different runtime / npm 
 
      createJsdomTestProject({
        name: 'exojs-${name}',
-       alias: aliasConfig,
        include: ['${pkgDirRel}/test/**/*.test.ts'],
      }),
 

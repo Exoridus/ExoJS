@@ -9,6 +9,7 @@ import type { MaterialKey } from '../../src/rendering/material/MaterialKey';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '../../src/rendering/plan/renderCommand';
 import type { RenderBackend } from '../../src/rendering/RenderBackend';
 import { TransformBuffer } from '../../src/rendering/TransformBuffer';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const NODE_COUNT = 4096;
 const FRAME_COUNT = 240;
@@ -101,7 +102,7 @@ const packFrame = (buffer: TransformBuffer, commands: DrawCommand[]): void => {
 const allConsuming = buildCommands(0);
 const halfNonConsuming = buildCommands(2);
 
-describe('transform-upload', () => {
+describe('transform-upload', { timeout: benchTimeoutMs }, () => {
   test('all-consuming (4k nodes, 240 frames)', async ({ bench }) => {
     await bench('all-consuming (4k nodes, 240 frames)', () => {
       const buffer = new TransformBuffer();
@@ -109,7 +110,7 @@ describe('transform-upload', () => {
       for (let frame = 0; frame < FRAME_COUNT; frame++) {
         packFrame(buffer, allConsuming);
       }
-    }).run();
+    }).run(benchRunOptions);
   });
 
   // Half the nodes opt out - their per-draw writes must be skipped, not packed.
@@ -122,6 +123,6 @@ describe('transform-upload', () => {
       for (let frame = 0; frame < FRAME_COUNT; frame++) {
         packFrame(buffer, halfNonConsuming);
       }
-    }).run();
+    }).run(benchRunOptions);
   });
 });

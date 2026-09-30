@@ -23,22 +23,21 @@ export interface BrowserProfile {
 }
 
 /**
- * Chromium's WebGPU recipe: the flags let a software or virtual adapter through
- * the blocklist without a display surface. On the GitHub runner the browser runs
- * headed under Xvfb and ends up on Chromium's bundled SwiftShader adapter (a
- * fallback adapter), whatever `VK_DRIVER_FILES` says; locally the same flags
- * reach whatever GPU the machine has. Forcing
- * `--use-angle=vulkan` regressed `requestAdapter()` to `null` and is not used.
+ * Chromium's WebGPU recipe. Both flags are load-bearing: `--enable-unsafe-webgpu`
+ * (without it Linux resolves `requestAdapter()` to `null`, and it exposes optional
+ * features such as `texture-compression-unaligned` everywhere) and
+ * `--ignore-gpu-blocklist` (without it the adapter is granted but `requestDevice()`
+ * rejects on a software or unrecognised GPU). The Linux runner ends up on Chromium's
+ * bundled SwiftShader adapter (`isFallbackAdapter: true`); a developer machine gets
+ * its own GPU.
+ *
+ * Deliberately absent: `--enable-features=Vulkan` and `--disable-vulkan-surface`
+ * (no effect on the adapter or the results), `--no-sandbox` (Playwright launches
+ * without the sandbox where the platform needs it) and the GPU-watchdog and
+ * driver-bug-workaround switches, which only weaken the browser's own protections.
+ * Forcing `--use-angle=vulkan` regressed `requestAdapter()` to `null` and is not used.
  */
-export const CHROMIUM_WEBGPU_ARGS = [
-  '--enable-unsafe-webgpu',
-  '--enable-features=Vulkan',
-  '--disable-vulkan-surface',
-  '--ignore-gpu-blocklist',
-  '--no-sandbox',
-  '--disable-gpu-watchdog',
-  '--disable-gpu-driver-bug-workarounds',
-] as const;
+export const CHROMIUM_WEBGPU_ARGS = ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist'] as const;
 
 export const CHROMIUM_WEBGL2_ARGS = ['--enable-webgl', '--use-angle=swiftshader'] as const;
 

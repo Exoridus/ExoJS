@@ -7,6 +7,7 @@ import { Quadtree } from '../../src/math/Quadtree';
 import { Rectangle } from '../../src/math/Rectangle';
 import { sweepRectangle } from '../../src/math/sweptCollision';
 import { Vector } from '../../src/math/Vector';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const rng = (seed: number) => {
   let s = seed;
@@ -25,7 +26,7 @@ const makeRegularPolygon = (cx: number, cy: number, radius: number, sides: numbe
   return new Polygon(points, cx, cy);
 };
 
-describe('collision', () => {
+describe('collision', { timeout: benchTimeoutMs }, () => {
   test('SAT polygon pairs (1k pairs, 60 iterations)', async ({ bench }) => {
     await bench('SAT polygon pairs (1k pairs, 60 iterations)', () => {
       const rand = rng(42);
@@ -54,7 +55,7 @@ describe('collision', () => {
         a.destroy();
         b.destroy();
       }
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('circle vs circle (10k pairs, 30 iterations)', async ({ bench }) => {
@@ -80,7 +81,7 @@ describe('collision', () => {
         a.destroy();
         b.destroy();
       }
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('quadtree build from 1k rectangles (120 iterations)', async ({ bench }) => {
@@ -105,7 +106,7 @@ describe('collision', () => {
       for (const item of items) {
         item.bounds.destroy();
       }
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('quadtree queryPoint (1k-item tree, 10k queries, 30 iterations)', async ({ bench }) => {
@@ -134,7 +135,7 @@ describe('collision', () => {
       }
 
       qt.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('swept rectangle (1k queries, 120 iterations)', async ({ bench }) => {
@@ -158,6 +159,6 @@ describe('collision', () => {
 
       for (const r of statics) r.destroy();
       for (const { rect } of movers) rect.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 });

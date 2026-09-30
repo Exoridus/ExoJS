@@ -24,6 +24,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,7 +32,14 @@ import { fileURLToPath } from 'node:url';
 import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const tscBin = resolve(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
+
+// This is a *consumer* compiler, deliberately not the native TypeScript 7
+// compiler that emits the shipped declarations. The point of the check is that a
+// project on an ordinary TypeScript release can consume the published `.d.ts`,
+// so it must keep running a mainstream JS-API compiler. Resolved from the
+// installed manifest rather than a hard-coded `node_modules` path so the
+// side-by-side native install cannot change which binary this reaches.
+const consumerTscBin = resolve(dirname(createRequire(import.meta.url).resolve('typescript/package.json')), 'bin', 'tsc');
 
 export interface ConsumerCheck {
   name: string;
@@ -251,7 +259,7 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
     // 3. TypeScript / Vite (bundler resolution) type-check against shipped .d.ts.
     writeFileSync(join(consumerDir, 'consumer.ts'), CONSUMER_TS);
     writeFileSync(join(consumerDir, 'tsconfig.json'), CONSUMER_TSCONFIG);
-    const tsc = run('node', [tscBin, '--noEmit', '-p', 'tsconfig.json'], consumerDir);
+    const tsc = run('node', [consumerTscBin, '--noEmit', '-p', 'tsconfig.json'], consumerDir);
     checks.push({
       name: 'TypeScript bundler-resolution type-check',
       ok: tsc.code === 0,
@@ -262,7 +270,7 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
     // includes the root barrel - see `CONSUMER_SUBPATH_TS`'s doc comment.
     writeFileSync(join(consumerDir, 'consumer-subpath.ts'), CONSUMER_SUBPATH_TS);
     writeFileSync(join(consumerDir, 'tsconfig.subpath.json'), CONSUMER_SUBPATH_TSCONFIG);
-    const tscSubpath = run('node', [tscBin, '--noEmit', '-p', 'tsconfig.subpath.json'], consumerDir);
+    const tscSubpath = run('node', [consumerTscBin, '--noEmit', '-p', 'tsconfig.subpath.json'], consumerDir);
     checks.push({
       name: 'TypeScript subpath-entry (renderer-sdk) type-check',
       ok: tscSubpath.code === 0,
