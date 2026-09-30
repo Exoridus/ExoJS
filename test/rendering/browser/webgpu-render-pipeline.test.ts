@@ -2,7 +2,7 @@
  * WebGPU RenderPipeline browser test - opt-in, capability-aware.
  *
  * Runs under the `browser-webgpu` project. CI guarantees a WebGPU adapter (the
- * required Chromium-WebGPU lane runs against Mesa lavapipe, a software Vulkan
+ * required Chromium-WebGPU lane runs against SwiftShader, a software
  * implementation); `withValidation` only skips when the software adapter drops the
  * device mid-test (the canonical `isDeviceLoss` model shared by every
  * webgpu-*.test.ts).

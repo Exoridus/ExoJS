@@ -5,7 +5,7 @@
  * rendering, all 8 tile orientations, culling, layer opacity, and one-extension
  * Tiled wiring on a real WebGPU backend. All WebGPU renderers use inline WGSL -
  * no shader mocks. CI guarantees a real WebGPU adapter (the required
- * Chromium-WebGPU lane runs against Mesa lavapipe); `renderScene` only skips
+ * Chromium-WebGPU lane runs against SwiftShader); `renderScene` only skips
  * when the software adapter drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu

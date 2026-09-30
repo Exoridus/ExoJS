@@ -2,7 +2,7 @@
  * WebGPU browser smoke tests.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe), so these tests exercise the API directly rather
+ * against SwiftShader), so these tests exercise the API directly rather
  * than skipping when it looks unavailable - a missing adapter here is a
  * genuine failure, not an environment gap.
  *

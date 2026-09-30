@@ -16,7 +16,7 @@ export type RgbaTuple = readonly [number, number, number, number];
  *
  * So the real requirement is 1. The value is held at 4 rather than 1 because
  * that measurement comes from one machine, while CI renders through different
- * adapters (Mesa lavapipe for WebGPU) whose rounding may differ by a step or
+ * adapters (SwiftShader for WebGPU) whose rounding may differ by a step or
  * two. It stays far tighter than the 8-18 it replaces, and a comparison
  * needing materially more is a finding about the backends, not a reason to
  * raise this.

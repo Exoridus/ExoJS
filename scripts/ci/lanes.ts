@@ -107,6 +107,8 @@ const chromiumHostRows: QualifiedRow[] = [
   { name: 'Chromium / Core Surfaces', timeoutMinutes: 6, command: `pnpm test:browser:core ${junit('webgl-core')}` },
 ];
 
+// `VK_DRIVER_FILES` points the Vulkan loader at Mesa lavapipe, but the preflight log shows that
+// Chromium's Dawn ends up on its bundled SwiftShader fallback adapter regardless.
 const webgpuEnv = 'VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json EXOJS_WEBGPU_CI_HEADED=1';
 const firefoxEnv = 'LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe';
 

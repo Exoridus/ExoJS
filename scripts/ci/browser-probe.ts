@@ -50,6 +50,9 @@ export const PAGE_PROBE = `(async () => {
   const features = ['texture-compression-bc', 'texture-compression-etc2', 'texture-compression-astc', 'float32-filterable'];
   if (typeof navigator.gpu === 'undefined') {
     record('webgpu-api', false, 'navigator.gpu is undefined');
+    record('webgpu-adapter', false, 'navigator.gpu is undefined');
+    record('webgpu-device', false, 'navigator.gpu is undefined');
+    for (const feature of features) record('feature:' + feature, false, 'navigator.gpu is undefined');
   } else {
     record('webgpu-api', true, 'navigator.gpu present');
     let adapter = null;

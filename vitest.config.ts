@@ -116,10 +116,9 @@ const browserBase = {
 //    context either way); headed under xvfb in CI via EXOJS_FIREFOX_CI_HEADED=1,
 //    because Firefox on Linux disables WebGL entirely in headless mode.
 //  - WebGPU Chromium: headless by default (safe for local dev with no display server).
-//    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 - Mesa lavapipe needs a
-//    real display to report a Vulkan adapter instead of falling back to
-//    SwiftShader, and CI supplies one via xvfb (see the `webgpu` lane in
-//    `scripts/ci/lanes.ts`). Without this gate, `headless: false` would pop a real,
+//    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 and supplies a display
+//    via xvfb (see the `webgpu` lane in `scripts/ci/lanes.ts`); the adapter it
+//    then gets is Chromium's bundled SwiftShader. Without this gate, `headless: false` would pop a real,
 //    visible Chromium window on every local `pnpm test:browser:webgpu` run.
 //  - WebGPU Firefox:  headed - Firefox only exposes a WebGPU adapter in a headed session.
 //
@@ -574,10 +573,10 @@ export default defineConfig({
       // The renderer contract on a real WebGPU adapter: adapter and device
       // setup, textures and render targets, sprite/mesh/text/shader/filter
       // renderers, blending, colour, readback, device lifecycle and the parity
-      // matrix. CI runs it headed under Xvfb against Mesa lavapipe (a software
-      // Vulkan implementation, so WGSL compilation, pipelines, bind groups and
-      // pixel results are real; NVIDIA/AMD/Intel behaviour and throughput are
-      // not covered). Locally it uses whatever GPU the machine has. The launch
+      // matrix. CI runs it headed under Xvfb on Chromium's bundled SwiftShader
+      // software adapter (so WGSL compilation, pipelines, bind groups and pixel
+      // results are real; NVIDIA/AMD/Intel behaviour and throughput are not
+      // covered). Locally it uses whatever GPU the machine has. The launch
       // recipe is in `scripts/ci/browser-profiles.ts`; the media specs are the
       // `browser-webgpu-media` project below.
       {

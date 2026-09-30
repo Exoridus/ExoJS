@@ -13,7 +13,7 @@
  *    pipeline creation on a device rejects.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); `renderScene` only skips when the software adapter
+ * against SwiftShader); `renderScene` only skips when the software adapter
  * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu

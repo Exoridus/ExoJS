@@ -2,7 +2,7 @@
  * WebGPU custom-SpriteMaterial browser test - opt-in, capability-aware.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe), so this test drives a
+ * against SwiftShader), so this test drives a
  * custom {@link SpriteMaterial} (user uniform) through the real
  * {@link WebGpuSpriteRenderer} and asserts the custom path (group 0 projection +
  * shared transform storage, group 1 base-texture slot table, group 2 user UBO) issues an
@@ -442,7 +442,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       backend.flush();
       validationError = await device.popErrorScope();
     } catch (error) {
-      // The software (lavapipe) adapter used in CI can drop the device
+      // The software (SwiftShader) adapter used in CI can drop the device
       // mid-test ("Instance dropped in popErrorScope"); treat that as an
       // unavailable-adapter skip rather than a failure.
       if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {

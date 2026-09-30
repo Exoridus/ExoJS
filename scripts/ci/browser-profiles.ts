@@ -24,9 +24,10 @@ export interface BrowserProfile {
 
 /**
  * Chromium's WebGPU recipe: the flags let a software or virtual adapter through
- * the blocklist without a display surface. On the GitHub runner the Vulkan
- * loader is pointed at Mesa lavapipe and the browser runs headed under Xvfb;
- * locally the same flags reach whatever GPU the machine has. Forcing
+ * the blocklist without a display surface. On the GitHub runner the browser runs
+ * headed under Xvfb and ends up on Chromium's bundled SwiftShader adapter (a
+ * fallback adapter), whatever `VK_DRIVER_FILES` says; locally the same flags
+ * reach whatever GPU the machine has. Forcing
  * `--use-angle=vulkan` regressed `requestAdapter()` to `null` and is not used.
  */
 export const CHROMIUM_WEBGPU_ARGS = [

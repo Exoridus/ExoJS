@@ -9,7 +9,7 @@
  * device's `maxTextureDimension2D` with the spec default standing in.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); this only skips when the software adapter drops the
+ * against SwiftShader); this only skips when the software adapter drops the
  * device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
