@@ -107,9 +107,11 @@ const chromiumHostRows: QualifiedRow[] = [
   { name: 'Chromium / Core Surfaces', timeoutMinutes: 6, command: `pnpm test:browser:core ${junit('webgl-core')}` },
 ];
 
-// `VK_DRIVER_FILES` points the Vulkan loader at Mesa lavapipe, but the preflight log shows that
-// Chromium's Dawn ends up on its bundled SwiftShader fallback adapter regardless.
-const webgpuEnv = 'VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json EXOJS_WEBGPU_CI_HEADED=1';
+// Chromium's Dawn brings its own SwiftShader Vulkan implementation, which is the adapter this lane
+// runs on. The runner installs no system Vulkan driver on purpose: with Mesa's lavapipe present and
+// no `VK_DRIVER_FILES` pin the loader offers a second implementation and roughly half of the Core
+// suite fails.
+const webgpuEnv = 'EXOJS_WEBGPU_CI_HEADED=1';
 const firefoxEnv = 'LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe';
 
 export const LANES: readonly Lane[] = [
@@ -171,7 +173,7 @@ export const LANES: readonly Lane[] = [
       },
     ),
     browser: 'chromium',
-    apt: ['mesa-vulkan-drivers', 'xvfb'],
+    apt: ['xvfb'],
     local: 'browser',
     junit: true,
     timeoutMinutes: 30,

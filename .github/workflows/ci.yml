@@ -22,6 +22,12 @@ on:
   pull_request:
     branches: [main, next]
   workflow_dispatch:
+    inputs:
+      runner:
+        description: Image for the browser and unit lanes (a manual run on a candidate image qualifies it before any migration)
+        type: choice
+        options: [ubuntu-24.04, ubuntu-26.04]
+        default: ubuntu-24.04
 
 permissions:
   contents: read
@@ -125,10 +131,12 @@ jobs:
     name: test (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.hasTest == 'true'
-    # Pinned: the browser lanes depend on the runner image's Mesa, Vulkan loader,
-    # Xvfb and browser libraries, so an image swap behind `ubuntu-latest` must be a
-    # deliberate change, not a Monday surprise.
-    runs-on: ubuntu-24.04
+    # Pinned: the browser lanes depend on the runner image's Xvfb, graphics stack and
+    # browser libraries, so an image swap behind `ubuntu-latest` must be a deliberate
+    # change, not a Monday surprise. ubuntu-24.04 is what `ubuntu-latest` resolves to
+    # today. A candidate image is qualified by dispatching this workflow with the
+    # `runner` input; ubuntu-26.04 ran every lane with the same outcomes.
+    runs-on: ${{ inputs.runner || 'ubuntu-24.04' }}
     timeout-minutes: ${{ matrix.timeoutMinutes }}
     strategy:
       fail-fast: false

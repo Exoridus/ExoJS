@@ -159,7 +159,7 @@ describe('the matrix entries carry what the setup action needs', () => {
 
   it('names the browser and the apt packages per lane', () => {
     const byId = Object.fromEntries(plan.test.map(entry => [entry.id, entry]));
-    expect(byId['webgpu']).toMatchObject({ browser: 'chromium', apt: 'mesa-vulkan-drivers xvfb' });
+    expect(byId['webgpu']).toMatchObject({ browser: 'chromium', apt: 'xvfb' });
     expect(byId['firefox']).toMatchObject({ browser: 'firefox', apt: 'xvfb' });
     expect(byId['unit']).toMatchObject({ browser: '', apt: '', naga: true });
   });
