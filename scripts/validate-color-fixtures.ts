@@ -1,5 +1,5 @@
 /**
- * Runs the Khronos `ktx validate` tool over every committed colour fixture.
+ * Runs the Khronos `ktx validate` tool over every committed colour fixture, hand-built and externally encoded.
  *
  * The validator is not a repository dependency: point `--ktx` (or `KTX_TOOL`) at a `ktx` executable from a
  * KTX-Software release. The recorded run used 4.4.2. Every fixture is checked with warnings treated as
@@ -13,11 +13,11 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const fixtureDir = join(repoRoot, 'test/fixtures/color');
+const fixtureDirs = ['test/fixtures/color', 'test/fixtures/color-external'].map(directory => join(repoRoot, directory));
 const reportPath = join(repoRoot, '.workspace/output/color-fixture-validation.json');
 
 const argument = (name: string): string | undefined => {
@@ -36,10 +36,13 @@ if (tool === undefined) {
 const version = execFileSync(tool, ['--version'], { encoding: 'utf8' }).trim();
 const results: { file: string; sha256: string; valid: boolean; exitCode: number | null; messages: unknown[] }[] = [];
 
-for (const file of readdirSync(fixtureDir)
-  .filter(name => name.endsWith('.ktx2'))
-  .sort()) {
-  const path = join(fixtureDir, file);
+for (const path of fixtureDirs.flatMap(directory =>
+  readdirSync(directory)
+    .filter(name => name.endsWith('.ktx2'))
+    .sort()
+    .map(name => join(directory, name)),
+)) {
+  const file = relative(repoRoot, path).replaceAll(sep, '/');
   const run = spawnSync(tool, ['validate', '--format', 'json', '--warnings-as-errors', path], { encoding: 'utf8' });
   const messages = ((): unknown[] => {
     try {

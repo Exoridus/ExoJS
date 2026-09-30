@@ -188,6 +188,7 @@
     "webgpu:probe": "tsx scripts/webgpu-probe.ts",
     "fixtures:color": "tsx scripts/generate-color-fixtures.ts",
     "fixtures:color:validate": "tsx scripts/validate-color-fixtures.ts",
+    "fixtures:color:external": "tsx scripts/generate-external-ktx2-fixtures.ts",
     "create:package": "tsx scripts/create-package.ts",
     "release:cut": "tsx ./scripts/release/cut.ts",
     "release:prepare": "tsx ./scripts/release/run.ts prepare",

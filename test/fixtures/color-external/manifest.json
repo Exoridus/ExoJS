@@ -1,0 +1,174 @@
+{
+  "$comment": "Written by scripts/generate-external-ktx2-fixtures.ts. Do not edit by hand.",
+  "tool": { "name": "KTX-Software ktx", "version": "ktx version: v4.4.2", "license": "Apache-2.0", "source": "https://github.com/KhronosGroup/KTX-Software" },
+  "source": {
+    "file": "source.png",
+    "sha256": "b65ca8f788058e1c3694e2c080d717f0562d2a04331e60f3a08f6e4669c6325b",
+    "description": "RGBA 16x16, four 8x8 quadrants: red, green, blue and half-transparent yellow. Authored for this repository; no third-party artwork."
+  },
+  "tolerance": 4,
+  "fixtures": [
+    {
+      "file": "bc7-unorm.ktx2",
+      "vkFormat": 145,
+      "vkFormatName": "VK_FORMAT_BC7_UNORM_BLOCK",
+      "transfer": "linear",
+      "alpha": true,
+      "width": 16,
+      "height": 16,
+      "codec": "Basis Universal UASTC LDR 4x4 transcode",
+      "commands": [
+        "ktx create --format R8G8B8A8_UNORM --assign-tf linear --encode uastc --uastc-quality 4 --testrun {source} {out}",
+        "ktx transcode --target bc7 {in} {out}"
+      ],
+      "sha256": "99130431fa2db7fdfc61fc5ca7eea7c3896a25317f7108f720fcd96f23a5d5c5",
+      "samples": [
+        { "x": 2, "y": 2, "rgba": [220, 40, 40, 255] },
+        { "x": 12, "y": 2, "rgba": [40, 190, 70, 255] },
+        { "x": 2, "y": 12, "rgba": [50, 70, 230, 255] },
+        { "x": 12, "y": 12, "rgba": [230, 200, 40, 128] }
+      ]
+    },
+    {
+      "file": "bc7-srgb.ktx2",
+      "vkFormat": 146,
+      "vkFormatName": "VK_FORMAT_BC7_SRGB_BLOCK",
+      "transfer": "srgb",
+      "alpha": true,
+      "width": 16,
+      "height": 16,
+      "codec": "Basis Universal UASTC LDR 4x4 transcode",
+      "commands": [
+        "ktx create --format R8G8B8A8_SRGB --assign-tf srgb --encode uastc --uastc-quality 4 --testrun {source} {out}",
+        "ktx transcode --target bc7 {in} {out}"
+      ],
+      "sha256": "fb4a2c04339c369a822e679920301453741a967f3598f4bd161de5274234c879",
+      "samples": [
+        { "x": 2, "y": 2, "rgba": [220, 40, 40, 255] },
+        { "x": 12, "y": 2, "rgba": [40, 190, 70, 255] },
+        { "x": 2, "y": 12, "rgba": [50, 70, 230, 255] },
+        { "x": 12, "y": 12, "rgba": [230, 200, 40, 128] }
+      ]
+    },
+    {
+      "file": "etc2-rgb8-unorm.ktx2",
+      "vkFormat": 147,
+      "vkFormatName": "VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK",
+      "transfer": "linear",
+      "alpha": false,
+      "width": 16,
+      "height": 16,
+      "codec": "Basis Universal UASTC LDR 4x4 transcode",
+      "commands": [
+        "ktx create --format R8G8B8A8_UNORM --assign-tf linear --encode uastc --uastc-quality 4 --testrun {source} {out}",
+        "ktx transcode --target etc-rgb {in} {out}"
+      ],
+      "sha256": "0bcbdeb94cb37adbf65e58a218f40c42a6109f093d8a8281ea546639de28838a",
+      "samples": [
+        { "x": 2, "y": 2, "rgba": [220, 40, 40, 255] },
+        { "x": 12, "y": 2, "rgba": [40, 190, 70, 255] },
+        { "x": 2, "y": 12, "rgba": [50, 70, 230, 255] },
+        { "x": 12, "y": 12, "rgba": [230, 200, 40, 255] }
+      ]
+    },
+    {
+      "file": "etc2-rgb8-srgb.ktx2",
+      "vkFormat": 148,
+      "vkFormatName": "VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK",
+      "transfer": "srgb",
+      "alpha": false,
+      "width": 16,
+      "height": 16,
+      "codec": "Basis Universal UASTC LDR 4x4 transcode",
+      "commands": [
+        "ktx create --format R8G8B8A8_SRGB --assign-tf srgb --encode uastc --uastc-quality 4 --testrun {source} {out}",
+        "ktx transcode --target etc-rgb {in} {out}"
+      ],
+      "sha256": "95ca7c2482c5b7e9ea3a937bdef7131b2400484e490bcb56900960eeb8be6047",
+      "samples": [
+        { "x": 2, "y": 2, "rgba": [220, 40, 40, 255] },
+        { "x": 12, "y": 2, "rgba": [40, 190, 70, 255] },
+        { "x": 2, "y": 12, "rgba": [50, 70, 230, 255] },
+        { "x": 12, "y": 12, "rgba": [230, 200, 40, 255] }
+      ]
+    },
+    {
+      "file": "etc2-rgba8-unorm.ktx2",
+      "vkFormat": 151,
+      "vkFormatName": "VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK",
+      "transfer": "linear",
+      "alpha": true,
+      "width": 16,
+      "height": 16,
+      "codec": "Basis Universal UASTC LDR 4x4 transcode",
+      "commands": [
+        "ktx create --format R8G8B8A8_UNORM --assign-tf linear --encode uastc --uastc-quality 4 --testrun {source} {out}",
+        "ktx transcode --target etc-rgba {in} {out}"
+      ],
+      "sha256": "c2df8df12d2d1bb4e930e2d3da0d49c0084c408b4e9bca7113e0f67ba99233d7",
+      "samples": [
+        { "x": 2, "y": 2, "rgba": [220, 40, 40, 255] },
+        { "x": 12, "y": 2, "rgba": [40, 190, 70, 255] },
+        { "x": 2, "y": 12, "rgba": [50, 70, 230, 255] },
+        { "x": 12, "y": 12, "rgba": [230, 200, 40, 128] }
+      ]
+    },
+    {
+      "file": "etc2-rgba8-srgb.ktx2",
+      "vkFormat": 152,
+      "vkFormatName": "VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK",
+      "transfer": "srgb",
+      "alpha": true,
+      "width": 16,
+      "height": 16,
+      "codec": "Basis Universal UASTC LDR 4x4 transcode",
+      "commands": [
+        "ktx create --format R8G8B8A8_SRGB --assign-tf srgb --encode uastc --uastc-quality 4 --testrun {source} {out}",
+        "ktx transcode --target etc-rgba {in} {out}"
+      ],
+      "sha256": "fd4546ce8ec26e2c221419c537a05165dba6971e0903f0a0d1a5b28afe5cf5ef",
+      "samples": [
+        { "x": 2, "y": 2, "rgba": [220, 40, 40, 255] },
+        { "x": 12, "y": 2, "rgba": [40, 190, 70, 255] },
+        { "x": 2, "y": 12, "rgba": [50, 70, 230, 255] },
+        { "x": 12, "y": 12, "rgba": [230, 200, 40, 128] }
+      ]
+    },
+    {
+      "file": "astc-4x4-unorm.ktx2",
+      "vkFormat": 157,
+      "vkFormatName": "VK_FORMAT_ASTC_4x4_UNORM_BLOCK",
+      "transfer": "linear",
+      "alpha": true,
+      "width": 16,
+      "height": 16,
+      "codec": "astcenc (thorough)",
+      "commands": ["ktx create --format ASTC_4x4_UNORM_BLOCK --assign-tf linear --astc-quality thorough --testrun {source} {out}"],
+      "sha256": "75e500285f2487057327a8f794acfa672cf6278a7f2f615a0e6df967922e509e",
+      "samples": [
+        { "x": 2, "y": 2, "rgba": [220, 40, 40, 255] },
+        { "x": 12, "y": 2, "rgba": [40, 190, 70, 255] },
+        { "x": 2, "y": 12, "rgba": [50, 70, 230, 255] },
+        { "x": 12, "y": 12, "rgba": [230, 200, 40, 128] }
+      ]
+    },
+    {
+      "file": "astc-4x4-srgb.ktx2",
+      "vkFormat": 158,
+      "vkFormatName": "VK_FORMAT_ASTC_4x4_SRGB_BLOCK",
+      "transfer": "srgb",
+      "alpha": true,
+      "width": 16,
+      "height": 16,
+      "codec": "astcenc (thorough)",
+      "commands": ["ktx create --format ASTC_4x4_SRGB_BLOCK --assign-tf srgb --astc-quality thorough --testrun {source} {out}"],
+      "sha256": "a8802f08a54d8e6f14a6c02b2dd09e823d4c510d1a7918d0712660a0edc07240",
+      "samples": [
+        { "x": 2, "y": 2, "rgba": [220, 40, 40, 255] },
+        { "x": 12, "y": 2, "rgba": [40, 190, 70, 255] },
+        { "x": 2, "y": 12, "rgba": [50, 70, 230, 255] },
+        { "x": 12, "y": 12, "rgba": [230, 200, 40, 128] }
+      ]
+    }
+  ]
+}
