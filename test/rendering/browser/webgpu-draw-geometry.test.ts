@@ -7,7 +7,7 @@
  * raw transform is applied verbatim, and that a tint modulates the vertex color.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); `drawGeometries` only skips when the software adapter
+ * against SwiftShader); `drawGeometries` only skips when the software adapter
  * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu

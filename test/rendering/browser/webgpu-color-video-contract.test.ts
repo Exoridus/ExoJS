@@ -21,10 +21,10 @@ import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import type { RgbaTuple } from './_pixels';
+import { createSolidColorVideo, disposeAllVideoFixtures } from './_videoFixture';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 32;
-const decodeWaitMs = 12_000;
 
 interface SkipCtx {
   skip: (reason: string) => void;
@@ -76,78 +76,11 @@ const renderScene = async (ctx: SkipCtx, backend: WebGpuBackend, root: Container
   return true;
 };
 
-/**
- * Same painted-canvas-to-`MediaStream` fixture strategy as
- * `webgpu-video.test.ts`: `requestVideoFrameCallback` never fires in this
- * headless configuration, so readiness is polled instead.
- */
-const createSolidColorVideo = async (color: string, size = 16): Promise<HTMLVideoElement> => {
-  const source = document.createElement('canvas');
-
-  source.width = size;
-  source.height = size;
-
-  const ctx = source.getContext('2d')!;
-  const paint = (): void => {
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, size, size);
-  };
-
-  paint();
-
-  const stream = (source as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(30);
-  const video = document.createElement('video');
-
-  video.muted = true;
-  video.playsInline = true;
-  video.srcObject = stream;
-
-  await new Promise<void>((resolve, reject) => {
-    let settled = false;
-
-    const fail = (error: unknown): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      video.pause();
-      stream.getTracks().forEach(track => track.stop());
-      video.srcObject = null;
-      reject(error instanceof Error ? error : new Error(String(error)));
-    };
-    const timeout = setTimeout(() => {
-      fail(new Error(`timed out waiting for video.play() / decoded frame (videoWidth=${video.videoWidth}, readyState=${video.readyState})`));
-    }, decodeWaitMs);
-    const poll = (): void => {
-      if (settled) return;
-
-      if (video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2) {
-        settled = true;
-        clearTimeout(timeout);
-        resolve();
-      } else {
-        paint();
-        setTimeout(poll, 16);
-      }
-    };
-
-    void video.play().catch(fail);
-    poll();
-  });
-
-  return video;
-};
-
-const destroyVideo = (video: HTMLVideoElement): void => {
-  video.pause();
-  (video.srcObject as MediaStream | null)?.getTracks().forEach(track => track.stop());
-  video.srcObject = null;
-};
-
 /** Renders one solid-color video and returns the center pixel, on whichever draw path the device currently resolves to. */
 const renderVideoPixel = async (ctx: SkipCtx, backend: WebGpuBackend, color: string): Promise<RgbaTuple | null> => {
-  const video = await createSolidColorVideo(color);
+  const fixture = await createSolidColorVideo(color);
   const root = new Container();
-  const videoSprite = new Video(video);
+  const videoSprite = new Video(fixture.video);
 
   try {
     videoSprite.setPosition(8, 8);
@@ -161,7 +94,7 @@ const renderVideoPixel = async (ctx: SkipCtx, backend: WebGpuBackend, color: str
   } finally {
     root.destroy();
     videoSprite.destroy();
-    destroyVideo(video);
+    fixture.dispose();
   }
 };
 
@@ -207,6 +140,8 @@ const expectParity = async (ctx: SkipCtx, color: string): Promise<void> => {
 };
 
 describe('WebGPU video color pipeline - SDR input boundary parity', { timeout: 30_000 }, () => {
+  afterEach(disposeAllVideoFixtures);
+
   test('external-texture and texture_2d fallback agree on a gray frame', async ctx => {
     await expectParity(ctx, '#808080');
   });

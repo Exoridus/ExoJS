@@ -10,7 +10,7 @@
  * API path.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); `renderAndValidate` only skips when the software
+ * against SwiftShader); `renderAndValidate` only skips when the software
  * adapter drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -54,7 +54,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-// The software (swiftshader) adapter can drop the device mid-test; treat that as
+// The software (SwiftShader) adapter can drop the device mid-test; treat that as
 // an unavailable-adapter skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 

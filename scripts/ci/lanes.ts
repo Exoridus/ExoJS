@@ -51,9 +51,66 @@ export interface Lane {
 
 export const laneTimeoutMinutes = (lane: Pick<Lane, 'timeoutMinutes'>): number => lane.timeoutMinutes ?? 20;
 
-const supervisorTests = 'node --test test/ci/validation.node.ts && ';
+const supervisorTests = 'node --test test/ci/validation.node.ts test/ci/qualify.node.ts && ';
 
 const junit = (id: string): string => `--reporter=minimal --reporter=junit --outputFile.junit=./test-results/${id}.junit.xml`;
+
+/** One row of the browser qualification matrix; `pnpm qualify` runs it. */
+interface QualifiedRow {
+  name: string;
+  command: string;
+  /** Browser profile probed before the command runs; see `scripts/ci/browser-profiles.ts`. */
+  preflight?: 'chromium-webgl2' | 'chromium-webgpu' | 'firefox-webgl2' | 'firefox-webgpu';
+  requires?: readonly string[];
+  /** Informational rows report UNSUPPORTED HOST or FAIL without failing the job. */
+  informational?: boolean;
+  /** Outer deadline in minutes: how long a healthy run may take, with headroom, not a budget to grow when a run hangs. */
+  timeoutMinutes: number;
+  /** Runs only when the named row did not find its capability unavailable. */
+  after?: string;
+  env?: string;
+  /** Runs under a virtual display: a headed browser on a Linux runner. */
+  xvfb?: boolean;
+}
+
+const qualifiedRow = (row: QualifiedRow): string => {
+  const flags = [
+    `--row "${row.name}"`,
+    row.informational ? '--policy informational' : '',
+    row.preflight ? `--preflight ${row.preflight}` : '',
+    row.requires?.length ? `--requires ${row.requires.join(',')}` : '',
+    row.after ? `--after "${row.after}"` : '',
+    `--timeout ${row.timeoutMinutes}`,
+  ].filter(Boolean);
+
+  return `${row.env ? `${row.env} ` : ''}${row.xvfb ? 'xvfb-run -a ' : ''}pnpm qualify ${flags.join(' ')} -- ${row.command}`;
+};
+
+const rows = (...list: QualifiedRow[]): string => list.map(qualifiedRow).join(' && ');
+
+const coverageFlags =
+  '--coverage --coverage.reporter=lcov --coverage.reporter=text-summary ' +
+  '--coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0';
+
+const webgl2Row = (coverage: boolean): QualifiedRow => ({
+  name: 'Chromium / WebGL2 Core',
+  preflight: 'chromium-webgl2',
+  requires: ['webgl2'],
+  timeoutMinutes: 10,
+  command: `pnpm test:browser:webgl ${junit('webgl')}${coverage ? ` ${coverageFlags}` : ''}`,
+});
+
+/** Chromium suites with no GPU contract of their own: the build output, the asset cache and core surfaces jsdom cannot host. */
+const chromiumHostRows: QualifiedRow[] = [
+  { name: 'Chromium / Build Output', timeoutMinutes: 6, command: `pnpm test:browser:build ${junit('webgl-build')}` },
+  { name: 'Chromium / Assets', timeoutMinutes: 6, command: `pnpm test:browser:assets ${junit('webgl-assets')}` },
+  { name: 'Chromium / Core Surfaces', timeoutMinutes: 6, command: `pnpm test:browser:core ${junit('webgl-core')}` },
+];
+
+// `VK_DRIVER_FILES` points the Vulkan loader at Mesa lavapipe, but the preflight log shows that
+// Chromium's Dawn ends up on its bundled SwiftShader fallback adapter regardless.
+const webgpuEnv = 'VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json EXOJS_WEBGPU_CI_HEADED=1';
+const firefoxEnv = 'LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe';
 
 export const LANES: readonly Lane[] = [
   { id: 'typecheck', stage: 'gates', when: 'typecheck', run: 'pnpm gates typecheck', local: 'gate' },
@@ -77,50 +134,115 @@ export const LANES: readonly Lane[] = [
     stage: 'test',
     when: 'browserWebgl2',
     run: 'pnpm test:browser:webgl && pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core',
-    ciRun: `pnpm test:browser:webgl ${junit('webgl')} && pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core`,
-    coverageRun:
-      `pnpm test:browser:webgl ${junit('webgl')} --coverage --coverage.reporter=lcov --coverage.reporter=text-summary ` +
-      '--coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0 ' +
-      '&& pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core',
+    ciRun: rows(webgl2Row(false), ...chromiumHostRows),
+    coverageRun: rows(webgl2Row(true), ...chromiumHostRows),
     browser: 'chromium',
     local: 'browser',
     junit: true,
+    timeoutMinutes: 30,
   },
   {
     id: 'webgpu',
     stage: 'test',
     when: 'browserWebgpu',
-    run: 'pnpm test:browser:webgpu --no-file-parallelism',
+    run: 'pnpm test:browser:webgpu --no-file-parallelism && pnpm test:browser:webgpu:media',
     // Local diagnostics avoid concurrent files competing for one GPU process.
-    // CI keeps its existing, independently qualified parallel configuration.
-    ciRun: 'VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json EXOJS_WEBGPU_CI_HEADED=1 ' + `xvfb-run -a pnpm test:browser:webgpu ${junit('webgpu')}`,
+    // CI keeps its existing, independently qualified parallel configuration for
+    // Core; Media is serial in its project definition. Each row gets its own
+    // virtual display so one row's X server cannot outlive it into the next.
+    ciRun: rows(
+      {
+        name: 'Chromium / WebGPU Core',
+        preflight: 'chromium-webgpu',
+        requires: ['webgpu-device'],
+        timeoutMinutes: 15,
+        env: webgpuEnv,
+        xvfb: true,
+        command: `pnpm test:browser:webgpu ${junit('webgpu')}`,
+      },
+      {
+        name: 'Chromium / WebGPU Media',
+        preflight: 'chromium-webgpu',
+        requires: ['webgpu-device', 'media-frame'],
+        timeoutMinutes: 6,
+        env: webgpuEnv,
+        xvfb: true,
+        command: `pnpm test:browser:webgpu:media ${junit('webgpu-media')}`,
+      },
+    ),
     browser: 'chromium',
     apt: ['mesa-vulkan-drivers', 'xvfb'],
     local: 'browser',
     junit: true,
+    timeoutMinutes: 30,
   },
   {
     id: 'firefox',
     stage: 'test',
     when: 'browserFirefox',
     run: 'pnpm test:browser:webgl:firefox',
-    // Firefox only exposes WebGL2 to a headed session; the WebGPU run after it
-    // is informational and never fails the lane.
-    ciRun:
-      'EXOJS_FIREFOX_CI_HEADED=1 LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe ' +
-      `xvfb-run -a pnpm test:browser:webgl:firefox ${junit('firefox')} && (pnpm test:browser:webgpu:firefox || true)`,
+    // Firefox only exposes WebGL2 to a headed session, and only WebGL2 is a
+    // blocking contract. Firefox WebGPU is informational: its adapter is probed
+    // under the same virtual display first, and a host without one reports
+    // UNSUPPORTED HOST in seconds instead of running the suite. Its results stay
+    // out of the skip budget on purpose: they describe this runner's Firefox, not
+    // the engine.
+    ciRun: rows(
+      {
+        name: 'Firefox / WebGL2 Core',
+        preflight: 'firefox-webgl2',
+        requires: ['webgl2'],
+        timeoutMinutes: 8,
+        env: `EXOJS_FIREFOX_CI_HEADED=1 ${firefoxEnv}`,
+        xvfb: true,
+        command: `pnpm test:browser:webgl:firefox ${junit('firefox')}`,
+      },
+      {
+        name: 'Firefox / WebGPU Core',
+        preflight: 'firefox-webgpu',
+        requires: ['webgpu-device'],
+        informational: true,
+        timeoutMinutes: 10,
+        env: firefoxEnv,
+        xvfb: true,
+        command: 'pnpm test:browser:webgpu:firefox',
+      },
+      {
+        name: 'Firefox / WebGPU Media',
+        preflight: 'firefox-webgpu',
+        requires: ['webgpu-device', 'media-frame'],
+        informational: true,
+        after: 'Firefox / WebGPU Core',
+        timeoutMinutes: 5,
+        env: firefoxEnv,
+        xvfb: true,
+        command: 'pnpm test:browser:webgpu:firefox:media',
+      },
+      {
+        name: 'Firefox / WebGPU Isolated Specs',
+        preflight: 'firefox-webgpu',
+        requires: ['webgpu-device'],
+        informational: true,
+        after: 'Firefox / WebGPU Core',
+        timeoutMinutes: 4,
+        env: firefoxEnv,
+        xvfb: true,
+        command: 'pnpm test:browser:webgpu:firefox:isolated',
+      },
+    ),
     browser: 'firefox',
     apt: ['xvfb'],
     local: 'browser',
     ciOnly: true,
     junit: true,
+    timeoutMinutes: 30,
   },
   {
     id: 'audio',
     stage: 'test',
     when: 'browserAudio',
     run: 'pnpm test:browser:audio',
-    ciRun: `pnpm test:browser:audio ${junit('audio')}`,
+    ciRun: rows({ name: 'Chromium / Audio Worklets', timeoutMinutes: 8, command: `pnpm test:browser:audio ${junit('audio')}` }),
     browser: 'chromium',
     local: 'browser',
     junit: true,
@@ -130,7 +252,7 @@ export const LANES: readonly Lane[] = [
     stage: 'test',
     when: 'browserTilemapWorker',
     run: 'pnpm test:browser:tilemap',
-    ciRun: `pnpm test:browser:tilemap ${junit('tilemap')}`,
+    ciRun: rows({ name: 'Chromium / Tilemap Worker', timeoutMinutes: 8, command: `pnpm test:browser:tilemap ${junit('tilemap')}` }),
     browser: 'chromium',
     local: 'browser',
     junit: true,
@@ -145,6 +267,7 @@ export const LANES: readonly Lane[] = [
     // `typecheck:packages`. The harness's unit tests need none of them and run
     // in the ordinary `test` project list.
     run: 'pnpm typecheck:bench && pnpm gate:bench:structural',
+    ciRun: `pnpm typecheck:bench && ${qualifiedRow({ name: 'Chromium / Bench Structural', timeoutMinutes: 25, command: 'pnpm gate:bench:structural' })}`,
     browser: 'chromium',
     local: 'browser',
     minimumOutput: 'normal',

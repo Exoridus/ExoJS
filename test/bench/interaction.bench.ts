@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 
 import type { QuadtreeItem } from '../../src/math/Quadtree';
 import { Quadtree } from '../../src/math/Quadtree';
@@ -67,55 +67,61 @@ const QUERIES = 100;
 const FRAMES = 100;
 
 describe('interaction', () => {
-  bench('recursive hit-test (1k nodes, 100 queries/frame × 100 frames)', () => {
-    const root = new Container();
-    for (let i = 0; i < NODES; i++) {
-      root.addChild(makeInteractiveDrawable((i % 40) * 25, Math.floor(i / 40) * 25));
-    }
-
-    for (let frame = 0; frame < FRAMES; frame++) {
-      for (let q = 0; q < QUERIES; q++) {
-        hitTestRecursive(root, (frame * 97 + q * 31) % 1000, (frame * 53 + q * 17) % 625);
+  test('recursive hit-test (1k nodes, 100 queries/frame × 100 frames)', async ({ bench }) => {
+    await bench('recursive hit-test (1k nodes, 100 queries/frame × 100 frames)', () => {
+      const root = new Container();
+      for (let i = 0; i < NODES; i++) {
+        root.addChild(makeInteractiveDrawable((i % 40) * 25, Math.floor(i / 40) * 25));
       }
-    }
 
-    root.destroy();
+      for (let frame = 0; frame < FRAMES; frame++) {
+        for (let q = 0; q < QUERIES; q++) {
+          hitTestRecursive(root, (frame * 97 + q * 31) % 1000, (frame * 53 + q * 17) % 625);
+        }
+      }
+
+      root.destroy();
+    }).run();
   });
 
-  bench('quadtree hit-test (1k nodes, index rebuilt each frame, 100 frames)', () => {
-    const root = new Container();
-    const buf: Array<QuadtreeItem<IndexedNode>> = [];
-    const worldBounds = new Rectangle(0, 0, 1000, 625);
+  test('quadtree hit-test (1k nodes, index rebuilt each frame, 100 frames)', async ({ bench }) => {
+    await bench('quadtree hit-test (1k nodes, index rebuilt each frame, 100 frames)', () => {
+      const root = new Container();
+      const buf: Array<QuadtreeItem<IndexedNode>> = [];
+      const worldBounds = new Rectangle(0, 0, 1000, 625);
 
-    for (let i = 0; i < NODES; i++) {
-      root.addChild(makeInteractiveDrawable((i % 40) * 25, Math.floor(i / 40) * 25));
-    }
-
-    for (let frame = 0; frame < FRAMES; frame++) {
-      const qt = buildIndex(root, worldBounds);
-      for (let q = 0; q < QUERIES; q++) {
-        hitTestIndexed(qt, buf, (frame * 97 + q * 31) % 1000, (frame * 53 + q * 17) % 625);
+      for (let i = 0; i < NODES; i++) {
+        root.addChild(makeInteractiveDrawable((i % 40) * 25, Math.floor(i / 40) * 25));
       }
-      qt.destroy();
-    }
 
-    root.destroy();
-    worldBounds.destroy();
+      for (let frame = 0; frame < FRAMES; frame++) {
+        const qt = buildIndex(root, worldBounds);
+        for (let q = 0; q < QUERIES; q++) {
+          hitTestIndexed(qt, buf, (frame * 97 + q * 31) % 1000, (frame * 53 + q * 17) % 625);
+        }
+        qt.destroy();
+      }
+
+      root.destroy();
+      worldBounds.destroy();
+    }).run();
   });
 
-  bench('drag-move (50 position updates × 100 frames)', () => {
-    const root = new Container();
-    const dragNode = makeInteractiveDrawable(400, 300, 64);
-    dragNode.draggable = true;
-    root.addChild(dragNode);
+  test('drag-move (50 position updates × 100 frames)', async ({ bench }) => {
+    await bench('drag-move (50 position updates × 100 frames)', () => {
+      const root = new Container();
+      const dragNode = makeInteractiveDrawable(400, 300, 64);
+      dragNode.draggable = true;
+      root.addChild(dragNode);
 
-    for (let frame = 0; frame < FRAMES; frame++) {
-      for (let m = 0; m < 50; m++) {
-        dragNode.position.x = 200 + Math.sin((frame * 50 + m) * 0.01) * 150 + 5;
-        dragNode.position.y = 150 + Math.cos((frame * 50 + m) * 0.01) * 100 + 5;
+      for (let frame = 0; frame < FRAMES; frame++) {
+        for (let m = 0; m < 50; m++) {
+          dragNode.position.x = 200 + Math.sin((frame * 50 + m) * 0.01) * 150 + 5;
+          dragNode.position.y = 150 + Math.cos((frame * 50 + m) * 0.01) * 100 + 5;
+        }
       }
-    }
 
-    root.destroy();
+      root.destroy();
+    }).run();
   });
 });

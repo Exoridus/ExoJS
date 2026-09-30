@@ -13,8 +13,8 @@
  *
  * The gate reads EVERY JUnit report under `test-results/*.junit.xml` - not
  * just the unit lane - and compares the summed skips per suite file against
- * `skipped-tests-baseline.json`. Each CI test lane (unit, browser-webgl,
- * browser-webgpu, browser-webgl-firefox, browser-audio, browser-tilemap-worker)
+ * `skipped-tests-baseline.json`. Each CI test suite (unit, webgl, webgl-build,
+ * webgl-assets, webgl-core, webgpu, webgpu-media, firefox, audio, tilemap)
  * writes its own JUnit file; a dedicated `skip-budget` CI job downloads all of
  * them into `test-results/` before running this script, so the budget is ONE
  * global number per suite file, not one per lane - a file's runtime skips in
@@ -30,6 +30,11 @@
  * than the full CI aggregate records. Undershooting therefore prints a note
  * instead of failing - tightening the budget is a judgement call about
  * whether the lower count describes every lane or just the ones that ran.
+ *
+ * Outside the contract by design: Firefox WebGPU (informational; it reports its
+ * own PASS / UNSUPPORTED HOST / FAIL through `pnpm qualify`), the bench lane,
+ * and the verify jobs, none of which run a test suite whose skips could hide a
+ * defect in the engine.
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -43,7 +48,7 @@ const DEFAULT_REPORT_DIR = 'test-results';
 const DEFAULT_REPORT_GLOB = `${DEFAULT_REPORT_DIR}/*.junit.xml`;
 
 const BASELINE_NOTE =
-  "Per-file budget of skipped tests, measured as the SUM across every CI test lane (unit + browser-webgl + browser-webgpu + browser-webgl-firefox + browser-audio + browser-tilemap-worker), aggregated from each lane's own JUnit report — one global budget, not one per lane. Skipping more than the budget fails `pnpm test:skips`, and so does any skip in a file with no budget — a conditional test (including a runtime `ctx.skip(...)`) must be a reviewed entry, not a quiet default. Skipping fewer only prints a note, because the count depends on which lanes actually ran (a local partial run, or a local `dist/` that unskips the production-stripping checks). Run `pnpm test:skips:update-baseline` against a full set of lane reports to record a change.";
+  "Per-file budget of skipped tests, measured as the SUM across every CI test lane (unit + webgl + webgl-build + webgl-assets + webgl-core + webgpu + webgpu-media + firefox + audio + tilemap), aggregated from each lane's own JUnit report — one global budget, not one per lane. Skipping more than the budget fails `pnpm test:skips`, and so does any skip in a file with no budget — a conditional test (including a runtime `ctx.skip(...)`) must be a reviewed entry, not a quiet default. Skipping fewer only prints a note, because the count depends on which lanes actually ran (a local partial run, or a local `dist/` that unskips the production-stripping checks). Run `pnpm test:skips:update-baseline` against a full set of lane reports to record a change.";
 
 interface Baseline {
   note: string;
@@ -120,6 +125,28 @@ const readSkips = (xml: string): Record<string, number> => {
   return skips;
 };
 
+/**
+ * The names of the skipped tests per suite file. A JUnit report carries no skip
+ * reason, so a file over its budget is reported with the tests that skipped:
+ * the reason (`ctx.skip(<reason>)`, a `runIf` condition) is then one search
+ * away in that test's source instead of a hunt through the lane's log.
+ */
+const readSkippedNames = (xml: string): Record<string, string[]> => {
+  const names: Record<string, string[]> = {};
+
+  for (const suite of xml.split('<testsuite ').slice(1)) {
+    const file = /\bname="([^"]*)"/.exec(suite)?.[1];
+
+    if (file === undefined) continue;
+
+    for (const [, testName] of suite.matchAll(/<testcase\s[^>]*?\bname="([^"]*)"[^>]*>\s*<skipped/g)) {
+      (names[file] ??= []).push(testName!);
+    }
+  }
+
+  return names;
+};
+
 const mergeSkips = (perFile: readonly Record<string, number>[]): Record<string, number> => {
   const merged: Record<string, number> = {};
 
@@ -156,10 +183,15 @@ const perFileSkips = paths.map(path => {
     fail(`test:skips: ${path} is not a JUnit report — refusing to read it as zero skips.`);
   }
 
-  return readSkips(xml);
+  return { skips: readSkips(xml), names: readSkippedNames(xml) };
 });
 
-const actual = mergeSkips(perFileSkips);
+const actual = mergeSkips(perFileSkips.map(report => report.skips));
+const skippedNames = perFileSkips.reduce<Record<string, string[]>>((merged, report) => {
+  for (const [file, names] of Object.entries(report.names)) (merged[file] ??= []).push(...names);
+
+  return merged;
+}, {});
 
 if (UPDATE_BASELINE) {
   writeBaseline(actual);
@@ -194,6 +226,8 @@ if (regressions.length > 0) {
     const reason = budget === 0 ? 'no recorded budget' : `budget ${budget}`;
 
     console.error(`  ${file}: ${count} skipped test(s), ${reason}.`);
+
+    for (const name of [...new Set(skippedNames[file] ?? [])].slice(0, 5)) console.error(`    skipped: ${name}`);
   }
 
   fail(

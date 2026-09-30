@@ -118,13 +118,17 @@ jobs:
           name: tooling-logs-${{ matrix.id }}
           path: .workspace/logs/
           retention-days: 1
+          include-hidden-files: true
           if-no-files-found: warn
 
   test:
     name: test (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.hasTest == 'true'
-    runs-on: ubuntu-latest
+    # Pinned: the browser lanes depend on the runner image's Mesa, Vulkan loader,
+    # Xvfb and browser libraries, so an image swap behind `ubuntu-latest` must be a
+    # deliberate change, not a Monday surprise.
+    runs-on: ubuntu-24.04
     timeout-minutes: ${{ matrix.timeoutMinutes }}
     strategy:
       fail-fast: false
@@ -138,21 +142,39 @@ jobs:
           apt: ${{ matrix.apt }}
           naga: ${{ matrix.naga }}
 
+      # A browser lane runs several qualification rows (`pnpm qualify`), each
+      # with its own JUnit report, deadline and log; the summary of which rows
+      # passed, were unsupported on this host or failed is on the job page.
       - run: ${{ matrix.run }}
 
-      - name: Keep the JUnit report for the skip budget
+      - name: Keep the JUnit reports for the skip budget
         if: ${{ matrix.junit && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: junit-${{ matrix.id }}
-          path: test-results/${{ matrix.id }}.junit.xml
+          path: test-results/*.junit.xml
           retention-days: 1
           if-no-files-found: warn
+
+      # `.workspace` and its logs are hidden paths, which the upload skips
+      # unless it is told otherwise. The supervisor writes one unique log per
+      # command there, so a transient failure stays diagnosable afterwards.
+      - name: Keep the command logs and qualification records on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tooling-logs-${{ matrix.id }}
+          path: |
+            .workspace/logs/
+            test-results/qualification/
+          retention-days: 3
+          include-hidden-files: true
+          if-no-files-found: ignore
 
       - if: ${{ matrix.junit && !cancelled() }}
         uses: codecov/test-results-action@v1
         with:
-          files: ./test-results/${{ matrix.id }}.junit.xml
+          directory: ./test-results
           flags: ${{ matrix.id }}
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -261,6 +283,7 @@ jobs:
           name: tooling-logs-site
           path: .workspace/logs/
           retention-days: 1
+          include-hidden-files: true
           if-no-files-found: warn
 
       # Deploy Pages ships exactly this artifact; it builds nothing itself.
@@ -303,6 +326,7 @@ jobs:
             .workspace/reports/example-smoke.md
             .workspace/reports/example-smoke-artifacts
           retention-days: 7
+          include-hidden-files: true
           if-no-files-found: ignore
 
   # The one required status check. Fails on any job the plan asked for that

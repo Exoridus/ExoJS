@@ -11,7 +11,7 @@ import { join } from 'node:path';
 /** Outputs of a test, benchmark or release run. Deleting one loses nothing a rerun cannot produce. */
 export const RUN_ARTIFACTS: readonly string[] = [
   'test-results',
-  '.vitest-attachments',
+  '.vitest',
   'coverage',
   '.release',
   'test/perf/results',

@@ -2,7 +2,7 @@
  * WebGPU custom-MeshMaterial browser test - opt-in, capability-aware.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe), so this test drives a
+ * against SwiftShader), so this test drives a
  * custom {@link MeshMaterial} (user uniform + user texture) through the real
  * {@link WebGpuMeshRenderer} and asserts the migrated WGSL custom path (group
  * 0 mesh-uniforms, group 1 mesh texture, group 2 user UBO + texture) issues a
@@ -182,7 +182,7 @@ describe('custom MeshMaterial WebGPU browser', () => {
       backend.flush();
       validationError = await device.popErrorScope();
     } catch (error) {
-      // The software (swiftshader) adapter used in CI can drop the device
+      // The software (SwiftShader) adapter used in CI can drop the device
       // mid-test ("Instance dropped in popErrorScope"); treat that as an
       // unavailable-adapter skip rather than a failure.
       if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {

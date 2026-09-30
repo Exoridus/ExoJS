@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { stopProcessTree } from '../../scripts/lib/process-tree.ts';
 import { runCommand } from '../../scripts/lib/run-command.ts';
 
 // Git hooks export GIT_DIR and related variables. Inherited by the fixture's git
@@ -95,6 +96,27 @@ for (const mode of ['sleep', 'stubborn', 'tree', 'detached-tree']) {
     assert.equal(isRunning(pid), false, `owned child ${pid} survived`);
   });
 }
+
+void test('stops a running root even when the recorded spawn window misses the kernel creation time', async () => {
+  // Windows stamps a process with a kernel time whose tick is coarser than Date.now() on a busy runner,
+  // so the spawn window Node records can end before the creation time the OS reports. A root that Node
+  // still holds a handle to cannot have had its PID reused, so that miss must not stop the cleanup.
+  const cwd = directory();
+  const pidFile = join(cwd, 'pid');
+  const child = spawn(process.execPath, [...process.execArgv, fixture, 'stubborn', pidFile], { stdio: 'ignore', cwd });
+  const now = Date.now();
+
+  try {
+    const grandchildless = await waitForFile(pidFile);
+    assert.equal(grandchildless, child.pid);
+    const problem = await stopProcessTree(child, 100, { earliest: now - 60_000, latest: now - 30_000 });
+    assert.equal(problem, undefined);
+    for (let i = 0; i < 100 && isRunning(child.pid!); i++) await delay(20);
+    assert.equal(isRunning(child.pid!), false, `root ${child.pid} survived`);
+  } finally {
+    if (child.exitCode === null) child.kill('SIGKILL');
+  }
+});
 
 void test('times out orphan without leaving its child running', async t => {
   const cwd = directory();
@@ -192,7 +214,7 @@ test.after(() => {
 void test('the shared lane budget is finite and preserves the longer bench timeout', async () => {
   const { LANES, laneTimeoutMinutes } = await import('../../scripts/ci/lanes.ts');
   assert.equal(typeof laneTimeoutMinutes, 'function');
-  assert.equal(laneTimeoutMinutes(LANES.find(lane => lane.id === 'webgpu')!), 20);
+  assert.equal(laneTimeoutMinutes(LANES.find(lane => lane.id === 'webgpu')!), 30);
   assert.equal(laneTimeoutMinutes(LANES.find(lane => lane.id === 'bench')!), 30);
 });
 
@@ -300,7 +322,7 @@ void test('CLI executes only the requested lane, passes its budget, and labels t
     .trim()
     .split('\n')
     .map(line => JSON.parse(line) as string[]);
-  assert.deepEqual(calls, [['test:browser:webgpu', '--no-file-parallelism']]);
+  assert.deepEqual(calls, [['test:browser:webgpu', '--no-file-parallelism'], ['test:browser:webgpu:media']]);
   const logs = join(cwd, '.workspace/logs');
   const summary = JSON.parse(
     readFileSync(
@@ -313,7 +335,7 @@ void test('CLI executes only the requested lane, passes its budget, and labels t
   ) as { completed: boolean; diagnostic: boolean; results: Array<{ result: { logPath: string } }> };
   assert.equal(summary.completed, true);
   assert.equal(summary.diagnostic, true);
-  assert.match(readFileSync(summary.results[0]!.result.logPath, 'utf8'), /timeoutMs=1200000/);
+  assert.match(readFileSync(summary.results[0]!.result.logPath, 'utf8'), /timeoutMs=1800000/);
   assert.throws(() => readFileSync(join(cwd, '.git/exojs-validation.lock')));
 });
 
@@ -383,7 +405,10 @@ void test('all existing stage selections, coverage mode and JUnit names remain a
     plan.test.map(lane => lane.id),
     ['unit', 'webgl', 'webgpu', 'firefox', 'bench'],
   );
-  assert.match(plan.test.find(lane => lane.id === 'unit')!.run, /node --test test\/ci\/validation.node.ts && EXOJS_REQUIRE_NAGA=1 pnpm test:coverage/);
+  assert.match(
+    plan.test.find(lane => lane.id === 'unit')!.run,
+    /node --test test\/ci\/validation.node.ts test\/ci\/qualify.node.ts && EXOJS_REQUIRE_NAGA=1 pnpm test:coverage/,
+  );
   assert.match(plan.test.find(lane => lane.id === 'webgpu')!.run, /test-results\/webgpu.junit.xml/);
   assert.ok(LANES.find(lane => lane.id === 'unit')!.run.endsWith('pnpm test && pnpm test:alloc && pnpm test:physics-perf'));
 });

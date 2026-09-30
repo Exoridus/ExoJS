@@ -32,7 +32,7 @@
  *    covered below.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); tests only skip when the software adapter drops the
+ * against SwiftShader); tests only skip when the software adapter drops the
  * device mid-test. Run via: pnpm test:browser:webgpu
  */
 
@@ -191,16 +191,14 @@ ${log}`,
 
   // ── Best-effort adapter-identity diagnostic ─────────────────────────────
   //
-  // Closes (partially) an open uncertainty about the lavapipe CI wiring: does
-  // `VK_DRIVER_FILES` actually reach the Playwright-launched Chromium child
-  // process, or does Chromium silently fall back to its bundled SwiftShader
-  // software adapter? `GPUAdapter.info` (and the deprecated async
-  // `requestAdapterInfo()` it replaced) are the only APIs that could answer
-  // this from inside a test, but support/content is inconsistent across
-  // Chromium versions and can be intentionally opaque for fingerprinting
-  // reasons - so this is diagnostic logging only, not a hard pass/fail gate.
-  // A human should read this log line in the CI run to confirm the adapter
-  // description does not say "SwiftShader".
+  // Records which adapter served the run. `GPUAdapter.info` (and the deprecated
+  // async `requestAdapterInfo()` it replaced) are the only APIs that can answer
+  // this from inside a test, but support and content differ across Chromium
+  // versions and can be intentionally opaque for fingerprinting reasons - so this
+  // is diagnostic logging only, not a pass/fail gate. The qualification preflight
+  // (`pnpm qualify`) logs the same identity before the suite: on the CI runner
+  // it is Chromium's bundled SwiftShader fallback adapter, whatever
+  // `VK_DRIVER_FILES` points at.
   test('logs the requested adapter identity (informational, non-blocking)', async () => {
     const adapter = await navigator.gpu.requestAdapter();
     const info = (adapter as GPUAdapter & { info?: GPUAdapterInfo }).info;

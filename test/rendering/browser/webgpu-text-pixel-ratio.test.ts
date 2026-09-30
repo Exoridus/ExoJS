@@ -13,7 +13,7 @@
  *    raster density - and each has its own packer.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); a run only skips when the software adapter drops the
+ * against SwiftShader); a run only skips when the software adapter drops the
  * device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu

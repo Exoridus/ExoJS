@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { LANES } from '../../scripts/ci/lanes.ts';
+import { LANES, laneTimeoutMinutes } from '../../scripts/ci/lanes.ts';
 import { effectiveLanes } from '../../scripts/ci/select-lanes.ts';
 
 /**
@@ -61,6 +61,44 @@ describe('lane table', () => {
         for (const script of named) {
           expect(Object.keys(packageScripts.scripts), `${lane.id} runs \`pnpm ${script}\``).toContain(script);
         }
+      }
+    }
+  });
+
+  it('runs every browser suite on CI as a supervised qualification row with an outer deadline', () => {
+    const browserLanes = LANES.filter(lane => lane.local === 'browser');
+
+    for (const lane of browserLanes) {
+      for (const command of [lane.ciRun, lane.coverageRun].filter((value): value is string => value !== undefined)) {
+        const segments = command
+          .split(' && ')
+          .filter(segment => /\bpnpm (test:browser|gate:bench)/.test(segment.replace(/^.*?-- /, '')) || segment.includes('pnpm qualify'));
+
+        expect(segments.length, `${lane.id} has no qualification row`).toBeGreaterThan(0);
+        for (const segment of segments) {
+          expect(segment, `${lane.id}: ${segment}`).toMatch(/pnpm qualify --row "[^"]+"/);
+          expect(segment, `${lane.id} needs a deadline`).toMatch(/--timeout \d+/);
+        }
+      }
+    }
+  });
+
+  it('keeps a lane deadline above the sum of its rows, so the row deadline is the one that fires', () => {
+    for (const lane of LANES.filter(candidate => candidate.ciRun?.includes('pnpm qualify'))) {
+      const minutes = [...(lane.ciRun ?? '').matchAll(/--timeout (\d+)/g)].map(match => Number(match[1]));
+      const total = minutes.reduce((sum, value) => sum + value, 0);
+
+      expect(laneTimeoutMinutes(lane), `${lane.id}: rows total ${total} min`).toBeGreaterThan(total);
+    }
+  });
+
+  it('gives an informational row no way to fail the job and a blocking row no way to hide', () => {
+    for (const lane of LANES) {
+      for (const segment of (lane.ciRun ?? '').split(' && ').filter(part => part.includes('pnpm qualify'))) {
+        const informational = segment.includes('--policy informational');
+        const name = /--row "([^"]+)"/.exec(segment)?.[1] ?? '';
+
+        expect(informational, `${lane.id} / ${name}`).toBe(name.includes('Firefox / WebGPU'));
       }
     }
   });

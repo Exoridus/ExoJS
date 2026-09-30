@@ -14,7 +14,7 @@
  *    canvas (a standard cross-context read) and sampled.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); `renderClipped` only skips when the software adapter
+ * against SwiftShader); `renderClipped` only skips when the software adapter
  * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -191,7 +191,7 @@ const setupBackend = async (logicalSize = canvasSize): Promise<WebGpuBackend> =>
   return backend;
 };
 
-// On the software (swiftshader) adapter used in CI the WebGPU device can be
+// On the software (SwiftShader) adapter used in CI the WebGPU device can be
 // dropped mid-test ("Instance dropped in popErrorScope"). Treat that as a
 // device-lost skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');

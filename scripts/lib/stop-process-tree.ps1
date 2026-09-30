@@ -26,14 +26,21 @@ function Test-ProcessAlive {
     try { return -not $process.HasExited } catch { return $true }
 }
 
-$earliest = [DateTimeOffset]::FromUnixTimeMilliseconds($EarliestMilliseconds).UtcDateTime
-$latest = [DateTimeOffset]::FromUnixTimeMilliseconds($LatestMilliseconds + 1).UtcDateTime
+# Node's Date.now() and the kernel's process creation time tick independently, each as coarsely as the
+# system timer (15.6 ms by default), so a creation time can land a few ticks outside the interval Node
+# recorded around spawn. The bound absorbs that; it is not a scheduling allowance.
+$clockToleranceMilliseconds = 50
+$earliest = [DateTimeOffset]::FromUnixTimeMilliseconds($EarliestMilliseconds - $clockToleranceMilliseconds).UtcDateTime
+$latest = [DateTimeOffset]::FromUnixTimeMilliseconds($LatestMilliseconds + $clockToleranceMilliseconds).UtcDateTime
 $rows = @(Get-CimInstance Win32_Process | Where-Object { $null -ne $_.CreationDate -and $_.CreationDate.ToUniversalTime() -ge $earliest })
 $root = @($rows | Where-Object { $_.ProcessId -eq $RootProcessId })
-# The root must have been created inside the recorded synchronous spawn interval.
-# A later process reusing its PID is not ours, even though its name might match.
-if ($root.Count -gt 0 -and $root[0].CreationDate.ToUniversalTime() -gt $latest) {
-    throw "Root PID $RootProcessId was reused; refusing to terminate it."
+# Windows keeps a PID reserved for as long as any handle to the process is open, and Node holds one
+# until it has reported the exit. A root that has not exited yet (ExitedAtMilliseconds = 0) therefore
+# still owns its PID whatever its creation time says. Only after the exit can a later process have
+# taken the PID over, and then it must have been created inside the recorded spawn interval to be ours.
+if ($ExitedAtMilliseconds -ne 0 -and $root.Count -gt 0 -and $root[0].CreationDate.ToUniversalTime() -gt $latest) {
+    $overshoot = [int]($root[0].CreationDate.ToUniversalTime() - $latest).TotalMilliseconds
+    throw "Root PID $RootProcessId was reused ($overshoot ms after the spawn interval); refusing to terminate it."
 }
 if ($root.Count -eq 0 -and $ExitedAtMilliseconds -eq 0) {
     throw "Root identity no longer observable; refusing an unqualified process-tree sweep."

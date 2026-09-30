@@ -44,7 +44,7 @@ const stagingDir = resolve(releaseDir, 'artifacts');
 const siteDistDir = resolve(repoRoot, 'site', 'dist');
 const manifestPath = resolve(stagingDir, 'release-manifest.json');
 
-const runner = createExecRunner({ echo: true });
+const runner = createExecRunner({ echo: true, logDirectory: resolve(repoRoot, '.workspace/logs') });
 const argv = process.argv.slice(2);
 const has = (flag: string): boolean => argv.includes(flag);
 
