@@ -12,7 +12,7 @@
     "@codexo/exojs-audio-fx": "latest"
   },
   "devDependencies": {
-    "typescript": "^5.8.0",
+    "typescript": "^7.0.2",
     "vite": "^6.0.0"
   }
 }

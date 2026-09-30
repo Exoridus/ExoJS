@@ -3,6 +3,7 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { runNativeTsc } from './lib/typescript-cli.ts';
 // The package's public entry, by path: 'create-exo-app' is not a root
 // dependency, and this script is a root script.
 import { TEMPLATES as SCAFFOLDER_TEMPLATES } from '../packages/create-exo-app/src/scaffold.js';
@@ -231,12 +232,13 @@ check(
 // a templates-only change, which routes to this script's lane and not to that
 // one.
 console.log('\n8. Template sources type-check against the workspace engine');
-try {
-  execSync('npx tsc --noEmit -p tsconfig.templates.json', { cwd: rootDir, stdio: 'pipe', encoding: 'utf-8' });
-  ok('tsc --noEmit -p tsconfig.templates.json');
-} catch (err) {
-  const output = err !== null && typeof err === 'object' && 'stdout' in err ? String((err as { stdout?: unknown }).stdout ?? '') : '';
-  fail(`template type-check failed:\n${output.trim() || String(err)}`);
+{
+  const result = runNativeTsc(['--noEmit', '-p', 'tsconfig.templates.json'], { cwd: rootDir, stdio: 'pipe' });
+  if (result.status === 0) {
+    ok('tsc --noEmit -p tsconfig.templates.json');
+  } else {
+    fail(`template type-check failed:\n${result.output.trim() || `tsc exit ${result.status}`}`);
+  }
 }
 
 // Summary

@@ -23,8 +23,8 @@
     "templates/"
   ],
   "scripts": {
-    "build": "tsc && node --input-type=module --eval \"import{readFileSync,writeFileSync}from'node:fs';const f='dist/index.js';writeFileSync(f,'#!/usr/bin/env node\\n'+readFileSync(f,'utf-8'));\"",
-    "dev": "tsc --watch",
+    "build": "tsx ../../scripts/tsc7.ts && node --input-type=module --eval \"import{readFileSync,writeFileSync}from'node:fs';const f='dist/index.js';writeFileSync(f,'#!/usr/bin/env node\\n'+readFileSync(f,'utf-8'));\"",
+    "dev": "tsx ../../scripts/tsc7.ts --watch",
     "prepack": "pnpm build",
     "start": "tsx src/index.ts"
   },
