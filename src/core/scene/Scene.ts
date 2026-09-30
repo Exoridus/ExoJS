@@ -65,13 +65,6 @@ import type { ApplicationLike, ApplicationOf } from './sceneTypes';
  * hooks, {@link Scene.unload}, and {@link Scene.destroy}.
  * @stable
  */
-/**
- * Key for {@link Scene}'s activation-data brand. Deliberately not exported: it is
- * an implementation detail of the declaration surface, and a consumer that could
- * name it would be able to fabricate a matching key.
- */
-declare const sceneDataBrand: unique symbol;
-
 export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
    * Type-only brand that keeps `Data` in the class's *emitted* type, so
@@ -576,3 +569,14 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
     return this._scope;
   }
 }
+
+/**
+ * Key for {@link Scene}'s activation-data brand. Deliberately not exported: it is
+ * an implementation detail of the declaration surface, and a consumer able to
+ * name it could fabricate a matching key.
+ *
+ * Declared after the class so that the brand's own documentation cannot take the
+ * place of the class documentation immediately above the declaration - the
+ * generated API reference reads that comment, not this one.
+ */
+declare const sceneDataBrand: unique symbol;

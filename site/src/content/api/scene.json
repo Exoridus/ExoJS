@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 32,
+  "memberCount": 33,
   "counts": {
     "constructors": 1,
     "methods": 12,
-    "properties": 15,
+    "properties": 16,
     "events": 4
   },
   "sections": [
@@ -678,6 +678,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "[sceneDataBrand]",
+          "signature": "[sceneDataBrand]?: Data",
+          "signatureTokens": [
+            {
+              "text": "[sceneDataBrand]",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Data",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-only brand that keeps Data in the class's *emitted* type, so SceneConstructor inference can recover a scene's activation data from typeof Subclass and Application.start keeps its conditional arity. declared - erased at runtime, never assigned, and not part of authored code or autocomplete. The member is protected under a non-exported unique symbol rather than private for a reason that is invisible in the source and decisive in the emit: declaration output drops the declared type of a private member (private readonly _sceneData?; with no : Data), which removes Data from the shipped class shape. InferSceneData<typeof AnyScene> then collapses to never for every consumer, so correct code such as app.start(BareScene) is rejected against the published .d.ts while the source still compiles. A protected member keeps its type through the emit, and the symbol key keeps the brand invisible to subclasses and to autocomplete alike."
+        },
         {
           "name": "animations",
           "signature": "animations: SceneAnimations",
