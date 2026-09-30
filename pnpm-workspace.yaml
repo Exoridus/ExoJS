@@ -39,8 +39,10 @@ allowBuilds:
 # `--frozen-lockfile` installs of already-pinned versions are unaffected.
 minimumReleaseAge: 4320
 
-# Vitest 5.0.2 builds its jsdom Blob shim against jsdom 29 internals: under jsdom 30
-# `URL.createObjectURL(blob)` reads an implementation object that no longer exists.
+# Vitest's jsdom Blob shim (5.0.2) finds the implementation object through the
+# wrapper's own symbol properties, which jsdom 30 no longer exposes there:
+# `URL.createObjectURL(new Blob([...]))` throws "Cannot read properties of undefined
+# (reading '_bytes')". Reproduced with vitest 5.0.2 and jsdom 30.1.1, the newest of both.
 # Without this pin a workspace package that does not depend on jsdom itself gets
 # jsdom 30 through the optional peer and a second Vitest instance with it.
 overrides:
