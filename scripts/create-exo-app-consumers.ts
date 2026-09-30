@@ -170,8 +170,11 @@ export const verifyRealConsumers = (options: {
       }
       writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
-      const install = run('pnpm', ['install', '--ignore-scripts', '--reporter=silent'], workspace);
-      if (install.code !== 0) throw new Error(`install failed:\n${tail(install.out, 6)}`);
+      // `--reporter=append-only` rather than `silent`: a silent reporter also
+      // suppresses the error output, so a failing install would report nothing
+      // but a non-zero exit. The progress lines are noise, the diagnosis is not.
+      const install = run('pnpm', ['install', '--ignore-scripts', '--reporter=append-only'], workspace);
+      if (install.code !== 0) throw new Error(`install failed:\n${tail(install.out, 12)}`);
 
       const versionOf = (pkg: string): string => {
         const manifestFile = join(dir, 'node_modules', pkg, 'package.json');
