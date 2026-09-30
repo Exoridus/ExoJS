@@ -296,6 +296,13 @@ export const LANES: readonly Lane[] = [
     stage: 'verify',
     when: 'createExoAppVerify',
     run: 'pnpm verify:create-exo-app',
+    // The real-consumer step packs the built engine packages and installs them
+    // into each generated project, so this lane needs the dist trees. They come
+    // from the authoritative build job rather than from a build hidden inside the
+    // verifier - otherwise a scaffolder change would build the engine twice and
+    // a published consumer would be judged against a different tree than the one
+    // the release lane ships.
+    dist: true,
   },
 ];
 
@@ -399,7 +406,10 @@ export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan 
     gates: stage('gates'),
     test: stage('test'),
     verify: stage('verify'),
-    build: areas.engine || site,
+    // The scaffolder's real-consumer step resolves the built engine packages, so
+    // a create-exo-app change needs the dist trees even when no engine file
+    // changed.
+    build: areas.engine || areas.createExoApp || site,
     site,
     smoke: areas.exampleCatalog,
     smokeSample: isPullRequest,

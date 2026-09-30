@@ -1,8 +1,9 @@
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { verifyRealConsumers } from './create-exo-app-consumers.ts';
 import { runNativeTsc } from './lib/typescript-cli.ts';
 // The package's public entry, by path: 'create-exo-app' is not a root
 // dependency, and this script is a root script.
@@ -94,6 +95,13 @@ const check = (condition: boolean, okMsg: string, failMsg: string): void => {
     fail(failMsg);
   }
 };
+
+/** Indents a multi-line diagnostic so it stays under its own check line. */
+const indent = (text: string): string =>
+  text
+    .split('\n')
+    .map(line => `      ${line}`)
+    .join('\n');
 
 console.log('\n=== verify:create-exo-app ===\n');
 
@@ -239,6 +247,42 @@ console.log('\n8. Template sources type-check against the workspace engine');
   } else {
     fail(`template type-check failed:\n${result.output.trim() || `tsc exit ${result.status}`}`);
   }
+}
+
+// 9. The generated projects really install and build
+//
+// Step 8 compiles the template sources against the engine's *sources*. A user
+// installs a package and resolves its *declarations*, so a template can pass step 8
+// and still not build. That is not hypothetical: a scene's activation-data
+// inference was correct in the source and broken in the emitted declarations, and
+// only a consumer compiling against the packed package saw it.
+//
+// This step therefore packs the engine packages, scaffolds every template against
+// them and runs `tsc` and `vite build` separately per project. Both results are
+// recorded even when one fails - the two contracts break for unrelated reasons,
+// and a type error that stopped the chain would hide the bundler result.
+//
+// Requires the built `dist` trees. The lane that runs this script gets them as a
+// build artifact; locally, `pnpm build` and `pnpm build:packages` first.
+console.log('\n9. Generated projects install and build against the packed engine');
+{
+  const outcomes = verifyRealConsumers({
+    repoRoot: rootDir,
+    workspace: join(rootDir, '.workspace', 'tmp', 'create-exo-app-consumers'),
+    templates: TEMPLATES,
+    runScaffold: (template, destination) => {
+      execFileSync(process.execPath, ['--import', 'tsx/esm', cliSrc, destination, '--template', template, '--force'], {
+        stdio: 'pipe',
+        env: { ...process.env, FORCE_COLOR: '0' },
+      });
+    },
+    report: ({ template, typecheck, bundle, viteVersion, typescriptVersion }) => {
+      const label = `${template} (vite ${viteVersion}, typescript ${typescriptVersion})`;
+      check(typecheck.ok, `${label}: tsc`, `${label}: tsc failed\n${indent(typecheck.detail)}`);
+      check(bundle.ok, `${label}: vite build`, `${label}: vite build failed\n${indent(bundle.detail)}`);
+    },
+  });
+  ok(`${outcomes.length} generated project(s) checked against the packed engine`);
 }
 
 // Summary

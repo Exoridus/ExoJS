@@ -90,6 +90,15 @@ describe('plan for a push with a resolved diff', () => {
     expect(plan).toMatchObject({ site: false, smoke: false });
   });
 
+  it('builds the engine for a scaffolder change, whose verify lane installs the built packages', () => {
+    // The real-consumer step of `verify:create-exo-app` packs the built engine
+    // packages and installs them into each generated project, so the build
+    // artifact has to exist even though no engine source changed.
+    const plan = push(['packages/create-exo-app/templates/minimal/package.json']);
+    expect(ids(plan.verify)).toContain('create-exo-app');
+    expect(plan.build).toBe(true);
+  });
+
   it('runs only the gates for a docs-only change', () => {
     const plan = push(['CONTRIBUTING.md']);
     expect(ids(plan.gates)).toEqual(['typecheck', 'lint', 'sync']);
