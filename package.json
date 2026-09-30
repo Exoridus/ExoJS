@@ -162,6 +162,7 @@
     "verify:quick": "pnpm gates all",
     "verify:exports": "tsx ./scripts/verify-exports.ts",
     "verify:declaration-imports": "tsx ./scripts/verify-declaration-imports.ts",
+    "verify:declaration-semantics": "tsx ./scripts/verify-declaration-semantics.ts",
     "verify:package-policy": "tsx ./scripts/verify-package-policy.ts",
     "verify:package": "pnpm build && pnpm verify:exports && pnpm verify:declaration-imports && pnpm pack",
     "verify:publish": "tsx ./scripts/verify-publish.ts",

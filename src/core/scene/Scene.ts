@@ -65,14 +65,32 @@ import type { ApplicationLike, ApplicationOf } from './sceneTypes';
  * hooks, {@link Scene.unload}, and {@link Scene.destroy}.
  * @stable
  */
+/**
+ * Key for {@link Scene}'s activation-data brand. Deliberately not exported: it is
+ * an implementation detail of the declaration surface, and a consumer that could
+ * name it would be able to fabricate a matching key.
+ */
+declare const sceneDataBrand: unique symbol;
+
 export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
-   * Type-only marker that keeps `Data` in the class's structural type so it
-   * survives inference through a zero-argument constructor (used by scene
-   * navigation typing). `declare`d - erased at runtime, never assigned, and
-   * not part of authored code or autocomplete.
+   * Type-only brand that keeps `Data` in the class's *emitted* type, so
+   * {@link SceneConstructor} inference can recover a scene's activation data
+   * from `typeof Subclass` and `Application.start` keeps its conditional arity.
+   * `declare`d - erased at runtime, never assigned, and not part of authored
+   * code or autocomplete.
+   *
+   * The member is `protected` under a non-exported `unique symbol` rather than
+   * `private` for a reason that is invisible in the source and decisive in the
+   * emit: declaration output drops the declared type of a `private` member
+   * (`private readonly _sceneData?;` with no `: Data`), which removes `Data` from
+   * the shipped class shape. `InferSceneData<typeof AnyScene>` then collapses to
+   * `never` for every consumer, so correct code such as `app.start(BareScene)`
+   * is rejected against the published `.d.ts` while the source still compiles.
+   * A `protected` member keeps its type through the emit, and the symbol key
+   * keeps the brand invisible to subclasses and to autocomplete alike.
    */
-  declare private readonly _sceneData?: Data;
+  declare protected readonly [sceneDataBrand]?: Data;
 
   protected _app: ApplicationOf<AppLike> | null = null;
   protected readonly _root = new Container();

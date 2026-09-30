@@ -280,7 +280,7 @@ export const LANES: readonly Lane[] = [
     id: 'package',
     stage: 'verify',
     when: 'packageVerify',
-    run: 'pnpm size && pnpm size:summary && pnpm verify:exports && pnpm verify:declaration-imports && pnpm verify:lockstep && pnpm verify:release-matrix && pnpm verify:publish',
+    run: 'pnpm size && pnpm size:summary && pnpm verify:exports && pnpm verify:declaration-imports && pnpm verify:declaration-semantics && pnpm verify:lockstep && pnpm verify:release-matrix && pnpm verify:publish',
     dist: true,
   },
   {
