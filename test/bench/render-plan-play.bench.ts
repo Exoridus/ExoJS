@@ -14,6 +14,7 @@ import { RenderBackendType } from '../../src/rendering/RenderBackendType';
 import { createRenderStats } from '../../src/rendering/RenderStats';
 import { RenderTarget } from '../../src/rendering/RenderTarget';
 import type { View } from '../../src/rendering/View';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const NODE_COUNT = 4096;
 const PLAY_COUNT = 240;
@@ -133,7 +134,7 @@ const prepare = (oneMaterial: boolean): { plan: ReturnType<RenderPlanBuilder['bu
 const oneMaterial = prepare(true);
 const manyMaterial = prepare(false);
 
-describe('render-plan-play', () => {
+describe('render-plan-play', { timeout: benchTimeoutMs }, () => {
   // Pure playback of a single coalesced render group (best case for batching).
   // A regression that reintroduces unconditional per-draw slot allocation
   // (`Object.freeze` + map insert) in RenderPlanPlayer shows up here first.
@@ -142,7 +143,7 @@ describe('render-plan-play', () => {
       for (let i = 0; i < PLAY_COUNT; i++) {
         RenderPlanPlayer.play(oneMaterial.plan, oneMaterial.backend);
       }
-    }).run();
+    }).run(benchRunOptions);
   });
 
   // Playback dominated by per-group upload boundaries (4096 singleton groups).
@@ -151,6 +152,6 @@ describe('render-plan-play', () => {
       for (let i = 0; i < PLAY_COUNT; i++) {
         RenderPlanPlayer.play(manyMaterial.plan, manyMaterial.backend);
       }
-    }).run();
+    }).run(benchRunOptions);
   });
 });

@@ -2,6 +2,7 @@ import { describe, test } from 'vitest';
 
 import { Container } from '../../src/rendering/Container';
 import { Drawable } from '../../src/rendering/Drawable';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const makeDrawable = (x = 0, y = 0, size = 16): Drawable => {
   const d = new Drawable();
@@ -10,7 +11,7 @@ const makeDrawable = (x = 0, y = 0, size = 16): Drawable => {
   return d;
 };
 
-describe('scene-graph', () => {
+describe('scene-graph', { timeout: benchTimeoutMs }, () => {
   test('deep-tree transform invalidation (11k nodes)', async ({ bench }) => {
     await bench('deep-tree transform invalidation (11k nodes)', () => {
       const root = new Container();
@@ -36,7 +37,7 @@ describe('scene-graph', () => {
       }
 
       root.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('bounds cache reads (1k nodes, 100 getBounds calls)', async ({ bench }) => {
@@ -58,7 +59,7 @@ describe('scene-graph', () => {
       }
 
       root.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('addChild/removeChild churn (1k nodes, 50 swaps/frame × 100 frames)', async ({ bench }) => {
@@ -88,7 +89,7 @@ describe('scene-graph', () => {
 
       parentA.destroy();
       parentB.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('zIndex-churn (1k children)', async ({ bench }) => {
@@ -106,6 +107,6 @@ describe('scene-graph', () => {
       }
 
       root.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 });

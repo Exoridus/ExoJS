@@ -6,6 +6,7 @@ import { Rectangle } from '../../src/math/Rectangle';
 import { Container } from '../../src/rendering/Container';
 import { Drawable } from '../../src/rendering/Drawable';
 import type { RenderNode } from '../../src/rendering/RenderNode';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const makeInteractiveDrawable = (x: number, y: number, size = 32): Drawable => {
   const d = new Drawable();
@@ -66,7 +67,7 @@ const NODES = 1000;
 const QUERIES = 100;
 const FRAMES = 100;
 
-describe('interaction', () => {
+describe('interaction', { timeout: benchTimeoutMs }, () => {
   test('recursive hit-test (1k nodes, 100 queries/frame × 100 frames)', async ({ bench }) => {
     await bench('recursive hit-test (1k nodes, 100 queries/frame × 100 frames)', () => {
       const root = new Container();
@@ -81,7 +82,7 @@ describe('interaction', () => {
       }
 
       root.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('quadtree hit-test (1k nodes, index rebuilt each frame, 100 frames)', async ({ bench }) => {
@@ -104,7 +105,7 @@ describe('interaction', () => {
 
       root.destroy();
       worldBounds.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('drag-move (50 position updates × 100 frames)', async ({ bench }) => {
@@ -122,6 +123,6 @@ describe('interaction', () => {
       }
 
       root.destroy();
-    }).run();
+    }).run(benchRunOptions);
   });
 });

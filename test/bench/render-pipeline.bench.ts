@@ -3,6 +3,7 @@ import { describe, test } from 'vitest';
 import type { RenderingContext } from '../../src/rendering/RenderingContext';
 import { RenderPass, type RenderPassOptions } from '../../src/rendering/RenderPass';
 import { RenderPipeline } from '../../src/rendering/RenderPipeline';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 // Pure orchestration overhead: a no-op pass isolates the per-frame loop cost
 // (enabled check, reentrancy guard, try/finally) from any GPU work. The claim
@@ -24,7 +25,7 @@ class NoopPass extends RenderPass {
 
 const PASS_COUNT = 20;
 
-describe('RenderPipeline orchestration overhead', () => {
+describe('RenderPipeline orchestration overhead', { timeout: benchTimeoutMs }, () => {
   const passes = Array.from({ length: PASS_COUNT }, () => new NoopPass());
   const pipeline = new RenderPipeline();
   for (const pass of passes) {
@@ -37,7 +38,7 @@ describe('RenderPipeline orchestration overhead', () => {
   test('pipeline.execute (20 passes)', async ({ bench }) => {
     await bench('pipeline.execute (20 passes)', () => {
       pipeline.execute(context);
-    }).run();
+    }).run(benchRunOptions);
   });
 
   test('imperative loop baseline (20 passes)', async ({ bench }) => {
@@ -47,6 +48,6 @@ describe('RenderPipeline orchestration overhead', () => {
           pass.execute(context);
         }
       }
-    }).run();
+    }).run(benchRunOptions);
   });
 });
