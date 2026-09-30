@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { stopProcessTree } from '../../scripts/lib/process-tree.ts';
 import { runCommand } from '../../scripts/lib/run-command.ts';
 
 // Git hooks export GIT_DIR and related variables. Inherited by the fixture's git
@@ -95,6 +96,27 @@ for (const mode of ['sleep', 'stubborn', 'tree', 'detached-tree']) {
     assert.equal(isRunning(pid), false, `owned child ${pid} survived`);
   });
 }
+
+void test('stops a running root even when the recorded spawn window misses the kernel creation time', async () => {
+  // Windows stamps a process with a kernel time whose tick is coarser than Date.now() on a busy runner,
+  // so the spawn window Node records can end before the creation time the OS reports. A root that Node
+  // still holds a handle to cannot have had its PID reused, so that miss must not stop the cleanup.
+  const cwd = directory();
+  const pidFile = join(cwd, 'pid');
+  const child = spawn(process.execPath, [...process.execArgv, fixture, 'stubborn', pidFile], { stdio: 'ignore', cwd });
+  const now = Date.now();
+
+  try {
+    const grandchildless = await waitForFile(pidFile);
+    assert.equal(grandchildless, child.pid);
+    const problem = await stopProcessTree(child, 100, { earliest: now - 60_000, latest: now - 30_000 });
+    assert.equal(problem, undefined);
+    for (let i = 0; i < 100 && isRunning(child.pid!); i++) await delay(20);
+    assert.equal(isRunning(child.pid!), false, `root ${child.pid} survived`);
+  } finally {
+    if (child.exitCode === null) child.kill('SIGKILL');
+  }
+});
 
 void test('times out orphan without leaving its child running', async t => {
   const cwd = directory();
