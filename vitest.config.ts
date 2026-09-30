@@ -687,6 +687,41 @@ export default defineConfig({
         },
       },
 
+      // ── browser-webgpu-firefox-stock - the Core specs on an unmodified Firefox ─
+      // Local and opt-in: it is in no CI lane, because Firefox ships WebGPU only on
+      // Windows and Apple Silicon and the Linux runner has none. The same specs run
+      // through WebDriver (geckodriver) against a stock Firefox release instead of
+      // Playwright's patched build. The Playwright build is the less trustworthy
+      // instrument for these specs: its Core run fails intermittently with
+      // "Not enough memory left" and can lose the GPU process, while a stock release
+      // completes the same set. Point `EXOJS_FIREFOX_BINARY` and
+      // `EXOJS_GECKODRIVER_BINARY` at a Firefox and a geckodriver, or leave them
+      // unset to use the ones on PATH. Like the Playwright project it is headed,
+      // because Firefox resolves `requestAdapter()` to `null` headless.
+      {
+        test: {
+          name: 'browser-webgpu-firefox-stock',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: webgpuCoreTests,
+          exclude: firefoxCoreExclude,
+          ...browserWorkers('EXOJS_FIREFOX_WEBGPU_WORKERS', 4),
+          browser: {
+            ...browserDefaults,
+            enabled: true,
+            commands: parityCommands,
+            headless: false,
+            provider: webdriverio({
+              capabilities: {
+                'moz:firefoxOptions': { ...(process.env['EXOJS_FIREFOX_BINARY'] ? { binary: process.env['EXOJS_FIREFOX_BINARY'] } : {}) },
+                'wdio:geckodriverOptions': { ...(process.env['EXOJS_GECKODRIVER_BINARY'] ? { binary: process.env['EXOJS_GECKODRIVER_BINARY'] } : {}) },
+              },
+            }),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
       // ── browser-webgpu-firefox-isolated - the specs that can wedge Firefox ─
       {
         test: {

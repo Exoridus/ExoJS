@@ -144,6 +144,7 @@
     "test:browser:webgpu": "vitest run --project=browser-webgpu",
     "test:browser:webgpu:media": "vitest run --project=browser-webgpu-media",
     "test:browser:webgpu:firefox": "vitest run --project=browser-webgpu-firefox",
+    "test:browser:webgpu:firefox:stock": "vitest run --project=browser-webgpu-firefox-stock",
     "test:browser:webgpu:firefox:media": "vitest run --project=browser-webgpu-firefox-media",
     "test:browser:webgpu:firefox:isolated": "vitest run --project=browser-webgpu-firefox-isolated",
     "test:browser:assets": "vitest run --project=browser-assets-chromium",
