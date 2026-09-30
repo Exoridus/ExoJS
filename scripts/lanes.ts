@@ -52,7 +52,7 @@ const main = async (): Promise<void> => {
   const options = parseLocalLaneOptions(outputOptions.argv);
   const files = options.all || options.only ? [] : changedFiles(options.base);
   const areas = options.all || options.only ? ALL_AREAS : selectAreas(files);
-  const selected = selectLocalLanes(effectiveLanes(areas), options);
+  const selected = selectLocalLanes(effectiveLanes(areas), options, files);
   const diagnostic = options.only !== undefined || options.quick;
   const scope = options.only
     ? `diagnostic subset: ${options.only.join(', ')}`

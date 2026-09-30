@@ -364,10 +364,10 @@ export default defineConfig({
         exclude: ['packages/exojs-audio-fx/test/browser/**'],
       }),
 
-      // ── exojs-react - jsdom + React Testing Library (esbuild JSX) ────────
+      // ── exojs-react - jsdom + React Testing Library (OXC JSX) ────────────
       // The shared jsdom factory is reused unchanged; the only addition is the
-      // esbuild automatic JSX runtime so `.tsx` test files need no React import.
-      // It is set at the project level so the other jsdom projects keep esbuild's
+      // OXC automatic JSX runtime so `.tsx` test files need no React import.
+      // It is set at the project level so the other jsdom projects keep OXC's
       // defaults byte-for-byte; the project therefore runs its own Vite server.
       {
         ...createJsdomTestProject({
@@ -375,7 +375,7 @@ export default defineConfig({
           include: ['packages/exojs-react/test/**/*.{test.ts,test.tsx}'],
           setupFiles: ['./packages/exojs-react/test/setup.ts'],
         }),
-        esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
+        oxc: { jsx: { runtime: 'automatic', importSource: 'react' } },
       },
 
       // ── exojs-bench - cross-library benchmark harness unit tests ─────────

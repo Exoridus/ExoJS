@@ -10,7 +10,11 @@ Run named tests while editing. Inspect the affected lanes before pushing:
 pnpm lanes --base origin/next
 ```
 
-The pre-push hook still runs its static gates and the required lanes. Do not run a complete duplicate suite immediately before that hook. A first push can be scoped against `origin/HEAD` by the existing hook rather than `origin/next`; inspect the actual printed range. The base-selection policy is unchanged by this tooling change.
+The pre-push hook defaults to `EXOJS_OUTPUT=compact`; set `EXOJS_OUTPUT=normal` or `verbose` to stream command output. Every command still has a unique full log under `.workspace/logs/`, and failures print a diagnostic tail and the log path. A new branch push uses the merge base with `origin/HEAD`; an incremental push uses the previous remote branch SHA. The hook runs static gates selected by `scripts/ci/local-policy.ts` and the local test lanes for that range. Unknown paths and unresolved ranges run every gate and lane. CI continues to run its complete affected matrix. Do not run a complete duplicate suite immediately before the hook.
+
+`node scripts/ci/local-policy.ts --files <path...>` prints the local selection for a proposed change. The explicitly listed random and input-mapping utilities run core unit tests without browser, smoke, allocation or physics performance suites. Other math modules remain broad because rendering and parity suites directly import Matrix, Rectangle and related geometry. Rendering and relevant extension changes retain their browser and perf contracts. Package tests and typechecks follow workspace package dependencies. CI deliberately keeps broader engine coverage, including example smoke, for pull requests.
+
+Vitest 5.0.2 itself returns `vitest:mocks:interceptor` through Vite's `applyToEnvironment` with a `configureServer` hook. Vite 8 warns that the hook on the returned plugin is ignored; Vitest installs its server hook on the enclosing plugin. The warning comes from Vitest's plugin composition and is left visible until upstream fixes it. The React project declares the automatic JSX runtime under OXC, the transformer Vite 8 actually selects, so there is no competing ignored esbuild configuration.
 
 ## Diagnose one lane
 

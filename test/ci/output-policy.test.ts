@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { atLeastOutputMode, readOutputOptions } from '../../scripts/lib/output.ts';
@@ -23,5 +26,12 @@ describe('tooling output policy', () => {
     expect(atLeastOutputMode('silent', 'normal')).toBe('normal');
     expect(atLeastOutputMode('compact', 'normal')).toBe('normal');
     expect(atLeastOutputMode('verbose', 'normal')).toBe('verbose');
+  });
+
+  it('defaults pre-push to compact while preserving explicit output overrides', () => {
+    const hook = readFileSync(resolve(import.meta.dirname!, '../../.husky/pre-push'), 'utf8');
+    expect(hook).toContain('EXOJS_OUTPUT=${EXOJS_OUTPUT:-compact}');
+    expect(readOutputOptions([], { EXOJS_OUTPUT: 'compact' }, true).mode).toBe('compact');
+    expect(readOutputOptions([], { EXOJS_OUTPUT: 'verbose' }, true).mode).toBe('verbose');
   });
 });

@@ -1,4 +1,5 @@
 import { LANES, selectLanes, type Lane } from './lanes.ts';
+import { selectLocalPolicy } from './local-policy.ts';
 import type { EffectiveLanes } from './select-lanes.ts';
 
 export interface LocalLaneOptions {
@@ -47,9 +48,42 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
   return options;
 };
 
-export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOptions): Lane[] => {
+export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOptions, files: readonly string[] = []): Lane[] => {
   if (options.only) return options.only.map(id => available().find(lane => lane.id === id)!);
-  return [...selectLanes(effective, false).filter(eligible), ...(effective.siteBuild ? [SITE_LANE] : []), ...(effective.exampleSmoke ? [SMOKE_LANE] : [])]
+  const policy = selectLocalPolicy(options.all ? [] : files);
+  const selectedEffective = policy.fullUnit
+    ? {
+        ...effective,
+        unit: true,
+        browserWebgl2: true,
+        browserWebgpu: true,
+        browserAudio: true,
+        browserTilemapWorker: true,
+        benchStructural: true,
+        siteBuild: true,
+        exampleSmoke: true,
+      }
+    : effective;
+  const unitCommand = policy.fullUnit
+    ? undefined
+    : [
+        policy.unitProjects.length
+          ? `pnpm exec vitest run ${policy.unitProjects.map(project => `--project=${project}`).join(' ')}${policy.unitFilter ? ` ${policy.unitFilter}` : ''}`
+          : '',
+        policy.allocation ? 'pnpm test:alloc' : '',
+        policy.physicsPerf ? 'pnpm test:physics-perf' : '',
+      ]
+        .filter(Boolean)
+        .join(' && ');
+  return [
+    ...selectLanes(selectedEffective, false).filter(eligible),
+    ...(selectedEffective.siteBuild ? [SITE_LANE] : []),
+    ...(selectedEffective.exampleSmoke ? [SMOKE_LANE] : []),
+  ]
+    .filter(lane => lane.stage !== 'test' || lane.id === 'unit' || policy.browser.includes(lane.id) || (lane.id === 'bench' && policy.bench))
+    .filter(lane => lane.id !== 'smoke' || policy.smoke)
+    .filter(lane => lane.id !== 'unit' || policy.fullUnit || unitCommand !== '')
+    .map(lane => (lane.id === 'unit' && unitCommand ? { ...lane, run: unitCommand } : lane))
     .filter(lane => !(options.quick && lane.local === 'browser'))
     .filter(lane => !(options.testsOnly && lane.local === 'gate'));
 };

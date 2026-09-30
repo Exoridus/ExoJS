@@ -43,6 +43,7 @@ describe('runCommand', () => {
     stderr.mockRestore();
     expect(result.status).toBe(2);
     expect(diagnostic).toContain('line-124');
+    expect(diagnostic).toContain('Full log:');
     expect(diagnostic).not.toContain('line-0');
     expect(log).toContain('line-0');
     expect(log).toContain('line-124');
@@ -86,5 +87,6 @@ describe('runCommand', () => {
 
     expect(result.status).toBe(0);
     expect(readFileSync(result.logPath!, 'utf8')).toContain('complete output');
+    expect(readFileSync(result.logPath!, 'utf8')).toMatch(/exit=0\nsignal=none\nreason=exit\ndurationMs=\d+/);
   });
 });

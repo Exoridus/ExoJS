@@ -272,7 +272,7 @@ export const LANES: readonly Lane[] = [
     ciRun: `pnpm typecheck:bench && ${qualifiedRow({ name: 'Chromium / Bench Structural', timeoutMinutes: 25, command: 'pnpm gate:bench:structural' })}`,
     browser: 'chromium',
     local: 'browser',
-    minimumOutput: 'normal',
+    minimumOutput: 'compact',
     timeoutMinutes: 30,
   },
 

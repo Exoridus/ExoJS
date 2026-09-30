@@ -1,28 +1,16 @@
 #!/usr/bin/env sh
 # Pre-push verification.
 #
-# Branch pushes:  first `scripts/ci/push-scope.ts`, which answers how much of
-#                 the below the pushed range needs. A range that changes no
-#                 tracked file verifies nothing; one carrying published
-#                 benchmark data alone runs only `verify:bench-results`, the
-#                 single gate that opens those files. Anything else - including
-#                 a range whose scope cannot be determined - takes the full
-#                 path:
-#
-#                 `verify:quick` — the static CI-parity gates: typecheck (core
-#                 + guides + examples + extension packages), lint:all,
-#                 format:check, docs:api:check and the site gates. Then the test
-#                 lanes the pushed range actually requires, chosen from
-#                 `scripts/ci/lanes.ts` — the same table CI's plan job reads,
-#                 so the two agree by construction. `--tests-only`
-#                 drops the gate lanes verify:quick just ran, so nothing runs
-#                 twice.
+# Branch pushes:  `scripts/ci/push-scope.ts` handles empty and published-data
+#                 ranges. Other pushes run path-aware static gates and local
+#                 test lanes against the pushed range. CI retains its complete
+#                 affected matrix. An unknown range takes the full local path.
 #
 #                 The point of running suites here rather than leaving them to
 #                 CI: a push that fails remote costs a round trip and blocks an
 #                 auto-merge, and every lane below is one a developer could have
 #                 run locally in less time than that round trip takes. What it
-#                 does NOT run is a lane the change cannot affect — a src-only
+#                 does NOT run is a lane the change cannot affect - a src-only
 #                 change never waits for the audio or tilemap-worker browser
 #                 lanes.
 # Tag pushes:     `scripts/ci/trust.ts` - the release workflow's own admission
@@ -35,6 +23,8 @@
 # Refs being pushed are read from stdin in the format:
 #   <local_ref> <local_sha> <remote_ref> <remote_sha>
 is_tag_push=0
+EXOJS_OUTPUT=${EXOJS_OUTPUT:-compact}
+export EXOJS_OUTPUT
 is_branch_push=0
 pushed_tags=""
 push_head_sha=""
@@ -42,7 +32,7 @@ push_base_sha=""
 null_sha="0000000000000000000000000000000000000000"
 
 while read local_ref local_sha remote_ref remote_sha; do
-    # Deletions carry the null SHA — nothing to verify when removing a ref.
+    # Deletions carry the null SHA; nothing to verify when removing a ref.
     [ "$local_sha" = "$null_sha" ] && continue
     case "$remote_ref" in
         refs/tags/*)
@@ -52,7 +42,7 @@ while read local_ref local_sha remote_ref remote_sha; do
         *)
             is_branch_push=1
             # Only the last pushed branch ref wins when a push carries several
-            # refs at once — same simplification the pre-existing boolean
+            # refs at once; same simplification the pre-existing boolean
             # flags above already make; a multi-branch push is a rare edge
             # case and this hook is a convenience, not a hard gate.
             push_head_sha="$local_sha"
@@ -70,15 +60,10 @@ if [ "$is_tag_push" = "1" ]; then
 fi
 
 if [ "$is_branch_push" = "1" ]; then
-    # Range for lane selection. A branch with no remote tracking ref yet has no
-    # base to diff against, so fall back to the merge base with origin/HEAD
-    # (the remote's default branch, whichever one that is) - and to running
-    # every lane if even that is unavailable, because a push whose scope cannot
-    # be determined must not be validated partially.
-    lane_base="$push_base_sha"
-    if [ -z "$lane_base" ] && [ -n "$push_head_sha" ]; then
-        lane_base=$(git merge-base "$push_head_sha" origin/HEAD 2>/dev/null || true)
-    fi
+    # Existing remote SHA scopes incremental pushes; a new branch uses the
+    # merge base with origin/HEAD. An unresolved base runs everything.
+    lane_base=$(node scripts/ci/push-range.ts "$push_head_sha" "${push_base_sha:-$null_sha}") || exit 1
+    echo "[pre-push] validation base ${lane_base:-unknown}"
 
     # How much of the above the range actually needs. `full` for anything
     # `push-scope.ts` does not positively recognise, including an undeterminable
@@ -94,20 +79,15 @@ if [ "$is_branch_push" = "1" ]; then
             npm run verify:bench-results || exit 1
             ;;
         *)
-            # verify:quick includes `typecheck:site` and `full-bundle:exports:check`, which
-            # read the PUBLISHED entry points (package.json `exports` → dist/) rather than
-            # src/. A dist that is missing fails them with a wall of ts(2307) "Cannot find
-            # module 'exojs'"; one that merely lags the sources - the state every local
-            # edit leaves behind - fails the freshness gate inside the site group, after
-            # the typecheck and lint groups have already run. Either way the push is lost,
-            # the build runs by hand, and everything runs again. So the build runs here
-            # instead, exactly when the source stamp says it is due and never otherwise: a
-            # clean tree pays one hash walk.
-            echo "[pre-push] checking dist against the sources"
-            node scripts/check-dist-fresh.ts --rebuild || exit 1
+            # Dist consumers need the current build before their gates run.
+            needs_dist=$(node scripts/ci/local-policy.ts --needs-dist "$lane_base" "$push_head_sha") || exit 1
+            if [ "$needs_dist" = "true" ]; then
+                echo "[pre-push] checking dist against the sources"
+                node scripts/check-dist-fresh.ts --rebuild || exit 1
+            fi
 
-            echo "[pre-push] running verify:quick (static CI-parity gates)"
-            npm run verify:quick || exit 1
+            echo "[pre-push] static validation"
+            npm run gates -- affected "$lane_base" "$push_head_sha" || exit 1
 
             if [ -n "$lane_base" ]; then
                 echo "[pre-push] running the test lanes this push requires"
