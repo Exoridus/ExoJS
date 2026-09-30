@@ -173,24 +173,26 @@ export const verifyRealConsumers = (options: {
   // `--no-frozen-lockfile` because this workspace is created and populated here:
   // its lockfile is an artefact of the run, not an input, and the repository's own
   // frozen-lockfile policy does not apply to a throwaway consumer set.
+  const outcomes: ConsumerOutcome[] = [];
+
   const install = run('pnpm', ['install', '--ignore-scripts', '--no-frozen-lockfile', '--reporter=append-only'], workspace);
   if (install.code !== 0) {
+    // Nothing can be checked without an install, so every template reports the
+    // same failure rather than one of them being silently skipped.
     const message = `install failed:\n${tail(install.out, 12)}`;
     for (const template of templates) {
-      const dir = join(workspace, template);
-      outcomes.push({
+      const outcome: ConsumerOutcome = {
         template,
         typecheck: { ok: false, detail: message },
         bundle: { ok: false, detail: message },
         viteVersion: 'unknown',
         typescriptVersion: 'unknown',
-      });
-      report(outcomes[outcomes.length - 1]!);
+      };
+      outcomes.push(outcome);
+      report(outcome);
     }
     return outcomes;
   }
-
-  const outcomes: ConsumerOutcome[] = [];
 
   for (const template of templates) {
     const dir = join(workspace, template);
