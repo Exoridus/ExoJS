@@ -129,6 +129,38 @@ describe('WebGPU device lifecycle', () => {
     expect(recoveryError).not.toHaveBeenCalled();
   });
 
+  test('a device destroyed behind the backend is reported as lost and is not recovered', { timeout: 60_000 }, async () => {
+    const backend = await createBackend();
+    const device = backend.device;
+    const lost = vi.fn();
+    const restored = vi.fn();
+    const failed = vi.fn();
+
+    backend.onDeviceLost.add(lost);
+    backend.onDeviceRestored.add(restored);
+    backend.onRenderError.add(failed);
+
+    // Not `backend.destroy()`: the loss arrives through the browser's own `device.lost`, exactly as
+    // it would if application code or an extension destroyed the device. It is the one real loss
+    // the standard lets a test provoke; a spontaneous loss (reason `unknown`) has no automation hook.
+    device.destroy();
+
+    expect((await device.lost).reason).toBe('destroyed');
+    await vi.waitFor(() => expect(lost).toHaveBeenCalledTimes(1));
+
+    expect(lost.mock.calls[0]?.[0]).toMatchObject({ reason: 'destroyed' });
+    expect(backend.deviceLost).toBe(true);
+
+    await new Promise<void>(resolve => {
+      setTimeout(resolve, 250);
+    });
+
+    expect(restored).not.toHaveBeenCalled();
+    expect(failed).not.toHaveBeenCalled();
+
+    backend.destroy();
+  });
+
   test('a fresh backend initializes after a previous one was destroyed', { timeout: 60_000 }, async () => {
     const first = await createBackend();
     const firstDevice = first.device;
