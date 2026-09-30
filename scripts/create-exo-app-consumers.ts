@@ -139,12 +139,63 @@ export const verifyRealConsumers = (options: {
     packed.set(name, `file:${join(tarballDir, archive).replaceAll('\\', '/')}`);
   }
 
+  // Point every generated project at the packed packages of this tree before a
+  // single install runs, so the check proves what a consumer of the *next* release
+  // gets. Templates use the `latest` dist-tag by design; here that would silently
+  // test the published release instead of the code under review.
+  //
+  // All manifests are rewritten up front rather than one per template inside the
+  // loop. Rewriting one and installing per template races the lockfile: pnpm
+  // defaults to `--frozen-lockfile` when `CI` is set, so the first install freezes
+  // a lockfile that only knows the first template, and every later template fails
+  // with ERR_PNPM_OUTDATED_LOCKFILE instead of being checked.
+  for (const template of templates) {
+    if (scaffoldFailures.has(template)) continue;
+
+    const manifestPath = join(workspace, template, 'package.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    for (const bucket of [manifest.dependencies, manifest.devDependencies]) {
+      for (const [name] of Object.entries(bucket ?? {})) {
+        const tarball = packed.get(name);
+        if (tarball) bucket![name] = tarball;
+      }
+    }
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  }
+
+  // `--reporter=append-only` rather than `silent`: a silent reporter also
+  // suppresses the error output, so a failing install would report nothing but a
+  // non-zero exit. The progress lines are noise, the diagnosis is not.
+  //
+  // `--no-frozen-lockfile` because this workspace is created and populated here:
+  // its lockfile is an artefact of the run, not an input, and the repository's own
+  // frozen-lockfile policy does not apply to a throwaway consumer set.
+  const install = run('pnpm', ['install', '--ignore-scripts', '--no-frozen-lockfile', '--reporter=append-only'], workspace);
+  if (install.code !== 0) {
+    const message = `install failed:\n${tail(install.out, 12)}`;
+    for (const template of templates) {
+      const dir = join(workspace, template);
+      outcomes.push({
+        template,
+        typecheck: { ok: false, detail: message },
+        bundle: { ok: false, detail: message },
+        viteVersion: 'unknown',
+        typescriptVersion: 'unknown',
+      });
+      report(outcomes[outcomes.length - 1]!);
+    }
+    return outcomes;
+  }
+
   const outcomes: ConsumerOutcome[] = [];
 
   for (const template of templates) {
     const dir = join(workspace, template);
     // Assigned in both branches below; the initialisers only give the catch block
-    // something to report when scaffolding or installing fails before either runs.
+    // something to report when scaffolding fails before either command runs.
     let typecheck: { ok: boolean; detail: string };
     let bundle: { ok: boolean; detail: string };
     let viteVersion = 'unknown';
@@ -152,29 +203,6 @@ export const verifyRealConsumers = (options: {
 
     try {
       if (scaffoldFailures.has(template)) throw new Error(scaffoldFailures.get(template));
-
-      // Point the generated project at the packed packages of this tree, so the
-      // check proves what a consumer of the *next* release gets. Templates use the
-      // `latest` dist-tag by design; here that would silently test the published
-      // release instead of the code under review.
-      const manifestPath = join(dir, 'package.json');
-      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
-        dependencies?: Record<string, string>;
-        devDependencies?: Record<string, string>;
-      };
-      for (const bucket of [manifest.dependencies, manifest.devDependencies]) {
-        for (const [name] of Object.entries(bucket ?? {})) {
-          const tarball = packed.get(name);
-          if (tarball) bucket![name] = tarball;
-        }
-      }
-      writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-
-      // `--reporter=append-only` rather than `silent`: a silent reporter also
-      // suppresses the error output, so a failing install would report nothing
-      // but a non-zero exit. The progress lines are noise, the diagnosis is not.
-      const install = run('pnpm', ['install', '--ignore-scripts', '--reporter=append-only'], workspace);
-      if (install.code !== 0) throw new Error(`install failed:\n${tail(install.out, 12)}`);
 
       const versionOf = (pkg: string): string => {
         const manifestFile = join(dir, 'node_modules', pkg, 'package.json');
