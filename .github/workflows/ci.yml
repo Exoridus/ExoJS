@@ -166,8 +166,9 @@ jobs:
 
       # `.workspace` and its logs are hidden paths, which the upload skips
       # unless it is told otherwise. The supervisor writes one unique log per
-      # command there, so a transient failure stays diagnosable afterwards.
-      - name: Keep the command logs and qualification records on failure
+      # command there, so a transient failure stays diagnosable afterwards, and
+      # Vitest keeps the screenshots of failed browser tests under `.vitest`.
+      - name: Keep the command logs, qualification records and failure screenshots on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
@@ -175,6 +176,7 @@ jobs:
           path: |
             .workspace/logs/
             test-results/qualification/
+            .vitest/attachments/
           retention-days: 3
           include-hidden-files: true
           if-no-files-found: ignore
