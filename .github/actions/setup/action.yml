@@ -25,6 +25,7 @@ runs:
     # and macOS already run with core.fileMode set locally.
     - name: Ignore executable-bit differences
       run: git config --global core.fileMode false
+      shell: bash
 
     # The pnpm version comes from `packageManager` in package.json.
     - uses: pnpm/action-setup@v6
