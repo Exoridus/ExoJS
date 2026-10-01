@@ -70,10 +70,17 @@ const ensureBuilt = (): void => {
 
 const build = (): void => {
   log('\n→ Building core + extensions (build-once)…');
-  // Core is `pnpm build`; each extension is `pnpm --filter <name> build`. pnpm
-  // resolves workspace-dependency order itself (e.g. tilemap before tiled/ldtk).
+  // Every lockstep package except Core lives in its own directory and is built
+  // with `pnpm --filter <name> build`; pnpm resolves workspace-dependency order
+  // itself (e.g. tilemap before tiled/ldtk). Core is the repository root and
+  // its `pnpm build` is that root build.
+  //
+  // Keyed on the directory rather than on `isExtension`: the scaffolder is a
+  // lockstep package that is not an extension, and building it with the root
+  // `pnpm build` compiles the engine instead of the CLI - which then packs with
+  // no `dist/` at all, because packing deliberately skips `prepack`.
   for (const pkg of LOCKSTEP_PACKAGES) {
-    const args = pkg.isExtension ? ['--filter', pkg.name, 'build'] : ['build'];
+    const args = pkg.dir === '.' ? ['build'] : ['--filter', pkg.name, 'build'];
     const r = runner.run({ command: 'pnpm', args, cwd: repoRoot });
     if (r.code !== 0) die(`build failed for ${pkg.name}:\n${r.stderr || r.stdout}`);
   }
