@@ -100,14 +100,14 @@ const freezeRevision = (): string => {
     // just run a build over generated files, and the reason is usually one
     // committed artefact the build legitimately rewrites.
     const changed = runner.run({ command: 'git', args: ['diff', '--name-only', 'HEAD', '--'] });
-    const paths = changed.output
+    const paths = changed.stdout
       .split('\n')
       .map(line => line.trim())
       .filter(Boolean);
     die(
       [
         'Working tree is dirty — a release must be prepared from a clean tree. Commit or stash changes first.',
-        ...(paths.length ? ['', `${paths.length} differing path(s):`, ...paths.slice(0, 20).map(p => `    ${p}`)] : []),
+        ...(paths.length ? ['', `${paths.length} differing path(s):`, ...paths.slice(0, 20).map((p: string) => `    ${p}`)] : []),
       ].join('\n'),
     );
   }
