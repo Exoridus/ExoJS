@@ -143,9 +143,17 @@ export function verifyToolingPackage(dir, opts) {
  * Verify a published command-line package.
  *
  * A CLI is judged against what it actually ships: an executable entry point and
- * the engine it operates on, named as a peer rather than bundled. The imported
- * library profile's `dist/esm` and `exports["."]` expectations describe a
- * different shape of package and would report a correct CLI as broken.
+ * nothing of the engine's runtime. The imported library profile's `dist/esm` and
+ * `exports["."]` expectations describe a different shape of package and would
+ * report a correct CLI as broken.
+ *
+ * A CLI declares no engine peer. It runs before any ExoJS exists - it writes the
+ * project that will install ExoJS - so a peer would be a compatibility claim
+ * about a host it never runs inside, and npm installs peers by default, which
+ * would pull the whole engine into a throwaway `npm create` environment for
+ * nothing. The relationship between scaffolder and engine is carried by the
+ * version line they share and by the range the scaffolder writes, not by a
+ * peer entry.
  *
  * @param {string} dir
  * @param {{ name: string }} opts
@@ -175,11 +183,12 @@ export function verifyCliPackage(dir, opts) {
   ok('README present', existsSync(join(dir, 'README.md')));
   ok('has repository field', pkg.repository != null);
 
-  // A CLI names the engine instead of importing it as a library would, and the
-  // range it declares is what ties it to one engine release.
-  ok('declares engine peer', typeof pkg.peerDependencies?.['@codexo/exojs'] === 'string');
-  const engineRange = pkg.peerDependencies?.['@codexo/exojs'];
-  ok('engine peer is a range, not latest', typeof engineRange === 'string' && !['latest', 'next', '*'].includes(engineRange), engineRange);
+  // A CLI depends on nothing from the engine: it runs before any ExoJS exists.
+  // A peer here would be an unfalse compatibility claim about a host it never
+  // runs inside, and npm installs peers by default - it would drag the engine
+  // into a throwaway `npm create` environment for nothing.
+  const runtimeDeps = { ...pkg.dependencies, ...pkg.peerDependencies };
+  ok('no engine peer or dependency', !Object.keys(runtimeDeps).some(d => d === '@codexo/exojs' || d.startsWith('@codexo/exojs-')));
   ok('no workspace: in deps', !JSON.stringify(pkg.dependencies ?? {}).includes('workspace:'));
   ok('no @/ alias in manifest', !JSON.stringify(pkg).includes('"@/"'));
 

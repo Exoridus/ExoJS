@@ -38,9 +38,6 @@
     "type": "git",
     "url": "git+https://github.com/Exoridus/ExoJS.git"
   },
-  "peerDependencies": {
-    "@codexo/exojs": "0.18.x"
-  },
   "devDependencies": {
     "@types/node": "^26.6.2",
     "tsx": "^4.23.15",
