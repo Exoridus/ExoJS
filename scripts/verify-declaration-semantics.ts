@@ -29,6 +29,8 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { typescriptCompilerPath } from '@codexo/exojs-config/typescript/compiler';
+
 const REPO_ROOT = join(import.meta.dirname, '..');
 const CONTRACTS = join(import.meta.dirname, 'declaration-semantics');
 
@@ -46,8 +48,7 @@ const compilers = (): { label: string; bin: string }[] => {
   const apiManifest = require.resolve('typescript/package.json');
   out.push({ label: 'TypeScript 6 (JavaScript compiler)', bin: join(join(apiManifest, '..'), 'bin', 'tsc') });
 
-  const nativeManifest = require.resolve('@typescript/native/package.json');
-  out.push({ label: 'TypeScript 7 (native compiler)', bin: join(join(nativeManifest, '..'), 'bin', 'tsc') });
+  out.push({ label: 'TypeScript 7 (native compiler)', bin: typescriptCompilerPath() });
 
   return out;
 };

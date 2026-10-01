@@ -18,7 +18,8 @@ import { pathToFileURL } from 'node:url';
 
 import { rolldown, type OutputOptions, type RolldownOptions } from 'rolldown';
 
-import { runNativeTsc } from './lib/typescript-cli.ts';
+import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
+
 import { writeSourceStamp } from './source-hash.ts';
 
 const cwd = process.cwd();
@@ -34,7 +35,7 @@ await bundle.close();
 
 const buildTsconfig = resolvePath(cwd, 'tsconfig.build.json');
 if (existsSync(buildTsconfig)) {
-  const { status } = runNativeTsc(
+  const { status } = runTypeScriptCompiler(
     ['-p', 'tsconfig.build.json', '--emitDeclarationOnly', '--outDir', 'dist/esm', '--declarationDir', 'dist/esm', '--inlineSources', '--incremental', 'false'],
     { cwd },
   );

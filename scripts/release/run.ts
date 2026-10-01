@@ -88,9 +88,28 @@ const writeManifest = (manifest: ReleaseManifest): void => {
 const freezeRevision = (): string => {
   log('\n→ Freezing revision…');
 
-  const dirtyResult = runner.run({ command: 'git', args: ['diff-index', '--quiet', 'HEAD', '--'] });
+  // `git diff`, not `git diff-index`: the build rewrites generated files whose
+  // content is unchanged, which leaves them stat-dirty. `diff-index` answers
+  // from the stat cache alone and reports that as a modified working tree, so a
+  // release prepared straight after a build failed on a tree that `git status`
+  // calls clean. `diff` hashes the content and answers the question actually
+  // being asked here.
+  const dirtyResult = runner.run({ command: 'git', args: ['diff', '--quiet', 'HEAD', '--'] });
   if (dirtyResult.code !== 0) {
-    die('Working tree is dirty — a release must be prepared from a clean tree. Commit or stash changes first.');
+    // Name the paths: "the tree is dirty" is unactionable in a CI log that has
+    // just run a build over generated files, and the reason is usually one
+    // committed artefact the build legitimately rewrites.
+    const changed = runner.run({ command: 'git', args: ['diff', '--name-only', 'HEAD', '--'] });
+    const paths = changed.stdout
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+    die(
+      [
+        'Working tree is dirty — a release must be prepared from a clean tree. Commit or stash changes first.',
+        ...(paths.length ? ['', `${paths.length} differing path(s):`, ...paths.slice(0, 20).map((p: string) => `    ${p}`)] : []),
+      ].join('\n'),
+    );
   }
 
   const explicit = process.env['EXOJS_REVISION'];
