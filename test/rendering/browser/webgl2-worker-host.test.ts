@@ -71,34 +71,33 @@ const WORKER_EXCHANGE_TIMEOUT_MS = 10_000;
 const exchange = <T extends WorkerMessage>(worker: Worker, message: unknown, transfer: Transferable[] = []): Promise<T> =>
   new Promise<T>((resolve, reject) => {
     const label = (message as { kind?: string }).kind ?? 'message';
-    const timer = setTimeout(() => {
-      worker.removeEventListener('message', onMessage);
-      worker.removeEventListener('error', onError);
-      reject(new Error(`worker did not answer "${label}" within ${WORKER_EXCHANGE_TIMEOUT_MS}ms`));
-    }, WORKER_EXCHANGE_TIMEOUT_MS);
-
-    const settle = <V>(fn: () => V): V => {
-      clearTimeout(timer);
-      return fn();
-    };
 
     const onMessage = (event: MessageEvent<WorkerMessage>): void => {
       worker.removeEventListener('message', onMessage);
       worker.removeEventListener('error', onError);
+      clearTimeout(timer);
 
       if (event.data.kind === 'error') {
-        settle(() => reject(new Error(event.data.message)));
+        reject(new Error(event.data.message));
+
         return;
       }
 
-      settle(() => resolve(event.data as T));
+      resolve(event.data as T);
     };
 
     const onError = (event: ErrorEvent): void => {
       worker.removeEventListener('message', onMessage);
       worker.removeEventListener('error', onError);
-      settle(() => reject(new Error(`worker error: ${event.message}`)));
+      clearTimeout(timer);
+      reject(new Error(`worker error: ${event.message}`));
     };
+
+    const timer = setTimeout(() => {
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+      reject(new Error(`worker did not answer "${label}" within ${WORKER_EXCHANGE_TIMEOUT_MS}ms`));
+    }, WORKER_EXCHANGE_TIMEOUT_MS);
 
     worker.addEventListener('message', onMessage);
     worker.addEventListener('error', onError);
