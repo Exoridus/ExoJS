@@ -11,8 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@codexo/exojs": "latest",
-    "@codexo/exojs-physics": "latest"
+    "@codexo/exojs": "lockstep",
+    "@codexo/exojs-physics": "lockstep"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

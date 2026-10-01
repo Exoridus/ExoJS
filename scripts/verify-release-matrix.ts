@@ -8,7 +8,7 @@
  *  1. Every lockstep package (`LOCKSTEP_PACKAGES`, Core + extensions) shares one
  *     lockstep version.
  *  2. Each extension's peerDependencies["@codexo/exojs"] is "<major>.<minor>.x".
- *  3. create-exo-app is versioned independently (a different version line).
+ *  3. Every independent package stays off the lockstep version line.
  *  4. release.yml builds every lockstep package in the PREPARE stage.
  *  5. PREPARE runs `release:prepare` (packs the tarballs + Full ZIP) and
  *     uploads the artifacts.

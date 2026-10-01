@@ -16,14 +16,28 @@ const tmpRoot = join(rootDir, '.workspace', 'tmp', 'create-exo-app');
 const cliSrc = join(rootDir, 'packages', 'create-exo-app', 'src', 'index.ts');
 const templatesDir = join(rootDir, 'packages', 'create-exo-app', 'templates');
 
-// Templates use the `latest` dist-tag so freshly scaffolded apps always resolve
-// the newest published @codexo/exojs without needing template edits per release.
-const EXPECTED_CORE_RANGE = 'latest';
+/**
+ * The placeholder an `@codexo/*` dependency carries in a template. The
+ * scaffolder rewrites it to its own release line, so a template never holds an
+ * engine version that could drift from the scaffolder that ships it.
+ */
+const LOCKSTEP_PLACEHOLDER = 'lockstep';
+
+/** The range a scaffolded project must actually receive. */
+const engineRange = (): string => {
+  const own = JSON.parse(readFileSync(join(rootDir, 'packages', 'create-exo-app', 'package.json'), 'utf-8')) as { version: string };
+  const match = /^(\d+)\.(\d+)\./.exec(own.version);
+  if (!match) throw new Error(`create-exo-app has an unparseable version "${own.version}".`);
+  return `${match[1]}.${match[2]}.x`;
+};
 
 // Imported rather than repeated: a second list here would pass while the
 // scaffolder offered something else entirely.
 const TEMPLATES = SCAFFOLDER_TEMPLATES;
 type TemplateName = (typeof TEMPLATES)[number];
+
+/** Resolved once: every scaffolded project must land on exactly this line. */
+const expectedEngineRange = engineRange();
 
 const EXPECTED_FILES: Record<TemplateName, string[]> = {
   minimal: ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'src/main.ts', 'src/scenes/MainScene.ts'],
@@ -194,9 +208,27 @@ for (const t of TEMPLATES) {
   }
 }
 
-// 7. Every @codexo dependency a template declares uses the "latest" dist-tag
+// 7. Template sources carry no engine version; scaffolded projects carry the
+//    scaffolder's own release line
 console.log('\n7. Template @codexo dependencies');
 const seenCoreRanges = new Set<string>();
+for (const t of TEMPLATES) {
+  // The template source, before scaffolding. A version here would be a second
+  // place the engine release is written down, and the one that goes stale: the
+  // release cut bumps package versions, not template text.
+  const sourcePkg = JSON.parse(readFileSync(join(templatesDir, t, 'package.json'), 'utf-8')) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+  for (const [name, range] of Object.entries({ ...sourcePkg.dependencies, ...sourcePkg.devDependencies }).filter(([dep]) => dep.startsWith('@codexo/'))) {
+    check(
+      range === LOCKSTEP_PLACEHOLDER,
+      `templates/${t}: ${name} holds the "${LOCKSTEP_PLACEHOLDER}" placeholder`,
+      `templates/${t}: ${name} is pinned to "${range}" in template source — the engine version belongs in one place, the scaffolder's own version`,
+    );
+  }
+}
+
 for (const t of TEMPLATES) {
   const pkgPath = join(tmpRoot, t, 'package.json');
   try {
@@ -211,10 +243,16 @@ for (const t of TEMPLATES) {
     seenCoreRanges.add(coreRange);
 
     // Every extension a template pulls in is published on the engine's cadence,
-    // so a template that pinned one would scaffold a project mixing versions as
-    // soon as either side is released.
+    // so the scaffolder pins all of them to its own release line. A template
+    // that carried a version of its own would scaffold a project mixing versions
+    // as soon as either side moved, which is why the template source holds a
+    // placeholder and the range is written here.
     for (const [name, range] of Object.entries(pkg.dependencies ?? {}).filter(([dependency]) => dependency.startsWith('@codexo/'))) {
-      check(range === EXPECTED_CORE_RANGE, `${t}: ${name} "${range}" ✓`, `${t}: ${name} "${range}" should be "${EXPECTED_CORE_RANGE}"`);
+      check(
+        range === expectedEngineRange,
+        `${t}: ${name} "${range}" ✓`,
+        `${t}: ${name} is "${range}", expected the scaffolder's own line "${expectedEngineRange}" — every ExoJS dependency moves together`,
+      );
       check(
         !range.startsWith('workspace:'),
         `${t}: ${name} has no workspace: protocol`,

@@ -140,6 +140,53 @@ export function verifyToolingPackage(dir, opts) {
 }
 
 /**
+ * Verify a published command-line package.
+ *
+ * A CLI is judged against what it actually ships: an executable entry point and
+ * the engine it operates on, named as a peer rather than bundled. The imported
+ * library profile's `dist/esm` and `exports["."]` expectations describe a
+ * different shape of package and would report a correct CLI as broken.
+ *
+ * @param {string} dir
+ * @param {{ name: string }} opts
+ * @returns {PolicyResult}
+ */
+export function verifyCliPackage(dir, opts) {
+  const pkg = read(dir);
+  /** @type {PolicyCheck[]} */
+  const checks = [];
+  /** @type {(name: string, cond: unknown, detail?: string) => number} */
+  const ok = (name, cond, detail) => checks.push({ name, ok: Boolean(cond), detail });
+
+  ok('name matches', pkg.name === opts.name, `${pkg.name} vs ${opts.name}`);
+  ok('type: module', pkg.type === 'module');
+  ok('not private', pkg.private !== true);
+  ok('has version', typeof pkg.version === 'string');
+  ok('has bin entry', pkg.bin != null && typeof pkg.bin === 'object' && Object.keys(pkg.bin).length > 0);
+  ok('exports ./package.json', pkg.exports?.['./package.json'] === './package.json');
+  ok('files allowlist', Array.isArray(pkg.files) && pkg.files.length > 0);
+  ok(
+    'files ship dist',
+    /** @type {string[]} */ (pkg.files ?? []).some(f => f.includes('dist')),
+  );
+  ok('ships LICENSE', (pkg.files ?? []).includes('LICENSE'));
+  ok('publishConfig public', pkg.publishConfig?.access === 'public');
+  ok('LICENSE file present', existsSync(join(dir, 'LICENSE')));
+  ok('README present', existsSync(join(dir, 'README.md')));
+  ok('has repository field', pkg.repository != null);
+
+  // A CLI names the engine instead of importing it as a library would, and the
+  // range it declares is what ties it to one engine release.
+  ok('declares engine peer', typeof pkg.peerDependencies?.['@codexo/exojs'] === 'string');
+  const engineRange = pkg.peerDependencies?.['@codexo/exojs'];
+  ok('engine peer is a range, not latest', typeof engineRange === 'string' && !['latest', 'next', '*'].includes(engineRange), engineRange);
+  ok('no workspace: in deps', !JSON.stringify(pkg.dependencies ?? {}).includes('workspace:'));
+  ok('no @/ alias in manifest', !JSON.stringify(pkg).includes('"@/"'));
+
+  return { ok: checks.every(c => c.ok), checks };
+}
+
+/**
  * Verify the private shared-config package.
  * @param {string} dir
  * @returns {PolicyResult}

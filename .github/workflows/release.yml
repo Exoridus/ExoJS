@@ -99,6 +99,7 @@ jobs:
           pnpm --filter @codexo/exojs-aseprite build
           pnpm --filter @codexo/exojs-ldtk build
           pnpm --filter @codexo/exojs-react build
+          pnpm --filter create-exo-app build
           pnpm site:build
 
       # Deploy Pages ships the site of a successful release from this artifact.
