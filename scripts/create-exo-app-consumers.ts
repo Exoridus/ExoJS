@@ -44,13 +44,19 @@ export interface ConsumerOutcome {
 }
 
 const run = (command: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = {}): { code: number; out: string } => {
-  // On Windows the package managers are `.cmd` shims that cannot be spawned
-  // directly, and a `.cmd` shim in turn cannot take a shell without re-splitting
-  // arguments that contain spaces. Resolve to the shim, and shell only for it.
-  const needsShell = process.platform === 'win32';
-  const executable = needsShell ? `${command}.cmd` : command;
+  // Windows package managers are `.cmd` shims: not spawnable directly, and not
+  // spawnable through `shell: true` either without Node re-splitting the argument
+  // list as a warning-only security risk (DEP0190). The shim is therefore invoked
+  // through `cmd.exe /d /s /c` with the arguments quoted here, which keeps them
+  // intact and keeps the deprecation out of the output.
+  const isPackageManager = command === 'pnpm' || command === 'npm';
+  const useShim = process.platform === 'win32' && isPackageManager;
+
+  const spawnArgs = useShim ? ['/d', '/s', '/c', [`${command}.cmd`, ...args].map(arg => (/\s/.test(arg) ? `"${arg}"` : arg)).join(' ')] : args;
+  const executable = useShim ? (process.env['ComSpec'] ?? 'cmd.exe') : command;
+
   try {
-    const out = execFileSync(executable, args, { cwd, encoding: 'utf8', stdio: 'pipe', shell: needsShell, env: { ...process.env, ...env } });
+    const out = execFileSync(executable, spawnArgs, { cwd, encoding: 'utf8', stdio: 'pipe', env: { ...process.env, ...env } });
     return { code: 0, out };
   } catch (error) {
     const e = error as { stdout?: string; stderr?: string; status?: number };
