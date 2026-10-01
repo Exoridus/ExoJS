@@ -139,10 +139,6 @@ importers:
         version: 5.0.2(@types/node@26.6.2)(@vitest/browser-playwright@5.0.2)(@vitest/browser-webdriverio@5.0.0)(@vitest/coverage-istanbul@5.0.2)(@vitest/ui@5.0.2)(jsdom@29.1.1)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.105.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/create-exo-app:
-    dependencies:
-      '@codexo/exojs':
-        specifier: 0.18.x
-        version: 0.18.0
     devDependencies:
       '@types/node':
         specifier: ^26.6.2
@@ -892,9 +888,6 @@ packages:
     engines: {node: '>=20.0.0'}
     peerDependencies:
       vite: 4.x || 5.x || 6.x
-
-  '@codexo/exojs@0.18.0':
-    resolution: {integrity: sha512-iTnnKGOH/9nxEazsWVdhcsiC8RCYiWfIZ68sS3Q5QoUyHkL40EeDc14RxBGwEXdshugkNwWYV1T2p+7brkQmGg==}
 
   '@csstools/color-helpers@6.1.1':
     resolution: {integrity: sha512-gLNsunvwf3mCi5u5o46/Z/JcJMnhbHSaZ69rkgPzNM3J4s8hWwpPUQB6/tt0EDFyCiWzxANlx+2LJwpYj4zS1w==}
@@ -5554,8 +5547,6 @@ snapshots:
       '@codecov/bundler-plugin-core': 2.0.1
       unplugin: 1.16.1
       vite: 8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.105.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
-
-  '@codexo/exojs@0.18.0': {}
 
   '@csstools/color-helpers@6.1.1': {}
 
