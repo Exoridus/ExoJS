@@ -102,7 +102,7 @@ const freezeRevision = (): string => {
     const changed = runner.run({ command: 'git', args: ['diff', '--name-only', 'HEAD', '--'] });
     const paths = changed.stdout
       .split('\n')
-      .map(line => line.trim())
+      .map((line: string) => line.trim())
       .filter(Boolean);
     die(
       [

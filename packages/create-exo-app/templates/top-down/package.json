@@ -11,11 +11,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@codexo/exojs": "latest",
-    "@codexo/exojs-pathfinding": "latest",
-    "@codexo/exojs-physics": "latest",
-    "@codexo/exojs-tiled": "latest",
-    "@codexo/exojs-tilemap": "latest"
+    "@codexo/exojs": "lockstep",
+    "@codexo/exojs-pathfinding": "lockstep",
+    "@codexo/exojs-physics": "lockstep",
+    "@codexo/exojs-tiled": "lockstep",
+    "@codexo/exojs-tilemap": "lockstep"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

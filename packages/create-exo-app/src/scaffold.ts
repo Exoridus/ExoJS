@@ -56,6 +56,36 @@ const promptProjectName = async (): Promise<string> => {
   return answer;
 };
 
+/**
+ * The engine range a generated project asks for. Read from this package's own
+ * manifest, so the version lives in exactly one place: the scaffolder's own
+ * `version`, which the release cut bumps alongside every engine package. A
+ * caret range on the minor keeps patch upgrades of the engine inside the same
+ * release line without floating the project onto the next minor.
+ */
+const engineRange = (): string => {
+  const own = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')) as { version: string };
+  const match = /^(\d+)\.(\d+)\./.exec(own.version);
+  if (!match) {
+    throw new Error(`create-exo-app has an unparseable version "${own.version}"; expected <major>.<minor>.<patch>.`);
+  }
+  return `${match[1]}.${match[2]}.x`;
+};
+
+/** Rewrites every `@codexo/*` dependency in the manifest to the engine range. */
+const pinEngineDependencies = (manifest: Record<string, unknown>): void => {
+  const range = engineRange();
+  for (const bucket of ['dependencies', 'devDependencies']) {
+    const deps = manifest[bucket];
+    if (typeof deps !== 'object' || deps === null) continue;
+    for (const [name, value] of Object.entries(deps as Record<string, unknown>)) {
+      if (!name.startsWith('@codexo/')) continue;
+      if (typeof value !== 'string') continue;
+      (deps as Record<string, string>)[name] = range;
+    }
+  }
+};
+
 const promptTemplate = async (): Promise<TemplateName> => {
   console.log('\nWhich template?');
   TEMPLATES.forEach((t, i) => {
@@ -91,6 +121,17 @@ export interface ScaffoldOptions {
  * Copy a template into `projectName` and set the generated `package.json` name
  * to the target directory's basename.
  *
+ * Every `@codexo/*` dependency is rewritten to this scaffolder's own release
+ * line. A template therefore never carries an engine version: the version that
+ * scaffolds the project is the version of the project, so `create-exo-app@0.19`
+ * always produces an app on `0.19.x` and a later `latest` never silently moves
+ * a generated project to a different engine API. That also keeps templates from
+ * needing an edit per release.
+ *
+ * Third-party tooling is left exactly as the template declares it - Vite,
+ * TypeScript and friends carry ordinary semver ranges and are not tied to the
+ * engine's release line.
+ *
  * Exits the process with a message when the target exists, is not empty and
  * `force` is not set.
  *
@@ -116,6 +157,7 @@ export const scaffoldApp = (options: ScaffoldOptions): string => {
   const pkgContent = readFileSync(pkgPath, 'utf-8');
   const pkgJson = JSON.parse(pkgContent) as Record<string, unknown>;
   pkgJson.name = basename(projectName);
+  pinEngineDependencies(pkgJson);
   writeFileSync(pkgPath, JSON.stringify(pkgJson, null, 2) + '\n');
 
   return destDir;

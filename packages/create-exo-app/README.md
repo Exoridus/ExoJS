@@ -11,6 +11,12 @@ npm run dev
 
 Omit `--template` to choose interactively. The generated project belongs to you: edit its source, commit its lockfile, and keep compatible ExoJS package versions pinned.
 
+## Engine version
+
+A generated project asks for the engine release the scaffolder belongs to. `create-exo-app@0.19` writes `"@codexo/exojs": "0.19.x"`, so the project you get matches the scaffolder you ran and a later `latest` never moves it to a different engine API. Pin `create-exo-app` the same way you pin the engine.
+
+Only ExoJS packages move together. Vite, TypeScript and the rest of the build toolchain keep ordinary semver ranges in the template and are not tied to the engine's release line.
+
 ## Templates
 
 | Template         | Starting point                                                                 |

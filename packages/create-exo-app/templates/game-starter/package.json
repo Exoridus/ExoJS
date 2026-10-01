@@ -11,7 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@codexo/exojs": "latest"
+    "@codexo/exojs": "lockstep"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

@@ -54,17 +54,21 @@ for (const dir of readdirSync(packagesDir, { withFileTypes: true })) {
 /**
  * A dependency range on an `@codexo/exojs*` package is considered in sync with
  * `version` when it is:
- *   - the literal `latest` dist-tag (the documented create-exo-app convention -
- *     see scripts/verify-create-exo-app.ts - which by construction can never
- *     drift, since it always resolves to whatever is newest on npm); or
+ *   - the `lockstep` placeholder, which the scaffolder rewrites to its own
+ *     release line when it writes the project - the documented convention, see
+ *     `pinEngineDependencies` in the scaffolder; or
  *   - an exact match of `version` (optionally caret-prefixed); or
  *   - the lockstep `<major>.<minor>.x` form used elsewhere in the repo (see
  *     scripts/verify-lockstep-versions.ts) for the same major.minor as `version`.
- * Anything else (a stale pin, a mismatched major/minor, a `workspace:` protocol
- * range that would break a published scaffold) fails.
+ *
+ * `latest` is deliberately *not* accepted. A template that resolved to whatever
+ * was newest on npm would let a generated project land on a different engine API
+ * than the scaffolder that produced it, which is the drift this placeholder
+ * exists to prevent. Anything else (a stale pin, a mismatched major/minor, a
+ * `workspace:` protocol range that would break a published scaffold) fails.
  */
 const isInSyncRange = (range: string, version: string): boolean => {
-  if (range === 'latest') return true;
+  if (range === 'lockstep') return true;
   if (range === version || range === `^${version}`) return true;
 
   const [major, minor] = version.split('.');
