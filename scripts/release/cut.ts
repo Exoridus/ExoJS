@@ -99,8 +99,11 @@ const run = (cmd: string, opts: { cwd?: string } = {}): void => {
 // ── Pre-flight checks ──────────────────────────────────────────────────────
 
 const assertCleanTree = (): void => {
+  // `git diff`, not `git diff-index`: see the same reasoning in `run.ts`. The build
+  // rewrites generated files with unchanged content, which `diff-index` reports as
+  // a modified tree from the stat cache alone.
   try {
-    execSync('git diff-index --quiet HEAD --', { stdio: 'pipe', cwd: repoRoot });
+    execSync('git diff --quiet HEAD --', { stdio: 'pipe', cwd: repoRoot });
   } catch {
     die('Working tree is dirty. Commit or stash changes before cutting a release.');
   }
