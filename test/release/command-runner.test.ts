@@ -57,23 +57,26 @@ describe('command logs', () => {
     const directory = scratch();
     const runner = createExecRunner({ logDirectory: directory });
     const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const failed = runner.run({ command: 'node', args: ['-e', 'process.exit(3)'] });
-    const passed = runner.run({ command: 'node', args: ['--version'] });
-    const diagnostic = stderr.mock.calls.map(([chunk]) => String(chunk)).join('');
-    stderr.mockRestore();
+    try {
+      const failed = runner.run({ command: 'node', args: ['-e', 'process.exit(3)'] });
+      const passed = runner.run({ command: 'node', args: ['--version'] });
+      const diagnostic = stderr.mock.calls.map(([chunk]) => String(chunk)).join('');
 
-    expect(failed.code).toBe(3);
-    expect(passed.code).toBe(0);
-    expect(failed.logPath).toBeDefined();
-    expect(passed.logPath).not.toBe(failed.logPath);
-    expect(existsSync(failed.logPath!)).toBe(true);
-    expect(readFileSync(failed.logPath!, 'utf8')).toContain('exit=3');
-    // The runner announces the failing exit code and points at its log. That
-    // announcement is expected here, so it is asserted instead of printed into a
-    // green run, and the successful command announces nothing.
-    expect(diagnostic).toContain('exited 3');
-    expect(diagnostic).toContain(failed.logPath!);
-    expect(diagnostic).not.toContain('exited 0');
+      expect(failed.code).toBe(3);
+      expect(passed.code).toBe(0);
+      expect(failed.logPath).toBeDefined();
+      expect(passed.logPath).not.toBe(failed.logPath);
+      expect(existsSync(failed.logPath!)).toBe(true);
+      expect(readFileSync(failed.logPath!, 'utf8')).toContain('exit=3');
+      // The runner announces the failing exit code and points at its log. That
+      // announcement is expected here, so it is asserted instead of printed into
+      // a green run, and the successful command announces nothing.
+      expect(diagnostic).toContain('exited 3');
+      expect(diagnostic).toContain(failed.logPath!);
+      expect(diagnostic).not.toContain('exited 0');
+    } finally {
+      stderr.mockRestore();
+    }
   });
 
   it('adds no log when none was asked for', () => {

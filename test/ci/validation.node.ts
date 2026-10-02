@@ -32,23 +32,31 @@ const run = (mode: string, cwd: string, extra: Partial<Parameters<typeof runComm
     output: 'silent',
     ...extra,
   });
-// The supervisor announces every failure, timeout and aborted run on the process
-// streams, so a test that provokes one would print a fake `FAIL` block into an
-// otherwise green run. A capture keeps exactly those announcements, asserts them
-// and restores the streams. Every other write is forwarded untouched, so the
-// runner's own result lines and a live child's mirrored output stay visible even
-// while a capture window is open.
-const ANNOUNCEMENT = /^(?:FAIL |STOP |RUN |PASS |Failed to start |--- diagnostic tail ---|Full log: )/;
+// The supervisor announces a failed run on the process streams, so a test that
+// provokes one would print a fake `FAIL` block into an otherwise green run. A
+// capture keeps those announcements, asserts them and restores the streams.
+// Scoping matters in both directions: only the labels this file supervises are
+// captured, because a supervised command may legitimately print text of the same
+// shape, and everything else is forwarded untouched so the runner's own result
+// lines and a live child's mirrored output stay visible.
+const SUPERVISED = '(?:supervisor-test|missing|invalid-spawn)';
+const ANNOUNCEMENT = new RegExp(`^(?:(?:FAIL|STOP|RUN|PASS) ${SUPERVISED}\\b|Failed to start ${SUPERVISED}:)`);
+// The tail and the full-log pointer carry no label. They belong to the failure
+// report a labelled announcement opens, and the supervisor never writes them
+// before it, so they are only taken once one has been seen.
+const REPORT = /^(?:--- diagnostic tail ---|Full log: )/;
 
 const capture = async <T>(block: () => Promise<T>): Promise<{ result: T; stdout: string; stderr: string }> => {
   let stdout = '';
   let stderr = '';
+  let announced = false;
   const patch = (stream: NodeJS.WriteStream, sink: (text: string) => void): (() => void) => {
     const original = stream.write;
     stream.write = ((chunk: string | Uint8Array, ...rest: unknown[]): boolean => {
-      if (!ANNOUNCEMENT.test(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString()))
-        return (original as (...args: unknown[]) => boolean).call(stream, chunk, ...rest);
-      sink(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString());
+      const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString();
+      if (ANNOUNCEMENT.test(text)) announced = true;
+      else if (!announced || !REPORT.test(text)) return (original as (...args: unknown[]) => boolean).call(stream, chunk, ...rest);
+      sink(text);
       return true;
     }) as typeof stream.write;
     return () => {
@@ -99,6 +107,20 @@ for (const output of ['silent', 'compact', 'normal', 'verbose'] as const) {
     assert.equal(stdout.includes('PASS supervisor-test'), output !== 'silent');
   });
 }
+
+void test('a supervised command keeps its own announcement-shaped output', async () => {
+  const { result, stdout, stderr } = await capture(() => run('lookalike', directory(), { output: 'normal' }));
+  const log = readFileSync(result.logPath!, 'utf8');
+  assert.equal(result.status, 0);
+  assert.match(log, /PASS stage one/);
+  assert.match(log, /RUN benchmark/);
+  // The capture is scoped to the supervisor's own labels, so a command that
+  // prints `PASS` or `RUN` of its own is forwarded instead of being taken for an
+  // announcement, and a successful run announces only its progress.
+  assert.equal(stdout.includes('PASS stage one'), false);
+  assert.equal(stderr.includes('RUN benchmark'), false);
+  assert.match(stdout, /^RUN supervisor-test; PID \d+/);
+});
 
 void test('preserves nonzero exit and the unterminated diagnostic line', async () => {
   const { result, stderr } = await capture(() => run('failure', directory()));
