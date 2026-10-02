@@ -38,6 +38,10 @@ interface Exemption {
 
 const EXEMPTIONS: readonly Exemption[] = [
   {
+    path: 'src/assets/factories/basis/basis_transcoder.mjs',
+    reason: 'pinned official Emscripten Basis Universal glue, executed only by the texture worker',
+  },
+  {
     path: 'packages/create-exo-app/bin/create-exo-app.js',
     reason: 'npm/pnpm link this executable before builds; Node cannot strip TypeScript inside installed node_modules, and tsconfig.scripts.json checks it',
   },

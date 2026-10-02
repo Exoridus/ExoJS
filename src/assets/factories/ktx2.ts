@@ -4,7 +4,7 @@ import { compressedLevelByteLength, CompressedTextureFormat as Format } from '#r
 import type { Rgba8TextureLevel } from '#rendering/texture/pixelPayload';
 import type { TextureAlphaMode, TextureColorSpace } from '#rendering/texture/TextureOptions';
 
-import { parseKtx2Descriptor } from './ktx2Descriptor';
+import { type Ktx2Descriptor, parseKtx2Descriptor } from './ktx2Descriptor';
 import { formatByVkFormat, ktx2LevelAlignment, vkFormatRgba8Srgb, vkFormatRgba8Unorm } from './ktx2Profile';
 
 /** `«KTX 20»\r\n\x1A\n` - the 12-byte KTX2 file identifier. */
@@ -122,7 +122,7 @@ const rgba8LevelByteLength = (source: string, width: number, height: number, ind
  * `source` only names the file in error messages.
  *
  * @throws AssetDecodeError - not a KTX2 file, a supercompression scheme this
- *   engine does not carry (BasisLZ, Zstandard, ZLIB), a `vkFormat` outside the
+ *   synchronous parser cannot decode (BasisLZ, Zstandard, ZLIB), a `vkFormat` outside the
  *   supported set, a non-2D target (array layers, cube faces, depth), or a level
  *   whose declared byte length does not match its extent.
  */
@@ -138,23 +138,34 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
   }
 
   const descriptor = parseKtx2Descriptor(buffer, source);
+  return materializeKtx2(buffer, source, descriptor);
+};
+
+/** Materializes native levels after container validation; a reader may supply inflated bytes. */
+export const materializeKtx2 = (
+  buffer: ArrayBuffer,
+  source: string,
+  descriptor: Ktx2Descriptor,
+  readLevel?: (index: number, expected: number) => Uint8Array,
+): Ktx2Payload => {
+  const bytes = new Uint8Array(buffer);
   const { vkFormat, pixelWidth, pixelHeight, levelCount, supercompressionScheme } = descriptor;
 
-  if (supercompressionScheme === zlibSupercompression) {
+  if (supercompressionScheme === zlibSupercompression && readLevel === undefined) {
     return fail(source, 'payload is still ZLIB-supercompressed. Run inflateKtx2Levels over the bytes before parsing them.');
   }
 
-  if (supercompressionScheme !== 0) {
+  if (supercompressionScheme !== 0 && (supercompressionScheme !== zlibSupercompression || readLevel === undefined)) {
     const name = supercompressionNames.get(supercompressionScheme) ?? `scheme ${supercompressionScheme}`;
 
     return fail(
       source,
-      `payload uses ${name} supercompression, which this engine does not decode. Ship the file in a hardware format per target ` +
-        `(and select between them with loader.variants) instead of a universal one.`,
+      `payload uses ${name} supercompression, which this synchronous parser does not decode. Use the texture loader for supported universal or ZLIB payloads.`,
     );
   }
 
   const sliceLevel = (index: number, expected: number): Uint8Array => {
+    if (readLevel !== undefined) return readLevel(index, expected);
     const level = descriptor.levels[index];
 
     if (level === undefined) {
@@ -220,13 +231,36 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
   return { kind: 'compressed', format, levels, ...metadata };
 };
 
+/** Inflates validated ZLIB levels directly into their final CPU payload. */
+export const inflateKtx2Payload = async (buffer: ArrayBuffer, source: string, descriptor: Ktx2Descriptor, signal?: AbortSignal): Promise<Ktx2Payload> => {
+  throwIfAborted(signal);
+  let decodedBytes = 0;
+  for (const level of descriptor.levels) {
+    decodedBytes += level.uncompressedByteLength;
+    if (!Number.isSafeInteger(decodedBytes) || decodedBytes > maxInflatedKtx2Bytes)
+      return fail(source, `exceeds the ${maxInflatedKtx2Bytes}-byte ZLIB safety budget.`);
+  }
+  const payload = materializeKtx2(buffer, source, descriptor, (index, expected) => {
+    if (descriptor.levels[index]?.uncompressedByteLength !== expected) return fail(source, `level ${index} inflated byte length must be ${expected}.`);
+    return new Uint8Array(expected);
+  });
+  if (typeof DecompressionStream === 'undefined') return fail(source, 'ZLIB requires DecompressionStream.');
+  const bytes = new Uint8Array(buffer);
+  for (const [index, level] of descriptor.levels.entries()) {
+    const destination = payload.levels[index];
+    if (destination === undefined) return fail(source, `level ${index} is missing.`);
+    await inflateZlib(bytes.subarray(level.offset, level.offset + level.length), destination.data, source, index, signal);
+  }
+  return payload;
+};
+
 /**
  * Inflate the levels of a ZLIB-supercompressed KTX2 container.
  *
  * Scheme 3 stores every mip level as a zlib stream, which the browser inflates
  * natively through `DecompressionStream` - no decoder ships with the engine, so
- * this is the one supercompression scheme that costs nothing to support. The
- * other two need a WASM transcoder and stay refused.
+ * this supercompression scheme needs no bundled decoder. This helper leaves
+ * universal payloads to the asynchronous texture decoder.
  *
  * Returns `buffer` itself when the container is not ZLIB-supercompressed, so it
  * can sit in front of {@link parseKtx2} unconditionally. The result is an

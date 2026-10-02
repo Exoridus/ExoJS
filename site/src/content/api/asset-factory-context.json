@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -183,6 +183,43 @@
           "params": [],
           "returnType": null,
           "description": "The identity of the source data it is built from."
+        },
+        {
+          "name": "textureFormats",
+          "signature": "textureFormats?: readonly CompressedTextureFormat[]",
+          "signatureTokens": [
+            {
+              "text": "textureFormats",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Backend-supported compressed formats, most preferred first. Absent before device initialization."
         }
       ],
       "paragraphs": [],

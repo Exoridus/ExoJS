@@ -4,6 +4,7 @@ import type { AssetConstructor } from '#assets/AssetConstructor';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { AssetDecoder } from '#assets/AssetDecoder';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
+import { AssetVariantSet } from '#assets/AssetVariantSet';
 import { AssetCache } from '#assets/cache/AssetCache';
 import type { CacheContext } from '#assets/cache/CachePolicy';
 import { CacheRoute } from '#assets/cache/CacheRoute';
@@ -16,7 +17,7 @@ import { testAssetType } from './test-asset-type';
 
 class TypeA {}
 
-const fakeLoader = {} as Loader;
+const fakeLoader = { variants: new AssetVariantSet() } as Loader;
 const fakeScope = { id: 1, kind: 'dependency' } as unknown as LoaderScope;
 
 /** A cache whose policy resolves to a canned value and records the contexts it saw. */
@@ -125,6 +126,7 @@ describe('AssetDecoder', () => {
     const { decoder, typeRegistry, storeResource, canonical } = createDecoder();
     let seenOptions: unknown;
     let seenSource: unknown;
+    let seenFormats: unknown;
 
     typeRegistry.installAll([
       testAssetType<string, unknown, { scale: number }>({
@@ -134,6 +136,7 @@ describe('AssetDecoder', () => {
         create: async (_source, context) => {
           seenOptions = context.options;
           seenSource = context.source;
+          seenFormats = context.textureFormats;
 
           return { ok: true };
         },
@@ -144,6 +147,7 @@ describe('AssetDecoder', () => {
 
     expect(seenOptions).toEqual({ scale: 2 });
     expect(seenSource).toBe('hero.png');
+    expect(seenFormats).toBe(fakeLoader.variants.profile.textureFormats);
     expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), { ok: true });
   });
 

@@ -280,6 +280,7 @@ export class AssetDecoder {
       ...(options !== undefined && options !== null && { options }),
       signal,
       source: asset.source,
+      textureFormats: this._loader.variants.profile.textureFormats,
       locator: asset.locator,
       resourceKey: asset.key,
       sourceKey: asset.sourceKey,

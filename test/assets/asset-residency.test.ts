@@ -5,6 +5,7 @@ import { AssetDecoder } from '#assets/AssetDecoder';
 import type { AssetResidencySignals } from '#assets/AssetResidency';
 import { AssetResidency } from '#assets/AssetResidency';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
+import { AssetVariantSet } from '#assets/AssetVariantSet';
 import { AssetCache } from '#assets/cache/AssetCache';
 import type { CacheContext, CachePolicy } from '#assets/cache/CachePolicy';
 import { type CanonicalAsset, canonicalizeSource, resourceKey, sourceKey } from '#assets/canonicalKey';
@@ -17,7 +18,7 @@ import { testAssetType } from './test-asset-type';
 
 class TypeA {}
 
-const fakeLoader = {} as Loader;
+const fakeLoader = { variants: new AssetVariantSet() } as Loader;
 
 /**
  * Installs `TypeA` as an acquiring text type, which is what makes a bare

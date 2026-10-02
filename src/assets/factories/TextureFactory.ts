@@ -5,8 +5,10 @@ import { CompressedTexture } from '#rendering/texture/CompressedTexture';
 import { Texture } from '#rendering/texture/Texture';
 import type { SamplerOptions, TextureAlphaMode, TextureColorSpace, TextureOptions } from '#rendering/texture/TextureOptions';
 
+import { BasisKtx2Runtime } from './BasisKtx2Runtime';
 import { decodeImageBlob } from './decodeImageBlob';
-import { inflateKtx2Levels, isKtx2, parseKtx2 } from './ktx2';
+import { decodeKtx2 } from './decodeKtx2';
+import { isKtx2 } from './ktx2';
 import { ObjectUrlPool } from './ObjectUrlPool';
 
 /** Options accepted by an asset of the built-in `texture` type. */
@@ -36,12 +38,13 @@ export interface TextureAssetOptions {
  */
 export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, TextureAssetOptions> {
   private readonly _objectUrls = new ObjectUrlPool();
+  private _basis: BasisKtx2Runtime | undefined;
 
   public async create(source: ArrayBuffer, context: AssetFactoryContext<TextureAssetOptions>): Promise<Texture> {
     const { mimeType, textureOptions } = context.options ?? {};
 
     if (isKtx2(new Uint8Array(source))) {
-      return this._createFromKtx2(source, context.source, textureOptions);
+      return this._createFromKtx2(source, context, textureOptions);
     }
 
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
@@ -57,13 +60,25 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
 
   public destroy(): void {
     this._objectUrls.revokeAll();
+    this._basis?.destroy();
   }
 
-  private async _createFromKtx2(source: ArrayBuffer, name: string, textureOptions: Partial<TextureOptions> | undefined): Promise<Texture> {
-    // ZLIB supercompression is inflated ahead of the parser rather than inside
-    // it: DecompressionStream is a stream, and keeping the parser synchronous
-    // keeps it testable without I/O.
-    const payload = parseKtx2(await inflateKtx2Levels(source, name), name);
+  private async _createFromKtx2(
+    source: ArrayBuffer,
+    context: AssetFactoryContext<TextureAssetOptions>,
+    textureOptions: Partial<TextureOptions> | undefined,
+  ): Promise<Texture> {
+    const name = context.source;
+    const payload = await decodeKtx2(
+      source,
+      name,
+      context.textureFormats,
+      (buffer, descriptor, target, signal) => {
+        this._basis ??= new BasisKtx2Runtime();
+        return this._basis.transcode(buffer, descriptor, target, signal);
+      },
+      context.signal,
+    );
 
     const requested = textureOptions ?? {};
     const colorSpace = resolveKtx2ColorSpace(name, payload.colorSpace, requested.colorSpace);

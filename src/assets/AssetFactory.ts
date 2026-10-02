@@ -1,3 +1,5 @@
+import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
+
 import type { AssetLocator, ResourceKey, SourceKey } from './canonicalKey';
 import type { LoaderScope } from './LoaderScope';
 
@@ -27,6 +29,8 @@ export type AssetDependencyScope = Pick<LoaderScope, 'get' | 'load' | 'createSco
  * @advanced
  */
 export interface AssetFactoryContext<Options = undefined> {
+  /** Backend-supported compressed formats, most preferred first. Absent before device initialization. */
+  readonly textureFormats?: readonly CompressedTextureFormat[];
   /** The options this request carried, as declared by the asset type. */
   readonly options?: Options;
   /**

@@ -18,7 +18,7 @@ import { TextureFormat } from '#rendering/types';
 import { factoryContext } from '../../assets/factory-context';
 import { externalCorpusFormats } from '../../assets/ktx2-external-formats';
 import manifest from '../../fixtures/color-external/manifest.json';
-import { type ColorProbeHarness, drawInto, expectBytes, type OpenColorProbeHarness, spriteScene } from './color-probe-fixtures';
+import { type ColorProbeHarness, drawInto, expectBytes, type OpenColorProbeHarness, spriteScene, srgbDecode, srgbEncode } from './color-probe-fixtures';
 
 const fixtureUrls = import.meta.glob<string>('../../fixtures/color-external/*.ktx2', { query: '?url', import: 'default', eager: true });
 
@@ -55,7 +55,7 @@ export const defineColorKtx2ExternalProbes = (title: string, open: OpenColorProb
       }
 
       const texture = await new TextureFactory().create(await loadFixture(file), factoryContext());
-      // An sRGB texture is decoded on sample and encoded again on write; a linear one stays numeric.
+      // Drawing associates straight RGB in linear light before the target optionally encodes it.
       const target = new RenderTexture(16, 16, { format: entry.transfer === 'srgb' ? TextureFormat.Rgba8Srgb : TextureFormat.Rgba8 });
 
       try {
@@ -63,7 +63,12 @@ export const defineColorKtx2ExternalProbes = (title: string, open: OpenColorProb
           drawInto(h.backend, target, spriteScene(texture, 16, 16), Color.transparentBlack);
 
           for (const { x, y, rgba } of entry.samples) {
-            expectBytes(await h.backend.readPixels(target, x, y, 1, 1), rgba, manifest.tolerance);
+            const alpha = rgba[3] / 255;
+            const expected = rgba.map((channel, index) => {
+              if (index === 3) return channel;
+              return entry.transfer === 'srgb' ? srgbEncode(srgbDecode(channel / 255) * alpha) * 255 : channel * alpha;
+            });
+            expectBytes(await h.backend.readPixels(target, x, y, 1, 1), expected, manifest.tolerance);
           }
         });
       } finally {

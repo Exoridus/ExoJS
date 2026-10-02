@@ -1860,11 +1860,15 @@ export class WebGpuBackend implements RenderBackend {
    * Part of the renderer SDK contract for extension renderers.
    */
   public shouldPremultiplyTextureSample(texture: Texture | RenderTexture): boolean {
-    if (texture instanceof RenderTexture || !texture.premultiplyAlpha) {
+    if (texture instanceof RenderTexture || texture.alphaMode === 'premultiplied') {
       return false;
     }
 
-    return texture.alphaMode !== 'premultiplied' && !this._needsColorNormalization(texture);
+    // Compressed bytes cannot be normalized at upload; their DFD association governs the sample instead.
+    if (texture.compressed !== null) return texture.colorSpace !== 'none';
+    if (!texture.premultiplyAlpha) return false;
+
+    return !this._needsColorNormalization(texture);
   }
 
   /** Part of the renderer SDK contract for extension renderers. */

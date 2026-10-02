@@ -33,6 +33,7 @@ export default defineConfig([
       'dist/**',
       'node_modules/**',
       'src/vendor/**',
+      'src/assets/factories/basis/basis_transcoder.mjs',
       'site/dist/**',
       'site/node_modules/**',
       'site/public/vendor/**',
@@ -66,7 +67,7 @@ export default defineConfig([
 
   // Engine source
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'src/assets/factories/basis/*.d.mts'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -570,6 +571,15 @@ export default defineConfig([
       // Splitting would scatter that state across files for no readability
       // gain. Known deviation, candidate for a later extraction.
       'max-lines': 'off',
+    },
+  },
+
+  {
+    files: ['src/assets/factories/basis/basis_transcoder.d.mts'],
+    rules: {
+      // This declaration must preserve the official transcoder's module name and ABI spelling.
+      'unicorn/filename-case': 'off',
+      '@typescript-eslint/naming-convention': 'off',
     },
   },
 
