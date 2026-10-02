@@ -1029,7 +1029,14 @@ export default defineConfig([
   // given a real tsconfig program, since these files intentionally sit
   // outside any typed program.
   ...nodeToolingConfig({
-    files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.{ts,mts,cts}', 'scripts/**/*.mjs', 'packages/exojs-bench/competitors/*.ts'],
+    files: [
+      '*.config.ts',
+      'eslint.config.ts',
+      'scripts/**/*.{ts,mts,cts}',
+      'scripts/**/*.mjs',
+      'packages/exojs-bench/competitors/*.ts',
+      'packages/create-exo-app/bin/*.js',
+    ],
   }),
 
   // scripts/webgpu-probe.ts runs as a Node process that drives a Playwright
