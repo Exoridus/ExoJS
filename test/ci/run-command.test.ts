@@ -33,6 +33,7 @@ describe('runCommand', () => {
 
   it('keeps the final unterminated line and limits the failure tail', async () => {
     const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     const result = await runNode(
       "for (let i = 0; i < 125; i++) process.stdout.write(`line-${i}\\n`); process.stdout.write('last-line'); process.exitCode = 2;",
       'compact',
@@ -40,11 +41,14 @@ describe('runCommand', () => {
 
     const log = readFileSync(result.logPath!, 'utf8');
     const diagnostic = stderr.mock.calls.map(([chunk]) => String(chunk)).join('');
+    const progress = stdout.mock.calls.map(([chunk]) => String(chunk)).join('');
     stderr.mockRestore();
+    stdout.mockRestore();
     expect(result.status).toBe(2);
     expect(diagnostic).toContain('line-124');
     expect(diagnostic).toContain('Full log:');
     expect(diagnostic).not.toContain('line-0');
+    expect(progress).toMatch(/RUN run-command-test-\d+; PID \d+/);
     expect(log).toContain('line-0');
     expect(log).toContain('line-124');
     expect(log).toContain('last-line');
@@ -57,18 +61,23 @@ describe('runCommand', () => {
   });
 
   it('propagates verbose mode through the live path', async () => {
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     const result = await runCommand({
       label: `run-command-verbose-${sequence++}`,
       command: process.execPath,
       args: ['-e', "process.exit(process.env.EXOJS_OUTPUT === 'verbose' ? 0 : 1)"],
       output: 'verbose',
     });
+    const progress = stdout.mock.calls.map(([chunk]) => String(chunk)).join('');
+    stdout.mockRestore();
 
     expect(result.status).toBe(0);
+    expect(progress).toMatch(/PASS run-command-verbose-\d+/);
   });
 
   it('reports a live spawn error instead of hiding it', async () => {
     const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     const result = await runCommand({
       label: `run-command-missing-${sequence++}`,
       command: 'exojs-command-that-does-not-exist',
@@ -76,16 +85,25 @@ describe('runCommand', () => {
       output: 'normal',
     });
     const diagnostic = stderr.mock.calls.map(([chunk]) => String(chunk)).join('');
+    const progress = stdout.mock.calls.map(([chunk]) => String(chunk)).join('');
     stderr.mockRestore();
+    stdout.mockRestore();
 
     expect(result.status).toBe(1);
     expect(diagnostic).toContain('Failed to start run-command-missing');
+    // The spawn never produced a pid, and the announcement says so rather than
+    // inventing one.
+    expect(progress).toMatch(/RUN run-command-missing-\d+; PID \?/);
   });
 
   it('writes a compact success result without losing the full log', async () => {
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     const result = await runNode("process.stdout.write('complete output');", 'compact');
+    const progress = stdout.mock.calls.map(([chunk]) => String(chunk)).join('');
+    stdout.mockRestore();
 
     expect(result.status).toBe(0);
+    expect(progress).toMatch(/PASS run-command-test-\d+/);
     expect(readFileSync(result.logPath!, 'utf8')).toContain('complete output');
     expect(readFileSync(result.logPath!, 'utf8')).toMatch(/exit=0\nsignal=none\nreason=exit\ndurationMs=\d+/);
   });

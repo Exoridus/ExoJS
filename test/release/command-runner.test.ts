@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createExecRunner, writeCommandLog } from '../../scripts/release/command-runner.ts';
 
@@ -56,8 +56,11 @@ describe('command logs', () => {
   it('runs a real command, returns the log of a failure and leaves the first run intact after a second', () => {
     const directory = scratch();
     const runner = createExecRunner({ logDirectory: directory });
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const failed = runner.run({ command: 'node', args: ['-e', 'process.exit(3)'] });
     const passed = runner.run({ command: 'node', args: ['--version'] });
+    const diagnostic = stderr.mock.calls.map(([chunk]) => String(chunk)).join('');
+    stderr.mockRestore();
 
     expect(failed.code).toBe(3);
     expect(passed.code).toBe(0);
@@ -65,6 +68,12 @@ describe('command logs', () => {
     expect(passed.logPath).not.toBe(failed.logPath);
     expect(existsSync(failed.logPath!)).toBe(true);
     expect(readFileSync(failed.logPath!, 'utf8')).toContain('exit=3');
+    // The runner announces the failing exit code and points at its log. That
+    // announcement is expected here, so it is asserted instead of printed into a
+    // green run, and the successful command announces nothing.
+    expect(diagnostic).toContain('exited 3');
+    expect(diagnostic).toContain(failed.logPath!);
+    expect(diagnostic).not.toContain('exited 0');
   });
 
   it('adds no log when none was asked for', () => {

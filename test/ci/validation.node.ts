@@ -32,6 +32,38 @@ const run = (mode: string, cwd: string, extra: Partial<Parameters<typeof runComm
     output: 'silent',
     ...extra,
   });
+// The supervisor announces every failure, timeout and aborted run on the process
+// streams, so a test that provokes one would print a fake `FAIL` block into an
+// otherwise green run. A capture keeps exactly those announcements, asserts them
+// and restores the streams. Every other write is forwarded untouched, so the
+// runner's own result lines and a live child's mirrored output stay visible even
+// while a capture window is open.
+const ANNOUNCEMENT = /^(?:FAIL |STOP |RUN |PASS |Failed to start |--- diagnostic tail ---|Full log: )/;
+
+const capture = async <T>(block: () => Promise<T>): Promise<{ result: T; stdout: string; stderr: string }> => {
+  let stdout = '';
+  let stderr = '';
+  const patch = (stream: NodeJS.WriteStream, sink: (text: string) => void): (() => void) => {
+    const original = stream.write;
+    stream.write = ((chunk: string | Uint8Array, ...rest: unknown[]): boolean => {
+      if (!ANNOUNCEMENT.test(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString()))
+        return (original as (...args: unknown[]) => boolean).call(stream, chunk, ...rest);
+      sink(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString());
+      return true;
+    }) as typeof stream.write;
+    return () => {
+      stream.write = original;
+    };
+  };
+  const restore = [patch(process.stdout, text => (stdout += text)), patch(process.stderr, text => (stderr += text))];
+  try {
+    const result = await block();
+    return { result, stdout, stderr };
+  } finally {
+    for (const undo of restore) undo();
+  }
+};
+
 const isRunning = (pid: number): boolean => {
   try {
     process.kill(pid, 0);
@@ -56,40 +88,54 @@ const waitForFile = async (path: string): Promise<number> => {
 for (const output of ['silent', 'compact', 'normal', 'verbose'] as const) {
   void test(`records both streams and propagates ${output} mode`, async () => {
     const cwd = directory();
-    const result = await run('streams', cwd, { output });
+    const { result, stdout } = await capture(() => run('streams', cwd, { output }));
     assert.equal(result.status, 0);
     assert.ok(result.logPath?.startsWith(join(cwd, '.workspace', 'logs')));
     const log = readFileSync(result.logPath!, 'utf8');
     assert.match(log, new RegExp(`stdout:${output}`));
     assert.match(log, /stderr/);
+    // Only the live modes mirror the child's own streams, and every mode but
+    // `silent` reports its progress on stdout.
+    assert.equal(stdout.includes('PASS supervisor-test'), output !== 'silent');
   });
 }
 
 void test('preserves nonzero exit and the unterminated diagnostic line', async () => {
-  const result = await run('failure', directory());
+  const { result, stderr } = await capture(() => run('failure', directory()));
   assert.equal(result.status, 7);
   assert.match(readFileSync(result.logPath!, 'utf8'), /line-0[\s\S]*line-124[\s\S]*last-line/);
+  assert.match(stderr, /FAIL supervisor-test \(exit 7,/);
+  assert.match(stderr, /--- diagnostic tail ---[\s\S]*line-124/);
+  assert.match(stderr, /Full log: /);
 });
 
 void test('same-label concurrent invocations never overwrite each other', async () => {
   const cwd = directory();
-  const results = await Promise.all([run('streams', cwd), run('failure', cwd)]);
-  assert.notEqual(results[0]!.logPath, results[1]!.logPath);
-  assert.match(readFileSync(results[0]!.logPath!, 'utf8'), /stdout/);
-  assert.match(readFileSync(results[1]!.logPath!, 'utf8'), /last-line/);
+  const { result, stdout, stderr } = await capture(() => Promise.all([run('streams', cwd), run('failure', cwd)]));
+  assert.notEqual(result[0]!.logPath, result[1]!.logPath);
+  assert.match(readFileSync(result[0]!.logPath!, 'utf8'), /stdout/);
+  assert.match(readFileSync(result[1]!.logPath!, 'utf8'), /last-line/);
+  // The failing invocation announces itself exactly once even though its sibling
+  // shares the label, and the silent sibling announces no progress at all.
+  assert.equal(stderr.match(/FAIL supervisor-test \(exit 7,/g)?.length, 1);
+  assert.equal(stdout, '');
 });
 
 for (const mode of ['sleep', 'stubborn', 'tree', 'detached-tree']) {
   void test(`times out ${mode} without leaving its child running`, async () => {
     const cwd = directory();
     const pidFile = join(cwd, 'pid');
-    const result = await run(mode, cwd, {
-      args: [...process.execArgv, fixture, mode, pidFile],
-      timeoutMs: 300,
-      killGraceMs: 100,
-    });
+    const { result, stderr } = await capture(() =>
+      run(mode, cwd, {
+        args: [...process.execArgv, fixture, mode, pidFile],
+        timeoutMs: 300,
+        killGraceMs: 100,
+      }),
+    );
     assert.equal(result.status, 124);
     assert.equal(result.timedOut, true);
+    assert.match(stderr, /STOP supervisor-test: timeout; owned PID \d+/);
+    assert.equal(stderr.match(/FAIL supervisor-test \(timeout,/g)?.length, 1);
     assert.ok(result.durationMs < (process.platform === 'win32' ? 12_000 : 1600), `duration=${result.durationMs}`);
     const pid = await waitForFile(pidFile);
     for (let i = 0; i < 50 && isRunning(pid); i++) await delay(20);
@@ -121,11 +167,13 @@ void test('stops a running root even when the recorded spawn window misses the k
 void test('times out orphan without leaving its child running', async t => {
   const cwd = directory();
   const pidFile = join(cwd, 'pid');
-  const result = await run('orphan', cwd, {
-    args: [...process.execArgv, fixture, 'orphan', pidFile],
-    timeoutMs: 300,
-    killGraceMs: 100,
-  });
+  const { result, stderr } = await capture(() =>
+    run('orphan', cwd, {
+      args: [...process.execArgv, fixture, 'orphan', pidFile],
+      timeoutMs: 300,
+      killGraceMs: 100,
+    }),
+  );
   let pid = -1;
   for (let i = 0; i < 100; i++) {
     try {
@@ -141,6 +189,8 @@ void test('times out orphan without leaving its child running', async t => {
   if (pid < 0) return t.skip('the host ended the descendant with its parent; no orphan exists here');
   assert.equal(result.status, 124);
   assert.equal(result.timedOut, true);
+  assert.match(stderr, /STOP supervisor-test: timeout/);
+  assert.match(stderr, /FAIL supervisor-test \(timeout,/);
   for (let i = 0; i < 50 && isRunning(pid); i++) await delay(20);
   assert.equal(isRunning(pid), false, `owned child ${pid} survived`);
 });
@@ -148,8 +198,10 @@ void test('times out orphan without leaving its child running', async t => {
 void test('timeout does not kill an unrelated process', async () => {
   const unrelated = spawn(process.execPath, [...process.execArgv, fixture, 'sleep'], { stdio: 'ignore' });
   try {
-    const result = await run('sleep', directory(), { timeoutMs: 200, killGraceMs: 80 });
+    const { result, stderr } = await capture(() => run('sleep', directory(), { timeoutMs: 200, killGraceMs: 80 }));
     assert.equal(result.status, 124);
+    assert.match(stderr, /STOP supervisor-test: timeout/);
+    assert.match(stderr, /FAIL supervisor-test \(timeout,/);
     assert.equal(isRunning(unrelated.pid!), true);
   } finally {
     unrelated.kill('SIGKILL');
@@ -161,9 +213,14 @@ void test('an already aborted command never starts', async () => {
   controller.abort();
   const cwd = directory();
   const pidFile = join(cwd, 'pid');
-  const result = await run('sleep', cwd, { args: [...process.execArgv, fixture, 'sleep', pidFile], signal: controller.signal });
+  const { result, stdout, stderr } = await capture(() =>
+    run('sleep', cwd, { args: [...process.execArgv, fixture, 'sleep', pidFile], signal: controller.signal }),
+  );
   assert.equal(result.status, 130);
   assert.equal(result.aborted, true);
+  // A run that never started has nothing to announce.
+  assert.equal(stdout, '');
+  assert.equal(stderr, '');
   assert.throws(() => readFileSync(pidFile));
 });
 
@@ -172,16 +229,20 @@ void test('an explicit abort stops a running command and removes process listene
   const before = ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal));
   const cwd = directory();
   const pidFile = join(cwd, 'pid');
-  const running = run('stubborn', cwd, {
-    args: [...process.execArgv, fixture, 'stubborn', pidFile],
-    signal: controller.signal,
-    killGraceMs: 80,
-  });
+  const running = capture(() =>
+    run('stubborn', cwd, {
+      args: [...process.execArgv, fixture, 'stubborn', pidFile],
+      signal: controller.signal,
+      killGraceMs: 80,
+    }),
+  );
   await waitForFile(pidFile);
   controller.abort();
-  const result = await running;
+  const { result, stderr } = await running;
   assert.equal(result.status, 130);
   assert.equal(result.aborted, true);
+  assert.match(stderr, /STOP supervisor-test: abort/);
+  assert.match(stderr, /FAIL supervisor-test \(abort,/);
   assert.deepEqual(
     ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal)),
     before,
@@ -197,14 +258,21 @@ void test('rejects invalid budgets instead of silently disabling supervision', a
 void test('a log-directory failure is nonzero and does not launch the command', async () => {
   const cwd = directory();
   writeFileSync(join(cwd, '.workspace'), 'not a directory');
-  const result = await run('sleep', cwd);
+  const { result, stderr } = await capture(() => run('sleep', cwd));
   assert.equal(result.status, 1);
   assert.ok(result.logError);
+  assert.match(stderr, /^FAIL supervisor-test: cannot open log: /);
+  assert.ok(stderr.includes(result.logError), 'the announced reason is the reported one');
 });
 
 void test('spawn failure remains nonzero', async () => {
-  const result = await runCommand({ label: 'missing', command: 'exojs-no-such-command', args: ['--test'], cwd: directory(), output: 'normal' });
+  const { result, stderr } = await capture(() =>
+    runCommand({ label: 'missing', command: 'exojs-no-such-command', args: ['--test'], cwd: directory(), output: 'normal' }),
+  );
   assert.equal(result.status, 1);
+  assert.match(stderr, /Failed to start missing: .*ENOENT/);
+  assert.match(stderr, /FAIL missing \(exit 1,/);
+  assert.match(stderr, /Full log: /);
 });
 
 test.after(() => {
@@ -414,14 +482,20 @@ void test('all existing stage selections, coverage mode and JUnit names remain a
 });
 
 void test('a synchronous spawn error is reported without leaking the log stream', async () => {
-  const result = await runCommand({ label: 'invalid-spawn', command: '', args: ['--test'], cwd: directory(), output: 'silent' });
+  const { result, stderr } = await capture(() => runCommand({ label: 'invalid-spawn', command: '', args: ['--test'], cwd: directory(), output: 'silent' }));
   assert.equal(result.status, 1);
+  assert.match(stderr, /^Failed to start invalid-spawn: /);
+  assert.doesNotMatch(stderr, /FAIL invalid-spawn/, 'a command that never spawned is not a supervised failure');
   assert.match(readFileSync(result.logPath!, 'utf8'), /Failed to start invalid-spawn/);
 });
 
 void test('successful commands do not leave signal listeners behind', async () => {
   const before = ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal));
-  for (let i = 0; i < 5; i++) assert.equal((await run('streams', directory())).status, 0);
+  for (let i = 0; i < 5; i++) {
+    const { result, stdout, stderr } = await capture(() => run('streams', directory()));
+    assert.equal(result.status, 0);
+    assert.equal(stdout + stderr, '');
+  }
   assert.deepEqual(
     ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal)),
     before,
@@ -429,6 +503,7 @@ void test('successful commands do not leave signal listeners behind', async () =
 });
 
 void test('unconfigured generic commands retain their unlimited deadline contract', async () => {
-  const result = await run('streams', directory());
+  const { result, stdout, stderr } = await capture(() => run('streams', directory()));
   assert.match(readFileSync(result.logPath!, 'utf8'), /timeoutMs=none/);
+  assert.equal(stdout + stderr, '', 'a silent success announces nothing');
 });

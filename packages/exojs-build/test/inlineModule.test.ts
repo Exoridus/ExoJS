@@ -184,7 +184,7 @@ describe('bundleInlineModule', () => {
   });
 
   it('surfaces the offending source path when the entry point does not parse', () => {
-    expect(() => bundleInlineModule({ entryPoint: join(fixtureDirectory, 'broken.ts') })).toThrow(/broken\.ts/);
+    expect(() => bundleInlineModule({ entryPoint: join(fixtureDirectory, 'broken.ts') })).toThrow(/broken\.ts:1:21/);
   });
 });
 
