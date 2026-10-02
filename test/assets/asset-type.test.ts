@@ -299,7 +299,7 @@ describe('AssetType factory boundary', () => {
   test('the factory context exposes no fetch, cache store or cache policy', async () => {
     const context = await captureContext();
 
-    expect(Object.keys(context).sort()).toEqual(['dependencies', 'locator', 'options', 'resourceKey', 'signal', 'source', 'sourceKey']);
+    expect(Object.keys(context).sort()).toEqual(['dependencies', 'locator', 'options', 'resourceKey', 'signal', 'source', 'sourceKey', 'textureFormats']);
 
     for (const reachable of ['fetch', 'fetchText', 'fetchJson', 'fetchArrayBuffer', 'cache', 'stores', 'cacheStrategy', 'loader']) {
       expect(reachable in context).toBe(false);

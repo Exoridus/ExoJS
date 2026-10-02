@@ -35,3 +35,5 @@ pnpm-lock.yaml
 
 # API docs are generated here before being moved into src/content/api.
 site/.api-staging
+src/assets/factories/basis/basis_transcoder.mjs
+src/assets/factories/basis/LICENSE

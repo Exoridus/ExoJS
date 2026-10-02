@@ -1638,33 +1638,19 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
-   * Whether a draw of `texture` still has to associate its samples with alpha.
-   *
-   * The answer follows the STORED samples: a managed colour upload normalizes
-   * (premultiplies) straight sRGB/float sources on the GPU before this ever
-   * runs (see `_needsColorNormalization`), so doing it again in the draw
-   * shader would multiply every translucent texel by its own alpha twice. A
-   * premultiplied SOURCE is in the same position - the association is already
-   * in the bytes.
-   *
-   * Unlike WebGPU's external-image copy, which never premultiplies, a WebGL2
-   * browser-image/canvas source that skips the normalization pass still gets
-   * premultiplied for free at upload through `UNPACK_PREMULTIPLY_ALPHA_WEBGL`
-   * (see `_syncTexture`'s non-normalized `texture.source` branch) - resolving
-   * true for it here as well would associate those samples a second time and
-   * darken every translucent texel. `_needsColorNormalization` already
-   * resolves true for every non-browser-sourced straight payload (raw pixels
-   * always take the GPU pass), so the remaining `texture.source === null`
-   * guard only ever matters once a future backend change lets a non-browser
-   * payload skip that pass - a native compressed source is the intended
-   * beneficiary, and is otherwise unreachable here today.
-   *
+   * Whether the draw shader must associate straight samples with alpha.
+   * Managed pixel uploads and browser sources are associated during upload.
+   * Compressed straight samples retain their declared association until drawing.
    * Part of the renderer SDK contract for extension renderers.
    */
   public shouldPremultiplyTextureSample(texture: Texture | RenderTexture): boolean {
-    if (texture instanceof RenderTexture || !texture.premultiplyAlpha || texture.alphaMode === 'premultiplied') {
+    if (texture instanceof RenderTexture || texture.alphaMode === 'premultiplied') {
       return false;
     }
+
+    // Compressed bytes cannot be normalized at upload; their DFD association governs the sample instead.
+    if (texture.compressed !== null) return texture.colorSpace !== 'none';
+    if (!texture.premultiplyAlpha) return false;
 
     return !this._needsColorNormalization(texture) && texture.source === null;
   }
@@ -3979,6 +3965,14 @@ export class WebGl2Backend implements RenderBackend {
       const levels = texture.pixels.levels;
       const internalFormat = this._managedColorInternalFormat(texture);
       const needsNormalization = this._needsColorNormalization(texture);
+      const allocateChain = needsNormalization && levels.length > 1 && levels.some(({ data }) => !isFullyOpaqueLevel(data));
+      if (allocateChain) {
+        // A non-base mip cannot be a framebuffer attachment until its texture is mip-complete.
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, levels.length - 1);
+        for (const [level, { width, height }] of levels.entries()) {
+          gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        }
+      }
       let uploadedBytes = 0;
 
       for (const [level, { data, width, height }] of levels.entries()) {
@@ -3986,8 +3980,10 @@ export class WebGl2Backend implements RenderBackend {
           // Allocated uninitialized and filled by the pass, so the write path
           // stays identical to the plain upload below: same destination, same
           // storage format, same accounting.
-          gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          if (!allocateChain) gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
           this._getTextureNormalizer().normalizePixels({ destination: state.handle, level, width, height, internalFormat }, data);
+        } else if (allocateChain) {
+          gl.texSubImage2D(gl.TEXTURE_2D, level, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
         } else {
           gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
         }

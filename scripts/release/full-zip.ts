@@ -240,6 +240,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
     const vendorDir = join(treeDir, 'vendor', vendorDirFor(pkg.name));
     cpSync(from, join(vendorDir, 'esm'), { recursive: true });
     if (pkg.isExtension) continue;
+    cpSync(join(distDir, 'basis'), join(vendorDir, 'basis'), { recursive: true });
     for (const file of CORE_BUNDLE_FILES) {
       const bundle = join(distDir, file);
       if (!existsSync(bundle)) {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
+import { decodeKtx2 } from '#assets/factories/decodeKtx2';
 import { inflateKtx2Levels, parseKtx2 } from '#assets/factories/ktx2';
 import { compressedLevelByteLength, CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 
@@ -162,5 +163,26 @@ describe('KTX2 ZLIB inflation', () => {
     controller.abort();
 
     await expect(inflateKtx2Levels(await zlibKtx2(), 'cancelled.ktx2', controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  test('direct decoding preserves every inflated byte and rejects truncated streams and oversized declarations', async () => {
+    const buffer = await zlibKtx2();
+    expect(await decodeKtx2(buffer, 'direct.ktx2')).toEqual(parseKtx2(await inflateKtx2Levels(buffer, 'legacy.ktx2'), 'legacy.ktx2'));
+    const truncated = buffer.slice(0),
+      view = new DataView(truncated);
+    view.setUint32(headerBytes + 8, view.getUint32(headerBytes + 8, true) - 1, true);
+    await expect(decodeKtx2(truncated, 'truncated.ktx2')).rejects.toThrow(/complete ZLIB stream/);
+    const overflow = buffer.slice(0);
+    new DataView(overflow).setUint32(headerBytes + 16, 0x2000_0000, true);
+    await expect(decodeKtx2(overflow, 'overflow.ktx2')).rejects.toThrow(/ZLIB safety budget/);
+  });
+
+  test('direct decoding rejects extent mismatches and honors abort', async () => {
+    const buffer = await zlibKtx2();
+    new DataView(buffer).setUint32(headerBytes + 16, 8, true);
+    await expect(decodeKtx2(buffer, 'mismatch.ktx2')).rejects.toThrow(/inflated byte length/);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(decodeKtx2(buffer, 'abort.ktx2', [], undefined, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
   });
 });

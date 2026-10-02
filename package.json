@@ -12,6 +12,7 @@
     }
   },
   "files": [
+    "dist/basis/",
     "dist/esm/",
     "dist/exo.esm.js",
     "dist/exo.esm.js.map",

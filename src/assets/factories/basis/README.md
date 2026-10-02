@@ -1,0 +1,13 @@
+# Basis Universal runtime
+
+Official runtime from https://github.com/BinomialLLC/basis_universal/tree/99f52d63aa6799cbdaecfe977111dc5ec3b31d47/webgl/transcoder/build (Basis Universal 2.50 development). `basis_transcoder.wasm` is unmodified; `basis_transcoder.mjs` is the official JS plus `export default BASIS;` for module-worker loading. The encoder is not shipped. Apache-2.0 and the bundled Zstd BSD-3-Clause license texts are in `LICENSE`.
+
+The runtime is fetched only inside the first universal-texture worker, then reused until the loader is destroyed. ExoJS validates KTX2 structure, dimensions, ranges, DFD, KVD, color, alpha, and the supported RGB/RGBA profile before the worker receives bytes. `KTX2File` performs the codec-specific decoding, including UASTC Zstd; its metadata must agree with the validated descriptor. Native and ZLIB textures never initialize this runtime. The source cache retains its buffer; one copy is transferred into the worker, and final mip buffers are transferred back.
+
+The production worker bundles the JS glue separately from Core. The WASM stays external and package-relative. Build output includes both `dist/basis` for bundles and `dist/esm/assets/factories/basis` for npm ESM; Full ZIP carries both. Vite resolves the module worker and its WASM URL. Serve `.wasm` as `application/wasm`; the Full ZIP server already does. The worker fetches binary bytes and uses `WebAssembly.instantiate`, so streaming MIME support is not required.
+
+CSP: the official glue has two `new Function` sites in Embind and requires `script-src 'unsafe-eval'` in addition to permission to compile WASM. It has no `eval`, `importScripts`, or dynamic script element creation. Module workers need `worker-src 'self'` (Vite production uses the emitted same-origin worker). No CDN, blob worker, or remote script is used by the shipped runtime.
+
+Supported: non-array 2D ETC1S RGB/RGBA with BasisLZ, UASTC LDR 4x4 RGB/RGBA with scheme 0 or Zstd, all authored mips, linear/sRGB transfer and straight/premultiplied alpha. Target selection follows backend capability order and filters channel/alpha/transfer compatibility. BC7, ASTC 4x4, ETC2 RGB/RGBA, BC3 and opaque BC1 are eligible; RGBA8 is the fallback. Base dimensions not aligned to 4x4 blocks use RGBA8 to preserve the existing cross-backend compressed payload contract. Opaque texels retain alpha 255; ExoJS's alpha-association API represents them as straight.
+
+Unsupported: arbitrary native `vkFormat` plus Zstd, universal ZLIB, standalone `.basis`, universal R/RG channel models, HDR/XUASTC/video, arrays, cubemaps and 3D. The existing native KTX2 formats and validation remain authoritative.

@@ -31,12 +31,14 @@ export interface Ktx2LevelRange extends Ktx2DataRange {
 }
 
 export interface Ktx2DfdDescriptor {
+  readonly hasAlpha?: boolean;
   readonly colorPrimaries: number;
   readonly transferFunction: number;
   readonly flags: number;
 }
 
 export interface Ktx2Descriptor {
+  readonly universal?: 'etc1s' | 'uastc';
   readonly vkFormat: number;
   readonly typeSize: number;
   readonly pixelWidth: number;
@@ -210,6 +212,57 @@ const validateDfdSamples = (
   }
 };
 
+const validateUniversalPlanes = (view: DataView, range: Ktx2DataRange, source: string, etc1s: boolean, hasAlpha: boolean): void => {
+  for (let plane = 0; plane < 8; plane++) {
+    let expected = 0;
+    if (plane === 0) expected = etc1s ? 8 : 16;
+    else if (plane === 1 && etc1s && hasAlpha) expected = 8;
+    // Supercompressed authors may leave the byte planes unspecified.
+    const actual = view.getUint8(range.offset + 20 + plane);
+    if (actual !== 0 && actual !== expected) fail(source, 'universal DFD has inconsistent byte planes.');
+  }
+};
+
+const validateUniversalSamples = (view: DataView, range: Ktx2DataRange, source: string, etc1s: boolean, sampleCount: number, channel: number): void => {
+  for (let sample = 0; sample < sampleCount; sample++) {
+    const offset = range.offset + 28 + sample * 16;
+    const expectedChannel = sample === 0 ? channel : 15;
+    const expectedBits = etc1s ? 63 : 127;
+    if (
+      view.getUint16(offset, true) !== sample * 64 ||
+      view.getUint8(offset + 2) !== expectedBits ||
+      (view.getUint8(offset + 3) & ~dfdSampleLinear) !== expectedChannel ||
+      view.getUint32(offset + 4, true) !== 0 ||
+      view.getUint32(offset + 8, true) !== 0 ||
+      view.getUint32(offset + 12, true) !== 0xffffffff
+    )
+      fail(source, 'universal DFD has inconsistent sample fields.');
+  }
+};
+
+const validateUniversalDfd = (view: DataView, range: Ktx2DataRange, source: string, model: number, blockSize: number): Ktx2DfdDescriptor => {
+  const descriptor = validateDfdColorFields(view, range, source, model);
+  const etc1s = model === 163;
+  const sampleCount = (blockSize - 24) / 16;
+  if (sampleCount < 1 || sampleCount > (etc1s ? 2 : 1)) return fail(source, 'universal DFD must describe RGB or RGBA channels.');
+  const channel = view.getUint8(range.offset + 31) & ~dfdSampleLinear;
+  const hasAlpha = etc1s ? sampleCount === 2 : channel === 3;
+
+  if (sampleCount !== (etc1s && hasAlpha ? 2 : 1) || (etc1s ? channel !== 0 : channel !== 0 && channel !== 3)) {
+    return fail(source, 'universal DFD must describe RGB or RGBA channels.');
+  }
+
+  if (view.getUint8(range.offset + 16) !== 3 || view.getUint8(range.offset + 17) !== 3 || view.getUint16(range.offset + 18, true) !== 0) {
+    return fail(source, 'universal DFD must describe 4x4 2D blocks.');
+  }
+
+  validateUniversalPlanes(view, range, source, etc1s, hasAlpha);
+  validateUniversalSamples(view, range, source, etc1s, sampleCount, channel);
+
+  if (!hasAlpha && descriptor.flags !== 0) fail(source, 'opaque universal DFD cannot declare premultiplied alpha.');
+  return { ...descriptor, hasAlpha };
+};
+
 const validateDfd = (view: DataView, range: Ktx2DataRange, source: string, vkFormat: number): Ktx2DfdDescriptor => {
   if (range.length < requiredDfdBytes) {
     return fail(source, `required DFD is ${range.length} bytes, shorter than its ${requiredDfdBytes}-byte basic descriptor.`);
@@ -225,6 +278,10 @@ const validateDfd = (view: DataView, range: Ktx2DataRange, source: string, vkFor
   // failure that follows names the format rather than its descriptor.
   const profile = ktx2FormatProfile(vkFormat);
   const descriptorBlockSize = validateDfdBlockSize(view, range, source, totalSize);
+  const model = view.getUint8(range.offset + 12);
+  if (vkFormat === 0 && (model === 163 || model === 166)) {
+    return validateUniversalDfd(view, range, source, model, descriptorBlockSize);
+  }
   const descriptor = validateDfdColorFields(view, range, source, profile?.dfdModel ?? dfdModelRgbSda);
 
   validateDfdSinglePlane(view, range, source, profile);
@@ -327,6 +384,62 @@ const validateKeyValueData = (bytes: Uint8Array, range: Ktx2DataRange, source: s
   }
 };
 
+const validateEtc1sPayload = (view: DataView, sgd: Ktx2DataRange, source: string, descriptor: Ktx2Descriptor): void => {
+  const { supercompressionScheme, levelCount, levels, dfd } = descriptor;
+  if (supercompressionScheme !== 1 || sgd.length < 20 + levelCount * 20) fail(source, 'ETC1S requires BasisLZ and complete SGD data.');
+  let globalBytes = 20 + levelCount * 20;
+  for (const offset of [4, 8, 12, 16]) globalBytes += view.getUint32(sgd.offset + offset, true);
+  if (globalBytes !== sgd.length) fail(source, 'ETC1S SGD tables do not match the indexed range.');
+  for (const [index, level] of levels.entries()) {
+    if (level.uncompressedByteLength !== 0) fail(source, 'BasisLZ level uncompressed byte length must be zero.');
+    const entry = sgd.offset + 20 + index * 20;
+    if (view.getUint32(entry, true) !== 0) fail(source, 'ETC1S video frames are unsupported.');
+    const rgbOffset = view.getUint32(entry + 4, true),
+      rgbLength = view.getUint32(entry + 8, true);
+    const alphaOffset = view.getUint32(entry + 12, true),
+      alphaLength = view.getUint32(entry + 16, true);
+    if (
+      rgbLength === 0 ||
+      rgbOffset + rgbLength > level.length ||
+      (dfd.hasAlpha === true
+        ? alphaLength === 0 || alphaOffset + alphaLength > level.length || alphaOffset < rgbOffset + rgbLength
+        : alphaOffset !== 0 || alphaLength !== 0)
+    ) {
+      fail(source, `ETC1S level ${index} has invalid RGB/alpha slices.`);
+    }
+  }
+};
+
+const validateUniversalPayload = (view: DataView, sgd: Ktx2DataRange, source: string, descriptor: Ktx2Descriptor): void => {
+  const { universal, declaredLevelCount, supercompressionScheme, levels, pixelWidth, pixelHeight } = descriptor;
+  if (universal === undefined) return;
+  if (declaredLevelCount === 0) fail(source, 'universal payload must carry authored mips.');
+  if (universal === 'etc1s') {
+    validateEtc1sPayload(view, sgd, source, descriptor);
+    return;
+  }
+  if ((supercompressionScheme !== 0 && supercompressionScheme !== 2) || sgd.length > 0) fail(source, 'UASTC requires scheme 0 or Zstandard and no SGD.');
+  for (const [index, level] of levels.entries()) {
+    const width = Math.max(Math.floor(pixelWidth / 2 ** index), 1),
+      height = Math.max(Math.floor(pixelHeight / 2 ** index), 1);
+    const expected = Math.ceil(width / 4) * Math.ceil(height / 4) * 16;
+    if (!Number.isSafeInteger(expected) || level.uncompressedByteLength !== expected)
+      fail(source, `UASTC level ${index} has inconsistent uncompressed byte length.`);
+  }
+};
+
+const universalFormat = (vkFormat: number, model: number): Ktx2Descriptor['universal'] => {
+  if (vkFormat !== 0) return undefined;
+  if (model === 163) return 'etc1s';
+  if (model === 166) return 'uastc';
+  return undefined;
+};
+
+const levelAlignmentFor = (vkFormat: number, scheme: number): number => {
+  if (scheme !== 0) return 1;
+  return vkFormat === 0 ? 16 : ktx2LevelAlignment(vkFormat);
+};
+
 /**
  * Validates the KTX2 index and source profile before callers inspect level data.
  *
@@ -402,7 +515,7 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
   const vkFormat = view.getUint32(12, true);
   const supercompressionScheme = view.getUint32(44, true);
   // A supercompressed level is an opaque stream; only an uncompressed one has native texel data to align.
-  const levelAlignment = supercompressionScheme === 0 ? ktx2LevelAlignment(vkFormat) : 1;
+  const levelAlignment = levelAlignmentFor(vkFormat, supercompressionScheme);
   const levels: Ktx2LevelRange[] = [];
 
   for (let index = 0; index < levelCount; index++) {
@@ -432,6 +545,8 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
   }
 
   const dfdDescriptor = validateDfd(view, dfd, source, vkFormat);
+  const model = view.getUint8(dfd.offset + 12);
+  const universal = universalFormat(vkFormat, model);
   const bytes = new Uint8Array(buffer);
   validateKeyValueData(bytes, kvd, source);
 
@@ -443,7 +558,8 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
     return fail(source, `declares typeSize ${view.getUint32(16, true)}, but this 8-bit native profile requires 1.`);
   }
 
-  return {
+  const descriptor: Ktx2Descriptor = {
+    ...(universal !== undefined && { universal }),
     vkFormat,
     typeSize: view.getUint32(16, true),
     pixelWidth,
@@ -454,4 +570,6 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
     levels,
     dfd: dfdDescriptor,
   };
+  validateUniversalPayload(view, sgd, source, descriptor);
+  return descriptor;
 };
