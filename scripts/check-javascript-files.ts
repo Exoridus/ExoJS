@@ -38,6 +38,10 @@ interface Exemption {
 
 const EXEMPTIONS: readonly Exemption[] = [
   {
+    path: 'packages/create-exo-app/bin/create-exo-app.js',
+    reason: 'npm/pnpm link this executable before builds; Node cannot strip TypeScript inside installed node_modules, and tsconfig.scripts.json checks it',
+  },
+  {
     path: 'examples/',
     reason: 'the playground catalog: `.ts` sources plus the `.js` twins the transpiler emits and `examples:sync:check` keeps in step',
   },

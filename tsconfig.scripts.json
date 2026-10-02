@@ -65,6 +65,7 @@
     "scripts/**/*.mjs",
     "*.config.ts",
     "packages/exojs-config/**/*.js",
+    "packages/create-exo-app/bin/*.js",
     "packages/exojs-bench/competitors/*.ts"
   ],
   "exclude": [

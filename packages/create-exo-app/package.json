@@ -6,7 +6,7 @@
   "license": "MIT",
   "sideEffects": false,
   "bin": {
-    "create-exo-app": "./dist/index.js"
+    "create-exo-app": "./bin/create-exo-app.js"
   },
   "main": "./dist/scaffold.js",
   "types": "./dist/scaffold.d.ts",
@@ -19,6 +19,7 @@
     "./package.json": "./package.json"
   },
   "files": [
+    "bin/",
     "dist/",
     "templates/",
     "README.md",
