@@ -103,7 +103,7 @@ jobs:
           pnpm site:build
 
       # Deploy Pages ships the site of a successful release from this artifact.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: site-dist-${{ needs.trust.outputs.sha }}
           path: site/dist/
@@ -122,7 +122,7 @@ jobs:
       - name: Prepare release (pack, hash, attw, consumers, full-zip)
         run: pnpm release:prepare
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-artifacts
           path: |
@@ -148,7 +148,7 @@ jobs:
           node-version-file: .nvmrc
           registry-url: 'https://registry.npmjs.org'
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-artifacts
           path: .release

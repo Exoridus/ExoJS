@@ -41,7 +41,7 @@ describe('site artifact production (ci.yml)', () => {
   const siteBuild = jobBlock(ci, 'site');
 
   it('uploads the built site as a commit-identified artifact', () => {
-    expect(siteBuild).toContain('actions/upload-artifact@v4');
+    expect(siteBuild).toContain('actions/upload-artifact@v7');
     expect(siteBuild).toContain(`name: ${SITE_ARTIFACT_UPLOAD}`);
     expect(siteBuild).toContain('path: site/dist/');
   });
@@ -53,7 +53,7 @@ describe('site artifact production (ci.yml)', () => {
   it('uploads only after the site typecheck gate and the site build have passed', () => {
     const gateIndex = siteBuild.indexOf('pnpm gates site');
     const buildIndex = siteBuild.indexOf('pnpm site:build');
-    const uploadIndex = siteBuild.indexOf('actions/upload-artifact@v4');
+    const uploadIndex = siteBuild.indexOf('actions/upload-artifact@v7');
     expect(gateIndex).toBeGreaterThan(-1);
     expect(buildIndex).toBeGreaterThan(gateIndex);
     expect(uploadIndex).toBeGreaterThan(buildIndex);
@@ -76,7 +76,7 @@ describe('Pages deployment (deploy-pages.yml)', () => {
   });
 
   it('deploys the artifact of the run that triggered it', () => {
-    expect(deployPages).toContain('actions/download-artifact@v4');
+    expect(deployPages).toContain('actions/download-artifact@v8');
     expect(deployPages).toContain(`name: ${SITE_ARTIFACT_DOWNLOAD}`);
     expect(deployPages).toContain('run-id: ${{ github.event.workflow_run.id }}');
     // Cross-run artifact reads need an explicit token and `actions: read`.
@@ -93,7 +93,7 @@ describe('Pages deployment (deploy-pages.yml)', () => {
   });
 
   it('still hands the deployed tree to the Pages actions', () => {
-    expect(deployPages).toContain('actions/upload-pages-artifact@v4');
+    expect(deployPages).toContain('actions/upload-pages-artifact@v5');
     expect(deployPages).toContain('actions/deploy-pages@v5');
   });
 });

@@ -59,7 +59,7 @@ jobs:
       # the commit in the artifact name pins it to that run's commit — an older
       # or unrelated build cannot be picked up. A missing artifact fails here.
       - name: Download validated site artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: site-dist-${{ github.event.workflow_run.head_sha }}
           run-id: ${{ github.event.workflow_run.id }}
@@ -74,7 +74,7 @@ jobs:
           }
 
       - name: Package for Pages
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site-dist
 
