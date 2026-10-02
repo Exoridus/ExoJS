@@ -11,6 +11,11 @@ if (mode === 'streams') {
   for (let i = 0; i < 125; i++) process.stdout.write(`line-${i}\n`);
   process.stdout.write('last-line');
   process.exitCode = 7;
+} else if (mode === 'lookalike') {
+  // A supervised command's own output can carry the supervisor's line shapes
+  // without being an announcement of anything.
+  process.stdout.write('PASS stage one\n');
+  process.stderr.write('RUN benchmark\n');
 } else if (mode === 'long-line') {
   process.stdout.write('x'.repeat(200_000));
   process.exitCode = 7;
