@@ -182,7 +182,7 @@ jobs:
           if-no-files-found: ignore
 
       - if: ${{ matrix.junit && !cancelled() }}
-        uses: codecov/codecov-action@v6.0.2
+        uses: codecov/codecov-action@v7
         with:
           report_type: test_results
           directory: ./test-results
@@ -191,7 +191,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v6.0.2
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage/lcov.info
           flags: ${{ matrix.id }}
