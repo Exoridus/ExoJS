@@ -49,7 +49,6 @@
     "allowJs": true,
     "verbatimModuleSyntax": false,
     "isolatedModules": false,
-    "ignoreDeprecations": "6.0",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noUncheckedIndexedAccess": false,

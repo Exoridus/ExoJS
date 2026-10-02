@@ -7,6 +7,7 @@ import react from '@astrojs/react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isGeneratedAstroDirective } from './scripts/astro-warning-policy';
 import { SHIKI_THEMES } from './src/lib/shiki-theme';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -72,6 +73,11 @@ export default defineConfig({
       // is a false positive after the real code-splitting work has been done.
       chunkSizeWarningLimit: 5500,
       rollupOptions: {
+        onwarn(warning, warn) {
+          // Astro carries propagated styles and links in this generated module's exports.
+          if (isGeneratedAstroDirective(warning, path.resolve(__dirname, 'src/content'))) return;
+          warn(warning);
+        },
         output: {
           manualChunks(id) {
             // Monaco editor core - isolated so its hash is stable across
