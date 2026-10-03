@@ -1,16 +1,4 @@
-/**
- * Adapter reuse across `WebGpuBackend` instances.
- *
- * `GPUDevice` has an explicit `destroy()`; `GPUAdapter` does not, so an
- * adapter is released only once garbage collection gets to it. A process that
- * constructs many backends in quick succession - the rendering parity matrix
- * does, once per scene per property - can outrun that collection and hit a
- * driver's live-adapter ceiling well before anything has actually leaked
- * (observed on Firefox as `requestDevice()` rejecting with "not enough memory
- * left"). `WebGpuBackend` shares one adapter per `GPU` object instead of
- * requesting a fresh one per instance; these are the guarantees that fix
- * rests on.
- */
+/** Sequential backends acquire distinct adapters and devices from one `GPU` object. */
 
 import { Color } from '#core/Color';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -18,43 +6,47 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 interface MockGpuEnvironment {
   readonly gpu: GPU;
   readonly requestAdapter: ReturnType<typeof vi.fn>;
-  /** The next `requestDevice()` call on this GPU's adapter rejects, as a stale/dead adapter would. */
+  /** Causes the next `requestDevice()` call to reject once. */
   failNextDeviceRequest(): void;
 }
 
-/** A fresh, independent mock `GPU` object: its own `requestAdapter` spy, its own device chain. */
+/** A fresh, independent mock `GPU` object: each adapter request gets a distinct adapter. */
 const createMockGpu = (): MockGpuEnvironment => {
   let failNext = false;
 
-  const device = {
-    createShaderModule: vi.fn(() => ({}) as GPUShaderModule),
-    createBindGroupLayout: vi.fn(() => ({}) as GPUBindGroupLayout),
-    createPipelineLayout: vi.fn(() => ({}) as GPUPipelineLayout),
-    createBindGroup: vi.fn(() => ({}) as GPUBindGroup),
-    createRenderPipeline: vi.fn(() => ({}) as GPURenderPipeline),
-    createCommandEncoder: vi.fn(),
-    createBuffer: vi.fn(() => ({ destroy: vi.fn() }) as unknown as GPUBuffer),
-    createTexture: vi.fn(() => ({ destroy: vi.fn(), createView: vi.fn(() => ({})) }) as unknown as GPUTexture),
-    createSampler: vi.fn(() => ({}) as GPUSampler),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    // Never resolves within a test's lifetime: nothing here drives real device loss.
-    lost: new Promise<GPUDeviceLostInfo>(() => undefined),
-    destroy: vi.fn(),
-    queue: { writeBuffer: vi.fn(), submit: vi.fn(), copyExternalImageToTexture: vi.fn(), writeTexture: vi.fn() },
-  } as unknown as GPUDevice;
+  const createDevice = (): GPUDevice =>
+    ({
+      createShaderModule: vi.fn(() => ({}) as GPUShaderModule),
+      createBindGroupLayout: vi.fn(() => ({}) as GPUBindGroupLayout),
+      createPipelineLayout: vi.fn(() => ({}) as GPUPipelineLayout),
+      createBindGroup: vi.fn(() => ({}) as GPUBindGroup),
+      createRenderPipeline: vi.fn(() => ({}) as GPURenderPipeline),
+      createCommandEncoder: vi.fn(),
+      createBuffer: vi.fn(() => ({ destroy: vi.fn() }) as unknown as GPUBuffer),
+      createTexture: vi.fn(() => ({ destroy: vi.fn(), createView: vi.fn(() => ({})) }) as unknown as GPUTexture),
+      createSampler: vi.fn(() => ({}) as GPUSampler),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      // Never resolves within a test's lifetime: nothing here drives real device loss.
+      lost: new Promise<GPUDeviceLostInfo>(() => undefined),
+      destroy: vi.fn(),
+      queue: { writeBuffer: vi.fn(), submit: vi.fn(), copyExternalImageToTexture: vi.fn(), writeTexture: vi.fn() },
+    }) as unknown as GPUDevice;
 
-  const requestDevice = vi.fn(async () => {
-    if (failNext) {
-      failNext = false;
+  const requestAdapter = vi.fn(async () => {
+    const device = createDevice();
+    const requestDevice = vi.fn(async () => {
+      if (failNext) {
+        failNext = false;
 
-      throw new DOMException('Not enough memory left.', 'OperationError');
-    }
+        throw new DOMException('Not enough memory left.', 'OperationError');
+      }
 
-    return device;
+      return device;
+    });
+
+    return { requestDevice, features: { has: () => false } } as unknown as GPUAdapter;
   });
-
-  const requestAdapter = vi.fn(async () => ({ requestDevice, features: { has: () => false } }) as unknown as GPUAdapter);
 
   const gpu = { requestAdapter, getPreferredCanvasFormat: vi.fn(() => 'bgra8unorm' as GPUTextureFormat) } as unknown as GPU;
 
@@ -105,8 +97,8 @@ const makeCanvas = (): HTMLCanvasElement => {
 const makeBackend = (canvas: HTMLCanvasElement): WebGpuBackend =>
   new WebGpuBackend({ canvas, options: { canvas: { width: 4, height: 4 }, clearColor: Color.black } } as never);
 
-describe('WebGpuBackend adapter sharing', () => {
-  it('requests the adapter once and reuses it across sequential backends on the same GPU object', async () => {
+describe('WebGpuBackend adapter acquisition', () => {
+  it('requests a fresh adapter for each sequential backend on the same GPU object', async () => {
     const environment = createMockGpu();
 
     await withGpu(environment.gpu, async () => {
@@ -120,11 +112,11 @@ describe('WebGpuBackend adapter sharing', () => {
       await second.initialize();
       second.destroy();
 
-      expect(environment.requestAdapter).toHaveBeenCalledTimes(1);
+      expect(environment.requestAdapter).toHaveBeenCalledTimes(2);
     });
   });
 
-  it('keeps each GPU object on its own adapter', async () => {
+  it('requests an adapter from each GPU object', async () => {
     const environmentA = createMockGpu();
     const environmentB = createMockGpu();
 
@@ -146,7 +138,7 @@ describe('WebGpuBackend adapter sharing', () => {
     expect(environmentB.requestAdapter).toHaveBeenCalledTimes(1);
   });
 
-  it('re-requests the adapter once when requestDevice rejects on the cached one, and still initializes', async () => {
+  it('requests a fresh adapter when requestDevice rejects, then initializes', async () => {
     const environment = createMockGpu();
 
     await withGpu(environment.gpu, async () => {
@@ -155,8 +147,8 @@ describe('WebGpuBackend adapter sharing', () => {
       await first.initialize();
       first.destroy();
 
-      // The cached adapter is now stale, as a driver-reset one would be: the
-      // next requestDevice() call on it rejects.
+      // The next adapter's requestDevice() call rejects, simulating a transient
+      // device-acquisition failure.
       environment.failNextDeviceRequest();
 
       const second = makeBackend(makeCanvas());
@@ -164,9 +156,8 @@ describe('WebGpuBackend adapter sharing', () => {
       await expect(second.initialize()).resolves.toBe(second);
       second.destroy();
 
-      // One request for the stale adapter's rejection to surface, one retry
-      // that succeeded - not a silent swallow, and not a loop.
-      expect(environment.requestAdapter).toHaveBeenCalledTimes(2);
+      // A fresh adapter is requested for the retry.
+      expect(environment.requestAdapter).toHaveBeenCalledTimes(3);
     });
   });
 });
