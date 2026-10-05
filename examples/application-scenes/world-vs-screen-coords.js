@@ -1,63 +1,92 @@
 // Auto-generated from world-vs-screen-coords.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text, View } from '@codexo/exojs';
-class WorldScreenScene extends Scene {
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text, View } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
+class CameraNavigationScene extends Scene {
   view;
   grid;
   markers;
-  text;
-  pointer = { x: 0, y: 0 };
+  readout;
+  hud;
+  up;
+  down;
+  left;
+  right;
+  pointer = { x: 640, y: 360 };
+  world = { x: 640, y: 360 };
+  onPointerMove = pointer => {
+    this.pointer.x = pointer.x;
+    this.pointer.y = pointer.y;
+  };
+  onPointerTap = pointer => {
+    const point = this.view.screenToWorld(pointer.x, pointer.y);
+    this.markers.fillColor = new Color(255, 190, 75);
+    this.markers.drawCircle(point.x, point.y, 8);
+  };
+  onMouseWheel = (_deltaX, deltaY) => {
+    this.view.setZoom(Math.max(0.3, Math.min(3, this.view.zoomLevel * Math.exp(-deltaY * 0.001))));
+  };
   init() {
-    const app = this.app;
-    const width = app.width;
-    const height = app.height;
-    this.view = new View(260, 160, width, height);
+    const { width, height } = this.app;
+    this.view = new View(width / 2, height / 2, width, height);
+    this.pointer = { x: width / 2, y: height / 2 };
     this.grid = new Graphics();
-    this.markers = new Graphics();
-    this.text = new Text('', { fillColor: Color.white, fontSize: 16 });
     this.grid.lineWidth = 1;
-    this.grid.lineColor = new Color(60, 60, 60);
-    for (let x = -200; x <= 1200; x += 100) {
-      this.grid.drawLine(x, -200, x, 1000);
+    this.grid.lineColor = new Color(65, 74, 92);
+    for (let x = -800; x <= width + 800; x += 80) {
+      this.grid.drawLine(x, -600, x, height + 600);
     }
-    for (let y = -200; y <= 1000; y += 100) {
-      this.grid.drawLine(-200, y, 1200, y);
+    for (let y = -600; y <= height + 600; y += 80) {
+      this.grid.drawLine(-800, y, width + 800, y);
     }
-    app.input.onPointerMove.add(pointer => {
-      this.pointer = { x: pointer.x, y: pointer.y };
+    this.markers = new Graphics();
+    this.readout = new Text('', { fillColor: Color.white, fontSize: 17 });
+    this.readout.setPosition(18, height - 88);
+    this.up = this.inputs.onActive([Keyboard.W, Keyboard.Up]);
+    this.down = this.inputs.onActive([Keyboard.S, Keyboard.Down]);
+    this.left = this.inputs.onActive([Keyboard.A, Keyboard.Left]);
+    this.right = this.inputs.onActive([Keyboard.D, Keyboard.Right]);
+    this.app.input.onPointerMove.add(this.onPointerMove);
+    this.app.input.onPointerTap.add(this.onPointerTap);
+    this.app.input.onMouseWheel.add(this.onMouseWheel);
+    this.hud = mountControls({
+      title: 'Camera Navigation',
+      controls: [
+        { keys: 'WASD / arrows', action: 'pan' },
+        { keys: 'Wheel', action: 'zoom' },
+        { keys: 'Move / click', action: 'inspect / mark world point' },
+      ],
+      hint: 'Markers use world coordinates; the readout stays fixed on screen.',
     });
-    app.input.onPointerTap.add(pointer => {
-      const world = this.toWorld(pointer.x, pointer.y);
-      this.markers.fillColor = new Color(255, 220, 80);
-      this.markers.drawCircle(world.x, world.y, 8);
-    });
+  }
+  update(delta) {
+    const x = (this.right.active ? 1 : 0) - (this.left.active ? 1 : 0);
+    const y = (this.down.active ? 1 : 0) - (this.up.active ? 1 : 0);
+    this.view.move(x * 420 * delta, y * 420 * delta);
+    this.world = this.view.screenToWorld(this.pointer.x, this.pointer.y);
+    this.readout.text = `Screen ${this.pointer.x.toFixed(0)}, ${this.pointer.y.toFixed(0)}\nWorld ${this.world.x.toFixed(0)}, ${this.world.y.toFixed(0)}\nZoom ${this.view.zoomLevel.toFixed(2)}`;
   }
   draw(context) {
-    const world = this.toWorld(this.pointer.x, this.pointer.y);
-    this.text.text = `screen: ${this.pointer.x | 0}, ${this.pointer.y | 0}\nworld: ${world.x | 0}, ${world.y | 0}`;
-    this.text.setPosition(12, 12);
-    context.backend.setView(this.view);
-    context.render(this.grid);
-    context.render(this.markers);
-    context.backend.setView(null);
-    context.render(this.text);
+    context.render(this.grid, { view: this.view });
+    context.render(this.markers, { view: this.view });
+    context.render(this.readout, { view: context.screenView });
   }
-  toWorld(screenX, screenY) {
-    // Pointer coordinates are already in design space, so screenToWorld only
-    // has to undo this view's camera transform (pan/zoom) to reach world space.
-    return this.view.screenToWorld(screenX, screenY);
+  destroy() {
+    this.app.input.onPointerMove.remove(this.onPointerMove);
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.app.input.onMouseWheel.remove(this.onMouseWheel);
+    this.hud.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
-  scenes: { WorldScreenScene },
+  scenes: { CameraNavigationScene },
   canvas: {
     width: 1280,
     height: 720,
     mount: document.body,
     sizing: new FixedResolutionCanvasSizing(),
   },
-  clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
+  clearColor: new Color(10, 12, 20),
+  loader: { basePath: 'assets/' },
 });
-await app.start(WorldScreenScene);
+await app.start(CameraNavigationScene);

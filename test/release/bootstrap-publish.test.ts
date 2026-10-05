@@ -26,17 +26,19 @@ describe('bootstrapTargets', () => {
   it('offers every extension and every independent package, and never Core', () => {
     const names = bootstrapTargets().map(target => target.name);
 
-    expect(names).toContain('create-exo-app');
     expect(names).toContain('@codexo/exojs-tilemap-physics');
     expect(names).toContain('@codexo/exojs-build');
     expect(names).not.toContain('@codexo/exojs');
+    // The scaffolder is on the engine's lockstep line, so the coordinated
+    // release owns it - bootstrap publish must not offer it.
+    expect(names).not.toContain('create-exo-app');
   });
 
   it('marks the lockstep line so a caller can tell the two version lines apart', () => {
     const targets = bootstrapTargets();
 
     expect(targets.find(t => t.name === '@codexo/exojs-tilemap-physics')?.lockstep).toBe(true);
-    expect(targets.find(t => t.name === 'create-exo-app')?.lockstep).toBe(false);
+    expect(targets.find(t => t.name === '@codexo/exojs-build')?.lockstep).toBe(false);
   });
 });
 
@@ -52,7 +54,7 @@ describe('versionFromTarball', () => {
 describe('bootstrapPublish', () => {
   it('builds, packs and publishes, in that order, and reports the version', () => {
     const runner = createRecordingRunner(respondNewPackage());
-    const report = bootstrapPublish('create-exo-app', { dryRun: true, skipBuild: false }, runner, repoRoot);
+    const report = bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: true, skipBuild: false }, runner, repoRoot);
 
     expect(report.ok).toBe(true);
     expect(report.version).toBe('0.1.0');
@@ -62,7 +64,7 @@ describe('bootstrapPublish', () => {
   it('never passes --provenance, because the name has no trusted publisher yet', () => {
     const runner = createRecordingRunner(respondNewPackage());
 
-    bootstrapPublish('create-exo-app', { dryRun: false, skipBuild: false }, runner, repoRoot);
+    bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: false, skipBuild: false }, runner, repoRoot);
 
     expect(npmCalls(runner.invocations, 'publish')[0]?.args).not.toContain('--provenance');
     expect(npmCalls(runner.invocations, 'publish')[0]?.args).toContain('--access');
@@ -72,8 +74,8 @@ describe('bootstrapPublish', () => {
     const dry = createRecordingRunner(respondNewPackage());
     const live = createRecordingRunner(respondNewPackage());
 
-    bootstrapPublish('create-exo-app', { dryRun: true, skipBuild: false }, dry, repoRoot);
-    bootstrapPublish('create-exo-app', { dryRun: false, skipBuild: false }, live, repoRoot);
+    bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: true, skipBuild: false }, dry, repoRoot);
+    bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: false, skipBuild: false }, live, repoRoot);
 
     expect(npmCalls(dry.invocations, 'publish')[0]?.args).toContain('--dry-run');
     expect(npmCalls(live.invocations, 'publish')[0]?.args).not.toContain('--dry-run');
@@ -105,7 +107,7 @@ describe('bootstrapPublish', () => {
 
       return ok();
     });
-    const report = bootstrapPublish('create-exo-app', { dryRun: true, skipBuild: false }, buildFails, repoRoot);
+    const report = bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: true, skipBuild: false }, buildFails, repoRoot);
 
     expect(report.ok).toBe(false);
     expect(report.failedStep).toBe('build');
@@ -120,7 +122,7 @@ describe('bootstrapPublish', () => {
 
       return ok();
     });
-    const report = bootstrapPublish('create-exo-app', { dryRun: true, skipBuild: false }, runner, repoRoot);
+    const report = bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: true, skipBuild: false }, runner, repoRoot);
 
     expect(report.ok).toBe(false);
     expect(report.failedStep).toBe('pack');
@@ -130,7 +132,7 @@ describe('bootstrapPublish', () => {
   it('skips the build when asked, for a dist that is already current', () => {
     const runner = createRecordingRunner(respondNewPackage());
 
-    bootstrapPublish('create-exo-app', { dryRun: true, skipBuild: true }, runner, repoRoot);
+    bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: true, skipBuild: true }, runner, repoRoot);
 
     expect(runner.invocations.filter(i => i.command === 'pnpm')).toHaveLength(0);
   });
@@ -138,42 +140,47 @@ describe('bootstrapPublish', () => {
   it('packs and publishes from the package directory, not the repo root', () => {
     const runner = createRecordingRunner(respondNewPackage());
 
-    bootstrapPublish('create-exo-app', { dryRun: true, skipBuild: false }, runner, repoRoot);
+    bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: true, skipBuild: false }, runner, repoRoot);
 
-    expect(npmCalls(runner.invocations, 'pack')[0]?.cwd).toBe('/repo/packages/create-exo-app');
-    expect(npmCalls(runner.invocations, 'publish')[0]?.cwd).toBe('/repo/packages/create-exo-app');
+    expect(npmCalls(runner.invocations, 'pack')[0]?.cwd).toBe('/repo/packages/eslint-plugin-exojs');
+    expect(npmCalls(runner.invocations, 'publish')[0]?.cwd).toBe('/repo/packages/eslint-plugin-exojs');
   });
 
   it('tells the operator to register the trusted publisher afterwards', () => {
     const runner = createRecordingRunner(respondNewPackage());
-    const report = bootstrapPublish('create-exo-app', { dryRun: false, skipBuild: false }, runner, repoRoot);
+    const report = bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: false, skipBuild: false }, runner, repoRoot);
 
     expect(report.followUp).toMatch(/trusted publisher/i);
   });
 });
 
 describe('bootstrapPublish - release mode, for the packages off the lockstep line', () => {
+  // Release mode publishes the independent line. `create-exo-app` is on the
+  // engine's lockstep line now - the version it scaffolds is its own - so these
+  // use the ESLint plugin, which stays independent.
   const respondKnownPackage =
     (published: string[] = []) =>
     (invocation: CommandInvocation): CommandResult => {
       if (invocation.command === 'npm' && invocation.args[0] === 'view') {
         const query = invocation.args[1] ?? '';
 
-        if (!query.includes('@', 1)) return ok('create-exo-app\n');
+        // `npm view <name> name` echoes the full name; the registry check
+        // compares it exactly.
+        if (!query.includes('@', 1)) return ok('@codexo/eslint-plugin-exojs\n');
 
         const version = query.split('@').at(-1) ?? '';
 
         return published.includes(version) ? ok(`${version}\n`) : fail('E404');
       }
 
-      if (invocation.command === 'npm' && invocation.args[0] === 'pack') return ok('create-exo-app-0.1.0.tgz\n');
+      if (invocation.command === 'npm' && invocation.args[0] === 'pack') return ok('codexo-eslint-plugin-exojs-0.1.0.tgz\n');
 
       return ok();
     };
 
   it('publishes a new version with provenance, once a trusted publisher can exist', () => {
     const runner = createRecordingRunner(respondKnownPackage());
-    const report = bootstrapPublish('create-exo-app', { dryRun: false, skipBuild: false, mode: 'release' }, runner, repoRoot);
+    const report = bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: false, skipBuild: false, mode: 'release' }, runner, repoRoot);
 
     expect(report.ok).toBe(true);
     expect(npmCalls(runner.invocations, 'publish')[0]?.args).toContain('--provenance');
@@ -181,7 +188,7 @@ describe('bootstrapPublish - release mode, for the packages off the lockstep lin
 
   it('is a no-op for a version that is already on the registry', () => {
     const runner = createRecordingRunner(respondKnownPackage(['0.1.0']));
-    const report = bootstrapPublish('create-exo-app', { dryRun: false, skipBuild: false, mode: 'release' }, runner, repoRoot);
+    const report = bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: false, skipBuild: false, mode: 'release' }, runner, repoRoot);
 
     expect(report.ok).toBe(true);
     expect(report.followUp).toMatch(/already published/);
@@ -198,7 +205,7 @@ describe('bootstrapPublish - release mode, for the packages off the lockstep lin
 
   it('refuses a name that does not exist yet and points at the bootstrap', () => {
     const runner = createRecordingRunner(respondNewPackage());
-    const report = bootstrapPublish('create-exo-app', { dryRun: true, skipBuild: false, mode: 'release' }, runner, repoRoot);
+    const report = bootstrapPublish('@codexo/eslint-plugin-exojs', { dryRun: true, skipBuild: false, mode: 'release' }, runner, repoRoot);
 
     expect(report.ok).toBe(false);
     expect(report.reason).toMatch(/bootstrap publish first/);

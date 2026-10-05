@@ -7,12 +7,12 @@
  * and that the order stream reproduces the emit order EXACTLY - including nested
  * scopes at their recorded position - because that stream IS the draw order.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { Drawable } from '#rendering/Drawable';
 import { DerivedSelectionState } from '#rendering/plan/DerivedSelectionState';
 import { RenderEntryKind } from '#rendering/plan/renderCommand';
-import { createSourceScope, finalizeSourceScopes, type SourceGroup, type SourceScope } from '#rendering/plan/renderSourceItem';
+import { createSourceScope, finalizeSourceScopes, LiveEntryReason, type SourceGroup, type SourceScope } from '#rendering/plan/renderSourceItem';
 import { MembershipBits } from '#rendering/plan/SourceVisibilityIndex';
 
 const drawable = (): Drawable => ({}) as Drawable;
@@ -70,6 +70,36 @@ const orderedHandles = (state: DerivedSelectionState): number[] => {
 };
 
 describe('DerivedSelectionState', () => {
+  it.each([0, 1])('skips live marks in an unqueried subgroup at item mark %i and restores them on re-entry', itemMark => {
+    const root = createSourceScope();
+
+    fill(root, 1);
+    const group = nest(root, 1, itemMark);
+    const child = nest(group, 0, 1);
+    const live = { kind: RenderEntryKind.Barrier as const, seq: 0, zIndex: 0, node: drawable(), reason: LiveEntryReason.Barrier, itemMark: 0 };
+
+    child.others.push(live);
+    const scopes = finalize(root);
+    const state = new DerivedSelectionState();
+    const first = membership(scopes, [[0], [0], []]);
+    const culled = membership(scopes, [[0], [], []]);
+
+    state.rebind(2);
+    state.update(root, first, null, new Uint8Array([1, 1, 1]));
+    expect(state.markCount).toBe(1);
+    const walk = vi.spyOn(state as unknown as { _walkScope(scope: SourceScope): void }, '_walkScope');
+
+    state.update(root, culled, first, new Uint8Array([1, 0, 0]));
+    expect(walk.mock.calls.map(([scope]) => scope.ordinal)).toEqual([0]);
+    expect(state.markCount).toBe(0);
+    expect(orderedHandles(state)).toEqual([0]);
+    expect(state.stats.released).toBe(1);
+    state.update(root, first, culled, new Uint8Array([1, 1, 1]));
+    expect(state.markCount).toBe(1);
+    expect(state.markEntries[0]).toBe(live);
+    expect(state.stats.reused).toBe(1);
+  });
+
   describe('slot lifetime', () => {
     it('gives every admitted item a slot on the first update', () => {
       const root = createSourceScope();

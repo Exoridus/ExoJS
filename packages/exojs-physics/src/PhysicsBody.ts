@@ -82,6 +82,17 @@ export class PhysicsBody {
   /** When `false`, this body is never put to sleep. Default `true`. */
   public allowSleep = true;
 
+  /** @internal - set by `PhysicsBodyComponent`; such a body may not be constrained by a joint. */
+  public _componentManaged = false;
+
+  /**
+   * @internal - whether the body left a world through `remove` and has not
+   * joined one since. Unlike a body that never joined any world (a joint's
+   * private anchor is one), it still carries island and pair state from that
+   * world, so no joint may constrain it until it is added again.
+   */
+  public _wasRemoved = false;
+
   /** @internal - Delta position X accumulated across the frame's sub-steps by the TGS integrator; written into the transform once per frame by {@link _finalizePosition}. */
   public _deltaPosX = 0;
   /** @internal - Delta position Y accumulated across the frame's sub-steps by the TGS integrator. */
@@ -578,6 +589,7 @@ export class PhysicsBody {
     this._assertDynamicCarriesMass();
 
     this._owner = owner;
+    this._wasRemoved = false;
     this._id = id;
     this._attached = true;
 
@@ -599,6 +611,15 @@ export class PhysicsBody {
     this._destroyed = true;
   }
 
+  /** @internal - end a body that belongs to no world: mark it and its colliders destroyed. */
+  public _discard(): void {
+    for (const collider of this._colliders) {
+      collider._markDestroyed();
+    }
+
+    this._destroyed = true;
+  }
+
   /**
    * @internal - whether this body belongs to a world OTHER than `owner`.
    *
@@ -613,6 +634,28 @@ export class PhysicsBody {
    */
   public _isForeignTo(owner: BodyOwner): boolean {
     return this._owner !== null && this._owner !== owner;
+  }
+
+  /** @internal - whether this body currently belongs to `owner`. */
+  public _isMemberOf(owner: BodyOwner): boolean {
+    return this._attached && this._owner === owner;
+  }
+
+  /**
+   * @internal - leave the owning world without being destroyed. Drops the
+   * world link and every id; transform, motion, mass model and colliders stay,
+   * so a later `_attachToWorld` re-registers the same body. The world has
+   * already taken the colliders out of detection.
+   */
+  public _detachFromWorld(): void {
+    this._owner = null;
+    this._id = -1;
+    this._attached = false;
+    this._wasRemoved = true;
+
+    for (const collider of this._colliders) {
+      collider._detachFromWorld();
+    }
   }
 
   /**

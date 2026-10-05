@@ -23,8 +23,7 @@ import { affineMat3Std140FloatCount, affineMat4FloatCount, packAffineMat3Std140,
 import { spriteVertexCoreWgsl } from '#rendering/sprite/materialSources';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { instancedMeshShaderSource, WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
-import { nineSliceShaderSource } from '#rendering/webgpu/WebGpuNineSliceSpriteRenderer';
-import { geoPathEntries, shaderPathEntries } from '#rendering/webgpu/WebGpuRepeatingSpriteRenderer';
+import { geoPathEntries, shaderPathEntries } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
 import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
@@ -147,9 +146,8 @@ describe('WGSL slot math parity across instanced renderers', () => {
     // the core covers all three at once. It takes the two transform rows as
     // parameters rather than reading a local, hence the empty slot prefix.
     { name: 'sprite (shared vertex core)', source: spriteVertexCoreWgsl, slot: '', lx: 'localX', ly: 'localY' },
-    { name: 'nine-slice', source: nineSliceShaderSource, lx: 'localX', ly: 'localY' },
     { name: 'repeating-sprite (shader path)', source: shaderPathEntries, lx: 'lx', ly: 'ly' },
-    { name: 'repeating-sprite (geometry path)', source: geoPathEntries, lx: 'lx', ly: 'ly' },
+    { name: 'scalable-sprite (shared geometry path)', source: geoPathEntries, lx: 'lx', ly: 'ly' },
     { name: 'mesh (instanced path)', source: instancedMeshShaderSource, lx: String.raw`input\.position\.x`, ly: String.raw`input\.position\.y` },
   ];
 

@@ -14,6 +14,8 @@ import { describe, expect, test } from 'vitest';
 import { inflateKtx2Levels, isKtx2, parseKtx2 } from '#assets/factories/ktx2';
 import { compressedLevelByteLength, CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 
+import { ktx2BlockBytes, ktx2Dfd } from './ktx2-dfd';
+
 const HEADER_BYTES = 80;
 const LEVEL_ENTRY_BYTES = 24;
 const IDENTIFIER = [0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -30,6 +32,7 @@ interface Ktx2Spec {
   readonly faceCount?: number;
   /** Overrides the level count written into the header, without changing the index. */
   readonly declaredLevelCount?: number;
+  readonly transfer?: number;
   /** Fills every level with this byte, so a mis-sliced level is visible. */
   readonly fillFrom?: number;
 }
@@ -44,11 +47,17 @@ const buildKtx2 = ({
   layerCount = 0,
   faceCount = 1,
   declaredLevelCount,
+  transfer = 1,
   fillFrom = 1,
 }: Ktx2Spec): ArrayBuffer => {
   const dataBytes = levelLengths.reduce((total, length) => total + length, 0);
   const indexBytes = levelLengths.length * LEVEL_ENTRY_BYTES;
-  const buffer = new ArrayBuffer(HEADER_BYTES + indexBytes + dataBytes);
+  const dfd = ktx2Dfd(vkFormat, { transfer });
+  const dfdOffset = HEADER_BYTES + indexBytes;
+  // Levels start on lcm(block size, 4); the descriptor and index regions on 8.
+  const levelAlignment = Math.max(8, (ktx2BlockBytes(vkFormat) * 4) / (ktx2BlockBytes(vkFormat) % 4 === 0 ? 4 : 1));
+  const dataOffset = Math.ceil((dfdOffset + dfd.length) / levelAlignment) * levelAlignment;
+  const buffer = new ArrayBuffer(dataOffset + dataBytes);
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);
 
@@ -62,10 +71,13 @@ const buildKtx2 = ({
   view.setUint32(36, faceCount, true);
   view.setUint32(40, declaredLevelCount ?? levelLengths.length, true);
   view.setUint32(44, supercompressionScheme, true);
+  view.setUint32(48, dfdOffset, true);
+  view.setUint32(52, dfd.length, true);
+  bytes.set(dfd, dfdOffset);
 
   // KTX2 stores the image data smallest level first, so the offsets are laid out
   // in reverse mip order while the index entries stay in mip order.
-  let offset = HEADER_BYTES + indexBytes + dataBytes;
+  let offset = dataOffset + dataBytes;
 
   for (let index = levelLengths.length - 1; index >= 0; index--) {
     const length = levelLengths[index]!;
@@ -122,13 +134,15 @@ describe('parseKtx2', () => {
     expect(payload.levels.map(({ data }) => data[0])).toEqual([1, 2, 3]);
   });
 
-  test('maps the sRGB and UNORM variants of one block format to the same engine format', () => {
-    const format = CompressedTextureFormat.Bc7RgbaUnorm;
-    const lengths = levelLengthsFor(format, 8, 8, 1);
+  test('preserves the sRGB and UNORM variants of one block format', () => {
+    const lengths = levelLengthsFor(CompressedTextureFormat.Bc7RgbaUnorm, 8, 8, 1);
 
-    for (const vkFormat of [145, 146]) {
-      expect(parseKtx2(buildKtx2({ vkFormat, width: 8, height: 8, levelLengths: lengths }), 'hero.ktx2')).toMatchObject({ format });
-    }
+    expect(parseKtx2(buildKtx2({ vkFormat: 145, width: 8, height: 8, levelLengths: lengths }), 'hero.ktx2')).toMatchObject({
+      format: CompressedTextureFormat.Bc7RgbaUnorm,
+    });
+    expect(parseKtx2(buildKtx2({ vkFormat: 146, width: 8, height: 8, levelLengths: lengths, transfer: 2 }), 'hero.ktx2')).toMatchObject({
+      format: CompressedTextureFormat.Bc7RgbaUnormSrgb,
+    });
   });
 
   test('reads ETC2 and ASTC payloads', () => {
@@ -169,9 +183,10 @@ describe('parseKtx2', () => {
       const height = blockHeight * 2;
       const lengths = levelLengthsFor(format, width, height, 1);
 
-      for (const vkFormat of [157 + index * 2, 158 + index * 2]) {
-        expect(parseKtx2(buildKtx2({ vkFormat, width, height, levelLengths: lengths }), 'a.ktx2')).toMatchObject({ format });
-      }
+      expect(parseKtx2(buildKtx2({ vkFormat: 157 + index * 2, width, height, levelLengths: lengths }), 'a.ktx2')).toMatchObject({ format });
+      expect(parseKtx2(buildKtx2({ vkFormat: 158 + index * 2, width, height, levelLengths: lengths, transfer: 2 }), 'a.ktx2')).toMatchObject({
+        format: `astc-${blockWidth}x${blockHeight}-srgb`,
+      });
     });
   });
 
@@ -194,14 +209,11 @@ describe('parseKtx2', () => {
     expect(payload.kind === 'rgba8' && payload.data.byteLength).toBe(32);
   });
 
-  test('treats a declared level count of zero as the one level present', () => {
+  test('rejects a compressed payload whose level count requests generated mips', () => {
     const format = CompressedTextureFormat.Bc1RgbaUnorm;
-    const payload = parseKtx2(
-      buildKtx2({ vkFormat: 133, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1), declaredLevelCount: 0 }),
-      'hero.ktx2',
-    );
-
-    expect(payload.kind === 'compressed' && payload.levels).toHaveLength(1);
+    expect(() =>
+      parseKtx2(buildKtx2({ vkFormat: 133, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1), declaredLevelCount: 0 }), 'hero.ktx2'),
+    ).toThrow(/levelCount 0/);
   });
 
   test.each([
@@ -263,7 +275,6 @@ describe('parseKtx2', () => {
 const deflateKtx2 = async (buffer: ArrayBuffer, levelCount: number): Promise<ArrayBuffer> => {
   const source = new Uint8Array(buffer);
   const view = new DataView(buffer);
-  const indexBytes = levelCount * LEVEL_ENTRY_BYTES;
   const entries = Array.from({ length: levelCount }, (_unused, index) => ({
     index,
     offset: view.getUint32(HEADER_BYTES + index * LEVEL_ENTRY_BYTES, true),
@@ -302,10 +313,13 @@ const deflateKtx2 = async (buffer: ArrayBuffer, levelCount: number): Promise<Arr
       return deflatedBytes;
     }),
   );
-  const result = new Uint8Array(HEADER_BYTES + indexBytes + deflated.reduce((total, level) => total + level.byteLength, 0));
+  const prefixBytes = Math.min(...entries.map(({ offset }) => offset));
+  const alignedPrefixBytes = Math.ceil(prefixBytes / 8) * 8;
+  const resultBytes = deflated.reduce((total, level) => Math.ceil((total + level.byteLength) / 8) * 8, alignedPrefixBytes);
+  const result = new Uint8Array(resultBytes);
   const resultView = new DataView(result.buffer);
 
-  result.set(source.subarray(0, HEADER_BYTES + indexBytes));
+  result.set(source.subarray(0, prefixBytes));
   resultView.setUint32(44, 3, true);
 
   // Kept in the container's own storage order - smallest level last in mip order,
@@ -316,7 +330,7 @@ const deflateKtx2 = async (buffer: ArrayBuffer, levelCount: number): Promise<Arr
     const data = deflated[index]!;
     const entry = HEADER_BYTES + index * LEVEL_ENTRY_BYTES;
 
-    cursor -= data.byteLength;
+    cursor = Math.floor((cursor - data.byteLength) / 8) * 8;
     result.set(data, cursor);
     resultView.setUint32(entry, cursor, true);
     resultView.setUint32(entry + 8, data.byteLength, true);

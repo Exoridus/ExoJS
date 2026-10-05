@@ -2,7 +2,7 @@
 // Not comparable to the real WebGL2/WebGPU backend, nor to the GPU-baseline
 // suite (`packages/exojs-bench`, `pnpm bench`).
 // Sub-30% deltas between runs are noise, not signal.
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 
 import { Container } from '../../src/rendering/Container';
 import { Drawable } from '../../src/rendering/Drawable';
@@ -11,6 +11,7 @@ import { createRenderStats, resetRenderStats } from '../../src/rendering/RenderS
 import { RenderTarget } from '../../src/rendering/RenderTarget';
 import { RenderTexture } from '../../src/rendering/texture/RenderTexture';
 import { createRenderBackendDouble } from '../support/render-backend-double';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const VIEWPORT_W = 800;
 const VIEWPORT_H = 600;
@@ -97,47 +98,53 @@ const createGridScene = (cols: number, rows: number, spacing: number, ox = 0, oy
   return root;
 };
 
-describe('rendering', () => {
-  bench('dense-visible (8k nodes, 240 frames)', () => {
-    const root = createGridScene(200, 40, 20);
-    const runtime = createStubRuntime();
+describe('rendering', { timeout: benchTimeoutMs }, () => {
+  test('dense-visible (8k nodes, 240 frames)', async ({ bench }) => {
+    await bench('dense-visible (8k nodes, 240 frames)', () => {
+      const root = createGridScene(200, 40, 20);
+      const runtime = createStubRuntime();
 
-    for (let frame = 0; frame < FRAME_COUNT; frame++) {
-      runtime.resetStats();
-      root.render(runtime);
-      runtime.flush();
-    }
+      for (let frame = 0; frame < FRAME_COUNT; frame++) {
+        runtime.resetStats();
+        root.render(runtime);
+        runtime.flush();
+      }
 
-    root.destroy();
-    runtime.destroy();
+      root.destroy();
+      runtime.destroy();
+    }).run(benchRunOptions);
   });
 
-  bench('dense-mostly-offscreen (8k nodes placed far off-screen, 240 frames)', () => {
-    const root = createGridScene(200, 40, 20, 5000, 5000);
-    const runtime = createStubRuntime();
+  test('dense-mostly-offscreen (8k nodes placed far off-screen, 240 frames)', async ({ bench }) => {
+    await bench('dense-mostly-offscreen (8k nodes placed far off-screen, 240 frames)', () => {
+      const root = createGridScene(200, 40, 20, 5000, 5000);
+      const runtime = createStubRuntime();
 
-    for (let frame = 0; frame < FRAME_COUNT; frame++) {
-      runtime.resetStats();
-      root.render(runtime);
-      runtime.flush();
-    }
+      for (let frame = 0; frame < FRAME_COUNT; frame++) {
+        runtime.resetStats();
+        root.render(runtime);
+        runtime.flush();
+      }
 
-    root.destroy();
-    runtime.destroy();
+      root.destroy();
+      runtime.destroy();
+    }).run(benchRunOptions);
   });
 
-  bench('camera-pan (6k nodes, 240 frames, panning view)', () => {
-    const root = createGridScene(300, 20, 18);
-    const runtime = createStubRuntime();
+  test('camera-pan (6k nodes, 240 frames, panning view)', async ({ bench }) => {
+    await bench('camera-pan (6k nodes, 240 frames, panning view)', () => {
+      const root = createGridScene(300, 20, 18);
+      const runtime = createStubRuntime();
 
-    for (let frame = 0; frame < FRAME_COUNT; frame++) {
-      runtime.resetStats();
-      runtime.view.setCenter(400 + frame * 18, 300);
-      root.render(runtime);
-      runtime.flush();
-    }
+      for (let frame = 0; frame < FRAME_COUNT; frame++) {
+        runtime.resetStats();
+        runtime.view.setCenter(400 + frame * 18, 300);
+        root.render(runtime);
+        runtime.flush();
+      }
 
-    root.destroy();
-    runtime.destroy();
+      root.destroy();
+      runtime.destroy();
+    }).run(benchRunOptions);
   });
 });

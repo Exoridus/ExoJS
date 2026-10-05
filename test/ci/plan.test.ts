@@ -90,8 +90,17 @@ describe('plan for a push with a resolved diff', () => {
     expect(plan).toMatchObject({ site: false, smoke: false });
   });
 
+  it('builds the engine for a scaffolder change, whose verify lane installs the built packages', () => {
+    // The real-consumer step of `verify:create-exo-app` packs the built engine
+    // packages and installs them into each generated project, so the build
+    // artifact has to exist even though no engine source changed.
+    const plan = push(['packages/create-exo-app/templates/minimal/package.json']);
+    expect(ids(plan.verify)).toContain('create-exo-app');
+    expect(plan.build).toBe(true);
+  });
+
   it('runs only the gates for a docs-only change', () => {
-    const plan = push(['README.md']);
+    const plan = push(['CONTRIBUTING.md']);
     expect(ids(plan.gates)).toEqual(['typecheck', 'lint', 'sync']);
     expect(plan.test).toEqual([]);
     expect(plan.verify).toEqual([]);
@@ -127,11 +136,18 @@ describe('plan for a pull request', () => {
   });
 
   it('runs only the gates for a docs-only change', () => {
-    const plan = pullRequest(['README.md']);
+    const plan = pullRequest(['CONTRIBUTING.md']);
     expect(ids(plan.gates)).toEqual(['typecheck', 'lint', 'sync']);
     expect(plan.test).toEqual([]);
     expect(plan.verify).toEqual([]);
     expect(plan).toMatchObject({ build: false, site: false, smoke: false, skipBudget: false });
+  });
+
+  it('runs the unit lane for a README whose examples are typechecked', () => {
+    const plan = pullRequest(['README.md']);
+    expect(ids(plan.test)).toEqual(['unit']);
+    expect(plan.verify).toEqual([]);
+    expect(plan).toMatchObject({ site: false, smoke: false });
   });
 
   it('adds the audio lane for an audio-fx change and the tilemap lane for a tilemap change', () => {
@@ -152,7 +168,7 @@ describe('the matrix entries carry what the setup action needs', () => {
 
   it('names the browser and the apt packages per lane', () => {
     const byId = Object.fromEntries(plan.test.map(entry => [entry.id, entry]));
-    expect(byId['webgpu']).toMatchObject({ browser: 'chromium', apt: 'mesa-vulkan-drivers xvfb' });
+    expect(byId['webgpu']).toMatchObject({ browser: 'chromium', apt: 'xvfb' });
     expect(byId['firefox']).toMatchObject({ browser: 'firefox', apt: 'xvfb' });
     expect(byId['unit']).toMatchObject({ browser: '', apt: '', naga: true });
   });

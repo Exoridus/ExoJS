@@ -15,7 +15,7 @@
  * Gradient, and a fractional tint, all through the default mesh path.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); `renderMesh` only skips when the software adapter
+ * against SwiftShader); `renderMesh` only skips when the software adapter
  * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -30,7 +30,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -64,13 +64,13 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
 
-// On the software (swiftshader) adapter the WebGPU device can drop mid-test;
+// On the software (SwiftShader) adapter the WebGPU device can drop mid-test;
 // treat that as an unavailable-adapter skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a single mesh through the real flush path inside a validation error
 // scope. Returns false when the device dropped mid-test (caller should bail).
-const renderMesh = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, mesh: Mesh): Promise<boolean> => {
+const renderMesh = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, mesh: Mesh, encoded = false): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
@@ -78,10 +78,15 @@ const renderMesh = async (ctx: { skip: (reason: string) => void }, backend: WebG
   let validationError: GPUError | null;
 
   try {
-    backend.resetStats();
-    backend.clear(Color.black);
-    mesh.render(backend);
-    backend.flush();
+    if (encoded) {
+      if (!(await renderWebGpuEncoded(ctx, backend, mesh))) return false;
+    } else {
+      backend.resetStats();
+      backend.clear(Color.black);
+      mesh.render(backend);
+      backend.flush();
+    }
+
     validationError = await device.popErrorScope();
   } catch (error) {
     if (isDeviceLoss(error)) {
@@ -182,7 +187,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
     try {
-      if (!(await renderMesh(ctx, backend, mesh))) {
+      if (!(await renderMesh(ctx, backend, mesh, true))) {
         return;
       }
 
@@ -208,7 +213,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
     try {
-      if (!(await renderMesh(ctx, backend, mesh))) {
+      if (!(await renderMesh(ctx, backend, mesh, true))) {
         return;
       }
 
@@ -242,7 +247,7 @@ describe('WebGPU mesh tint and texture sampling', () => {
     mesh.tint = new Color(96, 160, 224);
 
     try {
-      if (!(await renderMesh(ctx, backend, mesh))) {
+      if (!(await renderMesh(ctx, backend, mesh, true))) {
         return;
       }
 

@@ -96,7 +96,7 @@ const meshSerializer: NodeSerializer<Mesh> = {
         indices: data.indices !== undefined ? toU16(data.indices) : undefined,
         uvs: data.uvs !== undefined ? toF32(data.uvs) : undefined,
         colors: data.colors !== undefined ? toU32(data.colors) : undefined,
-        texture: ctx.resolveAsset(typeof data.texture === 'string' ? data.texture : null, Texture),
+        texture: ctx.resolveAsset(data.texture, Texture),
       }),
     );
   },
@@ -149,7 +149,7 @@ const nineSliceSerializer: NodeSerializer<NineSliceSprite> = {
     return out;
   },
   read(data, ctx) {
-    const texture = ctx.resolveAsset(typeof data.texture === 'string' ? data.texture : null, Texture);
+    const texture = ctx.resolveAsset(data.texture, Texture);
 
     if (texture === null) {
       throw new Error('NineSliceSprite deserialize requires its texture to be pre-loaded into the Loader.');
@@ -189,7 +189,7 @@ const repeatingSerializer: NodeSerializer<RepeatingSprite> = {
     return out;
   },
   read(data, ctx) {
-    const texture = ctx.resolveAsset(typeof data.texture === 'string' ? data.texture : null, Texture);
+    const texture = ctx.resolveAsset(data.texture, Texture);
 
     if (texture === null) {
       throw new Error('RepeatingSprite deserialize requires its texture to be pre-loaded into the Loader.');
@@ -242,7 +242,7 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
     return out;
   },
   read(data, ctx) {
-    const texture = ctx.resolveAsset(typeof data.texture === 'string' ? data.texture : null, Texture);
+    const texture = ctx.resolveAsset(data.texture, Texture);
     const clips: Record<string, AnimatedSpriteClipDefinition> = {};
     const clipsData = data.clips;
 
@@ -360,9 +360,9 @@ const videoSerializer: NodeSerializer<Video> = {
       element,
       compact({
         volume: num(data.volume),
-        loop: data.loop === true ? true : undefined,
+        loop: data.loop === true || undefined,
         playbackRate: num(data.playbackRate),
-        muted: data.muted === true ? true : undefined,
+        muted: data.muted === true || undefined,
         time: num(data.time),
       }),
     );

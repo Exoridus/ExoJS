@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
+import { CHECKED_README_PATHS, effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
 
 // Deterministic coverage for the CI path-to-lane policy. The logic under test is
 // scripts/ci/select-lanes.ts - the SAME module the "Detect changes" job in
@@ -155,7 +155,8 @@ describe('CI lane selection — engine/site areas', () => {
     const { areas, lanes } = decide('README.md');
     expect(areas).toMatchObject({ engine: false, site: false, audioFx: false, tilemapWorker: false });
     expect(lanes.browserAudio).toBe(false);
-    expect(lanes.unit).toBe(false);
+    // The unit lane runs only for the README-example suite (see the site-data block).
+    expect(lanes.coverage).toBe(false);
     expect(lanes.browserWebgpu).toBe(false);
     expect(lanes.packageVerify).toBe(false);
     expect(lanes.siteBuild).toBe(false);
@@ -435,6 +436,24 @@ describe('CI lane selection - prose outside the documentation folders', () => {
     expect(decide('packages/create-exo-app/templates/top-down/src/main.ts').lanes.createExoAppVerify).toBe(true);
   });
 
+  it.each(['packages/exojs-particles/src/ParticleSystem.ts', 'packages/exojs-particles/src/gpu/ParticleGlState.ts', 'packages/exojs-particles/package.json'])(
+    'a particles-only change runs the structural gate: %s',
+    file => {
+      // The `particles-*` archetypes measure the particle package's renderers, so
+      // a change confined to it alters the counters `gate:bench:structural` guards.
+      // Without this, the WebGL2 particle simulation's move to transform feedback
+      // took `particles-lifecycle` from 1/0/1 to 6/12/10 and the gate could not
+      // have noticed.
+      expect(decide(file).lanes.benchStructural).toBe(true);
+    },
+  );
+
+  it('prose in the particle package is still prose', () => {
+    // The gate follows the code that decides the counters, and the rule that
+    // gates code on its own is unchanged.
+    expect(decide('packages/exojs-particles/README.md').lanes.benchStructural).toBe(false);
+  });
+
   it('a licence file is prose too', () => {
     expect(decide('packages/exojs-bench/LICENSE').areas.engine).toBe(false);
     expect(decide('LICENSE').areas.engine).toBe(false);
@@ -507,6 +526,22 @@ describe('CI lane selection — site data gates the unit lane', () => {
     expect(areas.siteData).toBe(true);
     expect(lanes.unit).toBe(true);
     expect(lanes.exampleSmoke).toBe(true);
+  });
+
+  it('a README with checked examples runs the unit lane that typechecks them', () => {
+    for (const file of CHECKED_README_PATHS) {
+      const { areas, lanes } = decide(file);
+      expect({ file, siteData: areas.siteData, engine: areas.engine, ...lanes }).toMatchObject({
+        file,
+        siteData: true,
+        engine: false,
+        unit: true,
+        coverage: false,
+        packageVerify: false,
+        browserWebgl2: false,
+      });
+    }
+    expect(decide('packages/exojs-tilemap/README.md').lanes.unit).toBe(false);
   });
 
   it('site pages and components stay out of the area: no suite reads them', () => {

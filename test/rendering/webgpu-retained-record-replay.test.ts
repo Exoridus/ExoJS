@@ -32,13 +32,16 @@ import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
-import { RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
+import { RetainedInstructionKind, RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Shader } from '#rendering/shader/Shader';
+import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { BlendModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { WebGpuRetainedGroupBundle } from '#rendering/webgpu/WebGpuRetainedGroupBundle';
@@ -61,6 +64,8 @@ interface CapturedDraw {
 interface MockWebGpuEnvironment {
   readonly canvas: HTMLCanvasElement;
   submitCount(): number;
+  nativeBuildCount(): number;
+  nativeReplayCount(): number;
   writes(): readonly CapturedWrite[];
   draws(): readonly CapturedDraw[];
   restore(): void;
@@ -95,10 +100,18 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const previousGlobals = globalStubs.map(([name]) => [name, Object.getOwnPropertyDescriptor(globalThis, name)] as const);
 
   let submitCount = 0;
+  let nativeBuildCount = 0;
+  let nativeReplayCount = 0;
   const writes: CapturedWrite[] = [];
   const draws: CapturedDraw[] = [];
 
   const pass = {
+    executeBundles: (bundles: ReadonlyArray<{ instanceCounts: readonly number[] }>): void => {
+      nativeReplayCount += bundles.length;
+      for (const bundle of bundles) {
+        for (const instanceCount of bundle.instanceCounts) draws.push({ instanceCount });
+      }
+    },
     setPipeline: (): void => {},
     setBindGroup: (): void => {},
     setVertexBuffer: (): void => {},
@@ -127,6 +140,20 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     writeTexture: (): void => {},
   };
   const device = {
+    createRenderBundleEncoder: (): object => {
+      nativeBuildCount++;
+      const instanceCounts: number[] = [];
+      return {
+        setPipeline: (): void => {},
+        setBindGroup: (): void => {},
+        setVertexBuffer: (): void => {},
+        setIndexBuffer: (): void => {},
+        drawIndexed: (_indexCount: number, instanceCount: number): void => {
+          instanceCounts.push(instanceCount);
+        },
+        finish: (): object => ({ instanceCounts }),
+      };
+    },
     createShaderModule: () => ({}) as GPUShaderModule,
     createBindGroupLayout: () => ({}) as GPUBindGroupLayout,
     createPipelineLayout: () => ({}) as GPUPipelineLayout,
@@ -183,6 +210,8 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   return {
     canvas,
     submitCount: () => submitCount,
+    nativeBuildCount: () => nativeBuildCount,
+    nativeReplayCount: () => nativeReplayCount,
     writes: () => writes,
     draws: () => draws,
     restore: (): void => {
@@ -307,6 +336,109 @@ const buildGroupScene = (texture: Texture, groupCount: number): { root: Containe
 };
 
 describe('WebGPU retained record/replay: fallback ladder + submit collapse', () => {
+  test('native promotion waits for stability, limits build work, and resets after recording replacement', async () => {
+    const environment = createMockWebGpuEnvironment();
+    try {
+      const backend = await createBackend(environment);
+      const texture = createCanvasTexture();
+      const group = new RetainedContainer();
+      group.preserveDrawOrder = true;
+      for (let i = 0; i < 64; i++) {
+        const sprite = new Sprite(texture);
+        sprite.blendMode = i % 2 === 0 ? BlendModes.Normal : BlendModes.Multiply;
+        group.addChild(sprite);
+      }
+      renderFrame(backend, group);
+      renderFrame(backend, group);
+      for (let i = 0; i < 30; i++) renderFrame(backend, group);
+      expect(environment.nativeBuildCount()).toBe(0);
+      renderFrame(backend, group);
+      expect(environment.nativeBuildCount()).toBe(32);
+      expect(backend.stats.drawCalls).toBe(64);
+      renderFrame(backend, group);
+      expect(environment.nativeBuildCount()).toBe(64);
+      const replayBefore = environment.nativeReplayCount();
+      renderFrame(backend, group);
+      expect(environment.nativeReplayCount() - replayBefore).toBe(64);
+      expect(environment.nativeBuildCount()).toBe(64);
+      group.invalidateContent();
+      const invalidatedBefore = environment.nativeReplayCount();
+      renderFrame(backend, group);
+      expect(environment.nativeReplayCount()).toBe(invalidatedBefore);
+      for (let i = 0; i < 30; i++) renderFrame(backend, group);
+      expect(environment.nativeBuildCount()).toBe(64);
+      group.destroy();
+      texture.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+  test('mixed scalable geometry uses one batch through live, record and replay frames', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createBackend(environment);
+      const texture = createCanvasTexture();
+      const group = new RetainedContainer();
+
+      group.addChild(
+        new NineSliceSprite(texture, { slices: 4, width: 16, height: 16 }),
+        new RepeatingSprite(new TextureRegion(texture, { x: 0, y: 0, width: 16, height: 16 }), { width: 16, height: 16 }),
+      );
+
+      for (let frame = 0; frame < 4; frame++) {
+        const before = environment.draws().length;
+
+        renderFrame(backend, group);
+        expect(environment.draws().slice(before)).toEqual([{ instanceCount: 10 }]);
+        expect(backend.stats.batches).toBe(1);
+        expect(backend.stats.drawCalls).toBe(1);
+        expect(backend.stats.submittedNodes).toBe(2);
+      }
+
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+      group.destroy();
+      texture.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('destroyed replay resources count submitted nodes but no batches or draws', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createBackend(environment);
+      const texture = createCanvasTexture();
+      const { root, groups } = buildGroupScene(texture, 1);
+
+      renderFrame(backend, root);
+      renderFrame(backend, root);
+      const set = fragmentOf(groups[0]!).instructions!;
+      const batch = set.instructions.find(instruction => instruction.kind === RetainedInstructionKind.Batch)!;
+
+      if (batch.kind !== RetainedInstructionKind.Batch) throw new Error('Expected a recorded batch');
+      set.ownedBundle!.destroy!();
+      backend.resetStats();
+      const before = environment.draws().length;
+
+      backend.replayRetainedBatch({ ...batch, nodeCount: 2 });
+      backend.replayRetainedBatch({ ...batch, nodeCount: 0 });
+      expect(environment.draws()).toHaveLength(before);
+      expect(backend.stats.submittedNodes).toBe(2);
+      expect(backend.stats.batches).toBe(0);
+      expect(backend.stats.drawCalls).toBe(0);
+
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('SpriteMaterial values stay live on instruction replay and structural state re-records recoverably', async () => {
     const environment = createMockWebGpuEnvironment();
 
@@ -827,6 +959,52 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
 
     return { device, created, destroyed, writes };
   };
+
+  test('mixed retained layouts reuse bind groups and discard every cached layout after growth or device loss', () => {
+    const bundle = new WebGpuRetainedGroupBundle(new GpuResourceAccountant(createRenderStats()), () => {});
+    const { device } = createFakeDevice();
+    const spriteLayout = {} as GPUBindGroupLayout;
+    const geometryLayout = {} as GPUBindGroupLayout;
+    bundle.ensureCapacity(device, 100, 96, 12);
+
+    const invalidations = vi.spyOn(bundle.nativeReplay, 'invalidate');
+    bundle.ensureCapacity(device, 200, 96, 12);
+    expect(invalidations).not.toHaveBeenCalled();
+
+    let spriteGroup = bundle.getBindGroup(device, spriteLayout, true);
+    let geometryGroup = bundle.getBindGroup(device, geometryLayout, false);
+    const checkReuse = (): void => {
+      expect(bundle.getBindGroup(device, spriteLayout, true)).toBe(spriteGroup);
+      expect(bundle.getBindGroup(device, spriteLayout, true)).toBe(spriteGroup);
+      expect(bundle.getBindGroup(device, geometryLayout, false)).toBe(geometryGroup);
+    };
+    checkReuse();
+
+    for (const [instanceBytes, transformBytes, tintBytes] of [
+      [512, 96, 12],
+      [512, 512, 12],
+      [512, 512, 512],
+    ] as const) {
+      bundle.ensureCapacity(device, instanceBytes, transformBytes, tintBytes);
+      const nextSprite = bundle.getBindGroup(device, spriteLayout, true);
+      const nextGeometry = bundle.getBindGroup(device, geometryLayout, false);
+      expect(nextSprite).not.toBe(spriteGroup);
+      expect(nextGeometry).not.toBe(geometryGroup);
+      spriteGroup = nextSprite;
+      geometryGroup = nextGeometry;
+      checkReuse();
+    }
+
+    bundle.invalidateDeviceState(false);
+    expect(invalidations).toHaveBeenCalledTimes(4);
+    const restored = createFakeDevice().device;
+    bundle.ensureCapacity(restored, 100, 96, 12);
+    expect(bundle.getBindGroup(restored, spriteLayout, true)).not.toBe(spriteGroup);
+    expect(bundle.getBindGroup(restored, geometryLayout, false)).not.toBe(geometryGroup);
+    expect(invalidations).toHaveBeenCalledTimes(5);
+    bundle.destroy();
+    expect(invalidations).toHaveBeenCalledTimes(6);
+  });
 
   test('device loss invalidates: buffers dropped without destroy, generation bumped, accounting freed', () => {
     const stats = createRenderStats();

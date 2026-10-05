@@ -35,6 +35,8 @@ A freshly-constructed node serializes to just its `type` tag — only non-defaul
 Serialization records data and structure — transforms, tints, blend modes, frames, tree shape, and asset keys. Live and behavioural pieces (a `mask` node, post-process `filters`, `Geometry` clip shapes, custom materials, update logic) are skipped, so re-attach them in your `Scene` code after loading.
 </Callout>
 
+[Components](/ExoJS/en/guide/runtime/components/) are not part of the format either, but they are never skipped silently: `scene.serialize()` and `Prefab.from()` throw, naming the node and the component class, when the tree carries any. Pass `{ omitComponents: true }` to write the visual data alone and re-attach the components in code after loading.
+
 ## Prefabs
 
 A [`Prefab`](/ExoJS/en/api/prefab/) captures a configured subtree once and stamps out independent copies — the data-driven counterpart to building objects in a code factory. There is no re-serialization per instance.

@@ -1,152 +1,122 @@
-import { Application, Asset, AudioStream, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  type AudioStream,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  Text,
+  type Voice,
+} from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs-audio-fx';
-import { mountControls } from '@examples/runtime';
-
-type CompressorParam = 'threshold' | 'ratio' | 'attack' | 'release';
-
-interface SliderDef {
-  key: CompressorParam;
-  min: number;
-  max: number;
-}
-
-const sliders: SliderDef[] = [
-  { key: 'threshold', min: -60, max: 0 },
-  { key: 'ratio', min: 1, max: 16 },
-  { key: 'attack', min: 0.001, max: 0.2 },
-  { key: 'release', min: 0.02, max: 0.8 },
-];
+import { mountControlPanel, mountControls } from '@examples/runtime';
 
 class CompressorScene extends Scene {
   private music!: AudioStream;
-  private filter!: CompressorEffect;
-  private gfx!: Graphics;
-  private labels!: Text[];
-  private meterLabel!: Text;
-  private tapPrompt!: Text;
-  private drag = -1;
-  // Canvas-relative bar layout computed in init().
-  private barX = 0;
-  private barW = 0;
-  private labelX = 0;
-  private rowY: number[] = [];
-  private meterY = 0;
+  private voice!: Voice;
+  private compressor!: CompressorEffect;
+  private meter = new Graphics();
+  private label!: Text;
+  private panel!: ReturnType<typeof mountControlPanel>;
   private hud!: ReturnType<typeof mountControls>;
+  private bypass = false;
 
   override async load(): Promise<void> {
-    const app = this.app;
-    const { width, height } = app;
+    this.music = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
+  }
 
-    // Wide horizontal bars centred on the 16:9 canvas; labels sit to the left.
-    this.barW = width * 0.45;
-    this.barX = width * 0.32;
-    this.labelX = width * 0.1;
-    this.rowY = sliders.map((_, i) => height * 0.26 + i * 90);
-    this.meterY = this.rowY[this.rowY.length - 1] + 100;
-
-    // AudioStream has no seamless adapter - await it explicitly.
-    const music = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
-    this.music = music;
-    this.filter = new CompressorEffect();
-    app.audio.music.addEffect(this.filter);
-
-    this.gfx = new Graphics();
-    this.labels = sliders.map(() => new Text('', { fillColor: Color.white, fontSize: 16 }));
-    this.meterLabel = new Text('', { fillColor: Color.white, fontSize: 16 });
-    this.meterLabel.setPosition(this.labelX, this.meterY - 6);
-
-    // Shown while the browser still blocks audio (`app.audio.locked`); the
-    // first click or keypress unlocks it and the queued music starts.
-    this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height - 48);
+  override init(): void {
+    const audio = this.app.audio;
+    this.compressor = new CompressorEffect({ threshold: -30, ratio: 6 });
+    audio.music.addEffect(this.compressor);
+    this.voice = audio.play(this.music, { bus: audio.music, loop: true, volume: 0.15 });
+    this.label = new Text('', { fillColor: Color.white, fontSize: 24 });
+    this.label.setPosition(380, 280);
 
     this.hud = mountControls({
-      title: 'Compressor',
-      controls: [{ keys: 'Drag', action: 'sweep a parameter bar' }],
-      status: 'Click or press any key to start…',
-      hint: 'The red bar shows live gain reduction — louder peaks pull it further right.',
+      title: 'Compression',
+      status: 'Quiet source. Choose Loud to push peaks over the threshold.',
+      hint: 'The red meter reads CompressorEffect.reduction from the active audio node.',
     });
-
-    app.input.onPointerDown.add(p => {
-      this.drag = this.sliderAt(p.y);
-      this.apply(p.x);
+    this.panel = mountControlPanel({ title: 'Compression' });
+    this.panel.addButton({ label: 'Quiet input', onClick: () => this.setInput(0.15) });
+    this.panel.addButton({ label: 'Loud input', onClick: () => this.setInput(1) });
+    this.panel.addToggle({
+      label: 'Bypass',
+      value: false,
+      onChange: value => {
+        if (value === this.bypass) {
+          return;
+        }
+        this.bypass = value;
+        if (value) {
+          audio.music.removeEffect(this.compressor);
+        } else {
+          audio.music.addEffect(this.compressor);
+        }
+        this.hud.setStatus(value ? 'Compressor bypassed.' : 'Compressor active. Compare Quiet and Loud input.');
+      },
     });
-    app.input.onPointerMove.add(p => {
-      this.apply(p.x);
+    this.panel.addSlider({
+      label: 'Threshold (dB)',
+      min: -50,
+      max: -5,
+      step: 1,
+      value: -30,
+      onChange: value => {
+        this.compressor.threshold = value;
+      },
     });
-    app.input.onPointerUp.add(() => {
-      this.drag = -1;
+    this.panel.addSlider({
+      label: 'Ratio',
+      min: 1,
+      max: 12,
+      step: 0.5,
+      value: 6,
+      onChange: value => {
+        this.compressor.ratio = value;
+      },
     });
-
-    // Core defers playback until the AudioContext unlocks on the first
-    // gesture, then starts automatically.
-    app.audio.play(this.music, { loop: true, volume: 0.8 });
-    this.hud.setStatus('Compressing music bus…');
   }
 
-  private sliderAt(y: number): number {
-    for (let i = 0; i < sliders.length; i++) if (Math.abs(y - this.rowY[i]) <= 16) return i;
-    return -1;
-  }
-
-  private apply(x: number): void {
-    if (this.drag < 0) return;
-    const def = sliders[this.drag];
-    const t = Math.max(0, Math.min(1, (x - this.barX) / this.barW));
-    this.filter[def.key] = def.min + (def.max - def.min) * t;
-  }
-
-  private value(def: SliderDef): number {
-    return this.filter[def.key];
+  private setInput(volume: number): void {
+    this.voice.volume = volume;
+    this.hud.setStatus(`${volume === 1 ? 'Loud' : 'Quiet'} input; compressor ${this.bypass ? 'bypassed' : 'active'}.`);
   }
 
   override draw(context: RenderingContext): void {
-    const app = this.app;
-    this.gfx.clear();
-    for (let i = 0; i < sliders.length; i++) {
-      const def = sliders[i];
-      const y = this.rowY[i];
-      const val = this.value(def);
-      const t = (val - def.min) / (def.max - def.min);
-      this.gfx.fillColor = new Color(70, 70, 70);
-      this.gfx.drawRectangle(this.barX, y - 6, this.barW, 12);
-      this.gfx.fillColor = new Color(120, 200, 255);
-      this.gfx.drawRectangle(this.barX, y - 6, this.barW * t, 12);
-      this.labels[i].text = `${def.key}: ${val.toFixed(def.key === 'ratio' ? 2 : 3)}`;
-      this.labels[i].setPosition(this.labelX, y - 12);
-      context.render(this.labels[i]);
+    const reduction = this.bypass ? 0 : this.compressor.reduction;
+    this.meter.clear();
+    this.meter.fillColor = new Color(65, 70, 84);
+    this.meter.drawRectangle(380, 340, 520, 26);
+    this.meter.fillColor = new Color(245, 105, 105);
+    this.meter.drawRectangle(380, 340, 520 * Math.max(0, Math.min(1, -reduction / 24)), 26);
+    this.label.text = `Live gain reduction: ${reduction.toFixed(1)} dB`;
+    context.render(this.meter);
+    context.render(this.label);
+  }
+
+  override destroy(): void {
+    this.voice?.stop();
+    if (!this.bypass) {
+      this.app.audio.music.removeEffect(this.compressor);
     }
-
-    const reduction = this.filter.reduction;
-    const meterT = Math.max(0, Math.min(1, -reduction / 24));
-    this.gfx.fillColor = new Color(70, 70, 70);
-    this.gfx.drawRectangle(this.barX, this.meterY, this.barW, 12);
-    this.gfx.fillColor = new Color(255, 140, 140);
-    this.gfx.drawRectangle(this.barX, this.meterY, this.barW * meterT, 12);
-    this.meterLabel.text = `gain reduction: ${reduction.toFixed(1)} dB`;
-    context.render(this.meterLabel);
-
-    context.render(this.gfx);
-
-    if (app.audio.locked) {
-      context.render(this.tapPrompt);
-    }
+    this.compressor?.destroy();
+    this.panel?.dispose();
+    this.hud?.dispose();
+    this.meter.destroy();
+    this.label?.destroy();
+    super.destroy();
   }
 }
 
 const app = new Application({
   scenes: { CompressorScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
+  loader: { basePath: 'assets/' },
 });
 
 await app.start(CompressorScene);

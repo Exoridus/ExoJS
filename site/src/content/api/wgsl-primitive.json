@@ -1,6 +1,6 @@
 {
   "title": "WgslPrimitive",
-  "description": "WGSL primitive types accepted in WgslUniformField declarations. The codegen emits matching WGSL field declarations; the writeUniforms implementation must produce bytes in the layout WGSL expects (see https://www.w3.org/TR/WGSL/#alignment-and-size). Common pitfalls: - `vec2<f32>` aligns to 8 bytes; pad with `f32` or use `vec4<f32>`. - `vec3<f32>` aligns to 16 bytes (so does `vec4<f32>`); avoid `vec3` for tight packing. For now the supported subset covers what the built-in modules need. Add more types here as new modules require them.",
+  "description": "Compatibility names for the backend-neutral shader resource schema.",
   "symbol": "WgslPrimitive",
   "kind": "type",
   "subsystem": "particles",
@@ -19,9 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "WGSL primitive types accepted in WgslUniformField declarations. The codegen emits matching WGSL field declarations; the writeUniforms implementation must produce bytes in the layout WGSL expects (see https://www.w3.org/TR/WGSL/#alignment-and-size).",
-        "Common pitfalls: - `vec2<f32>` aligns to 8 bytes; pad with `f32` or use `vec4<f32>`. - `vec3<f32>` aligns to 16 bytes (so does `vec4<f32>`); avoid `vec3` for tight packing.",
-        "For now the supported subset covers what the built-in modules need. Add more types here as new modules require them."
+        "Compatibility names for the backend-neutral shader resource schema."
       ],
       "importLine": "import { WgslPrimitive } from '@codexo/exojs-particles'",
       "sourceLink": null
@@ -32,43 +30,11 @@
       "members": [
         {
           "name": "WgslPrimitive",
-          "signature": "\"f32\" | \"i32\" | \"u32\" | \"vec2<f32>\" | \"vec4<f32>\"",
+          "signature": "ParticleUniformPrimitive",
           "signatureTokens": [
             {
-              "text": "\"f32\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"i32\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"u32\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"vec2<f32>\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"vec4<f32>\"",
-              "kind": "keyword"
+              "text": "ParticleUniformPrimitive",
+              "kind": "type"
             }
           ],
           "params": [],

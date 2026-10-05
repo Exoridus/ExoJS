@@ -1,0 +1,56 @@
+name: Local validation on Windows
+
+on:
+  pull_request:
+    branches: [main, next]
+    paths:
+      - '.github/workflows/local-validation-windows.yml'
+      - '.nvmrc'
+      - 'scripts/lanes.ts'
+      - 'scripts/lib/**'
+      - 'scripts/ci/lanes.ts'
+      - 'scripts/ci/local-lanes.ts'
+      - 'scripts/ci/select-lanes.ts'
+      - 'scripts/ci/qualify.ts'
+      - 'scripts/ci/capability.ts'
+      - 'scripts/ci/browser-*.ts'
+      - 'test/ci/validation.node.ts'
+      - 'test/ci/qualify.node.ts'
+      - 'test/ci/fixtures/validation-*.ts'
+  push:
+    branches: [main, next]
+    paths:
+      - '.github/workflows/local-validation-windows.yml'
+      - '.nvmrc'
+      - 'scripts/lanes.ts'
+      - 'scripts/lib/**'
+      - 'scripts/ci/lanes.ts'
+      - 'scripts/ci/local-lanes.ts'
+      - 'scripts/ci/select-lanes.ts'
+      - 'scripts/ci/qualify.ts'
+      - 'scripts/ci/capability.ts'
+      - 'scripts/ci/browser-*.ts'
+      - 'test/ci/validation.node.ts'
+      - 'test/ci/qualify.node.ts'
+      - 'test/ci/fixtures/validation-*.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: local-validation-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  supervisor:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Check process ownership, cancellation and lane execution
+        run: node --test test/ci/validation.node.ts test/ci/qualify.node.ts

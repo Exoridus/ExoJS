@@ -1,58 +1,39 @@
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { selectLanes, type Lane } from './ci/lanes.ts';
+import { laneTimeoutMinutes } from './ci/lanes.ts';
+import { parseLocalLaneOptions, selectLocalLanes } from './ci/local-lanes.ts';
 import { effectiveLanes, selectAreas, type LaneAreas } from './ci/select-lanes.ts';
 import { atLeastOutputMode, readOutputOptions } from './lib/output.ts';
-import { runCommand } from './lib/run-command.ts';
+import { runCommand, type RunCommandResult } from './lib/run-command.ts';
+import { acquireValidationLock } from './lib/validation-lock.ts';
 
-/**
- * Local lane runner - the pre-push hook's half of the lane table.
- *
- * Prints the lanes the changed files require and runs them with `--run`. The
- * selection is `scripts/ci/lanes.ts`, the same table CI plans from, so the
- * two never disagree about what a change must pass.
- *
- * Usage:
- *   pnpm lanes                      # list what this change requires
- *   pnpm lanes --run                # run it
- *   pnpm lanes --run --quick        # skip browser lanes
- *   pnpm lanes --run --tests-only   # skip the gate lanes verify:quick already ran
- *   pnpm lanes --run --all          # every lane, whatever changed
- *   pnpm lanes --base <ref>         # diff against another base (default origin/HEAD)
- */
-
+/** Lists the affected lanes; --run executes them. --only <id[,id]> is a diagnostic subset, never full validation. */
 const git = (...args: string[]): string => {
-  const result = spawnSync('git', args, { encoding: 'utf8' });
-  if (result.status !== 0) {
-    throw new Error(`git ${args.join(' ')} failed: ${result.stderr.trim()}`);
-  }
+  const result = spawnSync('git', args, { encoding: 'utf8', timeout: 30_000 });
+  if (result.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${result.stderr || result.error?.message}`);
   return result.stdout;
 };
-
 const lines = (output: string): string[] =>
   output
     .split(/\r?\n/)
     .map(line => line.trim())
     .filter(Boolean);
-
 const changedFiles = (base: string): string[] => {
-  const mergeBase = spawnSync('git', ['merge-base', base, 'HEAD'], { encoding: 'utf8' });
+  const mergeBase = spawnSync('git', ['merge-base', base, 'HEAD'], { encoding: 'utf8', timeout: 30_000 });
   const from = mergeBase.status === 0 ? mergeBase.stdout.trim() : base;
-
   return [
-    ...lines(git('diff', '--name-only', from, 'HEAD')),
-    ...lines(git('diff', '--name-only', 'HEAD')),
-    ...lines(git('diff', '--name-only', '--cached')),
-    ...lines(git('ls-files', '--others', '--exclude-standard')),
+    ...new Set([
+      ...lines(git('diff', '--name-only', from, 'HEAD')),
+      ...lines(git('diff', '--name-only', 'HEAD')),
+      ...lines(git('diff', '--name-only', '--cached')),
+      ...lines(git('ls-files', '--others', '--exclude-standard')),
+    ]),
   ];
 };
-
-const readFlag = (argv: readonly string[], flag: string): string | undefined => {
-  const index = argv.indexOf(flag);
-  return index === -1 ? undefined : argv[index + 1];
-};
-
 const ALL_AREAS: LaneAreas = {
   engine: true,
   site: true,
@@ -66,81 +47,94 @@ const ALL_AREAS: LaneAreas = {
   createExoApp: true,
 };
 
-/** The catalog smoke has no CI lane entry: CI smokes the site job's artifact instead. */
-const SMOKE_LANE: Lane = {
-  id: 'smoke',
-  stage: 'verify',
-  when: 'exampleSmoke',
-  run: 'pnpm site:build && pnpm test:examples:smoke --sample',
-  local: 'browser',
-};
-
 const main = async (): Promise<void> => {
   const outputOptions = readOutputOptions(process.argv.slice(2));
-  const argv = outputOptions.argv;
-  const run = argv.includes('--run');
-  const quick = argv.includes('--quick');
-  const testsOnly = argv.includes('--tests-only');
-  const all = argv.includes('--all');
-  const base = readFlag(argv, '--base') ?? 'origin/HEAD';
-
-  const files = all ? [] : changedFiles(base);
-  const areas = all ? ALL_AREAS : selectAreas(files);
-  const effective = effectiveLanes(areas);
-
-  // The site gates run locally where CI runs them inside the site job.
-  const siteGates: Lane = { id: 'site', stage: 'gates', when: 'siteBuild', run: 'pnpm gates site', local: 'gate' };
-
-  // The verify stage packs and publints against a built dist; that stays CI's.
-  const selected = [
-    ...selectLanes(effective, false).filter(lane => lane.stage !== 'verify' && !lane.ciOnly),
-    ...(effective.siteBuild ? [siteGates] : []),
-    ...(effective.exampleSmoke ? [SMOKE_LANE] : []),
-  ]
-    .filter(lane => !(quick && lane.local === 'browser'))
-    .filter(lane => !(testsOnly && lane.local === 'gate'));
-
-  const scope = all ? 'every lane' : `${files.length} changed file(s) since ${base}`;
-  if (!run || outputOptions.mode !== 'silent') {
+  const options = parseLocalLaneOptions(outputOptions.argv);
+  const files = options.all || options.only ? [] : changedFiles(options.base);
+  const areas = options.all || options.only ? ALL_AREAS : selectAreas(files);
+  const selected = selectLocalLanes(effectiveLanes(areas), options, files);
+  const diagnostic = options.only !== undefined || options.quick;
+  const scope = options.only
+    ? `diagnostic subset: ${options.only.join(', ')}`
+    : options.all
+      ? 'every local lane'
+      : `${files.length} changed file(s) since ${options.base}`;
+  if (!options.run || outputOptions.mode !== 'silent') {
     process.stdout.write(`lanes: ${scope}\n`);
-    process.stdout.write(
-      `lanes: engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog} benchStructural=${areas.benchStructural}\n\n`,
-    );
-
-    for (const lane of selected) {
-      process.stdout.write(`  ${lane.run}${lane.local === 'browser' ? '   (browser)' : ''}\n`);
-    }
-    if (selected.length === 0) {
-      process.stdout.write('  (nothing to run)\n');
-    }
+    for (const lane of selected) process.stdout.write(`  ${lane.id}: ${lane.run} (limit ${laneTimeoutMinutes(lane)}m)\n`);
+    if (selected.length === 0) process.stdout.write('  (nothing to run)\n');
   }
-
-  if (!run) {
+  if (!options.run) {
     process.stdout.write('\nlanes: pass --run to execute these.\n');
     return;
   }
+  if (selected.length === 0) return;
 
-  for (const lane of selected) {
-    if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
-      process.stdout.write(`\n=== ${lane.id} ===\n\n`);
-    }
-    const result = await runCommand({
-      label: lane.id,
-      command: lane.run,
-      output: atLeastOutputMode(outputOptions.mode, lane.minimumOutput ?? 'silent'),
-    });
-    if (result.status !== 0) {
-      if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
-        process.stderr.write(`\nlanes: ${lane.id} failed (exit ${result.status}).\n`);
+  const lock = acquireValidationLock(process.cwd());
+  const controller = new AbortController();
+  let interrupted = 0;
+  const onInterrupt = (): void => {
+    interrupted = 130;
+    controller.abort('SIGINT');
+  };
+  const onTerminate = (): void => {
+    interrupted = 143;
+    controller.abort('SIGTERM');
+  };
+  process.on('SIGINT', onInterrupt);
+  process.on('SIGTERM', onTerminate);
+  const started = Date.now();
+  const results: { id: string; result: RunCommandResult }[] = [];
+  let status = 0;
+  let completed = false;
+  let retainLock = false;
+  try {
+    for (const lane of selected) {
+      if (controller.signal.aborted) {
+        status = interrupted;
+        break;
       }
-      process.exit(result.status);
+      const result = await runCommand({
+        label: lane.id,
+        command: lane.run,
+        timeoutMs: laneTimeoutMinutes(lane) * 60_000,
+        signal: controller.signal,
+        output: atLeastOutputMode(outputOptions.mode, lane.minimumOutput ?? 'silent'),
+      });
+      results.push({ id: lane.id, result });
+      retainLock ||= result.cleanupError !== undefined;
+      if (result.status !== 0 || interrupted !== 0) {
+        status = interrupted || result.status;
+        break;
+      }
+    }
+    completed = status === 0 && results.length === selected.length;
+  } finally {
+    process.removeListener('SIGINT', onInterrupt);
+    process.removeListener('SIGTERM', onTerminate);
+    try {
+      const logDirectory = resolve('.workspace/logs');
+      mkdirSync(logDirectory, { recursive: true });
+      const summary = resolve(logDirectory, `lanes-${started}-${process.pid}-${randomUUID()}.json`);
+      writeFileSync(
+        summary,
+        `${JSON.stringify({ completed, diagnostic, scope, base: options.base, selected: selected.map(lane => lane.id), durationMs: Date.now() - started, results }, null, 2)}\n`,
+      );
+      if (outputOptions.mode !== 'silent' || status !== 0) process.stdout.write(`lanes: summary ${summary}\n`);
+    } finally {
+      if (!retainLock) lock.release();
+      else process.stderr.write(`lanes: cleanup was incomplete; inspect the owned processes before removing ${lock.path}.\n`);
     }
   }
-
-  if (outputOptions.mode !== 'silent') process.stdout.write('\nlanes: all selected lanes passed.\n');
+  process.exitCode = status;
+  if (completed && outputOptions.mode !== 'silent') {
+    process.stdout.write(diagnostic ? 'lanes: diagnostic subset passed; full validation is still required.\n' : 'lanes: all selected lanes passed.\n');
+  }
 };
 
-const invokedPath = process.argv[1];
-if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
-  await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main().catch(error => {
+    process.stderr.write(`lanes: ${String(error instanceof Error ? error.message : error)}\n`);
+    process.exitCode = 1;
+  });
 }

@@ -35,17 +35,20 @@ export interface PhysicsDebugDrawOptions {
 
 const segments = 24;
 
-const colorStatic = new Color(0.3, 0.9, 0.4, 0.9);
-const colorKinematic = new Color(0.4, 0.7, 1, 0.9);
-const colorDynamic = new Color(1, 0.85, 0.3, 0.9);
-const colorSensor = new Color(1, 0.3, 1, 0.9);
-const colorAabb = new Color(0.5, 0.5, 0.5, 0.5);
-const colorContact = new Color(1, 0.2, 0.2, 1);
-const colorNormal = new Color(1, 0.6, 0.1, 1);
-const colorCenter = new Color(1, 1, 1, 0.9);
-const colorBroadphase = new Color(0.2, 0.8, 0.8, 0.5);
-const colorSleeping = new Color(0.45, 0.45, 0.5, 0.7);
-const colorJoint = new Color(0.9, 0.5, 1, 0.8);
+/** `Color` channels are bytes, so a colour written as unit-range fractions has to be scaled to them. */
+const unitColor = (r: number, g: number, b: number, a: number): Color => new Color(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), a);
+
+const colorStatic = unitColor(0.3, 0.9, 0.4, 0.9);
+const colorKinematic = unitColor(0.4, 0.7, 1, 0.9);
+const colorDynamic = unitColor(1, 0.85, 0.3, 0.9);
+const colorSensor = unitColor(1, 0.3, 1, 0.9);
+const colorAabb = unitColor(0.5, 0.5, 0.5, 0.5);
+const colorContact = unitColor(1, 0.2, 0.2, 1);
+const colorNormal = unitColor(1, 0.6, 0.1, 1);
+const colorCenter = unitColor(1, 1, 1, 0.9);
+const colorBroadphase = unitColor(0.2, 0.8, 0.8, 0.5);
+const colorSleeping = unitColor(0.45, 0.45, 0.5, 0.7);
+const colorJoint = unitColor(0.9, 0.5, 1, 0.8);
 
 /**
  * `DebugLayer` that visualises a {@link PhysicsWorld} - shapes, AABBs, contacts,

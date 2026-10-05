@@ -12,6 +12,7 @@ import type { ColorTextureFormat } from '#rendering/types';
 
 import type { BackendRenderPass } from './BackendRenderPass';
 import type { Drawable } from './Drawable';
+import type { PixelArray, PixelDataType } from './pixelPayload';
 import type { PixelReadback } from './PixelReadback';
 import type { RenderBackendType } from './RenderBackendType';
 import type { RendererRegistry } from './RendererRegistry';
@@ -20,6 +21,27 @@ import type { RenderStats } from './RenderStats';
 import type { RenderTarget } from './RenderTarget';
 import type { BlendModes } from './types';
 import type { View } from './View';
+
+/** Independent support properties of one render-target color format. */
+export interface ColorFormatCapabilities {
+  /** Whether the format can be used as a color attachment. */
+  readonly renderable: boolean;
+  /** Whether the format accepts linear sampling. */
+  readonly filterable: boolean;
+  /** Whether fixed-function blending can write the format. */
+  readonly blendable: boolean;
+  /**
+   * Render-target sample counts this backend can allocate storage for on
+   * `format`, ascending and always containing `1`.
+   *
+   * A count above `1` is a promise the backend keeps end to end: reading it as
+   * support and then setting {@link RenderTarget.sampleCount} makes the target
+   * render multisampled and resolve into its own sampled texture. A backend
+   * whose pipelines cannot carry a sample count reports `1` alone rather than
+   * a count it cannot deliver.
+   */
+  readonly sampleCounts: readonly number[];
+}
 
 /**
  * Common interface implemented by both rendering backends
@@ -177,15 +199,30 @@ export interface RenderBackend {
    */
   popStencilClip(): this;
 
-  /**
-   * Whether a {@link RenderTexture} of the given color format can be rendered
-   * into on this backend/context. `'rgba8'` is always supported; float formats
-   * depend on hardware/extension support. Check before allocating a float target.
-   */
+  /** Independent render-target capabilities for the requested color format. */
+  getColorFormatCapabilities(format: ColorTextureFormat): ColorFormatCapabilities;
+
+  /** Whether a {@link RenderTexture} of the given color format can be rendered into on this backend/context. */
   supportsColorFormat(format: ColorTextureFormat): boolean;
 
   /**
-   * Read back `width × height` RGBA bytes from `source`, starting at `x`, `y`
+   * Publish a {@link RenderTarget.sampleCount} target's current frame into the
+   * single-sample texture everything samples that target through.
+   *
+   * A no-op for a target at one sample, and for one that was never rendered
+   * into. Call it once per frame after the last draw into a multisample target
+   * and before anything filters or samples it - the engine's own frame path
+   * resolves the working target here. Depth and stencil are not resolved: a
+   * multisample depth/stencil attachment has no single-sample counterpart to
+   * resolve into, and nothing downstream reads it.
+   */
+  resolveRenderTarget(target: RenderTarget): void;
+
+  /** Whether the format supports lossless typed readback on this backend. */
+  supportsReadbackFormat(format: ColorTextureFormat): boolean;
+
+  /**
+   * Read back `width × height` RGBA components from `source`, starting at `x`, `y`
    * measured from its top-left corner, with the top row first.
    *
    * Pending work is submitted first, so the pixels are those of everything
@@ -193,11 +230,14 @@ export interface RenderBackend {
    * schedule rather than blocking, which is why this is asynchronous even where
    * the platform call is not.
    *
-   * The caller is expected to have validated the format and the rectangle;
+   * `uint8` accepts rgba8; `float32` accepts rgba16f/rgba32f and expands
+   * half-floats without normalization. The caller must validate the format and rectangle;
    * {@link RenderingContext.readPixels} is the checked entry point.
    * @advanced
    */
-  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<Uint8ClampedArray>;
+  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType?: 'uint8'): Promise<Uint8ClampedArray>;
+  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: 'float32'): Promise<Float32Array>;
+  readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
 
   /**
    * Open a standing, non-blocking readback over `width × height` pixels of
@@ -207,15 +247,38 @@ export interface RenderBackend {
    * caller-facing wrapper and the way application code should reach this.
    * @advanced
    */
-  createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number): PixelReadback;
+  createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: 'float32',
+  ): PixelReadback<Float32Array>;
+  createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType: PixelDataType,
+  ): PixelReadback<PixelArray>;
 
   /**
-   * Borrow a temporary {@link RenderTexture} of exactly `width × height` from
-   * the backend's pool, allocating one if no pooled entry matches. Hand it back
-   * with {@link releaseRenderTexture} - destroying a borrowed texture instead
-   * corrupts the pool.
+   * Borrow a temporary {@link RenderTexture} of exactly `width × height` and
+   * `format` from the backend's pool, allocating one if no pooled entry
+   * matches. Hand it back with {@link releaseRenderTexture} - destroying a
+   * borrowed texture instead corrupts the pool.
+   *
+   * `format` defaults to `Rgba8`. Pass the working color
+   * format explicitly for a scratch surface that carries color through a
+   * filter, cache or compositor - the pool keys on it, so a mismatched
+   * request never aliases a differently-formatted entry.
    */
-  acquireRenderTexture(width: number, height: number): RenderTexture;
+  acquireRenderTexture(width: number, height: number, format?: ColorTextureFormat): RenderTexture;
 
   /**
    * Return a borrowed render texture for reuse. The pool is bounded in both
@@ -258,7 +321,8 @@ export interface RenderBackend {
    * (backdrop-aware) blend mode. Captures the target's `[x, y, width, height]`
    * region, runs the W3C blend formula in a shader, and draws the result back
    * with normal premultiplied source-over. Used internally by the render-effect
-   * executor for modes where {@link isAdvancedBlendMode} is `true`.
+   * executor for the modes {@link blendModeNeedsBackdrop} reports for the
+   * destination being composited into.
    */
   composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this;
 

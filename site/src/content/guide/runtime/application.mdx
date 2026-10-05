@@ -255,7 +255,7 @@ build.done.then(placed => {
 
 `queue()` also takes a ready-made iterator (`scene.coroutines.queue(blinkThreeTimes())`) for the sequencing case, which has no use for a budget.
 
-The handle works from both worlds. Frame code polls `status`, `progress` and `result`; async code awaits `done`, which rejects when the body throws or the coroutine is cancelled. `cancel()` stops it at its current `yield` and runs its `finally` blocks, `priority` is writable so work the player is now waiting on can be promoted, and `{ signal }` reaches an existing `AbortSignal` in. A coroutine queued on `scene.coroutines` stops advancing while the scene is paused or suspended, resumes exactly where it left off, and is cancelled when the scene ends.
+The handle works from both worlds. Frame code polls `status`, `progress` and `result`; async code awaits `done`, which rejects when the body throws or the coroutine is cancelled. `cancel()` stops it at its current `yield` and runs its `finally` blocks, `priority` is writable so work the player is now waiting on can be promoted, and `{ signal }` reaches an existing `AbortSignal` in. A coroutine queued on `scene.coroutines` stops advancing while the scene is suspended, resumes exactly where it left off, and is cancelled when the scene ends. Pausing the scene does not stop it by default (`when: 'always'`); queue it with `{ when: 'active' }` when it should freeze while the scene is paused.
 
 The budget defaults to a quarter of what the frame has left, capped at 4 ms, so a frame that is already behind withdraws instead of being handed more work. Set `app.coroutines.budget` to an absolute `Seconds` value if you want a fixed figure instead.
 
@@ -311,4 +311,4 @@ Same shape, with the canvas auto-resizing to the window and rendering at the dev
 
 ## Where to go next
 
-Scenes are where actual game logic lives. The next chapter, [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/), covers what a scene is, how it differs from the application, and the order its hooks run in.
+Scenes are where actual game logic lives. Continue with [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/), which covers what a scene is, how it differs from the application, and the order its hooks run in.

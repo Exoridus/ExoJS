@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 20,
+  "memberCount": 22,
   "counts": {
     "constructors": 1,
-    "methods": 9,
+    "methods": 11,
     "properties": 9,
     "events": 1
   },
@@ -239,7 +239,7 @@
         },
         {
           "name": "play",
-          "signature": "play(source: Sound, options?: SoundPlayOptions): Voice",
+          "signature": "play(source: Sound, options?: SoundPlayOptions): Voice | Voice & Seekable & Pausable & Loopable & RatePitched",
           "signatureTokens": [
             {
               "text": "play",
@@ -292,6 +292,46 @@
             {
               "text": "Voice",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seekable",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pausable",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loopable",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RatePitched",
+              "kind": "type"
             }
           ],
           "params": [
@@ -306,7 +346,207 @@
               "optional": true
             }
           ],
-          "returnType": "Voice",
+          "returnType": "Voice | Voice & Seekable & Pausable & Loopable & RatePitched",
+          "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities). When source is a Sound, options widens to SoundPlayOptions and additionally accepts replace: true, which stops all currently-playing instances of that sound before the new one starts (singleton-replace mode)."
+        },
+        {
+          "name": "play",
+          "signature": "play(source: AudioStream, options?: PlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched",
+          "signatureTokens": [
+            {
+              "text": "play",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStream",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seekable",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pausable",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loopable",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RatePitched",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "AudioStream",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "PlayOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Voice & Seekable & Pausable & Loopable & RatePitched",
+          "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities). When source is a Sound, options widens to SoundPlayOptions and additionally accepts replace: true, which stops all currently-playing instances of that sound before the new one starts (singleton-replace mode)."
+        },
+        {
+          "name": "play",
+          "signature": "play(source: AudioGenerator, options?: PlayOptions): Voice | Voice & Pausable & RatePitched",
+          "signatureTokens": [
+            {
+              "text": "play",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioGenerator",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pausable",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RatePitched",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "AudioGenerator",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "PlayOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Voice | Voice & Pausable & RatePitched",
           "description": "Play a Playable asset and return a Voice handle. Each call creates an independent playback instance. Call play() again to start another concurrent voice. The returned Voice lets you control this specific instance (stop(), volume, fade(), capabilities). When source is a Sound, options widens to SoundPlayOptions and additionally accepts replace: true, which stops all currently-playing instances of that sound before the new one starts (singleton-replace mode)."
         },
         {

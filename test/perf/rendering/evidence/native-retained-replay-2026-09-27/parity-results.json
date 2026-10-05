@@ -1,0 +1,150 @@
+{
+  "description": "Derived from the same nine idle timing acquisitions in results.json; not a separate acquisition.",
+  "revision": "854b09a95929135a4b7ee19a9be64d084a5cc9da",
+  "results": [
+    {
+      "run": 0,
+      "cell": {
+        "id": "10k",
+        "count": 10000,
+        "runLength": 64
+      },
+      "batches": 157,
+      "parity": {
+        "captureCounts": [0, 157, 157],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 800955
+      },
+      "errors": []
+    },
+    {
+      "run": 0,
+      "cell": {
+        "id": "50k",
+        "count": 50000,
+        "runLength": 64
+      },
+      "batches": 782,
+      "parity": {
+        "captureCounts": [0, 782, 782],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 1897594
+      },
+      "errors": []
+    },
+    {
+      "run": 0,
+      "cell": {
+        "id": "100k",
+        "count": 100000,
+        "runLength": 64
+      },
+      "batches": 1563,
+      "parity": {
+        "captureCounts": [0, 1563, 1563],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 3032547
+      },
+      "errors": []
+    },
+    {
+      "run": 1,
+      "cell": {
+        "id": "10k",
+        "count": 10000,
+        "runLength": 64
+      },
+      "batches": 157,
+      "parity": {
+        "captureCounts": [0, 157, 157],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 800955
+      },
+      "errors": []
+    },
+    {
+      "run": 1,
+      "cell": {
+        "id": "50k",
+        "count": 50000,
+        "runLength": 64
+      },
+      "batches": 782,
+      "parity": {
+        "captureCounts": [0, 782, 782],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 1897594
+      },
+      "errors": []
+    },
+    {
+      "run": 1,
+      "cell": {
+        "id": "100k",
+        "count": 100000,
+        "runLength": 64
+      },
+      "batches": 1563,
+      "parity": {
+        "captureCounts": [0, 1563, 1563],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 3032547
+      },
+      "errors": []
+    },
+    {
+      "run": 2,
+      "cell": {
+        "id": "10k",
+        "count": 10000,
+        "runLength": 64
+      },
+      "batches": 157,
+      "parity": {
+        "captureCounts": [0, 157, 157],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 800955
+      },
+      "errors": []
+    },
+    {
+      "run": 2,
+      "cell": {
+        "id": "50k",
+        "count": 50000,
+        "runLength": 64
+      },
+      "batches": 782,
+      "parity": {
+        "captureCounts": [0, 782, 782],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 1897594
+      },
+      "errors": []
+    },
+    {
+      "run": 2,
+      "cell": {
+        "id": "100k",
+        "count": 100000,
+        "runLength": 64
+      },
+      "batches": 1563,
+      "parity": {
+        "captureCounts": [0, 1563, 1563],
+        "differences": 0,
+        "replayDifferences": 0,
+        "clearDifferences": 3032547
+      },
+      "errors": []
+    }
+  ]
+}

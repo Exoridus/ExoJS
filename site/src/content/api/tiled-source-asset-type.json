@@ -69,7 +69,7 @@
       "members": [
         {
           "name": "asset",
-          "signature": "asset(source: string, options?: TiledLoadOptions): Asset<TiledMap>",
+          "signature": "asset(source: string, options: [options]): ValueAsset<TiledMap>",
           "signatureTokens": [
             {
               "text": "asset",
@@ -100,16 +100,20 @@
               "kind": "param"
             },
             {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
               "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "TiledLoadOptions",
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
               "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -120,7 +124,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Asset",
+              "text": "ValueAsset",
               "kind": "type"
             },
             {
@@ -144,12 +148,12 @@
             },
             {
               "name": "options",
-              "type": "TiledLoadOptions",
-              "optional": true
+              "type": "[options]",
+              "optional": false
             }
           ],
-          "returnType": "Asset<TiledMap>",
-          "description": "A typed, loadable descriptor for one asset of this type. The resource and option types come from the type instance, so a custom type is fully typed at every call site without declaring anything to the module system: ts const world = await loader.load(worldType.asset('level.world')); "
+          "returnType": "ValueAsset<TiledMap>",
+          "description": "A typed, loadable descriptor for one asset of this type. The resource and option types come from the type instance, so a custom type is fully typed at every call site without declaring anything to the module system: ts const world = await loader.load(worldType.asset('level.world'));  The descriptor is branded with this type's leaf policy, so a catalog types its entry as the leaf the runtime hands out. options is required when the option bag has a required field. type and source are reserved for the request: an option bag carrying either throws."
         },
         {
           "name": "createFactory",

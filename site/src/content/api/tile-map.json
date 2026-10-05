@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 43,
+  "memberCount": 44,
   "counts": {
     "constructors": 1,
     "methods": 21,
-    "properties": 21,
+    "properties": 22,
     "events": 0
   },
   "sections": [
@@ -1048,7 +1048,7 @@
             }
           ],
           "returnType": "{ tx: number; ty: number }",
-          "description": "Convert a pixel position in map-local space to the tile coordinate that contains it. Uses floor. May return coordinates outside map bounds."
+          "description": "Convert a display position in map-local space to the tile coordinate that contains it. Uses floor. May return coordinates outside map bounds."
         },
         {
           "name": "removeImageLayer",
@@ -1399,7 +1399,7 @@
             }
           ],
           "returnType": "{ x: number; y: number }",
-          "description": "Convert a tile coordinate to the pixel position of its top-left corner in map-local space (ignoring layer offsets)."
+          "description": "Convert a grid vertex to display pixels (the top diamond vertex for isometric cells) in map-local space (ignoring layer offsets)."
         }
       ],
       "paragraphs": [],
@@ -1551,6 +1551,27 @@
           "params": [],
           "returnType": null,
           "description": "Map name (debug)."
+        },
+        {
+          "name": "projection",
+          "signature": "projection: TileProjection",
+          "signatureTokens": [
+            {
+              "text": "projection",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProjection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
         },
         {
           "name": "properties",

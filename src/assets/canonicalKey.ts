@@ -66,8 +66,12 @@ export interface CanonicalAsset {
   readonly sourceKey: SourceKey;
   readonly locator: AssetLocator;
   readonly type: AssetConstructor;
-  /** The source string as the caller wrote it. Used for fetching and diagnostics, never for identity. */
+  /** The source string fetched: the caller's, or the variant selected for it. Used for fetching and diagnostics, never for identity. */
   readonly source: string;
+  /** The logical source the caller wrote, before variant selection. */
+  readonly requested?: string;
+  /** The option bag of the request, as the caller passed it. */
+  readonly options?: unknown;
 }
 
 /** Sources that already carry their own absolute, opaque identity and must never be joined onto a base path or normalized. */

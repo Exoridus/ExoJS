@@ -22,10 +22,16 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // harbor-world.ldtk (examples/assets/json/maps/) defines two levels sharing
 // one tileset: "Level_Harbor" and "Level_Lighthouse", each with a Ground
 // tile layer, a Walls IntGrid layer (Wall / Water), and an Entities layer.
+/** Parse an LDtk `"#rrggbb"` colour string into an engine `Color` with the given alpha. */
+const hexToColor = (hex, alpha) => {
+  const value = Number.parseInt(hex.replace('#', ''), 16);
+  return new Color((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff, alpha);
+};
 class LdtkWorldImportScene extends Scene {
   world;
   content = new Container();
   hud;
+  panel;
   showIntGrid = true;
   async load() {
     // The .ldtk source must be an absolute URL: @codexo/exojs-ldtk resolves
@@ -41,14 +47,14 @@ class LdtkWorldImportScene extends Scene {
       status: `${this.world.levels.length} levels loaded`,
       hint: 'Coloured squares come from getLdtkIntGridValueAt() — the raw Walls IntGrid cell values, resolved to their LDtk-authored name + colour.',
     });
-    const panel = mountControlPanel({ title: 'LDtk' });
-    panel.addCycle({
+    this.panel = mountControlPanel({ title: 'LDtk' });
+    this.panel.addCycle({
       label: 'Level',
       options: this.world.levels.map(level => level.name),
       index: 0,
       onChange: index => this.showLevel(index),
     });
-    panel.addToggle({
+    this.panel.addToggle({
       label: 'IntGrid overlay',
       value: true,
       onChange: on => {
@@ -61,7 +67,11 @@ class LdtkWorldImportScene extends Scene {
   currentLevelIndex = 0;
   showLevel(index) {
     this.currentLevelIndex = index;
-    this.content.removeChildren();
+    // The level view owns these nodes; detaching alone would leave each
+    // TileLayerNode subscribed to its (loader-owned) layer.
+    for (const child of [...this.content.children]) {
+      child.destroy();
+    }
     const level = this.world.levels[index];
     if (!level) {
       return;
@@ -113,11 +123,12 @@ class LdtkWorldImportScene extends Scene {
   draw(context) {
     context.render(this.content);
   }
-}
-/** Parse an LDtk `"#rrggbb"` colour string into an engine `Color` with the given alpha. */
-function hexToColor(hex, alpha) {
-  const value = Number.parseInt(hex.replace('#', ''), 16);
-  return new Color((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff, alpha);
+  destroy() {
+    this.content.destroy();
+    this.hud?.dispose();
+    this.panel?.dispose();
+    super.destroy();
+  }
 }
 const app = new Application({
   scenes: { LdtkWorldImportScene },

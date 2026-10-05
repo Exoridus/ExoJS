@@ -298,15 +298,15 @@ The `gamepads` array is populated before `init` runs, but the browser's gamepad 
 Visual gamepad state display: buttons, sticks, D-pad, and triggers mapped to on-screen sprites.
 
 <a id="multi-gamepad"></a>
-<ExamplePreview chapter="input" slug="multi-gamepad" />
+<ExamplePreview chapter="application-scenes" slug="multi-view-split-screen" />
 
-Four sprites, each controlled by a separate gamepad slot via aggregate signed stick axes.
+Two players, each controlled by a separate gamepad slot or keyboard, with a camera following each one.
 
 <TryIt
-  examples={['input/gamepad', 'input/multi-gamepad']}
+  examples={['input/gamepad', 'application-scenes/multi-view-split-screen']}
   api={['gamepad', 'input-system']}
 />
 
 ## Where to go next
 
-The next chapter, [Chords and sequences](/ExoJS/en/guide/input/chords-and-sequences/), covers `ChordAction` and `SequenceAction` — requiring several channels at once and recognizing ordered command patterns, across keyboard and gamepad alike. For unifying keyboard and gamepad behind intent-driven action names first, see [action mapping](/ExoJS/en/guide/input/keyboard-and-actions/) back in the keyboard chapter.
+Continue with [Chords and sequences](/ExoJS/en/guide/input/chords-and-sequences/), which covers `ChordAction` and `SequenceAction` — requiring several channels at once and recognizing ordered command patterns, across keyboard and gamepad alike. For unifying keyboard and gamepad behind intent-driven action names first, see [action mapping](/ExoJS/en/guide/input/keyboard-and-actions/) back in the keyboard chapter.

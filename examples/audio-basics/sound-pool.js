@@ -17,6 +17,7 @@ class SoundPoolScene extends Scene {
   voices = [];
   clock = 0;
   evictions = 0;
+  lastDetune = 0;
   hud;
   init() {
     const app = this.app;
@@ -40,13 +41,13 @@ class SoundPoolScene extends Scene {
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 48);
     this.hud = mountControls({
-      title: 'Sound Pool',
+      title: 'Polyphonic Sound',
       controls: [
         { keys: 'Click', action: 'enable audio (once)' },
         { keys: 'Space', action: 'hold to spawn voices into the pool' },
       ],
       status: 'Click or press any key to enable audio, then hold Space.',
-      hint: `The pool caps at ${POOL_SIZE} concurrent voices. Each slot below lights up while a voice plays; at capacity the oldest voice is evicted so playback never stacks unbounded.`,
+      hint: `The pool caps at ${POOL_SIZE} voices. Each shot varies pitch; at capacity, the oldest voice is evicted.`,
     });
     this.inputs.onActive(Keyboard.Space, () => {
       this.firing = true;
@@ -64,9 +65,11 @@ class SoundPoolScene extends Scene {
       this.voices.shift();
       this.evictions += 1;
     }
-    this.voices.push(this.clock + this.sound.duration);
     // Small random pitch per shot keeps the barrage from sounding robotic.
-    app.audio.play(this.sound, { playbackRate: 0.85 + Math.random() * 0.3, volume: 0.5 });
+    const playbackRate = 0.85 + Math.random() * 0.3;
+    this.lastDetune = 1200 * Math.log2(playbackRate);
+    this.voices.push(this.clock + this.sound.duration / playbackRate);
+    app.audio.play(this.sound, { playbackRate, volume: 0.5 });
   }
   update(delta) {
     const app = this.app;
@@ -75,7 +78,9 @@ class SoundPoolScene extends Scene {
     this.voices = this.voices.filter(end => end > this.clock);
     // A Sound played before the AudioContext unlocks on the first gesture
     // is a no-op, so skip firing while audio is still locked.
-    if (!this.firing || app.audio.locked) return;
+    if (!this.firing || app.audio.locked) {
+      return;
+    }
     this.timer += delta;
     while (this.timer >= FIRE_INTERVAL) {
       this.timer -= FIRE_INTERVAL;
@@ -105,13 +110,17 @@ class SoundPoolScene extends Scene {
       }
       this.graphics.drawRectangle(x, y, cell, cell);
     }
-    this.readout.text = `Active voices: ${active} / ${POOL_SIZE}     evicted: ${this.evictions}`;
+    this.readout.text = `Voices ${active} / ${POOL_SIZE}  ·  evicted ${this.evictions}  ·  last pitch ${this.lastDetune >= 0 ? '+' : ''}${this.lastDetune.toFixed(0)} cents`;
     context.render(this.graphics);
     context.render(this.label);
     context.render(this.readout);
     if (app.audio.locked) {
       context.render(this.tapPrompt);
     }
+  }
+  destroy() {
+    this.hud.dispose();
+    super.destroy();
   }
 }
 const app = new Application({

@@ -181,15 +181,37 @@ export class ChunkStreamer {
     const shiftY = centerY * (1 - layer.parallaxY);
     const scale = layer.parallaxScale;
 
-    const layerLeft = layer.offsetX + (bounds.left - shiftX - layer.offsetX) / scale;
-    const layerTop = layer.offsetY + (bounds.top - shiftY - layer.offsetY) / scale;
-    const layerRight = layer.offsetX + (bounds.right - shiftX - layer.offsetX) / scale;
-    const layerBottom = layer.offsetY + (bounds.bottom - shiftY - layer.offsetY) / scale;
+    let layerLeft = layer.offsetX + (bounds.left - shiftX - layer.offsetX) / scale;
+    let layerTop = layer.offsetY + (bounds.top - shiftY - layer.offsetY) / scale;
+    let layerRight = layer.offsetX + (bounds.right - shiftX - layer.offsetX) / scale;
+    let layerBottom = layer.offsetY + (bounds.bottom - shiftY - layer.offsetY) / scale;
+    if (layer.projection.orientation === 'isometric') {
+      let left = 0;
+      let top = 0;
+      let right = 0;
+      let bottom = 0;
+      for (const tileset of layer.tilesets) {
+        left = Math.max(left, tileset.tileWidth - layer.tileWidth / 2 + tileset.offsetX);
+        top = Math.max(top, layer.tileHeight + tileset.offsetY);
+        right = Math.max(right, layer.tileWidth / 2 - tileset.offsetX);
+        bottom = Math.max(bottom, tileset.tileHeight - layer.tileHeight - tileset.offsetY);
+      }
+      layerLeft -= left;
+      layerTop -= top;
+      layerRight += right;
+      layerBottom += bottom;
+    }
     const topLeftTile = layer.pixelToTile(layerLeft, layerTop);
     const bottomRightTile = layer.pixelToTile(layerRight, layerBottom);
 
-    const topLeftChunk = tileToChunkCoord(topLeftTile.tx, topLeftTile.ty, layer.chunkWidth, layer.chunkHeight);
-    const bottomRightChunk = tileToChunkCoord(bottomRightTile.tx, bottomRightTile.ty, layer.chunkWidth, layer.chunkHeight);
+    const topRightTile = layer.pixelToTile(layerRight, layerTop);
+    const bottomLeftTile = layer.pixelToTile(layerLeft, layerBottom);
+    const minTx = Math.min(topLeftTile.tx, topRightTile.tx, bottomLeftTile.tx, bottomRightTile.tx);
+    const minTy = Math.min(topLeftTile.ty, topRightTile.ty, bottomLeftTile.ty, bottomRightTile.ty);
+    const maxTx = Math.max(topLeftTile.tx, topRightTile.tx, bottomLeftTile.tx, bottomRightTile.tx);
+    const maxTy = Math.max(topLeftTile.ty, topRightTile.ty, bottomLeftTile.ty, bottomRightTile.ty);
+    const topLeftChunk = tileToChunkCoord(minTx, minTy, layer.chunkWidth, layer.chunkHeight);
+    const bottomRightChunk = tileToChunkCoord(maxTx, maxTy, layer.chunkWidth, layer.chunkHeight);
 
     return {
       minCx: topLeftChunk.cx,

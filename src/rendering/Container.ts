@@ -1,9 +1,12 @@
+import type { Component } from '#core/Component';
+import type { ComponentAnchor, ComponentRuntime } from '#core/ComponentRuntime';
 import { invariant } from '#core/dev';
 import type { Stage } from '#core/Stage';
 import { removeArrayItems } from '#core/utils';
 import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
+import { blendModeNeedsBackdrop } from '#rendering/types';
 
 import { RenderNode } from './RenderNode';
 
@@ -31,6 +34,7 @@ export class Container extends RenderNode {
   private _childrenView: readonly RenderNode[] | null = null;
   private _paintChildrenView: readonly RenderNode[] | null = null;
   private _childIndexView: ReadonlyMap<RenderNode, number> | null = null;
+  private _anchor: ComponentAnchor | null = null;
 
   /**
    * The live child list, readable by subclasses and mutable only from here.
@@ -263,6 +267,11 @@ export class Container extends RenderNode {
 
     child._setStage(this._stage);
     this._stage?.interaction._notifyNodeAdded(child);
+
+    if (child._componentNodes > 0) {
+      this._adoptComponents(child);
+    }
+
     this._onChildListChanged();
 
     return this;
@@ -383,6 +392,8 @@ export class Container extends RenderNode {
     this._invalidateChildOrder();
 
     if (child?.parent === this) {
+      const componentRuntime = child._componentNodes > 0 ? this._componentRuntime(false) : null;
+
       // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
       this._invalidateBoundsCascade();
       child._setParent(null);
@@ -390,6 +401,10 @@ export class Container extends RenderNode {
       this._stage?.interaction._notifyNodeRemoved(child);
       this._stage?.focus._notifyNodeRemoved(child);
       child._setStage(null);
+
+      if (child._componentNodes > 0) {
+        this._releaseComponents(child, componentRuntime);
+      }
     }
 
     this.invalidateCache();
@@ -427,6 +442,8 @@ export class Container extends RenderNode {
     removeArrayItems(this._childList, begin, range);
     this._invalidateChildOrder();
 
+    const componentRuntime = this._componentNodes > 0 ? this._componentRuntime(false) : null;
+
     for (const child of removed) {
       if (child.parent === this) {
         child._setParent(null);
@@ -434,6 +451,10 @@ export class Container extends RenderNode {
         this._stage?.interaction._notifyNodeRemoved(child);
         this._stage?.focus._notifyNodeRemoved(child);
         child._setStage(null);
+
+        if (child._componentNodes > 0) {
+          this._releaseComponents(child, componentRuntime);
+        }
       }
     }
 
@@ -455,6 +476,48 @@ export class Container extends RenderNode {
    */
   public _childEscapesTransformGroup(_child: RenderNode): boolean {
     return false;
+  }
+
+  /** Mark this container as the top of a scene-owned component tree. @internal */
+  public _setComponentAnchor(anchor: ComponentAnchor | null): void {
+    this._anchor = anchor;
+  }
+
+  /** @internal */
+  public override _componentAnchor(): ComponentAnchor | null {
+    return this._anchor;
+  }
+
+  /** @internal */
+  public override _forEachComponent(visit: (component: Component) => void): void {
+    super._forEachComponent(visit);
+
+    if (this._componentNodes === 0) {
+      return;
+    }
+
+    for (const child of [...this._childList]) {
+      if (child._componentNodes > 0) {
+        child._forEachComponent(visit);
+      }
+    }
+  }
+
+  /** A child subtree carrying components joined this container's tree. */
+  private _adoptComponents(child: RenderNode): void {
+    this._adjustComponentNodes(child._componentNodes);
+    this._componentRuntime(true)?.attachSubtree(child);
+  }
+
+  /**
+   * A child subtree carrying components left this container's tree. `runtime`
+   * is resolved before the unlink, because afterwards the subtree no longer
+   * reaches the scene it leaves; the hooks run only once the unlink is
+   * complete, so they observe a consistent tree.
+   */
+  private _releaseComponents(child: RenderNode, runtime: ComponentRuntime | null): void {
+    this._adjustComponentNodes(-child._componentNodes);
+    runtime?.detachSubtree(child);
   }
 
   /** @internal - propagate the owning stage down the whole subtree. */
@@ -563,6 +626,10 @@ export class Container extends RenderNode {
     // starts already-begun.
     this._retainedPlan?._beginCapture();
 
+    // Hoisted: every child of this scope is collected at the same depth, so the
+    // coverage guarantee is one read for the whole loop.
+    const destinationOpaque = builder._destinationOpaque();
+
     for (let index = 0; index < this._childList.length; index++) {
       // In-bounds: index < length.
       const child = this._childList[index]!;
@@ -570,8 +637,14 @@ export class Container extends RenderNode {
       // Only a plain, non-barrier drawable can ever produce a retained slot
       // (exactly one Draw entry for itself). Every other child skips the
       // peek/capture bookkeeping entirely -- most containers have no direct
-      // drawable children and would otherwise pay pure overhead here.
-      if (!child._isDrawableForRenderPlan() || child._renderPlanHasBarrierEffects()) {
+      // drawable children and would otherwise pay pure overhead here. A child
+      // whose blend mode only the backdrop compositor can evaluate for this
+      // destination is such a child even though it carries no barrier effect.
+      if (
+        !child._isDrawableForRenderPlan() ||
+        child._renderPlanHasBarrierEffects() ||
+        (!destinationOpaque && blendModeNeedsBackdrop(child._renderPlanGetBlendMode(), destinationOpaque))
+      ) {
         child.collect(builder, index);
 
         continue;
@@ -697,16 +770,33 @@ export class Container extends RenderNode {
     // drops its stage while it is still a valid node; only then tear it down.
     this.removeChildren();
 
+    // A throwing child teardown (a component's onDestroy, a subclass override)
+    // must not leave its siblings and this container alive; the first error
+    // surfaces once everything is torn down.
+    const errors: unknown[] = [];
+
     for (const child of children) {
       // A child the caller already destroyed stays destroyed - re-entering its
       // teardown would double-release resources it no longer owns.
       if (!child.destroyed) {
-        child.destroy();
+        try {
+          child.destroy();
+        } catch (error) {
+          errors.push(error);
+        }
       }
     }
 
     this._retainedPlan?.invalidate();
 
-    super.destroy();
+    try {
+      super.destroy();
+    } catch (error) {
+      errors.push(error);
+    }
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 }

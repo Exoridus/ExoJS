@@ -25,8 +25,10 @@
  *
  * @internal Test/perf-only.
  */
+import { Color } from '#core/Color';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { Sprite } from '#rendering/sprite/Sprite';
+import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 
 import { buildFilteredScene, buildMeshScene, buildNestedScene, buildSpriteScene, makeTextures } from './fixtures';
@@ -71,6 +73,12 @@ export interface AllocationArchetype {
   readonly warmup?: number;
   build(harness: WebGl2Harness): AllocationScene;
 }
+
+const makeTranslucentSrgbTexture = (size: number): Texture => {
+  const data = new Uint8Array(size * size * 4).fill(128);
+
+  return Texture.fromPixels({ colorSpace: 'srgb', alphaMode: 'straight', levels: [{ data, width: size, height: size }] }, { generateMipMap: false });
+};
 
 /** Warm-up frame count at which the light scenes' window series measurably flattens. */
 const SETTLED_WARMUP = 1500;
@@ -236,6 +244,36 @@ export const ALLOCATION_ARCHETYPES: readonly AllocationArchetype[] = [
       });
 
       return { root, teardown: () => root.destroy() };
+    },
+  },
+  {
+    id: 'sprite/1000 colour-managed moving',
+    rationale:
+      'Translucent sRGB pixel textures (already normalized at upload) drawn with a per-sprite tint, fractional alpha included, that is rewritten every frame alongside ' +
+      'the transform. Reaches the colour-authoring and tint-invalidation path no other archetype touches, so a per-draw colour conversion that ' +
+      'allocates cannot hide behind default-white sprites.',
+    build: () => {
+      const textures = Array.from({ length: 4 }, () => makeTranslucentSrgbTexture(16));
+      const { root, sprites } = buildSpriteScene({ count: 1000, textures, viewW: VIEW.w, viewH: VIEW.h });
+      const nudge = nudgeEveryNth(sprites, 1);
+      const palette = Array.from({ length: 16 }, (_unused, index) => new Color(index * 16, 255 - index * 16, (index * 47) % 256, 0.25 + (index % 4) * 0.25));
+      let frame = 0;
+
+      return {
+        root,
+        beforeFrame: () => {
+          nudge();
+          frame++;
+
+          for (let i = 0; i < sprites.length; i++) {
+            sprites[i]!.setTint(palette[(i + frame) & 15]!);
+          }
+        },
+        teardown: () => {
+          root.destroy();
+          textures.forEach(texture => texture.destroy());
+        },
+      };
     },
   },
 ];

@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/materialSources';
 import { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
@@ -137,7 +138,8 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
     // texture_2d, sampled via textureSampleBaseClampToEdge).
     this._externalShaderModule = this._device.createShaderModule({
       label: 'video:shader:external',
-      code: `${spriteSharedStorageWgsl}
+      code: `${colorShaderSourcesWgsl}
+${spriteSharedStorageWgsl}
 ${videoExternalTextureGroupWgsl}
 ${spriteDefaultVertexInputWgsl}${spriteVertexCoreWgsl}
 ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
@@ -277,7 +279,15 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       // Resolved up front (it has no pass-related side effects) so the
       // texture-mutation guard below can skip the reopen it exists for when
       // this flush isn't going to touch the texture cache at all.
-      const sourceElement = texture.source instanceof HTMLVideoElement ? texture.source : null;
+      //
+      // The external-texture shader's sampleTexture linearizes its sample
+      // (see videoExternalTextureGroupWgsl), because texture_external never gets
+      // a hardware sRGB decode the way an srgb-view texture_2d does. That decode
+      // is only correct for a source the engine resolves to sRGB colour, so a
+      // texture requesting a different interpretation - raw data, or already
+      // linear content - takes the texture_2d fallback instead, whose
+      // format-driven decode (or lack of one) matches its colorSpace.
+      const sourceElement = texture.source instanceof HTMLVideoElement && texture.colorSpace === 'srgb' ? texture.source : null;
       const externalTexture = sourceElement !== null ? this._tryImportExternalTexture(device, sourceElement) : null;
 
       const coordinator = backend.passCoordinator;

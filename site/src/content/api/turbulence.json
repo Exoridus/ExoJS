@@ -1,15 +1,15 @@
 {
   "title": "Turbulence",
-  "description": "Adds a smooth pseudo-random force field that animates over time. Implemented as 2D value noise with cubic Hermite smoothing - sampled twice per particle (offset to decorrelate x and y components) and scaled by `strength`. The field evolves at `timeScale` units per second; lower values produce slow-moving currents, higher values produce buzzy chaos. `frequency` controls the spatial granularity: small values (≈ 0.005) yield broad swirls across the playfield, large values (≈ 0.1) produce tight per-particle jitter. Use cases: smoke turbulence, organic swirls, wind eddies, dust haze. Pair with Drag to keep particle velocities bounded. GPU-eligible. The noise function is identical on CPU and GPU so visual results match across backends (modulo float precision).",
+  "description": "Adds a smooth pseudo-random force field that animates over time. Implemented as 2D value noise with cubic Hermite smoothing - sampled twice per particle (offset to decorrelate x and y components) and scaled by `strength`. The field evolves at `timeScale` units per second; lower values produce slow-moving currents, higher values produce buzzy chaos. `frequency` controls the spatial granularity: small values (≈ 0.005) yield broad swirls across the playfield, large values (≈ 0.1) produce tight per-particle jitter. Use cases: smoke turbulence, organic swirls, wind eddies, dust haze. Pair with Drag to keep particle velocities bounded. CPU and GPU use the same integer lattice hash, avoiding backend-specific transcendental approximations. Interpolation still has float rounding error.",
   "symbol": "Turbulence",
   "kind": "class",
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
-    "methods": 5,
+    "methods": 7,
     "properties": 3,
     "events": 0
   },
@@ -22,7 +22,7 @@
         "Adds a smooth pseudo-random force field that animates over time. Implemented as 2D value noise with cubic Hermite smoothing - sampled twice per particle (offset to decorrelate x and y components) and scaled by `strength`. The field evolves at `timeScale` units per second; lower values produce slow-moving currents, higher values produce buzzy chaos.",
         "`frequency` controls the spatial granularity: small values (≈ 0.005) yield broad swirls across the playfield, large values (≈ 0.1) produce tight per-particle jitter.",
         "Use cases: smoke turbulence, organic swirls, wind eddies, dust haze. Pair with Drag to keep particle velocities bounded.",
-        "GPU-eligible. The noise function is identical on CPU and GPU so visual results match across backends (modulo float precision)."
+        "CPU and GPU use the same integer lattice hash, avoiding backend-specific transcendental approximations. Interpolation still has float rounding error."
       ],
       "importLine": "import { Turbulence } from '@codexo/exojs-particles'",
       "sourceLink": null
@@ -195,7 +195,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Mutates the live particles for one frame. Runs only on the CPU path: a system whose modules are all GPU-eligible executes wgsl bodies inside its compute shader instead, and never calls this."
+          "description": "Runs only during CPU simulation; must not retain the borrowed particle batch."
         },
         {
           "name": "destroy",
@@ -225,6 +225,120 @@
           "params": [],
           "returnType": "void",
           "description": "Optional cleanup hook called from ParticleSystem.destroy."
+        },
+        {
+          "name": "glsl",
+          "signature": "glsl(): GlslContribution",
+          "signatureTokens": [
+            {
+              "text": "glsl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GlslContribution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GlslContribution",
+          "description": "Explicit WebGL2 implementation. Absence selects CPU fallback on WebGL2."
+        },
+        {
+          "name": "textureData",
+          "signature": "textureData?(): ReadonlyMap<string, Float32Array<ArrayBuffer> | Uint8Array<ArrayBuffer>>",
+          "signatureTokens": [
+            {
+              "text": "textureData",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "ReadonlyMap<string, Float32Array<ArrayBuffer> | Uint8Array<ArrayBuffer>>",
+          "description": "Backend-neutral lookup bytes keyed by texture binding name. Tables have 256 samples: r32float uses 256 floats, rgba8unorm uses 1024 RGBA bytes. Called at compilation; borrowed arrays must remain valid until upload completes. Shader authors must explicitly interpolate texels if needed."
         },
         {
           "name": "uploadTextures",
@@ -316,7 +430,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Upload texture data (Curve/ColorGradient lookup tables) to the GPU at compile time. Receives the GPUDevice and a map of texture bindings keyed by the name in WgslContribution.textures. Called once after pipeline creation. Required when wgsl declares textures."
+          "description": "Legacy WebGPU texture uploader, called at compilation with bindings keyed by name. Prefer textureData() for modules that support both GPU backends."
         },
         {
           "name": "wgsl",
@@ -345,7 +459,7 @@
           ],
           "params": [],
           "returnType": "WgslContribution",
-          "description": "Override to declare a GPU contribution. Returning a WgslContribution makes this module GPU-eligible; omitting (or returning undefined) forces CPU mode for any system that uses this module."
+          "description": "Explicit WebGPU implementation. Absence selects CPU fallback on WebGPU."
         },
         {
           "name": "writeUniforms",
@@ -434,7 +548,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Write this module's current uniform values into the shared uniform buffer at byteOffset. Layout must match the field declarations returned by wgsl (in the same order). Receives the current frame dt (seconds). Modules tracking accumulated time (e.g. noise/turbulence) should advance their internal counter here to stay in sync when running in GPU mode (where apply is not called). Required when wgsl declares uniforms. Called every frame by the system before dispatching compute."
+          "description": "Writes little-endian values in contribution field order at byteOffset. Align scalars to 4 bytes, vec2 to 8 and vec4 to 16. The same bytes feed both backends. Required when the selected contribution declares uniforms. Called once per GPU simulation step. Stateful modules should advance their clock here instead of apply(), which does not run in GPU mode."
         }
       ],
       "paragraphs": [],

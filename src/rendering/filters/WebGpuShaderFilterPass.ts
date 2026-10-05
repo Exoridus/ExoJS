@@ -76,7 +76,9 @@ interface WebGpuConnection {
   readonly autoBindGroupLayout: GPUBindGroupLayout;
   readonly userBindGroupLayout: GPUBindGroupLayout;
   readonly pipelineLayout: GPUPipelineLayout;
-  readonly pipeline: GPURenderPipeline;
+  readonly module: GPUShaderModule;
+  /** One pipeline per colour-target format the filter has been applied into. */
+  readonly pipelines: Map<GPUTextureFormat, GPURenderPipeline>;
   readonly sampler: GPUSampler;
   /** One buffer per uniform binding: one per declared block, else the packed buffer. */
   readonly userUniformBuffers: Array<GPUBuffer | null>;
@@ -190,6 +192,10 @@ export class WebGpuShaderFilterPass {
     }
 
     // ---- Build auto-bind group (group 0) ----
+    // `getTextureBinding` resolves the working render texture's own GPU view,
+    // so a plain `textureSample` on `uTexture` already returns the
+    // hardware-decoded linear color ShaderFilter's color contract promises -
+    // no sRGB view is chosen or manually decoded here.
     const inputBinding = gpu.getTextureBinding(input);
     const autoBindGroup = device.createBindGroup({
       layout: conn.autoBindGroupLayout,
@@ -210,7 +216,7 @@ export class WebGpuShaderFilterPass {
     // a clear of the output target) and ends + submits it below.
     const pass = gpu.passCoordinator.acquirePass().pass;
 
-    pass.setPipeline(conn.pipeline);
+    pass.setPipeline(conn.pipelines.get(gpu.getTextureFormat(output))!);
     pass.setVertexBuffer(0, conn.vertexBuffer);
     pass.setBindGroup(0, autoBindGroup);
     pass.setBindGroup(1, userBindGroup);
@@ -222,8 +228,44 @@ export class WebGpuShaderFilterPass {
     gpu.passCoordinator.endPass();
   }
 
+  private _createPipeline(device: GPUDevice, module: GPUShaderModule, layout: GPUPipelineLayout, targetFormat: GPUTextureFormat): GPURenderPipeline {
+    return device.createRenderPipeline({
+      layout,
+      vertex: {
+        module,
+        entryPoint: 'vertexMain',
+        buffers: [
+          {
+            arrayStride: vertexStrideBytes,
+            attributes: [
+              { shaderLocation: 0, offset: 0, format: 'float32x2' },
+              { shaderLocation: 1, offset: 8, format: 'float32x2' },
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module,
+        entryPoint: 'fragmentMain',
+        targets: [{ format: targetFormat }],
+      },
+      primitive: { topology: 'triangle-strip' },
+    });
+  }
+
   private _ensureConnected(backend: WebGpuBackend, output: RenderTexture): void {
+    // A replaced device leaves every buffer, layout and pipeline of the old one unusable.
+    if (this._connection !== null && this._connection.device !== backend.device) {
+      this.destroy();
+    }
+
     if (this._connection !== null) {
+      const format = backend.getTextureFormat(output);
+
+      if (!this._connection.pipelines.has(format)) {
+        this._connection.pipelines.set(format, this._createPipeline(this._connection.device, this._connection.module, this._connection.pipelineLayout, format));
+      }
+
       return;
     }
 
@@ -276,28 +318,7 @@ export class WebGpuShaderFilterPass {
     // `output` will actually have, producing a permanent color-target format
     // mismatch that WebGPU validation silently rejects on every draw.
     const targetFormat = backend.getTextureFormat(output);
-    const pipeline = device.createRenderPipeline({
-      layout: pipelineLayout,
-      vertex: {
-        module,
-        entryPoint: 'vertexMain',
-        buffers: [
-          {
-            arrayStride: vertexStrideBytes,
-            attributes: [
-              { shaderLocation: 0, offset: 0, format: 'float32x2' },
-              { shaderLocation: 1, offset: 8, format: 'float32x2' },
-            ],
-          },
-        ],
-      },
-      fragment: {
-        module,
-        entryPoint: 'fragmentMain',
-        targets: [{ format: targetFormat }],
-      },
-      primitive: { topology: 'triangle-strip' },
-    });
+    const pipelines = new Map<GPUTextureFormat, GPURenderPipeline>([[targetFormat, this._createPipeline(device, module, pipelineLayout, targetFormat)]]);
 
     // ---- Vertex buffer (fullscreen quad, static) ----
     const vertexBuffer = device.createBuffer({
@@ -337,7 +358,8 @@ export class WebGpuShaderFilterPass {
       autoBindGroupLayout,
       userBindGroupLayout,
       pipelineLayout,
-      pipeline,
+      module,
+      pipelines,
       sampler,
       userUniformBuffers: new Array<GPUBuffer | null>(Math.max(this._bindings.blocks.length, 1)).fill(null),
     };

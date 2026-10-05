@@ -6,8 +6,8 @@ export function getStaticPaths() {
     return GUIDE_PARTS.flatMap(part =>
         part.chapters.map(chapter => ({
             params: {
-                part: part.slug,
-                chapter: chapter.slug,
+                part: chapter.path.split('/')[0],
+                chapter: chapter.path.split('/')[1],
             },
         })),
     );

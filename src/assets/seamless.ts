@@ -89,14 +89,7 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
     presizes.delete(handle);
     // Transplant ONLY the decoded payload - the handle keeps the per-handle
     // sampler state applied at createPlaceholder (do NOT copy the donor's).
-    // Either kind of payload can arrive: an asset variant may resolve one
-    // logical source to a compressed container on one device and an image on
-    // another, and a caller holding the handle must not have to care.
-    if (donor.compressed !== null) {
-      handle.setCompressed(donor.compressed);
-    } else {
-      handle.setSource(donor.source);
-    }
+    handle._copyPayloadFrom(donor);
 
     if (expected !== undefined && (handle.width !== expected.width || handle.height !== expected.height)) {
       logger.warn(`Texture pre-size (${expected.width}×${expected.height}) does not match the loaded payload (${handle.width}×${handle.height}).`, {
@@ -109,7 +102,7 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
 
   fail(handle: Texture, error: Error): void {
     presizes.delete(handle);
-    handle.setSource(Texture.missing.source);
+    handle._setFailureSource(Texture.missing.source);
     handle._loadState.fail(error);
   },
 

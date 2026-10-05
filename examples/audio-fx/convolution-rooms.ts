@@ -40,14 +40,24 @@ const ROOMS = [
 ] as const;
 
 /** Rough label for a tail length - the same intuition a level designer works with. */
-function character(ms: number): string {
-  if (ms < 10) return 'colouration only';
-  if (ms < 40) return 'tight box';
-  if (ms < 120) return 'narrow shaft';
-  if (ms < 250) return 'small room';
-  if (ms < 400) return 'chamber';
+const character = (ms: number): string => {
+  if (ms < 10) {
+    return 'colouration only';
+  }
+  if (ms < 40) {
+    return 'tight box';
+  }
+  if (ms < 120) {
+    return 'narrow shaft';
+  }
+  if (ms < 250) {
+    return 'small room';
+  }
+  if (ms < 400) {
+    return 'chamber';
+  }
   return 'cavern';
-}
+};
 
 // Four distinct impact materials laid out left to right, so a strike's
 // stereo position matches where it visually sits - the same left/right
@@ -127,7 +137,9 @@ class ConvolutionRoomsScene extends Scene {
     this.root.addChild(this.gfx, this.label, this.detail, this.tapPrompt, ...materialLabels);
 
     this.app.input.onPointerDown.add(pointer => {
-      if (!(pointer.buttons & 1)) return;
+      if (!(pointer.buttons & 1)) {
+        return;
+      }
 
       for (const pad of this.pads) {
         if (pointer.x >= pad.x && pointer.x <= pad.x + pad.w && pointer.y >= pad.y && pointer.y <= pad.y + pad.h) {

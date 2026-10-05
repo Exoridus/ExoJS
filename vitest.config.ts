@@ -5,8 +5,9 @@ import { createShaderPlugin } from '@codexo/exojs-build';
 import { createJsdomTestProject, srcConditions, workerTransformPlugin, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';
-import { defineConfig, type Plugin } from 'vitest/config';
+import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
+import { CHROMIUM_WEBGL2_ARGS, CHROMIUM_WEBGPU_ARGS, FIREFOX_WEBGL2_PREFS } from './scripts/ci/browser-profiles.ts';
 import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands.ts';
 import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink.ts';
 
@@ -88,26 +89,35 @@ const benchEngineHashImports = (): Plugin => {
 // `Shader` rejects an empty source outright.
 const realShaderPlugin = createShaderPlugin();
 
-// Shared resolution/plugin wiring for the repository-local browser projects.
+// Vite-level options every project inherits. They are declared once here, on the
+// root, and not per project: a project that sets a Vite option of its own gets its
+// own Vite server, and the jsdom fleet then re-transforms the same engine sources
+// once per project instead of once.
 //
-// The top-level Vite `define` replaces `__DEV__` in files Vite transforms
-// directly. Under the `#` subpath-imports model some engine modules (e.g.
-// `src/core/dev.ts`) resolve through `package.json#imports` and can be
-// pre-bundled by esbuild's optimizer, which does NOT apply this `define` - so
-// the bare `__DEV__` would survive and throw `__DEV__ is not defined` in the
-// browser runtime. The `_setup-dev-global` setup file (wired into every browser
-// project below) installs `__DEV__` as a real global so the reference resolves
-// regardless of how the module was bundled.
-const browserBase = {
+// The `define` replaces `__DEV__` in files Vite transforms directly. Under the `#`
+// subpath-imports model some engine modules (e.g. `src/core/dev.ts`) resolve
+// through `package.json#imports` and can be pre-bundled by esbuild's optimizer,
+// which does NOT apply this `define` - so the bare `__DEV__` would survive and
+// throw `__DEV__ is not defined` in the browser runtime. The `_setup-dev-global`
+// setup file (wired into every browser project below) installs `__DEV__` as a
+// real global so the reference resolves regardless of how the module was bundled.
+//
+// `workletTransformPlugin` and `workerTransformPlugin` are the real (non-stub)
+// transforms - the browser-audio-chromium project renders converted worklets
+// through a genuine AudioContext and browser-tilemap-chromium runs worker
+// sources in a genuine Worker, so both need functioning code, not a stub.
+const sharedViteOptions = {
   resolve: { alias: aliasConfig, conditions: srcConditions },
   ssr: { resolve: { conditions: srcConditions } },
-  // `workletTransformPlugin` and `workerTransformPlugin` are the real (non-stub)
-  // transforms - the browser-audio-chromium project renders converted worklets
-  // through a genuine AudioContext and browser-tilemap-chromium runs worker
-  // sources in a genuine Worker, so both need functioning code, not a stub.
   plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
   define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
 };
+
+// A project that must not inherit the shared Vite options (it tests the transforms
+// themselves, or needs none of them) opts out of the whole declaring config, so it
+// restates the root test options it relies on.
+const standaloneProject = { extends: false as const };
+const standaloneTestOptions = { clearMocks: true };
 
 // Per-project browser headedness:
 //  - WebGL2 Chromium: new headless. EXOJS_BROWSER_HEADED=1 only for local headed debug.
@@ -115,19 +125,63 @@ const browserBase = {
 //    context either way); headed under xvfb in CI via EXOJS_FIREFOX_CI_HEADED=1,
 //    because Firefox on Linux disables WebGL entirely in headless mode.
 //  - WebGPU Chromium: headless by default (safe for local dev with no display server).
-//    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 - Mesa lavapipe needs a
-//    real display to report a real Vulkan adapter instead of falling back to
-//    SwiftShader, and CI supplies one via xvfb (see `browser-tests-webgpu-chromium`
-//    in `scripts/ci/lanes.ts`). Without this gate, `headless: false` would pop a real,
+//    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 and supplies a display
+//    via xvfb (see the `webgpu` lane in `scripts/ci/lanes.ts`); the adapter it
+//    then gets is Chromium's bundled SwiftShader. Without this gate, `headless: false` would pop a real,
 //    visible Chromium window on every local `pnpm test:browser:webgpu` run.
 //  - WebGPU Firefox:  headed - Firefox only exposes a WebGPU adapter in a headed session.
+//
+// The launch options themselves live in `scripts/ci/browser-profiles.ts`, which
+// `pnpm qualify` also uses for its capability preflight.
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
 const webgl2Headless = !headed;
 const webgpuCiHeaded = process.env['EXOJS_WEBGPU_CI_HEADED'] === '1';
 const firefoxCiHeaded = process.env['EXOJS_FIREFOX_CI_HEADED'] === '1';
 
+// WebGPU specs whose ability to run depends on the browser media stack
+// (`captureStream`, `HTMLVideoElement` playback, `GPUExternalTexture`). They are
+// a project of their own so a media-stack failure cannot make the renderer
+// contract look broken, and so they run one file at a time: two concurrent
+// `captureStream` pipelines starve each other of decoded frames.
+// `test/ci/browser-project-split.test.ts` keeps the glob and the specs that use
+// media APIs in step.
+const webgpuMediaTests = ['test/rendering/browser/webgpu-*video*.test.ts'];
+const webgpuCoreTests = ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'];
+const webgpuCoreExclude = [...configDefaults.exclude, ...webgpuMediaTests];
+
+// Specs that can take a Firefox process down or wedge it on Windows, so they run
+// in a browser of their own with a short deadline and cannot cost the whole Core
+// run: the device-churn regression (96 create/destroy cycles) crashes the GPU
+// process, after which `requestAdapter()` resolves `null` for every later file;
+// the OffscreenCanvas surface spec intermittently blocks the page inside native
+// WebGPU code, where no test timeout can fire. Chromium keeps both in Core, where
+// they pass.
+const firefoxIsolatedTests = ['test/rendering/browser/webgpu-device-lifecycle.test.ts', 'test/rendering/browser/webgpu-offscreen-surface.test.ts'];
+const firefoxCoreExclude = [...webgpuCoreExclude, ...firefoxIsolatedTests];
+
+// Options every automated browser project shares. Vitest injects its own UI into
+// the page by default outside CI, and tracing costs time and memory that would
+// distort a GPU measurement; a qualification run wants neither.
+const browserDefaults = { ui: false, trace: 'off' } as const;
+
+/**
+ * Worker cap of a WebGPU browser project, read from the environment here rather
+ * than from a `--maxWorkers` flag: the CLI value does not reach browser projects
+ * in Vitest, a project-level `maxWorkers` does. Every worker is one live browser
+ * context with its own GPU device, so this bounds peak GPU and memory use.
+ * `undefined` leaves the Vitest default (one worker per core).
+ */
+const browserWorkers = (variable: string, fallback?: number): { maxWorkers?: number } => {
+  const raw = process.env[variable];
+  const value = raw === undefined ? fallback : Number.parseInt(raw, 10);
+
+  if (value !== undefined && (!Number.isInteger(value) || value < 1)) throw new Error(`${variable} must be a positive integer.`);
+
+  return value === undefined ? {} : { maxWorkers: value };
+};
+
 // Setup run in every browser project to install the `__DEV__` global (see the
-// browserBase note) before any engine module evaluates.
+// shared Vite options note) before any engine module evaluates.
 const browserSetupFiles = ['./test/rendering/browser/_setup-dev-global.ts'];
 
 const renderingBrowserSetupFiles = browserSetupFiles;
@@ -152,9 +206,27 @@ const allocationCommands = { startHeapSampling, stopHeapSampling, emitAllocation
  */
 const maxWorkers = process.env['EXOJS_TEST_MAX_WORKERS'] ?? (process.env['CI'] ? undefined : '50%');
 
+// Runner options deliberately left at their defaults, because each was measured and
+// found unsound here rather than merely unhelpful:
+//  - `fsModuleCache` keys a module by its own content, but the worklet and worker
+//    plugins bundle their inputs out of Vite's sight, so an edit to a bundled helper
+//    would be served stale; a warm run also fails to resolve `?worklet` imports.
+//  - `pool: 'vmThreads'` runs specs in a separate realm without the Node web-stream
+//    globals (`ReadableStream`, `CompressionStream`) that the container, zlib and codec
+//    specs use, and worker threads reject the `--expose-gc` flag the retention specs need.
+//  - `isolate: false` would let jsdom state leak between spec files.
 export default defineConfig({
+  ...sharedViteOptions,
   test: {
     ...(maxWorkers === undefined ? {} : { maxWorkers }),
+    // A root-only option in Vitest (it cannot be set per project). The default
+    // 300 ms flags nearly every browser test: one GPU device, pipeline, render and
+    // readback per test costs a few hundred milliseconds on a healthy run, Firefox
+    // more. It only changes what the reporter marks slow, never a timeout or a verdict.
+    slowTestThreshold: 1_000,
+    // Call history and implementations reset before every test, so a spec cannot
+    // inherit a spy's state from an earlier test or a `beforeAll`.
+    clearMocks: true,
     coverage: {
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
@@ -210,41 +282,32 @@ export default defineConfig({
       // what the browser lanes are for), so
       // `test/rendering/shader-source-structure.test.ts` adds a GPU-free
       // structural check instead.
-      {
-        ...createJsdomTestProject({
-          name: 'exojs',
-          alias: aliasConfig,
-          include: ['test/**/*.test.ts'],
-          // The parity matrix runs in `browser-webgpu`: its runner imports the
-          // browser context module, which throws on import under jsdom. The
-          // WebGPU allocation cell is the same story one project further down
-          // (`browser-webgpu-alloc`) - it needs a real adapter and a CDP session.
-          exclude: [
-            'test/rendering/browser/**/*.test.ts',
-            'test/rendering/parity/**/*.test.ts',
-            'test/perf/rendering/**/*.test.ts',
-            'test/perf/webgpu/**/*.test.ts',
-            // The asset browser suite needs a real IndexedDB and runs in the
-            // browser-assets-chromium project; jsdom implements none of it.
-            'test/assets/browser/**/*.test.ts',
-            // `InlineWorker` needs a real Worker and a real object URL, neither
-            // of which jsdom has; browser-core-chromium runs this suite.
-            'test/core/browser/**/*.test.ts',
-          ],
-        }),
-        plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
-      },
-      {
-        ...createJsdomTestProject({
-          name: 'exojs-particles',
-          alias: aliasConfig,
-          include: ['packages/exojs-particles/test/**/*.test.ts'],
-        }),
-        plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
-      },
+      createJsdomTestProject({
+        name: 'exojs',
+        include: ['test/**/*.test.ts'],
+        // The parity matrix runs in `browser-webgpu`: its runner imports the
+        // browser context module, which throws on import under jsdom. The
+        // WebGPU allocation cell is the same story one project further down
+        // (`browser-webgpu-alloc`) - it needs a real adapter and a CDP session.
+        exclude: [
+          'test/rendering/browser/**/*.test.ts',
+          'test/rendering/parity/**/*.test.ts',
+          'test/perf/rendering/**/*.test.ts',
+          'test/perf/webgpu/**/*.test.ts',
+          // The asset browser suite needs a real IndexedDB and runs in the
+          // browser-assets-chromium project; jsdom implements none of it.
+          'test/assets/browser/**/*.test.ts',
+          // `InlineWorker` needs a real Worker and a real object URL, neither
+          // of which jsdom has; browser-core-chromium runs this suite.
+          'test/core/browser/**/*.test.ts',
+        ],
+      }),
+      createJsdomTestProject({
+        name: 'exojs-particles',
+        include: ['packages/exojs-particles/test/**/*.test.ts'],
+      }),
       createJsdomTestProject({
         name: 'exojs-tilemap',
-        alias: aliasConfig,
         include: ['packages/exojs-tilemap/test/**/*.test.ts'],
         // The test/browser/** suite needs a real Worker + URL.createObjectURL and
         // runs in the browser-tilemap-chromium project; exclude it from jsdom.
@@ -252,22 +315,18 @@ export default defineConfig({
       }),
       createJsdomTestProject({
         name: 'exojs-tiled',
-        alias: aliasConfig,
         include: ['packages/exojs-tiled/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-aseprite',
-        alias: aliasConfig,
         include: ['packages/exojs-aseprite/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-ldtk',
-        alias: aliasConfig,
         include: ['packages/exojs-ldtk/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-physics',
-        alias: aliasConfig,
         include: ['packages/exojs-physics/test/**/*.test.ts'],
         // The sleeping gate is its own project - see `physics-perf`.
         exclude: ['packages/exojs-physics/test/sleeping-perf.test.ts'],
@@ -283,49 +342,40 @@ export default defineConfig({
       // so the measurement has the machine to itself.
       createJsdomTestProject({
         name: 'physics-perf',
-        alias: aliasConfig,
         include: ['packages/exojs-physics/test/sleeping-perf.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-tilemap-physics',
-        alias: aliasConfig,
         include: ['packages/exojs-tilemap-physics/test/**/*.test.ts'],
       }),
-      {
-        ...createJsdomTestProject({
-          name: 'exojs-lighting',
-          alias: aliasConfig,
-          include: ['packages/exojs-lighting/test/**/*.test.ts'],
-        }),
-        plugins: [realShaderPlugin],
-      },
+      createJsdomTestProject({
+        name: 'exojs-lighting',
+        include: ['packages/exojs-lighting/test/**/*.test.ts'],
+      }),
       createJsdomTestProject({
         name: 'exojs-pathfinding',
-        alias: aliasConfig,
         include: ['packages/exojs-pathfinding/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-audio-fx',
-        alias: aliasConfig,
         include: ['packages/exojs-audio-fx/test/**/*.test.ts'],
         // The test/browser/** suite needs a real OfflineAudioContext + AudioWorklet
         // and runs in the browser-audio-chromium project; exclude it from jsdom.
         exclude: ['packages/exojs-audio-fx/test/browser/**'],
       }),
 
-      // ── exojs-react - jsdom + React Testing Library (esbuild JSX) ────────
+      // ── exojs-react - jsdom + React Testing Library (OXC JSX) ────────────
       // The shared jsdom factory is reused unchanged; the only addition is the
-      // esbuild automatic JSX runtime so `.tsx` test files need no React import.
-      // It is set at the project level (like rendering-perf's `plugins`) so the
-      // other jsdom projects keep esbuild's defaults byte-for-byte.
+      // OXC automatic JSX runtime so `.tsx` test files need no React import.
+      // It is set at the project level so the other jsdom projects keep OXC's
+      // defaults byte-for-byte; the project therefore runs its own Vite server.
       {
         ...createJsdomTestProject({
           name: 'exojs-react',
-          alias: aliasConfig,
           include: ['packages/exojs-react/test/**/*.{test.ts,test.tsx}'],
           setupFiles: ['./packages/exojs-react/test/setup.ts'],
         }),
-        esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
+        oxc: { jsx: { runtime: 'automatic', importSource: 'react' } },
       },
 
       // ── exojs-bench - cross-library benchmark harness unit tests ─────────
@@ -338,12 +388,13 @@ export default defineConfig({
       // NOT added to the default `test`/`test:coverage` gate: per the bench
       // methodology (CI tiering), competitor arms must never red a contributor
       // PR - run it on demand via `pnpm --filter @codexo/exojs-bench test`.
-      createJsdomTestProject({
-        name: 'exojs-bench',
-        alias: aliasConfig,
+      {
+        ...createJsdomTestProject({
+          name: 'exojs-bench',
+          include: ['packages/exojs-bench/test/**/*.test.ts'],
+        }),
         plugins: [benchEngineHashImports()],
-        include: ['packages/exojs-bench/test/**/*.test.ts'],
-      }),
+      },
 
       // ── exojs-build: the published build-tooling package ───────────────
       // Plain Node, no jsdom and none of the shader/worklet/worker plugins: the
@@ -354,7 +405,9 @@ export default defineConfig({
       // fixtures under `test/browser` need a real Worker/AudioWorklet and run in
       // `browser-build-chromium` instead.
       {
+        ...standaloneProject,
         test: {
+          ...standaloneTestOptions,
           name: 'exojs-build',
           environment: 'node',
           globals: true,
@@ -370,7 +423,9 @@ export default defineConfig({
       // through ESLint's own `RuleTester` against fixture source strings, so
       // the only thing under test is the rule's view of a parsed file.
       {
+        ...standaloneProject,
         test: {
+          ...standaloneTestOptions,
           name: 'exojs-eslint-plugin',
           environment: 'node',
           globals: true,
@@ -386,10 +441,6 @@ export default defineConfig({
       // through Core's own `Loader.loadContainer`, which is what proves the
       // writer in `@codexo/exojs-build` and the reader in Core cannot drift.
       {
-        resolve: { alias: aliasConfig, conditions: srcConditions },
-        ssr: { resolve: { conditions: srcConditions } },
-        plugins: [realShaderPlugin],
-        define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
         test: {
           name: 'exojs-cli',
           environment: 'node',
@@ -404,16 +455,12 @@ export default defineConfig({
       // deterministic, GPU-free structural metrics. Uses the real-shader loader
       // instead of the stub so GLSL reflection resolves. Structural regression
       // tests run in normal CI; the opt-in sweep self-skips unless EXOJS_PERF_PROFILE.
-      {
-        ...createJsdomTestProject({
-          name: 'rendering-perf',
-          alias: aliasConfig,
-          include: ['test/perf/rendering/**/*.test.ts'],
-          // The allocation gate is its own project - see `rendering-alloc`.
-          exclude: ['test/perf/rendering/allocation.test.ts'],
-        }),
-        plugins: [realShaderPlugin],
-      },
+      createJsdomTestProject({
+        name: 'rendering-perf',
+        include: ['test/perf/rendering/**/*.test.ts'],
+        // The allocation gate is its own project - see `rendering-alloc`.
+        exclude: ['test/perf/rendering/allocation.test.ts'],
+      }),
 
       // ── rendering-alloc - the steady-state allocation gate ───────────────
       // Same harness as `rendering-perf`, separate project for exactly one
@@ -424,38 +471,34 @@ export default defineConfig({
       // machine with one Node build. Kept out of `test:coverage` and run by
       // `test:alloc` instead; the suite itself refuses to assert when it detects
       // instrumentation, so this split cannot be undone silently.
-      {
-        ...createJsdomTestProject({
-          name: 'rendering-alloc',
-          alias: aliasConfig,
-          include: ['test/perf/rendering/allocation.test.ts'],
-        }),
-        plugins: [realShaderPlugin],
-      },
+      createJsdomTestProject({
+        name: 'rendering-alloc',
+        include: ['test/perf/rendering/allocation.test.ts'],
+      }),
 
       // ── browser-webgl-chromium - WebGL2 via Chromium headless ────────────
       {
-        ...browserBase,
         test: {
           name: 'browser-webgl-chromium',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
+          // `--use-angle=swiftshader` renders on the CPU, so several Chromium
+          // instances racing for the same cores contend rather than gain
+          // anything: 78 files at default (parallel) concurrency measured no
+          // faster than sequential on an otherwise-loaded machine (~72s vs
+          // ~80s), and under that same load one file's timing-sensitive test
+          // missed its 15s timeout at 4x its isolated run time - reproduced
+          // twice, and the file passed clean every time run alone or as part
+          // of the sequential suite. `fileParallelism: false` trades the
+          // (near-zero) parallel speedup for not flaking under load.
+          fileParallelism: false,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: webgl2Headless,
-            // `--use-angle=swiftshader` renders on the CPU, so several Chromium
-            // instances racing for the same cores contend rather than gain
-            // anything: 78 files at default (parallel) concurrency measured no
-            // faster than sequential on an otherwise-loaded machine (~72s vs
-            // ~80s), and under that same load one file's timing-sensitive test
-            // missed its 15s timeout at 4x its isolated run time - reproduced
-            // twice, and the file passed clean every time run alone or as part
-            // of the sequential suite. `fileParallelism: false` trades the
-            // (near-zero) parallel speedup for not flaking under load.
-            fileParallelism: false,
             provider: playwright({
-              launchOptions: { channel: 'chromium', args: ['--enable-webgl', '--use-angle=swiftshader'] },
+              launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGL2_ARGS] },
             }),
             instances: [{ browser: 'chromium' }],
           },
@@ -479,24 +522,34 @@ export default defineConfig({
       // `gfx.webrender.software` selects the software backend - the counterpart
       // to Chromium's `--use-angle=swiftshader`. (`webgl.out-of-process: false`
       // was tried and rejected: it kills the browser connection mid-run.)
+      //
+      // `webgl.disable-angle` only matters on Windows, the one platform where
+      // Firefox translates WebGL to Direct3D through ANGLE; Linux and macOS
+      // run native OpenGL either way. Through ANGLE, every new context spends
+      // ~5s compiling the lighting shaders, which pushes the tests that build
+      // several contexts past their timeout, and its WARP rasterizer has no
+      // MSAA for the antialiasing cases to observe. Native OpenGL is also what
+      // the Linux runner uses, so a local run compares like with like.
       {
-        ...browserBase,
         test: {
           name: 'browser-webgl-firefox',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
+          // Firefox serves WebGL for every file from one GPU process, so
+          // parallel files queue behind each other's GPU work there: a worker's
+          // first synchronous WebGL query stalled for ~10s behind its
+          // neighbours. The whole lane took twice as long in parallel as it
+          // does sequentially (~330s vs ~160s) and ran 32 tests past their
+          // 15s timeout; sequentially none.
+          fileParallelism: false,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: !firefoxCiHeaded,
             provider: playwright({
               launchOptions: {
-                firefoxUserPrefs: {
-                  'webgl.force-enabled': true,
-                  'webgl.disabled': false,
-                  'gfx.webrender.software': true,
-                  'webgl.angle.force-warp': true,
-                },
+                firefoxUserPrefs: { ...FIREFOX_WEBGL2_PREFS },
               },
             }),
             instances: [{ browser: 'firefox' }],
@@ -504,47 +557,55 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgpu - WebGPU via Chromium (SwiftShader software backend) ──
-      // The `--enable-features=Vulkan` / `--disable-vulkan-surface` flags are the
-      // three.js-proven recipe for headless WebGPU on a free `ubuntu-latest`
-      // runner (confirmed against three.js's own CI recipe, which matches this
-      // baseline). Two later attempts to force real Mesa-lavapipe/Vulkan routing
-      // via `--use-angle=vulkan` (optionally combined with
-      // `--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`) both
-      // regressed `requestAdapter()` to returning `null` for almost every test -
-      // the WebGPU browser suite dropped from 100/100 tests actually exercised
-      // down to ~4/100, with the rest silently skip-passing. Reverted to this
-      // plain baseline, which runs the full suite against Chromium's bundled
-      // SwiftShader software WebGPU implementation - a real, working software
-      // backend, just not Mesa lavapipe. Locally these args are harmless
-      // (verified against a real Windows/NVIDIA adapter). `headless` stays true
-      // by default so local dev never pops a visible browser window; CI opts
-      // into `headless: false` via `EXOJS_WEBGPU_CI_HEADED=1` (see
-      // the `webgpu` lane in `scripts/ci/lanes.ts`).
+      // ── browser-webgpu - WebGPU Core via Chromium ────────────────────────
+      // The renderer contract on a real WebGPU adapter: adapter and device
+      // setup, textures and render targets, sprite/mesh/text/shader/filter
+      // renderers, blending, colour, readback, device lifecycle and the parity
+      // matrix. CI runs it headed under Xvfb on Chromium's bundled SwiftShader
+      // software adapter (so WGSL compilation, pipelines, bind groups and pixel
+      // results are real; NVIDIA/AMD/Intel behaviour and throughput are not
+      // covered). Locally it uses whatever GPU the machine has. The launch
+      // recipe is in `scripts/ci/browser-profiles.ts`; the media specs are the
+      // `browser-webgpu-media` project below.
       {
-        ...browserBase,
         test: {
           name: 'browser-webgpu',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
-          include: ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'],
+          include: webgpuCoreTests,
+          exclude: webgpuCoreExclude,
+          ...browserWorkers('EXOJS_CHROMIUM_WEBGPU_WORKERS', 4),
           browser: {
+            ...browserDefaults,
             enabled: true,
             commands: parityCommands,
             headless: !webgpuCiHeaded,
             provider: playwright({
-              launchOptions: {
-                channel: 'chromium',
-                args: [
-                  '--enable-unsafe-webgpu',
-                  '--enable-features=Vulkan',
-                  '--disable-vulkan-surface',
-                  '--ignore-gpu-blocklist',
-                  '--no-sandbox',
-                  '--disable-gpu-watchdog',
-                  '--disable-gpu-driver-bug-workarounds',
-                ],
-              },
+              launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGPU_ARGS] },
+            }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-webgpu-media - WebGPU video through Chromium's media stack ─
+      // The `Video` drawable end to end: a `captureStream` fixture decoded by a
+      // real `<video>`, sampled through `GPUExternalTexture` and through the
+      // `copyExternalImageToTexture` fallback. Serial by construction (see
+      // `webgpuMediaTests`).
+      {
+        test: {
+          name: 'browser-webgpu-media',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: webgpuMediaTests,
+          fileParallelism: false,
+          browser: {
+            ...browserDefaults,
+            enabled: true,
+            headless: !webgpuCiHeaded,
+            provider: playwright({
+              launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGPU_ARGS] },
             }),
             instances: [{ browser: 'chromium' }],
           },
@@ -564,9 +625,7 @@ export default defineConfig({
       // that configured the adapter differently from the lane that proves
       // correctness would be measuring a renderer nobody ships.
       {
-        ...browserBase,
         define: {
-          ...browserBase.define,
           __EXOJS_ALLOC_ID__: JSON.stringify(process.env['EXOJS_ALLOC_ID'] ?? ''),
           __EXOJS_ALLOC_MODE__: JSON.stringify(process.env['EXOJS_ALLOC_MODE'] ?? 'alloc'),
           __EXOJS_ALLOC_FRAMES__: JSON.stringify(Number(process.env['EXOJS_ALLOC_FRAMES'] ?? 200)),
@@ -582,46 +641,116 @@ export default defineConfig({
           testTimeout: 600_000,
           hookTimeout: 600_000,
           browser: {
+            ...browserDefaults,
             enabled: true,
             commands: allocationCommands,
             headless: !webgpuCiHeaded,
             provider: playwright({
-              launchOptions: {
-                channel: 'chromium',
-                args: [
-                  '--enable-unsafe-webgpu',
-                  '--enable-features=Vulkan',
-                  '--disable-vulkan-surface',
-                  '--ignore-gpu-blocklist',
-                  '--no-sandbox',
-                  '--disable-gpu-watchdog',
-                  '--disable-gpu-driver-bug-workarounds',
-                ],
-              },
+              launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGPU_ARGS] },
             }),
             instances: [{ browser: 'chromium' }],
           },
         },
       },
 
-      // ── browser-webgpu-firefox - WebGPU via Firefox headed ───────────────
-      // `headless: false` is load-bearing, not a leftover: Firefox exposes
-      // `navigator.gpu` either way, but `requestAdapter()` resolves to `null`
-      // headless no matter which prefs are set (`dom.webgpu.enabled`,
-      // `gfx.webgpu.force-enabled`, ...). A window is the only configuration in
-      // which Firefox has a WebGPU adapter at all - so this lane needs a real
-      // display, which is why CI cannot run it and the matrix takes its Firefox
-      // rows from local runs instead.
+      // ── browser-webgpu-firefox - WebGPU Core via Firefox, headed ─────────
+      // `headless: false` is load-bearing: Firefox exposes `navigator.gpu`
+      // either way, but `requestAdapter()` resolves to `null` headless whatever
+      // the prefs say (`dom.webgpu.enabled`, `gfx.webgpu.force-enabled`, ...).
+      // A window is the only configuration with an adapter, so this needs a real
+      // display: Windows and macOS have one, Linux CI supplies Xvfb. Firefox on
+      // Linux may still expose no adapter at all; `pnpm qualify` probes that
+      // first and reports UNSUPPORTED HOST instead of running the suite. Not a
+      // blocking contract - the second-engine gate is `browser-webgl-firefox`.
+      //
+      // Files run in parallel on purpose. Serial files were measured against the
+      // same 12 specs and were worse: one long-lived page accumulates GPUDevices
+      // until Firefox answers `Not enough memory left` (440 s and 20 failures
+      // against 112 s and none). The complete project still does not finish in
+      // 12 minutes on a Windows host with a physical GPU, in either mode.
       {
-        ...browserBase,
         test: {
           name: 'browser-webgpu-firefox',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
-          include: ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'],
+          include: webgpuCoreTests,
+          exclude: firefoxCoreExclude,
+          ...browserWorkers('EXOJS_FIREFOX_WEBGPU_WORKERS', 4),
           browser: {
+            ...browserDefaults,
             enabled: true,
             commands: parityCommands,
+            headless: false,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
+      // ── browser-webgpu-firefox-stock - the Core specs on an unmodified Firefox ─
+      // Local and opt-in: it is in no CI lane, because Firefox ships WebGPU only on
+      // Windows and Apple Silicon and the Linux runner has none. The same specs run
+      // through WebDriver (geckodriver) against a stock Firefox release instead of
+      // Playwright's patched build. The Playwright build is the less trustworthy
+      // instrument for these specs: its Core run fails intermittently with
+      // "Not enough memory left" and can lose the GPU process, while a stock release
+      // completes the same set. Point `EXOJS_FIREFOX_BINARY` and
+      // `EXOJS_GECKODRIVER_BINARY` at a Firefox and a geckodriver, or leave them
+      // unset to use the ones on PATH. Like the Playwright project it is headed,
+      // because Firefox resolves `requestAdapter()` to `null` headless.
+      {
+        test: {
+          name: 'browser-webgpu-firefox-stock',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: webgpuCoreTests,
+          exclude: firefoxCoreExclude,
+          ...browserWorkers('EXOJS_FIREFOX_WEBGPU_WORKERS', 4),
+          browser: {
+            ...browserDefaults,
+            enabled: true,
+            commands: parityCommands,
+            headless: false,
+            provider: webdriverio({
+              capabilities: {
+                'moz:firefoxOptions': { ...(process.env['EXOJS_FIREFOX_BINARY'] ? { binary: process.env['EXOJS_FIREFOX_BINARY'] } : {}) },
+                'wdio:geckodriverOptions': { ...(process.env['EXOJS_GECKODRIVER_BINARY'] ? { binary: process.env['EXOJS_GECKODRIVER_BINARY'] } : {}) },
+              },
+            }),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
+      // ── browser-webgpu-firefox-isolated - the specs that can wedge Firefox ─
+      {
+        test: {
+          name: 'browser-webgpu-firefox-isolated',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: firefoxIsolatedTests,
+          fileParallelism: false,
+          browser: {
+            ...browserDefaults,
+            enabled: true,
+            headless: false,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
+      // ── browser-webgpu-firefox-media - the video specs on Firefox ────────
+      {
+        test: {
+          name: 'browser-webgpu-firefox-media',
+          globals: true,
+          setupFiles: renderingBrowserSetupFiles,
+          include: webgpuMediaTests,
+          fileParallelism: false,
+          browser: {
+            ...browserDefaults,
+            enabled: true,
             headless: false,
             provider: playwright(),
             instances: [{ browser: 'firefox' }],
@@ -640,14 +769,13 @@ export default defineConfig({
       // Develop ▸ Allow Remote Automation in Safari's menu.
       //
       {
-        ...browserBase,
-        plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
         test: {
           name: 'browser-parity-safari',
           globals: true,
           setupFiles: browserSetupFiles,
           include: ['test/rendering/parity/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             commands: parityCommands,
             headless: false,
@@ -659,13 +787,14 @@ export default defineConfig({
 
       // ── browser-webgpu-firefox-dark - same as above, dark colour scheme ──
       {
-        ...browserBase,
         test: {
           name: 'browser-webgpu-firefox-dark',
           globals: true,
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgpu-*.test.ts'],
+          exclude: webgpuCoreExclude,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: false,
             provider: playwright({ contextOptions: { colorScheme: 'dark' } }),
@@ -681,13 +810,13 @@ export default defineConfig({
       // - exactly where the shipped pitch/gain bugs lived. Path-gated in CI so it
       // only runs when audio-fx changes.
       {
-        ...browserBase,
         test: {
           name: 'browser-audio-chromium',
           globals: true,
           setupFiles: browserSetupFiles,
           include: ['packages/exojs-audio-fx/test/browser/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),
@@ -702,13 +831,13 @@ export default defineConfig({
       // URL.createObjectURL). Path-gated in CI so it only runs when exojs-tilemap
       // changes.
       {
-        ...browserBase,
         test: {
           name: 'browser-tilemap-chromium',
           globals: true,
           setupFiles: browserSetupFiles,
           include: ['packages/exojs-tilemap/test/browser/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),
@@ -725,7 +854,6 @@ export default defineConfig({
       // IndexedDB at all, so this is the only lane where the persistent store
       // is exercised as such.
       {
-        ...browserBase,
         test: {
           name: 'browser-assets-chromium',
           globals: true,
@@ -734,6 +862,7 @@ export default defineConfig({
           // modules that read the bare build-flag globals - see the setup file.
           setupFiles: browserSetupFiles,
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),
@@ -748,13 +877,13 @@ export default defineConfig({
       // contract; only a browser can show that a `?worker` source string
       // actually runs, imports and all.
       {
-        ...browserBase,
         test: {
           name: 'browser-core-chromium',
           globals: true,
           setupFiles: browserSetupFiles,
           include: ['test/core/browser/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),
@@ -772,12 +901,12 @@ export default defineConfig({
       // path - Blob, object URL, real AudioWorklet and real Worker - which is
       // also the DX a consumer of `@codexo/exojs-build` writes by hand.
       {
-        ...browserBase,
         test: {
           name: 'browser-build-chromium',
           globals: true,
           include: ['packages/exojs-build/test/browser/**/*.test.ts'],
           browser: {
+            ...browserDefaults,
             enabled: true,
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),

@@ -22,12 +22,19 @@ const compareT = (a: ColorGradientKey, b: ColorGradientKey): number => a.t - b.t
  *   skipping the Color object. Use this in tight per-particle inner loops
  *   that write into a `Uint32Array` instance buffer.
  *
+ * Keyframe interpolation runs on the authored (encoded) color components as
+ * stored on `Color`, not in linear light. This keeps CPU evaluation, the
+ * WebGL2 transform-feedback lookup and the WebGPU compute lookup numerically
+ * identical: all three sample the same 256-entry authored-color table built
+ * from this interpolation. Linearization happens exactly once, in the
+ * consuming render vertex stage.
+ *
  * @example
  * const fire = new ColorGradient([
- *     { t: 0,   color: new Color(1, 1, 1, 1) },     // white
- *     { t: 0.3, color: new Color(1, 0.7, 0.1, 1) }, // orange
- *     { t: 0.7, color: new Color(0.4, 0.1, 0, 0.6) },
- *     { t: 1,   color: new Color(0, 0, 0, 0) },     // transparent black
+ *     { t: 0,   color: new Color(255, 255, 255, 1) }, // white
+ *     { t: 0.3, color: new Color(255, 179, 26, 1) },  // orange
+ *     { t: 0.7, color: new Color(102, 26, 0, 0.6) },
+ *     { t: 1,   color: new Color(0, 0, 0, 0) },       // transparent black
  * ]);
  */
 export class ColorGradient implements LifetimeFunction<Color> {

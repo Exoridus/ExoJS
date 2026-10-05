@@ -83,15 +83,31 @@ const load = async (app: Application): Promise<void> => {
 };
 ```
 
-`texture.compressed` is `null` for an ordinary image and carries the format and mip chain otherwise. A container holding uncompressed RGBA8 is read as an ordinary image - it takes exactly the same path as a PNG.
+`texture.compressed` is `null` for an ordinary image and carries the format and mip chain otherwise. A container holding uncompressed RGBA8 is uploaded byte for byte with every mip level it carries, without a browser image decode; the format, not the browser, decides whether it is sRGB colour or linear data.
 
 Two things do not apply to a compressed payload, and ignoring them is not a simplification:
 
 - **`premultiplyAlpha`** operates on decoded texels. Premultiply in the authoring tool, before compression.
 - **`generateMipMap`** cannot derive a mip level from compressed blocks. Compress the chain level by level and ship it inside the container; a file with one level samples without mips however the sampler is configured.
 
-<Callout type="warning" title="Universal formats are not decoded">
-A BasisLZ/ETC1S or UASTC "universal" KTX2 file needs a transcoder, which the engine does not carry, and loading one fails with an `AssetDecodeError` naming the scheme. Encode one file per target format instead - `toktx --target_type RGBA --encode uastc` and its per-format equivalents - and let a variant rule choose. Zstandard-supercompressed files are rejected the same way.
+## What the parser accepts
+
+The native profile is the plain-`VkFormat` hardware formats: RGBA8 (unorm and sRGB), BC1 to BC7, ETC2 and EAC, and ASTC LDR block sizes, each in its own colour or numeric variant. The data format descriptor is read and cross-checked against the format, and its answers become the texture's metadata:
+
+- **Transfer function.** An sRGB transfer is sRGB colour, a linear transfer is linear colour, and an unspecified one is numeric data. An sRGB format must carry an sRGB transfer and a non-sRGB format must not, or the file is rejected.
+- **Alpha association.** The descriptor's premultiplied flag is honoured. A premultiplied sRGB asset is authored as `encode(linearRGB * alpha)`, not `encodedRGB * alpha`. An opaque format such as BC1 RGB cannot claim premultiplied alpha.
+- **Colour primaries** must be unspecified or BT.709.
+
+A file outside the profile fails at load with an `AssetDecodeError` naming the cause; it is never guessed at from its pixels. That covers a missing or malformed descriptor, an unsupported colour model, primaries, transfer or flag, a transfer that contradicts the format, a `VkFormat` the engine cannot upload, inconsistent level offsets or lengths, a level count of zero on a compressed payload, and truncated or oversized ZLIB streams. A format the device cannot sample throws a `RenderError` with code `'unsupported-format'` when it is bound, so declare a variant rule for devices that lack it.
+
+No native format is recompressed, and that has a consequence for alpha. A premultiplied compressed asset filters exactly like premultiplied storage. A straight-alpha compressed asset is filtered straight and premultiplied in the draw shader afterwards, which does not carry the edge guarantee of premultiplied storage: transparent edges can show fringes. For quality-sensitive transparency, ship premultiplied compressed assets or dilate the colour under transparent pixels and author correct mips.
+
+<Callout type="warning" title="Basis Universal decoding">
+Universal KTX2 files load through the same texture type: ETC1S RGB/RGBA with BasisLZ and UASTC LDR 4x4 RGB/RGBA with no supercompression or Zstd. A loader-owned worker initializes the pinned, locally shipped Basis Universal WASM runtime only for the first universal texture, then reuses it. ExoJS chooses the first compatible format in `backend.supportedTextureFormats`, retaining the file's linear/sRGB transfer, alpha association and every authored mip. RGBA8 is the fallback when no compatible format exists or the base dimensions are not multiples of four; smaller authored mips may have odd dimensions. Native KTX2 files keep their zero-copy path and never initialize the worker or WASM.
+
+The worker and WASM ship in the npm package and Full ZIP; Vite resolves their package-relative URLs. There is no CDN default and no path configuration. Serve `.wasm` with `application/wasm` (the Full ZIP server already does). The pinned transcoder is built with Emscripten `DYNAMIC_EXECUTION=0`, so JavaScript `unsafe-eval` is not required. A same-origin CSP can use `script-src 'self' 'wasm-unsafe-eval'`, `worker-src 'self'`, and `connect-src 'self'`; apply it to worker responses as well. The runtime uses module workers without `importScripts` or script injection. Destroying the loader terminates the worker, and load cancellation rejects pending transcoding through `AbortSignal`.
+
+Arbitrary native `vkFormat` plus Zstd remains unsupported. The universal profile also excludes standalone `.basis`, universal ZLIB, HDR/XUASTC/video, non-RGB/RGBA channels, arrays, cube faces and 3D textures.
 
 ZLIB supercompression (KTX2 scheme 3) does load: it is a plain zlib stream per mip level, which the browser inflates itself, so it costs no decoder and no bundle size. It saves download bytes on top of the block compression and is unpacked before upload - the texture in VRAM is the same either way.
 </Callout>

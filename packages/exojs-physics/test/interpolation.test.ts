@@ -161,8 +161,8 @@ describe('interpolated bindings', () => {
 
     expect(body.angle).toBeCloseTo(5 * Math.PI, 4);
     expect(body.previousAngle).toBeCloseTo(4 * Math.PI, 4);
-    // Halfway between the two, in degrees - continuous, not wrapped into [0, 360).
-    expect(node.rotation).toBeCloseTo((4.5 * Math.PI * 180) / Math.PI, 3);
+    // Halfway between the two, in (counter-rotating) degrees - continuous, not wrapped into [0, 360).
+    expect(node.rotation).toBeCloseTo(-(4.5 * Math.PI * 180) / Math.PI, 3);
   });
 
   it('does not sweep a node across a teleport', () => {

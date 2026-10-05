@@ -160,7 +160,12 @@ void main(void) {
     vec3 colorSource = unpremultiply(src);
     vec3 colorBackdrop = unpremultiply(dst);
 
-    vec3 blended = blendAdvanced(u_mode, colorBackdrop, colorSource);
+    // The artistic blend functions (Darken..Luminosity, and Multiply/Screen when
+    // routed here) are bounded operations on [0, 1] straight colour, not a
+    // transparent HDR transport - an over-range input (e.g. additive-lit content
+    // premultiplied above 1) is clamped before evaluation. The un-clamped source
+    // still carries through the mix below when backdrop coverage is partial.
+    vec3 blended = blendAdvanced(u_mode, clamp(colorBackdrop, 0.0, 1.0), clamp(colorSource, 0.0, 1.0));
     // Cs' = (1 - αb)·Cs + αb·B(Cb, Cs)
     vec3 mixedSource = mix(colorSource, blended, alphaBackdrop);
 

@@ -8,6 +8,14 @@ import { ExampleBrowser } from '../../../components/ExampleBrowser';
          actually lands on something keyboard-traversable. Focus then tabs into the
          shadow tree of <example-browser> as normal. -->
     <div class="playground-main">
-        <ExampleBrowser client:load baseUrl={import.meta.env.BASE_URL} />
+        <p class="playground-tool-link">Need to inspect available art, sound, or fonts? <a href={`${import.meta.env.BASE_URL}en/tools/asset-browser/`}>Open the Asset Browser</a>.</p>
+        <ExampleBrowser client:load baseUrl={import.meta.env.BASE_URL} locale="en" />
     </div>
 </Layout>
+
+<style>
+    /* The playground fills the viewport under the header minus this row, so its
+       height is fixed and shared with ExampleBrowser through --playground-offset. */
+    .playground-main { --playground-offset: 2.25rem; }
+    .playground-tool-link { box-sizing: border-box; height: var(--playground-offset); line-height: var(--playground-offset); margin: 0; padding: 0 1rem; overflow: hidden; white-space: nowrap; font-size: 0.82rem; color: var(--fg-muted); }
+</style>

@@ -407,5 +407,4 @@ type AssertAliasesAreUsableKeys =
       ? true
       : never
     : never;
-const _keyboardAliasesAreUsableKeys: AssertAliasesAreUsableKeys = true;
-void _keyboardAliasesAreUsableKeys;
+true satisfies AssertAliasesAreUsableKeys;

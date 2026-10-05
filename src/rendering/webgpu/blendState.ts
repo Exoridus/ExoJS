@@ -15,10 +15,13 @@ export const getWebGpuBlendState = (blendMode: BlendModes): GPUBlendState => {
           srcFactor: 'one',
           dstFactor: 'one',
         },
+        // Unconstrained (as + ad) would exceed 1 under repeated additive draws;
+        // alpha uses ordinary source-over coverage instead, same as every other
+        // fixed-function mode.
         alpha: {
           operation: 'add',
           srcFactor: 'one',
-          dstFactor: 'one',
+          dstFactor: 'one-minus-src-alpha',
         },
       };
     case BlendModes.Subtract:
@@ -28,10 +31,13 @@ export const getWebGpuBlendState = (blendMode: BlendModes): GPUBlendState => {
           srcFactor: 'zero',
           dstFactor: 'one-minus-src',
         },
+        // Destination alpha is preserved exactly: this mode only attenuates RGB
+        // (Cd*(1-Cs), not arithmetic subtraction), and has no coverage of its own
+        // to composite over the destination with.
         alpha: {
           operation: 'add',
           srcFactor: 'zero',
-          dstFactor: 'one-minus-src-alpha',
+          dstFactor: 'one',
         },
       };
     case BlendModes.Multiply:
@@ -41,9 +47,13 @@ export const getWebGpuBlendState = (blendMode: BlendModes): GPUBlendState => {
           srcFactor: 'dst',
           dstFactor: 'one-minus-src-alpha',
         },
+        // Source-over coverage, matching every other fixed-function mode. This
+        // RGB shortcut (Cs*Cd + Cd*(1-as)) is exact only against an opaque
+        // destination; a translucent destination needs the backdrop-aware
+        // compositor's full W3C formula.
         alpha: {
           operation: 'add',
-          srcFactor: 'dst-alpha',
+          srcFactor: 'one',
           dstFactor: 'one-minus-src-alpha',
         },
       };

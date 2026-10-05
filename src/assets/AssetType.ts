@@ -2,11 +2,11 @@ import type { CacheLayout } from '#assets/cache/CacheLayout';
 import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 import type { NetworkSnapshot } from '#core/Connectivity';
 
-import type { Asset } from './Asset';
+import type { Asset, LeaflessAsset, ResourceAsset, ValueAsset } from './Asset';
 import { AssetImpl } from './Asset';
 import type { AssetConstructor } from './AssetConstructor';
-import type { AnyAssetConfig } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
+import { _requestConfig } from './assetMeta';
 import type { AssetSourceCodec } from './AssetSourceCodec';
 import type { SeamlessAdapter } from './seamless';
 
@@ -27,6 +27,52 @@ import type { SeamlessAdapter } from './seamless';
  * @advanced
  */
 export type AssetLeaf<Resource> = 'ref' | 'none' | SeamlessAdapter<Resource>;
+
+/** Option keys a descriptor's request owns, which an option bag can therefore never set. */
+interface ReservedRequestKeys {
+  readonly type?: never;
+  readonly source?: never;
+}
+
+/**
+ * The option argument a descriptor builder takes for a type with option bag
+ * `Options`: none for a type that takes no options, optional when every option
+ * is, and required when any option is - so a type that cannot build a resource
+ * without an option (a `font` needs its `family`) cannot be named without it.
+ * The existential `any` bag of {@link AnyAssetType} stays optional.
+ * @advanced
+ */
+export type AssetOptionsArgument<Options> = 0 extends 1 & Options
+  ? [options?: Options]
+  : [Options] extends [undefined]
+    ? [options?: undefined]
+    : Record<never, never> extends Options
+      ? [options?: Options & ReservedRequestKeys]
+      : undefined extends Options
+        ? // Without `strictNullChecks`, `undefined` is assignable to everything
+          // and says nothing about whether the bag is optional.
+          undefined extends Record<never, never>
+          ? [options: Options & ReservedRequestKeys]
+          : [options?: Options & ReservedRequestKeys]
+        : [options: Options & ReservedRequestKeys];
+
+/**
+ * The descriptor {@link AssetType.asset} produces for a type whose `leaf` has
+ * type `Leaf`: branded with that leaf policy, so a catalog classifies it exactly
+ * as the runtime will. A type that does not override `leaf` keeps the default
+ * `'ref'`.
+ * @advanced
+ */
+// The leading `any` check keeps the existential `AnyAssetType` a supertype of
+// every concrete type: its descriptor stays unbranded, so each branded
+// descriptor a concrete type produces is assignable to it.
+export type AssetDescriptor<Leaf, Resource> = 0 extends 1 & Resource
+  ? Asset<Resource>
+  : [Leaf] extends ['none']
+    ? LeaflessAsset<Resource>
+    : [Leaf] extends [SeamlessAdapter<unknown>]
+      ? ResourceAsset<Resource>
+      : ValueAsset<Resource>;
 
 /**
  * One request for an asset of a given type, as an identity hook sees it.
@@ -246,13 +292,18 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    * ```ts
    * const world = await loader.load(worldType.asset('level.world'));
    * ```
+   *
+   * The descriptor is branded with this type's {@link leaf} policy, so a
+   * catalog types its entry as the leaf the runtime hands out. `options` is
+   * required when the option bag has a required field. `type` and `source` are
+   * reserved for the request: an option bag carrying either throws.
    */
-  public asset(source: string, options?: Options): Asset<Resource> {
+  public asset(source: string, ...options: AssetOptionsArgument<Options>): AssetDescriptor<this['leaf'], Resource> {
     // A dynamic type's id is deliberately not a key of `AssetDefinitions` -
     // lifting that constraint is what this API exists for - but both names are
     // resolved through the same app-local lookup, so the widening is a naming
     // question rather than a dispatch one.
-    return new AssetImpl({ type: this.id, source, ...options } as unknown as AnyAssetConfig, this as AnyAssetType);
+    return new AssetImpl(_requestConfig(this.id, source, options[0]), this as AnyAssetType) as unknown as AssetDescriptor<this['leaf'], Resource>;
   }
 }
 

@@ -57,11 +57,18 @@ describe('BloomFilter options', () => {
     expect(new BloomFilter().levels).toBe(3);
   });
 
-  test('clamps the threshold to the 0..1 range luminance lives in', () => {
+  test('accepts a threshold above 1 - an HDR working target has luminance headroom above display white', () => {
     const filter = new BloomFilter({ threshold: 2 });
 
-    expect(filter.threshold).toBe(1);
-    filter.threshold = -1;
+    expect(filter.threshold).toBe(2);
+    filter.destroy();
+  });
+
+  test('clamps a negative threshold to zero', () => {
+    const filter = new BloomFilter({ threshold: -1 });
+
+    expect(filter.threshold).toBe(0);
+    filter.threshold = -3;
     expect(filter.threshold).toBe(0);
     filter.destroy();
   });

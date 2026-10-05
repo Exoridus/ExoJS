@@ -41,6 +41,8 @@ export interface MockWebGpuEnvironment {
   renderPassAttachmentCounts(): readonly number[];
   /** Fragment-target count of every synchronously created render pipeline, in call order. */
   pipelineTargetCounts(): readonly number[];
+  /** Format of every fragment target of each synchronously created pipeline, in call order. */
+  pipelineTargetFormats(): ReadonlyArray<readonly string[]>;
   /** Blend state of each fragment target of every synchronously created pipeline, in call order. */
   pipelineTargetBlends(): ReadonlyArray<ReadonlyArray<GPUBlendState | undefined>>;
   /** How many `beginRenderPass` descriptors carried a depth/stencil attachment. */
@@ -49,8 +51,14 @@ export interface MockWebGpuEnvironment {
   depthLoadOps(): readonly string[];
   /** `depthWriteEnabled` of every synchronously created pipeline that declared depth/stencil state. */
   pipelineDepthWrites(): readonly boolean[];
-  /** Format and usage of every `device.createTexture` call, in call order. */
-  textureDescriptors(): ReadonlyArray<{ readonly format: string; readonly usage: number }>;
+  /** Format, usage and mip level count of every `device.createTexture` call, in call order. */
+  textureDescriptors(): ReadonlyArray<{ readonly format: string; readonly usage: number; readonly mipLevelCount: number | undefined }>;
+  /** Label of every `beginRenderPass` descriptor, in call order. */
+  renderPassLabels(): readonly string[];
+  /** `bytesPerRow` of every `writeTexture` call, in call order. */
+  writeTextureRows(): readonly number[];
+  /** How many `createShaderModule` calls were made. */
+  shaderModuleCount(): number;
   restore(): void;
 }
 
@@ -75,10 +83,14 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const indexBufferBindings: Array<{ format: string; offset: number }> = [];
   const renderPassAttachmentCounts: number[] = [];
   const pipelineTargetCounts: number[] = [];
+  const pipelineTargetFormats: string[][] = [];
   const pipelineTargetBlends: Array<Array<GPUBlendState | undefined>> = [];
   const pipelineDepthWrites: boolean[] = [];
   const depthLoadOps: string[] = [];
-  const textureDescriptors: Array<{ format: string; usage: number }> = [];
+  const textureDescriptors: Array<{ format: string; usage: number; mipLevelCount: number | undefined }> = [];
+  const renderPassLabels: string[] = [];
+  const writeTextureRows: number[] = [];
+  let shaderModuleCount = 0;
   let depthAttachmentPasses = 0;
 
   const pass = {
@@ -100,6 +112,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const encoder = {
     beginRenderPass: (descriptor: GPURenderPassDescriptor) => {
       renderPassAttachmentCounts.push([...descriptor.colorAttachments].length);
+      renderPassLabels.push(descriptor.label ?? '');
 
       if (descriptor.depthStencilAttachment !== undefined) {
         depthAttachmentPasses++;
@@ -121,15 +134,23 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     },
     submit: (): void => {},
     copyExternalImageToTexture: (): void => {},
-    writeTexture: (_destination: unknown, data: ArrayBufferView): void => {
+    writeTexture: (_destination: unknown, data: ArrayBufferView, dataLayout?: { bytesPerRow?: number }): void => {
       writeTextureData.push(data);
+
+      if (dataLayout?.bytesPerRow !== undefined) {
+        writeTextureRows.push(dataLayout.bytesPerRow);
+      }
     },
   };
   const device = {
     // The spec's default. The backend reads it to bound a MultiRenderTarget's
     // attachment count, and falls back to 1 when a device reports nothing.
     limits: { maxColorAttachments: 8 },
-    createShaderModule: () => ({}) as GPUShaderModule,
+    createShaderModule: () => {
+      shaderModuleCount++;
+
+      return {} as GPUShaderModule;
+    },
     createBindGroupLayout: () => ({}) as GPUBindGroupLayout,
     createPipelineLayout: () => ({}) as GPUPipelineLayout,
     createBindGroup: (descriptor: GPUBindGroupDescriptor): GPUBindGroup => {
@@ -144,6 +165,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
       const targets = [...(descriptor.fragment?.targets ?? [])];
 
       pipelineTargetCounts.push(targets.length);
+      pipelineTargetFormats.push(targets.flatMap(target => (target === null ? [] : [target.format])));
       pipelineTargetBlends.push(targets.map(target => target?.blend));
 
       if (descriptor.depthStencil !== undefined) {
@@ -163,7 +185,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
       } as unknown as GPUBuffer;
     },
     createTexture: (descriptor: GPUTextureDescriptor): GPUTexture => {
-      textureDescriptors.push({ format: descriptor.format, usage: descriptor.usage });
+      textureDescriptors.push({ format: descriptor.format, usage: descriptor.usage, mipLevelCount: descriptor.mipLevelCount });
 
       // A stable view per GPU texture, matching the backend's cached-view
       // contract (a fresh view identity means "texture was recreated").
@@ -218,11 +240,15 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     indexBufferBindings: () => indexBufferBindings,
     renderPassAttachmentCounts: () => renderPassAttachmentCounts,
     pipelineTargetCounts: () => pipelineTargetCounts,
+    pipelineTargetFormats: () => pipelineTargetFormats,
     pipelineTargetBlends: () => pipelineTargetBlends,
     depthAttachmentPasses: () => depthAttachmentPasses,
     depthLoadOps: () => depthLoadOps,
     pipelineDepthWrites: () => pipelineDepthWrites,
     textureDescriptors: () => textureDescriptors,
+    renderPassLabels: () => renderPassLabels,
+    writeTextureRows: () => writeTextureRows,
+    shaderModuleCount: () => shaderModuleCount,
     restore: (): void => {
       if (previousGpu) {
         Object.defineProperty(navigator, 'gpu', previousGpu);

@@ -1,0 +1,84 @@
+import { isCurrentVersion } from './versions';
+
+export const EXAMPLE_ALIASES: Readonly<Record<string, string>> = {
+  'getting-started/game-loop.js': 'getting-started/hello-world.js',
+  'sprites-textures/spritesheet-frames.js': 'tweens-animation/frame-animation.js',
+  'application-scenes/camera-basic.js': 'application-scenes/world-vs-screen-coords.js',
+  'application-scenes/camera-and-view.js': 'application-scenes/world-vs-screen-coords.js',
+  'input/pointer-to-world.js': 'application-scenes/world-vs-screen-coords.js',
+  'tweens-animation/tween-with-yoyo.js': 'tweens-animation/tween-basics.js',
+  'tweens-animation/interrupt-and-replace.js': 'tweens-animation/tween-basics.js',
+  'sprites-textures/texture-loader.js': 'application-scenes/loading-screen.js',
+  'showcase/loading-progress-with-shader.js': 'application-scenes/loading-screen.js',
+  'application-scenes/pause-and-resume.js': 'showcase/pause-blur.js',
+  'application-scenes/scene-lifecycle.js': 'application-scenes/multiple-scenes.js',
+  'application-scenes/hud-overlay-scene.js': 'ui/hud-and-widgets.js',
+  'scene-graph/containers.js': 'scene-graph/nested-transforms.js',
+  'scene-graph/local-vs-global-transform.js': 'scene-graph/nested-transforms.js',
+  'showcase/mouse-parallax.js': 'scene-graph/parallax-starfield.js',
+  'performance/sprite-stress.js': 'performance/backend-comparison.js',
+  'performance/multi-texture-stress.js': 'performance/backend-comparison.js',
+  'debug-layer/performance-overlay.js': 'performance/backend-comparison.js',
+  'tweens-animation/tween-from-array.js': 'tweens-animation/tween-chains.js',
+  'geometry-graphics/mesh-triangle.js': 'geometry-graphics/mesh-textured-quad.js',
+  'geometry-graphics/graphics-primitives.js': 'geometry-graphics/graphics-gradient.js',
+  'geometry-graphics/gradient.js': 'geometry-graphics/graphics-gradient.js',
+  'geometry-graphics/infinite-grid.js': 'application-scenes/world-vs-screen-coords.js',
+  'render-targets/bloom-lite.js': 'filters/bloom-filter.js',
+  'showcase/vinyl-record.js': 'showcase/audio-visualisation.js',
+  'showcase/low-band-camera-shake.js': 'showcase/screen-shake-on-explosion.js',
+  'text-fonts/basic-text.js': 'text-fonts/typographic-styling.js',
+  'text-fonts/stroke-and-shadow.js': 'text-fonts/typographic-styling.js',
+  'text-fonts/web-fonts.js': 'text-fonts/typographic-styling.js',
+  'audio-basics/random-pitch-pool.js': 'audio-basics/sound-pool.js',
+  'showcase/typewriter-text.js': 'showcase/dialog-system.js',
+  'beat-detection/tempo-tracking.js': 'beat-detection/beat-sync-pulse.js',
+  'filters/drop-shadow-filter.js': 'filters/blur-filter.js',
+  'showcase/damage-flash.js': 'showcase/screen-shake-on-explosion.js',
+  'showcase/minimap-with-mask.js': 'render-targets/mini-map.js',
+  'beat-detection/frequency-bands.js': 'showcase/audio-visualisation.js',
+  'input/multi-gamepad.js': 'application-scenes/multi-view-split-screen.js',
+  'debug-layer/bounding-boxes.js': 'debug-layer/pointer-and-hittest.js',
+  'scene-graph/z-ordering.js': 'debug-layer/pointer-and-hittest.js',
+  'spatial-audio/moving-source.js': 'spatial-audio/listener-and-source.js',
+  'spatial-audio/falloff-curves.js': 'spatial-audio/listener-and-source.js',
+  'tilemap/infinite-terrain.js': 'tilemap/worker-streamed-terrain.js',
+  'performance/particle-stress.js': 'particles/gpu-particles.js',
+  'filters/filter-stack.js': 'filters/metaballs.js',
+  'filters/displacement-filter.js': 'render-targets/water-mirror.js',
+  'render-targets/post-processing-chain.js': 'render-targets/render-pipeline.js',
+  'custom-renderers/custom-render-pass.js': 'render-targets/render-pipeline.js',
+  'lighting/normal-mapped-sprites.js': 'lighting/many-lights.js',
+  'filters/palette-cycling.js': 'filters/color-matrix-filter.js',
+  'showcase/color-grading.js': 'filters/color-matrix-filter.js',
+  'filters/chromatic-aberration.js': 'filters/crt-scanlines.js',
+  'filters/noise-vignette.js': 'filters/crt-scanlines.js',
+  'text-fonts/text-glitch.js': 'filters/crt-scanlines.js',
+  'debug-layer/signal-bus-inspector.js': 'debug-layer/pointer-and-hittest.js',
+  'sprites-textures/svg-drawable.js': 'sprites-textures/texture-sampling.js',
+};
+
+export const resolveExampleAlias = (path: string): string => EXAMPLE_ALIASES[path] ?? path;
+
+/**
+ * Former examples that now live on a site tool page, keyed by catalog path.
+ * Values are relative to a locale root (`<base>/<locale>/`). These are not
+ * example aliases: a relocated path has no example to fall back to in the
+ * current catalog.
+ */
+export const EXAMPLE_TOOL_RELOCATIONS: Readonly<Record<string, string>> = {
+  'debug-layer/asset-browser.js': 'tools/asset-browser/',
+};
+
+/**
+ * The tool page a playground request should leave for, or `null` to open it as
+ * an example. Only the current version relocates: a historical version still
+ * ships the example at its original path.
+ */
+export const resolveExampleToolRelocation = (versionId: string, path: string | null): string | null => {
+  if (path === null || !isCurrentVersion(versionId)) {
+    return null;
+  }
+
+  return EXAMPLE_TOOL_RELOCATIONS[path] ?? null;
+};

@@ -221,9 +221,17 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
     copyFile(resolve(options.stagingDir, record.file), npmOut);
   }
 
-  // vendor/ - every lockstep package's ESM tree, read from the package's own
-  // dist so the set cannot drift from the release matrix, plus Core's bundles.
+  // vendor/ - the ESM tree of every package that is part of a *running* engine:
+  // Core and the extensions, read from the package's own dist so the set cannot
+  // drift from the release matrix, plus Core's bundles.
+  //
+  // A lockstep package that is not an engine extension is deliberately skipped:
+  // the offline tree ships what a consumer runs, and the app scaffolder is
+  // something they run once to write a project. It has no `dist/esm` to vendor,
+  // and requiring one would fail the release on a shape it never had.
   for (const pkg of LOCKSTEP_PACKAGES) {
+    if (!pkg.isExtension && pkg.dir !== '.') continue;
+
     const distDir = resolve(options.rootDir, pkg.dir, 'dist');
     const from = join(distDir, 'esm');
     if (!existsSync(from)) {
@@ -232,6 +240,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
     const vendorDir = join(treeDir, 'vendor', vendorDirFor(pkg.name));
     cpSync(from, join(vendorDir, 'esm'), { recursive: true });
     if (pkg.isExtension) continue;
+    cpSync(join(distDir, 'basis'), join(vendorDir, 'basis'), { recursive: true });
     for (const file of CORE_BUNDLE_FILES) {
       const bundle = join(distDir, file);
       if (!existsSync(bundle)) {

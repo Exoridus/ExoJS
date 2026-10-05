@@ -6,7 +6,7 @@ import { clamp } from '#math/utils';
 import { getAudioContext } from './audioContext';
 import { AudioStreamVoice } from './AudioStreamVoice';
 import type { AudioSystem } from './AudioSystem';
-import type { Playable, PlayOptions, Voice } from './Playable';
+import type { Playable, PlayOptions, Voice, VoiceProfile } from './Playable';
 import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatialOptions';
 
 /**
@@ -148,6 +148,18 @@ export class AudioStream implements Playable {
     });
 
     return voice;
+  }
+
+  /** Implements {@link Playable._profileVoice}. @internal */
+  public _profileVoice(system: AudioSystem, options: PlayOptions): VoiceProfile {
+    return {
+      bus: options.bus ?? system.music,
+      pausable: true,
+      duration: this.duration,
+      loop: options.loop ?? this.loop,
+      playbackRate: clamp(options.playbackRate ?? this.playbackRate, 0.1, 20),
+      detune: 0,
+    };
   }
 
   /**

@@ -44,7 +44,7 @@ const stagingDir = resolve(releaseDir, 'artifacts');
 const siteDistDir = resolve(repoRoot, 'site', 'dist');
 const manifestPath = resolve(stagingDir, 'release-manifest.json');
 
-const runner = createExecRunner({ echo: true });
+const runner = createExecRunner({ echo: true, logDirectory: resolve(repoRoot, '.workspace/logs') });
 const argv = process.argv.slice(2);
 const has = (flag: string): boolean => argv.includes(flag);
 
@@ -70,10 +70,17 @@ const ensureBuilt = (): void => {
 
 const build = (): void => {
   log('\n→ Building core + extensions (build-once)…');
-  // Core is `pnpm build`; each extension is `pnpm --filter <name> build`. pnpm
-  // resolves workspace-dependency order itself (e.g. tilemap before tiled/ldtk).
+  // Every lockstep package except Core lives in its own directory and is built
+  // with `pnpm --filter <name> build`; pnpm resolves workspace-dependency order
+  // itself (e.g. tilemap before tiled/ldtk). Core is the repository root and
+  // its `pnpm build` is that root build.
+  //
+  // Keyed on the directory rather than on `isExtension`: the scaffolder is a
+  // lockstep package that is not an extension, and building it with the root
+  // `pnpm build` compiles the engine instead of the CLI - which then packs with
+  // no `dist/` at all, because packing deliberately skips `prepack`.
   for (const pkg of LOCKSTEP_PACKAGES) {
-    const args = pkg.isExtension ? ['--filter', pkg.name, 'build'] : ['build'];
+    const args = pkg.dir === '.' ? ['build'] : ['--filter', pkg.name, 'build'];
     const r = runner.run({ command: 'pnpm', args, cwd: repoRoot });
     if (r.code !== 0) die(`build failed for ${pkg.name}:\n${r.stderr || r.stdout}`);
   }
@@ -88,9 +95,28 @@ const writeManifest = (manifest: ReleaseManifest): void => {
 const freezeRevision = (): string => {
   log('\n→ Freezing revision…');
 
-  const dirtyResult = runner.run({ command: 'git', args: ['diff-index', '--quiet', 'HEAD', '--'] });
+  // `git diff`, not `git diff-index`: the build rewrites generated files whose
+  // content is unchanged, which leaves them stat-dirty. `diff-index` answers
+  // from the stat cache alone and reports that as a modified working tree, so a
+  // release prepared straight after a build failed on a tree that `git status`
+  // calls clean. `diff` hashes the content and answers the question actually
+  // being asked here.
+  const dirtyResult = runner.run({ command: 'git', args: ['diff', '--quiet', 'HEAD', '--'] });
   if (dirtyResult.code !== 0) {
-    die('Working tree is dirty — a release must be prepared from a clean tree. Commit or stash changes first.');
+    // Name the paths: "the tree is dirty" is unactionable in a CI log that has
+    // just run a build over generated files, and the reason is usually one
+    // committed artefact the build legitimately rewrites.
+    const changed = runner.run({ command: 'git', args: ['diff', '--name-only', 'HEAD', '--'] });
+    const paths = changed.stdout
+      .split('\n')
+      .map((line: string) => line.trim())
+      .filter(Boolean);
+    die(
+      [
+        'Working tree is dirty — a release must be prepared from a clean tree. Commit or stash changes first.',
+        ...(paths.length ? ['', `${paths.length} differing path(s):`, ...paths.slice(0, 20).map((p: string) => `    ${p}`)] : []),
+      ].join('\n'),
+    );
   }
 
   const explicit = process.env['EXOJS_REVISION'];

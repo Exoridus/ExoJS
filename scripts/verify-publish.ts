@@ -1,36 +1,36 @@
-/**
- * Every published package packs and passes publint.
- *
- * The package set comes from `release/lockstep-packages.ts`, so a package that
- * joins the release line is checked here without a second edit. That is the
- * point of deriving it: the hand-written list this replaces had fallen three
- * packages behind the release matrix, and a package publint never saw could
- * have shipped with a broken `exports` map.
- */
-import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
+import { readOutputOptions } from './lib/output.ts';
+import { createExecRunner } from './release/command-runner.ts';
 import { INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES } from './release/lockstep-packages.ts';
 
 const PUBLINT = 'publint@0.3.21';
 
 const rootDir = resolve(import.meta.dirname, '..');
 const packages = [...LOCKSTEP_PACKAGES, ...INDEPENDENT_PACKAGES];
+const { mode } = readOutputOptions(process.argv.slice(2));
+const logDirectory = resolve(rootDir, '.workspace/logs');
+const runner = createExecRunner({ logDirectory });
 
-const run = (dir: string, command: string): boolean => {
-  console.log(`\n=== ${dir}: ${command} ===\n`);
-  // A shell so the pnpm shim resolves on Windows as well.
-  const result = spawnSync(command, { cwd: resolve(rootDir, dir), stdio: 'inherit', shell: true });
-  return result.status === 0;
+const run = (dir: string, args: readonly string[]): boolean => {
+  if (mode === 'verbose') console.log(`\n=== ${dir}: pnpm ${args.join(' ')} ===\n`);
+  const result = runner.run({ command: 'pnpm', args, cwd: resolve(rootDir, dir) });
+  if (mode === 'verbose' || result.code !== 0) {
+    process.stdout.write(result.stdout);
+    process.stderr.write(result.stderr);
+  }
+  return result.code === 0;
 };
 
 let failed = 0;
 
 for (const pkg of packages) {
-  const ok = run(pkg.dir, 'pnpm pack --dry-run') && run(pkg.dir, `pnpm dlx ${PUBLINT} --strict .`);
+  const ok = run(pkg.dir, ['pack', '--dry-run']) && run(pkg.dir, ['dlx', PUBLINT, '--strict', '.']);
   if (!ok) {
     failed += 1;
     console.error(`\n${pkg.name} failed the publish check.`);
+  } else if (mode !== 'silent') {
+    console.log(`${pkg.name}: pack OK, publint OK`);
   }
 }
 
@@ -39,4 +39,6 @@ if (failed > 0) {
   process.exit(1);
 }
 
-console.log(`\nAll ${packages.length} published packages pack and pass publint.`);
+if (mode !== 'silent') {
+  console.log(`\nAll ${packages.length} published packages pack and pass publint. Full logs: ${logDirectory}`);
+}

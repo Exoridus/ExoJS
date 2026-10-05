@@ -1,0 +1,71 @@
+{
+  "title": "PixelArray",
+  "description": "Storage returned by a pixel read.",
+  "symbol": "PixelArray",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Storage returned by a pixel read."
+      ],
+      "importLine": "import { PixelArray } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "PixelArray",
+          "signature": "Float32Array | Uint8ClampedArray",
+          "signatureTokens": [
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8ClampedArray",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/pixelPayload.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/pixelPayload.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/pixelPayload.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/pixelPayload.ts"
+}

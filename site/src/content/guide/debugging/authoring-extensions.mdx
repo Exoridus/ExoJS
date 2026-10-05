@@ -7,7 +7,7 @@ import Callout from '../../../components/Callout.astro';
 
 # Authoring extensions
 
-The [previous chapter](/ExoJS/en/guide/debugging/custom-renderers/) showed how to register a custom renderer against one running `Application`. An **extension** packages that same work — plus custom asset handlers and node serializers — into a single immutable descriptor you can publish as an npm package and drop into any project. This is exactly how the official `@codexo/exojs-particles`, `@codexo/exojs-tiled`, `@codexo/exojs-tilemap`, and `@codexo/exojs-physics` packages plug into the core.
+The [Custom renderers chapter](/ExoJS/en/guide/debugging/custom-renderers/) showed how to register a custom renderer against one running `Application`. An **extension** packages that same work — plus custom asset handlers and node serializers — into a single immutable descriptor you can publish as an npm package and drop into any project. This is exactly how the official `@codexo/exojs-particles`, `@codexo/exojs-tiled`, `@codexo/exojs-tilemap` packages plug into the core. Physics, pathfinding, and lighting are constructed directly instead; an optional package does not necessarily contribute an extension descriptor.
 
 The model is deliberately small and **add-only**: an extension can only *contribute* capabilities (a new drawable type's renderer, a new asset type, a new serializable node). It never patches or replaces core behaviour. The core ships nothing extension-specific — an `Application` understands your drawable or asset type only once its extension is active.
 
@@ -176,7 +176,7 @@ export * from './public';
     },
     "files": ["dist/esm/", "README.md", "LICENSE"],
     "peerDependencies": {
-        "@codexo/exojs": "0.15.x"
+        "@codexo/exojs": "0.18.x"
     },
     "devDependencies": {
         "@codexo/exojs": "workspace:*"
@@ -190,8 +190,8 @@ export * from './public';
 
 ExoJS is pre-1.0, so every minor release is a **clean break** — no back-compat shims. Extensions track the core in **lockstep**:
 
-- Pin the peer range to the core's current minor (`"@codexo/exojs": "0.15.x"`), and publish a matching minor of your extension for each core minor.
-- Publish your extension version to move in step with the core version it targets; document the compatibility in a small table in your README (`0.15.x ↔ 0.15.x`), as the official packages do.
+- Pin the peer range to the core's current minor (`"@codexo/exojs": "0.18.x"`), and publish a matching minor of your extension for each core minor.
+- Publish your extension version to move in step with the core version it targets; document the compatibility in a small table in your README (`0.18.x ↔ 0.18.x`), as the official packages do.
 - Because the id-collision check is by descriptor identity, a mismatched-version duplicate install throws loudly at registration rather than failing subtly at draw time.
 
 ## A tiny extension end to end

@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 9,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -239,6 +239,31 @@
           "params": [],
           "returnType": null,
           "description": "Light-field texels between the finest cascade's probes. Lower is sharper and costs a probe grid four times as large per halving. Defaults to 2. This is tuning rather than scene description: it changes how finely the same scene is sampled, never what is in it."
+        },
+        {
+          "name": "scene",
+          "signature": "scene?: LightingScene",
+          "signatureTokens": [
+            {
+              "text": "scene",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingScene",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene this system lights. Pass it whenever the system is built for one scene - in its init() - and registered in that scene's systems. The host's frame slot is application-wide, so a bound system installs its passes only while its scene is SceneState.Active (paused or not): on activation or restore, or at construction when the scene is already active. It leaves the frame slot when the scene is suspended for retention, and for good as soon as the scene's teardown begins. A scene prepared ahead of time, a preload discarded before it was ever shown, and a retained scene therefore leave the frame of the scene on screen alone, and keep their resources for when they are shown. Without it the system is application-wide: its passes go into the frame slot at construction and stay until it is destroyed, whatever scene is on screen - which is what a system built outside any scene, or registered in app.systems, wants. Passes enter the frame slot at the end of it, so a frame pass the scene installs itself before its lighting activates runs ahead of the lighting. A filter over the lit frame belongs in LightingOptions.post."
         },
         {
           "name": "shadowResolution",

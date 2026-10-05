@@ -1,6 +1,6 @@
 # ExoJS Site
 
-Astro + Lit docs/playground app for ExoJS. This package is private and is not published to npm.
+Astro + React docs/playground app for ExoJS. This package is private and is not published to npm.
 
 ## Relationship to `../examples`
 
@@ -31,7 +31,7 @@ pnpm --filter @codexo/exojs-examples preview
 
 ## Structure
 
-- `src/` — Astro pages and Lit playground shell
+- `src/` — Astro pages and React playground shell
 - `public/` — static site assets (`preview.html`, favicons, manifest, vendor bundles)
 - `scripts/` — sync scripts for vendor artifacts and generated static mirrors
 - `tests/` — smoke tests for built output

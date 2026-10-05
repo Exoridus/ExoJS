@@ -1,5 +1,11 @@
 import type { ObjectUrlPool } from './ObjectUrlPool';
 
+/** Interpretation required from the browser decoder. @internal */
+export type ImageDecodeMode = 'color' | 'data';
+
+const colorDecodeOptions: ImageBitmapOptions = Object.freeze({ colorSpaceConversion: 'default', premultiplyAlpha: 'none' });
+const dataDecodeOptions: ImageBitmapOptions = Object.freeze({ colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+
 /**
  * Decodes an image blob, preferring `createImageBitmap` for its zero-copy
  * GPU-upload path and falling back to an `<img>` element where the environment
@@ -10,9 +16,17 @@ import type { ObjectUrlPool } from './ObjectUrlPool';
  * for the lifetime of the document.
  * @internal
  */
-export const decodeImageBlob = (blob: Blob, objectUrls: ObjectUrlPool): Promise<ImageBitmap | HTMLImageElement> => {
+export const decodeImageBlob = (blob: Blob, objectUrls: ObjectUrlPool, mode: ImageDecodeMode = 'color'): Promise<ImageBitmap | HTMLImageElement> => {
   if (typeof createImageBitmap === 'function') {
-    return createImageBitmap(blob);
+    return createImageBitmap(blob, mode === 'color' ? colorDecodeOptions : dataDecodeOptions);
+  }
+
+  if (mode === 'data') {
+    return Promise.reject(
+      new TypeError(
+        "Numeric image decoding requires createImageBitmap() with colorSpaceConversion: 'none' and premultiplyAlpha: 'none'. Use Texture.fromPixels() or KTX2 bytes instead.",
+      ),
+    );
   }
 
   const objectUrl = objectUrls.create(blob);

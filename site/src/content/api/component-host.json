@@ -1,0 +1,71 @@
+{
+  "title": "ComponentHost",
+  "description": "The node type a component requires as its host - what a compile error names when SceneNode.addComponent is given a component for another kind of node. No value has this shape; it only appears in diagnostics.",
+  "symbol": "ComponentHost",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The node type a component requires as its host - what a compile error names when SceneNode.addComponent is given a component for another kind of node. No value has this shape; it only appears in diagnostics."
+      ],
+      "importLine": "import { ComponentHost } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "[componentHostRequirement]",
+          "signature": "[componentHostRequirement]: H",
+          "signatureTokens": [
+            {
+              "text": "[componentHostRequirement]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "H",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Component.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Component.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Component.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Component.ts"
+}

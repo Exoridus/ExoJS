@@ -237,10 +237,9 @@ export const planRepeat = (sourceLength: number, destinationLength: number, mode
       return buildClipPlan(destinationLength, sourceLength, true);
 
     default: {
-      // Exhaustiveness check: if a new RepeatMode is added, the assignment below
+      // Exhaustiveness check: if a new RepeatMode is added, the line below
       // will fail to compile (mode will not be assignable to never).
-      const _exhaustive: never = mode;
-      void _exhaustive;
+      mode satisfies never;
       throw new Error(`RepeatPlanner: unknown RepeatMode.`);
     }
   }

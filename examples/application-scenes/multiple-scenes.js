@@ -1,49 +1,83 @@
 // Auto-generated from multiple-scenes.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+const history = [];
+const record = event => {
+  history.push(event);
+  if (history.length > 8) {
+    history.shift();
+  }
+};
+const makeReadout = width => new Text('', { fillColor: Color.white, fontSize: 19, align: 'center' }).setAnchor(0.5, 0).setPosition(width / 2, 390);
+const makeBackground = (width, height, color) => {
+  const background = new Graphics();
+  background.fillColor = color;
+  background.drawRectangle(0, 0, width, height);
+  return background;
+};
 class MenuScene extends Scene {
-  label;
-  onTap;
+  background;
+  title;
+  readout;
+  updates = 0;
+  draws = 0;
+  async load() {
+    record('Menu: load');
+  }
   init() {
-    const app = this.app;
-    const { width, height } = app;
-    // Each scene owns its background: `init` runs once per activation, so
-    // navigating back and forth repaints the frame in this scene's colour.
-    app.clearColor.set(18, 38, 72, 1);
-    this.label = new Text('MENU\nClick to Start', { align: 'center', fillColor: Color.white, fontSize: 34, fontWeight: 'bold' });
-    this.label.setAnchor(0.5);
-    this.label.setPosition(width / 2, height / 2);
-    this.inputs.onTrigger(Keyboard.Space, () => {
-      void app.scenes.change(GameScene);
-    });
-    this.onTap = () => {
-      void app.scenes.change(GameScene);
-    };
-    app.input.onPointerTap.add(this.onTap);
+    record('Menu: init');
+    this.onActivate.add(() => record('Menu: activate'));
+    this.background = makeBackground(this.app.width, this.app.height, new Color(18, 38, 72));
+    this.title = new Text('MENU\nSpace: start game', { align: 'center', fillColor: Color.white, fontSize: 36, fontWeight: 'bold' });
+    this.title.setAnchor(0.5).setPosition(this.app.width / 2, 220);
+    this.readout = makeReadout(this.app.width);
+    this.inputs.onTrigger(Keyboard.Space, () => void this.app.scenes.change(GameScene));
+  }
+  update() {
+    this.updates++;
   }
   draw(context) {
-    context.render(this.label);
+    this.draws++;
+    this.readout.text = `Menu update ${this.updates} · draw ${this.draws}\n${history.join('\n')}`;
+    context.render(this.background);
+    context.render(this.title);
+    context.render(this.readout);
   }
   destroy() {
-    const app = this.app;
-    app.input.onPointerTap.remove(this.onTap);
+    record('Menu: destroy');
     super.destroy();
   }
 }
 class GameScene extends Scene {
-  label;
+  background;
+  title;
+  readout;
+  updates = 0;
+  draws = 0;
+  async load() {
+    record('Game: load');
+  }
   init() {
-    const app = this.app;
-    const { width, height } = app;
-    app.clearColor.set(24, 72, 42, 1);
-    this.label = new Text('GAME\nEsc to Menu', { align: 'center', fillColor: Color.white, fontSize: 34, fontWeight: 'bold' });
-    this.label.setAnchor(0.5);
-    this.label.setPosition(width / 2, height / 2);
-    this.inputs.onTrigger(Keyboard.Escape, () => {
-      void app.scenes.change(MenuScene);
-    });
+    record('Game: init');
+    this.onActivate.add(() => record('Game: activate'));
+    this.background = makeBackground(this.app.width, this.app.height, new Color(24, 72, 42));
+    this.title = new Text('GAME\nEsc: return to menu', { align: 'center', fillColor: Color.white, fontSize: 36, fontWeight: 'bold' });
+    this.title.setAnchor(0.5).setPosition(this.app.width / 2, 220);
+    this.readout = makeReadout(this.app.width);
+    this.inputs.onTrigger(Keyboard.Escape, () => void this.app.scenes.change(MenuScene));
+  }
+  update() {
+    this.updates++;
   }
   draw(context) {
-    context.render(this.label);
+    this.draws++;
+    this.readout.text = `Game update ${this.updates} · draw ${this.draws}\n${history.join('\n')}`;
+    context.render(this.background);
+    context.render(this.title);
+    context.render(this.readout);
+  }
+  destroy() {
+    record('Game: destroy');
+    super.destroy();
   }
 }
 const app = new Application({
@@ -55,8 +89,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
+  loader: { basePath: 'assets/' },
 });
 await app.start(MenuScene);

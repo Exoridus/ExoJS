@@ -3,10 +3,10 @@
 import { Curve } from '#distributions/Curve';
 import type { ParticleBatch } from '#ParticleStorage';
 
+import type { GlslContribution } from './GlslContribution';
+import { ParticleCurveLookup, particleLookupGlsl, particleLookupWgsl, sampleCurveLookup, uploadParticleLookup } from './particleLookup';
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
-
-const lookupSize = 256;
 
 /**
  * Fades only the alpha channel over a particle's lifetime, leaving RGB
@@ -17,11 +17,13 @@ const lookupSize = 256;
  * The default curve `1 → 0` produces a linear fade-out. For a fade-in then
  * fade-out, pass a curve like `[0,0]→[0.5,1]→[1,0]`.
  *
- * GPU-eligible: uploads the curve as a 256-tap 1D R32F texture; alpha is
- * resampled per-particle in the compute shader and stitched into the
- * existing color word with a single mask + shift.
+ * CPU, WebGL2 and WebGPU use the same 256-sample lookup table with
+ * explicit linear interpolation. Narrow keyframe features are approximated.
+ * Color channels are quantized to the nearest byte after interpolation.
  */
 export class AlphaFadeOverLifetime extends UpdateModule {
+  private readonly _lookup = new ParticleCurveLookup();
+
   public curve: Curve;
 
   public constructor(
@@ -38,48 +40,48 @@ export class AlphaFadeOverLifetime extends UpdateModule {
     const { elapsed, lifetime } = particles.timing;
     const color = particles.color;
     const liveCount = particles.count;
-    const curve = this.curve;
+    const lookup = this._lookup.get(this.curve);
 
     for (let i = 0; i < liveCount; i++) {
-      const t = (elapsed[i] ?? 0) / (lifetime[i] ?? 1);
-      const a = curve.evaluate(t);
-      const alphaByte = (Math.max(0, Math.min(1, a)) * 255) & 255;
+      const t = (elapsed[i] ?? 0) / Math.max(lifetime[i] ?? 1, 0.000001);
+      const a = sampleCurveLookup(lookup, t);
+      const alphaByte = Math.round(Math.max(0, Math.min(1, a)) * 255) & 255;
 
       color[i] = ((color[i] ?? 0) & 0x00ffffff) | (alphaByte << 24);
     }
   }
 
+  public override glsl(): GlslContribution {
+    return {
+      ...this.wgsl(),
+      prelude: particleLookupGlsl('AlphaFadeOverLifetime', 'curve'),
+      body: `
+float alphaSample = AlphaFadeOverLifetime_sample(timing.x / max(timing.y, 0.000001)).r;
+uint alphaByte = uint(floor(clamp(alphaSample, 0.0, 1.0) * 255.0 + 0.5));
+color = (color & 0x00ffffffu) | (alphaByte << 24u);
+      `,
+    };
+  }
+
   public override wgsl(): WgslContribution {
     return {
       key: 'AlphaFadeOverLifetime',
+      prelude: particleLookupWgsl('AlphaFadeOverLifetime', 'curve'),
       textures: [{ name: 'curve', format: 'r32float' }],
       body: `
                 let alphaT = clamp(timing[idx].x / max(timing[idx].y, 0.000001), 0.0, 1.0);
-                let alphaSample = textureSampleLevel(u_AlphaFadeOverLifetime_curve, u_AlphaFadeOverLifetime_curve_sampler, alphaT, 0.0).r;
-                let alphaByte = u32(clamp(alphaSample, 0.0, 1.0) * 255.0) & 255u;
+                let alphaSample = AlphaFadeOverLifetime_sample(alphaT).r;
+                let alphaByte = u32(floor(clamp(alphaSample, 0.0, 1.0) * 255.0 + 0.5)) & 255u;
                 color[idx] = (color[idx] & 0x00ffffffu) | (alphaByte << 24u);
             `,
     };
   }
 
+  public override textureData(): ReadonlyMap<string, Float32Array<ArrayBuffer>> {
+    return new Map([['curve', this._lookup.get(this.curve)]]);
+  }
+
   public override uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void {
-    const texture = textures.get('curve');
-
-    if (texture === undefined) {
-      return;
-    }
-
-    const data = new Float32Array(lookupSize);
-
-    for (let i = 0; i < lookupSize; i++) {
-      data[i] = this.curve.evaluate(i / (lookupSize - 1));
-    }
-
-    device.queue.writeTexture(
-      { texture },
-      data.buffer,
-      { offset: 0, bytesPerRow: lookupSize * 4, rowsPerImage: 1 },
-      { width: lookupSize, height: 1, depthOrArrayLayers: 1 },
-    );
+    uploadParticleLookup(device, textures.get('curve'), this._lookup.get(this.curve));
   }
 }

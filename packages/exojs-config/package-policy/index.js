@@ -140,6 +140,62 @@ export function verifyToolingPackage(dir, opts) {
 }
 
 /**
+ * Verify a published command-line package.
+ *
+ * A CLI is judged against what it actually ships: an executable entry point and
+ * nothing of the engine's runtime. The imported library profile's `dist/esm` and
+ * `exports["."]` expectations describe a different shape of package and would
+ * report a correct CLI as broken.
+ *
+ * A CLI declares no engine peer. It runs before any ExoJS exists - it writes the
+ * project that will install ExoJS - so a peer would be a compatibility claim
+ * about a host it never runs inside, and npm installs peers by default, which
+ * would pull the whole engine into a throwaway `npm create` environment for
+ * nothing. The relationship between scaffolder and engine is carried by the
+ * version line they share and by the range the scaffolder writes, not by a
+ * peer entry.
+ *
+ * @param {string} dir
+ * @param {{ name: string }} opts
+ * @returns {PolicyResult}
+ */
+export function verifyCliPackage(dir, opts) {
+  const pkg = read(dir);
+  /** @type {PolicyCheck[]} */
+  const checks = [];
+  /** @type {(name: string, cond: unknown, detail?: string) => number} */
+  const ok = (name, cond, detail) => checks.push({ name, ok: Boolean(cond), detail });
+
+  ok('name matches', pkg.name === opts.name, `${pkg.name} vs ${opts.name}`);
+  ok('type: module', pkg.type === 'module');
+  ok('not private', pkg.private !== true);
+  ok('has version', typeof pkg.version === 'string');
+  ok('has bin entry', pkg.bin != null && typeof pkg.bin === 'object' && Object.keys(pkg.bin).length > 0);
+  ok('exports ./package.json', pkg.exports?.['./package.json'] === './package.json');
+  ok('files allowlist', Array.isArray(pkg.files) && pkg.files.length > 0);
+  ok(
+    'files ship dist',
+    /** @type {string[]} */ (pkg.files ?? []).some(f => f.includes('dist')),
+  );
+  ok('ships LICENSE', (pkg.files ?? []).includes('LICENSE'));
+  ok('publishConfig public', pkg.publishConfig?.access === 'public');
+  ok('LICENSE file present', existsSync(join(dir, 'LICENSE')));
+  ok('README present', existsSync(join(dir, 'README.md')));
+  ok('has repository field', pkg.repository != null);
+
+  // A CLI depends on nothing from the engine: it runs before any ExoJS exists.
+  // A peer here would be an unfalse compatibility claim about a host it never
+  // runs inside, and npm installs peers by default - it would drag the engine
+  // into a throwaway `npm create` environment for nothing.
+  const runtimeDeps = { ...pkg.dependencies, ...pkg.peerDependencies };
+  ok('no engine peer or dependency', !Object.keys(runtimeDeps).some(d => d === '@codexo/exojs' || d.startsWith('@codexo/exojs-')));
+  ok('no workspace: in deps', !JSON.stringify(pkg.dependencies ?? {}).includes('workspace:'));
+  ok('no @/ alias in manifest', !JSON.stringify(pkg).includes('"@/"'));
+
+  return { ok: checks.every(c => c.ok), checks };
+}
+
+/**
  * Verify the private shared-config package.
  * @param {string} dir
  * @returns {PolicyResult}

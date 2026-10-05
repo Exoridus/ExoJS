@@ -32,6 +32,40 @@ export class RenderTarget {
    */
   public needsStencil = false;
 
+  /**
+   * Whether every pixel of this target is guaranteed to carry full coverage
+   * (alpha 1), so a blend whose shortcut is exact only over an opaque
+   * destination - {@link BlendModes.Multiply} - can be evaluated by the
+   * fixed-function pipeline without capturing the backdrop.
+   *
+   * Set by the backend for the root target when the canvas composites without
+   * an alpha channel, and left `false` everywhere else: every offscreen colour
+   * format carries an alpha channel, and a target the application renders into
+   * can hold partial coverage at any pixel. Set it to `true` yourself only for
+   * a target whose whole surface you keep fully covered - a value that is
+   * wrong here silently blends against coverage that is not there.
+   */
+  public opaqueDestination = false;
+
+  /**
+   * Samples per pixel this target's colour attachment is rendered at. `1`
+   * everywhere except an engine-owned working target an antialias request was
+   * honored for - see `RenderingApplicationOptions.webglAttributes`.
+   *
+   * A value above `1` makes the backend allocate multisample storage in place
+   * of the colour texture and keep the texture as the single-sample resolve
+   * destination, so everything that samples the target reads the resolved
+   * frame and needs no resolve of its own. Nothing is resolved until
+   * `RenderBackend.resolveRenderTarget` is called, so a caller that sets this
+   * itself must resolve before reading the target back.
+   *
+   * Ignored on a target that opted into a sampleable depth attachment
+   * ({@link depthTexture}): a multisample attachment cannot be sampled, so such
+   * a target stays single-sample. The root target is always single-sample - the
+   * browser owns its multisampling.
+   */
+  public sampleCount = 1;
+
   private readonly _root: boolean;
   private _depthTexture: DepthTexture | null = null;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();

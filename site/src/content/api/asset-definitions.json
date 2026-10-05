@@ -391,7 +391,7 @@
         },
         {
           "name": "image",
-          "signature": "image: { config: { mimeType?: string; source: string }; resource: HTMLImageElement }",
+          "signature": "image: { config: { colorSpace?: \"none\"; mimeType?: string; source: string }; resource: DecodedImage }",
           "signatureTokens": [
             {
               "text": "image",
@@ -415,6 +415,26 @@
             },
             {
               "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "colorSpace",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
               "kind": "punctuation"
             },
             {
@@ -466,7 +486,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "HTMLImageElement",
+              "text": "DecodedImage",
               "kind": "type"
             },
             {

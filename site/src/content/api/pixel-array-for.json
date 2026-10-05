@@ -1,0 +1,95 @@
+{
+  "title": "PixelArrayFor",
+  "description": "Array corresponding to the requested representation.",
+  "symbol": "PixelArrayFor",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Array corresponding to the requested representation."
+      ],
+      "importLine": "import { PixelArrayFor } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "PixelArrayFor",
+          "signature": "T extends \"float32\" ? Float32Array : Uint8ClampedArray",
+          "signatureTokens": [
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"float32\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8ClampedArray",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/pixelPayload.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/pixelPayload.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/pixelPayload.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/pixelPayload.ts"
+}

@@ -20,6 +20,13 @@ flat in vec4  v_pxAxes;
 
 layout(location = 0) out vec4 fragColor;
 
+// texel-fetched node colours are authored sRGB, straight alpha - the same
+// authoring convention as Color. Decode the RGB once at the point each colour
+// is read: alpha is coverage/opacity, never gamma-transformed.
+vec4 decodeAuthoredColor(vec4 raw) {
+  return vec4(srgbToLinear(raw.rgb), raw.a);
+}
+
 // ── Gradient ramp ────────────────────────────────────────────────────────────
 //
 // The stops live in the node's own packed row: colours in texels 10..17, their
@@ -40,13 +47,13 @@ float gradientStopOffset(int ni, int index) {
 vec4 evalTextGradient(int ni, int stopCount, float t) {
   float position   = clamp(t, 0.0, 1.0);
   float prevOffset = gradientStopOffset(ni, 0);
-  vec4  prevColor  = texelFetch(u_nodeData, ivec2(10, ni), 0);
+  vec4  prevColor  = decodeAuthoredColor(texelFetch(u_nodeData, ivec2(10, ni), 0));
 
   for (int i = 1; i < 8; i++) {
     if (i >= stopCount) break;
 
     float offset = gradientStopOffset(ni, i);
-    vec4  color  = texelFetch(u_nodeData, ivec2(10 + i, ni), 0);
+    vec4  color  = decodeAuthoredColor(texelFetch(u_nodeData, ivec2(10 + i, ni), 0));
 
     if (position <= offset) {
       // Coincident stops are a hard colour break, not a division by zero.
@@ -73,10 +80,10 @@ void main(void) {
   // texel 6: (shadowOffX_px, shadowOffY_px, 0, sdfRadius_logical)
   // texel 7: (gradAxisX, gradAxisY, gradBias, 0)
   // texels 10-19: gradient stop colours and offsets
-  vec4 tFill    = texelFetch(u_nodeData, ivec2(2, ni), 0);
-  vec4 tOutline = texelFetch(u_nodeData, ivec2(3, ni), 0);
+  vec4 tFill    = decodeAuthoredColor(texelFetch(u_nodeData, ivec2(2, ni), 0));
+  vec4 tOutline = decodeAuthoredColor(texelFetch(u_nodeData, ivec2(3, ni), 0));
   vec4 tParams  = texelFetch(u_nodeData, ivec2(4, ni), 0);
-  vec4 tShadow  = texelFetch(u_nodeData, ivec2(5, ni), 0);
+  vec4 tShadow  = decodeAuthoredColor(texelFetch(u_nodeData, ivec2(5, ni), 0));
   vec4 tShadow2 = texelFetch(u_nodeData, ivec2(6, ni), 0);
   vec4 tGradAxis = texelFetch(u_nodeData, ivec2(7, ni), 0);
 
@@ -168,7 +175,7 @@ void main(void) {
   // glyph interior - which is the default, and the reason an underline picks up
   // the gradient for free. An explicit decoration colour overrides it here.
   if (v_decoration == 1u && tShadow2.z > 0.5) {
-    fillColor = texelFetch(u_nodeData, ivec2(8, ni), 0);
+    fillColor = decodeAuthoredColor(texelFetch(u_nodeData, ivec2(8, ni), 0));
   }
 
   fragColor = fillColor * fill

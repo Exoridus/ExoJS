@@ -7,7 +7,6 @@
 // not collected by vitest (no `.test.ts` suffix).
 
 import {
-  type Asset,
   type AssetFactory,
   type AssetRequest,
   type AssetSourceCodec,
@@ -17,6 +16,7 @@ import {
   type Loader,
   type LoadingQueue,
   textSourceCodec,
+  type ValueAsset,
 } from '@codexo/exojs';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
@@ -82,9 +82,10 @@ class WorldAssetType extends AssetType<WorldData, World, WorldOptions, string> {
 const worldType = new WorldAssetType();
 declare const loader: Loader;
 
-// (4) The descriptor is typed by the type instance alone.
+// (4) The descriptor is typed by the type instance alone, branded with its
+// leaf policy - the default `'ref'` here.
 const level = worldType.asset('level.world');
-type _DescriptorCarriesResource = Expect<Equal<typeof level, Asset<World>>>;
+type _DescriptorCarriesResource = Expect<Equal<typeof level, ValueAsset<World>>>;
 
 // (5) So the load resolves to the resource, with no generic at the call site.
 const loading = loader.load(worldType.asset('level.world'));
@@ -109,7 +110,7 @@ class NoteAssetType extends AssetType<string, string[]> {
 
 const noteType = new NoteAssetType();
 const note = noteType.asset('a.note');
-type _NoteIsStringArray = Expect<Equal<typeof note, Asset<string[]>>>;
+type _NoteIsStringArray = Expect<Equal<typeof note, ValueAsset<string[]>>>;
 // @ts-expect-error - this type declares no options at all.
 noteType.asset('a.note', { locale: 'de' });
 

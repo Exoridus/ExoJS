@@ -1,4 +1,3 @@
-import type { RenderingContext } from '@codexo/exojs';
 import { Color, Keyboard, Scene, Text } from '@codexo/exojs';
 
 import { GameScene } from './GameScene';
@@ -24,9 +23,5 @@ export class GameOverScene extends Scene<GameOverData> {
     this.inputs.onTrigger(Keyboard.Space, () => {
       void this.app!.scenes.change(GameScene);
     });
-  }
-
-  public override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }

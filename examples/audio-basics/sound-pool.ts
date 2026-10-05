@@ -18,6 +18,7 @@ class SoundPoolScene extends Scene {
   private voices: number[] = [];
   private clock = 0;
   private evictions = 0;
+  private lastDetune = 0;
   private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
@@ -46,13 +47,13 @@ class SoundPoolScene extends Scene {
       .setPosition(width / 2, height - 48);
 
     this.hud = mountControls({
-      title: 'Sound Pool',
+      title: 'Polyphonic Sound',
       controls: [
         { keys: 'Click', action: 'enable audio (once)' },
         { keys: 'Space', action: 'hold to spawn voices into the pool' },
       ],
       status: 'Click or press any key to enable audio, then hold Space.',
-      hint: `The pool caps at ${POOL_SIZE} concurrent voices. Each slot below lights up while a voice plays; at capacity the oldest voice is evicted so playback never stacks unbounded.`,
+      hint: `The pool caps at ${POOL_SIZE} voices. Each shot varies pitch; at capacity, the oldest voice is evicted.`,
     });
 
     this.inputs.onActive(Keyboard.Space, () => {
@@ -74,9 +75,11 @@ class SoundPoolScene extends Scene {
       this.evictions += 1;
     }
 
-    this.voices.push(this.clock + this.sound.duration);
     // Small random pitch per shot keeps the barrage from sounding robotic.
-    app.audio.play(this.sound, { playbackRate: 0.85 + Math.random() * 0.3, volume: 0.5 });
+    const playbackRate = 0.85 + Math.random() * 0.3;
+    this.lastDetune = 1200 * Math.log2(playbackRate);
+    this.voices.push(this.clock + this.sound.duration / playbackRate);
+    app.audio.play(this.sound, { playbackRate, volume: 0.5 });
   }
 
   override update(delta: Seconds): void {
@@ -87,7 +90,9 @@ class SoundPoolScene extends Scene {
 
     // A Sound played before the AudioContext unlocks on the first gesture
     // is a no-op, so skip firing while audio is still locked.
-    if (!this.firing || app.audio.locked) return;
+    if (!this.firing || app.audio.locked) {
+      return;
+    }
 
     this.timer += delta;
     while (this.timer >= FIRE_INTERVAL) {
@@ -124,7 +129,7 @@ class SoundPoolScene extends Scene {
       this.graphics.drawRectangle(x, y, cell, cell);
     }
 
-    this.readout.text = `Active voices: ${active} / ${POOL_SIZE}     evicted: ${this.evictions}`;
+    this.readout.text = `Voices ${active} / ${POOL_SIZE}  ·  evicted ${this.evictions}  ·  last pitch ${this.lastDetune >= 0 ? '+' : ''}${this.lastDetune.toFixed(0)} cents`;
 
     context.render(this.graphics);
     context.render(this.label);
@@ -133,6 +138,11 @@ class SoundPoolScene extends Scene {
     if (app.audio.locked) {
       context.render(this.tapPrompt);
     }
+  }
+
+  override destroy(): void {
+    this.hud.dispose();
+    super.destroy();
   }
 }
 

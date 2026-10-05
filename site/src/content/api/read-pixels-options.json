@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 1,
+  "memberCount": 2,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 1,
+    "properties": 2,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "dataType",
+          "signature": "dataType?: T",
+          "signatureTokens": [
+            {
+              "text": "dataType",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Defaults to uint8 for rgba8/rgba8srgb - the attachment's own stored bytes, sRGB-encoded or not, never unassociated or tone-mapped. Use float32 for rgba16f/rgba32f; values are never normalized or clamped."
+        },
         {
           "name": "region",
           "signature": "region?: ReadonlyRectangle",

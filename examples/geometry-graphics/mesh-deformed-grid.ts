@@ -4,7 +4,7 @@ const COLS = 16;
 const ROWS = 16;
 const SIZE = 460;
 
-function buildGrid(): { vertices: Float32Array; uvs: Float32Array; indices: Uint16Array } {
+const buildGrid = (): { vertices: Float32Array; uvs: Float32Array; indices: Uint16Array } => {
   const half = SIZE / 2;
   const stepX = SIZE / COLS;
   const stepY = SIZE / ROWS;
@@ -40,7 +40,7 @@ function buildGrid(): { vertices: Float32Array; uvs: Float32Array; indices: Uint
   }
 
   return { vertices, uvs, indices };
-}
+};
 
 const UV_GRID = assets.technical.filtering.uvGrid256;
 

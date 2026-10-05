@@ -1,5 +1,6 @@
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
+import { createPixelArray, type PixelDataType } from '#rendering/pixelPayload';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RendererRegistry } from '#rendering/RendererRegistry';
@@ -8,6 +9,7 @@ import { createRenderStats, type RenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { ColorTextureFormat } from '#rendering/types';
 
 import { createPixelReadbackDouble } from './pixel-readback-double';
 
@@ -107,17 +109,41 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     popStencilClip() {
       return this;
     },
+    supportsReadbackFormat() {
+      return true;
+    },
     supportsColorFormat() {
       return true;
     },
-    readPixels(_source: RenderTexture, _x: number, _y: number, width: number, height: number) {
-      return Promise.resolve(new Uint8ClampedArray(width * height * 4));
+    resolveRenderTarget() {
+      return undefined;
     },
-    createPixelReadback(_source: RenderTexture, _x: number, _y: number, width: number, height: number, slots: number) {
-      return createPixelReadbackDouble(width, height, slots);
+    getColorFormatCapabilities() {
+      return { renderable: true, filterable: true, blendable: true, sampleCounts: [1] };
     },
-    acquireRenderTexture(width: number, height: number) {
-      return new RenderTexture(width, height);
+    readPixels: (<T extends PixelDataType = 'uint8'>(
+      _source: RenderTexture,
+      _x: number,
+      _y: number,
+      width: number,
+      height: number,
+      dataType: T = 'uint8' as T,
+    ) => {
+      return Promise.resolve(createPixelArray(width * height * 4, dataType));
+    }) as RenderBackend['readPixels'],
+    createPixelReadback: (<T extends PixelDataType = 'uint8'>(
+      _source: RenderTexture,
+      _x: number,
+      _y: number,
+      width: number,
+      height: number,
+      slots: number,
+      dataType: T = 'uint8' as T,
+    ) => {
+      return createPixelReadbackDouble(width, height, slots, dataType);
+    }) as RenderBackend['createPixelReadback'],
+    acquireRenderTexture(width: number, height: number, format?: ColorTextureFormat) {
+      return new RenderTexture(width, height, format === undefined ? {} : { format });
     },
     releaseRenderTexture() {
       return this;

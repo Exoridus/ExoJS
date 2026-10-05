@@ -1,5 +1,5 @@
 import { ApplicationState, type Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
-import { Children, createContext, isValidElement, type ReactElement, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { Children, createContext, isValidElement, type ReactElement, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useExoApp } from './useExoApp';
 
@@ -11,9 +11,30 @@ ActiveSceneContext.displayName = 'ExoActiveScene';
  * Returns the currently-active scene instance from the nearest {@link Scenes},
  * or `null` while none is live. Useful for HUD/overlay components that need to
  * read scene state.
+ *
+ * Pass a scene class to narrow the result: the active scene is returned only
+ * when it is an instance of `SceneClass` (checked with `instanceof` at
+ * runtime), and `null` otherwise.
+ *
+ * @example
+ * ```tsx
+ * function Hud() {
+ *   const scene = useActiveScene(GameScene);
+ *   if (scene === null) return null;
+ *   return <div>Score: {scene.score}</div>;
+ * }
+ * ```
  */
-export function useActiveScene<T extends ExoScene = ExoScene>(): T | null {
-  return useContext(ActiveSceneContext) as T | null;
+export function useActiveScene(): ExoScene | null;
+export function useActiveScene<T extends ExoScene>(SceneClass: abstract new (...args: never[]) => T): T | null;
+export function useActiveScene<T extends ExoScene>(SceneClass?: abstract new (...args: never[]) => T): ExoScene | null {
+  const scene = useContext(ActiveSceneContext);
+
+  if (SceneClass === undefined) {
+    return scene;
+  }
+
+  return scene instanceof SceneClass ? scene : null;
 }
 
 /** Props for a {@link Scene} declaration. */
@@ -54,6 +75,13 @@ export interface ScenesProps {
  * scene's React children (HUD overlay) render alongside, and can read the
  * instance via {@link useActiveScene}.
  *
+ * Activations that run while startup is still in flight - React StrictMode
+ * double-mounts every effect in development, and `active` may change before
+ * the first scene has loaded - join that `app.start()` call instead of racing
+ * a second navigation against it, and only switch afterwards if startup did
+ * not already leave the requested scene active. A StrictMode double mount
+ * therefore activates the scene exactly once.
+ *
  * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `load()`
  * rejects) is caught and routed to {@link Application.onError} rather than
  * left as an unhandled promise rejection - subscribe via `app.onError.add(...)`
@@ -76,6 +104,9 @@ export interface ScenesProps {
 export function Scenes({ active, transition, children }: ScenesProps): ReactElement {
   const app = useExoApp();
   const [instance, setInstance] = useState<ExoScene | null>(null);
+  // Bumped on every effect run so an async activation can tell whether a newer
+  // run has taken over since it started.
+  const generationRef = useRef(0);
 
   // Collect the <Scene> declarations from children (keyed by name).
   const registry = useMemo(() => {
@@ -93,6 +124,8 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
   const SceneClass = entry?.component ?? null;
 
   useEffect(() => {
+    const generation = ++generationRef.current;
+
     if (SceneClass === null) {
       // No matching <Scene name={active}> declaration. No public API switches
       // the director back to scene-less mid-lifetime - the
@@ -105,24 +138,46 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
     }
 
     let cancelled = false;
+    // Only the newest, still-mounted run may touch component or app state: an
+    // older run's activation is no longer what the caller asked for, and
+    // neither is its failure.
+    const isStale = (): boolean => cancelled || generationRef.current !== generation;
+    const changeOptions = transition !== undefined ? { transition } : {};
 
     const apply = async (): Promise<void> => {
       try {
-        if (app.state === ApplicationState.Stopped) {
-          // First activation initializes the backend and starts the frame loop;
-          // transitions only apply to subsequent switches.
+        if (app.state === ApplicationState.Stopped || app.state === ApplicationState.Loading) {
+          // Loading means an earlier run's start() is still in flight,
+          // including its initial navigation, which scenes.change() would
+          // collide with (navigation rejects instead of queueing). start()
+          // joins that run and ignores the target passed here. Transitions
+          // only apply to switches, never to the first activation.
           await app.start(SceneClass);
+
+          if (isStale()) {
+            return;
+          }
+
+          // Exact class comparison rather than instanceof: one declared scene
+          // may subclass another, and startup must not count as having
+          // activated the base when it activated the subclass.
+          if (app.scenes.currentScene?.constructor !== SceneClass) {
+            await app.scenes.change(SceneClass, changeOptions);
+          }
         } else {
-          await app.scenes.change(SceneClass, transition !== undefined ? { transition } : {});
+          await app.scenes.change(SceneClass, changeOptions);
         }
-        if (!cancelled) {
+
+        if (!isStale()) {
           setInstance(app.scenes.currentScene);
         }
       } catch (error) {
         // Route to Application.onError instead of leaving an unhandled
         // rejection - app.start()/change() reject rather than dispatching
         // onError themselves.
-        app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
+        if (!isStale()) {
+          app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
+        }
       }
     };
 

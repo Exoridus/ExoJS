@@ -42,44 +42,56 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 ## Usage — procedural map
 
 ```ts
-import { Application, TextureRegion } from '@codexo/exojs';
+import { Application, Scene, type Texture, TextureRegion } from '@codexo/exojs';
 import { TileLayer, TileMap, TileMapNode, TileSet, tilemapExtension, TILE_TRANSFORM_IDENTITY } from '@codexo/exojs-tilemap';
+
+class WorldScene extends Scene {
+  private atlas: Texture | null = null;
+
+  public override async load(): Promise<void> {
+    // A Loader-owned atlas texture: the tilemap runtime never destroys it.
+    this.atlas = await this.loader.load('tiles.png');
+  }
+
+  public override init(): void {
+    const atlas = this.atlas!;
+    const terrain = new TileSet({
+      name: 'terrain',
+      texture: new TextureRegion(atlas, { x: 0, y: 0, width: atlas.width, height: atlas.height }),
+      tileWidth: 16,
+      tileHeight: 16,
+      tileCount: 256,
+    });
+
+    const ground = new TileLayer({
+      id: 1,
+      name: 'ground',
+      width: 64,
+      height: 64,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [terrain],
+    });
+    ground.setTileAt(0, 0, { tileset: terrain, localTileId: 5, transform: TILE_TRANSFORM_IDENTITY });
+
+    const map = new TileMap({
+      name: 'world',
+      width: 64,
+      height: 64,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [terrain],
+      layers: [ground],
+    });
+
+    // Render the whole map: a scene draws its root without a draw() override.
+    this.addChild(new TileMapNode(map));
+  }
+}
 
 const app = new Application({ extensions: [tilemapExtension] /* canvas, … */ });
 
-// Tileset over a Loader-owned atlas texture (the runtime never destroys it).
-const atlas = await app.loader.load('tiles.png');
-const terrain = new TileSet({
-  name: 'terrain',
-  texture: new TextureRegion(atlas, { x: 0, y: 0, width: atlas.width, height: atlas.height }),
-  tileWidth: 16,
-  tileHeight: 16,
-  tileCount: 256,
-});
-
-const ground = new TileLayer({
-  id: 1,
-  name: 'ground',
-  width: 64,
-  height: 64,
-  tileWidth: 16,
-  tileHeight: 16,
-  tilesets: [terrain],
-});
-ground.setTileAt(0, 0, { tileset: terrain, localTileId: 5, transform: TILE_TRANSFORM_IDENTITY });
-
-const map = new TileMap({
-  name: 'world',
-  width: 64,
-  height: 64,
-  tileWidth: 16,
-  tileHeight: 16,
-  tilesets: [terrain],
-  layers: [ground],
-});
-
-// Render the whole map.
-app.scenes.root.addChild(new TileMapNode(map));
+await app.start(WorldScene);
 ```
 
 ### Interleaving actors between layers — `TileMapView`
@@ -116,6 +128,16 @@ Actors are application-owned siblings. `TileMapView` never adopts or destroys ac
 - Destroying a view or a band destroys only the tile nodes it generated — never actors, the `TileMap`, its `TileLayer`s, or tileset textures.
 - There is no map-replacement API: to swap maps, destroy the old view and create a new view from the new map — the actor tree is untouched.
 - After layers are structurally added to or removed from the map, call `view.refreshLayers()`: unchanged layer nodes keep their identity and bands keep their placement in your scene graph.
+
+## Isometric grids
+
+Supply a shared `TileProjection({ orientation: 'isometric', tileWidth, tileHeight, originX, originY })` to the map and each tile layer. Orthogonal is the default. `tileToPixel()` projects the cell's top diamond vertex; `pixelToTile()` inversely projects and floors both grid axes, including negative coordinates. Cell boundaries are half-open. `projection.logicalToPixel()` and `pixelToLogical()` preserve fractional coordinates. Isometric logical cells are squares of side `tileHeight`; display diamonds may have any positive integer width and height.
+
+Layer offsets are display translations. `TileLayer.logicalOffset` exposes the corresponding logical vector for simulation. A map's pixel dimensions describe the projected grid AABB, while `projection.getBounds()` also supplies its possibly negative origin. Scene-node bounds include isometric artwork overhangs and tileset offsets. Picking describes cells, not opaque pixels of tall artwork; apply inverse scene and camera transforms before calling the map/layer helpers.
+
+Isometric rendering splits resident storage chunks into diagonal draw sections, sorted across chunks by increasing `tx + ty`, then increasing `tx`. Only consecutive tiles with the same texture are batched, so tall tiles preserve painter order across texture and chunk boundaries. Geometry stays revision-cached. All sections share a layer-grid snap origin, including odd tile sizes. More draw sections and texture changes can cost more than orthogonal batching; no throughput improvement is promised.
+
+Object layers remain data-only. With a projection their objects use logical coordinates; `layer.getDisplayObject(object)` returns display geometry with the layer offset applied. Rectangles may become polygons and ellipses retain their exact affine shape. Tile/text dimensions stay in display pixels. Actors remain application-owned; bands interleave them between layers, not automatically among individual terrain tiles.
 
 ## Renderer model
 

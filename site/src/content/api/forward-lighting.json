@@ -1,6 +1,6 @@
 {
   "title": "ForwardLighting",
-  "description": "Lighting shaded inside the sprite fragment stage, against one packed light texture. ```ts const lighting = new ForwardLighting(app, { maxLights: 16, ambient: new Color(20, 20, 24) }); scene.systems.add(lighting); ``` One draw and no extra render targets, which is what makes it the floor renderer. It is also the only one that does normal mapping, through LitMaterial - the other two multiply a finished frame, which has no surface normals left to shade against. The price is the cap: every lit fragment walks every light, so ForwardLightingOptions.maxLights bounds how many there may be, and it casts no shadows at all. It is the one system that can be built without a host, because its light data is a texture a material samples rather than anything the frame slot runs: ```ts const lighting = new ForwardLighting({ maxLights: 16 }); ``` A filter chain is a frame pass, so `post` needs the host.",
+  "description": "Lighting shaded inside the sprite fragment stage, against one packed light texture. ```ts // In Scene.init(): const lighting = new ForwardLighting(this.app, { maxLights: 16, ambient: new Color(20, 20, 24), scene: this }); this.systems.add(lighting); ``` One draw and no extra render targets, which is what makes it the floor renderer. It is also the only one that does normal mapping, through LitMaterial - the other two multiply a finished frame, which has no surface normals left to shade against. The price is the cap: every lit fragment walks every light, so ForwardLightingOptions.maxLights bounds how many there may be, and it casts no shadows at all. It is the one system that can be built without a host, because its light data is a texture a material samples rather than anything the frame slot runs: ```ts const lighting = new ForwardLighting({ maxLights: 16 }); ``` A filter chain is a frame pass, so `post` needs the host - and, for a system built for one scene, LightingOptions.scene, which keeps the chain out of the frame while that scene is not the one on screen.",
   "symbol": "ForwardLighting",
   "kind": "class",
   "subsystem": "lighting",
@@ -20,12 +20,12 @@
       "members": [],
       "paragraphs": [
         "Lighting shaded inside the sprite fragment stage, against one packed light texture.",
-        "```ts const lighting = new ForwardLighting(app, { maxLights: 16, ambient: new Color(20, 20, 24) });",
-        "scene.systems.add(lighting); ```",
+        "```ts // In Scene.init(): const lighting = new ForwardLighting(this.app, { maxLights: 16, ambient: new Color(20, 20, 24), scene: this });",
+        "this.systems.add(lighting); ```",
         "One draw and no extra render targets, which is what makes it the floor renderer. It is also the only one that does normal mapping, through LitMaterial - the other two multiply a finished frame, which has no surface normals left to shade against. The price is the cap: every lit fragment walks every light, so ForwardLightingOptions.maxLights bounds how many there may be, and it casts no shadows at all.",
         "It is the one system that can be built without a host, because its light data is a texture a material samples rather than anything the frame slot runs:",
         "```ts const lighting = new ForwardLighting({ maxLights: 16 }); ```",
-        "A filter chain is a frame pass, so `post` needs the host."
+        "A filter chain is a frame pass, so `post` needs the host - and, for a system built for one scene, LightingOptions.scene, which keeps the chain out of the frame while that scene is not the one on screen."
       ],
       "importLine": "import { ForwardLighting } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -327,7 +327,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release the renderer's resources. Registered lights and sources are unregistered, not destroyed."
+          "description": "Leave the host's frame slot and release the renderer's resources. Registered lights and sources are unregistered, not destroyed."
         },
         {
           "name": "normalsFrom",
@@ -726,7 +726,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scale applied to the shaded output, 1 by default. It moves the exposure only: the lights, the transport and the bounce history are all untouched, so raising it shows what a light field holds above 1.0 without changing what any of it computed. That is what makes it the right knob for looking at an overbright scene - turning a light down instead would change the scene being looked at. Under forward, where nothing is composited, it does nothing. It is not a tone map: values still clip, one stop further along."
+          "description": "Scale applied to the shaded output, 1 by default. It moves the exposure only: the lights, the transport and the bounce history are all untouched, so raising it shows what a light field holds above 1.0 without changing what any of it computed. That is what makes it the right knob for looking at an overbright scene - turning a light down instead would change the scene being looked at. Under forward, where nothing is composited, it does nothing. It is not a tone map: values still clip, one stop further along. It also has nothing to do with the application's own output exposure/tone-mapping setting - that runs once, after this system has already composited into the frame, and stays the caller's decision about how the whole frame reaches the display; this one is a lighting-only debug multiplier with no effect on what gets published anywhere else."
         },
         {
           "name": "hdr",

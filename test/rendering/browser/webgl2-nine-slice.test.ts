@@ -22,7 +22,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { readWebGl2Pixel } from './_backendSetup';
+import { readWebGl2Pixel, useEncodedFrameTarget } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
@@ -67,6 +67,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
 
 const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.resetStats();
+  useEncodedFrameTarget(backend);
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();

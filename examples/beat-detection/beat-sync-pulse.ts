@@ -26,6 +26,7 @@ class BeatSyncPulseScene extends Scene {
   private burst!: BurstSpawn;
   private hud!: ReturnType<typeof mountControls>;
   private tapPrompt!: Text;
+  private tempoReadout!: Text;
 
   override async load(): Promise<void> {
     const app = this.app;
@@ -37,9 +38,13 @@ class BeatSyncPulseScene extends Scene {
     this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
 
     this.hud = mountControls({
-      title: 'Beat Sync Pulse',
-      hint: 'The ring and particle burst fire on each detected beat.',
+      title: 'Beat and Tempo',
+      hint: 'A detected beat pulses the sprite and particles. The tempo estimate and confidence update continuously.',
     });
+
+    this.tempoReadout = new Text('Listening for tempo...', { fillColor: Color.white, fontSize: 27, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height * 0.18);
 
     this.particles = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 3500 });
     this.systems.add(this.particles);
@@ -88,12 +93,18 @@ class BeatSyncPulseScene extends Scene {
   override update(delta: Seconds): void {
     this.pulse = Math.max(0, this.pulse - delta * 1.2);
     this.sprite.setScale(1 + this.pulse);
+    const bpm = this.detector.tempo;
+    this.tempoReadout.text =
+      bpm > 0
+        ? `${bpm.toFixed(1)} BPM  |  confidence ${this.detector.confidence.toFixed(2)}  |  onset ${this.detector.onsetStrength.toFixed(2)}`
+        : 'Listening for tempo...';
   }
 
   override draw(context: RenderingContext): void {
     const app = this.app;
     context.render(this.particles);
     context.render(this.sprite);
+    context.render(this.tempoReadout);
 
     if (app.audio.locked) {
       context.render(this.tapPrompt);

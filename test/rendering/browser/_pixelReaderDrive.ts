@@ -15,7 +15,11 @@ const nextTask = (): Promise<void> => new Promise(resolve => setTimeout(resolve,
 export const DRAIN_FRAME_BUDGET = 120;
 
 /** Step frames until `read` is ready or failed, returning how many it took. */
-export const driveUntilSettled = async (backend: RenderBackend, read: PixelRead, frames: number = DRAIN_FRAME_BUDGET): Promise<number> => {
+export const driveUntilSettled = async (
+  backend: RenderBackend,
+  read: Pick<PixelRead, 'ready' | 'failed'>,
+  frames: number = DRAIN_FRAME_BUDGET,
+): Promise<number> => {
   for (let frame = 1; frame <= frames; frame++) {
     await nextTask();
     backend.resetStats();

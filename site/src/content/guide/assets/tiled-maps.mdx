@@ -16,7 +16,7 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 > ```
 
 <Callout type="pitfall" title="TiledMap is data, not something you can draw">
-Loading a map gives you layer grids and tileset textures — it is not a `Drawable`, so adding it to the scene puts nothing on screen. You build the rendering yourself (batched `Sprite`s or a `Mesh`) from the data it exposes.
+Loading a map gives you layer grids and tileset textures — it is not a `Drawable`, so adding it to the scene puts nothing on screen. Load with `Asset.type('tileMap', path)` or call `toTileMap()`, then render the runtime through `TileMapNode`.
 </Callout>
 
 Like all extensions, the core ships nothing Tiled-specific — an `Application` only understands `.tmj` files once you activate the extension.
@@ -50,8 +50,8 @@ Loading a `.tmj` here throws `No renderer/handler` style errors directing you to
 
 Once the extension is active, load a `.tmj` map with an explicit descriptor or by path. Both resolve to the same handler.
 
-<Callout type="invalid" title="Only orthogonal Tiled JSON loads — the rest throw by design">
-XML (`.tmx`/`.tsx`), isometric or hexagonal orientations, collection-of-images tilesets, and `zstd` compression each raise a clear error rather than loading. Export an orthogonal JSON map (`.tmj`) with CSV, gzip, or zlib data. Infinite (chunked) maps **are** supported: `toTileMap()` converts each chunked layer to an unbounded runtime layer whose data streams in on demand via `getChunkSource()` — see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter.
+<Callout type="invalid" title="Orthogonal and isometric Tiled JSON maps">
+XML (`.tmx`/`.tsx`), staggered or hexagonal orientations, collection-of-images tilesets, and `zstd` compression each raise a clear error rather than loading. Export an orthogonal or isometric JSON map (`.tmj`) with CSV, gzip, or zlib data. Infinite (chunked) maps **are** supported: `toTileMap()` converts each chunked layer to an unbounded runtime layer whose data streams in on demand via `getChunkSource()` — see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter.
 </Callout>
 
 ```ts
@@ -81,7 +81,7 @@ map.tilesets[0].texture; // the Texture resolved for an image tileset (undefined
 map.data;             // the raw parsed TiledMapData
 ```
 
-`TiledMap` is a plain data asset, not a `Drawable`. It gives you the layer grids and tileset textures; you decide how to render them (for example, by building a `Mesh` or batching `Sprite`s per visible tile). A built-in tilemap renderer is out of this extension's initial scope.
+`TiledMap` is a plain data asset, not a `Drawable`. It gives you the layer grids and tileset textures; you decide how to render them (for example, by building a `Mesh` or batching `Sprite`s per visible tile). Load the `tileMap` asset type to render the converted runtime map through `TileMapNode`.
 
 ## Custom properties
 
@@ -313,3 +313,17 @@ These raise a clear error or are intentionally absent from this release:
 - **API reference:** the [`Loader`](/ExoJS/en/api/loader/) page documents `load(...)`, explicit `Asset.type(...)` descriptors, and the `.tmj` extension lookup.
 - **Spawning objects:** [Worlds and level streaming](/ExoJS/en/guide/assets/worlds-and-spawning/) turns an object layer into game objects with `MapObjectSpawner`, and shows how to drive several Tiled maps as one streamed world.
 - **Extension model:** the [Particles](/ExoJS/en/guide/effects/particles/) chapter walks through the same activation model for the sibling renderer extension.
+
+## Isometric coordinates and physics
+
+The [Isometric Landscape example](/ExoJS/en/playground/examples/tilemap/tiled-isometric/) loads a real isometric `.tmj` map using Kenney's Isometric Tiles Landscape assets (CC0). Click to pick a diamond and move a physics actor; the central bridge passes between the authored collider banks.
+
+`TileMap.projection` owns the mapping. `tileToPixel(tx, ty)` returns the top vertex of an isometric cell; `pixelToTile(x, y)` inverse-projects and floors both coordinates. Negative cells work for infinite maps. Pass map-local display coordinates after undoing camera and scene transforms. This selects a logical cell, not the opaque pixel of artwork extending above it.
+
+Tiled's horizontal origin is `map.height * tileWidth / 2`. Logical coordinates use `tileHeight` pixels per cell on both axes. `projection.logicalToPixel()` and `pixelToLogical()` convert fractional positions without cell quantization. Layer/group offsets remain display translations.
+
+Object layers expose logical shapes for gameplay. Use `layer.getDisplayObject(object)` for display placement: it projects the geometry and includes the layer offset. Rectangles become diamonds/polygons, ellipses remain exact affine ellipses, and tile images retain their display dimensions and Tiled alignment. Imported rotations preserve Tiled's rotation after projection. As with orthogonal objects, the application owns spawning and drawing.
+
+`TileColliderStreamer` and `buildObjectLayerColliders` operate in logical space. Bind an actor explicitly with `TilePhysicsBinding(body, node, map.projection)` and synchronize after stepping physics. Its node parent uses map display coordinates. The binding leaves sprite rotation and scale application-owned. Do not also use a direct physics-to-node binding for that node.
+
+The WebGL2 and WebGPU renderers share projected geometry and global diagonal ordering across storage chunks. Bounds include tall artwork and tileset offsets; only consecutive equal-texture runs batch. More texture changes can therefore increase draw calls. LDtk stays natively orthogonal, and staggered/hexagonal maps are not supported.

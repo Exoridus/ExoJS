@@ -25,7 +25,17 @@ export interface LockstepPackage {
   readonly name: string;
   /** Package directory relative to the repo root (`.` for Core). */
   readonly dir: string;
-  /** Core is `false`; every opt-in package is an extension. */
+  /**
+   * Whether this is an engine extension: a library that is loaded *by* a running
+   * `@codexo/exojs`, that declares the engine as a peer, and whose built output
+   * is vendored into the offline full-zip release tree.
+   *
+   * Not the same question as "is released on the engine's version line". Core is
+   * on the line but is not an extension, and so is the app scaffolder: it moves
+   * with the engine release, but it is a command that writes a project rather
+   * than a library the engine loads, so it declares no engine peer and has no
+   * vendored runtime tree.
+   */
   readonly isExtension: boolean;
   /**
    * Whether the package participates in the offline external-consumer smoke
@@ -33,6 +43,13 @@ export interface LockstepPackage {
    * is excluded: its `react`/`react-dom` peers are not resolvable offline.
    */
   readonly inOfflineSmoke: boolean;
+  /**
+   * How the package-policy gate judges the package. A lockstep package is
+   * normally an imported library; `create-exo-app` ships a command-line
+   * executable, so the runtime profile's `dist/esm` expectations do not describe
+   * it.
+   */
+  readonly profile?: 'runtime' | 'cli';
 }
 
 export const LOCKSTEP_PACKAGES = [
@@ -48,6 +65,12 @@ export const LOCKSTEP_PACKAGES = [
   { name: '@codexo/exojs-tilemap-physics', dir: 'packages/exojs-tilemap-physics', isExtension: true, inOfflineSmoke: true },
   { name: '@codexo/exojs-lighting', dir: 'packages/exojs-lighting', isExtension: true, inOfflineSmoke: true },
   { name: '@codexo/exojs-pathfinding', dir: 'packages/exojs-pathfinding', isExtension: true, inOfflineSmoke: true },
+  // The app scaffolder. It is on the engine's line because the version it
+  // scaffolds is its own: `create-exo-app@0.19` writes a project that asks for
+  // `@codexo/exojs@0.19.x`. The template source carries no engine version, so a
+  // scaffolder-only patch never needs a template edit. It is not an extension -
+  // see `isExtension`.
+  { name: 'create-exo-app', dir: 'packages/create-exo-app', isExtension: false, inOfflineSmoke: false, profile: 'cli' },
 ] as const satisfies readonly LockstepPackage[];
 
 /**
@@ -56,10 +79,10 @@ export const LOCKSTEP_PACKAGES = [
  *
  * A package belongs here when its version means something different from "the
  * engine release this goes with": build tooling a consumer keeps in
- * `devDependencies` across engine upgrades, and the app scaffolder, which is
- * installed once and never pinned. Enumerating them is what lets
- * `verify:release-matrix` assert the independence instead of silently ignoring
- * whatever is missing from `LOCKSTEP_PACKAGES`.
+ * `devDependencies` across engine upgrades, and command-line utilities a
+ * consumer runs without pinning to an engine release. Enumerating them is what
+ * lets `verify:release-matrix` assert the independence instead of silently
+ * ignoring whatever is missing from `LOCKSTEP_PACKAGES`.
  */
 export interface IndependentPackage {
   /** npm package name. */
@@ -75,11 +98,6 @@ export const INDEPENDENT_PACKAGES = [
     name: '@codexo/exojs-build',
     dir: 'packages/exojs-build',
     reason: 'build-time tooling; a consumer keeps one version across engine upgrades and it depends on no engine API',
-  },
-  {
-    name: 'create-exo-app',
-    dir: 'packages/create-exo-app',
-    reason: 'app scaffolder; run once via npx, never pinned to an engine version',
   },
   {
     name: '@codexo/exojs-cli',
@@ -98,10 +116,10 @@ export const INDEPENDENT_PACKAGES = [
  * (`verifyToolingPackage`): a library published from this repository that ships
  * `dist/esm`, is imported rather than executed, and depends on no engine API.
  *
- * `create-exo-app` and `@codexo/exojs-cli` are deliberately absent. Both are
- * `bin` entry points rather than libraries, so the profile's `exports`,
- * `sideEffects` and no-engine-dependency expectations do not describe them -
- * the CLI legitimately depends on the engine to read back what it packs.
+ * `@codexo/exojs-cli` is deliberately absent. It is a `bin` entry point rather
+ * than a library, so the profile's `exports`, `sideEffects` and
+ * no-engine-dependency expectations do not describe it - the CLI legitimately
+ * depends on the engine to read back what it packs.
  */
 const TOOLING_PACKAGE_NAMES = new Set<string>(['@codexo/exojs-build', '@codexo/eslint-plugin-exojs']);
 

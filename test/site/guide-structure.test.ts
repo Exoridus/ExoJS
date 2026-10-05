@@ -11,7 +11,8 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { EXAMPLES_CATALOG } from '../../site/src/lib/examples-catalog';
+import { resolveExampleAlias } from '../../site/src/lib/example-aliases';
+import { getAllExamples } from '../../site/src/lib/examples-catalog';
 import {
   CORE_ONBOARDING_PATHS,
   getAdjacentChapters,
@@ -52,13 +53,8 @@ const readFrontmatter = (file: string): { title: string; description: string } =
   return { title: scalar('title'), description: scalar('description') };
 };
 
-const exampleExists = (ref: string): boolean => {
-  const slash = ref.indexOf('/');
-  if (slash < 0) return false;
-  const category = ref.slice(0, slash);
-  const slug = ref.slice(slash + 1);
-  return (EXAMPLES_CATALOG[category] ?? []).some(entry => entry.slug === slug);
-};
+const examplePaths = new Set(getAllExamples().map(entry => entry.path));
+const exampleExists = (ref: string): boolean => examplePaths.has(resolveExampleAlias(`${ref}.js`));
 
 const guideFiles = walkMdx(GUIDE_DIR);
 const guidePathsOnDisk = guideFiles.map(file =>

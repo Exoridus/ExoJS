@@ -22,6 +22,12 @@ on:
   pull_request:
     branches: [main, next]
   workflow_dispatch:
+    inputs:
+      runner:
+        description: Image for the browser and unit lanes (a manual run on a candidate image qualifies it before any migration)
+        type: choice
+        options: [ubuntu-24.04, ubuntu-26.04]
+        default: ubuntu-24.04
 
 permissions:
   contents: read
@@ -59,7 +65,7 @@ jobs:
 
       - if: github.event_name == 'pull_request'
         id: changed
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           list-files: json
           filters: |
@@ -113,18 +119,24 @@ jobs:
       - run: ${{ matrix.run }}
       - name: Upload tooling logs on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tooling-logs-${{ matrix.id }}
           path: .workspace/logs/
           retention-days: 1
+          include-hidden-files: true
           if-no-files-found: warn
 
   test:
     name: test (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.hasTest == 'true'
-    runs-on: ubuntu-latest
+    # Pinned: the browser lanes depend on the runner image's Xvfb, graphics stack and
+    # browser libraries, so an image swap behind `ubuntu-latest` must be a deliberate
+    # change, not a Monday surprise. ubuntu-24.04 is what `ubuntu-latest` resolves to
+    # today. A candidate image is qualified by dispatching this workflow with the
+    # `runner` input; ubuntu-26.04 ran every lane with the same outcomes.
+    runs-on: ${{ inputs.runner || 'ubuntu-24.04' }}
     timeout-minutes: ${{ matrix.timeoutMinutes }}
     strategy:
       fail-fast: false
@@ -138,27 +150,48 @@ jobs:
           apt: ${{ matrix.apt }}
           naga: ${{ matrix.naga }}
 
+      # A browser lane runs several qualification rows (`pnpm qualify`), each
+      # with its own JUnit report, deadline and log; the summary of which rows
+      # passed, were unsupported on this host or failed is on the job page.
       - run: ${{ matrix.run }}
 
-      - name: Keep the JUnit report for the skip budget
+      - name: Keep the JUnit reports for the skip budget
         if: ${{ matrix.junit && !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: junit-${{ matrix.id }}
-          path: test-results/${{ matrix.id }}.junit.xml
+          path: test-results/*.junit.xml
           retention-days: 1
           if-no-files-found: warn
 
-      - if: ${{ matrix.junit && !cancelled() }}
-        uses: codecov/test-results-action@v1
+      # `.workspace` and its logs are hidden paths, which the upload skips
+      # unless it is told otherwise. The supervisor writes one unique log per
+      # command there, so a transient failure stays diagnosable afterwards, and
+      # Vitest keeps the screenshots of failed browser tests under `.vitest`.
+      - name: Keep the command logs, qualification records and failure screenshots on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
         with:
-          files: ./test-results/${{ matrix.id }}.junit.xml
+          name: tooling-logs-${{ matrix.id }}
+          path: |
+            .workspace/logs/
+            test-results/qualification/
+            .vitest/attachments/
+          retention-days: 3
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+      - if: ${{ matrix.junit && !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          report_type: test_results
+          directory: ./test-results
           flags: ${{ matrix.id }}
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v6.0.2
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage/lcov.info
           flags: ${{ matrix.id }}
@@ -176,7 +209,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: junit-*
           path: test-results
@@ -208,7 +241,7 @@ jobs:
           EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
         run: pnpm test:production-stripping
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: |
@@ -256,15 +289,16 @@ jobs:
 
       - name: Upload tooling logs on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tooling-logs-site
           path: .workspace/logs/
           retention-days: 1
+          include-hidden-files: true
           if-no-files-found: warn
 
       # Deploy Pages ships exactly this artifact; it builds nothing itself.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: site-dist-${{ github.sha }}
           path: site/dist/
@@ -287,7 +321,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           browser: chromium
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: site-dist-${{ github.sha }}
           path: site/dist
@@ -296,13 +330,14 @@ jobs:
 
       - name: Keep the smoke report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: example-smoke-report
           path: |
             .workspace/reports/example-smoke.md
             .workspace/reports/example-smoke-artifacts
           retention-days: 7
+          include-hidden-files: true
           if-no-files-found: ignore
 
   # The one required status check. Fails on any job the plan asked for that

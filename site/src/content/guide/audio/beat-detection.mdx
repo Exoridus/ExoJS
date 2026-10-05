@@ -223,13 +223,11 @@ Create one detector per scene (or share across scenes if the same source persist
 <a id="beat-sync-pulse"></a>
 <ExamplePreview chapter="beat-detection" slug="beat-sync-pulse" />
 
-A sprite pulses on every beat and particles burst on the `onBeat` signal — the canonical beat-reactive pattern.
+A sprite pulses on every beat and particles burst on the `onBeat` signal. The same example displays the live BPM estimate, confidence, and onset strength.
 
 <a id="tempo-tracking"></a>
-<ExamplePreview chapter="beat-detection" slug="tempo-tracking" />
-
-Live BPM display with a confidence bar, demonstrating the `tempo` and `confidence` getters.
+The beat and tempo example also demonstrates the `tempo`, `confidence`, and `onsetStrength` getters.
 
 ## Where to go next
 
-The next chapter, [Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/), covers how to bridge the detector's output into the render pipeline — polling getters for continuous animation, spectrum data from `AudioAnalyser`, spectrograms with `DataTexture`, and building full audio-reactive scenes.
+Continue with [Audio-reactive visualization](/ExoJS/en/guide/audio/audio-reactive-visualization/), which covers how to bridge the detector's output into the render pipeline — polling getters for continuous animation, spectrum data from `AudioAnalyser`, spectrograms with `DataTexture`, and building full audio-reactive scenes.

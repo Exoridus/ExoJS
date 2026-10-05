@@ -4,9 +4,13 @@ import type { PhysicsBody } from '../PhysicsBody';
 
 /**
  * A link between a {@link PhysicsBody} and a {@link SceneNode}. The body's world
- * position **and rotation** are written onto the node (the body's angle is
- * radians; the node's rotation is degrees). The node must be world-space-rooted;
+ * position **and rotation** are written onto the node, so the node renders
+ * exactly where the body's colliders are. The node must be world-space-rooted;
  * runtime scale is ignored and non-zero skew is rejected at bind time.
+ *
+ * The two angles have opposite signs: a body angle turns clockwise on the Y-down
+ * screen, a `SceneNode.rotation` counter-clockwise, so a body at `+30°` (in
+ * radians) shows as a node rotation of `-30°`.
  *
  * By default the node snaps to the latest fixed-step state after each step. With
  * `PhysicsWorld`'s interpolation enabled the node is instead placed between the
@@ -23,7 +27,7 @@ export class PhysicsBinding {
   /** Write the body's current transform (position + rotation) onto the bound node. */
   public sync(): void {
     this.node.setPosition(this.body.x, this.body.y);
-    this.node.setRotation(radiansToDegrees(this.body.angle));
+    this.node.setRotation(-radiansToDegrees(this.body.angle));
   }
 
   /**
@@ -43,6 +47,6 @@ export class PhysicsBinding {
     const previousAngle = body.previousAngle;
 
     this.node.setPosition(previousX + (body.x - previousX) * alpha, previousY + (body.y - previousY) * alpha);
-    this.node.setRotation(radiansToDegrees(previousAngle + (body.angle - previousAngle) * alpha));
+    this.node.setRotation(-radiansToDegrees(previousAngle + (body.angle - previousAngle) * alpha));
   }
 }

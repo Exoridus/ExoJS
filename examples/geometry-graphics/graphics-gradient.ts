@@ -15,6 +15,7 @@ class GraphicsGradientScene extends Scene {
   private sceneRoot!: Container;
   private panel!: Graphics;
   private orb!: Graphics;
+  private diamond!: Graphics;
   private ring!: Graphics;
   private badge!: Graphics;
 
@@ -49,6 +50,10 @@ class GraphicsGradientScene extends Scene {
     );
     this.orb.drawCircle(-96, -8, 56);
 
+    this.diamond = new Graphics();
+    this.diamond.fillColor = new Color(35, 45, 85);
+    this.diamond.drawPolygon([0, -70, 70, 0, 0, 70, -70, 0]);
+
     this.ring = new Graphics();
     this.ring.lineWidth = 12;
     this.ring.strokeStyle = new RadialGradient(
@@ -68,7 +73,7 @@ class GraphicsGradientScene extends Scene {
     ]);
     this.badge.drawStar(0, 116, 5, 46, 20);
 
-    this.sceneRoot.addChild(this.panel, this.orb, this.ring, this.badge);
+    this.sceneRoot.addChild(this.panel, this.orb, this.diamond, this.ring, this.badge);
   }
 
   override update(delta: Seconds): void {
@@ -84,6 +89,7 @@ class GraphicsGradientScene extends Scene {
 
   override destroy(): void {
     this.sceneRoot?.destroy();
+    super.destroy();
   }
 }
 

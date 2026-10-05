@@ -12,7 +12,7 @@ import type {
   TilePropertyValue,
   TileTransform,
 } from '@codexo/exojs-tilemap';
-import { ImageLayer, ObjectLayer, packTile, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
+import { ImageLayer, ObjectLayer, packTile, TileLayer, TileMap, TileProjection, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
 
 import type {
   TiledChunkData,
@@ -125,7 +125,7 @@ export class TiledMap {
    * Convert this parsed Tiled source model into a format-independent runtime
    * {@link TileMap} from `@codexo/exojs-tilemap`.
    *
-   * Only orthogonal maps with atlas tilesets are supported. A non-orthogonal
+   * Orthogonal and isometric maps with atlas tilesets are supported. An unsupported
    * map, a collection-of-images tileset, or a tileset with no image at all
    * throws {@link TiledFormatError} rather than silently producing wrong
    * (misplaced) or empty geometry. Tile
@@ -151,12 +151,16 @@ export class TiledMap {
   public toTileMap(): TileMap {
     this._chunkSources.clear();
 
-    // Orthogonal-only in this release. Reject maps we cannot convert
-    // faithfully rather than silently producing misplaced (isometric/
-    // staggered/hexagonal) geometry.
-    if (this.orientation !== 'orthogonal') {
-      throw new TiledFormatError(this.source, 'orientation', `toTileMap() supports only orthogonal maps in this release, got "${this.orientation}"`);
+    if (this.orientation !== 'orthogonal' && this.orientation !== 'isometric') {
+      throw new TiledFormatError(this.source, 'orientation', `toTileMap() supports orthogonal and isometric maps, got "${this.orientation}"`);
     }
+
+    const projection = new TileProjection({
+      orientation: this.orientation,
+      tileWidth: this.tileWidth,
+      tileHeight: this.tileHeight,
+      originX: this.orientation === 'isometric' ? (this.height * this.tileWidth) / 2 : 0,
+    });
 
     // Build runtime tilesets. Every tileset must resolve to an atlas texture:
     // a collection-of-images tileset is not supported yet, and a tileset with
@@ -241,6 +245,7 @@ export class TiledMap {
             tilesets: runtimeTilesets,
             tileWidth: this.tileWidth,
             tileHeight: this.tileHeight,
+            projection,
             visible: group.visible && layer.visible,
             opacity: group.opacity * layer.opacity,
             offsetX: group.offsetX + layer.offsetX,
@@ -258,7 +263,7 @@ export class TiledMap {
           runtimeLayers.push(rLayer);
           order.push(layer.id);
         } else if (layer instanceof TiledObjectLayer) {
-          runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime, this.orientation, group));
+          runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime, this.orientation, group, projection));
         } else if (layer instanceof TiledImageLayer) {
           runtimeImageLayers.push(
             new ImageLayer({
@@ -293,6 +298,7 @@ export class TiledMap {
       ...(this.infinite ? {} : { width: this.width, height: this.height }),
       tileWidth: this.tileWidth,
       tileHeight: this.tileHeight,
+      projection,
       tilesets: runtimeTilesets,
       layers: runtimeLayers,
       objectLayers: runtimeObjectLayers,
@@ -497,13 +503,15 @@ const convertObjectLayer = (
   indexToRuntime: ReadonlyArray<TileSet | null>,
   orientation: TiledOrientation,
   group: TiledGroupStyle,
+  projection: TileProjection,
 ): ObjectLayer => {
   const objects: TileMapObject[] = [];
   for (const object of layer.objects) {
-    const converted = convertObject(object, tiledTilesets, indexToRuntime, orientation);
-    if (converted) objects.push(converted);
+    const converted = convertObject(object, tiledTilesets, indexToRuntime, orientation, projection);
+    if (converted) objects.push(normalizeIsometricRotation(converted, projection));
   }
   return new ObjectLayer({
+    projection,
     id: layer.id,
     name: layer.name,
     class: layer.class,
@@ -517,6 +525,25 @@ const convertObjectLayer = (
     drawOrder: layer.drawOrder,
     objects,
     properties: convertProperties(layer.properties),
+  });
+};
+
+/** Tiled rotates authored geometry in display space, after projecting its axes. */
+const normalizeIsometricRotation = (object: TileMapObject, projection: TileProjection): TileMapObject => {
+  if (projection.orientation !== 'isometric' || object.rotation === 0 || object.kind === 'tile' || object.kind === 'text' || object.kind === 'point')
+    return object;
+  const display = projection.projectObject({ ...object, rotation: 0 });
+  const pivot = projection.logicalToPixel(object.x, object.y);
+  const angle = (object.rotation * Math.PI) / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const dx = display.x - pivot.x;
+  const dy = display.y - pivot.y;
+  return projection.unprojectObject({
+    ...display,
+    x: pivot.x + cos * dx - sin * dy,
+    y: pivot.y + sin * dx + cos * dy,
+    rotation: display.rotation + object.rotation,
   });
 };
 
@@ -537,6 +564,7 @@ const convertObject = (
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
   orientation: TiledOrientation,
+  projection: TileProjection,
 ): TileMapObject | null => {
   const base = {
     id: object.id,
@@ -575,7 +603,9 @@ const convertObject = (
     const tile = resolveGid(object.gid, tiledTilesets, indexToRuntime);
     if (!tile) return null;
     const anchor = tileObjectAnchorOffset(object.gid, object.width, object.height, tiledTilesets, orientation);
-    return { ...base, x: base.x - anchor.x, y: base.y - anchor.y, kind: 'tile', tile };
+    const position = projection.logicalToPixel(base.x, base.y);
+    const corner = projection.pixelToLogical(position.x - anchor.x, position.y - anchor.y);
+    return { ...base, x: corner.x, y: corner.y, kind: 'tile', tile, ...(orientation === 'isometric' ? { rotationOrigin: { x: base.x, y: base.y } } : {}) };
   }
   if (object.point) {
     return { ...base, kind: 'point' };
@@ -805,8 +835,7 @@ const convertPropertyValue = (property: TiledPropertyData): TilePropertyValue | 
     default: {
       // Exhaustiveness check: if a new TiledPropertyType is ever added,
       // `property.type` will fail to narrow to `never` here and tsc will error.
-      const _exhaustive: never = property.type;
-      void _exhaustive;
+      property.type satisfies never;
       throw new Error(`convertProperties: unrecognised Tiled property type "${property.type as string}".`);
     }
   }

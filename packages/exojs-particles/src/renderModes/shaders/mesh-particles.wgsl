@@ -52,7 +52,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // The mesh's own UVs address the particle's frame rather than the whole
     // texture, so a mesh particle still selects an atlas frame.
     output.texcoord = mix(input.uvMin, input.uvMax, input.meshTexcoord);
-    output.color = vec4(input.color.rgb * input.color.a, input.color.a);
+    // input.color.rgb is the authored sRGB tint byte-for-byte, not yet
+    // decoded; decode it to linear before it is premultiplied and
+    // interpolated.
+    let linearTint = srgbToLinear(input.color.rgb);
+    output.color = vec4(linearTint * input.color.a, input.color.a);
 
     return output;
 }

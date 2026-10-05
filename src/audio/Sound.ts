@@ -6,7 +6,7 @@ import type { AudioBus } from './AudioBus';
 import { getAudioContext, isAudioContextReady } from './audioContext';
 import type { AudioSystem } from './AudioSystem';
 import { NoopVoice } from './NoopVoice';
-import type { Playable, PlayOptions, Voice } from './Playable';
+import type { Playable, PlayOptions, Voice, VoiceProfile } from './Playable';
 import { SoundVoice, type SoundVoiceWindow } from './SoundVoice';
 import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatialOptions';
 
@@ -537,6 +537,18 @@ export class Sound implements Playable {
       loopStart: base,
       loopEnd: end,
     });
+  }
+
+  /** Implements {@link Playable._profileVoice}. @internal */
+  public _profileVoice(system: AudioSystem, options: SoundPlayOptions): VoiceProfile {
+    return {
+      bus: options.bus ?? system.sound,
+      pausable: true,
+      duration: this.duration,
+      loop: options.loop ?? this.loop,
+      playbackRate: clamp(options.playbackRate ?? this.playbackRate, 0.1, 20),
+      detune: options.detune ?? 0,
+    };
   }
 
   /**

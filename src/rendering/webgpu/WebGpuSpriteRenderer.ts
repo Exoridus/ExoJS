@@ -3,6 +3,7 @@
 import { Matrix } from '#math/Matrix';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import {
   createRetainedMaterialState,
@@ -140,7 +141,8 @@ export const resolveSpriteBatchTextureSlots = (device: GPUDevice): number => {
  * dispatches over the same slot range.
  * @internal
  */
-export const buildSpriteShaderSource = (textureSlots: number): string => `${spriteSharedStorageWgsl}
+export const buildSpriteShaderSource = (textureSlots: number): string => `${colorShaderSourcesWgsl}
+${spriteSharedStorageWgsl}
 ${buildSpriteTextureSlotWgsl(textureSlots)}
 
 ${spriteDefaultVertexInputWgsl}${spriteVertexCoreWgsl}
@@ -173,7 +175,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`;
  * `premultiplyAlpha` changed under a staying item.
  * @internal
  */
-export const buildPersistentSpriteShaderSource = (textureSlots: number): string => `
+export const buildPersistentSpriteShaderSource = (textureSlots: number): string => `${colorShaderSourcesWgsl}
 ${spritePersistentBindingsWgsl}
 ${buildSpriteTextureSlotWgsl(textureSlots)}
 ${spriteVertexCoreWgsl}
@@ -1419,19 +1421,42 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     this._syncUniformHazardPass(active);
 
-    pass.setPipeline(
+    const nativePipeline =
       material === null
         ? this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive)
-        : this._getOrCreateCustomPipeline(customResources!, payload.blendMode, backend.renderTargetFormats, coordinator.stencilActive, device),
-    );
-    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!, true));
-    pass.setBindGroup(1, textureBindGroup);
-    if (userBindGroup !== null) {
-      pass.setBindGroup(2, userBindGroup);
+        : this._getOrCreateCustomPipeline(customResources!, payload.blendMode, backend.renderTargetFormats, coordinator.stencilActive, device);
+    const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, true);
+
+    const nativeCompatible = backend.colorAttachmentCount === 1;
+    if (!nativeCompatible) bundle.nativeReplay.skipPass();
+
+    if (
+      !nativeCompatible ||
+      !bundle.nativeReplay.draw(
+        device,
+        active,
+        payload,
+        backend.renderTargetFormat,
+        nativePipeline,
+        nativeFrameBindGroup,
+        textureBindGroup,
+        this._indexBuffer,
+        'uint16',
+        indicesPerSprite,
+        payload.instanceCount,
+        userBindGroup,
+      )
+    ) {
+      pass.setPipeline(nativePipeline);
+      pass.setBindGroup(0, nativeFrameBindGroup);
+      pass.setBindGroup(1, textureBindGroup);
+      if (userBindGroup !== null) {
+        pass.setBindGroup(2, userBindGroup);
+      }
+      pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
+      pass.setIndexBuffer(this._indexBuffer, 'uint16');
+      pass.drawIndexed(indicesPerSprite, payload.instanceCount, 0, 0, 0);
     }
-    pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
-    pass.setIndexBuffer(this._indexBuffer, 'uint16');
-    pass.drawIndexed(indicesPerSprite, payload.instanceCount, 0, 0, 0);
 
     if (customResources !== null) {
       addUserUniformBuffersInPass(customResources.userUniform, this._uniformBuffersInPass);

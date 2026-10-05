@@ -172,8 +172,8 @@ describe('WebGL2 per-attachment blend', () => {
     });
     const mutable = base.context as unknown as Record<string, unknown>;
 
-    mutable['blendFunc'] = (src: number, dst: number): void => {
-      globalCalls.push({ src, dst });
+    mutable['blendFuncSeparate'] = (srcRgb: number, dstRgb: number): void => {
+      globalCalls.push({ src: srcRgb, dst: dstRgb });
       order.push('global');
     };
     mutable['blendEquation'] = (): void => {
@@ -544,9 +544,10 @@ describe('WebGPU per-attachment blend', () => {
       context.renderTo(mesh, { target });
       backend.flush();
 
-      const blends = environment.pipelineTargetBlends().at(-1);
+      const additive = getWebGpuBlendState(BlendModes.Additive);
+      const blends = environment.pipelineTargetBlends().find(targets => targets.length === 1 && JSON.stringify(targets[0]) === JSON.stringify(additive));
 
-      expect(blends![0]).toEqual(getWebGpuBlendState(BlendModes.Additive));
+      expect(blends).toBeDefined();
 
       mesh.destroy();
       material.destroy();

@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sound, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sound, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 interface DialogLine {
@@ -15,7 +15,6 @@ const lines: DialogLine[] = [
 const choices = ['Hold formation', 'Burn the gates'];
 
 class DialogSystemScene extends Scene {
-  private portrait!: Sprite;
   private namePlate!: Text;
   private box!: Text;
   private choicePrompt!: Text;
@@ -32,20 +31,12 @@ class DialogSystemScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    // Portrait sits on the left; the dialog column runs to its right and
-    // fills the wider 16:9 frame as a classic VN bottom-third box.
-    this.portrait = new Sprite(this.loader.get(assets.demo.textures.shipA))
-      .setAnchor(0.5)
-      .setScale(2.4)
-      .setPosition(width * 0.16, height * 0.62);
+    const textX = width * 0.16;
 
-    const textX = width * 0.3;
-
-    // Name plate sits just above the dialog body, like a classic VN UI.
     this.namePlate = new Text(lines[0].speaker, { fillColor: new Color(255, 214, 120), fontSize: 26, fontWeight: 'bold' });
     this.namePlate.setPosition(textX, height * 0.5);
 
-    this.box = new Text('', { fillColor: Color.white, fontSize: 32, lineHeight: 1.3, maxWidth: width * 0.55 });
+    this.box = new Text('', { fillColor: Color.white, fontSize: 32, lineHeight: 1.3, maxWidth: width * 0.68 });
     this.box.setPosition(textX, height * 0.56);
 
     this.choicePrompt = new Text('', { fillColor: new Color(150, 220, 255), fontSize: 20 });
@@ -54,7 +45,7 @@ class DialogSystemScene extends Scene {
     this.beep = this.loader.get(assets.demo.sound.uiConfirm);
 
     this.hud = mountControls({
-      title: 'Dialog System',
+      title: 'Dialogue and Choices',
       controls: [{ keys: 'Click', action: 'advance / reveal' }],
       hint: 'Click anywhere to skip the typewriter, then click again to continue.',
     });
@@ -133,7 +124,6 @@ class DialogSystemScene extends Scene {
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.portrait);
     context.render(this.namePlate);
     context.render(this.box);
     if (this.choicePrompt.visible) {

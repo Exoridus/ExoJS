@@ -13,6 +13,16 @@ import { Material } from './Material';
  * `sampleBase(slot, uv)` helper, which preserves batching and resolves the
  * backend's premultiplied-alpha convention. The material supplies the custom
  * fragment program, uniforms, additional texture bindings, and blend mode.
+ *
+ * `sampleBase` already returns a hardware-decoded, associated (premultiplied)
+ * linear-light color - a custom fragment must not call `pow(color, vec3(2.2))`
+ * or any other transfer function on its result, and must return its own output
+ * in the same domain (linear, premultiplied RGB, straight alpha) so blending
+ * and any following filter stay consistent. A texture bound through
+ * `options.textures` and sampled directly (bypassing `sampleBase`) is decoded
+ * or not according to that `Texture`'s own resolved `colorSpace`, exactly as
+ * for any other draw stage; a numeric texture (a mask, a lookup table) needs
+ * `colorSpace: 'none'` on construction, not a shader-side workaround.
  * @advanced
  */
 export class SpriteMaterial<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> extends Material<F, B> {

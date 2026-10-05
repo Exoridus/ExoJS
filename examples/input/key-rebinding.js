@@ -5,14 +5,14 @@ import { mountControls } from '@examples/runtime';
 // as an enum number: tokens survive an engine upgrade, a different browser, and
 // a controller plugged into another port. This turns one back into something a
 // player can read on screen.
-function keyName(token) {
+const keyName = token => {
   return token?.replace(/^keyboard\./, '').replaceAll('-', ' ') ?? 'unbound';
-}
+};
 // A BindingProfile stores only what the player CHANGED, so writing the whole
 // thing to localStorage still leaves every action the game gains later at its
 // own default.
 const STORAGE_KEY = 'exo-example-key-rebinding';
-function loadProfile() {
+const loadProfile = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -23,14 +23,14 @@ function loadProfile() {
     // way, fall through to the developer defaults.
   }
   return new BindingProfile();
-}
-function saveProfile(profile) {
+};
+const saveProfile = profile => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
   } catch {
     // Non-fatal - persistence is best-effort.
   }
-}
+};
 class KeyRebindingScene extends Scene {
   graphics;
   controls = new ActionMap({

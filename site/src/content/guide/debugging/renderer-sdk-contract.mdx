@@ -84,6 +84,8 @@ Recorded batches reference a `RetainedGroupBundle` you own. One field carries th
 
 Set `nodeCount` on a batch whenever one render node expands into several GPU instances — a tile chunk, a nine-slice, a repeating sprite, a text run. `instanceCount` is the replay draw's instance argument, not a node count, and without `nodeCount` the recorded tier reports instances where the live and entry-replay tiers report nodes. A node is booked once, against whichever batch was open when its first instance was written.
 
+For WebGL2, return `false` from `replayRetainedBatch` when a defensive check prevents drawing. The backend then leaves `batches` and `drawCalls` unchanged. Returning `true` or nothing keeps descriptor-based accounting, so existing SDK replayers remain compatible. WebGPU replayers increment these two counters after issuing a draw. Both backends count `submittedNodes` before replay, including submissions that cannot draw.
+
 ## Seam 4 — the pass coordinator
 
 Target, view, clear, the scissor stack and the stencil-clip stack belong to the backend's `passCoordinator`. Reach it through the backend when you need a pass of your own:
@@ -113,6 +115,12 @@ describeRendererConformance('Confetti', confettiBinding(), {
 ```
 
 It checks the lifecycle rules above, that a second `connect` acquires nothing further, that every GL object is released, that a foreign renderer drawing in between does not break you, that your retained verdict is stable for the same drawable, and that a frame drawn inside a capture window records a replayable batch.
+
+## Implementing typed readback in a backend
+
+Typed float readback extends the `RenderBackend` implementation contract. Existing application calls that read bytes, and custom renderers using the built-in backends, keep their default byte return types. A complete custom backend or a test double implementing `RenderBackend` must add `supportsReadbackFormat(format)` and support the payload-discriminated overloads of `readPixels` and `createPixelReadback`.
+
+Report readback capabilities separately from renderability. The `uint8` mode returns `Uint8ClampedArray` for `rgba8`; explicit `float32` mode returns `Float32Array` for `rgba16f` or `rgba32f`, expanding half-floats without normalization. Preserve top-left RGBA ordering and book the bytes actually transferred, which can differ from the expanded array size. A standing reader keeps its destination arrays until destruction and lends them to callers only until slot release. An unsupported format must be reported as unsupported rather than silently converted. `RenderingContext` and `PixelReader` validate format and region before invoking these backend hooks.
 
 ## The underscore
 

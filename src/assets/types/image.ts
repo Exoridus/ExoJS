@@ -24,7 +24,17 @@ export class ImageAssetType extends AssetType<ArrayBuffer, DecodedImage, ImageAs
   public override readonly codec: AssetSourceCodec<ArrayBuffer> = binarySourceCodec;
 
   public override resourceIdentity({ options }: AssetRequest<ImageAssetOptions>): string {
-    return options?.mimeType === undefined ? '' : `mimeType=${options.mimeType}`;
+    const identity: string[] = [];
+
+    if (options?.mimeType !== undefined) {
+      identity.push(`mimeType=${options.mimeType}`);
+    }
+
+    if (options?.colorSpace === 'none') {
+      identity.push('colorSpace=none');
+    }
+
+    return identity.join('&');
   }
 
   public createFactory(): AssetFactory<ArrayBuffer, DecodedImage, ImageAssetOptions> {
@@ -82,13 +92,23 @@ export class TextureAssetType extends AssetType<ArrayBuffer, Texture, TextureAss
   public override readonly codec: AssetSourceCodec<ArrayBuffer> = binarySourceCodec;
 
   /**
-   * Only the MIME type is identity. Sampler and upload state belong to the
-   * individual handle - two handles for one image share a single decode and
-   * keep independent samplers - so folding it in would decode the same bytes
-   * twice.
+   * MIME type and no-conversion data decoding are identity. Sampler and upload
+   * state belong to the individual handle - two handles for one image share a
+   * single decode and keep independent samplers - so folding them in would
+   * decode the same bytes twice.
    */
   public override resourceIdentity({ options }: AssetRequest<TextureAssetOptions>): string {
-    return options?.mimeType === undefined ? '' : `mimeType=${options.mimeType}`;
+    const identity: string[] = [];
+
+    if (options?.mimeType !== undefined) {
+      identity.push(`mimeType=${options.mimeType}`);
+    }
+
+    if (options?.textureOptions?.colorSpace === 'none') {
+      identity.push('colorSpace=none');
+    }
+
+    return identity.join('&');
   }
 
   public createFactory(): AssetFactory<ArrayBuffer, Texture, TextureAssetOptions> {

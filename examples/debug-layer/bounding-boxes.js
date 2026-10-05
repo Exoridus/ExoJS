@@ -29,9 +29,6 @@ class BoundingBoxesScene extends Scene {
       sprite.setPosition(sprite.position.x, height / 2 + Math.sin(this.time * speed) * 100);
     }
   }
-  draw(context) {
-    context.render(this.root);
-  }
 }
 const app = new Application({
   scenes: { BoundingBoxesScene },

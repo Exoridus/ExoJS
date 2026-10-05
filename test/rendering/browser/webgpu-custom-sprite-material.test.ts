@@ -2,7 +2,7 @@
  * WebGPU custom-SpriteMaterial browser test - opt-in, capability-aware.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe), so this test drives a
+ * against SwiftShader), so this test drives a
  * custom {@link SpriteMaterial} (user uniform) through the real
  * {@link WebGpuSpriteRenderer} and asserts the custom path (group 0 projection +
  * shared transform storage, group 1 base-texture slot table, group 2 user UBO) issues an
@@ -25,7 +25,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -345,11 +345,13 @@ describe('custom SpriteMaterial WebGPU browser', () => {
 
     const device = getBackendDevice(backend);
     // Browser-source pixels are unpremultiplied. The default-true texture must
-    // therefore resolve (200, 100, 50, .5) to roughly (100, 50, 25, .5), while
-    // the false texture already stores those premultiplied RGB channels.
+    // therefore premultiply in linear light: (200, 100, 50) decodes to
+    // (0.578, 0.127, 0.032), halves to (0.290, 0.064, 0.016) and is stored by the
+    // encoding target as (147, 72, 34). The false texture already carries those
+    // channels, authored as the encoded values they should land on.
     const defaultTexture = createSolidTexture(200, 100, 50, 128);
     const customPremultiplyTexture = createSolidTexture(200, 100, 50, 128);
-    const customAlreadyPremultipliedTexture = createSolidTexture(100, 50, 25, 128);
+    const customAlreadyPremultipliedTexture = createSolidTexture(147, 72, 34, 128);
 
     customAlreadyPremultipliedTexture.setPremultiplyAlpha(false);
 
@@ -380,14 +382,11 @@ describe('custom SpriteMaterial WebGPU browser', () => {
     device.pushErrorScope('validation');
 
     try {
-      backend.resetStats();
-      backend.clear(Color.black);
-      root.render(backend);
-      backend.flush();
+      await renderWebGpuEncoded(ctx, backend, root);
 
       const validationError = await device.popErrorScope();
       const readPixel = readWebGpuPixels(backend, 64);
-      const expected = [100, 50, 25, 255] as const;
+      const expected = [147, 72, 34, 255] as const;
 
       expect(validationError).toBeNull();
       expect(backend.stats.drawCalls).toBe(2);
@@ -443,7 +442,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       backend.flush();
       validationError = await device.popErrorScope();
     } catch (error) {
-      // The software (swiftshader) adapter used in CI can drop the device
+      // The software (SwiftShader) adapter used in CI can drop the device
       // mid-test ("Instance dropped in popErrorScope"); treat that as an
       // unavailable-adapter skip rather than a failure.
       if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {

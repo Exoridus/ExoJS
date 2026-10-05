@@ -1,16 +1,16 @@
 {
   "title": "Texture",
-  "description": "A static GPU texture sourced from an image, canvas, or video element. Holds the pixel source, its sampling state (ScaleModes, WrapModes) and its upload state (mip generation, alpha premultiplication). A `version` counter is incremented on every mutation that invalidates the GPU copy, so backends detect stale uploads without polling. Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultOptions.",
+  "description": "A static GPU texture sourced from an image, canvas, or video element. Holds the pixel source, its sampling state (ScaleModes, WrapModes) and its upload state (mip generation, alpha premultiplication). A `version` counter is incremented on every mutation that invalidates the GPU copy, so backends detect stale uploads without polling. Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultOptions. # Colour and alpha Image, canvas and video sources are colour by default: RGB is sRGB-encoded, stored in an sRGB format and decoded to linear light when sampled, while alpha stays linear coverage. Declare `colorSpace: 'none'` for numeric data so it is never decoded, and `'linear-srgb'` for colour already in linear light. A straight-alpha colour source is premultiplied once at upload, in linear light and before filtering, unless `premultiplyAlpha` is `false` or `alphaMode` says it already is. A borrowed canvas or `ImageBitmap` may have lost low-alpha precision before the engine sees it. Compressed KTX2 blocks are never recompressed. A straight-alpha compressed source is filtered straight and premultiplied in the draw shader, so it does not have the edge guarantee of premultiplied storage; use premultiplied compressed assets or dilated edges for quality-sensitive transparency.",
   "symbol": "Texture",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 36,
+  "memberCount": 45,
   "counts": {
     "constructors": 1,
-    "methods": 12,
-    "properties": 23,
+    "methods": 16,
+    "properties": 28,
     "events": 0
   },
   "sections": [
@@ -21,7 +21,10 @@
       "paragraphs": [
         "A static GPU texture sourced from an image, canvas, or video element.",
         "Holds the pixel source, its sampling state (ScaleModes, WrapModes) and its upload state (mip generation, alpha premultiplication). A `version` counter is incremented on every mutation that invalidates the GPU copy, so backends detect stale uploads without polling.",
-        "Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultOptions."
+        "Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultOptions.",
+        "# Colour and alpha",
+        "Image, canvas and video sources are colour by default: RGB is sRGB-encoded, stored in an sRGB format and decoded to linear light when sampled, while alpha stays linear coverage. Declare `colorSpace: 'none'` for numeric data so it is never decoded, and `'linear-srgb'` for colour already in linear light. A straight-alpha colour source is premultiplied once at upload, in linear light and before filtering, unless `premultiplyAlpha` is `false` or `alphaMode` says it already is. A borrowed canvas or `ImageBitmap` may have lost low-alpha precision before the engine sees it.",
+        "Compressed KTX2 blocks are never recompressed. A straight-alpha compressed source is filtered straight and premultiplied in the draw shader, so it does not have the edge guarantee of premultiplied storage; use premultiplied compressed assets or dilated edges for quality-sensitive transparency."
       ],
       "importLine": "import { Texture } from '@codexo/exojs'",
       "sourceLink": null
@@ -263,6 +266,116 @@
           "description": ""
         },
         {
+          "name": "setAlphaMode",
+          "signature": "setAlphaMode(alphaMode: TextureAlphaMode | undefined): this",
+          "signatureTokens": [
+            {
+              "text": "setAlphaMode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "alphaMode",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureAlphaMode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "alphaMode",
+              "type": "TextureAlphaMode | undefined",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Change the caller-selected alpha association where the active payload permits it."
+        },
+        {
+          "name": "setColorSpace",
+          "signature": "setColorSpace(colorSpace: TextureColorSpace | undefined): this",
+          "signatureTokens": [
+            {
+              "text": "setColorSpace",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "colorSpace",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureColorSpace",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "colorSpace",
+              "type": "TextureColorSpace | undefined",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Change the caller-selected interpretation where the active payload permits it."
+        },
+        {
           "name": "setCompressed",
           "signature": "setCompressed(payload: CompressedTexturePayload | null): this",
           "signatureTokens": [
@@ -315,7 +428,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Install a compressed payload, replacing any pixel source, and resize to its base level. Pass null to drop it. Bumps version, so backends re-create their GPU texture - a format change cannot be patched into an existing one."
+          "description": "Install a compressed payload, replacing any browser or raw pixel source, and resize to its base level. Pass null to drop it. Bumps version, so backends re-create their GPU texture - a format change cannot be patched into an existing one."
         },
         {
           "name": "setGenerateMipMap",
@@ -363,6 +476,61 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setPixels",
+          "signature": "setPixels(payload: Rgba8TexturePayload | null): this",
+          "signatureTokens": [
+            {
+              "text": "setPixels",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "payload",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rgba8TexturePayload",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "payload",
+              "type": "Rgba8TexturePayload | null",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Install RGBA8 bytes, replacing a browser or compressed source."
         },
         {
           "name": "setPremultiplyAlpha",
@@ -571,7 +739,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Installs a browser-managed image source. Direct sources use the browser's sRGB, straight-alpha interpretation."
         },
         {
           "name": "setWrapMode",
@@ -651,7 +819,7 @@
         },
         {
           "name": "fromColor",
-          "signature": "fromColor(color: Color | string, size: number): Texture",
+          "signature": "fromColor(color: Color | string, size: number, options?: Partial<TextureOptions>): Texture",
           "signatureTokens": [
             {
               "text": "fromColor",
@@ -698,6 +866,38 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -720,10 +920,99 @@
               "name": "size",
               "type": "number",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Partial<TextureOptions>",
+              "optional": true
             }
           ],
           "returnType": "Texture",
-          "description": "Create a solid-colour texture of the given square size (default 1×1). Accepts a Color instance or any CSS colour string; a Color with alpha below 1 is rendered with that alpha. Generalizes the fixed Texture.black/Texture.white helpers."
+          "description": "Create a solid-colour texture of the given square size (default 1×1). Accepts a Color instance or any CSS colour string; a Color with alpha below 1 is rendered with that alpha. Generalizes the fixed Texture.black/Texture.white helpers. A color producer by default, not a numeric placeholder: the fill goes through an ordinary HTMLCanvasElement, so it gets the same browser sRGB, straight-alpha interpretation as any loaded image and matches a genuinely loaded color asset of the same value. A solid texture standing for numeric data instead - a flat normal map, a constant mask - declares that in options."
+        },
+        {
+          "name": "fromPixels",
+          "signature": "fromPixels(payload: Rgba8TexturePayload, options?: Partial<TextureOptions>): Texture",
+          "signatureTokens": [
+            {
+              "text": "fromPixels",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "payload",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rgba8TexturePayload",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "payload",
+              "type": "Rgba8TexturePayload",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Partial<TextureOptions>",
+              "optional": true
+            }
+          ],
+          "returnType": "Texture",
+          "description": "Create a texture from RGBA8 bytes without converting through a browser image source. The payload declares the meaning and alpha association of its bytes; supplied handle metadata must agree with it."
         }
       ],
       "paragraphs": [],
@@ -777,6 +1066,48 @@
           "description": ""
         },
         {
+          "name": "alphaMode",
+          "signature": "alphaMode: TextureAlphaMode",
+          "signatureTokens": [
+            {
+              "text": "alphaMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureAlphaMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Source association of RGB with alpha for the active payload."
+        },
+        {
+          "name": "colorSpace",
+          "signature": "colorSpace: TextureColorSpace",
+          "signatureTokens": [
+            {
+              "text": "colorSpace",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureColorSpace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Meaning of the active texture samples."
+        },
+        {
           "name": "compressed",
           "signature": "compressed: CompressedTexturePayload | null",
           "signatureTokens": [
@@ -803,7 +1134,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Hardware-compressed payload this texture uploads instead of a pixel source, or null for the ordinary case. Mutually exclusive with source: installing one clears the other, so a texture is never ambiguous about what it uploads. A handle that arrives empty from the loader can become either, which is what lets an asset variant swap a PNG for a KTX2 file without changing what a caller holds."
+          "description": "Hardware-compressed payload this texture uploads instead of a pixel source, or null for the ordinary case. Mutually exclusive with source and pixels: installing one clears the others, so a texture is never ambiguous about what it uploads. A handle that arrives empty from the loader can become either, which is what lets an asset variant swap a PNG for a KTX2 file without changing what a caller holds."
         },
         {
           "name": "destroyed",
@@ -973,6 +1304,56 @@
           "description": "Load lifecycle of this texture. Directly constructed textures are 'ready'; deferred handles returned by loader.get('hero.png') / loader.get(Asset.type('texture', src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' (showing the Texture.missing checker) when the load errors."
         },
         {
+          "name": "mipLevelCount",
+          "signature": "mipLevelCount: number",
+          "signatureTokens": [
+            {
+              "text": "mipLevelCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of supplied levels; browser sources report one until realized."
+        },
+        {
+          "name": "pixels",
+          "signature": "pixels: Rgba8TexturePayload | null",
+          "signatureTokens": [
+            {
+              "text": "pixels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rgba8TexturePayload",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "RGBA8 payload this texture uploads instead of a browser source, or null."
+        },
+        {
           "name": "powerOfTwo",
           "signature": "powerOfTwo: boolean",
           "signatureTokens": [
@@ -1034,6 +1415,27 @@
           "params": [],
           "returnType": null,
           "description": "true exactly when state is 'ready'."
+        },
+        {
+          "name": "resolvedMetadata",
+          "signature": "resolvedMetadata: ResolvedTextureMetadata",
+          "signatureTokens": [
+            {
+              "text": "resolvedMetadata",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ResolvedTextureMetadata",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolved interpretation for the active payload. The record is immutable."
         },
         {
           "name": "scaleMode",
@@ -1201,7 +1603,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "A color producer: a browser-rasterized canvas, interpreted exactly like any other decoded image source."
         },
         {
           "name": "missing",
@@ -1222,7 +1624,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shared 8×8 magenta/black checkerboard shown in place of assets that failed to load - a visible error beats an invisible hole, in production too. Lazily created; every access returns the same instance."
+          "description": "Shared 8×8 magenta/black checkerboard shown in place of assets that failed to load - a visible error beats an invisible hole, in production too. Lazily created; every access returns the same instance. A color producer, like Texture.fromColor: the checker pattern is drawn on a canvas and resolved the same way a loaded color asset is."
         },
         {
           "name": "white",
@@ -1243,7 +1645,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "A color producer: a browser-rasterized canvas, interpreted exactly like any other decoded image source."
         }
       ],
       "paragraphs": [],

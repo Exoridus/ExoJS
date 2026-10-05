@@ -726,19 +726,19 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * static quad-index pattern, and the group-owned per-node style texture.
    * @internal
    */
-  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const data = payload.rendererData as TextRetainedRendererData | null;
 
     if (backend === null || vao === null || data === null || !(payload.bundle instanceof WebGl2RetainedGroupResources)) {
-      return;
+      return false;
     }
 
     const state = payload.bundle.rendererReplayState;
 
     if (!(state instanceof TextRetainedReplayState) || state.nodeDataTexture === null) {
-      return;
+      return false;
     }
 
     const shader = this._shaderFor(data.shaderType);
@@ -773,6 +773,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     shader.sync();
     backend.bindVertexArrayObject(vao);
     vao.draw(state.quadCount * 6, 0, RenderingPrimitives.Triangles);
+
+    return true;
   }
 
   /**

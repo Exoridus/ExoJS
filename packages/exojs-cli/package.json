@@ -40,11 +40,11 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "build": "exo-tsc -p tsconfig.build.json",
+    "typecheck": "exo-tsc --noEmit && exo-tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-cli"
   },
@@ -54,7 +54,7 @@
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.6.2",
     "typescript": "~6.0.3"
   },
   "license": "MIT",

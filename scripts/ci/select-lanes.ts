@@ -247,6 +247,14 @@ const isBenchStructuralPath = (file: string): boolean => {
   if (file.startsWith('packages/exojs-bench/test/')) return true;
   if (file.startsWith('packages/exojs-bench/baselines/')) return true;
   if (file === 'packages/exojs-bench/package.json') return true;
+  // The particle package owns the renderers the `particles-*` archetypes
+  // measure. Without it here, a particles-only change alters exactly the
+  // counters this gate guards and never runs the gate that would notice: the
+  // WebGL2 particle simulation moved to a transform-feedback one, the
+  // `particles-lifecycle` cell moved from 1/0/1 to 6/12/10, and the gate stayed
+  // green on the merge because nothing in that PR selected this lane.
+  if (file.startsWith('packages/exojs-particles/src/')) return true;
+  if (file === 'packages/exojs-particles/package.json') return true;
   if (file.startsWith('.github/workflows/')) return true;
 
   return false;
@@ -259,6 +267,18 @@ const isBenchStructuralPath = (file: string): boolean => {
  * exists to check. Gates the unit lane on its own, independent of `engine`.
  */
 const isGuidesPath = (file: string): boolean => file.startsWith('site/src/content/');
+
+/**
+ * READMEs that promise complete, typechecked TypeScript examples rather than
+ * caller-owned fragments. `test/site/readme-examples.test.ts` reads this list,
+ * so adding a README there also routes its changes to the unit lane.
+ */
+export const CHECKED_README_PATHS: readonly string[] = [
+  'README.md',
+  ...['exojs-physics', 'exojs-particles', 'exojs-lighting', 'exojs-tiled', 'exojs-ldtk', 'exojs-aseprite', 'exojs-audio-fx', 'exojs-pathfinding'].map(
+    name => `packages/${name}/README.md`,
+  ),
+];
 
 /**
  * Site-data area: the sources the remaining `test/site/**` suites read. Same
@@ -284,10 +304,18 @@ const isGuidesPath = (file: string): boolean => file.startsWith('site/src/conten
  *                                        profile-only commit reaches no other
  *                                        area that runs a test.
  *
+ *   - `CHECKED_README_PATHS`             the READMEs whose complete examples
+ *                                        `test/site/readme-examples` typechecks.
+ *                                        Read before the prose exemption, or a
+ *                                        README-only change - the one that can
+ *                                        break those examples - would never run
+ *                                        the suite that guards them.
+ *
  * Deliberately not `site/src/pages/` or `site/src/components/`: no suite reads
  * them, and the site build already gates on the wider `site` area.
  */
 const isSiteDataPath = (file: string): boolean => {
+  if (CHECKED_README_PATHS.includes(file)) return true;
   if (isDocPath(file)) return false;
   if (file.startsWith('site/src/lib/')) return true;
   if (file.startsWith('examples/')) return true;

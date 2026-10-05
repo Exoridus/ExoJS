@@ -3,6 +3,8 @@ title: 'Pixel snapping'
 description: 'Keep sprites, panels, and tilemaps crisp by snapping rendered output to the device-pixel grid — render-only, camera- and DPR-aware.'
 ---
 
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
 # Pixel snapping
 
 When a drawable lands between device pixels — a camera at a fractional offset, a tween easing to rest, a 1.25× zoom on a high-DPR display — texel edges fall across pixel boundaries and crisp art starts to shimmer and blur. Every [`Drawable`](/ExoJS/en/api/drawable/) carries a `pixelSnapMode` property that fixes this at render time:
@@ -98,5 +100,9 @@ Chunk origins snap on the shared device grid, and a chunk's internal tile geomet
 - **Logical bounds stay logical.** `getBounds()` reports unsnapped values; the rasterised result may differ from them by less than one device pixel.
 
 ## Where to go next
+
+<ExamplePreview chapter="sprites-textures" slug="texture-sampling" />
+
+Compare texture sampling modes and render-only snapping against a fixed reference while changing zoom.
 
 The next section, [Effects](/ExoJS/en/guide/effects/filters/), builds directly on the rendering chapters — filters, particles, and post-processing chains that layer mood and motion onto a scene.

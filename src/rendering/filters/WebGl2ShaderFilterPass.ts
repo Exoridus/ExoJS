@@ -120,7 +120,11 @@ export class WebGl2ShaderFilterPass {
     // Bind shader (calls WebGl2ShaderProgram.bind → gl.useProgram + sync dirty uniforms)
     gl2.bindShader(shader);
 
-    // Auto-bind input texture to slot 0 (uTexture)
+    // Auto-bind input texture to slot 0 (uTexture). No manual sRGB handling
+    // here on purpose: `input` is the working render texture's own GPU
+    // resource, so its resolved format already gives a plain `texture()` call
+    // the hardware-decoded linear color ShaderFilter's color contract promises
+    // - this pass does not, and must not, run a transfer function of its own.
     gl2.bindTexture(input, 0);
 
     if (shader.uniforms.has('uTexture')) {

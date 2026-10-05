@@ -6,7 +6,6 @@
     "noEmit": true,
     "allowJs": true,
     "verbatimModuleSyntax": false,
-    "isolatedModules": false,
-    "ignoreDeprecations": "6.0"
+    "isolatedModules": false
   }
 }

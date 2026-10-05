@@ -16,6 +16,7 @@ class BossIntroCinematicScene extends Scene {
   tapPrompt;
   width = 0;
   height = 0;
+  sequenceTweens = [];
   async load() {
     const app = this.app;
     const { width, height } = app;
@@ -52,11 +53,11 @@ class BossIntroCinematicScene extends Scene {
     // Core defers playback until the AudioContext unlocks on the first
     // gesture; start the cinematic in lockstep with the sting on unlock.
     this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.2 });
-    app.audio.onUnlock.add(() => this.playSequence());
+    app.audio.onUnlock.add(this.playSequence);
     this.inputs.onTrigger(Keyboard.R, () => this.replay());
-    app.input.onPointerDown.add(() => this.replay());
+    app.input.onPointerDown.add(this.replay);
   }
-  replay() {
+  replay = () => {
     const app = this.app;
     if (app.audio.locked) {
       return;
@@ -69,12 +70,13 @@ class BossIntroCinematicScene extends Scene {
     }
     this.playSequence();
     this.hud.setStatus('Replaying…');
-  }
-  playSequence() {
-    const app = this.app;
+  };
+  playSequence = () => {
     const { width, height } = this;
-    // Wipe any in-flight tweens and reset the visible state to frame zero.
-    app.tweens.clear();
+    for (const tween of this.sequenceTweens) {
+      tween.stop();
+    }
+    this.sequenceTweens.length = 0;
     this.view.reset(width * 0.42, height / 2, width, height);
     this.view.clearShake();
     this.barSize.v = 0;
@@ -82,33 +84,33 @@ class BossIntroCinematicScene extends Scene {
     this.title.text = '';
     this.boss.setScale(0.4);
     // Letterbox bars slam in.
-    app.tweens.create(this.barSize).to({ v: 84 }, 0.6).start();
+    this.sequenceTweens.push(this.tweens.create(this.barSize).to({ v: 84 }, 0.6).start());
     // Slow camera push-in toward the boss.
-    app.tweens
-      .create(this.view.center)
-      .to({ x: width * 0.55, y: height / 2 }, 2.0)
-      .start();
+    this.sequenceTweens.push(
+      this.tweens
+        .create(this.view.center)
+        .to({ x: width * 0.55, y: height / 2 }, 2.0)
+        .start(),
+    );
     // The boss looms larger as the camera arrives.
-    app.tweens.create(this.boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
+    this.sequenceTweens.push(this.tweens.create(this.boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start());
     // Typewriter title reveal - its onStart IS the reveal beat: punch a shake.
-    app.tweens
-      .create(this.titleState)
-      .to({ count: titleText.length }, 1.0)
-      .delay(1.6)
-      .onStart(() => {
-        this.view.shake(18, Time.seconds(0.52), { frequency: 24, decay: true });
-      })
-      .onUpdate(() => {
-        this.title.text = titleText.slice(0, this.titleState.count | 0);
-      })
-      .start();
+    this.sequenceTweens.push(
+      this.tweens
+        .create(this.titleState)
+        .to({ count: titleText.length }, 1.0)
+        .delay(1.6)
+        .onStart(() => {
+          this.view.shake(18, Time.seconds(0.52), { frequency: 24, decay: true });
+        })
+        .onUpdate(() => {
+          this.title.text = titleText.slice(0, this.titleState.count | 0);
+        })
+        .start(),
+    );
     // Music swells up under the reveal.
-    app.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start();
-  }
-  update(delta) {
-    // Advance the camera shake (and follow/bounds) animation each frame.
-    this.view.update(delta * 1000);
-  }
+    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start());
+  };
   draw(context) {
     const app = this.app;
     const { width, height } = this;
@@ -116,19 +118,27 @@ class BossIntroCinematicScene extends Scene {
     this.bg.fillColor = new Color(36, 42, 70);
     // Span well past the view edges so the push-in never reveals a seam.
     this.bg.drawRectangle(-width * 0.25, 0, width * 1.5, height);
-    context.backend.setView(this.view);
-    context.render(this.bg);
-    context.render(this.boss);
-    context.backend.setView(null);
-    context.render(this.title);
+    context.render(this.bg, { view: this.view });
+    context.render(this.boss, { view: this.view });
+    context.render(this.title, { view: context.screenView });
     this.bars.clear();
     this.bars.fillColor = Color.black;
     this.bars.drawRectangle(0, 0, width, this.barSize.v);
     this.bars.drawRectangle(0, height - this.barSize.v, width, this.barSize.v);
-    context.render(this.bars);
+    context.render(this.bars, { view: context.screenView });
     if (app.audio.locked) {
-      context.render(this.tapPrompt);
+      context.render(this.tapPrompt, { view: context.screenView });
     }
+  }
+  destroy() {
+    for (const tween of this.sequenceTweens) {
+      tween.stop();
+    }
+    this.app.audio.onUnlock.remove(this.playSequence);
+    this.app.input.onPointerDown.remove(this.replay);
+    this.musicVoice?.stop();
+    this.hud?.dispose();
+    super.destroy();
   }
 }
 const app = new Application({

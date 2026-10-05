@@ -31,6 +31,10 @@ type FrameCallbackVideoElement = HTMLVideoElement &
  * `requestVideoFrameCallback` (falling back to `currentTime` polling on
  * browsers that lack it). Audio is routed through the Web Audio API gain
  * node and can be directed to any {@link AudioBus}.
+ *
+ * Frames are uploaded as sRGB colour, like any other browser image source, so
+ * the video is SDR content. The engine has no HDR video path: an HDR clip
+ * reaches it as whatever SDR frames the browser hands over.
  */
 export class Video extends Sprite {
   public readonly onStart = new Signal();

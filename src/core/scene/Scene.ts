@@ -1,7 +1,9 @@
 import type { Application } from '#core/Application';
+import type { ComponentClass } from '#core/Component';
+import type { ComponentQuery } from '#core/ComponentQuery';
 import { DestroyScope } from '#core/DestroyScope';
 import { deserializeInto, migrate, serializeTree } from '#core/serialization/serialize';
-import { SERIALIZATION_VERSION, type SerializedScene } from '#core/serialization/types';
+import { SERIALIZATION_VERSION, type SerializedScene, type SerializeOptions } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import type { SystemRegistry } from '#core/SystemRegistry';
 import type { Destroyable, Synchronous } from '#core/types';
@@ -67,15 +69,26 @@ import type { ApplicationLike, ApplicationOf } from './sceneTypes';
  */
 export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
-   * Type-only marker that keeps `Data` in the class's structural type so it
-   * survives inference through a zero-argument constructor (used by scene
-   * navigation typing). `declare`d - erased at runtime, never assigned, and
-   * not part of authored code or autocomplete.
+   * Type-only brand that keeps `Data` in the class's *emitted* type, so
+   * {@link SceneConstructor} inference can recover a scene's activation data
+   * from `typeof Subclass` and `Application.start` keeps its conditional arity.
+   * `declare`d - erased at runtime, never assigned, and not part of authored
+   * code or autocomplete.
+   *
+   * The member is `protected` under a non-exported `unique symbol` rather than
+   * `private` for a reason that is invisible in the source and decisive in the
+   * emit: declaration output drops the declared type of a `private` member
+   * (`private readonly _sceneData?;` with no `: Data`), which removes `Data` from
+   * the shipped class shape. `InferSceneData<typeof AnyScene>` then collapses to
+   * `never` for every consumer, so correct code such as `app.start(BareScene)`
+   * is rejected against the published `.d.ts` while the source still compiles.
+   * A `protected` member keeps its type through the emit, and the symbol key
+   * keeps the brand invisible to subclasses and to autocomplete alike.
    */
-  declare private readonly _sceneData?: Data;
+  declare protected readonly [sceneDataBrand]?: Data;
 
   protected _app: ApplicationOf<AppLike> | null = null;
-  protected readonly _root = new Container();
+  protected readonly _root: Container = this._anchorComponents(new Container());
 
   /**
    * Dispatched after this scene becomes `Active` - a fresh activation
@@ -164,17 +177,14 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   /**
-   * Structural root container for this scene's hierarchy.
+   * Root container of this scene's hierarchy, and what the default
+   * {@link Scene.draw} renders each frame.
    *
-   * `Scene.root` is an **ownership and traversal anchor**, not an
-   * automatic render-authoritative root. The framework never calls
-   * `root.render(backend)` for you. `Scene.draw(context)` is the
-   * explicit orchestration point - see {@link Scene.draw}.
-   *
-   * The root exists eagerly so `addChild` / `removeChild` can proxy
-   * to a known container, and so transform/bounds traversal has a
-   * stable parent. Selecting what to render each frame remains the
-   * scene's responsibility.
+   * The root exists eagerly - before the scene is attached - so `addChild` /
+   * `removeChild` can proxy to a known container from a constructor or field
+   * initializer, and so transform/bounds traversal has a stable parent. A scene
+   * that overrides {@link Scene.draw} decides for itself what to render; the
+   * root stays the ownership anchor of its nodes either way.
    */
   public get root(): Container {
     return this._root;
@@ -242,9 +252,12 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Scene-bound coroutine facade over `app.coroutines`. Work queued via
-   * `this.coroutines.queue(...)` stops advancing while the scene is paused or
-   * suspended, resumes exactly where it left off, and is cancelled when the
-   * scene ends permanently - no manual cleanup required.
+   * `this.coroutines.queue(...)` stops advancing while the scene is suspended,
+   * resumes exactly where it left off, and is cancelled when the scene ends
+   * permanently - no manual cleanup required.
+   *
+   * Pausing the scene does not stop it by default (`when: 'always'`). Queue it
+   * with `{ when: 'active' }` to freeze it while the scene is paused.
    *
    * Throws if accessed before the scene is attached to an {@link Application}.
    */
@@ -312,14 +325,15 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * (after {@link Scene.draw}). Lazily created and destroyed with the scene;
    * add widgets via `this.ui.addChild(...)`.
    *
-   * Unlike {@link Scene.root}, the UI layer **is** auto-rendered each frame - a
+   * Unlike {@link Scene.root}, whose pass an overridden {@link Scene.draw}
+   * replaces, the UI layer is rendered every frame whatever `draw()` does - a
    * first-class overlay that always sits above the world. Its children live in
    * screen space (origin top-left, `0..width` × `0..height`); pointer and
    * keyboard input route to them ahead of the world layer.
    */
   public get ui(): UIRoot {
     if (this._ui === null) {
-      this._ui = this._destroyScope.track(new UIRoot());
+      this._ui = this._destroyScope.track(this._anchorComponents(new UIRoot()));
 
       // If the scene is already active (its root carries a stage), bind the UI
       // layer now; otherwise the director attaches it when the scene activates.
@@ -334,6 +348,42 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /** @internal - the UI layer if materialized, else `null` (no lazy allocation). */
   public _peekUI(): UIRoot | null {
     return this._ui;
+  }
+
+  /**
+   * The nodes under {@link Scene.root} or {@link Scene.ui} that carry a
+   * component of every given class, as a reusable {@link ComponentQuery}.
+   * Asking again with the same classes in the same order returns the same
+   * query, so it can be made once in {@link Scene.init} and kept in a field.
+   *
+   * Rows are `[node, ...components]` in the order the classes were given.
+   * Classes match exactly: a subclass instance does not match its base class.
+   * Disabled components and components of a paused scene still match.
+   *
+   * @throws Before the scene is attached (during construction and field
+   *   initialization), after it has ended, or without any class.
+   *
+   * @example
+   * ```ts
+   * const movers = this.query(Velocity, Bounds);
+   *
+   * movers.forEach((node, velocity, bounds) => {
+   *   node.x += velocity.x * delta;
+   * });
+   * ```
+   */
+  public query<T extends readonly [ComponentClass, ...ComponentClass[]]>(...types: T): ComponentQuery<T> {
+    if (types.length === 0) {
+      throw new Error('Scene.query() needs at least one component class.');
+    }
+
+    const runtime = this._requireScope('query').componentRuntime(true);
+
+    if (runtime === null) {
+      throw new Error('Scene.query() was called on a scene that has ended. Query the scene that is active now.');
+    }
+
+    return runtime.query(types);
   }
 
   public addChild(child: RenderNode): this {
@@ -357,15 +407,19 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * the scene is attached to an {@link Application}, texture/asset references
    * resolve to their {@link Loader} source keys. Reattach behaviour in code
    * after {@link Scene.deserialize}.
+   *
+   * @throws If a node under the root or UI layer carries components, unless
+   *   {@link SerializeOptions.omitComponents} is set - a save never drops them
+   *   silently.
    */
-  public serialize(): SerializedScene {
+  public serialize(options?: SerializeOptions): SerializedScene {
     const loader = this._app?.loader ?? null;
     const registry = this._app?.serializers;
-    const data: SerializedScene = { version: SERIALIZATION_VERSION, root: serializeTree(this._root, loader, registry) };
+    const data: SerializedScene = { version: SERIALIZATION_VERSION, root: serializeTree(this._root, loader, registry, options) };
     const ui = this._peekUI();
 
     if (ui !== null) {
-      data.ui = serializeTree(ui, loader, registry);
+      data.ui = serializeTree(ui, loader, registry, options);
     }
 
     return data;
@@ -452,25 +506,41 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   /**
-   * Explicit per-frame rendering entry point. Override to choose
-   * what gets rendered.
+   * Per-frame rendering entry point. The default renders {@link Scene.root}
+   * once through the context's default view, so a scene that only adds
+   * children to its root needs no override.
    *
-   * The default body is intentionally empty: `Scene` does not
-   * automatically traverse {@link Scene.root}. Auto-rendering the
-   * full hierarchy would conflict with ExoJS's "explicit instead of
-   * implicit" identity. Users decide which subtree(s) render each
-   * frame - `context.render(this.root)` is the recommended high-level
-   * path, but selective rendering (e.g. `context.render(world)` while
-   * skipping `ui` for a given frame) is equally valid and intentionally
-   * supported.
+   * An override replaces the default entirely: the engine does not render the
+   * root again afterwards. Render selected subtrees, several views or render
+   * textures from it; leave it empty to render nothing; call
+   * `super.draw(context)` to keep the root pass and add work around it.
+   *
+   * Scene systems' `draw` phases and {@link Scene.ui} run after this hook
+   * whether it is overridden or not. A paused scene keeps drawing; a scene
+   * still being prepared does not draw at all.
    *
    * Must be synchronous - see {@link Scene.update}. An `async` draw() would
    * present incomplete frames.
    *
-   * @see Scene.root for why root is structural, not render-authoritative.
+   * @example
+   * ```ts
+   * class WorldScene extends Scene {
+   *   private readonly world = new Container();
+   *   private readonly minimap = new View(0, 0, 2048, 2048);
+   *
+   *   public override init(): void {
+   *     this.addChild(this.world);
+   *   }
+   *
+   *   public override draw(context: RenderingContext): void {
+   *     context.render(this.world);
+   *     context.render(this.world, { view: this.minimap });
+   *   }
+   * }
+   * ```
    */
-  public draw(_context: RenderingContext): Synchronous {
-    // override in subclass
+  public draw(context: RenderingContext): Synchronous {
+    context.render(this._root);
   }
 
   /**
@@ -548,6 +618,13 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
     this._scope = null;
   }
 
+  /** Make `container` the top of a component tree belonging to this scene. */
+  private _anchorComponents<C extends Container>(container: C): C {
+    container._setComponentAnchor({ componentRuntime: create => this._scope?.componentRuntime(create) ?? null });
+
+    return container;
+  }
+
   private _requireScope(name: string): SceneScope<Data> {
     if (this._scope === null) {
       throw new Error(
@@ -558,3 +635,14 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
     return this._scope;
   }
 }
+
+/**
+ * Key for {@link Scene}'s activation-data brand. Deliberately not exported: it is
+ * an implementation detail of the declaration surface, and a consumer able to
+ * name it could fabricate a matching key.
+ *
+ * Declared after the class so that the brand's own documentation cannot take the
+ * place of the class documentation immediately above the declaration - the
+ * generated API reference reads that comment, not this one.
+ */
+declare const sceneDataBrand: unique symbol;

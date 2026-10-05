@@ -88,6 +88,23 @@ pnpm perf webgpu:timer   # per-frame timer methodology: raw vs attributed queue
 
 The structural counters are the durable half of the report: exact, deterministic and reproducible where a timing is not. A non-empty scene that reports zero draw calls fails the cell rather than reporting the undercount.
 
+## Measuring colour-pipeline cost
+
+The engine renders in linear light by default: managed colour textures are premultiplied once when they are uploaded, working surfaces are sRGB-encoded or half-float, and every frame ends in one output pass. Every published profile in `results/` (engine 0.17.0) and both files in `baselines/` (the timing baseline records 0.15.2; the structural counters were last re-recorded before the default changed) were acquired before that became the default, so they describe the earlier pipeline. They stay as they are: they are evidence for the engine they measured, they are never regenerated, and a colour-pipeline number is never merged into them. Nothing in a result file says "pre-activation" by itself, so read the `engineVersion` and `timestamp` stamps before comparing an old row with a new one, and do not quote an old ratio as though it described the current build.
+
+Colour-pipeline cost is measured in three layers, and each answers a different question:
+
+- **Counts and bytes are deterministic and are asserted by tests, not measured by the bench.** `test/rendering/color-pipeline-perf.test.ts` pins draw and pass counts, uploaded bytes, and that normalization is paid once per uploaded texture (one extra GL draw on upload, none on any later frame, none per sprite). `test/rendering/color-memory-accounting.test.ts` pins owned GPU bytes against the byte formulas below. The `sprite/1000 colour-managed moving` archetype of `pnpm test:alloc` pins zero per-frame allocation for tinted sprites over normalized textures. Neither needs a GPU or an idle machine.
+- **Steady-state timing comes from the bench.** A cell's warmup discards the first frames, so first-upload cost (normalization scratch, its pass, mip generation) is never inside a timed window; only the steady-state cost of the final output pass, half-float bandwidth, retained replay and filter intermediates is. The archetypes that reach those paths are `filter-chain-1`, `filter-chain-2`, `filter-chain-4`, `composite`, `mixed-blend`, `overdraw` and `static-heavy` as the retained-replay control. First-upload, resize and device-loss cost have no timed archetype; their records are the deterministic tests above, and a wall-clock figure for them is not claimed anywhere.
+- **Owned GPU memory is an estimate the engine books itself** (`RenderStats.gpuMemoryBytes`); the harness does not sample it. It counts texture and target storage at `width * height * texel bytes` per level (RGBA8 and RGBA8-sRGB 4, RGBA16F 8, RGBA32F 16, a full mip chain summing each level), multisample storage at `samples` times the colour storage, the depth/stencil attachment at 4 bytes per pixel, compressed textures as whole padded blocks per level, and the normalization staging texture at 4 bytes per texel of the largest level it has staged. At 1920x1080 one RGBA8 target is about 7.91 MiB, RGBA16F 15.82 MiB and RGBA32F 31.64 MiB before depth, multisampling and mips. The figure excludes driver padding and WebGPU's implementation-defined depth layout, so it is an upper-bound estimate of what the engine owns, not a driver reading.
+
+A labelled colour-pipeline run keeps its provenance separate from history:
+
+- Write it to its own `--out` directory, named for what it is (`.workspace/output/color-pipeline-<date>`). Never point it at a directory that already holds a `results.json`, because a run merges into an existing one and a kept cell keeps its earlier provenance.
+- Measure one archetype per invocation for a before/after claim, as described above; the engine revision under test is whatever is checked out, so record the commit next to the output directory, because `engineVersion` alone does not distinguish two commits of the same version.
+- Do not pass `--update` to `gate:timing`, and do not run `bench:compare --profile`, until the correctness qualification of the colour pipeline is complete. The committed timing baseline and the published profiles are not rewritten to "make the new pipeline pass"; a regression against them is information about the change in pipeline, and the decision to re-record is made on an idle machine with `--update --idle`, deliberately and separately.
+- Report draw and pass counts, uploaded bytes and owned bytes from the deterministic tests together with the measured timing and its platform provenance (GPU, browser, operating system, prerelease marker). A timing without that provenance, or a number estimated rather than measured, is not part of the report.
+
 ## Median vs p95
 
 `median` is the amortised cost of a typical frame. `p95` is the frame the player feels.
@@ -256,6 +273,7 @@ Rules the generator enforces rather than merely intends:
 - Every row names the mechanism behind its difference, drawn from the structural counters. A row whose mechanism cannot be evidenced is not published - it is listed under Omissions with the reason, so a dropped row stays auditable.
 - One column per competitor, no "best competitor" composite. Phaser occupies its own WebGL1 block, CPU time only, explicitly carrying no mechanism.
 - Cells where ExoJS loses are published exactly like the cells where it wins.
+- A scenario whose arms turn out not to do the same work is repaired and re-measured. It is never published with a "not comparable" label in place of its comparison, and never hidden: a label would keep a known-unfair row on the page, and hiding it would let the choice of what to show depend on the outcome.
 
 ### Machine profiles
 

@@ -88,6 +88,17 @@ grade.matrix = [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0];
 
 The transform runs on straight alpha — the shader divides the premultiplied sample by its alpha, transforms, and multiplies it back — so a half-transparent edge grades the same way an opaque pixel does.
 
+The matrix is applied in an explicit domain, chosen with the `colorSpace` option and defaulting to `'srgb'`. That keeps display-grading intent: the sample is converted to encoded sRGB, transformed and clamped to the displayable range there, and converted back to linear premultiplied colour. Pass `'linear-srgb'` to apply the same numbers to linear light instead. The clamp is deliberate, so a matrix cannot carry values above display white through:
+
+```ts
+import { ColorMatrixFilter } from '@codexo/exojs';
+
+const display = new ColorMatrixFilter().grayscale();
+const linear = new ColorMatrixFilter(undefined, { colorSpace: 'linear-srgb' }).grayscale();
+```
+
+A neutral matrix returns colour and alpha unchanged in either domain.
+
 For a plain per-drawable multiply, prefer [`Drawable.tint`](/ExoJS/en/guide/rendering/sprites/): it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image.
 
 ## DropShadowFilter
@@ -132,7 +143,7 @@ The glow is added **light**, not coverage: it carries no alpha of its own. A hal
 
 `strength` is the Gaussian standard deviation in logical units, exactly as `BlurFilter` defines it. `levels` is purely a cost knob: the same `strength` covers the same distance at every setting, and each halving buys that distance at a quarter of the fill rate, at the price of a softer and coarser base as the blur runs on fewer texels. A node too small to take every halving takes as many as it can. The filter declares the reach it needs — `strength * 3` for the blur plus what the halving chain spreads on its own — so a glow is never clipped by the subject's own bounds.
 
-Everything in the chain is eight-bit sRGB; there is no HDR and no tone mapping. The extraction leaves headroom for an `intensity` of roughly `1 / (1 - threshold)` before the glow saturates to white, past which the effect stops getting brighter and starts getting flatter. Colour grading is [`LutFilter`](#lutfilter)'s job, before or after this one.
+`threshold` is measured on linear luminance, where `1` is display white, not on encoded values: an encoded channel value of 128 is only about 0.22 in linear light. Every intermediate matches the input's own format. On the default eight-bit SDR working target nothing can exceed `1`, and the extraction leaves headroom for an `intensity` of roughly `1 / (1 - threshold)` before the glow saturates to white, past which the effect stops getting brighter and starts getting flatter. With `rendering.color.workingFormat: 'hdr'` the working target holds values above `1`, a `threshold` above `1` selects only those highlights, and the intermediates keep that energy until the output transform maps it for display. Colour grading is [`LutFilter`](#lutfilter)'s job, before or after this one.
 
 ## LutFilter
 
@@ -153,7 +164,7 @@ sprite.filters = [filter];
 filter.setLut(differentLutTexture);
 ```
 
-`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation.
+`LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation. Like `ColorMatrixFilter`, the lookup runs in a `colorSpace` domain, `'srgb'` by default: the input is encoded to sRGB to index the table, the table's texels are the graded output in that domain, and the result returns to linear premultiplied colour. The filter unassociates alpha before the lookup and re-associates it afterwards, so an identity LUT stays an identity at fractional alpha. LUT textures are numeric data, not colour: `setLut()` throws for a texture that does not resolve to `colorSpace: 'none'` (an ordinary loaded image resolves to `'srgb'`, and `'linear-srgb'` is colour too), so build the texture with `fromImage()`, a `DataTexture`, or declare `colorSpace: 'none'` on it. The check repeats every time the filter applies.
 
 ## DisplacementFilter
 
@@ -175,6 +186,8 @@ haze.offsetV += delta * 0.1;
 
 `scale` is the maximum displacement in logical units (one number for both axes, or `[x, y]`), so the distortion keeps its on-screen size at every pixel ratio. `offsetU`/`offsetV` move where the map is sampled, in the map's own UV units — give the map `WrapModes.Repeat` for a scroll that never runs off its edge. The filter reports the reach through `getOutputBounds`, so a subject at rest keeps the room its distortion needs; a fragment displaced past the edge of that domain comes out transparent rather than smearing the border texel.
 
+The map is sampled as numeric data, so it must resolve to exactly `colorSpace: 'none'`: an image `Texture` declares that itself (a `DataTexture` already is numeric). A map that resolves to `'srgb'` is rejected, because an sRGB view would hardware-decode the displacement direction, and so is `'linear-srgb'`, which is still colour and gets colour alpha handling. The check repeats every time the filter applies, so a texture reinterpreted after it was assigned fails there instead of displacing with a corrupted direction.
+
 ## Custom shader filters
 
 `ShaderFilter` takes a fragment shader source per language and an optional uniforms map. It renders a fullscreen quad and executes the shader against the filter input texture, picking the source the active backend speaks:
@@ -191,6 +204,8 @@ Both sources are optional on their own, but a filter is only portable when it ca
 The WGSL side is one module. Name the fragment entry point `fragmentMain`; a module without a `@vertex` stage gets the default fullscreen-quad vertex stage (`vertexMain`) prepended, and one that declares its own must name it `vertexMain` and emit `@location(0) vUv: vec2<f32>`.
 
 WGSL user uniforms live in `@group(1)`: every non-texture uniform packs into one buffer at `@binding(0)`, each in a 16-byte slot **in the order you passed them**, and textures follow from `@binding(1)`, each with its sampler in the next slot. The GLSL side binds by name instead, with texture uniforms taking slots 1..N.
+
+The filter input is linear, premultiplied colour, and the fragment must return colour in that same representation: no decode on the way in, no encode on the way out. A shader that only moves samples needs no colour conversion at all. Numeric inputs such as UVs, pointer positions and orientation are plain numbers, and a texture you sample as data must resolve to `colorSpace: 'none'`.
 
 Both auto-bind `uTexture` (the filter input), `uResolution` (output dimensions) and `uOrientation` (the v-axis sign, below) — you don't declare these in your fragment source unless you want to read them. Write custom uniforms with `setUniform(name, value)` or `setUniforms({ ... })`: they are flushed before each pass AND they invalidate the nodes rendering the filter, which writing into the read-only `uniforms` view could not do. Accepted value types: `number`, `[n, n]`/`[n, n, n]`/`[n, n, n, n]` tuples, `Float32Array`, `Int32Array`, `Texture`, and `RenderTexture`.
 
@@ -300,14 +315,14 @@ A filter transforms a drawable's rendered pixels — it operates on the 2D outpu
 - Use a `MeshMaterial` for per-vertex effects: displacement, custom lighting, procedural geometry.
 - Use both together: a `MeshMaterial` on the mesh, plus a filter on the mesh's parent container.
 
-The next chapter, [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/), covers attaching a `MeshMaterial` in detail.
+Continue with [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/), which covers attaching a `MeshMaterial` in detail.
 
 ## Examples
 
 <a id="blur-filter"></a>
 <ExamplePreview chapter="filters" slug="blur-filter" />
 
-A single `BlurFilter` with an interactive strength slider — the basic filter pattern.
+A side-by-side comparison of the original sprite, `BlurFilter`, and `DropShadowFilter`, with live controls and bypass.
 
 <a id="bloom-filter"></a>
 <ExamplePreview chapter="filters" slug="bloom-filter" />
@@ -315,15 +330,15 @@ A single `BlurFilter` with an interactive strength slider — the basic filter p
 Six discs of rising luminance under one `BloomFilter`, with live threshold, intensity, strength and level sliders.
 
 <a id="filter-stack"></a>
-<ExamplePreview chapter="filters" slug="filter-stack" />
+<ExamplePreview chapter="filters" slug="metaballs" />
 
-Three filters chained on one sprite — blur, tint, and a custom shader — demonstrating filter ordering and composition.
+Drag a circle into the moving field, then switch between blur → threshold, threshold → blur, and the raw source circles. The different silhouettes show why pass order matters.
 
 <a id="displacement-filter"></a>
-<ExamplePreview chapter="filters" slug="displacement-filter" />
+<ExamplePreview chapter="render-targets" slug="water-mirror" />
 
-A procedural ripple map warping a sprite, with a live scale slider and a scrolling sampling offset.
+The reflection captures the moving scene into a texture, flips it, and applies a scrolling displacement map. Drag across the water to vary ripple strength.
 
 ## Where to go next
 
-The next chapter, [Particles](/ExoJS/en/guide/effects/particles/), covers the data-oriented particle system — spawn modules, update modules, distributions, and CPU/GPU auto-routing.
+Continue with [Particles](/ExoJS/en/guide/effects/particles/), which covers the data-oriented particle system — spawn modules, update modules, distributions, and CPU/GPU auto-routing.

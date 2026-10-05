@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CHAPTERS } from '../../site/src/lib/chapters';
 import { EXAMPLES_CATALOG } from '../../site/src/lib/examples-catalog';
+import { PLAYGROUND_CATEGORIES } from '../../site/src/lib/playground-categories';
 
 // Vitest runs with the repository root as the working directory; the example
 // sources live in `<root>/examples`. `import.meta.url` is an http URL under
@@ -19,8 +20,12 @@ describe('examples catalog integrity', () => {
     expect(missing.map(entry => entry.path)).toEqual([]);
   });
 
-  it('keeps every path consistent with "<category>/<slug>.js"', () => {
-    const mismatched = entries.filter(entry => entry.path !== `${entry.category}/${entry.slug}.js`);
+  it('keeps every path consistent with its source chapter and slug', () => {
+    const sourceChapters = new Set(CHAPTERS.map(chapter => chapter.slug));
+    const mismatched = entries.filter(entry => {
+      const [chapter, file] = entry.path.split('/');
+      return !sourceChapters.has(chapter) || file !== `${entry.slug}.js`;
+    });
     expect(mismatched.map(entry => entry.path)).toEqual([]);
   });
 
@@ -36,14 +41,14 @@ describe('examples catalog integrity', () => {
     }
   });
 
-  it('matches the CHAPTERS category set exactly (no orphan category metadata)', () => {
+  it('matches the Playground category set exactly (no orphan category metadata)', () => {
     const catalogCategories = Object.keys(EXAMPLES_CATALOG).sort();
-    const chapterSlugs = CHAPTERS.map(chapter => chapter.slug).sort();
-    expect(catalogCategories).toEqual(chapterSlugs);
+    const categorySlugs = PLAYGROUND_CATEGORIES.map(category => category.slug).sort();
+    expect(catalogCategories).toEqual(categorySlugs);
   });
 
-  it('assigns every example to a known chapter', () => {
-    const known = new Set(CHAPTERS.map(chapter => chapter.slug));
+  it('assigns every example to a known Playground category', () => {
+    const known = new Set(PLAYGROUND_CATEGORIES.map(category => category.slug));
     const orphaned = entries.filter(entry => !known.has(entry.category));
     expect(orphaned.map(entry => entry.path)).toEqual([]);
   });

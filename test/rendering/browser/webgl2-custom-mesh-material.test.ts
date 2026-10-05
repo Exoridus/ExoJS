@@ -11,7 +11,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { readWebGl2Pixel } from './_backendSetup';
+import { readWebGl2Pixel, useEncodedFrameTarget } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
@@ -64,6 +64,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
 
 const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.resetStats();
+  useEncodedFrameTarget(backend);
   backend.clear(Color.black);
   node.render(backend);
   backend.flush();
@@ -220,8 +221,9 @@ describe('custom MeshMaterial WebGL2 browser', () => {
 
       render(backend, mesh);
 
-      // sampled (0.5,0.5,0.5) * userColor (1,0,0.5) → (0.5, 0, 0.25) → (128,0,64).
-      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [128, 0, 64, 255]);
+      // The sample decodes to 0.216 linear and the uniform multiplies it in shader
+      // space: (0.216, 0, 0.108), stored as (128, 0, 92).
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [128, 0, 92, 255]);
       // Outside the quad stays clear-black.
       expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
       expect(bindMaterialSampler).toHaveBeenCalledWith(material.sampler, 0);

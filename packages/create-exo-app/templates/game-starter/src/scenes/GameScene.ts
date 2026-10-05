@@ -1,4 +1,4 @@
-import type { RenderingContext, Seconds } from '@codexo/exojs';
+import type { Seconds } from '@codexo/exojs';
 import { Color, Keyboard, Scene, Text } from '@codexo/exojs';
 
 import { Player } from '../objects/Player';
@@ -94,9 +94,5 @@ export class GameScene extends Scene {
 
     this._elapsed += delta;
     this._scoreText.text = `Score: ${Math.floor(this._elapsed)}`;
-  }
-
-  public override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }

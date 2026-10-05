@@ -1,0 +1,146 @@
+[
+  {
+    "run": 0,
+    "id": "camera",
+    "batches": 157,
+    "constructionMs": 0.5250000059604645,
+    "instrumentedBuildMs": 0.6899999678134918,
+    "breakEvenFrames": 11.666670198794794,
+    "rates": [
+      {
+        "rate": 0,
+        "baselineMs": 0.25,
+        "bundleMs": 0.19499999284744263,
+        "savingMs": 0.04499998688697815,
+        "positivePairs": 6,
+        "buildsPerFrame": 0
+      },
+      {
+        "rate": 0.01,
+        "baselineMs": 0.25,
+        "bundleMs": 0.2199999988079071,
+        "savingMs": 0.034999996423721313,
+        "positivePairs": 5,
+        "buildsPerFrame": 1.5666666666666667
+      },
+      {
+        "rate": 0.05,
+        "baselineMs": 0.25999999046325684,
+        "bundleMs": 0.2150000035762787,
+        "savingMs": 0.025000005960464478,
+        "positivePairs": 5,
+        "buildsPerFrame": 7.85
+      },
+      {
+        "rate": 0.1,
+        "baselineMs": 0.23000000417232513,
+        "bundleMs": 0.23499999940395355,
+        "savingMs": 0.004999995231628418,
+        "positivePairs": 3,
+        "buildsPerFrame": 15.7
+      }
+    ],
+    "parity": {
+      "differences": 0,
+      "replayDifferences": 0,
+      "clearDifferences": 800955
+    },
+    "errors": []
+  },
+  {
+    "run": 1,
+    "id": "camera",
+    "batches": 157,
+    "constructionMs": 0.4150000065565109,
+    "instrumentedBuildMs": 0.6249999701976776,
+    "breakEvenFrames": 7.5454557276956,
+    "rates": [
+      {
+        "rate": 0,
+        "baselineMs": 0.26000000536441803,
+        "bundleMs": 0.2150000035762787,
+        "savingMs": 0.05499999225139618,
+        "positivePairs": 6,
+        "buildsPerFrame": 0
+      },
+      {
+        "rate": 0.01,
+        "baselineMs": 0.26500000059604645,
+        "bundleMs": 0.2200000137090683,
+        "savingMs": 0.04500000178813934,
+        "positivePairs": 5,
+        "buildsPerFrame": 1.5666666666666667
+      },
+      {
+        "rate": 0.05,
+        "baselineMs": 0.26000000536441803,
+        "bundleMs": 0.23000000417232513,
+        "savingMs": 0.014999985694885254,
+        "positivePairs": 5,
+        "buildsPerFrame": 7.85
+      },
+      {
+        "rate": 0.1,
+        "baselineMs": 0.26500000059604645,
+        "bundleMs": 0.27000001072883606,
+        "savingMs": -0.024999991059303284,
+        "positivePairs": 1,
+        "buildsPerFrame": 15.7
+      }
+    ],
+    "parity": {
+      "differences": 0,
+      "replayDifferences": 0,
+      "clearDifferences": 800955
+    },
+    "errors": []
+  },
+  {
+    "run": 2,
+    "id": "camera",
+    "batches": 157,
+    "constructionMs": 0.375,
+    "instrumentedBuildMs": 0.4700000435113907,
+    "breakEvenFrames": 9.374994970860795,
+    "rates": [
+      {
+        "rate": 0,
+        "baselineMs": 0.2549999952316284,
+        "bundleMs": 0.2199999988079071,
+        "savingMs": 0.04000002145767212,
+        "positivePairs": 6,
+        "buildsPerFrame": 0
+      },
+      {
+        "rate": 0.01,
+        "baselineMs": 0.2549999952316284,
+        "bundleMs": 0.22999998927116394,
+        "savingMs": 0.03000001609325409,
+        "positivePairs": 5,
+        "buildsPerFrame": 1.5666666666666667
+      },
+      {
+        "rate": 0.05,
+        "baselineMs": 0.24000000953674316,
+        "bundleMs": 0.23499999940395355,
+        "savingMs": 0,
+        "positivePairs": 2,
+        "buildsPerFrame": 7.85
+      },
+      {
+        "rate": 0.1,
+        "baselineMs": 0.23499999940395355,
+        "bundleMs": 0.26000000536441803,
+        "savingMs": -0.034999996423721313,
+        "positivePairs": 1,
+        "buildsPerFrame": 15.7
+      }
+    ],
+    "parity": {
+      "differences": 0,
+      "replayDifferences": 0,
+      "clearDifferences": 800955
+    },
+    "errors": []
+  }
+]

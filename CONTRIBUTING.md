@@ -140,6 +140,8 @@ assets.demo.textures.bunny;
 
 The global is installed only inside the controlled example runtimes (Playground, Example/Guide preview, Asset Browser, smoke harness, Full Release harness). It is not part of the engine public API. The canonical catalog is `examples/assets/assets.ts`; `pnpm --filter @codexo/exojs-examples examples:sync` regenerates the `.js` sources and the runtime catalog.
 
+JSON asset data under `examples/assets/` is committed compact, including Tiled maps/tilesets/templates (`.tmj`, `.tsj`, `.tj`, `.world`) and LDtk documents (`.ldtk`, `.ldtkl`). Run `pnpm assets:compact` after exporting or editing these files. `pnpm assets:compact:check` enforces this in the sync gates. Prettier ignores the asset directory; do not pretty-print large tile arrays. The example catalog `examples/examples.json` remains ordinary repository metadata.
+
 ### The `.ts` source and its committed `.js`
 
 The `.ts` file is the authored source. The `.js` beside it is generated from it by `examples:sync` and **committed**, which is unusual enough to say why: a release bundle ships the whole catalog in both languages, alongside the guides, the API reference and a working playground, so a reader can copy either form and run it locally without being online. `scripts/release/full-zip.ts` splits them into `examples/src/**` and `examples/js/**` from whatever is on disk, and the release requires a site build — which runs `examples:sync` — beforehand.

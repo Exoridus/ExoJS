@@ -14,9 +14,8 @@ const scratchRegion = new Rectangle();
  * The options back, or a refusal.
  *
  * Checked before the base class runs rather than after: a cascade chain lives
- * in float targets from end to end, and a renderer that has already taken its
- * place in the frame slot has to be destroyed to leave it again - which a
- * constructor that throws never gets to do.
+ * in float targets from end to end, and the base allocates its targets as it
+ * runs - which a constructor that throws never gets to release.
  */
 const requireFloatTargets = (options: RadianceBackendOptions): RadianceBackendOptions => {
   if (!options.app.rendering.supportsColorFormat(TextureFormat.Rgba16F)) {
@@ -62,7 +61,6 @@ export class RadianceBackend extends FrameLightingBackend {
     this._blocks = new MaskBlocks(this._maskTarget);
     this._transport = new TransportTextures();
     this._radiance = new RadianceField(this._target, this._app.frameTexture, options.field);
-    this._attach();
   }
 
   /** What each block of the occluder mask holds, for the walk that skips over it. @internal */
@@ -86,6 +84,9 @@ export class RadianceBackend extends FrameLightingBackend {
   protected override _detachOwnPasses(): void {
     this._app.framePasses.removePass(this._blocks.pass);
     this._app.framePasses.removePass(this._radiance.cascadePass);
+  }
+
+  protected override _destroyOwnResources(): void {
     this._radiance.destroy();
     this._blocks.destroy();
     this._transport.destroy();

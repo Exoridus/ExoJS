@@ -7,7 +7,7 @@
  * across a chunk boundary in the rendered output.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe), so these tests do not skip on a missing adapter -
+ * against SwiftShader), so these tests do not skip on a missing adapter -
  * `renderScene` only skips when the software adapter drops the device
  * mid-test (a DOMException device-loss caught during rendering).
  *
@@ -49,7 +49,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-// On the software (swiftshader) adapter the WebGPU device can be dropped
+// On the software (SwiftShader) adapter the WebGPU device can be dropped
 // mid-test. Treat that as an unavailable-adapter skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 

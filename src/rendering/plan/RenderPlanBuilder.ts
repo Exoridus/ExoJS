@@ -15,7 +15,8 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import { materialKeyForcesFlush } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
-import { BlendModes, isAdvancedBlendMode } from '#rendering/types';
+import type { RenderTarget } from '#rendering/RenderTarget';
+import { blendModeNeedsBackdrop, BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import type { DerivedRootProduct } from './DerivedRootProduct';
@@ -214,6 +215,21 @@ export class RenderPlanBuilder {
    */
   private readonly _resolutionStack: number[] = [];
   /**
+   * Whether the target the collected content is played into is guaranteed fully
+   * covered, innermost level last. Empty while collecting into the root target,
+   * whose guarantee is the target's own - there is no barrier to push for it.
+   *
+   * Every barrier pushes `false`: its content is rendered into an intermediate
+   * colour target that carries real alpha, whatever the destination the barrier
+   * itself composites back into. That is what makes the answer correct by
+   * default - a blend whose fixed-function shortcut is exact only over an
+   * opaque destination takes the backdrop-aware compositor here rather than
+   * quietly blending against partial coverage.
+   */
+  private readonly _opaqueDestinationStack: boolean[] = [];
+  /** Coverage guarantee of the target this build collects into, read once per build. */
+  private _rootDestinationOpaque = false;
+  /**
    * Shared across every barrier. Barriers nest, but a barrier reads its four
    * integers out before collecting its children, so no nested collect can
    * observe a half-built domain.
@@ -338,6 +354,13 @@ export class RenderPlanBuilder {
     this.backend = backend;
     this._view = null;
     this._resolutionStack.length = 0;
+    this._opaqueDestinationStack.length = 0;
+    // Read through a local so a backend stand-in that reports no target at all
+    // lands on the conservative answer, the same way the root resolution below
+    // falls back for one that reports nothing usable.
+    const destination = backend.renderTarget as RenderTarget | undefined;
+
+    this._rootDestinationOpaque = destination?.opaqueDestination === true;
     this._plan.reset();
     this._rewindPools();
     this._viewCullSuppression = 0;
@@ -446,6 +469,41 @@ export class RenderPlanBuilder {
     return Number.isFinite(rootResolution) && rootResolution > 0 ? rootResolution : 1;
   }
 
+  /**
+   * Whether the target the current collect is played into is guaranteed fully
+   * covered - the fact {@link blendModeNeedsBackdrop} reads to decide whether a
+   * {@link BlendModes.Multiply} draw can keep its fixed-function shortcut.
+   * `false` everywhere a barrier collects, because a barrier's content is
+   * rendered into an intermediate target that carries real alpha.
+   *
+   * Every consumer of a node's destination-dependent effects reads it through
+   * here rather than through {@link RenderBackend.renderTarget}: a nested
+   * collect runs while the backend is still bound to the ROOT target, so the
+   * backend could not answer it.
+   * @internal
+   */
+  public _destinationOpaque(): boolean {
+    const depth = this._opaqueDestinationStack.length;
+
+    return depth > 0 ? this._opaqueDestinationStack[depth - 1]! : this._rootDestinationOpaque;
+  }
+
+  /**
+   * Whether `node`'s own blend mode can only be evaluated correctly against the
+   * destination this collect is played into by capturing that destination - the
+   * {@link BlendModes.Multiply} case, whose fixed-function equation is exact
+   * only over a fully covered one.
+   *
+   * Ordered so the common case is one boolean read: a covered destination
+   * answers the same for every mode the barrier question has already settled,
+   * and this runs for every emitted node of every frame.
+   */
+  private _needsBackdropCompositor(node: RenderNode): boolean {
+    const destinationOpaque = this._destinationOpaque();
+
+    return !destinationOpaque && blendModeNeedsBackdrop(node._renderPlanGetBlendMode(), destinationOpaque);
+  }
+
   public emitNode(node: RenderNode, seq?: number): void {
     this._reserveEntryPlacement(seq, node.zIndex);
     const reservedSeq = this._reservedSeq;
@@ -457,7 +515,7 @@ export class RenderPlanBuilder {
       return;
     }
 
-    if (node._renderPlanHasBarrierEffects()) {
+    if (node._renderPlanHasBarrierEffects() || this._needsBackdropCompositor(node)) {
       const effect = this._createEffectDescriptor(node);
       const hasAlphaMask = effect.maskSource !== null && !(effect.maskSource instanceof Rectangle);
       const needsBounds = effect.cacheAsTexture || effect.filters.length > 0 || hasAlphaMask || (effect.needsBackdropBlend ?? false);
@@ -511,6 +569,7 @@ export class RenderPlanBuilder {
       if (childPlan !== null) {
         this._pushScope(childPlan);
         this._resolutionStack.push(resolution);
+        this._opaqueDestinationStack.push(false);
 
         try {
           // The barrier's CONTENT is an ordinary subtree and gets the same
@@ -524,6 +583,7 @@ export class RenderPlanBuilder {
             node._collectForRenderPlan(this);
           }
         } finally {
+          this._opaqueDestinationStack.pop();
           this._resolutionStack.pop();
           this._popScope();
         }
@@ -620,7 +680,7 @@ export class RenderPlanBuilder {
   private _collectSourceNode(node: RenderNode, seq: number, zIndex: number): void {
     const scope = this._sourceStack[this._sourceStack.length - 1]!;
 
-    if (node._renderPlanHasBarrierEffects()) {
+    if (node._renderPlanHasBarrierEffects() || this._needsBackdropCompositor(node)) {
       scope.others.push({ kind: RenderEntryKind.Barrier, seq, zIndex, node, reason: LiveEntryReason.Barrier, itemMark: scope.items.count });
 
       return;
@@ -1077,7 +1137,7 @@ export class RenderPlanBuilder {
     // descendant move patches its baked row in place instead of invalidating,
     // which is what keeps a partly-dynamic scene on the recorded tier.
     if (
-      representation.reconcileContent(contentRevision, node) &&
+      representation.reconcileContent(contentRevision, node, this._destinationOpaque()) &&
       representation.isCleanIgnoringTransform(contentRevision, structureRevision, ancestryStamp, view) &&
       representation.reconcileTransform(transformRevision, view, backend, node)
     ) {
@@ -1207,7 +1267,7 @@ export class RenderPlanBuilder {
 
     // A content change on or below a live entry - a mask whose rect moved -
     // touches nothing the source holds, so it is adopted rather than refused.
-    if (!source?.reconcileContent(contentRevision, structureRevision, ancestryStamp, transformRevision, node)) {
+    if (!source?.reconcileContent(contentRevision, structureRevision, ancestryStamp, transformRevision, node, this._destinationOpaque())) {
       return false;
     }
 
@@ -1247,7 +1307,7 @@ export class RenderPlanBuilder {
     const rect = this._captureCullRect;
 
     product.beginSelection();
-    this._selectMembership(rootScope, product, source);
+    const culled = this._selectMembership(rootScope, product, source);
     product.commitSelection(source.scopes);
 
     const slots = product.slots;
@@ -1275,9 +1335,7 @@ export class RenderPlanBuilder {
       backend._writePersistentSlots!(bundle, source, slots.entered, slots.enteredCount);
     }
 
-    // One note for the whole root rather than one per item: the count is exact
-    // either way, and it is what proves the tier still culls.
-    this.backend.stats.culledNodes += source.itemCount - product.delta.visible;
+    this.backend.stats.culledNodes += culled;
     representation.notePersistentSelection(rect);
 
     const record = representation.persistentDrawRecord(bundle, slots);
@@ -1328,19 +1386,26 @@ export class RenderPlanBuilder {
   /**
    * Fill every scope's membership without emitting anything.
    *
-   * The subtree cull a nested group gets on the ordinary path is deliberately
-   * absent: it is an optimisation over a per-item test, and here the per-item
-   * test is the spatial index, which already answers for a fully off-screen
-   * group in the time it takes to reject its cells.
+   * Apply the selection tier's subtree cull before querying descendants. The
+   * queried-scope bitmap also keeps their live marks out of the slot stream.
    */
-  private _selectMembership(scope: SourceScope, product: DerivedRootProduct, source: RenderRootSource): void {
+  private _selectMembership(scope: SourceScope, product: DerivedRootProduct, source: RenderRootSource): number {
+    const visibleBefore = product.delta.visible;
+
     product.selectScope(scope, this._captureCullRect, source.visibility);
+    let culled = scope.items.count - (product.delta.visible - visibleBefore);
 
     for (const other of scope.others) {
       if (other.kind === RenderEntryKind.Group) {
-        this._selectMembership(other, product, source);
+        if (other.node._inCullRect(this._captureCullRect)) {
+          culled += this._selectMembership(other, product, source);
+        } else {
+          culled++;
+        }
       }
     }
+
+    return culled;
   }
 
   /**
@@ -1368,7 +1433,7 @@ export class RenderPlanBuilder {
   ): SourceSelection | null {
     const existing = representation.source;
 
-    if (existing?.reconcileContent(contentRevision, structureRevision, ancestryStamp, transformRevision, node)) {
+    if (existing?.reconcileContent(contentRevision, structureRevision, ancestryStamp, transformRevision, node, this._destinationOpaque())) {
       return this._beginSelection(existing, representation.ensureDerivedProduct());
     }
 
@@ -1777,6 +1842,8 @@ export class RenderPlanBuilder {
     this._commandPoolCursor = 0;
     this._view = null;
     this._resolutionStack.length = 0;
+    this._opaqueDestinationStack.length = 0;
+    this._rootDestinationOpaque = false;
     this._nodeIndex = 0;
     this._viewCullSuppression = 0;
     this._retentionRoot = null;
@@ -2056,7 +2123,7 @@ export class RenderPlanBuilder {
     descriptor.maskSource = mask;
     descriptor.cacheAsTexture = node.cacheAsTexture;
     descriptor.blendMode = blendMode;
-    descriptor.needsBackdropBlend = isAdvancedBlendMode(blendMode);
+    descriptor.needsBackdropBlend = blendModeNeedsBackdrop(blendMode, this._destinationOpaque());
 
     return descriptor;
   }

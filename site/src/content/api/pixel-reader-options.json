@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "dataType",
+          "signature": "dataType?: T",
+          "signatureTokens": [
+            {
+              "text": "dataType",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Defaults to uint8 for rgba8/rgba8srgb - the attachment's own stored bytes, never decoded or tone-mapped. Float textures require float32 and preserve their values."
+        },
         {
           "name": "region",
           "signature": "region?: ReadonlyRectangle",
@@ -76,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Staging slots, each holding one read's pixels until it is released. Defaults to 2: one read in flight while the previous result is still held. Every slot costs width * height * 4 bytes for the reader's lifetime, so size this from how many reads the consumer keeps outstanding, not generously."
+          "description": "Staging slots, each holding one read's pixels until it is released. Defaults to 2: one read in flight while the previous result is still held. Every slot owns width * height * 4 components (one byte for uint8, four bytes for float32) plus backend staging storage for the reader's lifetime, so size this from how many reads the consumer keeps outstanding, not generously."
         }
       ],
       "paragraphs": [],

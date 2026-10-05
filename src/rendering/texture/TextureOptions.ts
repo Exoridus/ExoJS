@@ -1,5 +1,11 @@
 import type { ScaleModes, WrapModes } from '#rendering/types';
 
+/** Meaning assigned to RGB samples independently of their storage format. */
+export type TextureColorSpace = 'srgb' | 'linear-srgb' | 'none';
+
+/** Association of RGB with the alpha channel in the source samples. */
+export type TextureAlphaMode = 'straight' | 'premultiplied';
+
 /**
  * GPU sampling state: how a texture is filtered and how UV coordinates
  * outside `[0, 1]` are resolved.
@@ -23,8 +29,24 @@ export interface SamplerOptions {
  * rather than a different sampler.
  */
 export interface TextureUploadOptions {
-  /** Whether pixel values are premultiplied by their alpha before uploading to the GPU. */
+  /**
+   * Whether a straight-alpha colour source is premultiplied once at upload, in
+   * linear light and before filtering and mip generation, so edges do not
+   * fringe. Defaults to `true` for colour textures. It normalizes storage and
+   * never multiplies a source that is already premultiplied; a `'none'` source
+   * cannot request it.
+   */
   premultiplyAlpha: boolean;
+  /**
+   * Interpretation of RGB values. `'srgb'` is colour that is decoded to linear
+   * light on sampling and is what image, canvas and video sources default to;
+   * `'linear-srgb'` is colour already in linear light; `'none'` is numeric data
+   * (normal maps, displacement maps, masks, lookup tables) that is never
+   * transformed. Omit when the source or exact format determines it.
+   */
+  colorSpace?: TextureColorSpace;
+  /** Whether the source RGB is already multiplied by alpha. This describes the data, not canvas compositing. Omit when the payload determines it. */
+  alphaMode?: TextureAlphaMode;
   /** Whether to generate a full mipmap chain after upload. */
   generateMipMap: boolean;
   /**

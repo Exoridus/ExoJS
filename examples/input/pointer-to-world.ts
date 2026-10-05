@@ -82,7 +82,6 @@ class PointerToWorldScene extends Scene {
 
     this.view.setCenter(centerX, centerY);
     this.view.setZoom(this.userZoom * (1 + Math.sin(this.elapsed * 0.35) * 0.25));
-    this.view.update(delta * 1000);
 
     // Live world coordinate under the cursor - recomputed every frame because
     // the mapping changes as the camera moves.
@@ -94,9 +93,7 @@ class PointerToWorldScene extends Scene {
   }
 
   override draw(context: RenderingContext): void {
-    context.backend.setView(this.view);
-
-    context.render(this.grid);
+    context.render(this.grid, { view: this.view });
 
     // Rebuild markers each frame in their fixed world positions.
     this.markers.clear();
@@ -110,8 +107,7 @@ class PointerToWorldScene extends Scene {
     this.markers.fillColor = new Color(120, 230, 255);
     this.markers.drawCircle(this.world.x, this.world.y, 5);
 
-    context.render(this.markers);
-    context.backend.setView(null);
+    context.render(this.markers, { view: this.view });
   }
 }
 

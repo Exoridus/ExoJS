@@ -36,6 +36,18 @@ const rt = new RenderTexture(512, 512, {
 
 Default sampler settings — linear filtering, clamp-to-edge wrapping, premultiplied alpha, no mipmap generation — match the typical "render-to-texture then display" use case.
 
+### Choosing a format
+
+The `format` option decides what the target stores, and it is fixed for the texture's lifetime. The default `Rgba8` keeps values exactly as written, with no sRGB transfer, which is right for masks, data and generated numeric content. A target that holds scene colour should ask for `TextureFormat.Rgba8Srgb`: writes are encoded, sampling and blending decode back to linear light, and dark values keep their precision instead of being quantized as linear eight-bit numbers. The float formats store values as written and are not inherently HDR; `Rgba16F` is what an HDR colour surface uses, and it equally serves numeric state buffers that are not colour at all.
+
+```ts
+import { RenderTexture, TextureFormat } from '@codexo/exojs';
+
+const sceneColor = new RenderTexture(512, 512, { format: TextureFormat.Rgba8Srgb });
+```
+
+The application's own working target, and the intermediate targets the engine allocates for filters and cached nodes, already use the colour format. Only targets you create yourself need the choice.
+
 ## Drawing into a RenderTexture
 
 Set the render target on the backend, draw normally, then restore the canvas:
@@ -218,6 +230,16 @@ backdrop.cacheResolution = 1; // logical size regardless of the display
 
 Changing `cacheResolution` invalidates the cache, as does anything that moves the node's world bounds — including its own transform. A node that animates re-bakes every frame and is strictly slower cached than uncached, whatever its resolution.
 
+## Reading pixels and generated data
+
+Use [`RenderingContext.readPixels`](/ExoJS/en/api/rendering-context/) for a one-shot read, or [`PixelReader`](/ExoJS/en/api/pixel-reader/) for repeated non-blocking reads with a fixed number of staging slots. Both return top-row-first RGBA data, and both are raw: they hand back the attachment's own stored representation with no hidden transform. The default mode reads `rgba8` and `rgba8-srgb` into `Uint8ClampedArray`; an `rgba8-srgb` target's bytes are its encoded sRGB storage, and an `rgba8` target's bytes are whatever was written, unassociated and untransformed.
+
+For an image a person will look at, use `RenderingContext.readImageData(source, options)` instead. It runs the same output transform the canvas goes through, once, against the source, and returns straight-alpha sRGB bytes ready for `new ImageData(...)`, whatever the source's own format is. `exposure` and `toneMapping` default to `0` and `'none'` rather than following the application's setting, and `background` composites over an opaque colour instead of preserving coverage. Without a background, a pixel with zero alpha but nonzero colour throws, because premultiplied emission cannot be expressed as straight alpha. See [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/).
+
+To read a float target, explicitly pass `{ dataType: 'float32' }` to `readPixels` or `createPixelReader`. Both `rgba32f` and `rgba16f` then return `Float32Array`; half-float storage retains its original precision. Signed values and values above one survive without clipping or normalization. The byte mode rejects float targets, and the float mode rejects byte targets. Check `context.supportsReadbackFormat(format)` separately from rendering support before choosing a target format; the engine never silently selects a lower-precision fallback.
+
+A one-shot result belongs to the caller. A standing reader's result belongs to its slot and stays valid only until `release()`. Copy values you need to retain before releasing that slot. The reader refuses requests while all slots are held. Destroy the reader to cancel pending reads; destroying its source refuses new requests but does not recall copies already submitted. A whole-source reader follows a resize on its next request, invalidating handles from its old slots. A fixed-region reader retains its slots if the region still fits, or refuses the next request if it no longer fits. This makes the ownership and buffering bound explicit for consumers such as GPU-generated PCM.
+
 ## Lifecycle
 
 `RenderTexture` owns GPU resources. Call `destroy()` when the texture is no longer needed to release the backing framebuffer and texture. The engine does not garbage-collect GPU objects automatically. Destroying a `MultiRenderTarget` destroys its attachments too, so do not `destroy()` one of those separately.
@@ -227,12 +249,12 @@ Changing `cacheResolution` invalidates the cache, as does anything that moves th
 <a id="render-to-texture"></a>
 <ExamplePreview chapter="render-targets" slug="render-to-texture" />
 
-A container of 25 sprites rendered once into a `RenderTexture`, then displayed as a single sprite alongside the original container for comparison.
+A group of moving sprites feeds one live `RenderTexture` and one frozen snapshot. Click to recapture the snapshot after the source texture is ready.
 
 <a id="mini-map"></a>
 <ExamplePreview chapter="render-targets" slug="mini-map" />
 
-A zoomed-out view of a tile map rendered into a small `RenderTexture` and displayed as a corner mini-map.
+A second view of the world rendered into a small `RenderTexture` and displayed through a circular mask in the corner.
 
 ## Where to go next
 

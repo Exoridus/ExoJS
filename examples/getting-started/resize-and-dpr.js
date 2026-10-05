@@ -20,11 +20,10 @@ class ResizeScene extends Scene {
   // #region guide:layout
   layout() {
     const app = this.app;
-    const { width, height } = app;
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const { width, height, canvas, pixelRatio } = app;
     this.sprite.setPosition(width / 2, height / 2);
     this.info.setPosition(width / 2, 12);
-    this.info.text = `${width}x${height} @ DPR ${dpr.toFixed(2)}`;
+    this.info.text = `${width}x${height} logical, ${canvas.width}x${canvas.height} backing @ pixelRatio ${pixelRatio.toFixed(2)}`;
   }
 }
 // #region guide:app-setup
@@ -35,7 +34,6 @@ const app = new Application({
     height: 720,
     mount: document.body,
     sizing: new FixedResolutionCanvasSizing(),
-    pixelRatio: window.devicePixelRatio || 1,
   },
   clearColor: Color.black,
   loader: {

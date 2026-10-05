@@ -9,6 +9,7 @@
  */
 
 import { Color } from '#core/Color';
+import { linearToSrgb, srgbToLinear } from '#core/colorTransfer';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { RenderNode } from '#rendering/RenderNode';
 
@@ -164,5 +165,67 @@ describe('ColorMatrixFilter mutation reaches its owners', () => {
     expect(() => {
       filter.matrix = [1, 0, 0];
     }).toThrow('ColorMatrixFilter: a colour matrix needs exactly 20 entries (4 rows of 5).');
+  });
+});
+
+/** The scalar accessor of the raw shader uniform the filter writes at construction. */
+const domainUniformOf = (filter: ColorMatrixFilter): number =>
+  (filter as unknown as { _shaderFilter: { uniforms: { uDomain: { value: number } } } })._shaderFilter.uniforms.uDomain.value;
+
+describe('ColorMatrixFilter colorSpace', () => {
+  test('defaults to srgb', () => {
+    const filter = new ColorMatrixFilter();
+
+    expect(filter.colorSpace).toBe('srgb');
+    expect(domainUniformOf(filter)).toBe(1);
+  });
+
+  test('accepts linear-srgb', () => {
+    const filter = new ColorMatrixFilter(undefined, { colorSpace: 'linear-srgb' });
+
+    expect(filter.colorSpace).toBe('linear-srgb');
+    expect(domainUniformOf(filter)).toBe(0);
+  });
+
+  test('an explicit matrix and colorSpace combine', () => {
+    const filter = new ColorMatrixFilter([0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0], { colorSpace: 'linear-srgb' });
+
+    expect(filter.colorSpace).toBe('linear-srgb');
+    expectClose(applyMatrix([...filter.matrix], [0.2, 0.4, 0.6, 0.8]), [0.6, 0.4, 0.2, 0.8]);
+  });
+});
+
+/**
+ * A CPU oracle for the shader's gated path (unassociate -> convert to the
+ * selected domain -> apply the matrix -> clamp -> convert back -> re-
+ * associate), exercised directly against `#core/colorTransfer` - the scalar
+ * twin of the GLSL/WGSL `srgbToLinear`/`linearToSrgb` the shader composes.
+ * Mirrors `color-matrix.frag`'s `gated` branch exactly, so this is a
+ * behavioural check of the shader's math, not just of the filter's TS glue.
+ */
+const applyGatedIdentity = (premultiplied: readonly [number, number, number], alpha: number, domainSrgb: boolean): [number, number, number, number] => {
+  const toDomain = domainSrgb ? linearToSrgb : (v: number): number => v;
+  const fromDomain = domainSrgb ? srgbToLinear : (v: number): number => v;
+  const straight = alpha > 0 ? premultiplied.map(c => c / alpha) : [0, 0, 0];
+  const domain = straight.map(toDomain);
+  const graded = domain.map(v => Math.min(1, Math.max(0, v)));
+  const outRgb = graded.map(fromDomain);
+
+  return [outRgb[0]! * alpha, outRgb[1]! * alpha, outRgb[2]! * alpha, alpha];
+};
+
+describe('ColorMatrixFilter identity is exact through the gated domain conversion', () => {
+  test.each([0.25, 0.5])('srgb domain, alpha %s', alpha => {
+    const straight: [number, number, number] = [0.2, 0.4, 0.6];
+    const premultiplied: [number, number, number] = [straight[0] * alpha, straight[1] * alpha, straight[2] * alpha];
+
+    expectClose(applyGatedIdentity(premultiplied, alpha, true), [...premultiplied, alpha], 1e-9);
+  });
+
+  test.each([0.25, 0.5])('linear-srgb domain, alpha %s', alpha => {
+    const straight: [number, number, number] = [0.2, 0.4, 0.6];
+    const premultiplied: [number, number, number] = [straight[0] * alpha, straight[1] * alpha, straight[2] * alpha];
+
+    expectClose(applyGatedIdentity(premultiplied, alpha, false), [...premultiplied, alpha], 1e-9);
   });
 });

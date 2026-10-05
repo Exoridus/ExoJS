@@ -533,6 +533,15 @@ const isWideVariant = variant === 'wide';
         display: none;
     }
 
+    .docs-shell__sidebar {
+        position: sticky;
+        top: 76px;
+        align-self: start;
+        max-height: calc(100vh - 88px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
     .docs-shell__content {
         border: 1px solid var(--color-border-soft);
         border-radius: var(--radius-card);
@@ -838,11 +847,12 @@ const isWideVariant = variant === 'wide';
             align-items: center;
         }
 
-        .docs-shell__sidebar {
+        .docs-shell:not(.docs-shell--guide) .docs-shell__sidebar {
             position: fixed;
             top: 0;
             left: 0;
             bottom: 0;
+            max-height: none;
             width: min(90vw, 360px);
             z-index: 220;
             transform: translateX(-102%);
@@ -853,7 +863,7 @@ const isWideVariant = variant === 'wide';
             overflow: auto;
         }
 
-        .docs-shell__sidebar-header {
+        .docs-shell:not(.docs-shell--guide) .docs-shell__sidebar-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -883,7 +893,7 @@ const isWideVariant = variant === 'wide';
             outline-offset: 2px;
         }
 
-        .docs-shell[data-sidebar-open='true'] .docs-shell__sidebar {
+        .docs-shell:not(.docs-shell--guide)[data-sidebar-open='true'] .docs-shell__sidebar {
             transform: translateX(0);
         }
 
@@ -898,7 +908,7 @@ const isWideVariant = variant === 'wide';
             display: block;
         }
 
-        .docs-shell:not([data-sidebar-open='true']) .docs-shell__sidebar {
+        .docs-shell:not(.docs-shell--guide):not([data-sidebar-open='true']) .docs-shell__sidebar {
             visibility: hidden;
         }
     }
@@ -992,6 +1002,13 @@ const isWideVariant = variant === 'wide';
 
         .docs-shell--api .docs-shell__rail {
             display: none;
+        }
+    }
+
+    @media (min-width: 761px) and (max-width: 960px) {
+        .docs-shell--guide,
+        .docs-shell--guide.docs-shell--with-rail {
+            grid-template-columns: 240px minmax(0, 1fr);
         }
     }
 </style>

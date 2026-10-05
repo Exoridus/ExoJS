@@ -1,7 +1,7 @@
 import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 
 import { Texture } from './Texture';
-import type { TextureOptions } from './TextureOptions';
+import type { TextureColorSpace, TextureOptions } from './TextureOptions';
 
 /**
  * Pixel format for {@link DataTexture} - the {@link TextureFormat} subset that
@@ -90,6 +90,13 @@ export interface DataTextureOptions {
  * `Texture` (filter uniforms, mesh textures, custom shader uniforms)
  * accepts a `DataTexture` unchanged.
  *
+ * # Numeric samples
+ *
+ * The texels are data, never colour: they are sampled exactly as stored, with
+ * no sRGB decode, alpha premultiplication or output transform, and the format
+ * list has no sRGB entry. A producer that stores colour in a `DataTexture`
+ * (such as `Gradient.toTexture`) does its own conversion first.
+ *
  * # Default sampler
  *
  * `DataTexture` defaults to nearest filtering, clamp-to-edge wrap, no mip
@@ -122,6 +129,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
     scaleMode: ScaleModes.Nearest,
     wrapMode: WrapModes.ClampToEdge,
     premultiplyAlpha: false,
+    colorSpace: 'none',
     generateMipMap: false,
     flipY: false,
   };
@@ -144,7 +152,13 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
   private _dirtyPending = false;
 
   public constructor(options: DataTextureOptions & { format: F }) {
-    super(null, { ...DataTexture.defaultOptions, ...options.textureOptions });
+    const textureOptions = { ...DataTexture.defaultOptions, ...options.textureOptions };
+
+    if (textureOptions.colorSpace === 'srgb') {
+      throw new Error("DataTexture colorSpace cannot be 'srgb' - numerical data is never colour-managed.");
+    }
+
+    super(null, textureOptions);
 
     const { width, height, format, data } = options;
 
@@ -203,6 +217,19 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
     this._dirty.width = this.width;
     this._dirty.height = this.height;
     this._dirtyPending = true;
+  }
+
+  /**
+   * Numerical data is never colour-managed: `'srgb'` would imply a hardware
+   * decode of raw samples, silently corrupting them.
+   * @throws Error - `colorSpace` is `'srgb'`.
+   */
+  public override setColorSpace(colorSpace: TextureColorSpace | undefined): this {
+    if (colorSpace === 'srgb') {
+      throw new Error("DataTexture colorSpace cannot be 'srgb' - numerical data is never colour-managed.");
+    }
+
+    return super.setColorSpace(colorSpace);
   }
 
   /**

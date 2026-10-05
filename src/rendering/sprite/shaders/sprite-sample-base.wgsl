@@ -8,6 +8,5 @@
 fn sampleBase(packedSlotFlags: u32, uv: vec2<f32>) -> vec4<f32> {
     let slot = packedSlotFlags & 0xffu;
     let sample = sampleTexture(slot, uv, dpdx(uv), dpdy(uv));
-    let premultiplySample = ((packedSlotFlags >> 8u) & 1u) == 1u;
-    return select(sample, vec4<f32>(sample.rgb * sample.a, sample.a), premultiplySample);
+    return associateSampledColor(sample, ((packedSlotFlags >> 8u) & 1u) == 1u);
 }

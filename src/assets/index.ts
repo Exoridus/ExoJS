@@ -1,4 +1,4 @@
-export type { ValueAsset } from './Asset';
+export type { AssetForKind, LeaflessAsset, ResourceAsset, ValueAsset } from './Asset';
 export { Asset } from './Asset';
 export type { AssetConstructor } from './AssetConstructor';
 export type { AssetDecodeErrorOptions } from './AssetDecodeError';
@@ -13,6 +13,8 @@ export type {
   InferAssetResource,
   InferLoadedEntry,
   KindByPath,
+  LeaflessAssetKind,
+  LeaflessCatalogEntry,
 } from './AssetDefinitions';
 export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
 export type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
@@ -25,7 +27,7 @@ export { Assets } from './Assets';
 export type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
 export { binarySourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
 export type { AssetStatus } from './AssetStatus';
-export type { AnyAssetType, AssetLeaf, AssetRequest } from './AssetType';
+export type { AnyAssetType, AssetDescriptor, AssetLeaf, AssetOptionsArgument, AssetRequest } from './AssetType';
 export { AssetType } from './AssetType';
 export type { AssetVariant, AssetVariantProfile } from './AssetVariantSet';
 export { AssetVariantSet } from './AssetVariantSet';

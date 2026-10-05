@@ -15,10 +15,13 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
+import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { displacementShader } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
+import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { INSTANCE_TRANSFORM_GLSL } from '#rendering/shader/instanceContract';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
@@ -31,6 +34,7 @@ import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lightin
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
 import { angularAverageShader, transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
+import { composeParticleGlSource } from '../../../packages/exojs-particles/src/gpu/particleGlSource';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 
 // Core shaders plus the extension packages' own - the particle stage ships
@@ -46,6 +50,10 @@ const shaderModules = import.meta.glob(
     '/src/rendering/webgl2/shaders/*.{vert,frag}',
     '/src/rendering/filters/shaders/*.{vert,frag}',
     '/src/rendering/sprite/shaders/*.{vert,frag}',
+    // The output transform's own encode shader - deliberately not a glob over
+    // the whole `shaders/` directory, which also holds `color-transfer.frag`,
+    // a chunk with no `#version`/`main` of its own that cannot compile alone.
+    '/src/rendering/shaders/output.frag',
     '/packages/exojs-*/src/**/shaders/*.{vert,frag}',
   ],
   {
@@ -81,7 +89,10 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['bloom-threshold.frag', generateGlslUniformDeclarations(bloomThresholdShader.uniformSchema!)],
   ['blur.frag', generateGlslUniformDeclarations(blurShader.uniformSchema!)],
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
+  ['displacement.frag', generateGlslUniformDeclarations(displacementShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
+  ['lut-3d.frag', generateGlslUniformDeclarations(lut3dShaderSource.uniformSchema!)],
+  ['lut-rgb1d.frag', generateGlslUniformDeclarations(lutRgb1dShaderSource.uniformSchema!)],
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
   ['angular-average.frag', generateGlslUniformDeclarations(angularAverageShader.uniformSchema!)],
   ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],
@@ -109,10 +120,34 @@ const composedFragments: ReadonlyMap<string, string> = new Map([
   ['transport-filter.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
 ]);
 
+// Stages that call the shared colour helpers directly (tint decode,
+// sample association) rather than through `composeSpriteMaterialFragmentGlsl`
+// (which already carries them as part of its prologue - splicing them again
+// here would redeclare every helper).
+const needsColorHelpers: ReadonlySet<string> = new Set([
+  'sprite.vert',
+  'sprite-indexed.vert',
+  'sprite-material.vert',
+  'sprite.frag',
+  'repeating-sprite-geo-path.vert',
+  'repeating-sprite-shader-path.vert',
+  'mesh.frag',
+  'tile-chunk.vert',
+  'particle.vert',
+  'mesh.vert',
+  'ribbon.vert',
+  'trail.vert',
+  'color-matrix.frag',
+  'lut-rgb1d.frag',
+  'lut-3d.frag',
+  'output.frag',
+]);
+
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
 // handing a source to the driver, so a shader that reads the shared transform
 // store only compiles in its resolved form - the same form the renderer submits.
 const composeRuntimeSource = (name: string, source: string): string => {
+  if (name === 'particle-simulate.vert') return composeParticleGlSource([], source);
   const composedChunk = composedFragments.get(name);
 
   if (composedChunk !== undefined) {
@@ -142,8 +177,9 @@ ${filled}`
   // its renderer and read a declared uniform block, and `lit-sprite.frag` does
   // both.
   const composed = declarations === undefined ? spliced : withGlslUniformDeclarations(spliced, declarations);
+  const withColorHelpers = needsColorHelpers.has(name) ? spliceGlslPrologue(composed, colorShaderSourcesGlsl) : composed;
 
-  return resolveTransformTextureGlsl(composed);
+  return resolveTransformTextureGlsl(withColorHelpers);
 };
 
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
@@ -174,12 +210,12 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['sprite-indexed.vert', 'sprite.frag'],
   ['mesh.vert', 'mesh.frag'],
   ['particle.vert', 'particle.frag'],
+  ['particle-simulate.vert', 'particle-simulate.frag'],
   ['ribbon.vert', 'ribbon.frag'],
   ['trail.vert', 'trail.frag'],
   ['text.vert', 'text-color.frag'],
   ['text.vert', 'text-sdf.frag'],
   ['text.vert', 'text-msdf.frag'],
-  ['nine-slice.vert', 'nine-slice.frag'],
   // Both repeating-sprite vertex paths (one quad per sprite, N quads per sprite)
   // link against the same fragment stage.
   ['repeating-sprite-shader-path.vert', 'repeating-sprite.frag'],
@@ -188,6 +224,8 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['stencil-clip.vert', 'stencil-clip.frag'],
   ['mask-compose.vert', 'mask-compose.frag'],
   ['backdrop-blend.vert', 'backdrop-blend.frag'],
+  // The upload-time colour normalization pass, on the same fullscreen quad.
+  ['default-vertex.vert', 'texture-normalize.frag'],
   // The built-in filters: one pass-through fullscreen-quad vertex stage, one
   // fragment stage each, exactly as `ShaderFilter` assembles them.
   ['default-vertex.vert', 'bloom-threshold.frag'],
@@ -197,6 +235,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'drop-shadow.frag'],
   ['default-vertex.vert', 'lut-3d.frag'],
   ['default-vertex.vert', 'lut-rgb1d.frag'],
+  ['default-vertex.vert', 'output.frag'],
   // The lighting package's shadow march runs on the same fullscreen quad: the
   // occluder mask in, one shadow row per light out.
   ['default-vertex.vert', 'shadow-march.frag'],

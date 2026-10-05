@@ -320,7 +320,7 @@ describe('lightmap renderer WebGPU browser', () => {
     const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     // A normal leaning along the drawable's own +x, which is the one encoding
     // that says something different once the drawable turns.
-    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1, { colorSpace: 'none' }));
     const crate = new Sprite(Texture.fromColor(Color.white, 1));
 
     crate.width = 32;
@@ -532,7 +532,7 @@ describe('lightmap renderer WebGPU browser', () => {
     const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
     // Leaning along +x, so the ground faces the light more on the light's own
     // left than on its right.
-    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1));
+    const normals = new NormalMap(Texture.fromColor(new Color(218, 128, 218), 1, { colorSpace: 'none' }));
     const ground = new Sprite(Texture.fromColor(Color.white, 1));
 
     ground.width = canvasSize;
@@ -567,7 +567,7 @@ describe('lightmap renderer WebGPU browser', () => {
     // Quarter brightness, so what reaches the canvas says what the filter was
     // handed: a quarter of 2.0 is half, a quarter of a field clipped at 1.0 is
     // a quarter.
-    const grade = new ColorMatrixFilter().brightness(0.25);
+    const grade = new ColorMatrixFilter(undefined, { colorSpace: 'linear-srgb' }).brightness(0.25);
     const lighting = new LightmapLighting(host.app, {
       ambient: Color.black,
       lightResolution: 1,
@@ -614,8 +614,9 @@ describe('lightmap renderer WebGPU browser', () => {
         return;
       }
 
-      expect(at(2, 2)).toBeGreaterThan(100);
-      expect(at(2, 2)).toBeLessThan(160);
+      // The canvas holds linear light here: an authored 128 is 0.216, byte 55.
+      expect(at(2, 2)).toBeGreaterThan(45);
+      expect(at(2, 2)).toBeLessThan(65);
     } finally {
       lighting.destroy();
       host.destroy();

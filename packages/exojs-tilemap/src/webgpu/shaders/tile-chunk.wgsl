@@ -18,6 +18,8 @@ var<storage, read> transforms: array<TransformSlot>;
 var tileTexture: texture_2d<f32>;
 @group(1) @binding(1)
 var tileSampler: sampler;
+@group(1) @binding(2)
+var<uniform> sampleAlpha: vec4<f32>;
 
 struct VertexInput {
     @location(0) quadBounds: vec4<f32>,   // x0, y0, x1, y1
@@ -78,7 +80,11 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let v = select(input.uvBounds.y, input.uvBounds.w, sv == 1u);
     output.texcoord = vec2<f32>(u, v);
 
-    output.color = vec4(input.color.rgb * input.color.a, input.color.a);
+    // input.color.rgb is the authored sRGB tint byte-for-byte (unorm8x4
+    // vertex fetch, not yet decoded); decode it to linear before it is
+    // premultiplied and interpolated.
+    let linearTint = srgbToLinear(input.color.rgb);
+    output.color = vec4(linearTint * input.color.a, input.color.a);
 
     return output;
 }
@@ -86,5 +92,6 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     let sample = textureSample(tileTexture, tileSampler, input.texcoord);
-    return sample * input.color;
+    let rgb = select(sample.rgb, sample.rgb * sample.a, sampleAlpha.x != 0.0);
+    return vec4<f32>(rgb, sample.a) * input.color;
 }

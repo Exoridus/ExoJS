@@ -1,7 +1,10 @@
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { verifyRealConsumers } from './create-exo-app-consumers.ts';
+import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
 
 // The package's public entry, by path: 'create-exo-app' is not a root
 // dependency, and this script is a root script.
@@ -13,14 +16,28 @@ const tmpRoot = join(rootDir, '.workspace', 'tmp', 'create-exo-app');
 const cliSrc = join(rootDir, 'packages', 'create-exo-app', 'src', 'index.ts');
 const templatesDir = join(rootDir, 'packages', 'create-exo-app', 'templates');
 
-// Templates use the `latest` dist-tag so freshly scaffolded apps always resolve
-// the newest published @codexo/exojs without needing template edits per release.
-const EXPECTED_CORE_RANGE = 'latest';
+/**
+ * The placeholder an `@codexo/*` dependency carries in a template. The
+ * scaffolder rewrites it to its own release line, so a template never holds an
+ * engine version that could drift from the scaffolder that ships it.
+ */
+const LOCKSTEP_PLACEHOLDER = 'lockstep';
+
+/** The range a scaffolded project must actually receive. */
+const engineRange = (): string => {
+  const own = JSON.parse(readFileSync(join(rootDir, 'packages', 'create-exo-app', 'package.json'), 'utf-8')) as { version: string };
+  const match = /^(\d+)\.(\d+)\./.exec(own.version);
+  if (!match) throw new Error(`create-exo-app has an unparseable version "${own.version}".`);
+  return `${match[1]}.${match[2]}.x`;
+};
 
 // Imported rather than repeated: a second list here would pass while the
 // scaffolder offered something else entirely.
 const TEMPLATES = SCAFFOLDER_TEMPLATES;
 type TemplateName = (typeof TEMPLATES)[number];
+
+/** Resolved once: every scaffolded project must land on exactly this line. */
+const expectedEngineRange = engineRange();
 
 const EXPECTED_FILES: Record<TemplateName, string[]> = {
   minimal: ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'src/main.ts', 'src/scenes/MainScene.ts'],
@@ -93,6 +110,13 @@ const check = (condition: boolean, okMsg: string, failMsg: string): void => {
     fail(failMsg);
   }
 };
+
+/** Indents a multi-line diagnostic so it stays under its own check line. */
+const indent = (text: string): string =>
+  text
+    .split('\n')
+    .map(line => `      ${line}`)
+    .join('\n');
 
 console.log('\n=== verify:create-exo-app ===\n');
 
@@ -184,9 +208,27 @@ for (const t of TEMPLATES) {
   }
 }
 
-// 7. Every @codexo dependency a template declares uses the "latest" dist-tag
+// 7. Template sources carry no engine version; scaffolded projects carry the
+//    scaffolder's own release line
 console.log('\n7. Template @codexo dependencies');
 const seenCoreRanges = new Set<string>();
+for (const t of TEMPLATES) {
+  // The template source, before scaffolding. A version here would be a second
+  // place the engine release is written down, and the one that goes stale: the
+  // release cut bumps package versions, not template text.
+  const sourcePkg = JSON.parse(readFileSync(join(templatesDir, t, 'package.json'), 'utf-8')) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+  for (const [name, range] of Object.entries({ ...sourcePkg.dependencies, ...sourcePkg.devDependencies }).filter(([dep]) => dep.startsWith('@codexo/'))) {
+    check(
+      range === LOCKSTEP_PLACEHOLDER,
+      `templates/${t}: ${name} holds the "${LOCKSTEP_PLACEHOLDER}" placeholder`,
+      `templates/${t}: ${name} is pinned to "${range}" in template source — the engine version belongs in one place, the scaffolder's own version`,
+    );
+  }
+}
+
 for (const t of TEMPLATES) {
   const pkgPath = join(tmpRoot, t, 'package.json');
   try {
@@ -201,10 +243,16 @@ for (const t of TEMPLATES) {
     seenCoreRanges.add(coreRange);
 
     // Every extension a template pulls in is published on the engine's cadence,
-    // so a template that pinned one would scaffold a project mixing versions as
-    // soon as either side is released.
+    // so the scaffolder pins all of them to its own release line. A template
+    // that carried a version of its own would scaffold a project mixing versions
+    // as soon as either side moved, which is why the template source holds a
+    // placeholder and the range is written here.
     for (const [name, range] of Object.entries(pkg.dependencies ?? {}).filter(([dependency]) => dependency.startsWith('@codexo/'))) {
-      check(range === EXPECTED_CORE_RANGE, `${t}: ${name} "${range}" ✓`, `${t}: ${name} "${range}" should be "${EXPECTED_CORE_RANGE}"`);
+      check(
+        range === expectedEngineRange,
+        `${t}: ${name} "${range}" ✓`,
+        `${t}: ${name} is "${range}", expected the scaffolder's own line "${expectedEngineRange}" — every ExoJS dependency moves together`,
+      );
       check(
         !range.startsWith('workspace:'),
         `${t}: ${name} has no workspace: protocol`,
@@ -231,12 +279,49 @@ check(
 // a templates-only change, which routes to this script's lane and not to that
 // one.
 console.log('\n8. Template sources type-check against the workspace engine');
-try {
-  execSync('npx tsc --noEmit -p tsconfig.templates.json', { cwd: rootDir, stdio: 'pipe', encoding: 'utf-8' });
-  ok('tsc --noEmit -p tsconfig.templates.json');
-} catch (err) {
-  const output = err !== null && typeof err === 'object' && 'stdout' in err ? String((err as { stdout?: unknown }).stdout ?? '') : '';
-  fail(`template type-check failed:\n${output.trim() || String(err)}`);
+{
+  const result = runTypeScriptCompiler(['--noEmit', '-p', 'tsconfig.templates.json'], { cwd: rootDir, stdio: 'pipe' });
+  if (result.status === 0) {
+    ok('tsc --noEmit -p tsconfig.templates.json');
+  } else {
+    fail(`template type-check failed:\n${result.output.trim() || `tsc exit ${result.status}`}`);
+  }
+}
+
+// 9. The generated projects really install and build
+//
+// Step 8 compiles the template sources against the engine's *sources*. A user
+// installs a package and resolves its *declarations*, so a template can pass step 8
+// and still not build. That is not hypothetical: a scene's activation-data
+// inference was correct in the source and broken in the emitted declarations, and
+// only a consumer compiling against the packed package saw it.
+//
+// This step therefore packs the engine packages, scaffolds every template against
+// them and runs `tsc` and `vite build` separately per project. Both results are
+// recorded even when one fails - the two contracts break for unrelated reasons,
+// and a type error that stopped the chain would hide the bundler result.
+//
+// Requires the built `dist` trees. The lane that runs this script gets them as a
+// build artifact; locally, `pnpm build` and `pnpm build:packages` first.
+console.log('\n9. Generated projects install and build against the packed engine');
+{
+  const outcomes = verifyRealConsumers({
+    repoRoot: rootDir,
+    workspace: join(rootDir, '.workspace', 'tmp', 'create-exo-app-consumers'),
+    templates: TEMPLATES,
+    runScaffold: (template, destination) => {
+      execFileSync(process.execPath, ['--import', 'tsx/esm', cliSrc, destination, '--template', template, '--force'], {
+        stdio: 'pipe',
+        env: { ...process.env, FORCE_COLOR: '0' },
+      });
+    },
+    report: ({ template, typecheck, bundle, viteVersion, typescriptVersion }) => {
+      const label = `${template} (vite ${viteVersion}, typescript ${typescriptVersion})`;
+      check(typecheck.ok, `${label}: tsc`, `${label}: tsc failed\n${indent(typecheck.detail)}`);
+      check(bundle.ok, `${label}: vite build`, `${label}: vite build failed\n${indent(bundle.detail)}`);
+    },
+  });
+  ok(`${outcomes.length} generated project(s) checked against the packed engine`);
 }
 
 // Summary

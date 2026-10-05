@@ -26,8 +26,8 @@ export interface ObjectCollider {
  * them through the world. Use {@link import('./TileColliderStreamer').TileColliderStreamer}
  * for tile layers, whose chunks come and go.
  *
- * The layer's pixel offset is applied, so the colliders land where the layer is
- * drawn. Objects with no collision geometry (points, tile and text objects) are
+ * The layer's display offset is converted to a logical translation. Isometric
+ * geometry remains in logical space; use TilePhysicsBinding for presentation. Objects with no collision geometry (points, tile and text objects) are
  * skipped, as is any object the decomposition rejects - with a warning, not an
  * exception.
  */
@@ -41,8 +41,10 @@ export const buildObjectLayerColliders = (world: PhysicsWorld, layer: ObjectLaye
       continue;
     }
 
-    const x = object.x + layer.offsetX;
-    const y = object.y + layer.offsetY;
+    const p = layer.projection;
+    const offset = p === undefined ? { x: layer.offsetX, y: layer.offsetY } : p.pixelToLogical(p.originX + layer.offsetX, p.originY + layer.offsetY);
+    const x = object.x + offset.x;
+    const y = object.y + offset.y;
     const material = resolveMaterial(defaults, options.material, { type: object.type, object });
     const colliders = collidersForGeometry({ ...object, x, y }, material, x, y, objectLabel(object));
 

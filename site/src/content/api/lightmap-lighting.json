@@ -1,6 +1,6 @@
 {
   "title": "LightmapLighting",
-  "description": "Lighting accumulated into a target of its own and multiplied onto the frame. ```ts const lighting = new LightmapLighting(app, { lightResolution: 0.5, shadowResolution: 256 }); scene.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ``` Light no longer costs a loop iteration per fragment per light, so there is no cap on how many there may be, and the accumulated field is a texture a shadow term folds into: each light gets one polar row built from the registered occluder sources. Normals come from a prepass over the surfaces registered with Lighting.normalsFrom rather than from a material. The host is required and is the first argument: this renderer lights the frame that host drew, installs its passes in that host's frame slot, and follows its surface when it resizes. It is read, never owned.",
+  "description": "Lighting accumulated into a target of its own and multiplied onto the frame. ```ts // In Scene.init(): const lighting = new LightmapLighting(this.app, { lightResolution: 0.5, shadowResolution: 256, scene: this }); this.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ``` Light no longer costs a loop iteration per fragment per light, so there is no cap on how many there may be, and the accumulated field is a texture a shadow term folds into: each light gets one polar row built from the registered occluder sources. Normals come from a prepass over the surfaces registered with Lighting.normalsFrom rather than from a material. The host is required and is the first argument: this renderer lights the frame that host drew, installs its passes in that host's frame slot, and follows its surface when it resizes. It is read, never owned. Pass the scene the system belongs to as LightingOptions.scene, so its passes are in that frame slot only while the scene is the one on screen.",
   "symbol": "LightmapLighting",
   "kind": "class",
   "subsystem": "lighting",
@@ -20,10 +20,10 @@
       "members": [],
       "paragraphs": [
         "Lighting accumulated into a target of its own and multiplied onto the frame.",
-        "```ts const lighting = new LightmapLighting(app, { lightResolution: 0.5, shadowResolution: 256 });",
-        "scene.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ```",
+        "```ts // In Scene.init(): const lighting = new LightmapLighting(this.app, { lightResolution: 0.5, shadowResolution: 256, scene: this });",
+        "this.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ```",
         "Light no longer costs a loop iteration per fragment per light, so there is no cap on how many there may be, and the accumulated field is a texture a shadow term folds into: each light gets one polar row built from the registered occluder sources. Normals come from a prepass over the surfaces registered with Lighting.normalsFrom rather than from a material.",
-        "The host is required and is the first argument: this renderer lights the frame that host drew, installs its passes in that host's frame slot, and follows its surface when it resizes. It is read, never owned."
+        "The host is required and is the first argument: this renderer lights the frame that host drew, installs its passes in that host's frame slot, and follows its surface when it resizes. It is read, never owned. Pass the scene the system belongs to as LightingOptions.scene, so its passes are in that frame slot only while the scene is the one on screen."
       ],
       "importLine": "import { LightmapLighting } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -270,7 +270,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release the renderer's resources. Registered lights and sources are unregistered, not destroyed."
+          "description": "Leave the host's frame slot and release the renderer's resources. Registered lights and sources are unregistered, not destroyed."
         },
         {
           "name": "normalsFrom",
@@ -669,7 +669,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scale applied to the shaded output, 1 by default. It moves the exposure only: the lights, the transport and the bounce history are all untouched, so raising it shows what a light field holds above 1.0 without changing what any of it computed. That is what makes it the right knob for looking at an overbright scene - turning a light down instead would change the scene being looked at. Under forward, where nothing is composited, it does nothing. It is not a tone map: values still clip, one stop further along."
+          "description": "Scale applied to the shaded output, 1 by default. It moves the exposure only: the lights, the transport and the bounce history are all untouched, so raising it shows what a light field holds above 1.0 without changing what any of it computed. That is what makes it the right knob for looking at an overbright scene - turning a light down instead would change the scene being looked at. Under forward, where nothing is composited, it does nothing. It is not a tone map: values still clip, one stop further along. It also has nothing to do with the application's own output exposure/tone-mapping setting - that runs once, after this system has already composited into the frame, and stays the caller's decision about how the whole frame reaches the display; this one is a lighting-only debug multiplier with no effect on what gets published anywhere else."
         },
         {
           "name": "hdr",

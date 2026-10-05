@@ -107,9 +107,7 @@ export const BottomSheet = ({ children, open, title, opener, onOpenChange }: Bot
 
   if (!mounted) return <></>;
 
-  // Portaled to <body>: the sticky header uses backdrop-filter, which makes
-  // it the containing block for fixed-position descendants - rendered in
-  // place, the sheet would be trapped inside the 62px header strip.
+  // Portaled to <body> so sticky ancestors cannot clip the full-screen sheet.
   return createPortal(
     <div className={css(styles, 'host')} data-open={open ? 'true' : undefined}>
       <div className={css(styles, 'root')} aria-hidden={open ? 'false' : 'true'}>

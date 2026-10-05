@@ -1,6 +1,6 @@
 {
   "title": "PhysicsBinding",
-  "description": "A link between a PhysicsBody and a SceneNode. The body's world position **and rotation** are written onto the node (the body's angle is radians; the node's rotation is degrees). The node must be world-space-rooted; runtime scale is ignored and non-zero skew is rejected at bind time. By default the node snaps to the latest fixed-step state after each step. With `PhysicsWorld`'s interpolation enabled the node is instead placed between the body's previous and current fixed states, which smooths motion when the fixed rate is below the frame rate. Either way this is presentation: nothing written onto the node is read back into the simulation.",
+  "description": "A link between a PhysicsBody and a SceneNode. The body's world position **and rotation** are written onto the node, so the node renders exactly where the body's colliders are. The node must be world-space-rooted; runtime scale is ignored and non-zero skew is rejected at bind time. The two angles have opposite signs: a body angle turns clockwise on the Y-down screen, a `SceneNode.rotation` counter-clockwise, so a body at `+30°` (in radians) shows as a node rotation of `-30°`. By default the node snaps to the latest fixed-step state after each step. With `PhysicsWorld`'s interpolation enabled the node is instead placed between the body's previous and current fixed states, which smooths motion when the fixed rate is below the frame rate. Either way this is presentation: nothing written onto the node is read back into the simulation.",
   "symbol": "PhysicsBinding",
   "kind": "class",
   "subsystem": "physics",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A link between a PhysicsBody and a SceneNode. The body's world position **and rotation** are written onto the node (the body's angle is radians; the node's rotation is degrees). The node must be world-space-rooted; runtime scale is ignored and non-zero skew is rejected at bind time.",
+        "A link between a PhysicsBody and a SceneNode. The body's world position **and rotation** are written onto the node, so the node renders exactly where the body's colliders are. The node must be world-space-rooted; runtime scale is ignored and non-zero skew is rejected at bind time.",
+        "The two angles have opposite signs: a body angle turns clockwise on the Y-down screen, a `SceneNode.rotation` counter-clockwise, so a body at `+30°` (in radians) shows as a node rotation of `-30°`.",
         "By default the node snaps to the latest fixed-step state after each step. With `PhysicsWorld`'s interpolation enabled the node is instead placed between the body's previous and current fixed states, which smooths motion when the fixed rate is below the frame rate. Either way this is presentation: nothing written onto the node is read back into the simulation."
       ],
       "importLine": "import { PhysicsBinding } from '@codexo/exojs-physics'",

@@ -20,14 +20,18 @@
  * pipeline did. The dev build and watch mode skip it: it is the slowest job of
  * the set and nothing in the inner loop reads it.
  */
-import { spawnSync } from 'node:child_process';
 import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
+import { cpSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
+import { build as buildWorker } from 'esbuild';
 import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
 import { rolldown, watch, type OutputOptions, type Plugin, type PreRenderedChunk, type RolldownOptions } from 'rolldown';
+
+import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
+
 import { writeSourceStamp } from './source-hash.ts';
 
 const rootDir = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
@@ -122,11 +126,54 @@ const shared = {
   resolve: { conditionNames: sourceConditions, mainFields: ['browser', 'module', 'main'] },
 };
 
+const basisWorkerUrls = (scriptTag = false): Plugin => ({
+  name: 'basis-worker-url',
+  transform(code, id) {
+    if (!/\/BasisKtx2Runtime\.(?:ts|js)$/.test(id.replaceAll('\\', '/'))) return null;
+    const result = code.replace('basis/ktx2.worker.ts', 'basis/ktx2.worker.js');
+    return {
+      code: scriptTag
+        ? `const basisBundleUrl = typeof document === 'undefined' ? undefined : (document.currentScript?.src ?? document.baseURI);\n${result.replace('import.meta.url', 'basisBundleUrl')}`
+        : result,
+      map: {
+        version: 3,
+        sources: [id],
+        sourcesContent: [code],
+        names: [],
+        mappings: `${scriptTag ? ';' : ''}AAAA${';AACA'.repeat(code.split('\n').length - 1)}`,
+      },
+    };
+  },
+});
+
+const emitBasisRuntime = async (): Promise<void> => {
+  const source = resolvePath(rootDir, 'src/assets/factories/basis');
+  const targets = ['dist/basis', 'dist/esm/assets/factories/basis'];
+  await buildWorker({
+    entryPoints: [resolvePath(source, 'ktx2.worker.ts')],
+    outfile: resolvePath(rootDir, targets[0], 'ktx2.worker.js'),
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2022',
+    minify: true,
+    external: ['fs'],
+    logOverride: { 'commonjs-variable-in-esm': 'silent' },
+  });
+  for (const target of targets) {
+    const destination = resolvePath(rootDir, target);
+    mkdirSync(destination, { recursive: true });
+    cpSync(resolvePath(source, 'basis_transcoder.wasm'), resolvePath(destination, 'basis_transcoder.wasm'));
+    cpSync(resolvePath(source, 'LICENSE'), resolvePath(destination, 'LICENSE'));
+    if (target !== targets[0]) cpSync(resolvePath(rootDir, targets[0], 'ktx2.worker.js'), resolvePath(destination, 'ktx2.worker.js'));
+  }
+};
+
 const bundled = (minify: boolean): RolldownOptions => {
   return {
     ...shared,
     input: 'src/index.ts',
-    plugins: [...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin('exo-esm')],
+    plugins: [basisWorkerUrls(), ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin('exo-esm')],
     output: { file: 'dist/exo.esm.js', format: 'es', sourcemap: true, minify },
   };
 };
@@ -160,7 +207,7 @@ const modules = (): RolldownOptions => {
     // `./extensions` subpath resolves to.
     input: ['src/index.ts', 'src/debug/index.ts', 'src/renderer-sdk.ts'],
     resolve: { conditionNames: sourceConditions, mainFields: ['module', 'browser', 'main'] },
-    plugins: [...shaderAndWorkletPlugins(false), ...codecovBundlePlugin('exo-esm-modules')],
+    plugins: [basisWorkerUrls(), ...shaderAndWorkletPlugins(false), ...codecovBundlePlugin('exo-esm-modules')],
     output: {
       dir: 'dist/esm',
       format: 'es',
@@ -185,7 +232,7 @@ const iife = (minify: boolean): RolldownOptions => {
   return {
     ...shared,
     input: 'src/index.ts',
-    plugins: [...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-iife-min' : 'exo-iife')],
+    plugins: [basisWorkerUrls(true), ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-iife-min' : 'exo-iife')],
     output: { file: minify ? 'dist/exo.iife.min.js' : 'dist/exo.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
   };
 };
@@ -196,7 +243,12 @@ const fullBundle = (minify: boolean): RolldownOptions => {
     input: 'scripts/exo-full.entry.ts',
     transform: { define: defines },
     resolve: { conditionNames: fullSourceConditions, mainFields: ['browser', 'module', 'main'] },
-    plugins: [extensionSourcePlugin, ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-full-iife-min' : 'exo-full-iife')],
+    plugins: [
+      extensionSourcePlugin,
+      basisWorkerUrls(true),
+      ...shaderAndWorkletPlugins(minify),
+      ...codecovBundlePlugin(minify ? 'exo-full-iife-min' : 'exo-full-iife'),
+    ],
     output: { file: minify ? 'dist/exo.full.iife.min.js' : 'dist/exo.full.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
   };
 };
@@ -208,18 +260,17 @@ const runJob = async (options: RolldownOptions): Promise<void> => {
 };
 
 const emitDeclarations = async (): Promise<void> => {
-  const tsc = resolvePath(rootDir, 'node_modules/typescript/bin/tsc');
-  const result = spawnSync(
-    process.execPath,
-    [tsc, '-p', 'tsconfig.json', '--emitDeclarationOnly', '--outDir', 'dist/esm', '--declarationDir', 'dist/esm', '--inlineSources', '--incremental', 'false'],
-    { cwd: rootDir, stdio: 'inherit' },
+  const { status } = runTypeScriptCompiler(
+    ['-p', 'tsconfig.json', '--emitDeclarationOnly', '--outDir', 'dist/esm', '--declarationDir', 'dist/esm', '--inlineSources', '--incremental', 'false'],
+    { cwd: rootDir },
   );
-  if (result.status !== 0) {
-    throw new Error(`declaration emit failed (tsc exit ${result.status})`);
+  if (status !== 0) {
+    throw new Error(`declaration emit failed (tsc exit ${status})`);
   }
 };
 
 if (watchMode) {
+  await emitBasisRuntime();
   const jobs = [bundled(false), debugBundled(false), modules(), iife(false)];
   const watcher = watch(jobs as never);
   watcher.on('event', event => {
@@ -237,5 +288,6 @@ if (watchMode) {
     await runJob(job);
   }
   await emitDeclarations();
+  await emitBasisRuntime();
   writeSourceStamp(resolvePath(rootDir, 'src'), resolvePath(rootDir, 'dist'));
 }

@@ -1,16 +1,16 @@
 {
   "title": "TileObject",
-  "description": "A tile (GID) object carrying a resolved tile reference. `x`/`y` are the top-left corner of the bounding box, the same convention as every other object kind. Source formats that anchor a tile object elsewhere normalise to the corner on import: Tiled stores the position at the tileset's `objectalignment` point (bottom-left by default on an orthogonal map, bottom-centre on an isometric one) and rotates the tile image about that point, so a non-zero TileMapObjectBase.rotation on a tile object still pivots about the source anchor rather than about `(x, y)`. The owning tileset's drawing offset (Tiled `tileoffset`, reachable as `tile.tileset.offsetX`/`offsetY`) is likewise **not** folded into `x`/`y`. Object layers are data-only, so nothing in this package draws a tile object; code that does has to add that offset itself to match how a tile layer places the same tile.",
+  "description": "A tile (GID) object carrying a resolved tile reference. `x`/`y` are the top-left corner of the bounding box, the same convention as every other object kind. Source formats that anchor a tile object elsewhere normalise to the corner on import: Tiled stores the position at the tileset's `objectalignment` point (bottom-left by default on an orthogonal map, bottom-centre on an isometric one) and rotates the tile image about that point, so a non-zero TileMapObjectBase.rotation on a tile object still pivots about the source anchor rather than about `(x, y)`. Isometric Tiled objects expose this anchor as `rotationOrigin`; `getDisplayObject` projects both the unrotated corner and this pivot. The owning tileset's drawing offset (Tiled `tileoffset`, reachable as `tile.tileset.offsetX`/`offsetY`) is likewise **not** folded into `x`/`y`. Object layers are data-only, so nothing in this package draws a tile object; code that does has to add that offset itself to match how a tile layer places the same tile.",
   "symbol": "TileObject",
   "kind": "interface",
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 14,
+  "memberCount": 15,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 14,
+    "properties": 15,
     "events": 0
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A tile (GID) object carrying a resolved tile reference.",
-        "`x`/`y` are the top-left corner of the bounding box, the same convention as every other object kind. Source formats that anchor a tile object elsewhere normalise to the corner on import: Tiled stores the position at the tileset's `objectalignment` point (bottom-left by default on an orthogonal map, bottom-centre on an isometric one) and rotates the tile image about that point, so a non-zero TileMapObjectBase.rotation on a tile object still pivots about the source anchor rather than about `(x, y)`.",
+        "`x`/`y` are the top-left corner of the bounding box, the same convention as every other object kind. Source formats that anchor a tile object elsewhere normalise to the corner on import: Tiled stores the position at the tileset's `objectalignment` point (bottom-left by default on an orthogonal map, bottom-centre on an isometric one) and rotates the tile image about that point, so a non-zero TileMapObjectBase.rotation on a tile object still pivots about the source anchor rather than about `(x, y)`. Isometric Tiled objects expose this anchor as `rotationOrigin`; `getDisplayObject` projects both the unrotated corner and this pivot.",
         "The owning tileset's drawing offset (Tiled `tileoffset`, reachable as `tile.tileset.offsetX`/`offsetY`) is likewise **not** folded into `x`/`y`. Object layers are data-only, so nothing in this package draws a tile object; code that does has to add that offset itself to match how a tile layer places the same tile."
       ],
       "importLine": "import { TileObject } from '@codexo/exojs-tilemap'",
@@ -155,6 +155,31 @@
           "params": [],
           "returnType": null,
           "description": "Rotation in degrees, clockwise, about (x, y) - except on a TileObject, whose pivot stays at the source format's own anchor and is generally not (x, y). See TileObject for why."
+        },
+        {
+          "name": "rotationOrigin",
+          "signature": "rotationOrigin?: ObjectPoint",
+          "signatureTokens": [
+            {
+              "text": "rotationOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectPoint",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Image rotation pivot in layer coordinates, logical when projected. Adapters may omit it when unavailable."
         },
         {
           "name": "source",
@@ -309,7 +334,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "X of the object origin in object-layer pixel space."
+          "description": "X of the object origin in layer coordinates; logical pixels when the layer has a projection."
         },
         {
           "name": "y",
@@ -330,7 +355,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Y of the object origin in object-layer pixel space."
+          "description": "Y of the object origin in layer coordinates; logical pixels when the layer has a projection."
         }
       ],
       "paragraphs": [],

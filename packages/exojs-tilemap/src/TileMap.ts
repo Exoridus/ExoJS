@@ -3,6 +3,7 @@ import type { ObjectLayer, ObjectSchema } from './ObjectLayer';
 import { type TileLayer } from './TileLayer';
 import type { TileMapViewOptions } from './TileMapView';
 import { TileMapView } from './TileMapView';
+import { TileProjection } from './TileProjection';
 import { type TileSet } from './TileSet';
 import type { ResolvedTile, TileProperties } from './types';
 import { validatePairedDimensions, validatePositiveInteger } from './types';
@@ -12,6 +13,8 @@ import { validatePairedDimensions, validatePositiveInteger } from './types';
  * @advanced
  */
 export interface TileMapOptions {
+  /** Shared projection; defaults to an orthogonal grid of the supplied tile size. */
+  readonly projection?: TileProjection;
   /** Map name (for debugging). */
   readonly name?: string;
   /**
@@ -95,6 +98,7 @@ export interface TileMapOptions {
  * @advanced
  */
 export class TileMap {
+  public readonly projection: TileProjection;
   /** Map name (debug). */
   public readonly name: string;
 
@@ -110,11 +114,11 @@ export class TileMap {
 
   /** Pixel width, or `undefined` if unbounded. */
   public get pixelWidth(): number | undefined {
-    return this.width === undefined ? undefined : this.width * this.tileWidth;
+    return this.width === undefined || this.height === undefined ? undefined : this.projection.getBounds(0, 0, this.width, this.height).width;
   }
   /** Pixel height, or `undefined` if unbounded. */
   public get pixelHeight(): number | undefined {
-    return this.height === undefined ? undefined : this.height * this.tileHeight;
+    return this.width === undefined || this.height === undefined ? undefined : this.projection.getBounds(0, 0, this.width, this.height).height;
   }
   /** `true` if this map has a fixed width/height; `false` if unbounded. */
   public get bounded(): boolean {
@@ -164,6 +168,10 @@ export class TileMap {
     this.height = options.height;
     this.tileWidth = options.tileWidth;
     this.tileHeight = options.tileHeight;
+    this.projection = options.projection ?? new TileProjection({ tileWidth: options.tileWidth, tileHeight: options.tileHeight });
+    if (this.projection.tileWidth !== this.tileWidth || this.projection.tileHeight !== this.tileHeight) {
+      throw new Error('Projection tile dimensions must match the layer or map.');
+    }
     this.chunkWidth = chunkWidth;
     this.chunkHeight = chunkHeight;
     this.class = options.class ?? '';
@@ -537,25 +545,19 @@ export class TileMap {
   // ── Coordinate conversion (base layer) ────────────────────────────────
 
   /**
-   * Convert a tile coordinate to the pixel position of its top-left corner
+   * Convert a grid vertex to display pixels (the top diamond vertex for isometric cells)
    * in map-local space (ignoring layer offsets).
    */
   public tileToPixel(tx: number, ty: number): { x: number; y: number } {
-    return {
-      x: tx * this.tileWidth,
-      y: ty * this.tileHeight,
-    };
+    return this.projection.tileToPixel(tx, ty);
   }
 
   /**
-   * Convert a pixel position in map-local space to the tile coordinate
+   * Convert a display position in map-local space to the tile coordinate
    * that contains it. Uses `floor`. May return coordinates outside map bounds.
    */
   public pixelToTile(px: number, py: number): { tx: number; ty: number } {
-    return {
-      tx: Math.floor(px / this.tileWidth),
-      ty: Math.floor(py / this.tileHeight),
-    };
+    return this.projection.pixelToTile(px, py);
   }
 
   // ── Revision / lifecycle ──────────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat3Std140FloatCount, packAffineMat3Std140, packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import type { OwnTransformRowPatcher } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -236,13 +237,13 @@ class TextRetainedReplayState implements WebGpuRetainedRendererReplayState {
 
 // ── WGSL: shared vertex + three fragment entry points ────────────────────────
 /** WGSL source for the text pipeline (shared vertex + color/SDF/MSDF fragment entry points). @internal */
-export const textShaderSource = fillShaderSource(textShaderTemplate, {
+export const textShaderSource = `${colorShaderSourcesWgsl}${fillShaderSource(textShaderTemplate, {
   atlasTextureSlots: textAtlasTextureSlotWgsl,
   nodeIndexMask: textNodeIndexMask,
   decorationFlagBit: textDecorationFlagBit,
   atlasSlotShift: textAtlasSlotShift,
   nodeDataTexels: textNodeDataTexels,
-});
+})}`;
 
 /**
  * WebGPU renderer for {@link Text} and {@link BitmapText} nodes.
@@ -1319,12 +1320,34 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    pass.setPipeline(this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
-    pass.setBindGroup(0, frameBindGroup);
-    pass.setBindGroup(1, textureBindGroup);
-    pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
-    pass.setIndexBuffer(indexBuffer, 'uint32');
-    pass.drawIndexed(data.quadCount * 6, 1, 0, 0, 0);
+    const nativePipeline = this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+
+    const nativeCompatible = backend.colorAttachmentCount === 1;
+    if (!nativeCompatible) bundle.nativeReplay.skipPass();
+
+    if (
+      !nativeCompatible ||
+      !bundle.nativeReplay.draw(
+        device,
+        active,
+        payload,
+        backend.renderTargetFormat,
+        nativePipeline,
+        frameBindGroup,
+        textureBindGroup,
+        indexBuffer,
+        'uint32',
+        data.quadCount * 6,
+        1,
+      )
+    ) {
+      pass.setPipeline(nativePipeline);
+      pass.setBindGroup(0, frameBindGroup);
+      pass.setBindGroup(1, textureBindGroup);
+      pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
+      pass.setIndexBuffer(indexBuffer, 'uint32');
+      pass.drawIndexed(data.quadCount * 6, 1, 0, 0, 0);
+    }
 
     state.drawsInPass = active;
     coordinator.markPassDraws();
@@ -1444,7 +1467,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * indices are ALWAYS this exact pattern (`buildTextPageQuads` never packs
    * anything else), so replay never needs to persist per-batch index bytes;
    * one shared, ever-growing buffer serves every recorded Text batch on this
-   * renderer, exactly like `WebGpuNineSliceSpriteRenderer`'s static per-quad
+   * renderer, exactly like `WebGpuScalableSpriteRenderer`'s static per-quad
    * index buffer serves every nine-slice instance.
    */
   private _ensureRetainedQuadIndexBuffer(device: GPUDevice, quadCount: number, coordinator: WebGpuBackend['passCoordinator']): GPUBuffer {

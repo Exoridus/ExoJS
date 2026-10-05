@@ -77,7 +77,7 @@
         },
         {
           "name": "resolveAsset",
-          "signature": "resolveAsset(source: null | string | undefined, type: AssetConstructor<T>): T | null",
+          "signature": "resolveAsset(reference: unknown, type: AssetConstructor<T>): T | null",
           "signatureTokens": [
             {
               "text": "resolveAsset",
@@ -88,7 +88,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "source",
+              "text": "reference",
               "kind": "param"
             },
             {
@@ -96,23 +96,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
+              "text": "unknown",
               "kind": "keyword"
             },
             {
@@ -166,8 +150,8 @@
           ],
           "params": [
             {
-              "name": "source",
-              "type": "null | string | undefined",
+              "name": "reference",
+              "type": "unknown",
               "optional": false
             },
             {
@@ -177,7 +161,7 @@
             }
           ],
           "returnType": "T | null",
-          "description": "Resolve a serialized asset source key back to a loaded resource of type, or null if the source is missing/unset or the asset was not pre-loaded (a one-time warning is emitted in the not-loaded case)."
+          "description": "Resolve a serialized asset reference back to a loaded resource of type, or null if the reference is missing, malformed, or names an asset that was not pre-loaded (a one-time warning is emitted in the not-loaded case). Accepts both reference forms, so a version 1 document's bare source strings keep resolving."
         }
       ],
       "paragraphs": [],

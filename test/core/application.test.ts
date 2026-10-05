@@ -266,6 +266,8 @@ describe('Application', () => {
     // Same reason: the frame's draw path reads the frame-pass pipeline, and an
     // uninitialised field is not the `null` an application without one holds.
     rawApp['_framePasses'] = null;
+    // The stubbed backend has no working target to draw the frame into.
+    rawApp['_drawFrame'] = vi.fn();
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 

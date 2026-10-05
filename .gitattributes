@@ -34,3 +34,5 @@
 # Archives / misc binaries
 *.zip binary
 *.pdf binary
+*.ktx2 binary
+*.wasm binary

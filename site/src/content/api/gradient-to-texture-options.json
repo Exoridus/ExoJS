@@ -94,7 +94,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Sampler and upload overrides. colorSpace, alphaMode and premultiplyAlpha describe the produced buffer's actual content and are not overridable here."
         }
       ],
       "paragraphs": [],

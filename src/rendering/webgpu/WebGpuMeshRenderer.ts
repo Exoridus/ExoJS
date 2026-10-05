@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { packAffineMat3Std140 } from '#rendering/affinePacking';
+import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMaterial } from '#rendering/material/Material';
@@ -50,10 +51,10 @@ import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import type { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 
 /** WGSL source for the default (non-instanced) mesh pipeline. @internal */
-export const meshShaderSource: string = meshShaderSourceModule;
+export const meshShaderSource = `${colorShaderSourcesWgsl}${meshShaderSourceModule}`;
 
 /** WGSL source for the instanced mesh pipeline. @internal */
-export const instancedMeshShaderSource: string = instancedMeshShaderSourceModule;
+export const instancedMeshShaderSource = `${colorShaderSourcesWgsl}${instancedMeshShaderSourceModule}`;
 
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + color u8x4-norm.
 // Default-shader path bakes the (view * globalTransform) into position so the

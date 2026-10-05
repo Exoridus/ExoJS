@@ -33,6 +33,7 @@ export default defineConfig([
       'dist/**',
       'node_modules/**',
       'src/vendor/**',
+      'src/assets/factories/basis/basis_transcoder.mjs',
       'site/dist/**',
       'site/node_modules/**',
       'site/public/vendor/**',
@@ -66,7 +67,7 @@ export default defineConfig([
 
   // Engine source
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'src/assets/factories/basis/*.d.mts'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -573,6 +574,15 @@ export default defineConfig([
     },
   },
 
+  {
+    files: ['src/assets/factories/basis/basis_transcoder.d.mts'],
+    rules: {
+      // This declaration must preserve the official transcoder's module name and ABI spelling.
+      'unicorn/filename-case': 'off',
+      '@typescript-eslint/naming-convention': 'off',
+    },
+  },
+
   // Build-time constants intentionally follow ecosystem-style ALL_CAPS names.
   // Matched by filename rather than listed per package: every package that
   // declares them does it in the same file, and a list would fall behind the
@@ -1005,6 +1015,16 @@ export default defineConfig([
   },
   // Vitest test-quality rules, over both the root suite and every package's.
   ...vitestConfig({ files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}', 'packages/eslint-plugin-exojs/test/**/*.ts'] }),
+  // Node's built-in test runner, not Vitest: these tests launch real child
+  // processes and must not run inside Vitest's worker/sandbox model. The
+  // vitest plugin's import and disabled-test rules do not apply here.
+  {
+    files: ['test/ci/*.node.ts'],
+    rules: {
+      'vitest/no-import-node-test': 'off',
+      'vitest/no-disabled-tests': 'off',
+    },
+  },
   // Node / config files / scripts - not part of any tsconfig `include`, so
   // type-aware rules (from the global `recommendedTypeChecked`/
   // `stylisticTypeChecked` configs applied unscoped above) have no type
@@ -1019,7 +1039,14 @@ export default defineConfig([
   // given a real tsconfig program, since these files intentionally sit
   // outside any typed program.
   ...nodeToolingConfig({
-    files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.{ts,mts,cts}', 'scripts/**/*.mjs', 'packages/exojs-bench/competitors/*.ts'],
+    files: [
+      '*.config.ts',
+      'eslint.config.ts',
+      'scripts/**/*.{ts,mts,cts}',
+      'scripts/**/*.mjs',
+      'packages/exojs-bench/competitors/*.ts',
+      'packages/create-exo-app/bin/*.js',
+    ],
   }),
 
   // scripts/webgpu-probe.ts runs as a Node process that drives a Playwright

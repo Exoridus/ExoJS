@@ -1,0 +1,191 @@
+{
+  "title": "GlslContribution",
+  "description": "GLSL ES 3.00 contribution executed once per live particle after integration. Mutable locals are `vec2 position`, `velocity`, `scale`, `rotation` (angle, angular speed), `timing` (elapsed, lifetime), and `uint color`, `textureIndex`. `float dt` and `uint idx` identify the frame delta and storage slot. Uniforms are `u_KEY.field`; textures are `sampler2D u_KEY_NAME` with height 1. The body runs in its own block. Helpers belong in `prelude`.",
+  "symbol": "GlslContribution",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "GLSL ES 3.00 contribution executed once per live particle after integration. Mutable locals are `vec2 position`, `velocity`, `scale`, `rotation` (angle, angular speed), `timing` (elapsed, lifetime), and `uint color`, `textureIndex`. `float dt` and `uint idx` identify the frame delta and storage slot. Uniforms are `u_KEY.field`; textures are `sampler2D u_KEY_NAME` with height 1. The body runs in its own block. Helpers belong in `prelude`."
+      ],
+      "importLine": "import { GlslContribution } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "body",
+          "signature": "body: string",
+          "signatureTokens": [
+            {
+              "text": "body",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "key",
+          "signature": "key: string",
+          "signatureTokens": [
+            {
+              "text": "key",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Unique per module class within a system; combine repeated instances into one module."
+        },
+        {
+          "name": "prelude",
+          "signature": "prelude?: string",
+          "signatureTokens": [
+            {
+              "text": "prelude",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Module-scoped helper declarations. Prefix names with the module key to avoid collisions."
+        },
+        {
+          "name": "textures",
+          "signature": "textures?: readonly ParticleTextureBinding[]",
+          "signatureTokens": [
+            {
+              "text": "textures",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleTextureBinding",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms?: readonly ParticleUniformField[]",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleUniformField",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/GlslContribution.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/GlslContribution.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/GlslContribution.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/GlslContribution.ts"
+}

@@ -1,5 +1,6 @@
 ﻿import type { ParticleBatch } from '#ParticleStorage';
 
+import type { GlslContribution } from './GlslContribution';
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
@@ -52,6 +53,23 @@ export class RepelFromPoint extends UpdateModule {
     }
   }
 
+  public override glsl(): GlslContribution {
+    return {
+      ...this.wgsl(),
+      body: `
+vec2 repelDelta = position - u_RepelFromPoint.point;
+float repelDistSq = dot(repelDelta, repelDelta);
+float repelRadius = u_RepelFromPoint.radius;
+bool repelInRange = repelRadius <= 0.0 || repelDistSq <= repelRadius * repelRadius;
+if (repelDistSq >= 0.0000000001 && repelInRange) {
+    float repelDist = sqrt(repelDistSq);
+    float repelFalloff = repelRadius > 0.0 ? 1.0 - repelDist / repelRadius : 1.0;
+    velocity += repelDelta * ((u_RepelFromPoint.strength * repelFalloff * dt) / repelDist);
+}
+      `,
+    };
+  }
+
   public override wgsl(): WgslContribution {
     return {
       key: 'RepelFromPoint',
@@ -65,7 +83,7 @@ export class RepelFromPoint extends UpdateModule {
                 let repelDistSq = dot(repelDelta, repelDelta);
                 let repelRadius = modules.u_RepelFromPoint.radius;
                 let repelInRange = (repelRadius <= 0.0) || (repelDistSq <= repelRadius * repelRadius);
-                if (repelDistSq > 0.0000001 && repelInRange) {
+                if (repelDistSq >= 0.0000000001 && repelInRange) {
                     let repelDist = sqrt(repelDistSq);
                     let repelFalloff = select(1.0, 1.0 - repelDist / max(repelRadius, 0.000001), repelRadius > 0.0);
                     let repelAccel = (modules.u_RepelFromPoint.strength * repelFalloff * dt) / repelDist;

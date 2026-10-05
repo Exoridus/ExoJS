@@ -54,11 +54,28 @@ interface ErrorMessage {
 type WorkerMessage = ReadyMessage | PointerResultMessage | FramesResultMessage | ClosedMessage | ErrorMessage;
 
 /** One request, one reply - a worker that reports an error fails the test rather than hanging. */
+/**
+ * Sends one message to the worker and waits for its reply.
+ *
+ * The wait carries its own deadline, shorter than Vitest's per-test timeout, so
+ * a worker that never answers fails with a message naming the exchange instead of
+ * surfacing as the generic `Test timed out in 15000ms`. That distinction is the
+ * whole point: the worker-side failure and the runner being out of budget look
+ * identical from the outside, and the second one is not this test's fault.
+ *
+ * The timer is cleared on every exit path, so a resolved exchange does not leave
+ * a pending callback behind.
+ */
+const WORKER_EXCHANGE_TIMEOUT_MS = 10_000;
+
 const exchange = <T extends WorkerMessage>(worker: Worker, message: unknown, transfer: Transferable[] = []): Promise<T> =>
   new Promise<T>((resolve, reject) => {
+    const label = (message as { kind?: string }).kind ?? 'message';
+
     const onMessage = (event: MessageEvent<WorkerMessage>): void => {
       worker.removeEventListener('message', onMessage);
       worker.removeEventListener('error', onError);
+      clearTimeout(timer);
 
       if (event.data.kind === 'error') {
         reject(new Error(event.data.message));
@@ -72,8 +89,15 @@ const exchange = <T extends WorkerMessage>(worker: Worker, message: unknown, tra
     const onError = (event: ErrorEvent): void => {
       worker.removeEventListener('message', onMessage);
       worker.removeEventListener('error', onError);
+      clearTimeout(timer);
       reject(new Error(`worker error: ${event.message}`));
     };
+
+    const timer = setTimeout(() => {
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+      reject(new Error(`worker did not answer "${label}" within ${WORKER_EXCHANGE_TIMEOUT_MS}ms`));
+    }, WORKER_EXCHANGE_TIMEOUT_MS);
 
     worker.addEventListener('message', onMessage);
     worker.addEventListener('error', onError);

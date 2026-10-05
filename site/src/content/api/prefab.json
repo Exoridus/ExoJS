@@ -141,7 +141,7 @@
         },
         {
           "name": "from",
-          "signature": "from(node: SceneNode, loader: Loader | null, registry?: SerializationRegistry): Prefab",
+          "signature": "from(node: SceneNode, loader: Loader | null, registry?: SerializationRegistry, options?: SerializeOptions): Prefab",
           "signatureTokens": [
             {
               "text": "from",
@@ -208,6 +208,26 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializeOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -234,6 +254,11 @@
             {
               "name": "registry",
               "type": "SerializationRegistry",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "SerializeOptions",
               "optional": true
             }
           ],

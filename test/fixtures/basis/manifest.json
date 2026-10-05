@@ -1,0 +1,103 @@
+{
+  "revision": "99f52d63aa6799cbdaecfe977111dc5ec3b31d47",
+  "fixtures": [
+    {
+      "file": "etc1s-opaque-linear.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 255],
+      "sha256": "5e18ca74bbf8ca8bf027fca30de889d2764f5b38260bb63af2b7994688468dca"
+    },
+    {
+      "file": "etc1s-opaque-srgb.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 255],
+      "sha256": "870b2efe480827df318684f055c42279d6bb18b7e4fd08ed039ed39daf74e5f4"
+    },
+    {
+      "file": "etc1s-alpha-linear.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 128],
+      "sha256": "6231d20b7a3663c1eaaf92a64acd5432b9d9ecdc2531f0d14b521ec1b917462f"
+    },
+    {
+      "file": "etc1s-alpha-srgb.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 128],
+      "sha256": "349d48064d15c233a4d9cec189f6de4d4dec8b2e91e719ca90a08fc16e17204c"
+    },
+    {
+      "file": "uastc-opaque-linear.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 255],
+      "sha256": "4b80bcc00a899c9c0bbf57477cef3081faf6a8cb8e6c50214da5cac1cad3f60a"
+    },
+    {
+      "file": "uastc-opaque-linear-zstd.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 255],
+      "sha256": "34b7fd7efc6106503d4c54c6d25cf226666acd4bcf19d76685eec60aad55a36e"
+    },
+    {
+      "file": "uastc-opaque-srgb.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 255],
+      "sha256": "302d8757724c9835cdff9dc7bbea817b0c18e14cf0b346f7de3a2b6bb2b88695"
+    },
+    {
+      "file": "uastc-opaque-srgb-zstd.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 255],
+      "sha256": "63380820a47500da1e6cba926d1d55294c922f9bd9bce12e556a7e57b3f536ce"
+    },
+    {
+      "file": "uastc-alpha-linear.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 128],
+      "sha256": "49e1197a3fa11b34626944eca56b02eb9b9f509823f26b2427ef168bbe5f3d79"
+    },
+    {
+      "file": "uastc-alpha-linear-zstd.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 128],
+      "sha256": "9ac76c64da25f2d4c64c2e5bcc4b45cbc26597e9199e0adb23efae7bea39f3e6"
+    },
+    {
+      "file": "uastc-alpha-srgb.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 128],
+      "sha256": "352a011d73c748adbafac0c03908fb2e863bf28d9fc10274664d3aa3f821e1e6"
+    },
+    {
+      "file": "uastc-alpha-srgb-zstd.ktx2",
+      "width": 28,
+      "height": 12,
+      "rgba": [128, 64, 32, 128],
+      "sha256": "fe37d0567b908ac3cc33dea82c0330feed33f35ec7d8d314e30c1a4dc4445929"
+    },
+    {
+      "file": "etc1s-alpha-srgb-odd.ktx2",
+      "width": 17,
+      "height": 9,
+      "rgba": [128, 64, 32, 128],
+      "sha256": "87dd945abaa749019c1ee299ede8c5cfeef45223e624aa6e2c3af432b42069fb"
+    },
+    {
+      "file": "uastc-alpha-srgb-odd.ktx2",
+      "width": 17,
+      "height": 9,
+      "rgba": [128, 64, 32, 128],
+      "sha256": "0d3fc2d8659f8b6ee4c10865326d3ebe637156cfe53b6cf2bdff0d4db9f1b502"
+    }
+  ]
+}

@@ -1,0 +1,280 @@
+{
+  "title": "ComponentQuery",
+  "description": "A reusable, typed selection of the nodes in one scene that carry an exact set of component classes. Obtained from Scene.query; the same class tuple on the same scene returns the same query. A query selects; it runs nothing. Iterate it from a System, a behaviour or a scene hook: ```ts const movers = this.query(Velocity, Bounds); for (const [node, velocity, bounds] of movers) { node.x += velocity.x * delta; } movers.forEach((node, velocity) => { ... }); // no row array per match ``` A match carries every requested class exactly - a subclass instance does not match its base class. Disabled components and components of a paused or retained scene match; check Component.enabled or Component.active where a task needs to. Rows hold no `null`. Each iteration works on the candidates that existed when it started: members added meanwhile are not visited, and members removed or destroyed meanwhile are skipped. Nested iterations are independent. A `for...of` iteration must finish within the frame it started in - resuming it after the frame boundary throws - and must not span an `await`, which the runtime cannot always detect. Each `for...of` row is a fresh array; forEach passes the components as arguments instead and allocates no row. Candidates come from an index per component class, never from walking the scene graph: an iteration visits the nodes of the rarest requested class and looks the others up on each of them.",
+  "symbol": "ComponentQuery",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A reusable, typed selection of the nodes in one scene that carry an exact set of component classes. Obtained from Scene.query; the same class tuple on the same scene returns the same query.",
+        "A query selects; it runs nothing. Iterate it from a System, a behaviour or a scene hook:",
+        "```ts const movers = this.query(Velocity, Bounds);",
+        "for (const [node, velocity, bounds] of movers) { node.x += velocity.x * delta; }",
+        "movers.forEach((node, velocity) => { ... }); // no row array per match ```",
+        "A match carries every requested class exactly - a subclass instance does not match its base class. Disabled components and components of a paused or retained scene match; check Component.enabled or Component.active where a task needs to. Rows hold no `null`.",
+        "Each iteration works on the candidates that existed when it started: members added meanwhile are not visited, and members removed or destroyed meanwhile are skipped. Nested iterations are independent. A `for...of` iteration must finish within the frame it started in - resuming it after the frame boundary throws - and must not span an `await`, which the runtime cannot always detect. Each `for...of` row is a fresh array; forEach passes the components as arguments instead and allocates no row.",
+        "Candidates come from an index per component class, never from walking the scene graph: an iteration visits the nodes of the rarest requested class and looks the others up on each of them."
+      ],
+      "importLine": "import { ComponentQuery } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "[iterator]",
+          "signature": "[iterator](): Iterator<readonly [SceneNode, ComponentQueryComponents<T>]>",
+          "signatureTokens": [
+            {
+              "text": "[iterator]",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Iterator",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentQueryComponents",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "Iterator<readonly [SceneNode, ComponentQueryComponents<T>]>",
+          "description": ""
+        },
+        {
+          "name": "forEach",
+          "signature": "forEach(callback: (node: SceneNode, components: ComponentQueryComponents<T>) => void): void",
+          "signatureTokens": [
+            {
+              "text": "forEach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "components",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentQueryComponents",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "callback",
+              "type": "(node: SceneNode, components: ComponentQueryComponents<T>) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Call callback for every match, with the node and its components as arguments in query order. Allocates no row per match, which makes it the form for per-frame loops."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "size",
+          "signature": "size: number",
+          "signatureTokens": [
+            {
+              "text": "size",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The number of nodes matching right now. Counts by visiting the candidates, so it costs as much as an iteration."
+        },
+        {
+          "name": "types",
+          "signature": "types: T",
+          "signatureTokens": [
+            {
+              "text": "types",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The requested component classes, in row order."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/ComponentQuery.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/ComponentQuery.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/ComponentQuery.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/ComponentQuery.ts"
+}

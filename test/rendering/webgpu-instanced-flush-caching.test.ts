@@ -37,8 +37,8 @@ const renderFrame = (backend: WebGpuBackend, nodes: readonly RenderNode[]): void
 };
 
 describe('WebGPU NineSliceSprite flush hot-path caching', () => {
-  const uniformLabel = 'nine-slice:uniform-buffer';
-  const textureBindGroupLabel = 'nine-slice:texture-bind-group';
+  const uniformLabel = 'repeating-sprite:uniform-buffer';
+  const textureBindGroupLabel = 'repeating-sprite:texture-bind-group:geo';
 
   const makeSprite = (texture: Texture): NineSliceSprite => new NineSliceSprite(texture, { slices: 4, border: 4, width: 48, height: 48 });
 

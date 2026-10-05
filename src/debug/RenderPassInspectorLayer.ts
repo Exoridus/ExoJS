@@ -61,20 +61,26 @@ export interface RenderPipelineRow {
 }
 
 /**
- * Debug layer that lists every {@link RenderNode} with an active filter chain
- * each frame. Renders a compact text panel with per-drawable rows showing
- * the filter sequence, bounding-box dimensions, and mask/cache status.
+ * Debug layer that lists every visible {@link RenderNode} in the scene tree
+ * with an attached filter chain, and optionally a {@link RenderPipeline} set
+ * with {@link setPipeline}. Renders a compact text panel with per-node rows
+ * showing the filter sequence, bounding-box dimensions, and mask/cache status.
  *
  * Use during development to answer:
  *
- *   - "Is my filter actually attached?" → it appears in the list
- *   - "Why does my frame have N render passes?" → see total pass count
- *   - "Is this drawable being re-rendered or cached?" → `[cached]` flag
+ *   - "Is my filter actually attached?" - it appears in the list
+ *   - "Is this node configured to render through a cache?" - `[cached]` flag
+ *
+ * The pass total counts the attached filters plus one per collected entry with
+ * a mask. It is a structural estimate, not a hardware-pass count or GPU timing:
+ * multi-step filters are not expanded, cached work is not subtracted, and
+ * mask-only nodes are not collected. The returned entries are reused on every
+ * update.
  *
  * For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL
- * source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel -
- * the engine emits debug-group labels around filter and mesh-custom-shader
- * passes so those tools show meaningful pass names.
+ * source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel.
+ * On WebGPU, draws with a custom mesh or sprite material carry debug-group
+ * labels, so those tools can tell them apart.
  */
 export class RenderPassInspectorLayer extends DebugLayer {
   private readonly _entries: RenderPassInspectorEntry[] = [];

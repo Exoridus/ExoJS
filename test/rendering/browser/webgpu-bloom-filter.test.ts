@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { Filter } from '#rendering/filters/Filter';
 
-import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
+import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import {
   backdropScene,
   bloom,
@@ -29,7 +29,7 @@ const withScene = async (
   const { root, texture } = blurScene(filters);
 
   try {
-    if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();
@@ -48,7 +48,7 @@ const withPlateau = async (
   const { root, texture, filter } = plateauScene(levels);
 
   try {
-    if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();
@@ -63,7 +63,7 @@ const withBackdrop = async (ctx: { skip: (reason: string) => void }, read: (pixe
   const { root, textures, filter } = backdropScene();
 
   try {
-    if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();

@@ -10,7 +10,7 @@
  * API path.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); `renderAndValidate` only skips when the software
+ * against SwiftShader); `renderAndValidate` only skips when the software
  * adapter drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -24,7 +24,7 @@ import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -54,14 +54,14 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-// The software (swiftshader) adapter can drop the device mid-test; treat that as
+// The software (SwiftShader) adapter can drop the device mid-test; treat that as
 // an unavailable-adapter skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene through the real plan path inside a validation error scope and
 // assert it produced valid GPU work. Returns false when the device dropped
 // mid-test (the caller should bail).
-const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
+const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode, encoded = false): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
@@ -69,10 +69,15 @@ const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backen
   let validationError: GPUError | null;
 
   try {
-    backend.resetStats();
-    backend.clear(Color.black);
-    root.render(backend);
-    backend.flush();
+    if (encoded) {
+      if (!(await renderWebGpuEncoded(ctx, backend, root))) return false;
+    } else {
+      backend.resetStats();
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+    }
+
     validationError = await device.popErrorScope();
   } catch (error) {
     if (isDeviceLoss(error)) {
@@ -106,7 +111,7 @@ describe('WebGPU Graphics gradient fills', () => {
     graphics.drawRectangle(8, 8, 48, 48);
 
     try {
-      if (!(await renderAndValidate(ctx, backend, graphics))) {
+      if (!(await renderAndValidate(ctx, backend, graphics, true))) {
         return;
       }
 
@@ -184,7 +189,7 @@ describe('WebGPU Graphics gradient fills', () => {
     graphics.drawLine(8, 32, 56, 32);
 
     try {
-      if (!(await renderAndValidate(ctx, backend, graphics))) {
+      if (!(await renderAndValidate(ctx, backend, graphics, true))) {
         return;
       }
 

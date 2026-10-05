@@ -221,6 +221,23 @@ describe('Loader seamless get (Texture)', () => {
     }
   });
 
+  test('color and numeric interpretations split one source without splitting sampler-only requests', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const color = loader.get('ship.png');
+    const data = loader.get('ship.png', { textureOptions: { colorSpace: 'none' } });
+
+    expect(data).not.toBe(color);
+    expect(loader.get('ship.png', { textureOptions: { colorSpace: 'none', scaleMode: ScaleModes.Nearest } })).toBe(data);
+
+    await Promise.all([color.loaded, data.loaded]);
+
+    expect(color.colorSpace).toBe('srgb');
+    expect(data.colorSpace).toBe('none');
+    expect(data.source).not.toBe(color.source);
+  });
+
   test('differing per-handle textureOptions across get() warn once; the first sampler wins on the shared handle', async () => {
     mockFetchImage();
     const loader = createCoreLoader();

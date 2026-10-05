@@ -38,11 +38,11 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "build": "exo-tsc -p tsconfig.build.json",
+    "typecheck": "exo-tsc --noEmit && exo-tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-eslint-plugin"
   },
@@ -51,8 +51,8 @@
   },
   "devDependencies": {
     "@types/estree": "^1.0.9",
-    "@types/node": "^26.4.0",
-    "eslint": "~10.9.1",
+    "@types/node": "^26.6.2",
+    "eslint": "~10.11.0",
     "typescript": "~6.0.3"
   },
   "license": "MIT",

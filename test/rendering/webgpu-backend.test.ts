@@ -732,7 +732,7 @@ describe('WebGpuBackend', () => {
             target?.blend?.color.srcFactor === 'one' &&
             target.blend.color.dstFactor === 'one' &&
             target.blend.alpha.srcFactor === 'one' &&
-            target.blend.alpha.dstFactor === 'one',
+            target.blend.alpha.dstFactor === 'one-minus-src-alpha',
         ),
       );
 
@@ -774,7 +774,7 @@ describe('WebGpuBackend', () => {
             target?.blend?.color.srcFactor === 'zero' &&
             target.blend.color.dstFactor === 'one-minus-src' &&
             target.blend.alpha.srcFactor === 'zero' &&
-            target.blend.alpha.dstFactor === 'one-minus-src-alpha',
+            target.blend.alpha.dstFactor === 'one',
         ),
       );
 
@@ -843,15 +843,15 @@ describe('WebGpuBackend', () => {
       const manager = new WebGpuBackend(app);
       installCoreRenderers(manager);
       const sourceCanvas = document.createElement('canvas');
-      const texture = new Texture(sourceCanvas);
+      const texture = new Texture(sourceCanvas, { colorSpace: 'none' });
       const first = new Sprite(texture);
       const second = new Sprite(texture);
 
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
-      // Disable mipmaps so the only render passes are content passes - mipmap
-      // generation legitimately opens its own (non-coordinator) passes against
-      // mip-level targets, which would otherwise inflate the raw mock counts.
+      // Disable mipmaps and the colour normalization pass so the only render
+      // passes are content passes - both legitimately open their own
+      // (non-coordinator) passes, which would otherwise inflate the raw mock counts.
       texture.generateMipMap = false;
       texture.updateSource();
       second.x = 20;
@@ -1157,7 +1157,7 @@ describe('WebGpuBackend', () => {
               target?.blend?.color.srcFactor === 'one' &&
               target.blend.color.dstFactor === 'one' &&
               target.blend.alpha.srcFactor === 'one' &&
-              target.blend.alpha.dstFactor === 'one',
+              target.blend.alpha.dstFactor === 'one-minus-src-alpha',
           ),
       );
 
@@ -1202,7 +1202,7 @@ describe('WebGpuBackend', () => {
             target =>
               target?.blend?.color.srcFactor === 'dst' &&
               target.blend.color.dstFactor === 'one-minus-src-alpha' &&
-              target.blend.alpha.srcFactor === 'dst-alpha' &&
+              target.blend.alpha.srcFactor === 'one' &&
               target.blend.alpha.dstFactor === 'one-minus-src-alpha',
           ),
       );
@@ -1752,7 +1752,7 @@ describe('WebGpuBackend', () => {
               target?.blend?.color.srcFactor === 'one' &&
               target.blend.color.dstFactor === 'one' &&
               target.blend.alpha.srcFactor === 'one' &&
-              target.blend.alpha.dstFactor === 'one',
+              target.blend.alpha.dstFactor === 'one-minus-src-alpha',
           ),
       );
 

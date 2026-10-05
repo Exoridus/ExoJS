@@ -2,35 +2,17 @@
   display: block;
 }
 
-section {
-  display: block;
-  padding: 0 0 0.2rem;
-}
-
-.toggle {
-  appearance: none;
-  width: 100%;
-  min-height: 32px;
-  padding: 0 0.48rem;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: inherit;
+.heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  cursor: pointer;
-  text-align: left;
-}
-
-.toggle:hover {
-  background: color-mix(in oklab, var(--bg-panel), transparent 8%);
-}
-
-.toggle:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--accent-line);
+  min-height: 32px;
+  padding: 0 0.48rem;
+  margin: 0;
+  background: var(--bg-elevated);
 }
 
 .title {
@@ -47,14 +29,6 @@ section {
   text-overflow: ellipsis;
 }
 
-.meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex: 0 0 auto;
-  padding-left: 0.5rem;
-}
-
 .count {
   min-width: 16px;
   height: 16px;
@@ -69,24 +43,12 @@ section {
   font-weight: 600;
 }
 
-.chevron {
-  width: 6px;
-  height: 6px;
-  border-right: 1.5px solid var(--fg-faint);
-  border-bottom: 1.5px solid var(--fg-faint);
-  transform: rotate(45deg);
-}
-
-.chevron[data-expanded] {
-  transform: rotate(225deg);
-}
-
 .content {
   display: block;
 }
 
 @media (max-width: 1119px) {
-  .toggle {
+  .heading {
     min-height: 44px;
   }
 }

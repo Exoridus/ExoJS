@@ -78,9 +78,11 @@ During iteration, run the smallest relevant validation:
 
 Never run a full test project or the full gate set to find out what a change broke. Re-run only the check that was red, on the files that were red.
 
-Before completion, run `pnpm lanes` to see which lanes the change requires, run those, and run `git diff --check`.
+Before the first push, identify the complete validation contract affected by the change and run targeted checks for every affected surface. Do not rely on the push hook to discover missing validation responsibilities. This includes, where applicable, generated API/reference artifacts, central shader inventories and compile tests, source/generated example synchronization, public export/package verification, documentation generation, and package-specific browser or parity tests.
 
-Do not run a full suite immediately before pushing. The pre-push hook already runs `verify:quick` plus the lanes `scripts/ci/lanes.ts` selects for the pushed range, so a full local run beforehand is the same work twice.
+Use `pnpm lanes --base <base>` before the first push to confirm that the expected repository lanes match the surfaces you identified. Run the targeted prerequisite checks needed to establish those contracts, then run `git diff --check`.
+
+The regular pre-push hook is the final local integration check, not the discovery mechanism for required validation. It may repeat work already performed deliberately. A first push should happen only after the affected contracts are understood and their targeted checks are green.
 
 Do not weaken, delete, skip, or baseline a failing test or gate merely to make the change pass without establishing that the expectation itself is wrong.
 

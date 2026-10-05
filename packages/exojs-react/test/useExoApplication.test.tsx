@@ -91,6 +91,17 @@ describe('useExoApplication — construction & wiring', () => {
     expect(onReady).toHaveBeenCalledWith(app);
   });
 
+  it('hands the colour pipeline options through to the Application untouched', () => {
+    const clearColor = new Color(30, 60, 90);
+
+    mount({ options: { clearColor, rendering: { color: { workingFormat: 'hdr', toneMapping: 'reinhard', exposure: 1 } } } });
+
+    const app = onlyInstance();
+
+    expect(app.options.clearColor).toBe(clearColor);
+    expect((app.options['rendering'] as { color?: unknown } | undefined)?.color).toEqual({ workingFormat: 'hdr', toneMapping: 'reinhard', exposure: 1 });
+  });
+
   it('returns a canvasRef whose identity is stable across re-renders', () => {
     const harness = mount({ options: { canvas: { width: 320, height: 240 } } });
     const refBefore = harness.result().canvasRef;

@@ -183,6 +183,21 @@ Accepted uniform value types:
 
 In WGSL, user uniforms belong to `@group(2)`. Scalar/vector/matrix uniforms declared as a struct are packed into `@group(2) @binding(0)`. Each `Texture`/`RenderTexture` uniform claims its own binding, declaration order, with its sampler at the next binding index.
 
+### Colour in a shader
+
+A colour shader samples linear, premultiplied colour and must return linear, premultiplied RGB with linear alpha; the engine encodes for the display once, later. Uniforms are numeric: a number array reaches the shader exactly as written, with no colour conversion. An authored `Color` you want as a shader colour has to be converted to linear light first, and `Color.writeLinear` does that without allocating:
+
+```ts
+import { Color } from '@codexo/exojs';
+
+const glow = new Color(255, 160, 40);
+const glowLinear = new Float32Array(4);
+
+glow.writeLinear(glowLinear);
+```
+
+A texture you sample as data (a mask, normal map or lookup table) must resolve to `colorSpace: 'none'`; as `'srgb'` the sample is decoded before your shader sees it, and as `'linear-srgb'` it is still treated as colour. Declare `colorSpace: 'none'` on it. The engine-supplied `u_tint` is already the linear premultiplied tint.
+
 <Callout type="debug" title="Catch GLSL/WGSL uniform drift in CI">
 When a uniform is spelled differently across your two shader sources it silently misbinds on one backend. `material.shader.detectUniformDrift()` reports names present in only one language — assert both lists empty in CI to catch the typo before it ships.
 </Callout>

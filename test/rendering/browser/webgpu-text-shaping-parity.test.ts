@@ -191,6 +191,15 @@ describe('Cross-backend parity: browser-shaped text renders identically on WebGL
       const gpuScene = buildScene(value, direction);
       const glScene = buildScene(value, direction);
 
+      // Every test owns a device and a GL context. Left to garbage collection
+      // they accumulate across the file until device creation stalls the page.
+      onTestFinished(() => {
+        gpuScene.destroy();
+        glScene.destroy();
+        gpu.destroy();
+        gl.destroy();
+      });
+
       if (!(await renderWebGpu(ctx, gpu, gpuScene))) return;
 
       renderWebGl2(gl, glScene);
@@ -235,6 +244,12 @@ describe('Cross-backend parity: browser-shaped text renders identically on WebGL
 
     const ltrScene = buildScene(MIXED, 'ltr');
     const rtlScene = buildScene(MIXED, 'rtl');
+
+    onTestFinished(() => {
+      ltrScene.destroy();
+      rtlScene.destroy();
+      gpu.destroy();
+    });
 
     if (!(await renderWebGpu(ctx, gpu, ltrScene))) return;
 

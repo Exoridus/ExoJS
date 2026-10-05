@@ -19,6 +19,7 @@ import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { useEncodedFrameTarget } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
@@ -82,6 +83,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     mesh.tint = new Color(255, 255, 0, 1); // yellow
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       mesh.render(backend);
       backend.flush();
@@ -103,6 +105,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     graphics.drawRectangle(8, 8, 48, 48);
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       graphics.render(backend);
       backend.flush();
@@ -170,6 +173,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     graphics.lineTo(56, 32);
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       graphics.render(backend);
       backend.flush();
@@ -198,6 +202,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     graphics.lineTo(8, 8);
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       graphics.render(backend);
       backend.flush();
@@ -209,6 +214,52 @@ describe('WebGL2 untextured mesh rendering', () => {
       expectPixelNear(readPixel(backend, 32, 32), [0, 0, 0, 255]); // hollow center
     } finally {
       graphics.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('consecutive meshes in one flush each keep their own vertices, indices and tint', async () => {
+    // Every dynamic mesh draw rewrites the same streaming buffers. Each mesh
+    // here differs from its neighbours in all three per-draw streams, so a draw
+    // that read a later mesh's vertices, indices or instance slot would land in
+    // the wrong cell, pick the offscreen decoy quad, or take the wrong tint.
+    const size = 64;
+    const backend = await createBackend(size);
+    const cells: Array<{ x: number; y: number; tint: RgbaTuple }> = [
+      { x: 4, y: 4, tint: [255, 0, 0, 255] },
+      { x: 36, y: 4, tint: [0, 255, 0, 255] },
+      { x: 4, y: 36, tint: [0, 0, 255, 255] },
+      { x: 36, y: 36, tint: [255, 255, 0, 255] },
+    ];
+    const meshes = cells.map(({ x, y, tint }, i) => {
+      const quad = [x, y, x + 24, y, x + 24, y + 24, x, y + 24];
+      const decoy = [-40, -40, -20, -40, -20, -20, -40, -20];
+      const decoyFirst = i % 2 === 1;
+      const mesh = new Mesh({
+        vertices: new Float32Array(decoyFirst ? [...decoy, ...quad] : [...quad, ...decoy]),
+        indices: new Uint16Array(decoyFirst ? [4, 5, 6, 4, 6, 7] : [0, 1, 2, 0, 2, 3]),
+      });
+
+      mesh.tint = new Color(tint[0], tint[1], tint[2], 1);
+
+      return mesh;
+    });
+
+    try {
+      useEncodedFrameTarget(backend);
+      backend.clear(Color.black);
+      for (const mesh of meshes) {
+        mesh.render(backend);
+      }
+      backend.flush();
+
+      for (const { x, y, tint } of cells) {
+        expectPixelNear(readPixel(backend, x + 12, y + 12), tint);
+      }
+    } finally {
+      for (const mesh of meshes) {
+        mesh.destroy();
+      }
       backend.destroy();
     }
   });
@@ -277,6 +328,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     graphics.drawRectangle(8, 8, 48, 48);
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       graphics.render(backend);
       backend.flush();

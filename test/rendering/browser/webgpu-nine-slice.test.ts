@@ -12,7 +12,7 @@
  *
  * All WebGPU renderers use inline WGSL - no shader file mocks are needed.
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); `renderScene` only skips when the software adapter
+ * against SwiftShader); `renderScene` only skips when the software adapter
  * drops the device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -27,7 +27,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -71,10 +71,8 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
   let validationError: GPUError | null;
 
   try {
-    backend.resetStats();
-    backend.clear(Color.black);
-    root.render(backend);
-    backend.flush();
+    if (!(await renderWebGpuEncoded(ctx, backend, root))) return false;
+
     validationError = await device.popErrorScope();
   } catch (error) {
     if (isDeviceLoss(error)) {

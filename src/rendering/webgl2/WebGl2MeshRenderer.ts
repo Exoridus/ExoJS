@@ -1,4 +1,5 @@
 import { Matrix } from '#math/Matrix';
+import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMaterial, UniformValue } from '#rendering/material/Material';
@@ -122,7 +123,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   /** Reusable single-slot texture list handed to the recorder (avoids a per-batch array). */
   private readonly _retainedTextureScratch: [Texture | RenderTexture] = [Texture.white];
 
-  private readonly _defaultShader: WebGl2Shader = new WebGl2Shader(vertexSource, fragmentSource);
+  private readonly _defaultShader: WebGl2Shader = new WebGl2Shader(vertexSource, spliceGlslPrologue(fragmentSource, colorShaderSourcesGlsl));
   private readonly _customShaders = new Map<AnyMaterial, WebGl2Shader>();
   private readonly _compatibilityCache = new Map<WebGl2Shader, boolean>();
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
@@ -182,7 +183,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const blendMode = resolveBlendMode(mesh.blendMode, material);
     const texture = mesh.texture ?? Texture.white;
     const command = backend.activeDrawCommand;
-    const supportsInstancing = material === null ? true : this._isInstancingCompatible(shader);
+    const supportsInstancing = material === null || this._isInstancingCompatible(shader);
 
     // Reuse a pooled slot if one exists at the cursor, otherwise grow the pool.
     // Overwrite every field (see PendingMeshDraw): a forgotten field leaks the
@@ -363,7 +364,11 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       this._createBufferRuntime(gl, buffers),
       backend.accountant,
     );
-    const dynamicVertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
+    // Only the vertex stream is orphaned per upload (see _createBufferRuntime):
+    // that alone keeps every per-draw stream of a flush intact on Firefox's
+    // native-GL path, while orphaning the index and instance streams as well
+    // measurably slows that path down for no further gain.
+    const dynamicVertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.StreamDraw).connect(
       this._createBufferRuntime(gl, buffers),
       backend.accountant,
     );
@@ -765,7 +770,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * (`drawElementsInstanced`), unlike the sprite path's `drawArraysInstanced`.
    * @internal
    */
-  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const geometry = payload.geometry;
@@ -775,7 +780,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     if (backend === null || vao === null || geometry === null || geometry === undefined || transformTexture === null || tintTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
-      return;
+      return false;
     }
 
     const shader = this._defaultShader;
@@ -815,6 +820,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     shader.sync();
     backend.bindVertexArrayObject(vao);
     vao.drawInstanced(geometry.indexCount, 0, payload.instanceCount, RenderingPrimitives.Triangles);
+
+    return true;
   }
 
   private _canBatchStatic(draw: PendingMeshDraw): boolean {
@@ -1185,11 +1192,24 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
         const state = buffers.get(buffer);
         gl.bindBuffer(buffer.type, handle);
 
-        if (state && state.dataByteLength >= buffer.uploadByteLength) {
+        // A stream buffer is fully rewritten before every draw. Re-specifying the
+        // store (orphaning) instead of overwriting it in place lets the draw that
+        // still reads the previous contents keep them: an in-place bufferSubData
+        // needs an implicit sync with pending draws, which Firefox's native-GL
+        // WebGL path does not honor, so earlier draws of the same flush render
+        // the later draw's geometry.
+        if (buffer.usage !== BufferUsage.StreamDraw && state && state.dataByteLength >= buffer.uploadByteLength) {
           uploadBufferRange(gl, buffer, offset);
         } else {
           uploadBufferStore(gl, buffer);
-          buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
+
+          // Stream buffers take this branch on every draw, so reuse the entry
+          // rather than allocating one per upload.
+          if (state) {
+            state.dataByteLength = buffer.uploadByteLength;
+          } else {
+            buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
+          }
         }
       },
       destroy: (buffer: WebGl2RenderBuffer): void => {

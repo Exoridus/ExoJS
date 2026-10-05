@@ -1,4 +1,4 @@
-import type { Application } from '@codexo/exojs';
+import type { Application, Scene } from '@codexo/exojs';
 
 /**
  * What a lighting system needs of the application whose frame it lights.
@@ -12,3 +12,12 @@ import type { Application } from '@codexo/exojs';
  * The system is handed one; it never owns or destroys it.
  */
 export type LightingHost = Pick<Application, 'rendering' | 'frameTexture' | 'framePasses' | 'width' | 'height' | 'onResize'>;
+
+/**
+ * What a lighting system needs of the scene it belongs to: its state, and the
+ * lifecycle signals that move it into and out of the host's frame. A
+ * {@link Scene} satisfies this structurally. See {@link LightingOptions.scene}.
+ *
+ * The system only listens; it never drives or destroys the scene.
+ */
+export type LightingScene = Pick<Scene, 'state' | 'onActivate' | 'onSuspend' | 'lifecycleSignal'>;

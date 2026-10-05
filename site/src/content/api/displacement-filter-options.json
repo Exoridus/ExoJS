@@ -47,7 +47,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The displacement map. Its red and green channels are read as a direction in [-1, 1] (0.5 grey displaces nothing), stretched across the filtered area and read with the texture's own filtering and wrap mode. The filter samples the map but does not own it - destroying the filter leaves the texture alone."
+          "description": "The displacement map. Its red and green channels are read as a direction in [-1, 1] (0.5 grey displaces nothing), stretched across the filtered area and read with the texture's own filtering and wrap mode. The filter samples the map but does not own it - destroying the filter leaves the texture alone. Sampled as numeric data, never colour: the map must resolve to colorSpace: 'none'. 'srgb' storage is hardware-decoded on sample regardless of what the shader does with the result, and 'linear-srgb' still gets colour alpha handling, either of which would corrupt the displacement vector. A DataTexture is accepted directly, as is an image Texture declared colorSpace: 'none'. The check repeats on every DisplacementFilter.apply, so a texture reinterpreted after assignment fails there instead of sampling corrupted vectors."
         },
         {
           "name": "offset",

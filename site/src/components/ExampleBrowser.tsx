@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { resolveExampleToolRelocation } from '../lib/example-aliases';
 import { getExampleByPath, getExamplesList, getLoadErrorFor, getNestedExamples, hasExamplesFor, loadExamples, onExamplesLoaded } from '../lib/example-store';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
 import { showToast } from '../lib/toast-store';
@@ -26,9 +27,10 @@ import { ToastStack } from './ToastStack';
 
 export interface ExampleBrowserProps {
   baseUrl: string;
+  locale: 'en' | 'de';
 }
 
-export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element => {
+export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.Element => {
   const [examples, setExamples] = useState<ExamplesMap>(() => new Map());
   const [activeExample, setActiveExample] = useState<Example | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<VersionInfo | null>(null);
@@ -112,6 +114,13 @@ export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element =>
 
       const versionId = selected.id;
       const requestedPath = readUrlState().example ?? null;
+      const relocation = resolveExampleToolRelocation(versionId, requestedPath);
+
+      if (relocation !== null) {
+        window.location.replace(`${baseUrl}${locale}/${relocation}`);
+        return;
+      }
+
       const requested = requestedPath ? getExampleByPath(versionId, requestedPath) : null;
       const fellBack = requestedPath !== null && requested === null;
       const example = requested ?? getExamplesList(versionId)[0] ?? null;
@@ -131,7 +140,7 @@ export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element =>
         if (fellBack && requestedPath) showMissingExampleToast(requestedPath, versionId);
       }
     },
-    [showMissingExampleToast],
+    [baseUrl, locale, showMissingExampleToast],
   );
 
   const syncExampleState = useCallback((): void => {

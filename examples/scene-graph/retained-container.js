@@ -8,6 +8,41 @@ const FIELD_COLUMNS = 96;
 const FIELD_ROWS = 60;
 const TILE_SPACING = 34;
 const FIELD_COUNT = FIELD_COLUMNS * FIELD_ROWS;
+const drawAtlasCell = (context, x, y, background, accent, shape) => {
+  context.fillStyle = background;
+  context.fillRect(x, y, 64, 64);
+  context.fillStyle = accent;
+  context.beginPath();
+  if (shape === 'circle') {
+    context.arc(x + 32, y + 32, 18, 0, Math.PI * 2);
+  } else if (shape === 'diamond') {
+    context.moveTo(x + 32, y + 12);
+    context.lineTo(x + 52, y + 32);
+    context.lineTo(x + 32, y + 52);
+    context.lineTo(x + 12, y + 32);
+    context.closePath();
+  } else if (shape === 'square') {
+    context.rect(x + 16, y + 16, 32, 32);
+  } else {
+    context.moveTo(x + 32, y + 12);
+    context.lineTo(x + 52, y + 52);
+    context.lineTo(x + 12, y + 52);
+    context.closePath();
+  }
+  context.fill();
+};
+/** Draw a small 2x2 sprite atlas procedurally so the example needs no asset load. */
+const createAtlasTexture = () => {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  canvas.width = 128;
+  canvas.height = 128;
+  drawAtlasCell(context, 0, 0, '#0f172a', '#ffd166', 'circle');
+  drawAtlasCell(context, 64, 0, '#10243d', '#7dd3fc', 'diamond');
+  drawAtlasCell(context, 0, 64, '#112b21', '#4ade80', 'square');
+  drawAtlasCell(context, 64, 64, '#23163c', '#ff6b6b', 'triangle');
+  return new Texture(canvas);
+};
 class RetainedContainerScene extends Scene {
   atlas;
   // Typed as the base Container so the same field code works whether the
@@ -120,38 +155,3 @@ const app = new Application({
   clearColor: new Color(6, 9, 18, 1),
 });
 await app.start(RetainedContainerScene);
-/** Draw a small 2x2 sprite atlas procedurally so the example needs no asset load. */
-function createAtlasTexture() {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  canvas.width = 128;
-  canvas.height = 128;
-  drawAtlasCell(context, 0, 0, '#0f172a', '#ffd166', 'circle');
-  drawAtlasCell(context, 64, 0, '#10243d', '#7dd3fc', 'diamond');
-  drawAtlasCell(context, 0, 64, '#112b21', '#4ade80', 'square');
-  drawAtlasCell(context, 64, 64, '#23163c', '#ff6b6b', 'triangle');
-  return new Texture(canvas);
-}
-function drawAtlasCell(context, x, y, background, accent, shape) {
-  context.fillStyle = background;
-  context.fillRect(x, y, 64, 64);
-  context.fillStyle = accent;
-  context.beginPath();
-  if (shape === 'circle') {
-    context.arc(x + 32, y + 32, 18, 0, Math.PI * 2);
-  } else if (shape === 'diamond') {
-    context.moveTo(x + 32, y + 12);
-    context.lineTo(x + 52, y + 32);
-    context.lineTo(x + 32, y + 52);
-    context.lineTo(x + 12, y + 32);
-    context.closePath();
-  } else if (shape === 'square') {
-    context.rect(x + 16, y + 16, 32, 32);
-  } else {
-    context.moveTo(x + 32, y + 12);
-    context.lineTo(x + 52, y + 52);
-    context.lineTo(x + 12, y + 52);
-    context.closePath();
-  }
-  context.fill();
-}

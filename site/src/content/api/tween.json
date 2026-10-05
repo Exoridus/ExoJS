@@ -593,7 +593,7 @@
         },
         {
           "name": "to",
-          "signature": "to(properties: Partial<Record<NumericKeys<T>, number>>, duration: number): this",
+          "signature": "to(properties: TweenProperties<T>, duration: number): this",
           "signatureTokens": [
             {
               "text": "to",
@@ -612,23 +612,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Partial",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Record",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "NumericKeys",
+              "text": "TweenProperties",
               "kind": "type"
             },
             {
@@ -638,22 +622,6 @@
             {
               "text": "T",
               "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -691,7 +659,7 @@
           "params": [
             {
               "name": "properties",
-              "type": "Partial<Record<NumericKeys<T>, number>>",
+              "type": "TweenProperties<T>",
               "optional": false
             },
             {
@@ -701,7 +669,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set target end-values and duration in seconds. Replaces any prior to(). The starting values are captured lazily on first update() after start(), so mutating target between to() and start() is safe. Only numeric properties of target are accepted. Non-numeric keys are rejected at compile time; the runtime guard in update() remains as a safety net for untyped callers."
+          "description": "Set target end-values and duration in seconds. Replaces any prior to(). The starting values are captured lazily on first update() after start(), so mutating target between to() and start() is safe. Only mutable, continuous numeric properties of target are accepted (see TweenableKeys): readonly and getter-only properties and discrete numeric types such as numeric enums are rejected at compile time. For untyped callers, a property the runtime can tell is not assignable - a getter without a setter, a read-only data property - throws here rather than on the first frame; a discrete type cannot be told apart from a number at runtime. Non-numeric keys are still skipped with a warning when the tween starts."
         },
         {
           "name": "update",

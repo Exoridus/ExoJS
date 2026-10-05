@@ -1,16 +1,16 @@
 {
   "title": "WgslUniformField",
-  "description": "A named uniform field within a module's struct. Order matters - defines memory layout.",
+  "description": "",
   "symbol": "WgslUniformField",
-  "kind": "interface",
+  "kind": "type",
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 0,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 0,
     "events": 0
   },
   "sections": [
@@ -18,51 +18,20 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A named uniform field within a module's struct. Order matters - defines memory layout."
-      ],
+      "paragraphs": [],
       "importLine": "import { WgslUniformField } from '@codexo/exojs-particles'",
       "sourceLink": null
     },
     {
-      "id": "properties",
-      "title": "Properties",
+      "id": "definition",
+      "title": "Definition",
       "members": [
         {
-          "name": "name",
-          "signature": "name: string",
+          "name": "WgslUniformField",
+          "signature": "ParticleUniformField",
           "signatureTokens": [
             {
-              "text": "name",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "type",
-          "signature": "type: WgslPrimitive",
-          "signatureTokens": [
-            {
-              "text": "type",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "WgslPrimitive",
+              "text": "ParticleUniformField",
               "kind": "type"
             }
           ],

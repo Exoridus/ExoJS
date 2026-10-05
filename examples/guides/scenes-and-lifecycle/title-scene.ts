@@ -1,4 +1,4 @@
-import { Application, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
+import { Application, Scene, type Seconds } from '@codexo/exojs';
 
 // #region guide:scene-hooks
 class TitleScene extends Scene {
@@ -8,11 +8,6 @@ class TitleScene extends Scene {
 
   override update(delta: Seconds): void {
     // per-frame logic
-  }
-
-  override draw(context: RenderingContext): void {
-    // per-frame rendering
-    context.render(this.root);
   }
 }
 // #endregion guide:scene-hooks

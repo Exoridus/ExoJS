@@ -1,6 +1,7 @@
 import { DirtyChannel } from '#core/nodeDirtyIndex';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
+import { blendModeNeedsBackdrop } from '#rendering/types';
 
 import { type PersistentSlotBackend, sourceShapeAllowsPersistentSlots } from './persistentSlotDraw';
 import type { RenderRootSource } from './RenderRootSource';
@@ -19,6 +20,8 @@ export interface SourceDeltaHost {
   readonly backend: RenderBackend;
   _discoverSourceScope(node: RenderNode): SourceScope | null;
   _rederiveSourceScope(node: RenderNode, previous: SourceScope, cursor: number, epoch: number, targets: SourceDeltaTargets): SourceScope | null;
+  /** Whether the target the walk's content is played into is guaranteed fully covered. */
+  _destinationOpaque(): boolean;
 }
 
 /** What a re-derivation may ask of the delta that started it. */
@@ -274,6 +277,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
       node.destroyed ||
       !node.visible ||
       node._renderPlanHasBarrierEffects() ||
+      blendModeNeedsBackdrop(node._renderPlanGetBlendMode(), host._destinationOpaque()) ||
       node._isTransformGroupBoundary ||
       node._isDrawableForRenderPlan() ||
       group.zIndex !== node.zIndex ||

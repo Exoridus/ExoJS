@@ -8,7 +8,7 @@
  *  1. Every lockstep package (`LOCKSTEP_PACKAGES`, Core + extensions) shares one
  *     lockstep version.
  *  2. Each extension's peerDependencies["@codexo/exojs"] is "<major>.<minor>.x".
- *  3. create-exo-app is versioned independently (a different version line).
+ *  3. Every independent package stays off the lockstep version line.
  *  4. release.yml builds every lockstep package in the PREPARE stage.
  *  5. PREPARE runs `release:prepare` (packs the tarballs + Full ZIP) and
  *     uploads the artifacts.
@@ -119,13 +119,21 @@ const requireInWorkflow = (needle: string, label: string): void => {
   }
 };
 
-// 4. PREPARE builds every lockstep package exactly once (build-once). Core is
-// `pnpm build`; each extension is `pnpm --filter <name> build`. Looping over the
-// SoT means a new package's build line is enforced in release.yml automatically.
+// 4. PREPARE builds every lockstep package exactly once (build-once). The build
+// line is a function of where the package lives, not of what kind of package it
+// is: Core sits at the repository root and builds with `pnpm build`, every other
+// lockstep package builds with `pnpm --filter <name> build` from its own
+// directory. Keying this on `isExtension` read it as "not Core" and so expected
+// the root build for a package that has no root build - and the check could not
+// see the difference, because the Core line it looked for is a substring of
+// nothing but was already present for Core.
+const buildLineFor = (pkg: { readonly dir: string; readonly name: string }): string => (pkg.dir === '.' ? 'pnpm build' : `pnpm --filter ${pkg.name} build`);
+
+// Looping over the SoT means a new package's build line is enforced in
+// release.yml automatically.
 for (const pkg of LOCKSTEP_PACKAGES) {
   const short = pkg.name.replace('@codexo/exojs-', '').replace('@codexo/exojs', 'core');
-  const needle = pkg.isExtension ? `pnpm --filter ${pkg.name} build` : 'pnpm build';
-  requireInWorkflow(needle, `prepare builds ${short}`);
+  requireInWorkflow(buildLineFor(pkg), `prepare builds ${short}`);
 }
 
 // 5. PREPARE packs/hashes/zips and uploads the artifacts.

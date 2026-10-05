@@ -24,6 +24,7 @@ export const MAX_POOLED_RENDER_TEXTURE_BYTES = 64 * 1024 * 1024;
 const colorFormatBytesPerPixel = (format: ColorTextureFormat): number => {
   switch (format) {
     case TextureFormat.Rgba8:
+    case TextureFormat.Rgba8Srgb:
       return 4;
     case TextureFormat.Rgba16F:
       return 8;

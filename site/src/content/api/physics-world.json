@@ -6,10 +6,10 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 39,
+  "memberCount": 40,
   "counts": {
     "constructors": 1,
-    "methods": 18,
+    "methods": 19,
     "properties": 16,
     "events": 4
   },
@@ -131,7 +131,7 @@
             }
           ],
           "returnType": "PhysicsBody",
-          "description": "Add a body to the world: allocates the body and its collider ids, registers the colliders, computes the mass model and tracks the body for stepping. Construct the body freely first (new PhysicsBody({ ... })), then add it. Safe to call inside an event callback - the body push is deferred to the end of the step, exactly like collider registration. Returns the body."
+          "description": "Add a body to the world: allocates the body and its collider ids, registers the colliders, computes the mass model and tracks the body for stepping. Construct the body freely first (new PhysicsBody({ ... })), then add it. Safe to call inside an event callback - the body push is deferred to the end of the step, exactly like collider registration. Returns the body. A body taken out with remove can be added again, here or to another world."
         },
         {
           "name": "addJoint",
@@ -343,7 +343,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release every body, collider, binding and backend resource."
+          "description": "Release every body, collider, binding and backend resource. Changes queued from an event callback are applied first; if one of them throws, the world is still fully released and the first such error is rethrown afterwards."
         },
         {
           "name": "destroyBody",
@@ -1616,6 +1616,53 @@
           "description": "All collider hits along the ray, sorted by distance. Writes into out (cleared) if given."
         },
         {
+          "name": "remove",
+          "signature": "remove(body: PhysicsBody): void",
+          "signatureTokens": [
+            {
+              "text": "remove",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "body",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "body",
+              "type": "PhysicsBody",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Take a body out of the simulation without destroying it. Its transform, velocities, mass model and colliders are kept and its ids are released; a later add, into this world or another, assigns new ones and wakes it. Touching pairs end with the usual end and exit events, delivered with the next step's events, and bodies resting on it are woken. A binding to a node ends. The colliders in those end events are the body's own, so by the time the events arrive their ids read -1, or the new ids of a re-add. A removed body cannot be constrained by a joint until it is added again. Deferred when called inside an event callback. Adding the body back before that dispatch ends cancels the removal, and calling remove again in the meantime does nothing."
+        },
+        {
           "name": "removeJoint",
           "signature": "removeJoint(joint: Joint): void",
           "signatureTokens": [
@@ -2248,7 +2295,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires when two solid colliders stop touching (or one is destroyed)."
+          "description": "Fires when two solid colliders stop touching. A pair also ends when one of its colliders leaves the world (destroyed or removed); that end arrives with the next step's events, ahead of them. destroy() ends no pairs."
         },
         {
           "name": "onCollisionStart",
@@ -2371,7 +2418,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires when a collider leaves a sensor."
+          "description": "Fires when a collider leaves a sensor, including by leaving the world; see onCollisionEnd."
         }
       ],
       "paragraphs": [],

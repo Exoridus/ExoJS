@@ -1,12 +1,1 @@
-{
-  "sprites": {
-    "powerUp": {
-      "start": 0.0,
-      "duration": 1.2016
-    },
-    "laser": {
-      "start": 1.3016,
-      "duration": 1.1004
-    }
-  }
-}
+{"sprites":{"powerUp":{"start":0,"duration":1.2016},"laser":{"start":1.3016,"duration":1.1004}}}

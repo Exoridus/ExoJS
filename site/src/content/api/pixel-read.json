@@ -70,7 +70,7 @@
       "members": [
         {
           "name": "data",
-          "signature": "data: PixelData | null",
+          "signature": "data: PixelData<T> | null",
           "signatureTokens": [
             {
               "text": "data",
@@ -85,6 +85,18 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": " | ",
               "kind": "punctuation"
             },
@@ -95,7 +107,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The pixels, laid out as ImageData wants them, or null until ready. The array belongs to the slot and stays valid until release; after that a later read overwrites it. Copy it out to keep it longer."
+          "description": "RGBA pixels with the top row first, or null until ready. The array belongs to the slot and stays valid until release; after that a later read overwrites it. Copy it out to keep it longer."
         },
         {
           "name": "failed",

@@ -61,5 +61,5 @@ export const isSampleableTexture = (texture: Texture | RenderTexture): boolean =
     return true;
   }
 
-  return texture.compressed !== null || (texture.source !== null && texture.width > 0 && texture.height > 0);
+  return texture.compressed !== null || texture.pixels !== null || (texture.source !== null && texture.width > 0 && texture.height > 0);
 };

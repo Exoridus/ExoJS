@@ -120,11 +120,10 @@ export const typeAwareCorrectnessRules = {
   // `window` is not the global object in a worker, and this engine runs in both.
   'unicorn/prefer-global-this': 'error',
 
-  // Promoted from warning: all three are satisfied everywhere, so the warning
+  // Promoted from warning: both are satisfied everywhere, so the warning
   // was a migration state with nothing left to migrate.
   'unicorn/no-for-each': 'error',
   'unicorn/prefer-spread': 'error',
-  'unicorn/prefer-ternary': 'error',
 
   // ── Unicorn: Bug patterns the type system does not reject ────────────────
   'unicorn/no-accidental-bitwise-operator': 'error',
@@ -308,6 +307,11 @@ export const typeAwareCorrectnessRules = {
 //     part of its contract and is spelled out for that reason.
 //   unicorn/consistent-function-style
 //     Overlaps `func-style` above, which already decides this repository-wide.
+//   unicorn/prefer-ternary
+//     Held while it only merged `if`/`else` pairs. Since unicorn 75 it also
+//     folds an `if (...) return a;` guard into the `return` after it: 196 hits,
+//     and the autofix turns boolean guards into `cond ? false : expr`. The
+//     `only-single-line` option does not narrow it.
 //   unicorn/prefer-set-methods, unicorn/prefer-group-by,
 //   unicorn/prefer-get-or-insert-computed, unicorn/prefer-regexp-escape,
 //   unicorn/prefer-array-from-async, unicorn/prefer-array-last-methods,

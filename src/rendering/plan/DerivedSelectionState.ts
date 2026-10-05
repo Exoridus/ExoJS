@@ -272,7 +272,7 @@ export class DerivedSelectionState {
    * ordinal; pass `null` when there is none, in which case every admitted item
    * is treated as entering.
    */
-  public update(rootScope: SourceScope, current: readonly MembershipBits[], previous: readonly MembershipBits[] | null): void {
+  public update(rootScope: SourceScope, current: readonly MembershipBits[], previous: readonly MembershipBits[] | null, queried?: Uint8Array): void {
     resetSlotStats(this.stats);
     this._enteredCount = 0;
     this._orderCount = 0;
@@ -288,7 +288,7 @@ export class DerivedSelectionState {
     }
 
     this._admitTree(rootScope, current, previous);
-    this._walkScope(rootScope, current);
+    this._walkScope(rootScope, current, queried);
     this.stats.orderEntries = this._orderCount;
     this.stats.slotCapacity = this._slotCount;
   }
@@ -442,13 +442,11 @@ export class DerivedSelectionState {
    *
    * This is the same walk `RenderPlanBuilder._emitSourceSelection` performs, and
    * it has to stay the same walk: the order stream IS the draw order, so any
-   * divergence here is a reordered frame. Nested groups are entered
-   * unconditionally rather than behind their subtree cull test - the per-item
-   * membership already answers that question, and an empty nested scope
-   * contributes nothing to append. A live entry is never culled here either:
-   * its own collect applies whatever cull its node has.
+   * divergence here is a reordered frame. Only queried groups are entered:
+   * empty membership alone cannot distinguish a culled subtree from a visible
+   * group containing live entries. A live entry's own collect applies its cull.
    */
-  private _walkScope(scope: SourceScope, current: readonly MembershipBits[]): void {
+  private _walkScope(scope: SourceScope, current: readonly MembershipBits[], queried?: Uint8Array): void {
     const bits = current[scope.ordinal]!;
     const words = bits.words;
     const wordCount = bits.wordCount;
@@ -481,8 +479,12 @@ export class DerivedSelectionState {
           other++;
 
           if (nested.kind === RenderEntryKind.Group) {
+            if (queried?.[nested.ordinal] === 0) {
+              continue;
+            }
+
             this._orderCount = cursor;
-            this._walkScope(nested, current);
+            this._walkScope(nested, current, queried);
             cursor = this._orderCount;
           } else {
             this._mark(cursor, nested);
@@ -501,7 +503,9 @@ export class DerivedSelectionState {
       other++;
 
       if (nested.kind === RenderEntryKind.Group) {
-        this._walkScope(nested, current);
+        if (queried?.[nested.ordinal] !== 0) {
+          this._walkScope(nested, current, queried);
+        }
       } else {
         this._mark(this._orderCount, nested);
       }

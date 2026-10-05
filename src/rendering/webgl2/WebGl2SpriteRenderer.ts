@@ -1,5 +1,6 @@
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { UniformValue } from '#rendering/material/Material';
 import {
@@ -42,7 +43,7 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  * ```
  *   localBounds    f32x4       (offset  0, 16 bytes)  - left, top, right, bottom
  *   uvBounds       u16x4 norm  (offset 16,  8 bytes)  - uMin, vMin, uMax, vMax
- *   textureSlot    u32         (offset 24,  4 bytes)  - multi-texture slot
+ *   packedSlotFlags u32        (offset 24,  4 bytes)  - texture slot (bits 0..7) + sample premultiply flag (bit 8)
  *   nodeIndex      u32         (offset 28,  4 bytes)  - row into the shared TransformBuffer
  * ```
  *
@@ -179,8 +180,11 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     super();
 
     this._batchSize = batchSize;
-    this._shader = new WebGl2Shader(vertexSource, fragmentSource);
-    this._indexedShader = new WebGl2Shader(indexedVertexSource, fragmentSource);
+
+    const composedFragmentSource = spliceGlslPrologue(fragmentSource, colorShaderSourcesGlsl);
+
+    this._shader = new WebGl2Shader(spliceGlslPrologue(vertexSource, colorShaderSourcesGlsl), composedFragmentSource);
+    this._indexedShader = new WebGl2Shader(spliceGlslPrologue(indexedVertexSource, colorShaderSourcesGlsl), composedFragmentSource);
     this._instanceData = new ArrayBuffer(batchSize * instanceStrideBytes);
     this._instanceFloat32 = new Float32Array(this._instanceData);
     this._instanceUint32 = new Uint32Array(this._instanceData);
@@ -547,7 +551,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * dispatching here and bumps the stats from the instruction descriptor.
    * @internal
    */
-  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;
@@ -558,7 +562,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     if (backend === null || vao === null || transformTexture === null || tintTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
-      return;
+      return false;
     }
 
     backend.setBlendMode(payload.blendMode);
@@ -614,6 +618,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     this._bindBaseTextureSamplers(backend, material, textures.length);
     vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
     this._unbindBaseTextureSamplers(backend, material, textures.length);
+
+    return true;
   }
 
   private _bindBaseTextureSamplers(backend: WebGl2Backend, material: AnySpriteMaterial | null, slotCount: number): void {
@@ -754,7 +760,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       backend.bindTexture(texture, slot);
     }
 
-    this._packInstance(sprite, texture, slot, nodeIndex);
+    const premultiplySample = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+
+    this._packInstance(sprite, texture, slot | (premultiplySample << 8), nodeIndex);
     this._instanceCount++;
   }
 
@@ -786,11 +794,13 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       backend.bindTexture(texture, slot);
     }
 
-    this._packInstance(sprite, texture, slot, nodeIndex);
+    const premultiplySample = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+
+    this._packInstance(sprite, texture, slot | (premultiplySample << 8), nodeIndex);
     this._instanceCount++;
   }
 
-  private _packInstance(sprite: Sprite, texture: Texture | RenderTexture, slot: number, nodeIndex: number): void {
+  private _packInstance(sprite: Sprite, texture: Texture | RenderTexture, packedSlotFlags: number, nodeIndex: number): void {
     const offset = this._instanceCount * wordsPerInstance;
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
@@ -821,10 +831,13 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     u32[offset + 4] = uMin | (vMin << 16);
     u32[offset + 5] = uMax | (vMax << 16);
 
-    // textureSlot (u32) at word 6. The tint is NOT packed here: the vertex
-    // shader reads it from the separate u_tintTexture (same value the
-    // transform-buffer upload boundary wrote from this sprite's tint).
-    u32[offset + 6] = slot;
+    // packedSlotFlags (u32) at word 6: bits 0..7 select the batch texture
+    // slot, bit 8 asks the fragment stage to associate this instance's sample
+    // with alpha (see WebGl2Backend.shouldPremultiplyTextureSample). The tint
+    // is NOT packed here: the vertex shader reads it from the separate
+    // u_tintTexture (same value the transform-buffer upload boundary wrote
+    // from this sprite's tint).
+    u32[offset + 6] = packedSlotFlags;
 
     // nodeIndex (u32) at word 7 - row into the shared transform buffer.
     const node = nodeIndex >>> 0;
@@ -855,7 +868,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     // the engine's base-texture slot table spliced in, so `sampleBase` and the
     // `u_texture0..N-1` samplers behind it exist without the author declaring
     // them.
-    const shader = new WebGl2Shader(spriteVertexGlsl, composeSpriteMaterialFragmentGlsl(glsl.fragment));
+    const shader = new WebGl2Shader(spliceGlslPrologue(spriteVertexGlsl, colorShaderSourcesGlsl), composeSpriteMaterialFragmentGlsl(glsl.fragment));
 
     shader.uniformBlockData = material._blocks;
     shader.connect(createWebGl2ShaderProgram(gl));

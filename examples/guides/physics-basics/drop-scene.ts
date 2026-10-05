@@ -1,4 +1,4 @@
-import { type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { Scene, type Seconds, Sprite } from '@codexo/exojs';
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 
 // #region guide:drop-scene
@@ -34,10 +34,6 @@ class DropScene extends Scene {
 
   public override fixedUpdate(delta: Seconds): void {
     this.world.step(delta);
-  }
-
-  public override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 // #endregion guide:drop-scene

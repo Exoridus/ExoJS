@@ -5,6 +5,7 @@ import type { Texture } from '@codexo/exojs';
 import type { ComputeBindGroupEntry } from '@codexo/exojs/renderer-sdk';
 import { fillShaderSource, reflectComputeBindings, WebGpuComputePipeline, WebGpuStorageBuffer, WebGpuUniformBuffer } from '@codexo/exojs/renderer-sdk';
 
+import { uploadParticleLookup } from '#modules/particleLookup';
 import type { UpdateModule } from '#modules/UpdateModule';
 import type { WgslContribution, WgslUniformField } from '#modules/WgslContribution';
 import { getWgslUniformByteSize } from '#modules/WgslContribution';
@@ -342,8 +343,24 @@ export class ParticleGpuState {
     this._bindGroup0 = this._pipelineWrapper.createBindGroup(0, this._buildBindGroup0Entries(slots), 'particle-uniforms-bg');
     this._bindGroup1 = this._pipelineWrapper.createBindGroup(1, this._buildSoaBindGroupEntries(), 'particle-soa-bg');
 
-    // Modules upload their lookup textures.
+    this._uploadModuleTextures(slots);
+  }
+
+  private _uploadModuleTextures(slots: readonly ModuleSlot[]): void {
     for (const slot of slots) {
+      if (slot.module.textureData) {
+        const data = slot.module.textureData();
+
+        for (const binding of slot.contribution.textures ?? []) {
+          const bytes = data.get(binding.name);
+
+          if (bytes !== undefined) {
+            uploadParticleLookup(this.device, this._moduleTextures.get(`${slot.contribution.key}_${binding.name}`), bytes);
+          }
+        }
+        continue;
+      }
+
       if (!slot.module.uploadTextures) continue;
 
       const moduleTextures = new Map<string, GPUTexture>();
@@ -405,6 +422,8 @@ export class ParticleGpuState {
 
     const simulating = dispatchCount > 0;
     const reporting = pendingDeaths > 0 && this._reportsDeaths && this._deathBuffer !== null;
+    // Stateful module clocks advance on empty CPU steps too.
+    this._writeModuleUniforms(dt);
 
     // A system whose last particles just expired has nothing left to simulate,
     // but its records still have to reach a staging slot - otherwise the last
@@ -415,7 +434,6 @@ export class ParticleGpuState {
 
     if (simulating) {
       this._writeSimUniforms(dt, dispatchCount);
-      this._writeModuleUniforms(dt);
     }
 
     if (reporting && !this._deathBufferDirty) {
@@ -603,6 +621,11 @@ export class ParticleGpuState {
     this._deathBufferDirty = false;
   }
 
+  /** Discards the device backlog while submitted readbacks finish independently. */
+  public discardDeaths(): void {
+    this._deathBufferDirty = false;
+  }
+
   public destroy(): void {
     this._destroyed = true;
     this._destroyProgram();
@@ -678,7 +701,7 @@ export class ParticleGpuState {
 
   /**
    * Push the listed CPU SoA slots to the GPU. Called by `ParticleSystem`
-   * with newly-spawned slots and just-expired slots (lifetime sentinel).
+   * with newly-spawned slots before advancing their CPU elapsed time.
    * Slots not in the dirty set are left alone - GPU keeps the integrated
    * state from previous compute dispatches.
    *
@@ -725,14 +748,12 @@ export class ParticleGpuState {
   }
 
   /**
-   * Marks `slot` expired for the device without touching anything else about
-   * it. Only the lifetime lane is written: a full slot upload would push the
-   * CPU's stale position and velocity over the values the device integrated,
-   * and those are exactly what the death record is supposed to carry.
+   * Marks a terminal step without overwriting integrated state or lifetime.
+   * The final module pass still reads the original lifetime before capture.
    */
-  public uploadExpiry(slot: number): void {
-    this._expiryScratch[0] = -1;
-    this._timing.write(this._expiryScratch, slot * 8 + 4);
+  public uploadExpiry(slot: number, report = true): void {
+    this._expiryScratch[0] = report ? -1 : -3;
+    this._rotInfo.write(this._expiryScratch, slot * 16 + 12);
   }
 
   private readonly _expiryScratch = new Float32Array(1);
@@ -861,7 +882,7 @@ struct FrameUniforms {
 
       seenStructKeys.add(c.key);
       sections.push(this._renderModuleStruct(c.key, fields));
-      moduleStructFields.push(`u_${c.key}: ${c.key}Uniforms,`);
+      moduleStructFields.push(`@align(16) u_${c.key}: ${c.key}Uniforms,`);
     }
 
     if (moduleStructFields.length > 0) {
@@ -952,30 +973,13 @@ ${fillShaderSource(particleSimulateWgsl, { workgroupSize, moduleBodies, frameCou
     return sections.join('\n\n');
   }
 
-  /**
-   * The block that captures a particle's state the first time the shader sees
-   * its expiry sentinel, or nothing when the system has no death modules.
-   *
-   * The CPU marks an expired particle with `lifetime = -1` and the shader
-   * rewrites that to `-2` once captured, so exactly one record is appended per
-   * death even though a dead slot is visited every frame until it is reused.
-   */
+  /** Captures the terminal state after integration and all update modules. */
   private _deathReportSource(): string {
     if (!this._reportsDeaths) {
       return '';
     }
 
     return `
-    if (timing[idx].y > -1.5) {
-        // The CPU found this particle expired from an elapsed time it had
-        // already advanced for this frame, so the device owes it the matching
-        // integration step before the snapshot is taken. Without it a death
-        // reported from the GPU would sit one step behind the same death
-        // reported from the CPU pipeline.
-        positions[idx] = positions[idx] + velocities[idx] * dt;
-        rotInfo[idx].x = rotInfo[idx].x + rotInfo[idx].y * dt;
-        timing[idx].x = timing[idx].x + dt;
-
         let at = atomicAdd(&deaths.count, 1u);
 
         deaths.records[at].x = positions[idx].x;
@@ -987,10 +991,7 @@ ${fillShaderSource(particleSimulateWgsl, { workgroupSize, moduleBodies, frameCou
         deaths.records[at].scaleY = scales[idx].y;
         deaths.records[at].elapsed = timing[idx].x;
         deaths.records[at].color = color[idx];
-        deaths.records[at].slot = idx;
-
-        timing[idx].y = -2.0;
-    }`;
+        deaths.records[at].slot = idx;`;
   }
 
   private _renderModuleStruct(key: string, fields: readonly WgslUniformField[]): string {

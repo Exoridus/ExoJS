@@ -14,6 +14,16 @@ const channels = 4;
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 const noCone = -1;
 
+/**
+ * Write `color`'s RGB into `buffer` at `offset..offset+2`, decoded to linear
+ * light. Writes `offset + 3` too (the colour's own alpha) - every caller here
+ * packs a numeric field (a flag, a height) into that slot instead, and
+ * overwrites it immediately after.
+ */
+const writeLightColorRgb = (buffer: Float32Array, offset: number, color: Color): void => {
+  color.writeLinear(buffer, offset);
+};
+
 const scratchPosition = { x: 0, y: 0 };
 const scratchDirection = { x: 0, y: 0 };
 
@@ -91,6 +101,7 @@ export class ForwardBackend implements LightingBackend {
   private readonly _app: LightingHost | null = null;
   private readonly _postPass: FilterPass | null = null;
   private _activeCount = 0;
+  private _attached = false;
 
   public constructor(options: ForwardBackendOptions) {
     this.maxLights = options.maxLights;
@@ -107,7 +118,31 @@ export class ForwardBackend implements LightingBackend {
     if (options.post.length > 0 && options.app !== null) {
       this._app = options.app;
       this._postPass = new FilterPass(options.app.frameTexture, options.post, { label: 'lighting:post' });
-      options.app.framePasses.addPass(this._postPass);
+    }
+  }
+
+  /** Install the `post` chain in the frame slot. Without one there is nothing to install. */
+  public attach(): void {
+    if (this._attached) {
+      return;
+    }
+
+    this._attached = true;
+
+    if (this._postPass !== null) {
+      this._app?.framePasses.addPass(this._postPass);
+    }
+  }
+
+  public detach(): void {
+    if (!this._attached) {
+      return;
+    }
+
+    this._attached = false;
+
+    if (this._postPass !== null) {
+      this._app?.framePasses.removePass(this._postPass);
     }
   }
 
@@ -130,9 +165,7 @@ export class ForwardBackend implements LightingBackend {
     buffer[1] = 0;
     buffer[2] = 0;
     buffer[3] = 0;
-    buffer[secondRow] = ambient.r / 255;
-    buffer[secondRow + 1] = ambient.g / 255;
-    buffer[secondRow + 2] = ambient.b / 255;
+    writeLightColorRgb(buffer, secondRow, ambient);
     buffer[secondRow + 3] = 0;
 
     let written = 0;
@@ -154,9 +187,7 @@ export class ForwardBackend implements LightingBackend {
       buffer[offset + 2] = lightRadius(light);
       buffer[offset + 3] = light.intensity;
 
-      buffer[secondRow + offset] = light.color.r / 255;
-      buffer[secondRow + offset + 1] = light.color.g / 255;
-      buffer[secondRow + offset + 2] = light.color.b / 255;
+      writeLightColorRgb(buffer, secondRow + offset, light.color);
       buffer[secondRow + offset + 3] = lightHeight(light);
 
       writeCone(buffer, thirdRow + offset, light);
@@ -169,14 +200,11 @@ export class ForwardBackend implements LightingBackend {
   }
 
   public destroy(): void {
+    this.detach();
     this._activeCount = 0;
     this._texture.destroy();
-
-    if (this._postPass !== null) {
-      this._app?.framePasses.removePass(this._postPass);
-      // The filters are the caller's; the pass only releases what it allocated.
-      this._postPass.destroy();
-    }
+    // The filters are the caller's; the pass only releases what it allocated.
+    this._postPass?.destroy();
   }
 }
 

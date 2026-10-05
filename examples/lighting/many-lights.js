@@ -1,5 +1,5 @@
 // Auto-generated from many-lights.ts - edit the .ts source, not this file.
-import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, DataTexture, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture, TextureFormat } from '@codexo/exojs';
 import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // The FORWARD renderer under load: the light list is a data texture, not a
@@ -20,9 +20,24 @@ const canvasTexture = (size, paint) => {
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
-  if (context === null) throw new Error('2D canvas context unavailable.');
+  if (context === null) {
+    throw new Error('2D canvas context unavailable.');
+  }
   paint(context);
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
+};
+// Numeric data is generated straight into a DataTexture: it is never
+// colour-managed, and no canvas round trip can touch its bytes.
+const dataTexture = (size, fill) => {
+  const data = new Uint8Array(size * size * 4);
+  fill(data);
+  return new DataTexture({
+    width: size,
+    height: size,
+    format: TextureFormat.Rgba8,
+    data,
+    textureOptions: { scaleMode: ScaleModes.Linear, generateMipMap: false },
+  });
 };
 // Flat stone albedo with a mortar cross, so the tiling is visible even unlit.
 const albedoTexture = canvasTexture(TILE_SIZE, context => {
@@ -37,8 +52,7 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
 // Both are built with image-space y, which grows downwards, and the green
 // channel is negated on the way out: the engine reads the OpenGL convention,
 // where green above the midpoint leans towards the top of the image.
-const normalTexture = canvasTexture(TILE_SIZE, context => {
-  const image = context.createImageData(TILE_SIZE, TILE_SIZE);
+const normalTexture = dataTexture(TILE_SIZE, data => {
   const half = TILE_SIZE / 2;
   const bevel = 14;
   for (let y = 0; y < TILE_SIZE; y++) {
@@ -52,13 +66,12 @@ const normalTexture = canvasTexture(TILE_SIZE, context => {
       const ny = horizontal ? ((y - half) / half) * 0.25 : towardsY * slope;
       const length = Math.hypot(nx, ny, 1);
       const offset = (y * TILE_SIZE + x) * 4;
-      image.data[offset] = ((nx / length) * 0.5 + 0.5) * 255;
-      image.data[offset + 1] = ((-ny / length) * 0.5 + 0.5) * 255;
-      image.data[offset + 2] = (1 / length) * 0.5 * 255 + 127.5;
-      image.data[offset + 3] = 255;
+      data[offset] = Math.round(((nx / length) * 0.5 + 0.5) * 255);
+      data[offset + 1] = Math.round(((-ny / length) * 0.5 + 0.5) * 255);
+      data[offset + 2] = Math.round((1 / length) * 0.5 * 255 + 127.5);
+      data[offset + 3] = 255;
     }
   }
-  context.putImageData(image, 0, 0);
 });
 // Evenly spaced hues at a fixed lightness, so neighbouring pools of light stay
 // distinguishable without any of them blowing out to white.
@@ -76,8 +89,27 @@ class ManyLightsScene extends Scene {
   lighting;
   orbits;
   visibleLights = 24;
+  draggingFirst = false;
+  manualFirst = true;
   elapsed = 0;
   hud;
+  onPointerDown = (_pointer, x, y) => {
+    const marker = this.orbits[0]?.marker;
+    this.draggingFirst = !!marker && Math.hypot(x - marker.x, y - marker.y) < 36;
+    if (this.draggingFirst) {
+      this.manualFirst = true;
+    }
+  };
+  onPointerMove = (_pointer, x, y) => {
+    if (!this.draggingFirst) {
+      return;
+    }
+    this.orbits[0].light.setPosition(x, y);
+    this.orbits[0].marker.setPosition(x, y);
+  };
+  onPointerEnd = () => {
+    this.draggingFirst = false;
+  };
   init() {
     const { width, height } = this.app;
     this.floor = new Container();
@@ -96,7 +128,7 @@ class ManyLightsScene extends Scene {
     this.orbits = Array.from({ length: MAX_LIGHTS }, (_, index) => {
       const color = lightColor(index);
       const light = new PointLight({ radius: 190, intensity: 1.6, height: 46, color });
-      const marker = new Sprite(Texture.fromColor(color, 6)).setAnchor(0.5);
+      const marker = new Sprite(Texture.fromColor(color, index === 0 ? 32 : 6)).setAnchor(0.5);
       this.markerLayer.addChild(marker);
       return {
         light,
@@ -107,10 +139,12 @@ class ManyLightsScene extends Scene {
         radiusY: height * (0.16 + ((index % 3) / 3) * 0.3),
       };
     });
+    this.orbits[0].light.setPosition(width * 0.25, height / 2);
+    this.orbits[0].marker.setPosition(width * 0.25, height / 2);
     this.setVisibleLights(this.visibleLights);
     this.hud = mountControls({
-      title: 'Many Lights (forward renderer)',
-      hint: `Up to ${MAX_LIGHTS} point lights over ${this.floor.children.length} tiles, all in one batch. The light list is a data texture, so the count is a loop bound - not a recompile. No shadows and no transport here: this shows what the forward renderer costs, not what the package can do.`,
+      title: 'Normal-Mapped Lighting',
+      hint: `Drag the large light marker across the normal-mapped tiles or change the count. Up to ${MAX_LIGHTS} lights share one material; this forward-lighting scene has no shadows.`,
       status: '',
     });
     const panel = mountControlPanel({ title: 'Lights', corner: 'top-right' });
@@ -122,6 +156,11 @@ class ManyLightsScene extends Scene {
       value: this.visibleLights,
       onChange: value => this.setVisibleLights(value),
     });
+    panel.addButton({ label: 'Resume first orbit', onClick: () => (this.manualFirst = false) });
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onPointerMove.add(this.onPointerMove);
+    this.app.input.onPointerUp.add(this.onPointerEnd);
+    this.app.input.onPointerCancel.add(this.onPointerEnd);
   }
   setVisibleLights(count) {
     this.visibleLights = count;
@@ -130,13 +169,18 @@ class ManyLightsScene extends Scene {
       const orbit = this.orbits[index];
       const active = index < count;
       orbit.marker.visible = active;
-      if (active) this.lighting.add(orbit.light);
+      if (active) {
+        this.lighting.add(orbit.light);
+      }
     }
   }
   update(delta) {
     const { width, height } = this.app;
     this.elapsed += delta;
     for (let index = 0; index < this.visibleLights; index++) {
+      if (index === 0 && this.manualFirst) {
+        continue;
+      }
       const orbit = this.orbits[index];
       const angle = this.elapsed * orbit.speed + orbit.phase;
       const x = width / 2 + Math.cos(angle) * orbit.radiusX;
@@ -149,6 +193,14 @@ class ManyLightsScene extends Scene {
     context.render(this.floor);
     context.render(this.markerLayer);
     this.hud.setStatus(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
+  }
+  destroy() {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onPointerMove.remove(this.onPointerMove);
+    this.app.input.onPointerUp.remove(this.onPointerEnd);
+    this.app.input.onPointerCancel.remove(this.onPointerEnd);
+    this.hud.dispose();
+    super.destroy();
   }
 }
 const app = new Application({

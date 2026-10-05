@@ -1,61 +1,62 @@
 // Auto-generated from tween-chains.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
-class TweenChainsScene extends Scene {
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, Scene, Sprite } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
+const WAYPOINTS = [
+  { x: 0.2, y: 0.3 },
+  { x: 0.8, y: 0.3 },
+  { x: 0.8, y: 0.72 },
+  { x: 0.2, y: 0.72 },
+];
+class TweenSequencesScene extends Scene {
   sprite;
+  path;
+  steps = [];
+  hud;
   init() {
-    const app = this.app;
-    const { width, height } = app;
-    // A rectangle centred in the frame, spread across the wider 16:9 space.
-    const left = width / 2 - width * 0.28;
-    const right = width / 2 + width * 0.28;
-    const top = height / 2 - height * 0.28;
-    const bottom = height / 2 + height * 0.28;
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(left, top);
-    const a = app.tweens
-      .create(this.sprite.position)
-      .to({ x: right, y: top }, 0.6)
-      .onComplete(() => {
-        this.sprite.setRotation(90);
-      });
-    const b = app.tweens
-      .create(this.sprite.position)
-      .to({ x: right, y: bottom }, 0.6)
-      .onComplete(() => {
-        this.sprite.setRotation(180);
-      });
-    const c = app.tweens
-      .create(this.sprite.position)
-      .to({ x: left, y: bottom }, 0.6)
-      .onComplete(() => {
-        this.sprite.setRotation(270);
-      });
-    const d = app.tweens
-      .create(this.sprite.position)
-      .to({ x: left, y: top }, 0.6)
-      .onComplete(() => {
-        this.sprite.setRotation(0);
-      });
-    a.chain(b);
-    b.chain(c);
-    c.chain(d);
-    d.onComplete(() => a.start());
-    a.start();
+    const points = WAYPOINTS.map(point => ({ x: point.x * this.app.width, y: point.y * this.app.height }));
+    this.path = new Graphics();
+    this.path.lineWidth = 3;
+    this.path.lineColor = new Color(60, 100, 150);
+    for (let i = 0; i < points.length; i++) {
+      const next = points[(i + 1) % points.length];
+      this.path.drawLine(points[i].x, points[i].y, next.x, next.y);
+    }
+    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(points[0].x, points[0].y);
+    this.hud = mountControls({
+      title: 'Tween Sequences',
+      status: 'Leg 1 / 4',
+      hint: 'Four tweens are chained once, then the final completion restarts the sequence.',
+    });
+    this.steps = points
+      .slice(1)
+      .concat(points[0])
+      .map((point, index) =>
+        this.app.tweens
+          .create(this.sprite.position)
+          .to(point, 0.75)
+          .easing(Ease.sineInOut)
+          .onStart(() => this.hud.setStatus(`Leg ${index + 1} / ${points.length}`)),
+      );
+    for (let i = 0; i < this.steps.length - 1; i++) {
+      this.steps[i].chain(this.steps[i + 1]);
+    }
+    this.steps.at(-1).onComplete(() => this.steps[0].start());
+    this.steps[0].start();
   }
   draw(context) {
+    context.render(this.path);
     context.render(this.sprite);
+  }
+  destroy() {
+    this.steps.forEach(tween => tween.stop());
+    this.hud.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
-  scenes: { TweenChainsScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
+  scenes: { TweenSequencesScene },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
+  loader: { basePath: 'assets/' },
 });
-await app.start(TweenChainsScene);
+await app.start(TweenSequencesScene);

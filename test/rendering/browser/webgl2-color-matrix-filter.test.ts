@@ -14,7 +14,7 @@ import { BlurFilter } from '#rendering/filters/BlurFilter';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
 
-import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
+import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Encoded } from './_backendSetup';
 import { CLEAR, MATRIX_SCENE_SIZE, matrixScene, matrixSubtreeScene, SAMPLE, SECOND_SAMPLE } from './_colorMatrixFixture';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
@@ -23,7 +23,7 @@ const render = async (css: string, filters: readonly Filter[], read: (pixel: (x:
   const { root, textures } = matrixScene(css, filters);
 
   try {
-    renderWebGl2Once(backend, root, CLEAR);
+    renderWebGl2Encoded(backend, root, CLEAR);
     read((x, y) => readWebGl2Pixel(backend, x, y));
   } finally {
     root.destroy();
@@ -76,11 +76,12 @@ describe('ColorMatrixFilter grading (WebGL2)', () => {
   });
 
   test('a half-transparent edge grades on straight alpha, not on the stored sample', async () => {
-    // 0.4 grey at half alpha. Inverted on straight alpha that is 0.6, which
-    // composites over black to 0.3 -> 77. Inverting the STORED premultiplied
-    // 0.2 would give 0.8 and read 204 instead.
+    // 0.4 grey at half alpha. Inverted on straight alpha that is 0.6, which is
+    // 0.318 linear; composited at half coverage over black in linear light that
+    // is 0.159, stored as byte 111. Inverting the STORED premultiplied sample
+    // instead would leave a visibly brighter result.
     await render('rgba(102, 102, 102, 0.5)', [new ColorMatrixFilter().invert()], pixel => {
-      expectPixelNear(pixel(SAMPLE, SAMPLE), [77, 77, 77, 255], 3);
+      expectPixelNear(pixel(SAMPLE, SAMPLE), [111, 111, 111, 255], 3);
     });
   });
 
@@ -95,7 +96,7 @@ describe('ColorMatrixFilter grading (WebGL2)', () => {
     const { root, textures } = matrixSubtreeScene('#ffffff', '#ff0000', [new ColorMatrixFilter().grayscale()]);
 
     try {
-      renderWebGl2Once(backend, root, CLEAR);
+      renderWebGl2Encoded(backend, root, CLEAR);
 
       const red = Math.round(0.2126 * 255);
 
@@ -116,12 +117,12 @@ describe('ColorMatrixFilter grading (WebGL2)', () => {
     try {
       root.children[0]!.cacheAsTexture = true;
 
-      renderWebGl2Once(backend, root, CLEAR);
+      renderWebGl2Encoded(backend, root, CLEAR);
       expectPixelNear(readWebGl2Pixel(backend, SAMPLE, SAMPLE), [255, 255, 255, 255]);
 
       filter.tint(new Color(0, 255, 0));
 
-      renderWebGl2Once(backend, root, CLEAR);
+      renderWebGl2Encoded(backend, root, CLEAR);
       expectPixelNear(readWebGl2Pixel(backend, SAMPLE, SAMPLE), [0, 255, 0, 255]);
     } finally {
       root.destroy();

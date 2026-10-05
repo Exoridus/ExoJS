@@ -314,4 +314,32 @@ export interface Playable {
    * @returns A {@link Voice} handle for the new instance.
    */
   createVoice(system: AudioSystem, options: PlayOptions): Voice;
+  /**
+   * Describe the voice {@link Playable.createVoice} would start for `options`,
+   * without starting it. Lets a deferred voice report the bus and capability
+   * surface of a voice that does not exist yet. Without it, a deferred voice
+   * offers only the base {@link Voice} surface until playback starts.
+   * @internal
+   */
+  _profileVoice?(system: AudioSystem, options: PlayOptions): VoiceProfile;
+}
+
+/**
+ * The bus and capability surface of a voice that has not been created yet, as
+ * reported by {@link Playable._profileVoice}. A capability field is `null` when
+ * the voice will not carry that capability; otherwise it holds the value the
+ * voice will start with.
+ * @internal
+ */
+export interface VoiceProfile {
+  readonly bus: AudioBus;
+  readonly pausable: boolean;
+  /** {@link Seekable.duration}, or `null` when the voice will not be {@link Seekable}. */
+  readonly duration: number | null;
+  /** {@link Loopable.loop}, or `null` when the voice will not be {@link Loopable}. */
+  readonly loop: boolean | null;
+  /** {@link RatePitched.playbackRate}, or `null` when the voice will not be {@link RatePitched}. */
+  readonly playbackRate: number | null;
+  /** {@link RatePitched.detune}; `null` exactly when `playbackRate` is. */
+  readonly detune: number | null;
 }

@@ -64,7 +64,7 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
   const versionRef = useRef(selectedVersionId);
   const canvasMutationObserverRef = useRef<MutationObserver | null>(null);
   const canvasAttributeObserverRef = useRef<MutationObserver | null>(null);
-  const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1 });
+  const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 });
 
   // Latest-value refs for the callbacks below - the iframe load handler and
   // the imperative handle must see current props without re-subscribing when
@@ -81,7 +81,7 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect -- reload preview on source change
     setUpdateId(value => value + 1);
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
-    currentCanvasRef.current = { width: 0, height: 0, zoom: 1 };
+    currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
     // Before the example reports its canvas, the frame already takes the
     // stage's size scaled to the surface, so the iframe never sits at a
     // different size or position from the one it settles on: the transform
@@ -95,15 +95,15 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
 
   useEffect(() => {
     const recalculateZoom = (): void => {
-      const { width, height } = currentCanvasRef.current;
+      const { width, height, resolutionWidth, resolutionHeight } = currentCanvasRef.current;
       if (!width) {
         rootRef.current?.style.setProperty('--preview-zoom', String(measureFillZoom(rootRef.current, STAGE_WIDTH, STAGE_HEIGHT)));
         return;
       }
       const zoom = measureFillZoom(rootRef.current, width, height);
-      currentCanvasRef.current = { width, height, zoom };
+      currentCanvasRef.current = { width, height, zoom, resolutionWidth, resolutionHeight };
       rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
-      onCanvasSize?.({ width, height, zoom });
+      onCanvasSize?.({ width: resolutionWidth, height: resolutionHeight, zoom });
     };
 
     const preventScroll = (event: KeyboardEvent): void => {
@@ -144,24 +144,30 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     onPreviewErrors?.(errors.filter(error => Boolean(error.summary)));
   };
 
-  const applyCanvasSize = (width: number, height: number): void => {
+  const applyCanvasSize = (width: number, height: number, resolutionWidth: number, resolutionHeight: number): void => {
     if (!width || !height) return;
     const zoom = measureFillZoom(rootRef.current, width, height);
-    currentCanvasRef.current = { width, height, zoom };
+    currentCanvasRef.current = { width, height, zoom, resolutionWidth, resolutionHeight };
     rootRef.current?.style.setProperty('--canvas-w', `${width}px`);
     rootRef.current?.style.setProperty('--canvas-h', `${height}px`);
     rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
-    onCanvasSize?.({ width, height, zoom });
+    onCanvasSize?.({ width: resolutionWidth, height: resolutionHeight, zoom });
   };
 
   const observeCanvas = (canvas: HTMLCanvasElement): void => {
-    applyCanvasSize(canvas.width, canvas.height);
-    canvasAttributeObserverRef.current = new MutationObserver(() => {
-      applyCanvasSize(canvas.width, canvas.height);
-    });
+    // The canvas's CSS box, not its backing store: the iframe viewport sized
+    // here is the window the example sees, and a backing store scaled by the
+    // device pixel ratio would feed back into an example that sizes its canvas
+    // to that window, doubling it on every resize.
+    const measure = (): void => {
+      applyCanvasSize(canvas.clientWidth || canvas.width, canvas.clientHeight || canvas.height, canvas.width, canvas.height);
+    };
+
+    measure();
+    canvasAttributeObserverRef.current = new MutationObserver(measure);
     canvasAttributeObserverRef.current.observe(canvas, {
       attributes: true,
-      attributeFilter: ['width', 'height'],
+      attributeFilter: ['width', 'height', 'style'],
     });
   };
 

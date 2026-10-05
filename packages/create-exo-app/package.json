@@ -1,12 +1,12 @@
 {
   "name": "create-exo-app",
-  "version": "0.1.0",
+  "version": "0.18.0",
   "description": "Official starter for ExoJS — scaffold a new app with npm create exo-app",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
   "bin": {
-    "create-exo-app": "./dist/index.js"
+    "create-exo-app": "./bin/create-exo-app.js"
   },
   "main": "./dist/scaffold.js",
   "types": "./dist/scaffold.d.ts",
@@ -19,12 +19,15 @@
     "./package.json": "./package.json"
   },
   "files": [
+    "bin/",
     "dist/",
-    "templates/"
+    "templates/",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && node --input-type=module --eval \"import{readFileSync,writeFileSync}from'node:fs';const f='dist/index.js';writeFileSync(f,'#!/usr/bin/env node\\n'+readFileSync(f,'utf-8'));\"",
-    "dev": "tsc --watch",
+    "build": "exo-tsc && node --input-type=module --eval \"import{readFileSync,writeFileSync}from'node:fs';const f='dist/index.js';writeFileSync(f,'#!/usr/bin/env node\\n'+readFileSync(f,'utf-8'));\"",
+    "dev": "exo-tsc --watch",
     "prepack": "pnpm build",
     "start": "tsx src/index.ts"
   },
@@ -37,8 +40,11 @@
     "url": "git+https://github.com/Exoridus/ExoJS.git"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0",
-    "tsx": "^4.23.12",
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

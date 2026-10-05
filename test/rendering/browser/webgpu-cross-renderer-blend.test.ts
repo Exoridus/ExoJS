@@ -8,7 +8,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce, webGpuAvailable } from './_backendSetup';
+import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuEncoded, webGpuAvailable } from './_backendSetup';
 import { blendClearColor, blendExpected, blendSamples, buildCrossRendererBlendScene } from './_crossRendererBlendScene';
 import { expectPixelNear } from './_pixels';
 
@@ -24,7 +24,7 @@ describe('WebGPU blend state across renderer types', () => {
     const scene = buildCrossRendererBlendScene();
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, scene.root, blendClearColor))) return;
+      if (!(await renderWebGpuEncoded(ctx, backend, scene.root, blendClearColor))) return;
 
       expect(backend.stats.drawCalls).toBe(3);
 

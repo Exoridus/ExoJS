@@ -3,7 +3,7 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { verifyConfigPackage, verifyRuntimePackage, verifyToolingPackage } from '@codexo/exojs-config/package-policy';
+import { verifyCliPackage, verifyConfigPackage, verifyRuntimePackage, verifyToolingPackage } from '@codexo/exojs-config/package-policy';
 
 import { LOCKSTEP_PACKAGES, TOOLING_PACKAGES } from './release/lockstep-packages.ts';
 
@@ -26,16 +26,20 @@ const targets = LOCKSTEP_PACKAGES.map(p => ({
   dir: p.dir === '.' ? root : resolve(root, p.dir),
   name: p.name,
   isExtension: p.isExtension,
+  profile: 'profile' in p ? p.profile : ('runtime' as const),
 }));
 
 let failed = 0;
 
 for (const t of targets) {
-  const { ok, checks }: PolicyResult = verifyRuntimePackage(t.dir, { name: t.name, isExtension: t.isExtension });
-  const bad = checks.filter(c => !c.ok);
-  console.log(`${ok ? '✓' : '✗'} ${t.name} (${checks.length} checks${bad.length ? `, ${bad.length} failed` : ''})`);
+  // A CLI entry point is judged as a CLI: it ships an executable and names the
+  // engine as a peer, which the imported-library profile would call missing.
+  const result: PolicyResult =
+    t.profile === 'cli' ? verifyCliPackage(t.dir, { name: t.name }) : verifyRuntimePackage(t.dir, { name: t.name, isExtension: t.isExtension });
+  const bad = result.checks.filter(c => !c.ok);
+  console.log(`${result.ok ? '✓' : '✗'} ${t.name} (${result.checks.length} checks${bad.length ? `, ${bad.length} failed` : ''})`);
   for (const c of bad) console.log(`    ✗ ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);
-  if (!ok) failed++;
+  if (!result.ok) failed++;
 }
 
 // Published tooling: the same publish contract, judged against the tooling

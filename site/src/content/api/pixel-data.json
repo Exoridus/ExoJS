@@ -1,6 +1,6 @@
 {
   "title": "PixelData",
-  "description": "The pixels RenderingContext.readPixels read, shaped for `ImageData`.",
+  "description": "RGBA pixels returned by a read, with the top row first.",
   "symbol": "PixelData",
   "kind": "interface",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The pixels RenderingContext.readPixels read, shaped for `ImageData`."
+        "RGBA pixels returned by a read, with the top row first."
       ],
       "importLine": "import { PixelData } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "data",
-          "signature": "data: Uint8ClampedArray",
+          "signature": "data: T",
           "signatureTokens": [
             {
               "text": "data",
@@ -41,13 +41,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Uint8ClampedArray",
+              "text": "T",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "RGBA bytes, four per pixel, row-major with the top row first."
+          "description": "Four RGBA components per pixel, row-major with the top row first."
         },
         {
           "name": "height",

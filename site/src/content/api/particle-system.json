@@ -1,16 +1,16 @@
 {
   "title": "ParticleSystem",
-  "description": "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns: - **Particle storage** - one channel per attribute (position, velocity, scale, rotation, color, timing, ...), sized to a fixed capacity at construction. Modules and render modes address it by name through a ParticleBatch; user code brings particles into existence with emit. - **Spawn modules** - fill freshly emitted particles. - **Update modules** - mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** - fire once per dying particle, before its slot is recycled (sub-emitters, event hooks). **Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages - a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops. **Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count. **Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** - slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes. **Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering - both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`. **View culling:** a system is created with `cullable = false`. Its local bounds cover one texture frame at the local origin, because the particles themselves are simulated on the GPU in half the configurations and no emitted extent is tracked in either - so culling against those bounds would remove the entire cloud as soon as the emitter's own origin left the view. For a system whose reach is known, set the node's `cullArea` to a rectangle in local space covering where its particles travel and set `cullable = true` again; the viewport check then uses that rectangle instead of the bounds. `getBounds()` still reports the one-frame box, not an extent of the live particles. **Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output - snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable.",
+  "description": "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns: - **Particle storage** - one channel per attribute (position, velocity, scale, rotation, color, timing, ...), sized to a fixed capacity at construction. Modules and render modes address it by name through a ParticleBatch; user code brings particles into existence with emit. - **Spawn modules** - fill freshly emitted particles. - **Update modules** - mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship CPU, WGSL and GLSL implementations; custom modules opt into each GPU backend explicitly. - **Death modules** - fire once per dying particle, before its slot is recycled (sub-emitters, event hooks). - **An explicitly supplied render mode** - destroyed with the system. The default mode and the texture are shared and stay the caller's. **Execution selection:** `simulation: 'cpu'` always uses CPU simulation. Otherwise WebGPU requires `wgsl()` from every update module and an eligible render mode; WebGL2 requires `glsl()` from every module and `QuadParticles`. Missing shader implementations, an unavailable backend, or insufficient WebGL2 texture capabilities select CPU. Invalid shader source throws and the next update retries compilation. Inspect simulationBackend after attachment and update. Built-in modules support all three paths. GPU state stays on the device and is rendered without a full readback. Module changes that remain eligible preserve live particles. Switching away from a GPU backend, losing its context/device, or adding an incompatible module clears particles because CPU storage contains only spawn values. **Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count. **GPU update order:** spawn and upload initial values, advance CPU expiry clocks, mark terminal slots, then integrate and apply modules on the GPU. Terminal snapshots include that step's module results. Death callbacks are asynchronous and bounded; see ParticleDeathContext. Clearing or destroying the system cancels pending callbacks.",
   "symbol": "ParticleSystem",
   "kind": "class",
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 115,
+  "memberCount": 120,
   "counts": {
     "constructors": 4,
-    "methods": 47,
-    "properties": 50,
+    "methods": 51,
+    "properties": 51,
     "events": 14
   },
   "sections": [
@@ -20,13 +20,11 @@
       "members": [],
       "paragraphs": [
         "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns:",
-        "- **Particle storage** - one channel per attribute (position, velocity, scale, rotation, color, timing, ...), sized to a fixed capacity at construction. Modules and render modes address it by name through a ParticleBatch; user code brings particles into existence with emit. - **Spawn modules** - fill freshly emitted particles. - **Update modules** - mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** - fire once per dying particle, before its slot is recycled (sub-emitters, event hooks).",
-        "**Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages - a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops.",
+        "- **Particle storage** - one channel per attribute (position, velocity, scale, rotation, color, timing, ...), sized to a fixed capacity at construction. Modules and render modes address it by name through a ParticleBatch; user code brings particles into existence with emit. - **Spawn modules** - fill freshly emitted particles. - **Update modules** - mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship CPU, WGSL and GLSL implementations; custom modules opt into each GPU backend explicitly. - **Death modules** - fire once per dying particle, before its slot is recycled (sub-emitters, event hooks). - **An explicitly supplied render mode** - destroyed with the system. The default mode and the texture are shared and stay the caller's.",
+        "**Execution selection:** `simulation: 'cpu'` always uses CPU simulation. Otherwise WebGPU requires `wgsl()` from every update module and an eligible render mode; WebGL2 requires `glsl()` from every module and `QuadParticles`. Missing shader implementations, an unavailable backend, or insufficient WebGL2 texture capabilities select CPU. Invalid shader source throws and the next update retries compilation. Inspect simulationBackend after attachment and update. Built-in modules support all three paths.",
+        "GPU state stays on the device and is rendered without a full readback. Module changes that remain eligible preserve live particles. Switching away from a GPU backend, losing its context/device, or adding an incompatible module clears particles because CPU storage contains only spawn values.",
         "**Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count.",
-        "**Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** - slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes.",
-        "**Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering - both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`.",
-        "**View culling:** a system is created with `cullable = false`. Its local bounds cover one texture frame at the local origin, because the particles themselves are simulated on the GPU in half the configurations and no emitted extent is tracked in either - so culling against those bounds would remove the entire cloud as soon as the emitter's own origin left the view. For a system whose reach is known, set the node's `cullArea` to a rectangle in local space covering where its particles travel and set `cullable = true` again; the viewport check then uses that rectangle instead of the bounds. `getBounds()` still reports the one-frame box, not an extent of the live particles.",
-        "**Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output - snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable."
+        "**GPU update order:** spawn and upload initial values, advance CPU expiry clocks, mark terminal slots, then integrate and apply modules on the GPU. Terminal snapshots include that step's module results. Death callbacks are asynchronous and bounded; see ParticleDeathContext. Clearing or destroying the system cancels pending callbacks."
       ],
       "importLine": "import { ParticleSystem } from '@codexo/exojs-particles'",
       "sourceLink": null
@@ -374,6 +372,81 @@
           "description": "Re-derive origin from the fractional anchor and the CURRENT layout box. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose layout box changes after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored. The anchor measures against the drawable's declared LAYOUT BOX - its extent, taken from its own local origin - and never against where its AABB happens to start. Only the size term participates, so the mapping from anchor to origin is a pure function of the anchor and the box size: anchor = (0, 0) always means origin = (0, 0), whatever the anchor was set to before. Folding the bounds origin in would make it path-dependent instead - a drawable whose rectangle starts off-origin would keep that corner baked into its origin after returning to the default anchor. A drawable whose layout box is NOT its local bounds overrides this: text measures against its typographic advance, an AnimatedSprite against the untrimmed source frame rather than the per-frame trimmed rectangle."
         },
         {
+          "name": "addComponent",
+          "signature": "addComponent(component: C & ComponentHostCheck<ParticleSystem, C>): C",
+          "signatureTokens": [
+            {
+              "text": "addComponent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "component",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentHostCheck",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleSystem",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "component",
+              "type": "C & ComponentHostCheck<ParticleSystem, C>",
+              "optional": false
+            }
+          ],
+          "returnType": "C",
+          "description": "Attach component and return it - the same instance, typed as passed, so it can be kept in a field. A node holds at most one component per exact class. Attaching the instance that is already attached here is a no-op. Runs the component's Component.onAttach at once; if the node belongs to an active scene, Component.onEnable follows - during a frame, at the frame's end. The component's host type is checked at compile time: a Component<Sprite> cannot be attached to a plain container."
+        },
+        {
           "name": "addDeathModule",
           "signature": "addDeathModule(mod: DeathModule): this",
           "signatureTokens": [
@@ -559,7 +632,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Registers an update module. Modules run in registration order, each seeing what the previous ones did. Modules may be added and removed at any time, including mid-flight: the next update rebuilds whatever the change invalidated. On the GPU path that is the compute program alone - live particles keep the state the device has been integrating. Adding a module without a wgsl() implementation to a running GPU system is the one change that cannot preserve them: the simulation moves to the CPU, which has no copy of the integrated state, so the system clears its live particles rather than continuing from stale values (see clearParticles)."
+          "description": "Registers an update module. Modules run in registration order, each seeing what the previous ones did. Modules may be added and removed at any time, including mid-flight: the next update rebuilds whatever the change invalidated. On the GPU path that is the compute program alone - live particles keep the state the device has been integrating. Adding a module without the selected shader implementation to a running GPU system is the one change that cannot preserve them: the simulation moves to the CPU, which has no copy of the integrated state, so the system clears its live particles rather than continuing from stale values (see clearParticles)."
         },
         {
           "name": "blur",
@@ -675,7 +748,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Resets the system to zero live particles without destroying it."
+          "description": "Clears particles and pending death callbacks while retaining allocated simulation resources."
         },
         {
           "name": "clearSpawnModules",
@@ -1005,6 +1078,73 @@
           "description": "Axis-aligned bounding box of this node in its GLOBAL-transform space. That is world space for ordinary nodes, but GROUP-LOCAL space for nodes inside an engaged RetainedContainer transform group (the group matrix is applied on the GPU, not here) - this is deliberate and matches the rendering convention. For a true world-space extent of such a node, lift this rect by the group's getWorldTransform matrix. Pass out to receive a copy you own. Without it the return value is this node's **cached** rectangle, rebuilt in place whenever the transform or the local extent changes - retaining it across frames hands you a value that silently moves. The cache is why the no-arg form does not allocate: this runs per node per frame for culling and hit-testing."
         },
         {
+          "name": "getComponent",
+          "signature": "getComponent(type: ComponentClass<C>): C | null",
+          "signatureTokens": [
+            {
+              "text": "getComponent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentClass",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "ComponentClass<C>",
+              "optional": false
+            }
+          ],
+          "returnType": "C | null",
+          "description": "The component attached under exactly type, or null. A subclass instance is not found under its base class."
+        },
+        {
           "name": "getGlobalTransform",
           "signature": "getGlobalTransform(): Matrix",
           "signatureTokens": [
@@ -1152,6 +1292,53 @@
           "params": [],
           "returnType": "Matrix",
           "description": "The node's TRUE world-space transform, composed through every transform-group boundary (RetainedContainer) in the ancestor chain. getGlobalTransform deliberately stops at the nearest engaged boundary (descendants resolve group-RELATIVE transforms; the renderer multiplies the group matrix back in on the GPU), so it is the right space for rendering but the wrong one for spatial queries. Use THIS accessor whenever a real world position/orientation is needed - picking, spatial audio, physics, world-space math against nodes outside the group. Without any engaged boundary ancestor it returns the exact getGlobalTransform matrix (same instance, no extra work). With one, it lazily caches groupLocal × groupWorld and revalidates on read via version/stamp compares - including runtime space flips such as RetainedContainer's deep-barrier sub-branch escape."
+        },
+        {
+          "name": "hasComponent",
+          "signature": "hasComponent(type: ComponentClass): boolean",
+          "signatureTokens": [
+            {
+              "text": "hasComponent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentClass",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "ComponentClass",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether a component of exactly type is attached."
         },
         {
           "name": "intersectsWith",
@@ -1440,6 +1627,81 @@
           ],
           "returnType": "Interval",
           "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
+        },
+        {
+          "name": "removeComponent",
+          "signature": "removeComponent(target: C | ComponentClass<C>): C | null",
+          "signatureTokens": [
+            {
+              "text": "removeComponent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentClass",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "C | ComponentClass<C>",
+              "optional": false
+            }
+          ],
+          "returnType": "C | null",
+          "description": "Detach a component - by class or by instance - and return it, or null when no such component is attached here. Detaching is not destroying: the component runs Component.onDisable if it was active, then Component.onDetach, and can be attached again afterwards."
         },
         {
           "name": "removeFilter",
@@ -2820,6 +3082,51 @@
           "description": "Clip region used when clip is true. A Rectangle (or null for the node's bounds) maps to the scissor fast path; a Geometry maps to the stencil path. Has no effect while clip is false."
         },
         {
+          "name": "components",
+          "signature": "components: readonly Component<SceneNode>[]",
+          "signatureTokens": [
+            {
+              "text": "components",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Component",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The components attached to this node, in attach order. A snapshot: it does not change when components are added or removed later."
+        },
+        {
           "name": "cullable",
           "signature": "cullable: boolean",
           "signatureTokens": [
@@ -3008,36 +3315,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true when the system is running on the GPU compute pipeline."
-        },
-        {
-          "name": "gpuState",
-          "signature": "gpuState: ParticleGpuState | null",
-          "signatureTokens": [
-            {
-              "text": "gpuState",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ParticleGpuState",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "GPU-side state, or null in CPU mode."
+          "description": "true for WebGPU compute or WebGL2 transform-feedback simulation."
         },
         {
           "name": "hasAtlas",
@@ -3319,6 +3597,43 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "simulationBackend",
+          "signature": "simulationBackend: \"cpu\" | \"webgl2\" | \"webgpu\"",
+          "signatureTokens": [
+            {
+              "text": "simulationBackend",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"cpu\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"webgl2\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"webgpu\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Actual simulation path after the most recent update; CPU until an eligible backend is attached."
         },
         {
           "name": "skewX",

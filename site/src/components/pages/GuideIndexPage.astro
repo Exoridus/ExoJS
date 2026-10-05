@@ -29,7 +29,7 @@ const topics = GUIDE_TOPICS;
 
 const getFirstChapterHref = (part: (typeof GUIDE_PARTS)[number]) => {
     const firstChapter = part.chapters[0];
-    return firstChapter ? guideHref(`${part.slug}/${firstChapter.slug}`) : `${base}${locale}/guide/${part.slug}/`;
+    return firstChapter ? guideHref(firstChapter.path) : `${base}${locale}/guide/${part.slug}/`;
 };
 const sidebarParts = GUIDE_PARTS.map(part => ({
     slug: part.slug,
@@ -77,15 +77,15 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
                 <code>npm create exo-app@latest my-game</code>
             </div>
             <div class="guide-hero__actions">
-                <a class="act act--primary" href={guideHref('introduction/setup')}>Create a project</a>
-                <a class="act" href={guideHref('introduction/what-is-exojs')}>Start the first guide</a>
+                <a class="act act--primary" href={guideHref('getting-started/setup')}>Create a project</a>
+                <a class="act" href={guideHref('getting-started/what-is-exojs')}>Start the first guide</a>
                 <a class="act" href={`${base}${locale}/playground/`}>Open the Playground</a>
             </div>
         </section>
 
         <section class="guide-section" id="path" aria-labelledby="path-title">
             <h2 class="guide-section__title" id="path-title">Recommended learning path</h2>
-            <p class="guide-section__lead">Follow these in order to go from an empty folder to a deployable game.</p>
+            <p class="guide-section__lead">Follow the core path to understand the runtime, then choose a gameplay or integration topic. Advanced chapters are task references, not prerequisites for every project.</p>
             <ol class="path">
                 {learningPath.map((step, index) => (
                     <li class="path__step">
@@ -124,12 +124,12 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
                 <span class="orient-arrow" aria-hidden="true">→</span>
                 <div class="orient-card">
                     <p class="orient-card__k">Playground</p>
-                    <p class="orient-card__v">Run and edit every example live in the browser.</p>
+                    <p class="orient-card__v">Run and edit the curated demonstrations; individual examples state their capabilities.</p>
                 </div>
                 <span class="orient-arrow" aria-hidden="true">→</span>
                 <div class="orient-card">
                     <p class="orient-card__k">API reference</p>
-                    <p class="orient-card__v">Documents every class, method, and option.</p>
+                    <p class="orient-card__v">States the generated public contracts, parameters, units, and ownership rules.</p>
                 </div>
             </div>
         </section>

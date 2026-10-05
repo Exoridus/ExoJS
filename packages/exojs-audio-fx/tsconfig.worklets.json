@@ -6,7 +6,7 @@
     "lib": ["ES2022"],
     "types": [],
     "noEmit": true,
-    "rootDir": "src"
+    "rootDir": "."
   },
-  "include": ["src/worklets/*.worklet.ts", "src/worklets/worklet-globals.d.ts", "src/dsp/*.ts"]
+  "include": ["src/worklets/*.worklet.ts", "src/worklets/worklet-globals.d.ts", "src/dsp/*.ts", "test/fixtures/*.worklet.ts"]
 }

@@ -1,42 +1,69 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Text, Tween } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Sprite, Tween } from '@codexo/exojs';
+import { mountControls } from '@examples/runtime';
 
-class TweenBasicsScene extends Scene {
+class InteractiveTweensScene extends Scene {
   private sprite!: Sprite;
-  private text!: Text;
-  private forward!: Tween;
-  private backward!: Tween;
+  private target!: Graphics;
+  private hud!: ReturnType<typeof mountControls>;
+  private moveTween: Tween | null = null;
+  private roundTrip = false;
+  private readonly onPointerDown = (_pointer: unknown, x: number, y: number): void => this.moveTo(x, y);
 
   override init(): void {
-    const app = this.app;
-    const { width, height } = app;
-    const left = width * 0.1;
-    const right = width * 0.9;
-
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(left, height / 2);
-    this.text = new Text('Tween running', { fillColor: Color.white, fontSize: 18 });
-    this.text.setPosition(20, 20);
-    this.forward = app.tweens.create(this.sprite.position).to({ x: right }, 1.2);
-    this.backward = app.tweens.create(this.sprite.position).to({ x: left }, 1.2);
-    this.forward
-      .onComplete(() => {
-        this.text.text = 'Completed -> reverse';
-        this.backward.start();
-      })
-      .start();
-    this.backward.onComplete(() => {
-      this.text.text = 'Completed -> forward';
-      this.forward.start();
+    const { width, height } = this.app;
+    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.target = new Graphics();
+    this.hud = mountControls({
+      title: 'Interactive Tweens',
+      controls: [
+        { keys: 'Click', action: 'move to target; click again to interrupt' },
+        { keys: 'Space', action: 'toggle round trip' },
+      ],
+      hint: 'A new tween starts from the current position. Round trip uses repeat(1) with yoyo().',
+    });
+    this.updateHud('Ready');
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.inputs.onTrigger(Keyboard.Space, () => {
+      this.roundTrip = !this.roundTrip;
+      this.updateHud('Ready');
     });
   }
 
+  private moveTo(x: number, y: number): void {
+    this.moveTween?.stop();
+    this.target.clear();
+    this.target.lineWidth = 2;
+    this.target.lineColor = new Color(120, 220, 255);
+    this.target.drawCircle(x, y, 24);
+    this.moveTween = this.app.tweens
+      .create(this.sprite.position)
+      .to({ x, y }, 0.7)
+      .repeat(this.roundTrip ? 1 : 0)
+      .yoyo(this.roundTrip)
+      .onComplete(() => this.updateHud('Complete'))
+      .start();
+    this.updateHud('Moving');
+  }
+
+  private updateHud(state: string): void {
+    this.hud.setStatus(`${state} · ${this.roundTrip ? 'round trip' : 'one way'}`);
+  }
+
   override draw(context: RenderingContext): void {
+    context.render(this.target);
     context.render(this.sprite);
-    context.render(this.text);
+  }
+
+  override destroy(): void {
+    this.moveTween?.stop();
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.hud.dispose();
+    super.destroy();
   }
 }
 
 const app = new Application({
-  scenes: { TweenBasicsScene },
+  scenes: { InteractiveTweensScene },
   canvas: {
     width: 1280,
     height: 720,
@@ -44,9 +71,7 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
+  loader: { basePath: 'assets/' },
 });
 
-await app.start(TweenBasicsScene);
+await app.start(InteractiveTweensScene);

@@ -117,16 +117,19 @@ describe('the SDF atlas is sampled as a continuous field', () => {
   const scanline = (frame: Uint8Array, y: number): number[] => Array.from({ length: size }, (_, x) => frame[(y * size + x) * 4]!);
 
   /**
-   * The rising side of one glyph edge, as a spatial profile.
+   * The rising side of the glyph's left edge on every scanline that crosses it,
+   * as spatial profiles.
    *
-   * Taken across a scanline rather than over the whole frame, because the
+   * Taken across scanlines rather than over the whole frame, because the
    * property under test is about how coverage behaves ALONG an edge, and a set
    * of frame-wide values cannot express that: sorting them yields a monotone
-   * list whatever the frame looked like. The segment runs from the last fully
+   * list whatever the frame looked like. Each segment runs from the last fully
    * transparent pixel before the edge to the first fully covered one after it,
    * so it holds exactly one transition and nothing of the glyph's other three.
    */
-  const edgeIntensityProfile = (frame: Uint8Array): number[] => {
+  const edgeIntensityProfiles = (frame: Uint8Array): number[][] => {
+    const profiles: number[][] = [];
+
     for (let y = 0; y < size; y++) {
       const row = scanline(frame, y);
       const covered = row.findIndex(value => value > 247);
@@ -137,14 +140,15 @@ describe('the SDF atlas is sampled as a continuous field', () => {
 
       while (start > 0 && row[start - 1]! >= 8) start--;
 
-      return row.slice(Math.max(0, start - 1), covered + 1);
+      profiles.push(row.slice(Math.max(0, start - 1), covered + 1));
     }
 
-    return [];
+    return profiles;
   };
 
-  /** The distinct values in a profile, ascending. */
-  const distinctIntensityLevels = (profile: number[]): number[] => [...new Set(profile)].sort((a, b) => a - b);
+  /** The distinct partial-coverage values across all profiles, ascending. */
+  const intermediateLevels = (profiles: number[][]): number[] =>
+    [...new Set(profiles.flat().filter(value => value >= 8 && value <= 247))].sort((a, b) => a - b);
 
   /**
    * Whether coverage only ever increases along the profile.
@@ -156,7 +160,11 @@ describe('the SDF atlas is sampled as a continuous field', () => {
    */
   const isMonotoneEdgeProfile = (profile: number[]): boolean => profile.every((value, index) => index === 0 || value >= profile[index - 1]!);
 
-  const describeProfile = (profile: number[]): string => `profile (${profile.length}): [${profile.join(', ')}]`;
+  const describeProfiles = (profiles: number[][], levels: number[]): string =>
+    `${profiles.length} rows, levels [${levels.join(', ')}], first rows ${profiles
+      .slice(0, 4)
+      .map(profile => `[${profile.join(', ')}]`)
+      .join(' ')}`;
 
   test('pins the page sampler to linear filtering', () => {
     const pool = new GlyphAtlasPool();
@@ -173,12 +181,18 @@ describe('the SDF atlas is sampled as a continuous field', () => {
   // produces - a node scaled up at runtime, or a `pixelRatio` below the surface
   // it is drawn on. Under NEAREST this frame is a staircase.
   //
-  // The number of distinct coverage levels is not a rendering contract.
-  // Software and hardware adapters may quantize linear texture filtering at
-  // different precision. This test verifies the invariant we actually require:
-  // magnified SDF glyph edges form a full-range monotone coverage ramp with
-  // multiple intermediate levels. NEAREST sampling collapses that ramp and must
-  // fail this oracle.
+  // The antialiasing band of an SDF edge is about one screen pixel wide at any
+  // magnification, so a single scanline crossing the edge steeply holds only one
+  // or two partial values; how many depends on the font's outline where the
+  // scanline happens to cut it. What tells LINEAR from NEAREST is the edge as a
+  // whole: filtered, the crossing moves continuously from row to row, so the
+  // rows along the curve land on many different partial values. Under NEAREST
+  // the distance is
+  // constant per texel, so rows repeat in blocks of the magnification and
+  // nearly every pixel is fully in or fully out.
+  //
+  // The number of distinct levels is not a rendering contract: software and
+  // hardware adapters may quantize linear filtering at different precision.
   test('keeps a magnified glyph smooth rather than blocky', async () => {
     const backend = await createWebGl2TestBackend(size, 1);
     const node = new Text('O', { fontSize: 24, pixelRatio: 1, fillColor: new Color(255, 255, 255) });
@@ -187,35 +201,31 @@ describe('the SDF atlas is sampled as a continuous field', () => {
     node.setScale(4);
     renderWebGl2Once(backend, node, Color.black);
 
-    const profile = edgeIntensityProfile(readWebGl2Frame(backend, size));
-    const levels = distinctIntensityLevels(profile);
-    const described = describeProfile(profile);
+    const profiles = edgeIntensityProfiles(readWebGl2Frame(backend, size));
+    const levels = intermediateLevels(profiles);
+    const described = describeProfiles(profiles, levels);
 
     node.destroy();
     backend.destroy();
 
     // Asserted as one object so a failure names which part of the invariant
-    // broke and prints the profile that broke it; `expect`'s message argument
-    // is not available here. The profile sits on both sides of the comparison
+    // broke and prints the profiles that broke it; `expect`'s message argument
+    // is not available here. The evidence sits on both sides of the comparison
     // for that reason - it is evidence, not an assertion.
     expect({
-      // The ramp spans the full coverage range.
-      reachesTransparent: Math.min(...profile) < 8,
-      reachesOpaque: Math.max(...profile) > 247,
-      // NEAREST, or any collapsed filtering, produces essentially the end
-      // values alone. How many steps sit between them is the adapter's
-      // business, not a contract.
+      tracesAnEdge: profiles.length > 0,
+      // NEAREST, or any collapsed filtering, leaves the edge almost entirely at
+      // the end values.
       hasIntermediateLevels: levels.length > 4,
       // Real partial coverage on both sides, not one lonely midpoint.
-      partialCoverageLow: levels.some(value => value > 8 && value < 96),
-      partialCoverageHigh: levels.some(value => value > 160 && value < 247),
-      // Monotone along the edge IN SPACE. Asserted over sorted unique values it
-      // would hold for any frame whatsoever.
-      monotone: isMonotoneEdgeProfile(profile),
+      partialCoverageLow: levels.some(value => value < 96),
+      partialCoverageHigh: levels.some(value => value > 160),
+      // Monotone along the edge IN SPACE, row by row. Asserted over sorted
+      // unique values it would hold for any frame whatsoever.
+      monotone: profiles.every(isMonotoneEdgeProfile),
       evidence: described,
     }).toEqual({
-      reachesTransparent: true,
-      reachesOpaque: true,
+      tracesAnEdge: true,
       hasIntermediateLevels: true,
       partialCoverageLow: true,
       partialCoverageHigh: true,

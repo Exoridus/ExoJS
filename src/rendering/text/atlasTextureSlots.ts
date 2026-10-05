@@ -1,3 +1,4 @@
+import { colorShaderSourcesGlsl } from '#rendering/colorShaderSources';
 import {
   buildSpriteMaterialSlotGlsl,
   buildSpriteTextureSlotWgsl,
@@ -60,7 +61,8 @@ ${dimensionCases}
  * it rather than a fix for a defect visible here.
  * @internal
  */
-export const textAtlasPrologueGlsl = buildSpriteMaterialSlotGlsl(textAtlasTextureSlots, 'highp');
+export const textAtlasPrologueGlsl = `${colorShaderSourcesGlsl}
+${buildSpriteMaterialSlotGlsl(textAtlasTextureSlots, 'highp')}`;
 
 /** Inject the Text slot table into a shipped Text fragment shader. @internal */
 export const composeTextAtlasFragmentGlsl = (fragment: string): string => composeSpriteMaterialFragmentGlsl(fragment, textAtlasPrologueGlsl);

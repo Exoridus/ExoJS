@@ -18,12 +18,12 @@
  *
  * Pixel readback is real GPU-side readback (`copyTextureToBuffer` +
  * `mapAsync`), NOT `ctx.drawImage(webgpuCanvas)` into a 2D canvas - the
- * drawImage path silently reads back all-zero on the software (SwiftShader /
- * lavapipe) adapters CI runs on, which would make this spike pass without
+ * drawImage path silently reads back all-zero on the software (SwiftShader)
+ * adapter CI runs on, which would make this spike pass without
  * proving anything.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); tests only skip when the software adapter drops the
+ * against SwiftShader); tests only skip when the software adapter drops the
  * device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -77,7 +77,7 @@ const setupBackend = async (alphaMode: CanvasAlphaMode = 'opaque'): Promise<WebG
   return backend;
 };
 
-// On the software (swiftshader) adapter the WebGPU device can drop mid-test;
+// On the software (SwiftShader) adapter the WebGPU device can drop mid-test;
 // treat that as an unavailable-adapter skip rather than a failure.
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
@@ -94,8 +94,8 @@ const bytesPerRowAligned = (widthPx: number, bytesPerPixel: number): number => M
 // Read the presented WebGPU canvas back via a real GPU-side readback:
 // copyTextureToBuffer -> mapAsync -> getMappedRange, mirroring
 // `WebGpuStorageBuffer.read`. `ctx.drawImage(webgpuCanvas)` into a 2D canvas
-// looks like a readback but returns all-zero on the software (SwiftShader /
-// lavapipe) adapters CI runs the WebGPU lane on - it never actually exercises
+// looks like a readback but returns all-zero on the software (SwiftShader)
+// adapter CI runs the WebGPU lane on - it never actually exercises
 // the GPU-visible pixel data, so a real regression there would go undetected.
 const readGpuCanvas = async (backend: WebGpuBackend): Promise<(x: number, y: number) => RgbaTuple> => {
   const device = backend.device;

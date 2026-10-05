@@ -1,5 +1,5 @@
 // #region guide:minimal-scene
-import type { RenderingContext, Seconds } from '@codexo/exojs';
+import type { Seconds } from '@codexo/exojs';
 import { Color, Graphics, Scene } from '@codexo/exojs';
 
 export class MainScene extends Scene {
@@ -17,10 +17,6 @@ export class MainScene extends Scene {
 
   public override update(delta: Seconds): void {
     this._box.rotate(delta * 90);
-  }
-
-  public override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 // #endregion guide:minimal-scene

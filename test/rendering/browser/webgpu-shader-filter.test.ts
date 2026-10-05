@@ -15,7 +15,7 @@
  * any pixels - it stays cleared to transparent black.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe); this only skips when the software adapter drops the
+ * against SwiftShader); this only skips when the software adapter drops the
  * device mid-test.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -56,7 +56,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-// On the software (swiftshader/lavapipe) adapter the WebGPU device can drop
+// On the software (SwiftShader) adapter the WebGPU device can drop
 // mid-test; treat that as a device-lost skip rather than a failure (mirrors
 // every other webgpu-*.test.ts in this suite).
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');

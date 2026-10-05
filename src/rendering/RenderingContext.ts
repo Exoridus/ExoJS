@@ -1,18 +1,20 @@
-import type { Color } from '#core/Color';
+import { Color } from '#core/Color';
 import type { Seconds } from '#core/units';
 import type { Matrix } from '#math/Matrix';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMeshMaterial } from '#rendering/material/MeshMaterial';
 import { ImmediateMesh } from '#rendering/mesh/ImmediateMesh';
+import { type OutputToneMapping, OutputTransform, resolveOutputTransformOptions } from '#rendering/OutputTransform';
 import type { RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordinator';
 import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
-import { PixelReader, type PixelReaderOptions, resolvePixelRegion } from '#rendering/texture/PixelReader';
+import { PixelReader, type PixelReaderOptions, resolvePixelRegion, resolvePixelRegionBounds } from '#rendering/texture/PixelReader';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
-import type { ColorTextureFormat } from '#rendering/types';
+import { type ColorTextureFormat, TextureFormat } from '#rendering/types';
 
 import type { DrawContext, RenderToOptions } from './DrawContext';
+import type { PixelArray, PixelDataType } from './pixelPayload';
 import { type RenderBackend } from './RenderBackend';
 import { type RenderBatch } from './RenderBatch';
 import { type RenderNode } from './RenderNode';
@@ -33,17 +35,39 @@ export interface CaptureOptions {
 }
 
 /** Options for {@link RenderingContext.readPixels}. */
-export interface ReadPixelsOptions {
+export interface ReadPixelsOptions<T extends PixelDataType = 'uint8'> {
+  /**
+   * Defaults to `uint8` for `rgba8`/`rgba8srgb` - the attachment's own stored
+   * bytes, sRGB-encoded or not, never unassociated or tone-mapped. Use
+   * `float32` for `rgba16f`/`rgba32f`; values are never normalized or clamped.
+   */
+  dataType?: T;
   /** Sub-rectangle to read, in pixels from the texture's top-left corner. Defaults to the whole texture. */
   region?: ReadonlyRectangle;
 }
 
-/** The pixels {@link RenderingContext.readPixels} read, shaped for `ImageData`. */
-export interface PixelData {
+/** RGBA pixels returned by a read, with the top row first. */
+export interface PixelData<T extends PixelArray = Uint8ClampedArray> {
   readonly width: number;
   readonly height: number;
-  /** RGBA bytes, four per pixel, row-major with the top row first. */
-  readonly data: Uint8ClampedArray;
+  /** Four RGBA components per pixel, row-major with the top row first. */
+  readonly data: T;
+}
+
+/** Options for {@link RenderingContext.readImageData}. */
+export interface ReadImageDataOptions {
+  /** Sub-rectangle to read, in pixels from the texture's top-left corner. Defaults to the whole texture. */
+  region?: ReadonlyRectangle;
+  /** Exposure in stops, applied before the tone-map and sRGB encode. Must be finite and within `[-32, 32]`. Default `0`. */
+  exposure?: number;
+  /** HDR-to-SDR mapping applied after exposure. Default `'none'`. */
+  toneMapping?: OutputToneMapping;
+  /**
+   * Composite over this opaque color instead of preserving coverage. The
+   * result then carries alpha `1` everywhere and never throws on a zero-alpha
+   * pixel, since compositing gives every pixel a well-defined color.
+   */
+  background?: Color;
 }
 
 export interface RenderOptions {
@@ -99,6 +123,8 @@ export class RenderingContext implements DrawContext {
   private readonly _trackedViews = new Set<View>();
   /** Views rendered since the last {@link update} - auto-advanced then cleared each frame, so a custom view's follow/shake ticks with no manual bookkeeping. */
   private readonly _renderedViews = new Set<View>();
+  /** Lazily-created, reused by every {@link readImageData} call - see its own doc for why one instance is shared. */
+  private _displayTransform: OutputTransform | null = null;
 
   public constructor(backend: RenderBackend) {
     this._backend = backend;
@@ -211,6 +237,8 @@ export class RenderingContext implements DrawContext {
     this._immediateMesh = null;
     this._batchMesh?.destroy();
     this._batchMesh = null;
+    this._displayTransform?.destroy();
+    this._displayTransform = null;
   }
 
   /**
@@ -257,6 +285,16 @@ export class RenderingContext implements DrawContext {
    */
   public supportsColorFormat(format: ColorTextureFormat): boolean {
     return this._backend.supportsColorFormat(format);
+  }
+
+  /** Independent render-target capabilities for the requested color format. */
+  public getColorFormatCapabilities(format: ColorTextureFormat): import('./RenderBackend').ColorFormatCapabilities {
+    return this._backend.getColorFormatCapabilities(format);
+  }
+
+  /** Whether this backend can read the format without normalization or clamping. */
+  public supportsReadbackFormat(format: ColorTextureFormat): boolean {
+    return this._backend.supportsReadbackFormat(format);
   }
 
   /**
@@ -329,7 +367,7 @@ export class RenderingContext implements DrawContext {
    * const image = new ImageData(frame.data, frame.width, frame.height);
    * ```
    *
-   * The payload is laid out exactly as `ImageData` wants it - RGBA bytes, four
+   * The default payload is laid out exactly as `ImageData` wants it - RGBA bytes, four
    * per pixel, top row first - so a screenshot, an export or a colour picked
    * off the frame is the two lines above and nothing more. Both backends agree
    * on that layout even though only one of them produces it natively.
@@ -351,14 +389,108 @@ export class RenderingContext implements DrawContext {
    *
    * # Formats
    *
-   * `'rgba8'` only. A float target holds values a byte per channel cannot carry,
-   * and no lossless byte answer exists for one; reading those needs a typed
-   * payload this does not have.
+   * The default `uint8` payload accepts `rgba8` and `rgba8srgb` - the latter's
+   * bytes are its own hardware-encoded sRGB storage, returned as-is; this
+   * never unassociates alpha or applies a display transform. Use
+   * {@link readImageData} for a display-referred, tone-mapped result. With
+   * `dataType: 'float32'`, `rgba16f` and `rgba32f` return Float32Array values
+   * without normalization or clamping. Half-float values are expanded to
+   * float32. Mismatches throw.
    */
-  public async readPixels(source: RenderTexture, options: ReadPixelsOptions = {}): Promise<PixelData> {
-    const { x, y, width, height } = resolvePixelRegion('RenderingContext.readPixels', source, options.region);
+  public readPixels(source: RenderTexture, options: ReadPixelsOptions<'float32'> & { dataType: 'float32' }): Promise<PixelData<Float32Array>>;
+  public readPixels(source: RenderTexture, options?: ReadPixelsOptions): Promise<PixelData>;
+  public readPixels(source: RenderTexture, options: ReadPixelsOptions<PixelDataType>): Promise<PixelData<PixelArray>>;
+  public async readPixels(source: RenderTexture, options: ReadPixelsOptions<PixelDataType> = {}): Promise<PixelData<PixelArray>> {
+    const dataType = options.dataType ?? 'uint8';
+    const { x, y, width, height } = resolvePixelRegion('RenderingContext.readPixels', source, options.region, dataType);
 
-    return { width, height, data: await this._backend.readPixels(source, x, y, width, height) };
+    if (!this.supportsReadbackFormat(source.format)) {
+      throw new Error(`RenderingContext.readPixels cannot read '${source.format}' on this backend.`);
+    }
+
+    return { width, height, data: await this._backend.readPixels(source, x, y, width, height, dataType) };
+  }
+
+  /**
+   * Read `source` back as a display-referred, sRGB-encoded image - the same
+   * output transform every frame's canvas goes through, run once against an
+   * off-screen target instead. Where {@link readPixels} hands back a working
+   * format's own raw storage (linear HDR values included), this always
+   * returns straight-alpha sRGB `uint8` bytes ready for `new ImageData(...)`,
+   * whatever `source`'s own format is.
+   *
+   * ```ts
+   * const shot = await app.rendering.readImageData(app.frameTexture);
+   * const image = new ImageData(shot.data, shot.width, shot.height);
+   * ```
+   *
+   * `exposure`/`toneMapping` default to `0`/`'none'` - a plain sRGB encode of
+   * the linear input, not the application's own {@link RenderingApplicationOptions.color}
+   * setting, since a caller reading one region for one purpose (a thumbnail, a
+   * color picker) may want a different mapping than the live frame.
+   *
+   * Without `background`, coverage is preserved: the result is straight
+   * (non-premultiplied) alpha, and a pixel with zero alpha but nonzero color
+   * throws rather than silently erasing that emission - premultiplied data is
+   * invalid in that configuration, not a transparent black pixel. Pass
+   * `background` to composite over an opaque color instead, which always
+   * succeeds and returns alpha `1` everywhere.
+   *
+   * On WebGPU a 32-bit float source (`Rgba32F`) is only accepted on a device
+   * that can filter it (`float32-filterable`); elsewhere the call rejects with a
+   * `RenderError` of code `'unsupported-format'`. Read such a target's raw values
+   * with {@link readPixels}, or render into an `Rgba16F` target.
+   *
+   * Same cost caveat as {@link readPixels}: this waits for the GPU and is not
+   * a per-frame call.
+   */
+  public async readImageData(source: RenderTexture, options: ReadImageDataOptions = {}): Promise<PixelData> {
+    const { x, y, width, height } = resolvePixelRegionBounds('RenderingContext.readImageData', source, options.region);
+    const resolved = resolveOutputTransformOptions({
+      ...(options.exposure !== undefined && { exposure: options.exposure }),
+      ...(options.toneMapping !== undefined && { toneMapping: options.toneMapping }),
+    });
+    const transparent = options.background === undefined;
+    const matte = options.background ?? Color.black;
+
+    if (transparent) {
+      await this._rejectOrphanedEmission(source, x, y, width, height);
+    }
+
+    const displayTransform = (this._displayTransform ??= new OutputTransform());
+
+    displayTransform.setOptions({ exposure: resolved.exposure, toneMapping: resolved.toneMapping });
+
+    const scratch = this._backend.acquireRenderTexture(source.width, source.height, TextureFormat.Rgba8);
+
+    try {
+      displayTransform.present(this._backend, source, transparent, matte, scratch, true);
+
+      return { width, height, data: await this._backend.readPixels(scratch, x, y, width, height, 'uint8') };
+    } finally {
+      this._backend.releaseRenderTexture(scratch);
+    }
+  }
+
+  /**
+   * A pixel with zero alpha but nonzero premultiplied color is invalid input
+   * for the transparent output rule (`E(C/a)*a` collapses it to `0`, quietly
+   * discarding whatever color it carried) - reject it instead of guessing
+   * that the caller meant to erase it. Reads the same region raw, in
+   * `source`'s own format, so this never triggers on HDR values the display
+   * transform would otherwise compress but not erase.
+   */
+  private async _rejectOrphanedEmission(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<void> {
+    const dataType: PixelDataType = source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F ? 'float32' : 'uint8';
+    const raw = await this._backend.readPixels(source, x, y, width, height, dataType);
+
+    for (let i = 0; i < raw.length; i += 4) {
+      if (raw[i + 3] === 0 && (raw[i] !== 0 || raw[i + 1] !== 0 || raw[i + 2] !== 0)) {
+        throw new Error(
+          'RenderingContext.readImageData: the region contains a pixel with zero alpha but nonzero color, which the transparent output rule would silently erase. Pass a background color to composite it, or fix the source.',
+        );
+      }
+    }
   }
 
   /**
@@ -374,12 +506,16 @@ export class RenderingContext implements DrawContext {
    * ```
    *
    * The reader is yours: destroy it when the reads stop. Its slots cost
-   * `slots * width * height * 4` bytes for as long as it lives, which is why
+   * `slots * width * height * 4` components plus backend staging storage for
+   * as long as it lives (one byte per uint8 component, four per float32), so
    * a reader is created for a purpose rather than kept around just in case.
    * Formats and regions are checked as for {@link readPixels}.
    */
-  public createPixelReader(source: RenderTexture, options: PixelReaderOptions = {}): PixelReader {
-    return new PixelReader(this._backend, source, options);
+  public createPixelReader(source: RenderTexture, options: PixelReaderOptions<'float32'> & { dataType: 'float32' }): PixelReader<Float32Array>;
+  public createPixelReader(source: RenderTexture, options?: PixelReaderOptions): PixelReader;
+  public createPixelReader(source: RenderTexture, options: PixelReaderOptions<PixelDataType>): PixelReader<PixelArray>;
+  public createPixelReader(source: RenderTexture, options: PixelReaderOptions<PixelDataType> = {}): PixelReader<PixelArray> {
+    return new PixelReader<PixelArray>(this._backend, source, options);
   }
 
   /**

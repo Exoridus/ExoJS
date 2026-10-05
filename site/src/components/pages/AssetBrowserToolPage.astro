@@ -1,0 +1,69 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+interface Props {
+  locale: 'en' | 'de';
+}
+
+const { locale } = Astro.props;
+const baseUrl = import.meta.env.BASE_URL;
+const playgroundHref = `${baseUrl}${locale}/playground/`;
+const sourceHref = `${baseUrl}examples/debug-layer/asset-browser.ts`;
+const scriptHref = `${baseUrl}examples/debug-layer/asset-browser.js`;
+const previewHref = `${baseUrl}preview.html`;
+---
+
+<Layout title="Asset Browser — ExoJS Tools" description="Inspect the asset catalog and preview textures, sprites, audio, fonts, SVG, video, and input prompts.">
+  <main class="tool-page">
+    <nav aria-label="Breadcrumb"><a href={playgroundHref}>Playground</a> / Tools</nav>
+    <div class="tool-heading">
+      <div>
+        <p class="eyebrow">Tools</p>
+        <h1>Asset Browser</h1>
+        <p>Inspect and preview the assets available to Playground examples.</p>
+      </div>
+      <a href={sourceHref}>View source</a>
+    </div>
+    <p class="tool-error" data-tool-error hidden></p>
+    <iframe
+      title="Asset Browser"
+      data-tool-preview
+      data-script={scriptHref}
+      data-preview={previewHref}
+      allow="autoplay; fullscreen"
+    ></iframe>
+  </main>
+</Layout>
+
+<script>
+  const frame = document.querySelector<HTMLIFrameElement>('[data-tool-preview]');
+  const error = document.querySelector<HTMLElement>('[data-tool-error]');
+
+  if (frame && error) {
+    try {
+      const response = await fetch(frame.dataset.script ?? '');
+      if (!response.ok) throw new Error(`Could not load the asset browser (${response.status}).`);
+      const source = await response.text();
+      const sourceKey = `exojs-tool-${crypto.randomUUID()}`;
+      sessionStorage.setItem(sourceKey, source);
+      const previewUrl = new URL(frame.dataset.preview ?? '', window.location.href);
+      previewUrl.searchParams.set('source-key', sourceKey);
+      frame.src = previewUrl.toString();
+    } catch (cause) {
+      error.textContent = cause instanceof Error ? cause.message : String(cause);
+      error.hidden = false;
+    }
+  }
+</script>
+
+<style>
+  .tool-page { max-width: 1480px; margin: 0 auto; padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem; }
+  nav { color: var(--fg-muted); font-size: 0.85rem; }
+  .tool-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin: 1.25rem 0; }
+  .tool-heading h1 { margin: 0.2rem 0; }
+  .tool-heading p { margin: 0; color: var(--fg-muted); }
+  .eyebrow { color: var(--accent) !important; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .tool-error { color: var(--color-error, #c44); }
+  iframe { display: block; width: 100%; min-height: min(72vw, 750px); border: 1px solid var(--line-soft); border-radius: 12px; background: #121722; }
+  @media (max-width: 600px) { .tool-heading { align-items: start; flex-direction: column; } iframe { min-height: 65vh; } }
+</style>

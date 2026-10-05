@@ -28,6 +28,7 @@ class MouseAndPointerScene extends Scene {
     this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.ship.interactive = true;
     this.ship.draggable = true;
+    this.root.addChild(this.ship);
     this.crosshair = new Graphics();
 
     app.input.onPointerMove.add(pointer => {
@@ -75,7 +76,7 @@ class MouseAndPointerScene extends Scene {
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.ship);
+    context.render(this.root);
 
     this.crosshair.clear();
     this.crosshair.lineWidth = 2;

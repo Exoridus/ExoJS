@@ -65,7 +65,17 @@
     "scripts/**/*.mjs",
     "*.config.ts",
     "packages/exojs-config/**/*.js",
+    "packages/create-exo-app/bin/*.js",
     "packages/exojs-bench/competitors/*.ts"
   ],
-  "exclude": ["scripts/exo-full.entry.ts"]
+  "exclude": [
+    "scripts/exo-full.entry.ts",
+    // Consumer programs for `verify:declaration-semantics`, not repository code.
+    // They are compiled against the *built* declarations as an external package
+    // would, in a throwaway workspace, and the contracts they assert are about
+    // that published surface - so this program would judge them by the wrong
+    // rules (no `noUnusedLocals` for assertion aliases, and the source types
+    // rather than the emitted ones).
+    "scripts/declaration-semantics"
+  ]
 }

@@ -1,0 +1,146 @@
+[
+  {
+    "run": 0,
+    "id": "groups",
+    "batches": 100,
+    "constructionMs": 0.23999999463558197,
+    "instrumentedBuildMs": 0.5649999678134918,
+    "breakEvenFrames": 7.999999503294647,
+    "rates": [
+      {
+        "rate": 0,
+        "baselineMs": 0.20000000298023224,
+        "bundleMs": 0.19499999284744263,
+        "savingMs": 0.030000001192092896,
+        "positivePairs": 4,
+        "buildsPerFrame": 0
+      },
+      {
+        "rate": 0.01,
+        "baselineMs": 5.4649999886751175,
+        "bundleMs": 5.435000002384186,
+        "savingMs": 0.10499998927116394,
+        "positivePairs": 3,
+        "buildsPerFrame": 1
+      },
+      {
+        "rate": 0.05,
+        "baselineMs": 6.405000001192093,
+        "bundleMs": 6.220000013709068,
+        "savingMs": 0.19999998807907104,
+        "positivePairs": 5,
+        "buildsPerFrame": 5
+      },
+      {
+        "rate": 0.1,
+        "baselineMs": 7.215000003576279,
+        "bundleMs": 7.260000005364418,
+        "savingMs": 0.024999991059303284,
+        "positivePairs": 3,
+        "buildsPerFrame": 10
+      }
+    ],
+    "parity": {
+      "differences": 0,
+      "replayDifferences": 0,
+      "clearDifferences": 1488000
+    },
+    "errors": []
+  },
+  {
+    "run": 1,
+    "id": "groups",
+    "batches": 100,
+    "constructionMs": 0.2849999964237213,
+    "instrumentedBuildMs": 0.2749999761581421,
+    "breakEvenFrames": 8.142854405910054,
+    "rates": [
+      {
+        "rate": 0,
+        "baselineMs": 0.20499999821186066,
+        "bundleMs": 0.1550000011920929,
+        "savingMs": 0.03500001132488251,
+        "positivePairs": 6,
+        "buildsPerFrame": 0
+      },
+      {
+        "rate": 0.01,
+        "baselineMs": 5.5150000005960464,
+        "bundleMs": 5.334999993443489,
+        "savingMs": 0.18000000715255737,
+        "positivePairs": 5,
+        "buildsPerFrame": 1
+      },
+      {
+        "rate": 0.05,
+        "baselineMs": 6.740000009536743,
+        "bundleMs": 6.405000001192093,
+        "savingMs": 0.03000001609325409,
+        "positivePairs": 3,
+        "buildsPerFrame": 5
+      },
+      {
+        "rate": 0.1,
+        "baselineMs": 7.614999994635582,
+        "bundleMs": 7.454999998211861,
+        "savingMs": 0.16500000655651093,
+        "positivePairs": 3,
+        "buildsPerFrame": 10
+      }
+    ],
+    "parity": {
+      "differences": 0,
+      "replayDifferences": 0,
+      "clearDifferences": 1488000
+    },
+    "errors": []
+  },
+  {
+    "run": 2,
+    "id": "groups",
+    "batches": 100,
+    "constructionMs": 0.27000001072883606,
+    "instrumentedBuildMs": 0.4049999862909317,
+    "breakEvenFrames": 9,
+    "rates": [
+      {
+        "rate": 0,
+        "baselineMs": 0.2850000113248825,
+        "bundleMs": 0.2800000011920929,
+        "savingMs": 0.030000001192092896,
+        "positivePairs": 4,
+        "buildsPerFrame": 0
+      },
+      {
+        "rate": 0.01,
+        "baselineMs": 7.3599999994039536,
+        "bundleMs": 7,
+        "savingMs": 0.35999999940395355,
+        "positivePairs": 5,
+        "buildsPerFrame": 1
+      },
+      {
+        "rate": 0.05,
+        "baselineMs": 7.75,
+        "bundleMs": 8.049999997019768,
+        "savingMs": 0.025000005960464478,
+        "positivePairs": 4,
+        "buildsPerFrame": 5
+      },
+      {
+        "rate": 0.1,
+        "baselineMs": 8.614999994635582,
+        "bundleMs": 8.640000000596046,
+        "savingMs": 0.05499999225139618,
+        "positivePairs": 4,
+        "buildsPerFrame": 10
+      }
+    ],
+    "parity": {
+      "differences": 0,
+      "replayDifferences": 0,
+      "clearDifferences": 1488000
+    },
+    "errors": []
+  }
+]

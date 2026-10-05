@@ -1,6 +1,7 @@
 import type { ChunkPayload } from './ChunkSource';
 import type { ReadonlyTileChunk } from './TileChunk';
 import { TileChunk } from './TileChunk';
+import { TileProjection } from './TileProjection';
 import type { TileSet } from './TileSet';
 import type { TileProperties } from './types';
 import type { PackedTile, ResolvedTile } from './types';
@@ -12,6 +13,8 @@ import { tileToChunkCoord, tileToLocalInChunk } from './types';
  * @advanced
  */
 export interface TileLayerOptions {
+  /** Shared projection; defaults to an orthogonal grid of the supplied tile size. */
+  readonly projection?: TileProjection;
   /** Stable layer ID (unique within the map). */
   readonly id: number;
   /** Display name (need not be unique). */
@@ -184,6 +187,7 @@ const validateTileLayerOptions = (options: TileLayerOptions): ResolvedTileLayerO
  * @advanced
  */
 export class TileLayer {
+  public readonly projection: TileProjection;
   /** Stable unique ID within the map. */
   public readonly id: number;
   /** Display name (may not be unique). */
@@ -211,11 +215,11 @@ export class TileLayer {
 
   /** Pixel width, or `undefined` if unbounded. */
   public get pixelWidth(): number | undefined {
-    return this.width === undefined ? undefined : this.width * this.tileWidth;
+    return this.width === undefined || this.height === undefined ? undefined : this.projection.getBounds(0, 0, this.width, this.height).width;
   }
   /** Pixel height, or `undefined` if unbounded. */
   public get pixelHeight(): number | undefined {
-    return this.height === undefined ? undefined : this.height * this.tileHeight;
+    return this.width === undefined || this.height === undefined ? undefined : this.projection.getBounds(0, 0, this.width, this.height).height;
   }
 
   /** Visibility flag (mutable). */
@@ -280,6 +284,10 @@ export class TileLayer {
     this.chunkHeight = chunkHeight;
     this.tileWidth = options.tileWidth;
     this.tileHeight = options.tileHeight;
+    this.projection = options.projection ?? new TileProjection({ tileWidth: options.tileWidth, tileHeight: options.tileHeight });
+    if (this.projection.tileWidth !== this.tileWidth || this.projection.tileHeight !== this.tileHeight) {
+      throw new Error('Projection tile dimensions must match the layer or map.');
+    }
     this.tilesets = options.tilesets;
     this.visible = options.visible ?? true;
     this.opacity = opacity;
@@ -641,18 +649,22 @@ export class TileLayer {
     }
   }
 
+  /** Display layer translation expressed as a logical simulation-space vector. */
+  public get logicalOffset(): { x: number; y: number } {
+    const p = this.projection;
+    return p.pixelToLogical(p.originX + this.offsetX, p.originY + this.offsetY);
+  }
+
   // ── Coordinate conversion ─────────────────────────────────────────────
 
   /**
-   * Convert a tile coordinate to the pixel position of its top-left corner
-   * in the layer's local space.
+   * Convert a grid vertex to display pixels (the top diamond vertex for isometric cells)
+   * including the layer's display offset.
    * @advanced
    */
   public tileToPixel(tx: number, ty: number): { x: number; y: number } {
-    return {
-      x: tx * this.tileWidth + this.offsetX,
-      y: ty * this.tileHeight + this.offsetY,
-    };
+    const point = this.projection.tileToPixel(tx, ty);
+    return { x: point.x + this.offsetX, y: point.y + this.offsetY };
   }
 
   /**
@@ -662,10 +674,7 @@ export class TileLayer {
    * @advanced
    */
   public pixelToTile(px: number, py: number): { tx: number; ty: number } {
-    return {
-      tx: Math.floor((px - this.offsetX) / this.tileWidth),
-      ty: Math.floor((py - this.offsetY) / this.tileHeight),
-    };
+    return this.projection.pixelToTile(px - this.offsetX, py - this.offsetY);
   }
 
   // ── Revision / lifecycle ──────────────────────────────────────────────

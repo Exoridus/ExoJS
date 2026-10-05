@@ -66,7 +66,10 @@ export abstract class CsvAsset {
 /**
  * Dispatch token for image loading.
  *
- * `loader.load(Asset.type('image', 'img.png'))` returns `Promise<HTMLImageElement>`.
+ * `loader.load(Asset.type('image', 'img.png'))` returns `Promise<DecodedImage>`: an
+ * `ImageBitmap` where the environment has `createImageBitmap`, an
+ * `HTMLImageElement` otherwise. Narrow before reading element-only members such
+ * as `naturalWidth` or `src`.
  */
 export abstract class ImageAsset {
   declare protected readonly _token: 'image';

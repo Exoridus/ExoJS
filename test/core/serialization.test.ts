@@ -96,6 +96,11 @@ const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; res
 
       return hit ? { type: hit.type, source: hit.source } : null;
     },
+    _assetReference(resource: object) {
+      const hit = entries.find(entry => entry.resource === resource);
+
+      return hit ? { kind: 'request', source: hit.source } : null;
+    },
     _peekResource(type: Loadable, source: string) {
       const hit = entries.find(entry => entry.type === type && entry.source === source);
 
@@ -373,7 +378,7 @@ describe('serialization — default-registry reset', () => {
 
 describe('serialization — errors & version', () => {
   it('stamps the current version on a serialized scene shape', () => {
-    expect(SERIALIZATION_VERSION).toBe(1);
+    expect(SERIALIZATION_VERSION).toBe(2);
   });
 
   it('throws on an unknown type during deserialize', () => {

@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, type Seconds, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 class BoundingBoxesScene extends Scene {
@@ -32,10 +32,6 @@ class BoundingBoxesScene extends Scene {
       sprite.setRotation(this.time * 35 * speed);
       sprite.setPosition(sprite.position.x, height / 2 + Math.sin(this.time * speed) * 100);
     }
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

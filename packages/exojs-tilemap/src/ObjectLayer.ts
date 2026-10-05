@@ -1,3 +1,4 @@
+import type { TileProjection } from './TileProjection';
 import type { ResolvedTile, TileProperties, TilePropertyObjectRef, TilePropertyValue } from './types';
 import { TilePropertyKind } from './types';
 
@@ -54,9 +55,9 @@ interface TileMapObjectBase<P extends TileProperties = TileProperties> {
   readonly name: string;
   /** Object class/type string (Tiled `type`/`class`; may be empty). */
   readonly type: string;
-  /** X of the object origin in object-layer pixel space. */
+  /** X of the object origin in layer coordinates; logical pixels when the layer has a projection. */
   readonly x: number;
-  /** Y of the object origin in object-layer pixel space. */
+  /** Y of the object origin in layer coordinates; logical pixels when the layer has a projection. */
   readonly y: number;
   /** Bounding width in px (0 for points). */
   readonly width: number;
@@ -120,6 +121,8 @@ export interface PolylineObject<P extends TileProperties = TileProperties> exten
  * map, bottom-centre on an isometric one) and rotates the tile image about
  * that point, so a non-zero {@link TileMapObjectBase.rotation} on a tile
  * object still pivots about the source anchor rather than about `(x, y)`.
+ * Isometric Tiled objects expose this anchor as `rotationOrigin`;
+ * `getDisplayObject` projects both the unrotated corner and this pivot.
  *
  * The owning tileset's drawing offset (Tiled `tileoffset`, reachable as
  * `tile.tileset.offsetX`/`offsetY`) is likewise **not** folded into `x`/`y`.
@@ -130,6 +133,8 @@ export interface PolylineObject<P extends TileProperties = TileProperties> exten
 export interface TileObject<P extends TileProperties = TileProperties> extends TileMapObjectBase<P> {
   readonly kind: typeof ObjectKind.Tile;
   readonly tile: ResolvedTile;
+  /** Image rotation pivot in layer coordinates, logical when projected. Adapters may omit it when unavailable. */
+  readonly rotationOrigin?: ObjectPoint;
 }
 
 /** Text styling options carried by a {@link TextObject}. */
@@ -255,6 +260,8 @@ const tilePropertyValueEquals = (a: TilePropertyValue, b: TilePropertyValue): bo
 
 /** Construction options for an {@link ObjectLayer}. */
 export interface ObjectLayerOptions {
+  /** Object geometry uses logical pixels when supplied; display placement is available through getDisplayObject. */
+  readonly projection?: TileProjection;
   /** Layer id (unique within the map). */
   readonly id: number;
   /** Layer name. */
@@ -331,6 +338,8 @@ export interface ObjectLayerOptions {
  * @advanced
  */
 export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
+  /** Projection of the logical object geometry, or undefined for ordinary display-space objects. */
+  public readonly projection: TileProjection | undefined;
   /** Layer-kind discriminant (distinguishes object layers from tile layers). */
   public readonly kind = 'object' as const;
 
@@ -378,6 +387,7 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
 
   public constructor(options: ObjectLayerOptions) {
     this.id = options.id;
+    this.projection = options.projection;
     this.name = options.name ?? '';
     this.class = options.class ?? '';
     this.visible = options.visible ?? true;
@@ -394,6 +404,21 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
     this.drawOrder = options.drawOrder ?? 'topdown';
     this.properties = options.properties ? Object.freeze({ ...options.properties }) : Object.freeze({});
     this.objects = options.objects ? Object.freeze([...options.objects]) : Object.freeze([]);
+  }
+
+  /**
+   * Returns display-space geometry including the layer offset. Isometric
+   * rectangles become polygons; ellipses retain their exact affine shape.
+   * Tile/text dimensions remain display pixels. Parallax and scene transforms
+   * are applied by the consumer, after this conversion.
+   */
+  public getDisplayObject(object: TileMapObject): TileMapObject {
+    const projected = this.projection?.projectObject(object) ?? object;
+    const position = { x: projected.x + this.offsetX, y: projected.y + this.offsetY };
+    if (projected.kind === 'tile' && projected.rotationOrigin) {
+      return { ...projected, ...position, rotationOrigin: { x: projected.rotationOrigin.x + this.offsetX, y: projected.rotationOrigin.y + this.offsetY } };
+    }
+    return { ...projected, ...position };
   }
 
   /** Objects matching every specified criterion of `filter`. Returns a fresh array. */

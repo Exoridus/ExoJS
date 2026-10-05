@@ -4,19 +4,22 @@ import { Color } from '#core/Color';
 /**
  * LutFilter unit tests.
  *
- * LutFilter is a thin wrapper: its static factories rasterize LUT textures via
- * the 2D canvas API, and `apply()` delegates to a `ShaderFilter` carrying both
- * language sources (covered by its own dedicated test files). These tests focus
- * on LutFilter's own logic: texture generation, option defaults/clamping,
- * `setLut`, source selection, and lifecycle - using the same minimal
- * WebGL2/WebGPU backend mocks established in shader-filter-webgl2.test.ts /
- * shader-filter-webgpu.test.ts, not a from-scratch GPU simulation.
+ * LutFilter is a thin wrapper: its identity-LUT factories write raw numeric
+ * `DataTexture` bytes directly (no canvas 2D involved - a LUT texel is a
+ * coordinate, not a colour image), `fromImage` wraps a caller-supplied
+ * image/canvas as numeric data, and `apply()`
+ * delegates to a `ShaderFilter` carrying both language sources (covered by
+ * its own dedicated test files). These tests focus on LutFilter's own logic:
+ * texture generation, option defaults/clamping, `setLut`, source selection,
+ * and lifecycle - using the same minimal WebGL2/WebGPU backend mocks
+ * established in shader-filter-webgl2.test.ts / shader-filter-webgpu.test.ts,
+ * not a from-scratch GPU simulation.
  *
  * The shared jsdom canvas 2D context stub (test/setup-env.vitest.ts) only
- * implements `fillStyle`/`fillRect`/`drawImage` - LutFilter's identity-LUT
- * builders also need `createImageData`/`putImageData`, so this file installs
- * a fuller local mock for the duration of the suite and restores the
- * original afterwards.
+ * implements `fillStyle`/`fillRect`/`drawImage`; some tests below still need
+ * a real canvas element as a `fromImage` source, so this file installs a
+ * fuller local mock for the duration of the suite and restores the original
+ * afterwards.
  */
 import { LutFilter } from '#rendering/filters/LutFilter';
 import { ShaderFilter } from '#rendering/filters/ShaderFilter';
@@ -24,6 +27,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import type { View } from '#rendering/View';
@@ -128,6 +132,9 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     getActiveUniforms: vi.fn(() => []),
     getActiveUniformBlockName: vi.fn(() => null),
     getUniformBlockIndex: vi.fn(() => 0),
+    uniformBlockBinding: vi.fn(),
+    bindBufferBase: vi.fn(),
+    bufferSubData: vi.fn(),
     getShaderInfoLog: vi.fn(() => ''),
     getProgramInfoLog: vi.fn(() => ''),
     getAttribLocation: vi.fn((_prog: unknown, name: string) => (name === 'aPosition' ? 0 : name === 'aUv' ? 1 : -1)),
@@ -403,18 +410,37 @@ describe('LutFilter static texture factories', () => {
 
     expect(texture).toBeInstanceOf(Texture);
     expect(texture.source).toBe(canvas);
+    expect(texture.colorSpace).toBe('none');
   });
 
-  test('identityLut1D throws a clear error when no 2D context is available', () => {
-    getContextSpy.mockImplementationOnce(() => null);
+  test('identityLut1D and identityLut3D build numeric DataTextures, not colour images', () => {
+    const oneD = LutFilter.identityLut1D(4);
+    const threeD = LutFilter.identityLut3D(2);
 
-    expect(() => LutFilter.identityLut1D()).toThrow('LutFilter.identityLut1D: 2D canvas context unavailable.');
+    expect(oneD).toBeInstanceOf(DataTexture);
+    expect(oneD.colorSpace).toBe('none');
+    expect(threeD).toBeInstanceOf(DataTexture);
+    expect(threeD.colorSpace).toBe('none');
   });
 
-  test('identityLut3D throws a clear error when no 2D context is available', () => {
-    getContextSpy.mockImplementationOnce(() => null);
+  test('identityLut1D writes an exact grayscale ramp', () => {
+    const texture = LutFilter.identityLut1D(4);
 
-    expect(() => LutFilter.identityLut3D()).toThrow('LutFilter.identityLut3D: 2D canvas context unavailable.');
+    // 4 steps: 0, 85, 170, 255.
+    expect(Array.from(texture.buffer)).toEqual([0, 0, 0, 255, 85, 85, 85, 255, 170, 170, 170, 255, 255, 255, 255, 255]);
+  });
+
+  test('identityLut3D writes exact identity texel values at the corner and centre', () => {
+    const size = 2;
+    const texture = LutFilter.identityLut3D(size);
+
+    // Corner (r=0, g=0, b=0) -> texel (0, 0).
+    expect(Array.from(texture.buffer.slice(0, 4))).toEqual([0, 0, 0, 255]);
+
+    // Opposite corner (r=1, g=1, b=1) at x = 1*size + 1 = 3, y = 1.
+    const offset = (1 * (size * size) + 3) * 4;
+
+    expect(Array.from(texture.buffer.slice(offset, offset + 4))).toEqual([255, 255, 255, 255]);
   });
 });
 
@@ -426,6 +452,32 @@ describe('LutFilter construction and options', () => {
     expect(filter.size).toBe(17);
     expect(filter.lut.width).toBe(17 * 17);
     expect(filter.lut.height).toBe(17);
+  });
+
+  test('colorSpace defaults to srgb', () => {
+    const filter3d = new LutFilter();
+    const filterRgb1d = new LutFilter({ mode: 'rgb1d' });
+
+    expect(filter3d.colorSpace).toBe('srgb');
+    expect(filterRgb1d.colorSpace).toBe('srgb');
+  });
+
+  test('colorSpace accepts linear-srgb and reaches the shader uniform', () => {
+    const filter3d = new LutFilter({ colorSpace: 'linear-srgb' });
+    const filterRgb1d = new LutFilter({ mode: 'rgb1d', colorSpace: 'linear-srgb' });
+
+    expect(filter3d.colorSpace).toBe('linear-srgb');
+    expect(uniformsOf(filter3d)['uDomain']?.value).toBe(0);
+    expect(filterRgb1d.colorSpace).toBe('linear-srgb');
+    expect(uniformsOf(filterRgb1d)['uDomain']?.value).toBe(0);
+  });
+
+  test('the srgb default writes uDomain as 1', () => {
+    const filter3d = new LutFilter();
+    const filterRgb1d = new LutFilter({ mode: 'rgb1d' });
+
+    expect(uniformsOf(filter3d)['uDomain']?.value).toBe(1);
+    expect(uniformsOf(filterRgb1d)['uDomain']?.value).toBe(1);
   });
 
   test('rgb1d mode builds a 1D identity LUT', () => {
@@ -454,6 +506,16 @@ const shaderFilterOf = (filter: LutFilter): ShaderFilter => {
   return (filter as unknown as { _shaderFilter: ShaderFilter })._shaderFilter;
 };
 
+/** The declared uniform accessors, which differ per mode. */
+const uniformsOf = (filter: LutFilter): Record<string, { readonly value: number } | undefined> => {
+  return shaderFilterOf(filter).uniforms as unknown as Record<string, { readonly value: number } | undefined>;
+};
+
+/** The textures the filter's passes bind, read live on every draw. */
+const boundTexturesOf = (filter: LutFilter): Readonly<Record<string, Texture>> => {
+  return (shaderFilterOf(filter) as unknown as { _bindings: { textures: Record<string, Texture> } })._bindings.textures;
+};
+
 describe('LutFilter.setLut', () => {
   test('replaces the LUT texture', () => {
     const filter = new LutFilter();
@@ -465,13 +527,54 @@ describe('LutFilter.setLut', () => {
     expect(filter.lut).toBe(custom);
   });
 
+  test('rejects a texture that resolves to colorSpace srgb and keeps the current LUT', () => {
+    const filter = new LutFilter();
+    const before = filter.lut;
+    const srgbLut = new Texture(document.createElement('canvas'), { colorSpace: 'srgb' });
+
+    expect(() => filter.setLut(srgbLut)).toThrow(/colorSpace: 'srgb'/);
+    expect(filter.lut).toBe(before);
+  });
+
+  test('rejects a linear-srgb texture and keeps the current LUT', () => {
+    const filter = new LutFilter();
+    const before = filter.lut;
+    const linearLut = new Texture(document.createElement('canvas'), { colorSpace: 'linear-srgb' });
+
+    expect(() => filter.setLut(linearLut)).toThrow(/colorSpace: 'linear-srgb'/);
+    expect(filter.lut).toBe(before);
+  });
+
+  test('refuses to apply once the accepted LUT has been reinterpreted as colour', () => {
+    const filter = new LutFilter();
+    const reinterpreted = new Texture(document.createElement('canvas'), { colorSpace: 'none' });
+    const input = new RenderTexture(16, 16);
+    const output = new RenderTexture(16, 16);
+
+    filter.setLut(reinterpreted);
+    reinterpreted.colorSpace = 'srgb';
+
+    expect(() => filter.apply(makeWebGl2Backend(), input, output)).toThrow(/LutFilter LUT resolved to colorSpace: 'srgb'/);
+
+    filter.destroy();
+    input.destroy();
+    output.destroy();
+  });
+
+  test('accepts an image texture declared colorSpace none', () => {
+    const filter = new LutFilter();
+    const numeric = new Texture(document.createElement('canvas'), { colorSpace: 'none' });
+
+    expect(filter.setLut(numeric).lut).toBe(numeric);
+  });
+
   test('also updates the shader filter uniform', () => {
     const filter = new LutFilter({ mode: '3d' });
     const replacement = LutFilter.identityLut3D(9);
 
     filter.setLut(replacement);
 
-    expect(shaderFilterOf(filter).uniforms['uLut']).toBe(replacement);
+    expect(boundTexturesOf(filter)['uLut']).toBe(replacement);
 
     filter.destroy();
   });
@@ -485,7 +588,7 @@ describe('LutFilter — source selection', () => {
     expect(shaderFilter).toBeInstanceOf(ShaderFilter);
     expect(shaderFilter.supports(RenderBackendType.WebGl2)).toBe(true);
     expect(shaderFilter.supports(RenderBackendType.WebGpu)).toBe(true);
-    expect(shaderFilter.uniforms['uLutSize']).toBe(5);
+    expect(uniformsOf(filter)['uLutSize']?.value).toBe(5);
 
     filter.destroy();
   });
@@ -496,7 +599,7 @@ describe('LutFilter — source selection', () => {
 
     expect(shaderFilter.supports(RenderBackendType.WebGl2)).toBe(true);
     expect(shaderFilter.supports(RenderBackendType.WebGpu)).toBe(true);
-    expect(shaderFilter.uniforms['uLutSize']).toBeUndefined();
+    expect(uniformsOf(filter)['uLutSize']).toBeUndefined();
 
     filter.destroy();
   });

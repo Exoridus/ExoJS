@@ -1,0 +1,103 @@
+{
+  "title": "LeaflessAssetKind",
+  "description": "The built-in types that hand out no catalog leaf at all - the type-level mirror of the built-in types whose `leaf` is `'none'`. Their assets load directly (`loader.load(Asset.type('music', ...))`) but cannot be held by a catalog, inferred from a bare path, or handed out by `get()`.",
+  "symbol": "LeaflessAssetKind",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The built-in types that hand out no catalog leaf at all - the type-level mirror of the built-in types whose `leaf` is `'none'`. Their assets load directly (`loader.load(Asset.type('music', ...))`) but cannot be held by a catalog, inferred from a bare path, or handed out by `get()`."
+      ],
+      "importLine": "import { LeaflessAssetKind } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LeaflessAssetKind",
+          "signature": "\"bmFont\" | \"font\" | \"image\" | \"music\" | \"svg\" | \"video\"",
+          "signatureTokens": [
+            {
+              "text": "\"bmFont\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"font\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"image\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"music\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"svg\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"video\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+}

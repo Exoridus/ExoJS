@@ -1,4 +1,4 @@
-import type { ReadonlyRectangle } from '@codexo/exojs';
+import type { Color, ReadonlyRectangle } from '@codexo/exojs';
 
 import type { Light } from '../lights/Light';
 import { LineLight } from '../lights/LineLight';
@@ -8,6 +8,17 @@ import { SpotLight } from '../lights/SpotLight';
 /** Floats per texel of every table, which are all RGBA32F. */
 const CHANNELS = 4;
 const GRID_EPSILON = 1e-7;
+
+// Reused across every emitter written per frame so decoding a colour never
+// allocates.
+const scratchLinearColor = new Float32Array(4);
+
+/** `color`'s RGB, decoded to linear light. */
+const emitterColorRgb = (color: Color): { r: number; g: number; b: number } => {
+  color.writeLinear(scratchLinearColor);
+
+  return { r: scratchLinearColor[0] ?? 0, g: scratchLinearColor[1] ?? 0, b: scratchLinearColor[2] ?? 0 };
+};
 
 /** Texels one occluder segment takes: `(ax, ay, bx, by)`. */
 const SEGMENT_TEXELS = 1;
@@ -289,9 +300,11 @@ export class TransportGeometry {
       this._emitters[target + 5] = axisY;
       this._emitters[target + 6] = Math.cos(outer);
       this._emitters[target + 7] = Math.cos(inner);
-      this._emitters[target + 8] = (light.color.r / 255) * density;
-      this._emitters[target + 9] = (light.color.g / 255) * density;
-      this._emitters[target + 10] = (light.color.b / 255) * density;
+      const emitterRgb = emitterColorRgb(light.color);
+
+      this._emitters[target + 8] = emitterRgb.r * density;
+      this._emitters[target + 9] = emitterRgb.g * density;
+      this._emitters[target + 10] = emitterRgb.b * density;
       this._emitters[target + 11] = light instanceof SpotLight ? 1 : 0;
     }
   }

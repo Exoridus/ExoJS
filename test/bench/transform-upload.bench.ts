@@ -2,13 +2,14 @@
 // Not comparable to the real WebGL2/WebGPU backend, nor to the GPU-baseline
 // suite (`packages/exojs-bench`, `pnpm bench`).
 // Sub-30% deltas between runs are noise, not signal.
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 
 import { Drawable } from '../../src/rendering/Drawable';
 import type { MaterialKey } from '../../src/rendering/material/MaterialKey';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '../../src/rendering/plan/renderCommand';
 import type { RenderBackend } from '../../src/rendering/RenderBackend';
 import { TransformBuffer } from '../../src/rendering/TransformBuffer';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const NODE_COUNT = 4096;
 const FRAME_COUNT = 240;
@@ -101,23 +102,27 @@ const packFrame = (buffer: TransformBuffer, commands: DrawCommand[]): void => {
 const allConsuming = buildCommands(0);
 const halfNonConsuming = buildCommands(2);
 
-describe('transform-upload', () => {
-  bench('all-consuming (4k nodes, 240 frames)', () => {
-    const buffer = new TransformBuffer();
+describe('transform-upload', { timeout: benchTimeoutMs }, () => {
+  test('all-consuming (4k nodes, 240 frames)', async ({ bench }) => {
+    await bench('all-consuming (4k nodes, 240 frames)', () => {
+      const buffer = new TransformBuffer();
 
-    for (let frame = 0; frame < FRAME_COUNT; frame++) {
-      packFrame(buffer, allConsuming);
-    }
+      for (let frame = 0; frame < FRAME_COUNT; frame++) {
+        packFrame(buffer, allConsuming);
+      }
+    }).run(benchRunOptions);
   });
 
   // Half the nodes opt out - their per-draw writes must be skipped, not packed.
   // A regression that reintroduces per-draw writes for non-consuming renderers
   // would close the gap between these two cases.
-  bench('half-non-consuming (4k nodes, 240 frames)', () => {
-    const buffer = new TransformBuffer();
+  test('half-non-consuming (4k nodes, 240 frames)', async ({ bench }) => {
+    await bench('half-non-consuming (4k nodes, 240 frames)', () => {
+      const buffer = new TransformBuffer();
 
-    for (let frame = 0; frame < FRAME_COUNT; frame++) {
-      packFrame(buffer, halfNonConsuming);
-    }
+      for (let frame = 0; frame < FRAME_COUNT; frame++) {
+        packFrame(buffer, halfNonConsuming);
+      }
+    }).run(benchRunOptions);
   });
 });

@@ -1,0 +1,817 @@
+import { packedGroupChanged } from '#rendering/affinePacking';
+import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
+import type { Drawable } from '#rendering/Drawable';
+import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { RepeatMode } from '#rendering/texture/repeat';
+import { Texture } from '#rendering/texture/Texture';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, ScaleModes, WrapModes } from '#rendering/types';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
+
+import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
+import { createWebGl2ShaderProgram } from './shaderProgram';
+import sharedFragSource from './shaders/repeating-sprite.frag';
+import geoPathVertSource from './shaders/repeating-sprite-geo-path.vert';
+import shaderPathVertSource from './shaders/repeating-sprite-shader-path.vert';
+import type { WebGl2Backend } from './WebGl2Backend';
+import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
+import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
+
+// ---------------------------------------------------------------------------
+// WebGl2Shader path: one quad per sprite, UVs computed in vertex shader.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Geometry path: N quads per sprite, UVs pre-computed in CPU (like NineSlice).
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Layout constants
+// ---------------------------------------------------------------------------
+
+const shaderStrideBytes = 40; // 10 × float32
+const shaderWordsPerInstance = shaderStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
+
+const geoStrideBytes = 32; // 8 × uint32 (matches NineSlice layout)
+const geoWordsPerInstance = geoStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
+
+const transformTextureUnit = 1;
+const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+
+// ---------------------------------------------------------------------------
+// Sampler cache helper
+// ---------------------------------------------------------------------------
+
+const repeatModeToWrap = (mode: RepeatMode): WrapModes => {
+  if (mode === 'repeat') return WrapModes.Repeat;
+  if (mode === 'mirror-repeat') return WrapModes.MirroredRepeat;
+  return WrapModes.ClampToEdge;
+};
+
+// ---------------------------------------------------------------------------
+// Connection type
+// ---------------------------------------------------------------------------
+
+interface RendererConnection {
+  readonly gl: WebGL2RenderingContext;
+  readonly buffers: Map<WebGl2RenderBuffer, { handle: WebGLBuffer; dataByteLength: number }>;
+  readonly shaderVaoHandle: WebGLVertexArrayObject;
+  readonly geoVaoHandle: WebGLVertexArrayObject;
+}
+
+/** Shared geometry batches for scalable sprites, with a separate whole-texture repeating path. @internal */
+export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSliceSprite | RepeatingSprite> implements WebGl2RetainedBatchReplayer {
+  /**
+   * NineSlice and atlas repeating geometry share the retained instance layout.
+   * Whole-texture repeating uses a distinct stride and sampler state, so it
+   * stays on entry replay. Pixel snapping is resolved in the shader.
+   * @internal
+   */
+  public readonly supportsRetainedBatches = true;
+
+  /**
+   * Veto the SHADER path at collect time. `resolvedStrategy` is derived from the
+   * source type alone, so it is decidable per drawable - and a shader-path draw
+   * would otherwise poison the capture on every frame, leaving the group on the
+   * entry-replay tier it can reach for free.
+   *
+   * The verdict is cached per capture, so it would go stale if this answer could
+   * flip under a live capture. It cannot: `resolvedStrategy` reads a private,
+   * readonly source assigned once in the constructor, so a sprite's strategy is
+   * fixed for its lifetime. The poison in {@link render} is therefore
+   * unreachable through the public API and kept only as a structural safety net.
+   * @internal
+   */
+  public admitsRetainedRecording(drawable: Drawable): boolean {
+    return !(drawable instanceof RepeatingSprite) || drawable.resolvedStrategy !== 'shader';
+  }
+
+  private readonly _shaderPathShader: WebGl2Shader;
+  private readonly _geoPathShader: WebGl2Shader;
+  private readonly _batchSize: number;
+
+  // WebGl2Shader-path buffers
+  private readonly _shaderData: ArrayBuffer;
+  private readonly _shaderF32: Float32Array;
+  private readonly _shaderU32: Uint32Array;
+  private _shaderBuf: WebGl2RenderBuffer | null = null;
+  private _shaderVao: WebGl2VertexArrayObject | null = null;
+  private _shaderQuadCount = 0;
+
+  // Geometry-path buffers
+  private readonly _geoData: ArrayBuffer;
+  private readonly _geoF32: Float32Array;
+  private readonly _geoU32: Uint32Array;
+  private _geoBuf: WebGl2RenderBuffer | null = null;
+  private _geoVao: WebGl2VertexArrayObject | null = null;
+  private _geoQuadCount = 0;
+  // Render nodes booked against the PENDING geometry batch, and whether the
+  // sprite being rendered right now has already been booked. One node expands
+  // into a Cartesian product of tile quads, so the recorded batch's
+  // `submittedNodes` contribution is this count and not `_geoQuadCount`. A sprite
+  // whose quads chunk across several batches is booked once, against the batch
+  // its first chunk lands in. WebGl2Shader-path sprites are never recorded (they poison
+  // the capture), so they are never booked either.
+  private _geoBatchNodeCount = 0;
+  private _geoNodeBooked = false;
+
+  /**
+   * Sampler cache keyed by wrapS/wrapT/scaleMode packed into one number. A
+   * template-string key would be rebuilt on every shader-path flush - measured
+   * at ~146 B per flush, which a blend-churn frame pays once per sprite.
+   */
+  private _samplers = new Map<number, WebGLSampler>();
+
+  // Shared batch state
+  private _maxNodeIndex = 0;
+  private _currentTexture: Texture | RenderTexture | null = null;
+  private _currentBlendMode: BlendModes | null = null;
+  private _currentModeX: RepeatMode | null = null;
+  private _currentModeY: RepeatMode | null = null;
+  private _currentPath: 'shader' | 'geometry' | null = null;
+
+  private _connection: RendererConnection | null = null;
+
+  private readonly _transformUnitScratch = new Int32Array([transformTextureUnit]);
+  private readonly _textureUnitScratch = new Int32Array([0]);
+  private _shaderView: unknown = null;
+  private _shaderViewId = -1;
+  private _geoView: unknown = null;
+  private _geoViewId = -1;
+  private _hasWrittenShaderGroup = false;
+  private readonly _writtenShaderGroupData = new Float32Array(9);
+  private _hasWrittenGeoGroup = false;
+  private readonly _writtenGeoGroupData = new Float32Array(9);
+
+  // Retained-replay reusable scratch. Uniform tracking follows the physical
+  // shader programs above: replay and live geometry draws share the geo state,
+  // while the shader path has its own state.
+  private readonly _recordTextureScratch: Array<Texture | RenderTexture | null> = [null];
+
+  public constructor(batchSize: number) {
+    super();
+    this._batchSize = batchSize;
+    this._shaderPathShader = new WebGl2Shader(spliceGlslPrologue(shaderPathVertSource, colorShaderSourcesGlsl), sharedFragSource);
+    this._geoPathShader = new WebGl2Shader(spliceGlslPrologue(geoPathVertSource, colorShaderSourcesGlsl), sharedFragSource);
+
+    this._shaderData = new ArrayBuffer(batchSize * shaderStrideBytes);
+    this._shaderF32 = new Float32Array(this._shaderData);
+    this._shaderU32 = new Uint32Array(this._shaderData);
+
+    this._geoData = new ArrayBuffer(batchSize * geoStrideBytes);
+    this._geoF32 = new Float32Array(this._geoData);
+    this._geoU32 = new Uint32Array(this._geoData);
+  }
+
+  public render(sprite: NineSliceSprite | RepeatingSprite): void {
+    const repeating = sprite instanceof RepeatingSprite ? sprite : null;
+    const strategy = repeating?.resolvedStrategy ?? 'geometry';
+
+    if (strategy === 'geometry' && sprite.quads.length === 0) {
+      return;
+    }
+
+    const texture = sprite.texture;
+    const blendMode = sprite.blendMode;
+    const modeX = repeating?.modeX ?? null;
+    const modeY = repeating?.modeY ?? null;
+
+    const hasData = this._shaderQuadCount > 0 || this._geoQuadCount > 0;
+
+    if (hasData) {
+      const pathChanged = this._currentPath !== strategy;
+      const texChanged = this._currentTexture !== texture;
+      const blendChanged = this._currentBlendMode !== blendMode;
+      const modeChanged = strategy === 'shader' && (this._currentModeX !== modeX || this._currentModeY !== modeY);
+
+      const geometryOverflow = repeating === null && this._geoQuadCount + sprite.quads.length > this._batchSize;
+
+      if (pathChanged || texChanged || blendChanged || modeChanged || geometryOverflow) {
+        this.flush();
+      }
+    }
+
+    const backend = this.getBackend();
+
+    // Retained recording: only the geometry path is replayable, and
+    // admitsRetainedRecording keeps a shader-path sprite from opening a capture
+    // at all. A sprite's strategy cannot change after that verdict was cached
+    // (readonly source), so this poison is unreachable through the public API
+    // and stays only as a structural safety net: were it to fire, the window
+    // cannot be replayed from group-owned resources, so the group falls back to
+    // entry replay (correct, never stale) rather than replaying a wrap-less
+    // instruction stream. Both pixel-snap modes are resolved in-shader and stay
+    // recordable.
+    if (backend._isRetainedCapturing && strategy === 'shader') {
+      backend._poisonRetainedCaptures();
+    }
+
+    if (this._currentTexture !== texture) {
+      this._currentTexture = texture;
+      backend.bindTexture(texture, 0);
+    }
+
+    if (this._currentBlendMode !== blendMode) {
+      this._currentBlendMode = blendMode;
+      backend.setBlendMode(blendMode);
+    }
+
+    this._currentPath = strategy;
+
+    const command = backend.activeDrawCommand;
+    const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(sprite);
+
+    if (nodeIndex > this._maxNodeIndex) {
+      this._maxNodeIndex = nodeIndex;
+    }
+
+    if (repeating !== null && strategy === 'shader') {
+      this._currentModeX = modeX;
+      this._currentModeY = modeY;
+      this._writeShaderInstance(repeating, nodeIndex);
+    } else {
+      this._geoNodeBooked = false;
+      this._writeGeoQuads(sprite, nodeIndex);
+    }
+  }
+
+  private _writeShaderInstance(sprite: RepeatingSprite, nodeIndex: number): void {
+    const texture = sprite.texture;
+    const srcW = sprite.region.width;
+    const srcH = sprite.region.height;
+    // The destination rectangle is uploaded RAW; PixelSnapMode.Geometry rounds
+    // its edges to the device grid in the vertex shader (which also re-derives
+    // destW/destH from the snapped corners so the tiling UVs stay aligned).
+    const destW = sprite.width;
+    const destH = sprite.height;
+    const flipY = texture instanceof Texture && texture.flipY;
+
+    const tilingX = computeShaderTiling(srcW, destW, sprite.modeX, sprite.fitX);
+    const tilingY = computeShaderTiling(srcH, destH, sprite.modeY, sprite.fitY);
+    const offsetU = sprite.offsetX / (srcW > 0 ? srcW : 1);
+    const offsetV = sprite.offsetY / (srcH > 0 ? srcH : 1);
+
+    // When flipY, negate tilingY and start from tilingY so V runs top→bottom.
+    const uvParamY = flipY ? -tilingY : tilingY;
+    const uvParamW = flipY ? tilingY + offsetV : offsetV;
+
+    if (this._shaderQuadCount >= this._batchSize) {
+      this.flush();
+    }
+
+    const idx = this._shaderQuadCount * shaderWordsPerInstance;
+    const f32 = this._shaderF32;
+    const u32 = this._shaderU32;
+
+    f32[idx + 0] = 0;
+    f32[idx + 1] = 0;
+    f32[idx + 2] = destW;
+    f32[idx + 3] = destH;
+    f32[idx + 4] = tilingX;
+    f32[idx + 5] = uvParamY;
+    f32[idx + 6] = offsetU;
+    f32[idx + 7] = uvParamW;
+    u32[idx + 8] = sprite.tint.toRgba8();
+    u32[idx + 9] = nodeIndex >>> 0;
+
+    this._shaderQuadCount++;
+  }
+
+  private _writeGeoQuads(sprite: NineSliceSprite | RepeatingSprite, nodeIndex: number): void {
+    // Quads are uploaded RAW; PixelSnapMode.Geometry snaps each shared segment
+    // boundary to the device grid in the vertex shader (gap-free, like NineSlice).
+    const quads: readonly RepeatingSpriteQuad[] = sprite.quads;
+
+    const flipY = sprite.texture instanceof Texture && sprite.texture.flipY;
+    const tint = sprite.tint.toRgba8();
+
+    let offset = 0;
+
+    while (offset < quads.length) {
+      const remaining = quads.length - offset;
+      const chunk = Math.min(remaining, this._batchSize - this._geoQuadCount);
+
+      if (chunk <= 0) {
+        this.flush();
+
+        // Re-establish texture/blend after flush
+        const backend = this.getBackend();
+        backend.bindTexture(sprite.texture, 0);
+        backend.setBlendMode(sprite.blendMode);
+        this._currentTexture = sprite.texture;
+        this._currentBlendMode = sprite.blendMode;
+        this._currentPath = 'geometry';
+
+        if (nodeIndex > this._maxNodeIndex) {
+          this._maxNodeIndex = nodeIndex;
+        }
+        continue;
+      }
+
+      const f32 = this._geoF32;
+      const u32 = this._geoU32;
+
+      // Booked here rather than in render(): any flush the chunking loop
+      // triggers has already happened, so the node lands on the batch that
+      // actually holds its first quad.
+      if (!this._geoNodeBooked) {
+        this._geoNodeBooked = true;
+        this._geoBatchNodeCount++;
+      }
+
+      for (let i = 0; i < chunk; i++) {
+        // In-bounds: `offset + i < offset + chunk <= quads.length`.
+        const q = quads[offset + i]!;
+        const idx = (this._geoQuadCount + i) * geoWordsPerInstance;
+
+        f32[idx + 0] = q.x0;
+        f32[idx + 1] = q.y0;
+        f32[idx + 2] = q.x1;
+        f32[idx + 3] = q.y1;
+
+        const uMin = (q.u0 * 0xffff) & 0xffff;
+        const uMax = (q.u1 * 0xffff) & 0xffff;
+        const v0Raw = (q.v0 * 0xffff) & 0xffff;
+        const v1Raw = (q.v1 * 0xffff) & 0xffff;
+        const vMin = flipY ? v1Raw : v0Raw;
+        const vMax = flipY ? v0Raw : v1Raw;
+
+        u32[idx + 4] = uMin | (vMin << 16);
+        u32[idx + 5] = uMax | (vMax << 16);
+        u32[idx + 6] = tint;
+        u32[idx + 7] = nodeIndex >>> 0;
+      }
+
+      this._geoQuadCount += chunk;
+      offset += chunk;
+    }
+  }
+
+  public flush(): void {
+    const backend = this.getBackendOrNull();
+
+    if (backend === null) {
+      this._resetBatchState();
+      return;
+    }
+
+    const view = backend.view;
+
+    if (this._shaderView !== view || this._shaderViewId !== view.updateId) {
+      this._shaderView = view;
+      this._shaderViewId = view.updateId;
+      this._shaderPathShader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    }
+
+    if (this._geoView !== view || this._geoViewId !== view.updateId) {
+      this._geoView = view;
+      this._geoViewId = view.updateId;
+      this._geoPathShader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    }
+
+    const groupTransform = backend.renderGroupTransform;
+    const groupData = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
+
+    if (this._shaderPathShader.uniforms.has('u_group') && (!this._hasWrittenShaderGroup || packedGroupChanged(groupData, this._writtenShaderGroupData, 0))) {
+      this._shaderPathShader.getUniform('u_group').setValue(groupData);
+      this._writtenShaderGroupData.set(groupData);
+      this._hasWrittenShaderGroup = true;
+    }
+
+    if (this._geoPathShader.uniforms.has('u_group') && (!this._hasWrittenGeoGroup || packedGroupChanged(groupData, this._writtenGeoGroupData, 0))) {
+      this._geoPathShader.getUniform('u_group').setValue(groupData);
+      this._writtenGeoGroupData.set(groupData);
+      this._hasWrittenGeoGroup = true;
+    }
+
+    // Staged unconditionally per flush (cheap vec4) so a viewport change without
+    // a group change still refreshes the snap projection on both path shaders.
+    backend.stageViewportUniform(this._shaderPathShader);
+    backend.stageViewportUniform(this._geoPathShader);
+
+    if (this._shaderQuadCount > 0) {
+      this._flushShaderBatch(backend);
+    }
+
+    if (this._geoQuadCount > 0) {
+      this._flushGeoBatch(backend);
+    }
+
+    this._resetBatchState();
+  }
+
+  private _flushShaderBatch(backend: WebGl2Backend): void {
+    const conn = this._connection;
+    const buf = this._shaderBuf;
+    const vao = this._shaderVao;
+
+    if (!conn || !buf || !vao || this._shaderQuadCount === 0) return;
+
+    const gl = conn.gl;
+    const texture = this._currentTexture;
+    backend.bindTexture(texture, 0);
+    backend.setBlendMode(this._currentBlendMode);
+    const scaleMode = texture instanceof Texture ? texture.scaleMode : ScaleModes.Linear;
+    const wrapS = repeatModeToWrap(this._currentModeX ?? 'repeat');
+    const wrapT = repeatModeToWrap(this._currentModeY ?? 'repeat');
+
+    // Bind repeat sampler (overrides texture's own wrap params for this unit).
+    const samplerHandle = this._getOrCreateSampler(gl, wrapS, wrapT, scaleMode);
+    gl.bindSampler(0, samplerHandle);
+
+    backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
+    this._shaderPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
+    this._shaderPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._shaderPathShader.sync();
+
+    backend.bindVertexArrayObject(vao);
+    buf.upload(this._shaderF32, 0, this._shaderQuadCount * shaderWordsPerInstance);
+    vao.drawInstanced(4, 0, this._shaderQuadCount, RenderingPrimitives.TriangleStrip);
+
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+
+    // Unbind sampler so subsequent draws use the texture's own wrap params.
+    gl.bindSampler(0, null);
+
+    this._shaderQuadCount = 0;
+  }
+
+  private _flushGeoBatch(backend: WebGl2Backend): void {
+    const conn = this._connection;
+    const buf = this._geoBuf;
+    const vao = this._geoVao;
+
+    if (!conn || !buf || !vao || this._geoQuadCount === 0) return;
+
+    backend.bindTexture(this._currentTexture, 0);
+    backend.setBlendMode(this._currentBlendMode);
+    backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
+    this._geoPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
+    this._geoPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._geoPathShader.sync();
+
+    backend.bindVertexArrayObject(vao);
+    buf.upload(this._geoF32, 0, this._geoQuadCount * geoWordsPerInstance);
+    vao.drawInstanced(4, 0, this._geoQuadCount, RenderingPrimitives.TriangleStrip);
+
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+
+    // Retained recording: while a capture window is open,
+    // hand the exact packed geometry-path words of this flush to the backend -
+    // byte-identical to what just drew. A single base texture binds to unit 0,
+    // so the recorded slot list is one entry. WebGl2Shader-path batches are never
+    // recorded (render() poisoned the window if one appeared).
+    if (backend._isRetainedCapturing && this._currentTexture !== null) {
+      this._recordTextureScratch[0] = this._currentTexture;
+      backend.recordRetainedBatch(
+        this,
+        this._geoU32.subarray(0, this._geoQuadCount * geoWordsPerInstance),
+        this._geoQuadCount,
+        this._currentBlendMode ?? BlendModes.Normal,
+        this._recordTextureScratch,
+        1,
+        null,
+        null,
+        this._geoBatchNodeCount,
+      );
+    }
+
+    this._geoQuadCount = 0;
+    this._geoBatchNodeCount = 0;
+  }
+
+  // ── Retained-batch record/replay ──────────────────────────────────────────
+  // Only geometry-path batches reach here (see supportsRetainedBatches). Their
+  // 32-byte layout puts the node index at word 7 of the 8-word instance - the
+  // same position the sprite renderer uses - so scan/rebase mirror it exactly.
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      // In-bounds: the payload's word range was appended to the bundle store.
+      const node = words[start + i * geoWordsPerInstance + 7]!;
+
+      if (node < range.min) {
+        range.min = node;
+      }
+
+      if (node > range.max) {
+        range.max = node;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer.rebaseRetainedNodeIndices} (rebases to group-local indices). */
+  public rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      const index = start + i * geoWordsPerInstance + 7;
+
+      // In-bounds: see the scan above.
+      words[index] = (words[index]! - base) >>> 0;
+    }
+  }
+
+  /**
+   * Point the batch VAO's per-instance attributes at the bundle's persistent
+   * instance buffer for the geometry-path layout (same attributes/locations as
+   * the live `_geoVao` in {@link onConnect}), based at the batch's byte offset.
+   * @internal
+   */
+  public configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+    const gl = this.getBackend().context;
+    const buffer = payload.bundle.instanceBuffer;
+    const vao = payload.vao;
+
+    if (buffer === null || vao === null) {
+      throw new Error('WebGl2ScalableSpriteRenderer: retained batch VAO configuration requires an uploaded bundle.');
+    }
+
+    const base = payload.byteOffset;
+
+    vao
+      .addAttribute(buffer, this._geoPathShader.getAttribute('a_quadBounds'), gl.FLOAT, false, geoStrideBytes, base + 0, false, 1)
+      .addAttribute(buffer, this._geoPathShader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, geoStrideBytes, base + 16, false, 1)
+      .addAttribute(buffer, this._geoPathShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, geoStrideBytes, base + 24, false, 1)
+      .addAttribute(buffer, this._geoPathShader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, geoStrideBytes, base + 28, true, 1);
+  }
+
+  /**
+   * Replay one recorded geometry-path batch: all STATE resolved live (blend,
+   * `u_projection` from the live view, `u_group` from the live composed group
+   * matrix, the single base texture on unit 0) and only DATA cached (instance
+   * bytes via the per-batch VAO, group-owned transform texture on the shared
+   * transform unit). Mirrors {@link WebGl2SpriteRenderer.replayRetainedBatch}.
+   * @internal
+   */
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
+    const backend = this.getBackendOrNull();
+    const vao = payload.vao;
+    const transformTexture = payload.bundle.transformTexture;
+
+    if (backend === null || vao === null || transformTexture === null) {
+      // Defensive: a bundle in this state never validates (generation), so a
+      // spliced replay cannot reach here; skip rather than crash mid-frame.
+      return false;
+    }
+
+    if (payload.blendMode !== this._currentBlendMode) {
+      this._currentBlendMode = payload.blendMode;
+    }
+
+    backend.setBlendMode(payload.blendMode);
+    this._stageGeoReplayUniforms(backend);
+
+    // In-bounds: the geometry path records exactly one base texture (slot 0).
+    backend.bindTexture(payload.textures[0]!, 0);
+
+    // The group-owned transform texture replaces the shared frame buffer on the
+    // SAME unit/sampler - zero GLSL changes. The next live flush
+    // re-binds the shared texture via bindTransformBufferTexture.
+    backend.bindTexture(transformTexture, transformTextureUnit);
+
+    this._geoPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
+    this._geoPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._geoPathShader.sync();
+
+    backend.bindVertexArrayObject(vao);
+    vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
+
+    return true;
+  }
+
+  /**
+   * Stage `u_projection` (live view) and `u_group` (live composed group matrix)
+   * on the geometry-path shader for a retained replay. Tracking is shared with
+   * live geometry draws because both write the same physical program; the
+   * shader-path program keeps independent state.
+   */
+  private _stageGeoReplayUniforms(backend: WebGl2Backend): void {
+    const view = backend.view;
+
+    if (this._geoView !== view || this._geoViewId !== view.updateId) {
+      this._geoView = view;
+      this._geoViewId = view.updateId;
+      this._geoPathShader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    }
+
+    if (this._geoPathShader.uniforms.has('u_group')) {
+      const groupTransform = backend.renderGroupTransform;
+      const groupData = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
+
+      if (!this._hasWrittenGeoGroup || packedGroupChanged(groupData, this._writtenGeoGroupData, 0)) {
+        this._geoPathShader.getUniform('u_group').setValue(groupData);
+        this._writtenGeoGroupData.set(groupData);
+        this._hasWrittenGeoGroup = true;
+      }
+    }
+
+    backend.stageViewportUniform(this._geoPathShader);
+  }
+
+  private _resetBatchState(): void {
+    this._shaderQuadCount = 0;
+    this._geoQuadCount = 0;
+    this._geoBatchNodeCount = 0;
+    this._maxNodeIndex = 0;
+    this._currentTexture = null;
+    this._currentBlendMode = null;
+    this._currentModeX = null;
+    this._currentModeY = null;
+    this._currentPath = null;
+  }
+
+  private _getOrCreateSampler(gl: WebGL2RenderingContext, wrapS: WrapModes, wrapT: WrapModes, scaleMode: ScaleModes): WebGLSampler {
+    // Exact, allocation-free key: every wrap and scale mode is a GL enum well
+    // below 0x10000, so three of them pack into one integer below 2^53.
+    const key = (wrapS * 0x10000 + wrapT) * 0x10000 + scaleMode;
+    const existing = this._samplers.get(key);
+    if (existing !== undefined) return existing;
+
+    const sampler = gl.createSampler();
+    if (sampler === null) throw new Error('WebGl2ScalableSpriteRenderer: could not create sampler.');
+
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
+    gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, scaleMode);
+    gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, scaleMode);
+
+    this._samplers.set(key, sampler);
+    return sampler;
+  }
+
+  protected onConnect(backend: WebGl2Backend): void {
+    const gl = backend.context;
+
+    this._shaderPathShader.connect(createWebGl2ShaderProgram(gl));
+    this._geoPathShader.connect(createWebGl2ShaderProgram(gl));
+
+    // sync() triggers finalize() which compiles the shaders and populates the
+    // attributes/uniforms maps - must happen before any getAttribute() call.
+    this._shaderPathShader.sync();
+    this._geoPathShader.sync();
+
+    const conn = this._createConnection(gl);
+    this._connection = conn;
+
+    // WebGl2Shader-path VAO (uses float4 uvParams, not packed unorm16)
+    this._shaderBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._shaderData, BufferUsage.DynamicDraw).connect(
+      this._createBufRuntime(conn, 'shader'),
+      backend.accountant,
+    );
+
+    this._shaderVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
+      .addAttribute(this._shaderBuf, this._shaderPathShader.getAttribute('a_quadBounds'), gl.FLOAT, false, shaderStrideBytes, 0, false, 1)
+      .addAttribute(this._shaderBuf, this._shaderPathShader.getAttribute('a_uvParams'), gl.FLOAT, false, shaderStrideBytes, 16, false, 1)
+      .addAttribute(this._shaderBuf, this._shaderPathShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, shaderStrideBytes, 32, false, 1)
+      .addAttribute(this._shaderBuf, this._shaderPathShader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, shaderStrideBytes, 36, true, 1)
+      .connect(this._createVaoRuntime(conn, 'shader'));
+
+    // Geometry-path VAO (packed unorm16 UVs, same layout as NineSlice)
+    this._geoBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._geoData, BufferUsage.DynamicDraw).connect(
+      this._createBufRuntime(conn, 'geo'),
+      backend.accountant,
+    );
+
+    this._geoVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
+      .addAttribute(this._geoBuf, this._geoPathShader.getAttribute('a_quadBounds'), gl.FLOAT, false, geoStrideBytes, 0, false, 1)
+      .addAttribute(this._geoBuf, this._geoPathShader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, geoStrideBytes, 16, false, 1)
+      .addAttribute(this._geoBuf, this._geoPathShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, geoStrideBytes, 24, false, 1)
+      .addAttribute(this._geoBuf, this._geoPathShader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, geoStrideBytes, 28, true, 1)
+      .connect(this._createVaoRuntime(conn, 'geo'));
+  }
+
+  protected onDisconnect(): void {
+    const gl = this._connection?.gl;
+
+    if (gl !== undefined) {
+      for (const sampler of this._samplers.values()) {
+        gl.deleteSampler(sampler);
+      }
+    }
+    this._samplers.clear();
+
+    this._shaderPathShader.destroy();
+    this._geoPathShader.destroy();
+    this._shaderBuf?.destroy();
+    this._shaderBuf = null;
+    this._shaderVao?.destroy();
+    this._shaderVao = null;
+    this._geoBuf?.destroy();
+    this._geoBuf = null;
+    this._geoVao?.destroy();
+    this._geoVao = null;
+    this._connection = null;
+    this._shaderView = null;
+    this._shaderViewId = -1;
+    this._geoView = null;
+    this._geoViewId = -1;
+    this._hasWrittenShaderGroup = false;
+    this._hasWrittenGeoGroup = false;
+    this._recordTextureScratch[0] = null;
+    this._resetBatchState();
+  }
+
+  public destroy(): void {
+    this.disconnect();
+    this._shaderPathShader.destroy();
+    this._geoPathShader.destroy();
+  }
+
+  // -----------------------------------------------------------------------
+  // Private GL helpers
+  // -----------------------------------------------------------------------
+
+  private _createConnection(gl: WebGL2RenderingContext): RendererConnection {
+    const shaderVaoHandle = gl.createVertexArray();
+    const geoVaoHandle = gl.createVertexArray();
+
+    if (shaderVaoHandle === null || geoVaoHandle === null) {
+      throw new Error('WebGl2ScalableSpriteRenderer: could not create vertex array object.');
+    }
+
+    return { gl, buffers: new Map(), shaderVaoHandle, geoVaoHandle };
+  }
+
+  private _createBufRuntime(conn: RendererConnection, _kind: string): WebGl2RenderBufferRuntime {
+    const handle = conn.gl.createBuffer();
+    if (handle === null) throw new Error('WebGl2ScalableSpriteRenderer: could not create render buffer.');
+
+    return {
+      bind: (buffer): void => {
+        conn.gl.bindBuffer(buffer.type, handle);
+      },
+      upload: (buffer, offset): void => {
+        const gl = conn.gl;
+        const state = conn.buffers.get(buffer);
+
+        gl.bindBuffer(buffer.type, handle);
+        if (state && state.dataByteLength >= buffer.uploadByteLength) {
+          uploadBufferRange(gl, buffer, offset);
+        } else {
+          uploadBufferStore(gl, buffer);
+          conn.buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
+        }
+      },
+      destroy: (buffer): void => {
+        conn.gl.deleteBuffer(handle);
+        conn.buffers.delete(buffer);
+        buffer.disconnect();
+      },
+    };
+  }
+
+  private _createVaoRuntime(conn: RendererConnection, kind: 'shader' | 'geo'): WebGl2VertexArrayObjectRuntime {
+    const vaoHandle = kind === 'shader' ? conn.shaderVaoHandle : conn.geoVaoHandle;
+    let appliedVersion = -1;
+
+    return {
+      bind: (vao): void => {
+        const gl = conn.gl;
+        gl.bindVertexArray(vaoHandle);
+
+        if (appliedVersion !== vao.version) {
+          let lastBuffer: WebGl2RenderBuffer | null = null;
+
+          for (const attr of vao.attributes) {
+            if (lastBuffer !== attr.buffer) {
+              attr.buffer.bind();
+              lastBuffer = attr.buffer;
+            }
+            if (attr.integer) {
+              gl.vertexAttribIPointer(attr.location, attr.size, attr.type, attr.stride, attr.start);
+            } else {
+              gl.vertexAttribPointer(attr.location, attr.size, attr.type, attr.normalized, attr.stride, attr.start);
+            }
+            gl.enableVertexAttribArray(attr.location);
+            gl.vertexAttribDivisor(attr.location, attr.divisor);
+          }
+          appliedVersion = vao.version;
+        }
+      },
+      unbind: (): void => {
+        conn.gl.bindVertexArray(null);
+      },
+      draw: (_vao, size, start, type): void => {
+        conn.gl.drawArrays(type, start, size);
+      },
+      drawInstanced: (_vao, count, start, instanceCount, type): void => {
+        conn.gl.drawArraysInstanced(type, start, count, instanceCount);
+      },
+      destroy: (vao): void => {
+        conn.gl.deleteVertexArray(vaoHandle);
+        vao.disconnect();
+      },
+    };
+  }
+}

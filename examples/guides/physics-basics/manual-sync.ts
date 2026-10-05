@@ -7,5 +7,5 @@ const sprite = new Sprite(Texture.empty);
 
 // #region guide:manual-sync
 sprite.setPosition(body.x, body.y);
-sprite.setRotation(radiansToDegrees(body.angle));
+sprite.setRotation(-radiansToDegrees(body.angle));
 // #endregion guide:manual-sync

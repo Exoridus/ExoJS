@@ -1,0 +1,44 @@
+---
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import { GUIDE_CHAPTER_BY_PATH } from '../../lib/guide-structure';
+
+interface Props {
+    locale: 'en' | 'de';
+    chapterPath: string;
+}
+
+const { locale, chapterPath } = Astro.props;
+const chapter = GUIDE_CHAPTER_BY_PATH.get(chapterPath);
+
+if (!chapter) {
+    throw new Error(`Unknown guide chapter: ${chapterPath}`);
+}
+
+const guideEntries = await getCollection('guide');
+const chapterTitle =
+    guideEntries.find((entry: CollectionEntry<'guide'>) => entry.id.replace(/\.(md|mdx)$/, '') === chapter.path)?.data.title ?? chapter.slug;
+
+const targetHref = `${import.meta.env.BASE_URL}${locale}/guide/${chapter.path}/`;
+const redirectLabel = locale === 'de' ? 'Weiterleitung zu' : 'Redirecting to';
+---
+
+<!doctype html>
+<html lang={locale}>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex" />
+        <link rel="canonical" href={targetHref} />
+        <title>{chapterTitle} | ExoJS Guide</title>
+        <script is:inline define:vars={{ targetHref }}>
+            window.location.replace(targetHref);
+        </script>
+        <noscript>
+            <meta http-equiv="refresh" content={`0;url=${targetHref}`} />
+        </noscript>
+    </head>
+    <body>
+        <p>{redirectLabel} <a href={targetHref}>{chapterTitle}</a>...</p>
+    </body>
+</html>

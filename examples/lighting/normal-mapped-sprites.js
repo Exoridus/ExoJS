@@ -1,5 +1,5 @@
 // Auto-generated from normal-mapped-sprites.ts - edit the .ts source, not this file.
-import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, DataTexture, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture, TextureFormat } from '@codexo/exojs';
 import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControls } from '@examples/runtime';
 // Forward normal mapping on plain sprites. A LitMaterial samples a
@@ -18,6 +18,19 @@ const canvasTexture = (size, paint) => {
   if (context === null) throw new Error('2D canvas context unavailable.');
   paint(context);
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
+};
+// Numeric data is generated straight into a DataTexture: it is never
+// colour-managed, and no canvas round trip can touch its bytes.
+const dataTexture = (size, fill) => {
+  const data = new Uint8Array(size * size * 4);
+  fill(data);
+  return new DataTexture({
+    width: size,
+    height: size,
+    format: TextureFormat.Rgba8,
+    data,
+    textureOptions: { scaleMode: ScaleModes.Linear, generateMipMap: false },
+  });
 };
 // Base colour: a matte disc with a checker so rotation and flips read clearly.
 const albedoTexture = canvasTexture(TILE_SIZE, context => {
@@ -43,8 +56,7 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
 // convention the engine reads - green above the midpoint means the normal
 // leans towards the TOP of the image, so the image-space gradient is negated
 // on the way into the green channel.
-const normalTexture = canvasTexture(TILE_SIZE, context => {
-  const image = context.createImageData(TILE_SIZE, TILE_SIZE);
+const normalTexture = dataTexture(TILE_SIZE, data => {
   const half = TILE_SIZE / 2;
   for (let y = 0; y < TILE_SIZE; y++) {
     for (let x = 0; x < TILE_SIZE; x++) {
@@ -55,13 +67,12 @@ const normalTexture = canvasTexture(TILE_SIZE, context => {
       const nx = inside < 1 ? dx : 0;
       const ny = inside < 1 ? -dy : 0;
       const offset = (y * TILE_SIZE + x) * 4;
-      image.data[offset] = (nx * 0.5 + 0.5) * 255;
-      image.data[offset + 1] = (ny * 0.5 + 0.5) * 255;
-      image.data[offset + 2] = (nz * 0.5 + 0.5) * 255;
-      image.data[offset + 3] = 255;
+      data[offset] = Math.round((nx * 0.5 + 0.5) * 255);
+      data[offset + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+      data[offset + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+      data[offset + 3] = 255;
     }
   }
-  context.putImageData(image, 0, 0);
 });
 const lightColors = [new Color(255, 180, 120), new Color(120, 180, 255), new Color(160, 255, 160), new Color(255, 120, 200)];
 class NormalMappedSpritesScene extends Scene {

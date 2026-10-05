@@ -5,13 +5,15 @@ import type { ChunkPage } from './chunkGeometry';
 import { buildChunkPages } from './chunkGeometry';
 import type { ReadonlyTileChunk } from './TileChunk';
 import { TileChunk } from './TileChunk';
+import { TileProjection } from './TileProjection';
 import type { TileSet } from './TileSet';
 
 /**
  * A single renderable tile chunk. One `TileChunkNode` is a {@link Drawable}
  * that owns the batched quad geometry for exactly one {@link ReadonlyTileChunk}
- * of one {@link import('./TileLayer').TileLayer}, positioned at the chunk's
- * pixel origin within the owning {@link TileLayerNode}.
+ * of one {@link import('./TileLayer').TileLayer}. Orthogonal nodes use the
+ * chunk's pixel origin; isometric nodes draw one diagonal slice and share
+ * the projection origin to keep pixel snapping independent of chunk layout.
  *
  * Geometry is built lazily and cached against the source chunk's `revision`:
  * the renderer reads {@link TileChunkNode.pages} on each visible frame, but a
@@ -31,8 +33,12 @@ export class TileChunkNode extends Drawable {
   private readonly _tilesets: readonly TileSet[];
   private readonly _tileWidth: number;
   private readonly _tileHeight: number;
-  private readonly _pixelWidth: number;
-  private readonly _pixelHeight: number;
+  private readonly _projection: TileProjection;
+  private readonly _geometryX: number;
+  private readonly _geometryY: number;
+  public readonly diagonal: number | undefined;
+  public readonly depth: number;
+  public readonly firstColumn: number;
 
   private _pages: ChunkPage[] = [];
   private _builtRevision = -1;
@@ -67,6 +73,8 @@ export class TileChunkNode extends Drawable {
     tileHeight: number,
     chunkWidthTiles: number,
     chunkHeightTiles: number,
+    projection = new TileProjection({ tileWidth, tileHeight }),
+    diagonal?: number,
   ) {
     super();
 
@@ -74,10 +82,18 @@ export class TileChunkNode extends Drawable {
     this._tilesets = tilesets;
     this._tileWidth = tileWidth;
     this._tileHeight = tileHeight;
-    this._pixelWidth = chunk.width * tileWidth;
-    this._pixelHeight = chunk.height * tileHeight;
-
-    this.setPosition(chunk.cx * chunkWidthTiles * tileWidth, chunk.cy * chunkHeightTiles * tileHeight);
+    this._projection = projection;
+    this.diagonal = diagonal;
+    const tx = chunk.cx * chunkWidthTiles;
+    const ty = chunk.cy * chunkHeightTiles;
+    this.depth = tx + ty + (diagonal ?? 0);
+    this.firstColumn = tx + Math.max(0, (diagonal ?? 0) - chunk.height + 1);
+    const position = projection.tileToPixel(tx, ty);
+    const iso = projection.orientation === 'isometric';
+    this._geometryX = iso ? position.x - projection.originX : 0;
+    this._geometryY = iso ? position.y - projection.originY : 0;
+    // Shared origin keeps pixel snapping coherent when projected pitches are fractional.
+    this.setPosition(iso ? projection.originX : position.x, iso ? projection.originY : position.y);
 
     // `loadedChunks()` always yields the concrete `TileChunk` behind the
     // readonly view (see TileLayer); the guard is defensive only.
@@ -102,7 +118,16 @@ export class TileChunkNode extends Drawable {
    */
   public get pages(): readonly ChunkPage[] {
     if (this._builtRevision !== this._chunk.revision) {
-      this._pages = buildChunkPages(this._chunk, this._tilesets, this._tileWidth, this._tileHeight);
+      this._pages = buildChunkPages(
+        this._chunk,
+        this._tilesets,
+        this._tileWidth,
+        this._tileHeight,
+        this._projection,
+        this.diagonal,
+        this._geometryX,
+        this._geometryY,
+      );
       this._builtRevision = this._chunk.revision;
     }
 
@@ -120,7 +145,28 @@ export class TileChunkNode extends Drawable {
    * would re-dirty the node on every read.
    */
   public override getLocalBounds(): ReadonlyRectangle {
-    return this._localBounds.set(0, 0, this._pixelWidth, this._pixelHeight);
+    const iso = this._projection.orientation === 'isometric';
+    if (!iso) return this._localBounds.set(0, 0, this._chunk.width * this._tileWidth, this._chunk.height * this._tileHeight);
+    const d = this.diagonal;
+    const minX = d === undefined ? 0 : Math.max(0, d - this._chunk.height + 1);
+    const maxX = d === undefined ? this._chunk.width - 1 : Math.min(this._chunk.width - 1, d);
+    const minY = d === undefined ? 0 : d - maxX;
+    const maxY = d === undefined ? this._chunk.height - 1 : d - minX;
+    let left = ((minX - maxY - 1) * this._tileWidth) / 2;
+    let top = ((minX + maxY) * this._tileHeight) / 2;
+    let right = ((maxX - minY + 1) * this._tileWidth) / 2;
+    let bottom = ((maxX + minY) * this._tileHeight) / 2 + this._tileHeight;
+    const baseLeft = left;
+    const baseTop = top;
+    const baseRight = right;
+    const baseBottom = bottom;
+    for (const tileset of this._tilesets) {
+      left = Math.min(left, baseLeft + tileset.offsetX);
+      top = Math.min(top, baseTop + this._tileHeight - tileset.tileHeight + tileset.offsetY);
+      right = Math.max(right, baseRight + tileset.tileWidth - this._tileWidth + tileset.offsetX);
+      bottom = Math.max(bottom, baseBottom + tileset.offsetY);
+    }
+    return this._localBounds.set(left + this._geometryX, top + this._geometryY, right - left, bottom - top);
   }
 
   public override destroy(): void {

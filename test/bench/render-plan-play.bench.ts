@@ -2,7 +2,7 @@
 // Not comparable to the real WebGL2/WebGPU backend, nor to the GPU-baseline
 // suite (`packages/exojs-bench`, `pnpm bench`).
 // Sub-30% deltas between runs are noise, not signal.
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 
 import { Container } from '../../src/rendering/Container';
 import { Drawable } from '../../src/rendering/Drawable';
@@ -14,6 +14,7 @@ import { RenderBackendType } from '../../src/rendering/RenderBackendType';
 import { createRenderStats } from '../../src/rendering/RenderStats';
 import { RenderTarget } from '../../src/rendering/RenderTarget';
 import type { View } from '../../src/rendering/View';
+import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const NODE_COUNT = 4096;
 const PLAY_COUNT = 240;
@@ -133,20 +134,24 @@ const prepare = (oneMaterial: boolean): { plan: ReturnType<RenderPlanBuilder['bu
 const oneMaterial = prepare(true);
 const manyMaterial = prepare(false);
 
-describe('render-plan-play', () => {
+describe('render-plan-play', { timeout: benchTimeoutMs }, () => {
   // Pure playback of a single coalesced render group (best case for batching).
   // A regression that reintroduces unconditional per-draw slot allocation
   // (`Object.freeze` + map insert) in RenderPlanPlayer shows up here first.
-  bench('one-material (4096 draws, 1 group, 240 replays)', () => {
-    for (let i = 0; i < PLAY_COUNT; i++) {
-      RenderPlanPlayer.play(oneMaterial.plan, oneMaterial.backend);
-    }
+  test('one-material (4096 draws, 1 group, 240 replays)', async ({ bench }) => {
+    await bench('one-material (4096 draws, 1 group, 240 replays)', () => {
+      for (let i = 0; i < PLAY_COUNT; i++) {
+        RenderPlanPlayer.play(oneMaterial.plan, oneMaterial.backend);
+      }
+    }).run(benchRunOptions);
   });
 
   // Playback dominated by per-group upload boundaries (4096 singleton groups).
-  bench('many-material (4096 draws, 4096 groups, 240 replays)', () => {
-    for (let i = 0; i < PLAY_COUNT; i++) {
-      RenderPlanPlayer.play(manyMaterial.plan, manyMaterial.backend);
-    }
+  test('many-material (4096 draws, 4096 groups, 240 replays)', async ({ bench }) => {
+    await bench('many-material (4096 draws, 4096 groups, 240 replays)', () => {
+      for (let i = 0; i < PLAY_COUNT; i++) {
+        RenderPlanPlayer.play(manyMaterial.plan, manyMaterial.backend);
+      }
+    }).run(benchRunOptions);
   });
 });

@@ -72,6 +72,13 @@ export interface MeshMaterialOptions<
  * `u_projection`/`u_translation`/`u_tint`/`u_texture`, and the WGSL
  * group(0)=mesh-uniforms / group(1)=texture / group(2)=user binding scheme.
  * Renderer wiring is added in a later phase.
+ *
+ * The vertex `color` attribute and `u_tint`/`uniforms.tint` are authored sRGB,
+ * straight alpha - the same authoring convention as {@link Color}. A custom
+ * fragment stage must return linear, premultiplied RGB and linear alpha:
+ * decode and premultiply an authored colour once, and associate a sampled
+ * texture's alpha at most once, matching whatever association its source
+ * declares.
  * @advanced
  */
 export class MeshMaterial<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> extends Material<F, B> {

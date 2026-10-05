@@ -87,7 +87,7 @@ const relatedApi = chapterMeta.apiLinks.map(slug => {
 const getFirstChapterHref = (part: (typeof GUIDE_PARTS)[number]) => {
     const firstChapter = part.chapters[0];
     return firstChapter
-        ? `${import.meta.env.BASE_URL}${locale}/guide/${part.slug}/${firstChapter.slug}/`
+        ? `${import.meta.env.BASE_URL}${locale}/guide/${firstChapter.path}/`
         : `${import.meta.env.BASE_URL}${locale}/guide/${part.slug}/`;
 };
 const sidebarParts = GUIDE_PARTS.map(part => ({
@@ -100,7 +100,7 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
     chapters: part.chapters.map(chapter => ({
         slug: chapter.slug,
         title: titleByPath(chapter.path),
-        href: `${import.meta.env.BASE_URL}${locale}/guide/${part.slug}/${chapter.slug}/`,
+        href: `${import.meta.env.BASE_URL}${locale}/guide/${chapter.path}/`,
     })),
 }));
 ---

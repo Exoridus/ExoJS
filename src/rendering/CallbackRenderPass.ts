@@ -35,6 +35,12 @@ export interface CallbackRenderPassOptions extends RenderPassOptions {
  * (no per-frame allocation). `execute` is not re-entrant - a callback must not re-run the same pass instance; the
  * reentrancy guard keeps the redirect's active context from being clobbered. If your callback closes over owned GPU
  * resources, subclass {@link RenderPass} instead so you can override `destroy()`.
+ *
+ * `pass.render(node)`/`pass.drawGeometry(...)` draw through the engine's ordinary color-managed renderers, so a
+ * callback that only uses those inherits the same linear, premultiplied color contract every other pass produces -
+ * no extra care needed. `clear` takes a `Color` and is resolved the same way any other clear color is. `pass.backend`
+ * is the one genuinely unprotected escape hatch: a raw draw issued through it carries none of that machinery, so a
+ * callback reaching for it is responsible for matching the surrounding linear-PMA-color domain itself.
  * @advanced
  */
 export class CallbackRenderPass extends RenderPass {

@@ -3,7 +3,7 @@ import { Application, Color, FixedResolutionCanvasSizing, Mesh, Scene } from '@c
 const COLS = 16;
 const ROWS = 16;
 const SIZE = 460;
-function buildGrid() {
+const buildGrid = () => {
   const half = SIZE / 2;
   const stepX = SIZE / COLS;
   const stepY = SIZE / ROWS;
@@ -36,7 +36,7 @@ function buildGrid() {
     }
   }
   return { vertices, uvs, indices };
-}
+};
 const UV_GRID = assets.technical.filtering.uvGrid256;
 class MeshDeformedGridScene extends Scene {
   restVertices;

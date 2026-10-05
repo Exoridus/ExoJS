@@ -1,16 +1,4 @@
-import {
-  Application,
-  Button,
-  Color,
-  FixedResolutionCanvasSizing,
-  Label,
-  Panel,
-  ProgressBar,
-  type RenderingContext,
-  Scene,
-  type Seconds,
-  Stack,
-} from '@codexo/exojs';
+import { Application, Button, Color, FixedResolutionCanvasSizing, Label, Panel, ProgressBar, Scene, type Seconds, Stack } from '@codexo/exojs';
 
 /**
  * UI-Core showcase: a screen-fixed HUD and interactive widgets live on
@@ -81,11 +69,6 @@ class HudScene extends Scene {
   override update(delta: Seconds): void {
     this.angle += delta * 60;
     this.spinner.setRotation(this.angle);
-  }
-
-  override draw(context: RenderingContext): void {
-    // scene.root is explicit; scene.ui is auto-rendered above it.
-    context.render(this.root);
   }
 
   private makeButton(label: string, color: Color, onClick: () => void): Button {

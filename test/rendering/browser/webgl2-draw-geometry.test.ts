@@ -22,7 +22,7 @@ import { Shader } from '#rendering/shader/Shader';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { readWebGl2Pixel } from './_backendSetup';
+import { readWebGl2Pixel, useEncodedFrameTarget } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
@@ -165,6 +165,7 @@ describe('WebGL2 RenderingContext.drawGeometry', () => {
 
     try {
       backend.resetStats();
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       context.drawGeometry(geometry, new Matrix(), { view: screenView() });
 
@@ -185,6 +186,7 @@ describe('WebGL2 RenderingContext.drawGeometry', () => {
 
     try {
       backend.resetStats();
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       // Translate the quad from (0,0)-(32,32) to (32,32)-(64,64).
       context.drawGeometry(geometry, new Matrix(1, 0, 32, 0, 1, 32), { view: screenView() });
@@ -206,6 +208,7 @@ describe('WebGL2 RenderingContext.drawGeometry', () => {
 
     try {
       backend.resetStats();
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       context.drawGeometry(geometry, new Matrix(), { tint: new Color(96, 160, 224), view: screenView() });
 
@@ -225,6 +228,7 @@ describe('WebGL2 RenderingContext.drawGeometry', () => {
 
     try {
       backend.resetStats();
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       // Blue is drawn after red, so it layers on top in the overlap region.
       context.drawGeometry(red, new Matrix(), { view: screenView() });
@@ -255,6 +259,7 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
 
     try {
       backend.resetStats();
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       context.drawBatch(batch, { view: screenView() });
 
@@ -292,6 +297,7 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
 
     try {
       backend.resetStats();
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       context.drawBatch(batch, { view: screenView() });
 
@@ -336,6 +342,7 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
 
     try {
       backend.resetStats();
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       context.drawBatch(batch, { view: screenView() });
 
@@ -368,6 +375,7 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
     const batch = new RenderBatch(geometry, material).add(new Matrix());
 
     try {
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
 
       // Throws rather than falling back: the fallback would silently turn one
@@ -391,6 +399,7 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
 
     try {
       backend.resetStats();
+      useEncodedFrameTarget(backend);
       backend.clear(Color.black);
       context.drawBatch(batch, { view: screenView() });
       expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 255, 255, 255]);
@@ -399,6 +408,8 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
       // Grow the quad in place and publish the change through the existing seam.
       writeQuadCorners(geometry.vertexData as ArrayBuffer, 0, 0, 56, 56, stride);
       geometry.invalidate();
+
+      useEncodedFrameTarget(backend);
 
       backend.clear(Color.black);
       context.drawBatch(batch, { view: screenView() });

@@ -269,6 +269,61 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     restoreGlobals();
   });
 
+  test('explicit CPU simulation remains available with a GPU device', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device, simulation: 'cpu' });
+    system.emit()!.velocity.set(10, 0);
+    system.update(tick(0.25));
+    expect(system.simulationBackend).toBe('cpu');
+    expect(system.gpuMode).toBe(false);
+    expect(system._storage.posX[0]).toBe(2.5);
+    expect(env.device.createBuffer).not.toHaveBeenCalled();
+    system.destroy();
+  });
+
+  test('a failed compilation retries instead of silently running the CPU path', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
+    const compile = env.device.createComputePipeline as unknown as MockInstance;
+    compile.mockImplementationOnce(() => {
+      throw new Error('compile rejected');
+    });
+    expect(() => system.update(tick(0))).toThrow('compile rejected');
+    system.update(tick(0));
+    expect(system.gpuMode).toBe(true);
+    system.destroy();
+  });
+
+  test('backend replacement clears device-integrated particles before CPU fallback', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+    system.visible = false;
+    system.collect(makeBuilder(env.device));
+    system.emit()!.lifetime = 10;
+    system.update(tick(0.25));
+    system.collect(makeBuilder(null));
+    system.update(tick(0));
+    expect(system.aliveCount).toBe(0);
+    expect(system.gpuMode).toBe(false);
+    system.destroy();
+  });
+
+  test('clearing particles preserves the allocated simulation buffers and program', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
+    system.emit();
+    system.update(tick(0));
+    const state = system.gpuState;
+    const allocations = env.buffers.length;
+    system.clearParticles();
+    system.emit();
+    system.update(tick(0));
+    expect(system.gpuState).toBe(state);
+    expect(env.buffers).toHaveLength(allocations);
+    expect(env.device.createComputePipeline).toHaveBeenCalledTimes(1);
+    system.destroy();
+  });
+
   test('CPU mode (no device passed) — first update does not allocate GPU resources', () => {
     const env = makeMockDevice();
     const system = new ParticleSystem(makeTexture(), { capacity: 64 });
@@ -1029,6 +1084,9 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toContain('more than');
 
+      const pending = (system as unknown as { _pendingDeathLifetimes: Map<number, number[]> })._pendingDeathLifetimes;
+      expect([...pending.values()].reduce((count, lifetimes) => count + lifetimes.length, 0)).toBeLessThanOrEqual(capacity);
+
       // A second overflow on the same system stays quiet.
       system.update(tick(0.02));
       emitDying();
@@ -1088,6 +1146,40 @@ describe('ParticleGpuState direct construction', () => {
     }
 
     expect(() => new ParticleGpuState(env.device, 4, [new NoWgslModule()], [], makeTexture(), new Rectangle(0, 0, 16, 16))).toThrow(/has no wgsl/);
+  });
+
+  test('uploads backend-neutral texture bytes instead of invoking a legacy uploader', () => {
+    const env = makeMockDevice();
+    const allocation = new Float32Array(512).fill(-1);
+    const values = allocation.subarray(128, 384).fill(0.375);
+    let legacyCalls = 0;
+
+    class NeutralLookup extends UpdateModule {
+      public override apply(): void {}
+
+      public override wgsl() {
+        return {
+          key: 'NeutralLookup',
+          textures: [{ name: 'curve', format: 'r32float' as const }],
+          body: 'scales[idx] = vec2<f32>(textureLoad(u_NeutralLookup_curve, 0, 0).r);',
+        };
+      }
+
+      public override textureData(): ReadonlyMap<string, Float32Array<ArrayBuffer>> {
+        return new Map([['curve', values]]);
+      }
+
+      public override uploadTextures(): void {
+        legacyCalls++;
+      }
+    }
+
+    const state = new ParticleGpuState(env.device, 4, [new NeutralLookup()], [], makeTexture(), new Rectangle(0, 0, 16, 16));
+    expect(env.queue.writeTexture).toHaveBeenCalledTimes(1);
+    const [, bytes, layout] = env.queue.writeTexture.mock.calls[0] as [unknown, ArrayBuffer, GPUImageDataLayout];
+    expect(new Float32Array(bytes, layout.offset, 256)).toEqual(values);
+    expect(legacyCalls).toBe(0);
+    state.destroy();
   });
 
   test('uploadTextures loop tolerates a module that implements uploadTextures() without declaring any wgsl() textures', () => {

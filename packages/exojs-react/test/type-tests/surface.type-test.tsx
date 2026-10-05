@@ -2,7 +2,8 @@
 // canvas-ownership `Omit` on `ExoApplicationOptions`/`ExoCanvasProps`
 // (`element`/`mount`/`ref`/`width`/`height` are hook-managed, not
 // caller-supplied), the zero-arg `Scene`-subclass constructor
-// `SceneProps.component`/`useScene` require, and the `Signal`-or-nullish
+// `SceneProps.component`/`useScene` require, the class witness `useActiveScene`
+// narrows by, and the `Signal`-or-nullish
 // shape `useSignal` accepts. Compiled by this package's own `tsconfig.test.json`
 // via `pnpm --filter @codexo/exojs-react typecheck`, against the package
 // sources rather than its built declarations.
@@ -13,6 +14,7 @@ import {
   type ExoCanvasProps,
   type SceneProps,
   type ScenesProps,
+  useActiveScene,
   useExoApp,
   type UseExoApplicationResult,
   useScene,
@@ -77,6 +79,32 @@ void scenesDeclaration;
 // @ts-expect-error - `active` selects a scene by name and must be a string.
 const badScenesDeclaration: ScenesProps = { active: 1 };
 void badScenesDeclaration;
+
+// ── useActiveScene: unnarrowed, or narrowed by a runtime class witness ──
+class OtherScene extends Scene {
+  public readonly other = true;
+}
+abstract class BaseLevelScene extends Scene {}
+
+const anyActive: Scene | null = useActiveScene();
+void anyActive;
+// @ts-expect-error - without a class witness the result is only a Scene.
+const assertedActive: OtherScene | null = useActiveScene();
+void assertedActive;
+// @ts-expect-error - there is no free result type argument; narrowing needs the class witness.
+useActiveScene<OtherScene>();
+
+const narrowedActive: GameScene | null = useActiveScene(GameScene);
+void narrowedActive;
+const abstractNarrowed: BaseLevelScene | null = useActiveScene(BaseLevelScene);
+void abstractNarrowed;
+const argfulNarrowed: SceneNeedingArgs | null = useActiveScene(SceneNeedingArgs);
+void argfulNarrowed;
+// @ts-expect-error - the result is narrowed to the witness class, not another scene type.
+const mismatchedActive: OtherScene | null = useActiveScene(GameScene);
+void mismatchedActive;
+// @ts-expect-error - the witness must be a Scene class.
+useActiveScene(NotAScene);
 
 // ── useSignal: accepts a Signal, or null/undefined before one exists ──
 declare const signal: Signal<[]>;

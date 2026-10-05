@@ -23,9 +23,10 @@ packages:
 # CI installs with --ignore-scripts and is unaffected by this.
 allowBuilds:
   '@parcel/watcher': true
-  # Pulled in by @vitest/browser-webdriverio, which we use only to drive Safari
-  # through the system's own safaridriver. Their postinstall steps download
-  # Edge and Firefox drivers we never launch, so they stay off.
+  # Pulled in by @vitest/browser-webdriverio, which drives Safari through the
+  # system's own safaridriver and, in the opt-in stock-Firefox WebGPU project, a
+  # Firefox and geckodriver the developer supplies. Their postinstall steps
+  # download Edge and Firefox drivers we never launch, so they stay off.
   edgedriver: false
   esbuild: true
   geckodriver: false
@@ -38,3 +39,12 @@ allowBuilds:
 # cooldown (which only governs Dependabot's own PRs, not manual installs).
 # `--frozen-lockfile` installs of already-pinned versions are unaffected.
 minimumReleaseAge: 4320
+
+# Vitest's jsdom Blob shim (5.0.2) finds the implementation object through the
+# wrapper's own symbol properties, which jsdom 30 no longer exposes there:
+# `URL.createObjectURL(new Blob([...]))` throws "Cannot read properties of undefined
+# (reading '_bytes')". Reproduced with vitest 5.0.2 and jsdom 30.1.1, the newest of both.
+# Without this pin a workspace package that does not depend on jsdom itself gets
+# jsdom 30 through the optional peer and a second Vitest instance with it.
+overrides:
+  jsdom: ^29.1.1

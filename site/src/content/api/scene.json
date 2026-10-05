@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 32,
+  "memberCount": 34,
   "counts": {
     "constructors": 1,
-    "methods": 12,
-    "properties": 15,
+    "methods": 13,
+    "properties": 16,
     "events": 4
   },
   "sections": [
@@ -220,7 +220,7 @@
         },
         {
           "name": "draw",
-          "signature": "draw(_context: RenderingContext): Synchronous",
+          "signature": "draw(context: RenderingContext): Synchronous",
           "signatureTokens": [
             {
               "text": "draw",
@@ -231,7 +231,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_context",
+              "text": "context",
               "kind": "param"
             },
             {
@@ -257,13 +257,13 @@
           ],
           "params": [
             {
-              "name": "_context",
+              "name": "context",
               "type": "RenderingContext",
               "optional": false
             }
           ],
           "returnType": "Synchronous",
-          "description": "Explicit per-frame rendering entry point. Override to choose what gets rendered. The default body is intentionally empty: Scene does not automatically traverse Scene.root. Auto-rendering the full hierarchy would conflict with ExoJS's \"explicit instead of implicit\" identity. Users decide which subtree(s) render each frame - context.render(this.root) is the recommended high-level path, but selective rendering (e.g. context.render(world) while skipping ui for a given frame) is equally valid and intentionally supported. Must be synchronous - see Scene.update. An async draw() would present incomplete frames."
+          "description": "Per-frame rendering entry point. The default renders Scene.root once through the context's default view, so a scene that only adds children to its root needs no override. An override replaces the default entirely: the engine does not render the root again afterwards. Render selected subtrees, several views or render textures from it; leave it empty to render nothing; call super.draw(context) to keep the root pass and add work around it. Scene systems' draw phases and Scene.ui run after this hook whether it is overridden or not. A paused scene keeps drawing; a scene still being prepared does not draw at all. Must be synchronous - see Scene.update. An async draw() would present incomplete frames."
         },
         {
           "name": "fixedUpdate",
@@ -451,6 +451,65 @@
           "description": "Optional asynchronous loading hook. Runs once per activation, before Scene.init: initial asset loading, activation-data-dependent asset selection, remote/storage reads, or any other work that must complete before synchronous setup. Reach the loader via this.loader (scene lifetime) or this.app.loader (app lifetime). Override in subclass."
         },
         {
+          "name": "query",
+          "signature": "query(types: T): ComponentQuery<T>",
+          "signatureTokens": [
+            {
+              "text": "query",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "types",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentQuery",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "types",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "ComponentQuery<T>",
+          "description": "The nodes under Scene.root or Scene.ui that carry a component of every given class, as a reusable ComponentQuery. Asking again with the same classes in the same order returns the same query, so it can be made once in Scene.init and kept in a field. Rows are [node, ...components] in the order the classes were given. Classes match exactly: a subclass instance does not match its base class. Disabled components and components of a paused scene still match."
+        },
+        {
           "name": "removeChild",
           "signature": "removeChild(child: RenderNode): this",
           "signatureTokens": [
@@ -499,7 +558,7 @@
         },
         {
           "name": "serialize",
-          "signature": "serialize(): SerializedScene",
+          "signature": "serialize(options?: SerializeOptions): SerializedScene",
           "signatureTokens": [
             {
               "text": "serialize",
@@ -508,6 +567,22 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializeOptions",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -522,7 +597,13 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "options",
+              "type": "SerializeOptions",
+              "optional": true
+            }
+          ],
           "returnType": "SerializedScene",
           "description": "Serialize this scene's structural root subtree to a plain, JSON-able SerializedScene descriptor. Captures **data, not behaviour**: structure, transforms, visuals and asset references - never update logic, signal handlers, tweens or systems. When the scene is attached to an Application, texture/asset references resolve to their Loader source keys. Reattach behaviour in code after Scene.deserialize."
         },
@@ -679,6 +760,31 @@
       "title": "Properties",
       "members": [
         {
+          "name": "[sceneDataBrand]",
+          "signature": "[sceneDataBrand]?: Data",
+          "signatureTokens": [
+            {
+              "text": "[sceneDataBrand]",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Data",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-only brand that keeps Data in the class's *emitted* type, so SceneConstructor inference can recover a scene's activation data from typeof Subclass and Application.start keeps its conditional arity. declared - erased at runtime, never assigned, and not part of authored code or autocomplete. The member is protected under a non-exported unique symbol rather than private for a reason that is invisible in the source and decisive in the emit: declaration output drops the declared type of a private member (private readonly _sceneData?; with no : Data), which removes Data from the shipped class shape. InferSceneData<typeof AnyScene> then collapses to never for every consumer, so correct code such as app.start(BareScene) is rejected against the published .d.ts while the source still compiles. A protected member keeps its type through the emit, and the symbol key keeps the brand invisible to subclasses and to autocomplete alike."
+        },
+        {
           "name": "animations",
           "signature": "animations: SceneAnimations",
           "signatureTokens": [
@@ -793,7 +899,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound coroutine facade over app.coroutines. Work queued via this.coroutines.queue(...) stops advancing while the scene is paused or suspended, resumes exactly where it left off, and is cancelled when the scene ends permanently - no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+          "description": "Scene-bound coroutine facade over app.coroutines. Work queued via this.coroutines.queue(...) stops advancing while the scene is suspended, resumes exactly where it left off, and is cancelled when the scene ends permanently - no manual cleanup required. Pausing the scene does not stop it by default (when: 'always'). Queue it with { when: 'active' } to freeze it while the scene is paused. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "inputs",
@@ -919,7 +1025,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Structural root container for this scene's hierarchy. Scene.root is an **ownership and traversal anchor**, not an automatic render-authoritative root. The framework never calls root.render(backend) for you. Scene.draw(context) is the explicit orchestration point - see Scene.draw. The root exists eagerly so addChild / removeChild can proxy to a known container, and so transform/bounds traversal has a stable parent. Selecting what to render each frame remains the scene's responsibility."
+          "description": "Root container of this scene's hierarchy, and what the default Scene.draw renders each frame. The root exists eagerly - before the scene is attached - so addChild / removeChild can proxy to a known container from a constructor or field initializer, and so transform/bounds traversal has a stable parent. A scene that overrides Scene.draw decides for itself what to render; the root stays the ownership anchor of its nodes either way."
         },
         {
           "name": "state",
@@ -1003,7 +1109,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound UI layer, rendered screen-fixed on top of the scene content (after Scene.draw). Lazily created and destroyed with the scene; add widgets via this.ui.addChild(...). Unlike Scene.root, the UI layer **is** auto-rendered each frame - a first-class overlay that always sits above the world. Its children live in screen space (origin top-left, 0..width × 0..height); pointer and keyboard input route to them ahead of the world layer."
+          "description": "Scene-bound UI layer, rendered screen-fixed on top of the scene content (after Scene.draw). Lazily created and destroyed with the scene; add widgets via this.ui.addChild(...). Unlike Scene.root, whose pass an overridden Scene.draw replaces, the UI layer is rendered every frame whatever draw() does - a first-class overlay that always sits above the world. Its children live in screen space (origin top-left, 0..width × 0..height); pointer and keyboard input route to them ahead of the world layer."
         }
       ],
       "paragraphs": [],

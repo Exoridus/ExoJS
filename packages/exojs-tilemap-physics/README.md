@@ -68,6 +68,14 @@ for (const { object, body } of built) {
 }
 ```
 
+## Isometric presentation
+
+Tile and object colliders use logical coordinates. Isometric logical cells are squares of side `tileHeight`; image-space tile collision shapes are inverse-projected before collider generation. Display layer offsets become logical translation vectors, and streamed collider bodies retain the same cell/chunk ownership rules. Orthogonal behavior is unchanged.
+
+Create a `TilePhysicsBinding(body, node, map.projection)` explicitly and call `sync()` after physics updates, or `syncInterpolated(alpha)` with the fixed-step interpolation fraction. The node's parent must use map display coordinates. The binding only writes node position, owns nothing, and leaves sprite rotation/scale to the application; a projected logical rotation is not a rigid sprite rotation. Do not attach the same node through `PhysicsWorld.attach()`, which binds directly to unprojected world coordinates.
+
+Object-layer `objects` remain logical geometry; `getDisplayObject()` is for rendering and must not be fed back into the collider builder. The Isometric Landscape example shows both representations.
+
 ## Geometry mapping
 
 | Source                                             | Collider                                             |

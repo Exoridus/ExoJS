@@ -63,10 +63,6 @@ class HudScene extends Scene {
     this.angle += delta * 60;
     this.spinner.setRotation(this.angle);
   }
-  draw(context) {
-    // scene.root is explicit; scene.ui is auto-rendered above it.
-    context.render(this.root);
-  }
   makeButton(label, color, onClick) {
     const button = new Button({ label, color, width: 160, height: 44 });
     button.onClick.add(onClick);
