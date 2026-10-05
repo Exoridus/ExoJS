@@ -5,6 +5,7 @@ import { aabbOverlap, createAabb } from './Aabb';
 import { NativePhysicsBackend } from './backend/NativePhysicsBackend';
 import type { PhysicsBackend } from './backend/PhysicsBackend';
 import { BindingRegistry } from './binding/BindingRegistry';
+import { nodeWorldAngle, nodeWorldPosition } from './binding/nodeWorldTransform';
 import type { PhysicsBinding } from './binding/PhysicsBinding';
 import { authoredCollider, Collider } from './Collider';
 import type { SweepHit } from './collision/sweep';
@@ -163,44 +164,6 @@ const isUnresolved = (record: ContactRecord, dt: number): boolean => {
   }
 
   return false;
-};
-
-/**
- * {@link PhysicsWorld.attach}'s default `position`: `node`'s current WORLD
- * translation, duck-typed the same way `AudioListener` reads a follow target -
- * real {@link SceneNode}s expose `getWorldTransform()`, test doubles that omit
- * it fall back to `(0, 0)` (the previous, surprising default).
- */
-const worldPositionOf = (node: SceneNode): Readonly<PointLike> => {
-  const asNode = node as Partial<SceneNode>;
-
-  if (typeof asNode.getWorldTransform === 'function') {
-    const world = asNode.getWorldTransform();
-
-    return { x: world.x, y: world.y };
-  }
-
-  return { x: 0, y: 0 };
-};
-
-/**
- * {@link PhysicsWorld.attach}'s default `angle` (radians): the body angle whose
- * colliders line up with `node`'s current WORLD rotation. `SceneNode` builds its
- * rotation block as `[[cosθ, sinθ], [-sinθ, cosθ]]`, which turns counter-clockwise
- * on the Y-down screen while a body angle turns clockwise, so the angle is
- * `atan2(c, a)` = `-θ` - the inverse of the negation `PhysicsBinding.sync` applies.
- * Falls back to `0` for a duck-typed node without `getWorldTransform`.
- */
-const worldAngleOf = (node: SceneNode): number => {
-  const asNode = node as Partial<SceneNode>;
-
-  if (typeof asNode.getWorldTransform === 'function') {
-    const world = asNode.getWorldTransform();
-
-    return Math.atan2(world.c, world.a);
-  }
-
-  return 0;
 };
 
 /** Construction options for a {@link PhysicsWorld}. */
@@ -604,8 +567,8 @@ export class PhysicsWorld implements BodyOwner {
   public attach(node: SceneNode, options: AttachOptions): PhysicsBody {
     const body = new PhysicsBody({
       ...(options.type !== undefined && { type: options.type }),
-      position: options.position ?? worldPositionOf(node),
-      angle: options.angle ?? worldAngleOf(node),
+      position: options.position ?? nodeWorldPosition(node),
+      angle: options.angle ?? nodeWorldAngle(node),
       ...(options.gravityScale !== undefined && { gravityScale: options.gravityScale }),
       ...(options.fixedRotation !== undefined && { fixedRotation: options.fixedRotation }),
       colliders: [
@@ -715,6 +678,12 @@ export class PhysicsWorld implements BodyOwner {
    */
   public addJoint<T extends Joint>(joint: T): T {
     this._assertAlive();
+
+    if (joint.bodyA._componentManaged || joint.bodyB._componentManaged) {
+      throw new Error(
+        'PhysicsWorld.addJoint: PhysicsBodyComponent-managed bodies do not support joints yet. Use a manually managed PhysicsBody for jointed bodies.',
+      );
+    }
 
     if (joint.bodyA === joint.bodyB) {
       throw new Error('PhysicsWorld.addJoint: a joint needs two different bodies.');

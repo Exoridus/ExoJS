@@ -82,6 +82,9 @@ export class PhysicsBody {
   /** When `false`, this body is never put to sleep. Default `true`. */
   public allowSleep = true;
 
+  /** @internal - set by `PhysicsBodyComponent`; such a body may not be constrained by a joint. */
+  public _componentManaged = false;
+
   /** @internal - Delta position X accumulated across the frame's sub-steps by the TGS integrator; written into the transform once per frame by {@link _finalizePosition}. */
   public _deltaPosX = 0;
   /** @internal - Delta position Y accumulated across the frame's sub-steps by the TGS integrator. */
@@ -596,6 +599,15 @@ export class PhysicsBody {
 
   /** @internal - mark destroyed (called by the world). */
   public _markDestroyed(): void {
+    this._destroyed = true;
+  }
+
+  /** @internal - end a body that belongs to no world: mark it and its colliders destroyed. */
+  public _discard(): void {
+    for (const collider of this._colliders) {
+      collider._markDestroyed();
+    }
+
     this._destroyed = true;
   }
 
