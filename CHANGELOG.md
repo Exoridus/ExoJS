@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-05
+
 ### Changed
 
 - **BREAKING: Add scene components and render Scene.root by default.** ([#807](https://github.com/Exoridus/ExoJS/pull/807))
