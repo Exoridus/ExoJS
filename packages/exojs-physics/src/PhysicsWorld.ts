@@ -356,11 +356,15 @@ export interface AttachOptions {
 export class PhysicsWorld implements BodyOwner {
   /** Fires when two solid colliders begin touching. Argument is an immutable snapshot. */
   public readonly onCollisionStart = new Signal<[CollisionEvent]>();
-  /** Fires when two solid colliders stop touching (or one is destroyed). */
+  /**
+   * Fires when two solid colliders stop touching. A pair also ends when one of
+   * its colliders is destroyed; that end arrives with the next step's events,
+   * ahead of them. `destroy()` ends no pairs.
+   */
   public readonly onCollisionEnd = new Signal<[CollisionEvent]>();
   /** Fires when a collider enters a sensor. */
   public readonly onSensorEnter = new Signal<[SensorEvent]>();
-  /** Fires when a collider leaves a sensor. */
+  /** Fires when a collider leaves a sensor, including by being destroyed; see {@link onCollisionEnd}. */
   public readonly onSensorExit = new Signal<[SensorEvent]>();
 
   /** World gravity (px/s², +Y down). Integrated each sub-step. */
@@ -1090,6 +1094,18 @@ export class PhysicsWorld implements BodyOwner {
 
     this._dispatching = true;
 
+    // Pairs ended by a removal since the last dispatch go first, so an end
+    // always precedes a new start of the same pair.
+    for (const event of graph.removalCollisionEnd) {
+      this.onCollisionEnd.dispatch(event);
+    }
+
+    for (const event of graph.removalSensorExit) {
+      this.onSensorExit.dispatch(event);
+    }
+
+    graph.clearRemovalEnds();
+
     for (const event of graph.collisionEnd) {
       this.onCollisionEnd.dispatch(event);
     }
@@ -1550,6 +1566,7 @@ export class PhysicsWorld implements BodyOwner {
       this._detachCollider(collider);
     }
 
+    this._backend.contactGraph.sealRemovalEnds();
     this._bindings.unbind(body);
     body._markDestroyed();
   }
@@ -1572,6 +1589,7 @@ export class PhysicsWorld implements BodyOwner {
 
   private _removeCollider(collider: Collider): void {
     this._detachCollider(collider);
+    this._backend.contactGraph.sealRemovalEnds();
     collider.body._removeCollider(collider);
   }
 
