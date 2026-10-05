@@ -309,15 +309,28 @@ export class ComponentRuntime {
   private _schedule(component: BehaviorComponent): void {
     component._ticking = true;
 
-    if (!component._inUpdateList && overrides(component, 'update')) {
-      component._inUpdateList = true;
-      this._updateList.push(component);
+    if (component._updateListOwner !== this && overrides(component, 'update')) {
+      component._updateListOwner = this;
+      this._enlist(this._updateList, component);
     }
 
-    if (!component._inFixedList && overrides(component, 'fixedUpdate')) {
-      component._inFixedList = true;
-      this._fixedList.push(component);
+    if (component._fixedListOwner !== this && overrides(component, 'fixedUpdate')) {
+      component._fixedListOwner = this;
+      this._enlist(this._fixedList, component);
     }
+  }
+
+  /**
+   * Another runtime may still list the component while its open frame keeps it from compacting, so
+   * the flag cannot say whether THIS list has an entry. A component that left and came back before
+   * compaction is the one case where it does: its old entry is revived instead of doubled.
+   */
+  private _enlist(list: BehaviorComponent[], component: BehaviorComponent): void {
+    if (this._holes && list.includes(component)) {
+      return;
+    }
+
+    list.push(component);
   }
 
   private _unschedule(component: Component): void {
@@ -339,8 +352,24 @@ export class ComponentRuntime {
     }
 
     this._holes = false;
-    compactList(this._updateList, component => (component._inUpdateList = false));
-    compactList(this._fixedList, component => (component._inFixedList = false));
+    compactList(
+      this._updateList,
+      component => component._ticking && component._runtime === this,
+      component => {
+        if (component._updateListOwner === this) {
+          component._updateListOwner = null;
+        }
+      },
+    );
+    compactList(
+      this._fixedList,
+      component => component._ticking && component._runtime === this,
+      component => {
+        if (component._fixedListOwner === this) {
+          component._fixedListOwner = null;
+        }
+      },
+    );
   }
 
   public beginFrame(): void {
@@ -397,7 +426,9 @@ export class ComponentRuntime {
       for (let i = 0; i < count; i++) {
         const component = list[i]!;
 
-        if (!component._ticking) {
+        // The runtime check matters across scenes: a component moved to another runtime while this frame was open
+        // is ticking there, and its entry here is stale.
+        if (!component._ticking || component._runtime !== this) {
           continue;
         }
 
@@ -450,14 +481,18 @@ export class ComponentRuntime {
   }
 }
 
-/** Drop the entries whose component no longer ticks, keeping the order of the rest. */
-const compactList = (list: BehaviorComponent[], release: (component: BehaviorComponent) => void): void => {
+/** Drop the entries that are no longer live, keeping the order of the rest. */
+const compactList = (
+  list: BehaviorComponent[],
+  isLive: (component: BehaviorComponent) => boolean,
+  release: (component: BehaviorComponent) => void,
+): void => {
   let write = 0;
 
   for (let read = 0; read < list.length; read++) {
     const component = list[read]!;
 
-    if (component._ticking) {
+    if (isLive(component)) {
       list[write++] = component;
     } else {
       release(component);

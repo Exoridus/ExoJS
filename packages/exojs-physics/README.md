@@ -45,7 +45,7 @@ The scene registry drives and destroys this world. The snippet creates simulatio
 
 ## Bodies owned by nodes
 
-`PhysicsBodyComponent` gives a node a body that follows the node's lifecycle: it joins the world while the node is active in a scene, leaves it with its state kept when the component is disabled, the node is removed or reparented, or its scene is retained, and is destroyed with the node.
+`PhysicsBodyComponent` gives a node a body that follows the node's lifecycle: it joins the world while the node is active in a scene, leaves it with its state kept when the component is disabled, the node is removed from its scene, or its scene is retained, and is destroyed with the node.
 
 ```ts
 import { Graphics } from '@codexo/exojs';

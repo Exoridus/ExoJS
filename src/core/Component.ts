@@ -108,10 +108,13 @@ export abstract class Component<N extends SceneNode = SceneNode> {
   public _joinStamp = 0;
   /** Whether a frame dispatch list may call this component this frame. @internal */
   public _ticking = false;
-  /** Whether an entry for this component sits in the runtime's update list. @internal */
-  public _inUpdateList = false;
-  /** Whether an entry for this component sits in the runtime's fixed-update list. @internal */
-  public _inFixedList = false;
+  /**
+   * The runtime whose update list holds this component's entry. The entry may be stale, left behind
+   * while that runtime's frame is open, so the owner is not necessarily {@link _runtime}. @internal
+   */
+  public _updateListOwner: ComponentRuntime | null = null;
+  /** Like {@link _updateListOwner}, for the fixed-update list. @internal */
+  public _fixedListOwner: ComponentRuntime | null = null;
 
   /**
    * The node this component is attached to.
