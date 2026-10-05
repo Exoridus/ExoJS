@@ -1,16 +1,14 @@
 {
   "stamps": {
     "chromium": {
-      "measuredAt": "2026-09-22",
-      "commit": "dc50cf10c",
-      "platform": "win32",
-      "release": "0.18.0"
+      "measuredAt": "2026-10-05",
+      "commit": "a7df4476f",
+      "platform": "win32"
     },
     "firefox": {
-      "measuredAt": "2026-09-22",
-      "commit": "dc50cf10c",
-      "platform": "win32",
-      "release": "0.18.0"
+      "measuredAt": "2026-10-05",
+      "commit": "a7df4476f",
+      "platform": "win32"
     },
     "webkit": {
       "measuredAt": "2026-09-22",
@@ -332,7 +330,7 @@
       "support": "supported",
       "evidence": "oracle",
       "delta": 1,
-      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds: channel = 255 * (x + 0.5) / 64"
+      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds, interpolated in sRGB and stored as linear light: channel = 255 * srgbToLinear((x + 0.5) / 64)"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -343,7 +341,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "4096/4096 pixels drawn"
+      "note": "3968/4096 pixels drawn"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -469,7 +467,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "2109/4096 pixels drawn"
+      "note": "1015/4096 pixels drawn"
     },
     {
       "scene": "lighting/lit-sprite",
@@ -1099,7 +1097,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "1020/4096 pixels drawn"
+      "note": "1015/4096 pixels drawn"
     },
     {
       "scene": "tint/half-intensity",
@@ -1592,7 +1590,7 @@
       "support": "supported",
       "evidence": "oracle",
       "delta": 1,
-      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds: channel = 255 * (x + 0.5) / 64"
+      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds, interpolated in sRGB and stored as linear light: channel = 255 * srgbToLinear((x + 0.5) / 64)"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -1603,7 +1601,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "4096/4096 pixels drawn"
+      "note": "3968/4096 pixels drawn"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -1729,7 +1727,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "2109/4096 pixels drawn"
+      "note": "1015/4096 pixels drawn"
     },
     {
       "scene": "lighting/lit-sprite",
@@ -2359,7 +2357,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "1020/4096 pixels drawn"
+      "note": "1015/4096 pixels drawn"
     },
     {
       "scene": "tint/half-intensity",
@@ -2852,7 +2850,7 @@
       "support": "supported",
       "evidence": "oracle",
       "delta": 1,
-      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds: channel = 255 * (x + 0.5) / 64"
+      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds, interpolated in sRGB and stored as linear light: channel = 255 * srgbToLinear((x + 0.5) / 64)"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -2863,7 +2861,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "4096/4096 pixels drawn"
+      "note": "3968/4096 pixels drawn"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -2989,7 +2987,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "2109/4096 pixels drawn"
+      "note": "1015/4096 pixels drawn"
     },
     {
       "scene": "lighting/lit-sprite",
@@ -3619,7 +3617,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "1020/4096 pixels drawn"
+      "note": "1015/4096 pixels drawn"
     },
     {
       "scene": "tint/half-intensity",
@@ -4112,7 +4110,7 @@
       "support": "supported",
       "evidence": "oracle",
       "delta": 1,
-      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds: channel = 255 * (x + 0.5) / 64"
+      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds, interpolated in sRGB and stored as linear light: channel = 255 * srgbToLinear((x + 0.5) / 64)"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -4123,7 +4121,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "4096/4096 pixels drawn"
+      "note": "3968/4096 pixels drawn"
     },
     {
       "scene": "gradient/linear-black-to-white",
@@ -4249,7 +4247,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "2109/4096 pixels drawn"
+      "note": "1015/4096 pixels drawn"
     },
     {
       "scene": "lighting/lit-sprite",
@@ -4879,7 +4877,7 @@
       "support": "supported",
       "evidence": "sampled",
       "delta": null,
-      "note": "1020/4096 pixels drawn"
+      "note": "1015/4096 pixels drawn"
     },
     {
       "scene": "tint/half-intensity",
