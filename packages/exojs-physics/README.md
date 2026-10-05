@@ -43,6 +43,18 @@ export class GameScene extends Scene {
 
 The scene registry drives and destroys this world. The snippet creates simulation only; bodies do not draw themselves. Use `world.attach(node, definition)` or `world.bind(body, node)` to connect visible nodes, and render them from the scene's `draw` hook. The [Physics guide](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/) supplies a complete, asset-free falling-box application.
 
+## Bodies owned by nodes
+
+`PhysicsBodyComponent` gives a node a body that follows the node's lifecycle: it joins the world while the node is active in a scene, leaves it with its state kept when the node is disabled, removed, reparented or its scene retained, and is destroyed with the node.
+
+```ts
+const physics = ball.addComponent(new PhysicsBodyComponent(world, { colliders: [{ shape: new CircleShape(12) }] }));
+
+physics.body.applyImpulse(0, -300);
+```
+
+Component-managed bodies do not support joints yet. `world.remove(body)` takes any body out of the simulation without destroying it; `world.add(body)` puts it back.
+
 ## Important boundaries
 
 Choose one stepping clock. A world registered in `scene.systems` is stepped by the host; do not also call `step()`. An independently hosted world can use `step(frameDeltaSeconds)` and its own accumulator.
