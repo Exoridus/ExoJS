@@ -2248,7 +2248,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires when two solid colliders stop touching (or one is destroyed)."
+          "description": "Fires when two solid colliders stop touching. A pair also ends when one of its colliders is destroyed; that end arrives with the next step's events, ahead of them. destroy() ends no pairs."
         },
         {
           "name": "onCollisionStart",
@@ -2371,7 +2371,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires when a collider leaves a sensor."
+          "description": "Fires when a collider leaves a sensor, including by being destroyed; see onCollisionEnd."
         }
       ],
       "paragraphs": [],

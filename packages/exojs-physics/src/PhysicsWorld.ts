@@ -358,13 +358,13 @@ export class PhysicsWorld implements BodyOwner {
   public readonly onCollisionStart = new Signal<[CollisionEvent]>();
   /**
    * Fires when two solid colliders stop touching. A pair also ends when one of
-   * its colliders leaves the world (destroyed or removed); that end arrives with
-   * the next step's events, ahead of them. `destroy()` ends no pairs.
+   * its colliders is destroyed; that end arrives with the next step's events,
+   * ahead of them. `destroy()` ends no pairs.
    */
   public readonly onCollisionEnd = new Signal<[CollisionEvent]>();
   /** Fires when a collider enters a sensor. */
   public readonly onSensorEnter = new Signal<[SensorEvent]>();
-  /** Fires when a collider leaves a sensor, including by leaving the world; see {@link onCollisionEnd}. */
+  /** Fires when a collider leaves a sensor, including by being destroyed; see {@link onCollisionEnd}. */
   public readonly onSensorExit = new Signal<[SensorEvent]>();
 
   /** World gravity (px/s², +Y down). Integrated each sub-step. */
