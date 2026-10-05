@@ -343,7 +343,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release every body, collider, binding and backend resource."
+          "description": "Release every body, collider, binding and backend resource. Changes queued from an event callback are applied first; if one of them throws, the world is still fully released and the first such error is rethrown afterwards."
         },
         {
           "name": "destroyBody",
