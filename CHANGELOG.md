@@ -6,6 +6,41 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Add scene components and render Scene.root by default.** ([#807](https://github.com/Exoridus/ExoJS/pull/807))
+- **BREAKING: Establish the linear-light color and texture pipeline.** ([#792](https://github.com/Exoridus/ExoJS/pull/792))
+- **BREAKING: Add GPU simulation parity.** ([#786](https://github.com/Exoridus/ExoJS/pull/786))
+- **BREAKING: Add realtime PCM and typed GPU readback.** ([#785](https://github.com/Exoridus/ExoJS/pull/785))
+- **BREAKING: Integrate curated example overhaul, flip bound physics rotation.** ([#776](https://github.com/Exoridus/ExoJS/pull/776))
+
+### Added
+
+- **Add removable bodies and PhysicsBodyComponent.** ([#809](https://github.com/Exoridus/ExoJS/pull/809))
+- **Support Basis Universal KTX2 textures.** ([#803](https://github.com/Exoridus/ExoJS/pull/803))
+- **Pin generated projects to the engine release line.** ([#796](https://github.com/Exoridus/ExoJS/pull/796))
+- **Support Tiled isometric maps.** ([#787](https://github.com/Exoridus/ExoJS/pull/787))
+
+### Fixed
+
+- **Keep deferred commands and first-activation placement through failures.** ([#810](https://github.com/Exoridus/ExoJS/pull/810))
+- **Request a fresh adapter per device.** ([#805](https://github.com/Exoridus/ExoJS/pull/805))
+- **Emit end events when live contacts are removed.** ([#808](https://github.com/Exoridus/ExoJS/pull/808))
+- **Link scaffolder bin before build.** ([#801](https://github.com/Exoridus/ExoJS/pull/801))
+- **Derive the build line from the package directory.** ([#798](https://github.com/Exoridus/ExoJS/pull/798))
+- **Stop treating the app scaffolder as an engine extension.** ([#797](https://github.com/Exoridus/ExoJS/pull/797))
+- **Supervise validation lanes and clean up owned processes.** ([#789](https://github.com/Exoridus/ExoJS/pull/789))
+- **Run structural gate for particle-package changes and record TF simulation.** ([#790](https://github.com/Exoridus/ExoJS/pull/790))
+- **Promote stable retained replay.** ([#784](https://github.com/Exoridus/ExoJS/pull/784))
+- **Complete core rendering integrity.** ([#782](https://github.com/Exoridus/ExoJS/pull/782))
+- **Complete persistent slot roadmap.** ([#781](https://github.com/Exoridus/ExoJS/pull/781))
+- **Keep earlier dynamic mesh draws intact on Firefox native GL.** ([#777](https://github.com/Exoridus/ExoJS/pull/777))
+
+### Documentation
+
+- **Record render-bundle spike.** ([#783](https://github.com/Exoridus/ExoJS/pull/783))
+- **Consolidate guides and polish documentation entry points.** ([#778](https://github.com/Exoridus/ExoJS/pull/778))
+
 ## [0.18.0] - 2026-09-22
 
 ### Changed
