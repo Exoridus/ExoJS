@@ -224,3 +224,132 @@ describe('PhysicsWorld.remove', () => {
     expect(body.colliders[0]!.destroyed).toBe(true);
   });
 });
+
+describe('PhysicsWorld.remove during event dispatch', () => {
+  /** A floor and a box that start touching on the first step; `inCallback` runs inside that start event. */
+  const onFirstContact = (inCallback: (world: PhysicsWorld, box: PhysicsBody) => void) => {
+    const world = new PhysicsWorld();
+
+    colliderAt(world, new BoxShape(100, 10), { x: 0, y: 0 });
+
+    const box = world.add(kinematicBox(0, -8));
+    const starts: CollisionEvent[] = [];
+    const ends: CollisionEvent[] = [];
+    let fired = false;
+
+    world.onCollisionStart.add(event => {
+      starts.push(event);
+
+      if (!fired) {
+        fired = true;
+        inCallback(world, box);
+      }
+    });
+    world.onCollisionEnd.add(event => ends.push(event));
+    world.step(DT);
+
+    return { world, box, starts, ends };
+  };
+
+  it('queues one removal when called twice', () => {
+    const { box } = onFirstContact((world, box) => {
+      world.remove(box);
+      world.remove(box);
+    });
+
+    expect(box.attached).toBe(false);
+    expect(box.destroyed).toBe(false);
+  });
+
+  it('cancels a removal when the body is added back before the dispatch ends', () => {
+    let idBefore = -2;
+    const { world, box, starts, ends } = onFirstContact((world, box) => {
+      idBefore = box.id;
+      world.remove(box);
+      world.add(box);
+    });
+
+    expect(box.attached).toBe(true);
+    expect(box.id).toBe(idBefore);
+
+    world.step(DT);
+    expect(ends).toHaveLength(0);
+    expect(starts).toHaveLength(1);
+  });
+
+  it('rejects adding a body to another world while its removal is pending', () => {
+    const other = new PhysicsWorld();
+    let error: unknown = null;
+
+    onFirstContact((world, box) => {
+      world.remove(box);
+
+      try {
+        other.add(box);
+      } catch (caught) {
+        error = caught;
+      }
+    });
+
+    expect(error).toBeInstanceOf(Error);
+    expect(other.bodies).toHaveLength(0);
+  });
+
+  it('rejects a joint on a body whose removal is pending', () => {
+    let error: unknown = null;
+
+    const { world } = onFirstContact((world, box) => {
+      const partner = world.add(kinematicBox(40, -40));
+
+      world.remove(box);
+
+      try {
+        world.addJoint(new DistanceJoint({ bodyA: box, bodyB: partner }));
+      } catch (caught) {
+        error = caught;
+      }
+    });
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toMatch(/being removed/);
+    expect(world.joints).toHaveLength(0);
+  });
+
+  it('rejects removing a body whose joint registration is pending', () => {
+    let error: unknown = null;
+
+    const { box } = onFirstContact((world, box) => {
+      const partner = world.add(kinematicBox(40, -40));
+
+      world.addJoint(new DistanceJoint({ bodyA: box, bodyB: partner }));
+
+      try {
+        world.remove(box);
+      } catch (caught) {
+        error = caught;
+      }
+    });
+
+    expect((error as Error).message).toMatch(/constrained by a joint/);
+    expect(box.attached).toBe(true);
+  });
+
+  it('lets destroyBody win over a pending removal', () => {
+    const { box } = onFirstContact((world, box) => {
+      world.remove(box);
+      world.destroyBody(box);
+    });
+
+    expect(box.destroyed).toBe(true);
+  });
+
+  it('applies a pending removal before the world is destroyed, leaving the body alive', () => {
+    const { box } = onFirstContact((world, box) => {
+      world.remove(box);
+      world.destroy();
+    });
+
+    expect(box.attached).toBe(false);
+    expect(box.destroyed).toBe(false);
+  });
+});

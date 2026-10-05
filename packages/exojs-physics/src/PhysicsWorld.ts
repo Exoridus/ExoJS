@@ -454,6 +454,14 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _commands: Array<() => void> = [];
   /** Colliders with a deferred removal queued but not yet applied; see {@link assertBodyKeepsItsMass}. */
   private readonly _pendingColliderRemovals = new Set<Collider>();
+  /**
+   * Bodies with a `remove` queued but not applied yet. An `add` of such a body
+   * before the queue drains cancels the removal instead of failing, and a
+   * second `remove` is a no-op.
+   */
+  private readonly _pendingBodyRemovals = new Set<PhysicsBody>();
+  /** Joints with a deferred registration queued; `remove` counts them as live. */
+  private readonly _pendingJoints = new Set<Joint>();
   /** Shape kinds already reported as unswept by this world; see {@link warnUnsweptBulletShape}. */
   private readonly _warnedUnsweptKinds = new Set<string>();
   /** Pooled union-find parent array for the per-step island pass (reused; sized to the body count). */
@@ -556,6 +564,10 @@ export class PhysicsWorld implements BodyOwner {
   public add(body: PhysicsBody): PhysicsBody {
     this._assertAlive();
 
+    if (this._pendingBodyRemovals.delete(body)) {
+      return body;
+    }
+
     if (body.attached) {
       throw new Error('PhysicsWorld.add: this body has already been added to a world.');
     }
@@ -627,6 +639,10 @@ export class PhysicsWorld implements BodyOwner {
    * The colliders in those end events are the body's own, so by the time the
    * events arrive their ids read `-1`, or the new ids of a re-add.
    *
+   * Deferred when called inside an event callback. Adding the body back before
+   * that dispatch ends cancels the removal, and calling `remove` again in the
+   * meantime does nothing.
+   *
    * @throws if the body is destroyed, does not belong to this world, or is
    *   constrained by a joint of this world (remove the joint first, or end the
    *   body with {@link destroyBody}).
@@ -642,13 +658,22 @@ export class PhysicsWorld implements BodyOwner {
       throw new Error('PhysicsWorld.remove: this body does not belong to this world.');
     }
 
+    if (this._pendingBodyRemovals.has(body)) {
+      return;
+    }
+
     if (this._isJointed(body)) {
       throw new Error(
         'PhysicsWorld.remove: this body is constrained by a joint. Remove the joint with removeJoint() first, or end the body with destroyBody().',
       );
     }
 
-    this._defer(() => this._detachBody(body));
+    this._pendingBodyRemovals.add(body);
+    this._defer(() => {
+      if (this._pendingBodyRemovals.delete(body)) {
+        this._detachBody(body);
+      }
+    });
   }
 
   /**
@@ -657,6 +682,7 @@ export class PhysicsWorld implements BodyOwner {
    * gone. Deferred when called inside a callback.
    */
   public destroyBody(body: PhysicsBody): void {
+    this._pendingBodyRemovals.delete(body);
     this._defer(() => this._removeBody(body));
   }
 
@@ -698,10 +724,17 @@ export class PhysicsWorld implements BodyOwner {
       throw new Error('PhysicsWorld.addJoint: a joint cannot constrain a destroyed body.');
     }
 
+    if (this._pendingBodyRemovals.has(joint.bodyA) || this._pendingBodyRemovals.has(joint.bodyB)) {
+      throw new Error('PhysicsWorld.addJoint: a joint cannot constrain a body that is being removed from the world.');
+    }
+
     joint.bodyA.wake();
     joint.bodyB.wake();
 
+    this._pendingJoints.add(joint);
     this._defer(() => {
+      this._pendingJoints.delete(joint);
+
       // Checked here rather than above: the bodies may legitimately be added in
       // the same dispatch as the joint, and the command queue is FIFO, so this
       // is the first point at which their membership is settled. A joint whose
@@ -1084,6 +1117,8 @@ export class PhysicsWorld implements BodyOwner {
     this._joints.length = 0;
     this._uncollidableJointPairs.clear();
     this._commands.length = 0;
+    this._pendingBodyRemovals.clear();
+    this._pendingJoints.clear();
     this._bindings.clear();
     this._backend.destroy();
     this.onCollisionStart.destroy();
@@ -1630,6 +1665,12 @@ export class PhysicsWorld implements BodyOwner {
   /** Whether a live joint of this world constrains `body`. */
   private _isJointed(body: PhysicsBody): boolean {
     for (const joint of this._joints) {
+      if (joint.bodyA === body || joint.bodyB === body) {
+        return true;
+      }
+    }
+
+    for (const joint of this._pendingJoints) {
       if (joint.bodyA === body || joint.bodyB === body) {
         return true;
       }
