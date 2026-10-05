@@ -82,6 +82,14 @@ export class ContactGraph {
   public readonly sensorEnter: SensorEvent[] = [];
   /** Immutable sensor-exit snapshots produced by the latest {@link update}. */
   public readonly sensorExit: SensorEvent[] = [];
+  /**
+   * End snapshots of touching solid pairs whose collider left the world
+   * between detection passes. {@link update} keeps them; the world dispatches
+   * them ahead of the next pass's events, then calls {@link clearRemovalEnds}.
+   */
+  public readonly removalCollisionEnd: CollisionEvent[] = [];
+  /** Sensor counterpart of {@link removalCollisionEnd}. */
+  public readonly removalSensorExit: SensorEvent[] = [];
   /** Touching solid contacts this pass, in deterministic order - consumed by the solver. */
   public readonly solidContacts: ContactRecord[] = [];
 
@@ -104,6 +112,9 @@ export class ContactGraph {
   // are engine-owned proxies appear here; everything else emits directly.
   private readonly _authoredPairs = new Map<number, number>();
   private readonly _modifierContext = new MutableContactModifierContext();
+  // How much of each removal buffer is already sorted; see sealRemovalEnds.
+  private _sealedCollisionEnds = 0;
+  private _sealedSensorExits = 0;
 
   /** Touching pairs currently tracked (for debug draw). */
   public get recordCount(): number {
@@ -227,15 +238,20 @@ export class ContactGraph {
   }
 
   /**
-   * Remove every record referencing `collider` (called when a collider is
-   * destroyed). Passing an authored chain collider also drops the records of
-   * every edge proxy it owns.
+   * Remove every record referencing `collider` (called when a collider leaves
+   * the world). Passing an authored chain collider also drops the records of
+   * every edge proxy it owns. A touching pair queues one end snapshot per
+   * authored pair into the removal buffers.
    */
   public removeCollider(collider: Collider): void {
     for (const [key, record] of this._records) {
       if (record.a === collider || record.b === collider || record.ownerA === collider || record.ownerB === collider) {
-        if (record.touching) {
-          this._releaseAuthoredPair(record);
+        if (record.touching && this._releaseAuthoredPair(record)) {
+          if (record.isSensor) {
+            this.removalSensorExit.push(makeSensorEvent(record.ownerA, record.ownerB));
+          } else {
+            this.removalCollisionEnd.push(makeEndEvent(record.ownerA, record.ownerB));
+          }
         }
 
         this._records.delete(key);
@@ -243,10 +259,32 @@ export class ContactGraph {
     }
   }
 
+  /**
+   * Sort the removal ends queued since the previous seal by collider ids, the
+   * order {@link update} gives its own events. Called once per removal while
+   * the removed colliders still carry the ids they were detected under, since
+   * a non-destructive removal resets them afterwards.
+   */
+  public sealRemovalEnds(): void {
+    sortTail(this.removalCollisionEnd, this._sealedCollisionEnds, byColliderPair);
+    sortTail(this.removalSensorExit, this._sealedSensorExits, bySensorPair);
+    this._sealedCollisionEnds = this.removalCollisionEnd.length;
+    this._sealedSensorExits = this.removalSensorExit.length;
+  }
+
+  /** Forget the removal ends once they have been dispatched. */
+  public clearRemovalEnds(): void {
+    this.removalCollisionEnd.length = 0;
+    this.removalSensorExit.length = 0;
+    this._sealedCollisionEnds = 0;
+    this._sealedSensorExits = 0;
+  }
+
   /** Drop all records (world reset/destroy). */
   public clear(): void {
     this._records.clear();
     this._authoredPairs.clear();
+    this.clearRemovalEnds();
   }
 
   private _emitBegin(record: ContactRecord): void {
@@ -489,3 +527,15 @@ const byColliderPair = (x: CollisionEvent, y: CollisionEvent): number => x.colli
 const bySensorPair = (x: SensorEvent, y: SensorEvent): number => x.sensor.id - y.sensor.id || x.other.id - y.other.id;
 
 const byRecordPair = (x: ContactRecord, y: ContactRecord): number => x.a.id - y.a.id || x.b.id - y.b.id;
+
+/** Sort `items[from..]` in place. Removal is not a per-step path, so the splice is acceptable. */
+const sortTail = <T>(items: T[], from: number, compare: (x: T, y: T) => number): void => {
+  if (items.length - from < 2) {
+    return;
+  }
+
+  const tail = items.splice(from);
+
+  tail.sort(compare);
+  items.push(...tail);
+};
