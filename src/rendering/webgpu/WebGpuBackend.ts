@@ -185,71 +185,6 @@ const DEPTH_STENCIL_BYTES_PER_PIXEL = 4;
 export const mipmapWgsl: string = mipmapWgslModule;
 
 /**
- * The one `GPUAdapter` requested per `GPU` object, shared across every
- * `WebGpuBackend` instance that initializes against that same `navigator.gpu`.
- *
- * `GPUDevice` has an explicit `destroy()` for exactly this reason - see the
- * comment on {@link WebGpuBackend.destroy} - but the spec gives `GPUAdapter`
- * no equivalent: an adapter is released only once every reference to it is
- * garbage collected, and GC timing is not something a hot path can rely on.
- * An application that creates one `Application` never notices, but a process
- * that constructs many backends back to back (the rendering parity matrix
- * does, once per scene per property) can request adapters faster than the
- * browser reclaims the previous ones. Firefox in particular enforces a low
- * ceiling on simultaneously live adapters/devices and fails the next
- * `requestDevice()` with "not enough memory" well before anything has
- * actually leaked. Mirroring a single adapter here removes the pile-up
- * without changing behaviour: an adapter can mint any number of devices, so
- * reuse costs nothing a fresh request would have bought.
- *
- * Keyed by the `GPU` object rather than held as one bare value so a real page
- * - which keeps exactly one `navigator.gpu` for its whole life - shares one
- * adapter, while a test that installs its own mock `GPU` object gets its own
- * cache entry for free and cannot observe another test's adapter. A `WeakMap`
- * also means a mock `GPU` object never outlives its test in this cache.
- */
-const sharedAdapters = new WeakMap<GPU, GPUAdapter>();
-const pendingAdapterRequests = new WeakMap<GPU, Promise<GPUAdapter | null>>();
-
-/** The `GPU` object's shared adapter, requesting it once if nothing has yet. */
-const requestSharedAdapter = async (gpu: GPU): Promise<GPUAdapter | null> => {
-  const cached = sharedAdapters.get(gpu);
-
-  if (cached !== undefined) return cached;
-
-  let pending = pendingAdapterRequests.get(gpu);
-
-  if (pending === undefined) {
-    pending = gpu.requestAdapter();
-    pendingAdapterRequests.set(gpu, pending);
-  }
-
-  const adapter = await pending;
-
-  pendingAdapterRequests.delete(gpu);
-
-  if (adapter !== null) {
-    sharedAdapters.set(gpu, adapter);
-  }
-
-  return adapter;
-};
-
-/**
- * Drops the `GPU` object's shared adapter so the next backend to initialize
- * against it requests a new one.
- *
- * Called when there is a concrete reason to believe the cached adapter is no
- * longer good: `requestDevice()` rejected on it, or a device it minted was
- * lost for a reason other than an explicit `destroy()` - loss this backend
- * did not cause is the strongest signal available that the adapter itself,
- * not just one device, went away (a GPU reset invalidates both).
- */
-const invalidateSharedAdapter = (gpu: GPU): void => {
-  sharedAdapters.delete(gpu);
-};
-
-/**
  * WebGPU implementation of {@link RenderBackend}. Manages the GPU device,
  * canvas context configuration, format selection, managed-texture cache
  * (sized + format-aware), pre-warmed render pipelines per (blend-mode ×
@@ -259,8 +194,7 @@ const invalidateSharedAdapter = (gpu: GPU): void => {
  *
  * Detects device loss via the platform's `device.lost` Promise and
  * automatically attempts recovery: drops dead GPU state, requests a
- * device from the shared adapter (a fresh one if the loss was not an
- * explicit `destroy()`) with exponential backoff (up to 5 tries), then
+ * device from a fresh adapter with exponential backoff (up to 5 tries), then
  * fires {@link WebGpuBackend.onDeviceRestored}. While recovering, draw
  * submissions silently no-op so user code survives transient outages
  * without explicit error handling. If every retry fails, a
@@ -2487,14 +2421,13 @@ export class WebGpuBackend implements RenderBackend {
       throw new Error('WebGPU is available, but navigator.gpu.getPreferredCanvasFormat is not implemented.');
     }
 
-    // Request the adapter AND the device before acquiring a WebGPU canvas
+    // Request a fresh adapter and its device before acquiring a WebGPU canvas
     // context - see the getContext('webgpu') call below for why the order
-    // matters. The adapter is the process-wide shared one (see
-    // `requestSharedAdapter`), not a fresh request per backend.
+    // matters. An adapter can only be used to create one device.
     let adapter: GPUAdapter | null;
 
     try {
-      adapter = await requestSharedAdapter(gpuNavigator.gpu);
+      adapter = await gpuNavigator.gpu.requestAdapter();
     } catch (error) {
       throw this._createInitializationError('Failed to request a WebGPU adapter.', error);
     }
@@ -2508,15 +2441,10 @@ export class WebGpuBackend implements RenderBackend {
     try {
       device = await this._requestDeviceFrom(adapter);
     } catch (error) {
-      // The shared adapter may have gone stale since another backend last
-      // used it - released by the browser, or invalidated by a driver reset.
-      // One retry against a freshly requested adapter tells that apart from
-      // an ordinary request failure: a genuinely dead adapter fails again
-      // immediately, so the retry only ever costs one extra round trip.
-      invalidateSharedAdapter(gpuNavigator.gpu);
+      // Each adapter can create only one device, so retry against a fresh one.
 
       try {
-        adapter = await requestSharedAdapter(gpuNavigator.gpu);
+        adapter = await gpuNavigator.gpu.requestAdapter();
       } catch (retryError) {
         throw this._createInitializationError('Failed to request a WebGPU adapter.', retryError);
       }
@@ -2636,16 +2564,6 @@ export class WebGpuBackend implements RenderBackend {
     // user code). Don't try to recover - the loss is intentional.
     if (info.reason === 'destroyed') {
       return;
-    }
-
-    // A loss we did not cause is the strongest signal available that the
-    // adapter itself may be gone too (a GPU reset invalidates both), so
-    // recovery requests a fresh one rather than risk retrying against a dead
-    // cached adapter for every one of its attempts.
-    const gpuNavigator = this._getGpuNavigator();
-
-    if (gpuNavigator !== null) {
-      invalidateSharedAdapter(gpuNavigator.gpu);
     }
 
     void this._attemptRecovery();
