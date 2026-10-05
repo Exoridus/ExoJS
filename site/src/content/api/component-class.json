@@ -1,0 +1,87 @@
+{
+  "title": "ComponentClass",
+  "description": "Any concrete or abstract component class: the token SceneNode.getComponent and Scene.query look components up by. Matching is by exact class identity - a subclass is a different token.",
+  "symbol": "ComponentClass",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Any concrete or abstract component class: the token SceneNode.getComponent and Scene.query look components up by. Matching is by exact class identity - a subclass is a different token."
+      ],
+      "importLine": "import { ComponentClass } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ComponentClass",
+          "signature": "(args: never[]) => C",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Component.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Component.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Component.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Component.ts"
+}

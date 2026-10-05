@@ -13,12 +13,12 @@ Core is the peer dependency. This package exposes directly constructed systems, 
 ## Start with a scene-owned lightmap
 
 ```ts
-import { Color, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
+import { Color, Graphics, Scene } from '@codexo/exojs';
 import { LightmapLighting, PointLight } from '@codexo/exojs-lighting';
 
 export class LitScene extends Scene {
   override init(): void {
-    const lighting = new LightmapLighting(this.app, { ambient: new Color(25, 25, 35) });
+    const lighting = new LightmapLighting(this.app, { ambient: new Color(25, 25, 35), scene: this });
     const floor = new Graphics();
     const lamp = new PointLight({ radius: 300, color: new Color(255, 190, 100) });
 
@@ -29,14 +29,10 @@ export class LitScene extends Scene {
     this.root.addChild(floor, lamp);
     lighting.add(lamp);
   }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
-  }
 }
 ```
 
-Register and start `LitScene` in an `Application`. Construct host-bound lighting in `init`, not in a field initializer that accesses `this.app` before attachment. The [Lighting guide](https://exoridus.github.io/ExoJS/en/guide/effects/lighting/) includes the complete application and the shadow and normal-map workflows.
+Register and start `LitScene` in an `Application`. Construct host-bound lighting in `init`, not in a field initializer that accesses `this.app` before attachment. Pass `scene: this`: the application's frame slot is shared by every scene, and a bound system installs its passes there only while its scene is active, so a scene that is preloaded, retained, or being torn down never lights the frame of the scene on screen. Lighting built without `scene` is application-wide and stays in the frame slot until it is destroyed. The [Lighting guide](https://exoridus.github.io/ExoJS/en/guide/effects/lighting/) includes the complete application and the shadow and normal-map workflows.
 
 ## Choose deliberately
 

@@ -89,6 +89,23 @@ export interface LightingBackend {
    */
   collectRegion(out: Rectangle): boolean;
 
-  /** Release GPU resources. The lights are not owned. */
+  /**
+   * Take this renderer's place in the host's frame: install whatever passes it
+   * runs in the frame slot and start following the host's surface. A renderer
+   * that runs no pass has nothing to install. Idempotent.
+   *
+   * Construction never does this on its own, so a renderer can be built for a
+   * scene that is not on screen yet without touching the frame another scene
+   * is drawing.
+   */
+  attach(): void;
+
+  /**
+   * Leave the host's frame again, keeping every resource for a later
+   * {@link attach}. Idempotent.
+   */
+  detach(): void;
+
+  /** Leave the host's frame if still in it, and release GPU resources. The lights are not owned. */
   destroy(): void;
 }

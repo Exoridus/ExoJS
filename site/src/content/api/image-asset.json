@@ -1,6 +1,6 @@
 {
   "title": "ImageAsset",
-  "description": "Dispatch token for image loading. `loader.load(Asset.type('image', 'img.png'))` returns `Promise<HTMLImageElement>`.",
+  "description": "Dispatch token for image loading. `loader.load(Asset.type('image', 'img.png'))` returns `Promise<DecodedImage>`: an `ImageBitmap` where the environment has `createImageBitmap`, an `HTMLImageElement` otherwise. Narrow before reading element-only members such as `naturalWidth` or `src`.",
   "symbol": "ImageAsset",
   "kind": "class",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for image loading.",
-        "`loader.load(Asset.type('image', 'img.png'))` returns `Promise<HTMLImageElement>`."
+        "`loader.load(Asset.type('image', 'img.png'))` returns `Promise<DecodedImage>`: an `ImageBitmap` where the environment has `createImageBitmap`, an `HTMLImageElement` otherwise. Narrow before reading element-only members such as `naturalWidth` or `src`."
       ],
       "importLine": "import { ImageAsset } from '@codexo/exojs'",
       "sourceLink": null

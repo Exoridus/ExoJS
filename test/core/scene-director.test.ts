@@ -40,6 +40,8 @@ import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
+import type { RenderingContext } from '#rendering/RenderingContext';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 interface InputSystemStub {
@@ -3442,5 +3444,215 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
     } finally {
       destroySpy.mockRestore();
     }
+  });
+});
+
+describe('default root rendering', () => {
+  const rootRenders = (app: ApplicationStub, scene: Scene | null): number => app.rendering.render.mock.calls.filter(([node]) => node === scene?.root).length;
+
+  test('the root exists before attachment and addChild/removeChild work on it', () => {
+    const scene = new Scene();
+    const child = new Container();
+
+    scene.addChild(child);
+    expect(scene.root.children).toEqual([child]);
+
+    scene.removeChild(child);
+    expect(scene.root.children).toEqual([]);
+  });
+
+  test('a scene without a draw override renders its root once per frame, then systems, then its UI', async () => {
+    const app = createApplicationStub();
+    const order: string[] = [];
+    const TestScene = makeSceneClass();
+    const manager = new SceneDirector(app, { test: TestScene });
+
+    await manager.change(TestScene);
+
+    const scene = manager.currentScene!;
+    scene.addChild(new Container());
+    scene.systems.add({
+      draw: () => {
+        order.push('system');
+      },
+    });
+    vi.spyOn(scene.ui, '_render').mockImplementation(() => {
+      order.push('ui');
+    });
+    app.rendering.render.mockImplementation((node: unknown) => {
+      if (node === scene.root) order.push('root');
+    });
+
+    tick(manager, app);
+    tick(manager, app);
+
+    expect(order).toEqual(['root', 'system', 'ui', 'root', 'system', 'ui']);
+    expect(rootRenders(app, scene)).toBe(2);
+  });
+
+  test('an override replaces the default: no second, automatic root pass', async () => {
+    const app = createApplicationStub();
+    const world = new Container();
+    const TestScene = makeSceneClass({
+      draw(context: RenderingContext): void {
+        context.render(world);
+      },
+    });
+    const manager = new SceneDirector(app, { test: TestScene });
+
+    await manager.change(TestScene);
+    const ui = vi.spyOn(manager.currentScene!.ui, '_render').mockImplementation(() => undefined);
+    tick(manager, app);
+
+    expect(app.rendering.render.mock.calls.map(([node]) => node)).toEqual([world]);
+    expect(rootRenders(app, manager.currentScene)).toBe(0);
+    expect(ui).toHaveBeenCalledTimes(1);
+  });
+
+  test('an empty override suppresses the root but keeps systems and UI', async () => {
+    const app = createApplicationStub();
+    const systemDraw = vi.fn();
+    const TestScene = makeSceneClass({ draw: () => undefined });
+    const manager = new SceneDirector(app, { test: TestScene });
+
+    await manager.change(TestScene);
+    manager.currentScene!.systems.add({ draw: systemDraw });
+    const ui = vi.spyOn(manager.currentScene!.ui, '_render').mockImplementation(() => undefined);
+    tick(manager, app);
+
+    expect(app.rendering.render).not.toHaveBeenCalled();
+    expect(systemDraw).toHaveBeenCalledTimes(1);
+    expect(ui).toHaveBeenCalledTimes(1);
+  });
+
+  test('super.draw() is one deliberate root pass, not two', async () => {
+    const app = createApplicationStub();
+    const overlay = new Container();
+
+    class LayeredScene extends Scene {
+      public override draw(context: RenderingContext): void {
+        super.draw(context);
+        context.render(overlay);
+      }
+    }
+
+    const manager = new SceneDirector(app, { layered: LayeredScene });
+
+    await manager.change(LayeredScene);
+    tick(manager, app);
+
+    expect(app.rendering.render.mock.calls.map(([node]) => node)).toEqual([manager.currentScene!.root, overlay]);
+  });
+
+  test('a paused scene keeps rendering its root', async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const manager = new SceneDirector(app, { test: TestScene });
+
+    await manager.change(TestScene);
+    manager.pause();
+    tick(manager, app);
+
+    expect(rootRenders(app, manager.currentScene)).toBe(1);
+  });
+
+  test('a preloaded scene does not render; a retained scene stops and resumes rendering on restore', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const Preloaded = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second, preloaded: Preloaded });
+
+    await manager.change(First);
+    const first = manager.currentScene!;
+
+    await manager.preload(Preloaded);
+    tick(manager, app);
+
+    expect(app.rendering.render.mock.calls.map(([node]) => node)).toEqual([first.root]);
+
+    await manager.change(Second, { suspendCurrent: true });
+    const second = manager.currentScene!;
+    app.rendering.render.mockClear();
+    tick(manager, app);
+
+    expect(rootRenders(app, first)).toBe(0);
+    expect(rootRenders(app, second)).toBe(1);
+
+    await manager.restore(First);
+    app.rendering.render.mockClear();
+    tick(manager, app);
+
+    expect(app.rendering.render.mock.calls.map(([node]) => node)).toEqual([first.root]);
+  });
+
+  test('an outgoing-frame snapshot captures the default root pass exactly once', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+    const first = manager.currentScene!;
+    app.rendering.render.mockClear();
+
+    let environmentRef = null as SceneTransitionEnvironment | null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'snapshot', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    expect(app.rendering._renderSurfaceInto).toHaveBeenCalled();
+    expect(rootRenders(app, first)).toBe(1);
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    session.done = true;
+    tick(manager, app);
+    await navigation;
+  });
+
+  test('rendering into several views and a render texture neither repeats the default nor ticks the scene again', async () => {
+    const app = createApplicationStub();
+    const update = vi.fn();
+    const fixedUpdate = vi.fn();
+    const target = new RenderTexture(64, 64);
+    const leftView = { id: 'left' };
+    const rightView = { id: 'right' };
+
+    class SplitScene extends Scene {
+      public override update(): void {
+        update();
+      }
+
+      public override fixedUpdate(): void {
+        fixedUpdate();
+      }
+
+      public override draw(context: RenderingContext): void {
+        context.render(this.root, { view: leftView } as never);
+        context.render(this.root, { view: rightView } as never);
+        context.render(this.root, { target } as never);
+      }
+    }
+
+    const manager = new SceneDirector(app, { split: SplitScene });
+
+    await manager.change(SplitScene);
+    tick(manager, app);
+
+    expect(rootRenders(app, manager.currentScene)).toBe(3);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(fixedUpdate.mock.calls.length).toBeLessThanOrEqual(1);
   });
 });

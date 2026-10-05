@@ -1,15 +1,4 @@
-import {
-  AnimatedSprite,
-  Application,
-  Asset,
-  Color,
-  FixedResolutionCanvasSizing,
-  Keyboard,
-  type RenderingContext,
-  Scene,
-  Spritesheet,
-  type SpritesheetData,
-} from '@codexo/exojs';
+import { AnimatedSprite, Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Spritesheet, type SpritesheetData } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'] as const;
@@ -73,10 +62,6 @@ class FrameAnimationScene extends Scene {
 
   private updateHud(frame: number): void {
     this.hud.setStatus(`${CHARACTERS[this.characterIndex]} · frame ${frame + 1}/2 · ${this.playing ? 'playing' : 'paused'}`);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 
   override destroy(): void {

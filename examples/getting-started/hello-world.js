@@ -22,9 +22,6 @@ class HelloWorldScene extends Scene {
       this.sprite.rotate(delta * 120);
     }
   }
-  draw(context) {
-    context.render(this.root);
-  }
 }
 // #endregion guide:first-scene
 const app = new Application({

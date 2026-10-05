@@ -36,10 +36,10 @@ npm run dev
 
 The starter is a Vite + TypeScript project with a visible, animated scene. Choose `minimal`, `game-starter`, `platformer`, `top-down`, `ui-app`, or `audio-reactive`. The [Setup guide](https://exoridus.github.io/ExoJS/en/guide/getting-started/setup/) explains the templates, project layout, and installation into an existing application.
 
-A scene contains ordinary TypeScript state and explicitly chooses what to render. This example needs no external assets:
+A scene contains ordinary TypeScript state and renders whatever is attached to its root; override `draw` when it should render something else. This example needs no external assets:
 
 ```ts
-import { Application, Color, Graphics, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, type Seconds } from '@codexo/exojs';
 
 class MainScene extends Scene {
   private readonly box = new Graphics();
@@ -53,10 +53,6 @@ class MainScene extends Scene {
 
   override update(delta: Seconds): void {
     this.box.rotate(90 * delta);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

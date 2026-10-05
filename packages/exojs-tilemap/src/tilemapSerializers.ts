@@ -50,7 +50,7 @@ export const tileMapNodeSerializer: NodeSerializer<TileMapNode> = {
     return out;
   },
   read(data, ctx) {
-    const map = ctx.resolveAsset(typeof data.map === 'string' ? data.map : null, TileMap);
+    const map = ctx.resolveAsset(data.map, TileMap);
 
     if (map === null) {
       throw new Error('TileMapNode deserialize requires its TileMap to be pre-loaded into the Loader (procedural maps have no source key).');

@@ -30,6 +30,11 @@ export interface SceneCoroutineOptions extends CoroutineOptions {
  * coroutine keeps its body alive and is merely stepped past. Only the scene
  * ending, {@link Coroutine.cancel}, an aborting signal or scope destruction
  * settles it.
+ *
+ * A paused scene is still `Active`, so pause alone does not stop a coroutine:
+ * the default availability is `'always'`. Pass
+ * {@link SceneCoroutineOptions.when | `when: 'active'`} for work that should
+ * freeze while the scene is paused.
  */
 export class SceneCoroutines implements Destroyable {
   private readonly _coroutines = new Map<Coroutine<unknown, unknown>, SceneAvailability>();

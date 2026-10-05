@@ -93,12 +93,17 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   // Pausable
   // -------------------------------------------------------------------------
 
+  /** While playback is still waiting for the autoplay unlock, also cancels that deferred start. */
   public pause(): void {
-    if (!this._ended) this._element.pause();
+    if (this._ended) return;
+    this._clearUnlockHandler();
+    this._element.pause();
   }
 
+  /** While audio is still locked, defers the start to the unlock gesture again. */
   public resume(): void {
-    if (!this._ended) void this._element.play();
+    if (this._ended || this._unlockHandler !== null) return;
+    this._startPlayback();
   }
 
   public get paused(): boolean {
@@ -179,15 +184,29 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
    */
   private _startPlayback(): void {
     if (isAudioContextReady()) {
-      void this._element.play();
+      this._play();
       return;
     }
 
     this._unlockHandler = (): void => {
       this._clearUnlockHandler();
-      if (!this._ended) void this._element.play();
+      if (!this._ended) this._play();
     };
     onAudioContextReady.add(this._unlockHandler);
+  }
+
+  /**
+   * A `pause()` issued before the element's `play()` promise settles rejects
+   * that promise with an `AbortError` - the expected outcome of starting a voice
+   * paused, not a failure. Anything else still surfaces.
+   */
+  private _play(): void {
+    // Wrapped: a test double or legacy element may return nothing from play().
+    Promise.resolve(this._element.play()).catch((error: unknown) => {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        throw error;
+      }
+    });
   }
 
   private _clearUnlockHandler(): void {

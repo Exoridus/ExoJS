@@ -1,7 +1,7 @@
-import { Color, type Filter, Rectangle } from '@codexo/exojs';
+import { Color, type Filter, Rectangle, SceneState } from '@codexo/exojs';
 
 import type { LightingBackend } from './backends/LightingBackend';
-import type { LightingHost } from './LightingHost';
+import type { LightingHost, LightingScene } from './LightingHost';
 import type { Light } from './lights/Light';
 import { lightRadius } from './lights/reach';
 import { SunLight } from './lights/SunLight';
@@ -67,6 +67,29 @@ export interface LightingOptions {
   readonly ambient?: Color;
   /** Filters over the shaded frame, in order. Each concrete system documents what they read. */
   readonly post?: readonly Filter[];
+  /**
+   * The scene this system lights. Pass it whenever the system is built for one
+   * scene - in its `init()` - and registered in that scene's `systems`.
+   *
+   * The host's frame slot is application-wide, so a bound system installs its
+   * passes only while its scene is {@link SceneState.Active} (paused or not):
+   * on activation or restore, or at construction when the scene is already
+   * active. It leaves the frame slot when the scene is suspended for
+   * retention, and for good as soon as the scene's teardown begins. A scene
+   * prepared ahead of time, a preload discarded before it was ever shown, and
+   * a retained scene therefore leave the frame of the scene on screen alone,
+   * and keep their resources for when they are shown.
+   *
+   * Without it the system is application-wide: its passes go into the frame
+   * slot at construction and stay until it is destroyed, whatever scene is on
+   * screen - which is what a system built outside any scene, or registered in
+   * `app.systems`, wants.
+   *
+   * Passes enter the frame slot at the end of it, so a frame pass the scene
+   * installs itself before its lighting activates runs ahead of the lighting.
+   * A filter over the lit frame belongs in {@link LightingOptions.post}.
+   */
+  readonly scene?: LightingScene;
 }
 
 const scratchPosition = { x: 0, y: 0 };
@@ -77,7 +100,7 @@ const scratchPosition = { x: 0, y: 0 };
  *
  * ```ts
  * // In Scene.init(), where the scene's application is attached:
- * const lighting = new LightmapLighting(this.app, { ambient: new Color(11, 16, 32) });
+ * const lighting = new LightmapLighting(this.app, { ambient: new Color(11, 16, 32), scene: this });
  *
  * this.systems.add(lighting);
  * lighting.add(player.addChild(new PointLight({ radius: 260 })));
@@ -99,7 +122,13 @@ const scratchPosition = { x: 0, y: 0 };
  * The renderer and its GPU resources. Lights are scene nodes owned by the tree
  * they hang in - registering one does not transfer ownership, and destroying a
  * registered light unregisters it. Occluder and normal sources, filters passed
- * as `post`, and the host are the caller's too.
+ * as `post`, the host and the scene are the caller's too.
+ *
+ * # Which frame it lights
+ *
+ * The host's frame slot belongs to the whole application. A system given its
+ * {@link LightingOptions.scene} takes part in it only while that scene is
+ * active; one without is in it from construction until destroyed.
  *
  * # Ordering
  *
@@ -115,6 +144,7 @@ export abstract class Lighting {
   protected readonly _backend: LightingBackend;
 
   private readonly _host: LightingHost | null;
+  private readonly _scene: LightingScene | null;
   private readonly _post: readonly Filter[];
   private readonly _lights: Light[] = [];
   private readonly _occluders: OccluderSource[] = [];
@@ -135,6 +165,19 @@ export abstract class Lighting {
     // term shades an untouched scene black, and "black until the first tick"
     // is not a state the vocabulary admits.
     this._backend.publish(this._lights, this.ambient, this._field, this._surfaces);
+    this._scene = options.scene ?? null;
+
+    if (this._scene === null) {
+      this._backend.attach();
+    } else if (!this._scene.lifecycleSignal.aborted) {
+      this._scene.onActivate.add(this._onSceneActivate);
+      this._scene.onSuspend.add(this._onSceneSuspend);
+      this._scene.lifecycleSignal.addEventListener('abort', this._onSceneEnd);
+
+      if (this._scene.state === SceneState.Active) {
+        this._backend.attach();
+      }
+    }
   }
 
   /** Filters over the shaded frame, in order. Caller-owned and fixed for this system's lifetime. */
@@ -378,13 +421,46 @@ export abstract class Lighting {
     this._backend.publish(this._lights, this.ambient, this._field, this._surfaces);
   }
 
-  /** Release the renderer's resources. Registered lights and sources are unregistered, not destroyed. */
+  /**
+   * Leave the host's frame slot and release the renderer's resources.
+   * Registered lights and sources are unregistered, not destroyed.
+   */
   public destroy(): void {
+    this._unbindScene();
     this.clear();
     this.clearOccluders();
     this.clearSurfaces();
     this._field.clear();
     this._backend.destroy();
+  }
+
+  private readonly _onSceneActivate = (): void => {
+    this._backend.attach();
+  };
+
+  private readonly _onSceneSuspend = (): void => {
+    this._backend.detach();
+  };
+
+  /**
+   * Leave the frame the moment the scene's teardown begins rather than when the
+   * scene's registry destroys this system: the scene being replaced is torn
+   * down after its successor activates, and its unload() may await for frames
+   * in between.
+   */
+  private readonly _onSceneEnd = (): void => {
+    this._unbindScene();
+    this._backend.detach();
+  };
+
+  private _unbindScene(): void {
+    if (this._scene === null) {
+      return;
+    }
+
+    this._scene.onActivate.remove(this._onSceneActivate);
+    this._scene.onSuspend.remove(this._onSceneSuspend);
+    this._scene.lifecycleSignal.removeEventListener('abort', this._onSceneEnd);
   }
 
   /**

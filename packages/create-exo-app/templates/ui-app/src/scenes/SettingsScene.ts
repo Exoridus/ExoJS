@@ -1,4 +1,3 @@
-import type { RenderingContext } from '@codexo/exojs';
 import { Button, Checkbox, Color, Dropdown, Label, Panel, Scene, Slider, Stack, TextInput } from '@codexo/exojs';
 
 type Difficulty = 'casual' | 'normal' | 'brutal';
@@ -34,10 +33,6 @@ export class SettingsScene extends Scene {
     this.ui.addChild(this._buildSummary());
 
     this._refreshSummary();
-  }
-
-  public override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 
   private _buildForm(): Panel {

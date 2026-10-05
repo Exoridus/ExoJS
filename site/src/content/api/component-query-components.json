@@ -1,0 +1,63 @@
+{
+  "title": "ComponentQueryComponents",
+  "description": "The component instances a ComponentQuery row carries, in the order the classes were given.",
+  "symbol": "ComponentQueryComponents",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The component instances a ComponentQuery row carries, in the order the classes were given."
+      ],
+      "importLine": "import { ComponentQueryComponents } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ComponentQueryComponents",
+          "signature": "mapped",
+          "signatureTokens": [
+            {
+              "text": "mapped",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/ComponentQuery.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/ComponentQuery.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/ComponentQuery.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/ComponentQuery.ts"
+}

@@ -1,7 +1,9 @@
+import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
+import { AudioStream } from '#audio/AudioStream';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
-import type { Pausable, Playable, Voice } from '#audio/Playable';
+import type { Loopable, Pausable, Playable, RatePitched, Seekable, Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
 import { SceneAudio } from '#core/scene/SceneAudio';
@@ -9,6 +11,8 @@ import { SceneAvailability } from '#core/scene/SceneAvailability';
 import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import { Time } from '#core/units';
+
+import { mutable } from '../../support/mutable';
 
 const makeVoice = (overrides: Partial<Voice> = {}): Voice =>
   ({
@@ -550,6 +554,412 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
 
       generator.destroy();
       app.audio.destroy();
+    });
+  });
+});
+
+// A deferred voice has to answer for the voice it will become: the bus it will
+// route into and the capability set of its source, from the moment play()
+// returns until long after the scene activated - the caller never gets a
+// second handle. These drive a real AudioSystem so the bus and capability
+// sets come from the real assets, not from a mock shaped to match.
+describe('SceneAudio — deferred voice surface', () => {
+  type FullVoice = Voice & Seekable & Pausable & Loopable & RatePitched;
+  type CapabilityName = 'seek' | 'pause' | 'resume' | 'loop' | 'playbackRate' | 'detune';
+
+  const capabilityNames: readonly CapabilityName[] = ['seek', 'pause', 'resume', 'loop', 'playbackRate', 'detune'];
+
+  const hasCapability = (voice: Voice, name: CapabilityName): boolean => name in voice;
+
+  const asFull = (voice: Voice): FullVoice => {
+    for (const name of capabilityNames) {
+      expect({ [name]: hasCapability(voice, name) }).toEqual({ [name]: true });
+    }
+
+    return voice as FullVoice;
+  };
+
+  const createRealApp = (): { system: AudioSystem; app: Application } => {
+    const system = new AudioSystem();
+
+    return { system, app: { audio: system } as unknown as Application };
+  };
+
+  const createAudioElementStub = (): HTMLAudioElement => {
+    const el = document.createElement('audio');
+    Object.defineProperty(el, 'duration', { configurable: true, value: 30 });
+    Object.defineProperty(el, 'currentTime', { configurable: true, writable: true, value: 0 });
+    Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
+    vi.spyOn(el, 'play').mockImplementation(function (this: HTMLAudioElement) {
+      mutable(this).paused = false;
+      return Promise.resolve();
+    });
+    vi.spyOn(el, 'pause').mockImplementation(function (this: HTMLAudioElement) {
+      mutable(this).paused = true;
+    });
+    return el;
+  };
+
+  const setContextState = (state: AudioContextState): void => {
+    mutable(getAudioContext()).state = state;
+  };
+
+  afterEach(() => {
+    setContextState('running');
+    vi.restoreAllMocks();
+  });
+
+  describe('Sound', () => {
+    test('bus resolves to the default sound bus from the moment play() returns', () => {
+      const { system, app } = createRealApp();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = audio.play(sound);
+
+      expect(voice.bus).toBe(system.sound);
+
+      audio._flushPending();
+
+      expect(voice.bus).toBe(system.sound);
+
+      voice.stop();
+      sound.destroy();
+      system.destroy();
+    });
+
+    test('the returned handle carries the SoundVoice capabilities before and after the flush', () => {
+      const { system, app } = createRealApp();
+      const sound = new Sound({ duration: 10 } as AudioBuffer, { loop: true });
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = asFull(audio.play(sound, { playbackRate: 1.5 }));
+
+      expect(voice.paused).toBe(false);
+      expect(voice.time).toBe(0);
+      expect(voice.duration).toBe(10);
+      expect(voice.loop).toBe(true);
+      expect(voice.playbackRate).toBe(1.5);
+
+      audio._flushPending();
+
+      asFull(voice);
+      voice.pause();
+      expect(voice.paused).toBe(true);
+      voice.seek(4);
+      expect(voice.time).toBe(4);
+      voice.resume();
+      expect(voice.paused).toBe(false);
+      expect(voice.ended).toBe(false);
+
+      voice.stop();
+      expect(voice.ended).toBe(true);
+
+      sound.destroy();
+      system.destroy();
+    });
+
+    test('pause() before the flush starts the real voice paused; resume() then starts it', () => {
+      const { system, app } = createRealApp();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = asFull(audio.play(sound));
+
+      voice.pause();
+      expect(voice.paused).toBe(true);
+
+      audio._flushPending();
+
+      expect(voice.paused).toBe(true);
+      expect(voice.ended).toBe(false);
+
+      voice.resume();
+      expect(voice.paused).toBe(false);
+
+      voice.stop();
+      sound.destroy();
+      system.destroy();
+    });
+
+    test('pause() then resume() before the flush starts the voice playing', () => {
+      const { system, app } = createRealApp();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = asFull(audio.play(sound));
+
+      voice.pause();
+      voice.resume();
+      audio._flushPending();
+
+      expect(voice.paused).toBe(false);
+
+      voice.stop();
+      sound.destroy();
+      system.destroy();
+    });
+
+    test('seek(), loop and rate writes before the flush become the real voice start state', () => {
+      const { system, app } = createRealApp();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+      const playSpy = vi.spyOn(system, 'play');
+
+      const voice = asFull(audio.play(sound, { volume: 0.5 }));
+
+      voice.seek(3);
+      voice.loop = true;
+      voice.playbackRate = 2;
+      voice.detune = 100;
+      expect(voice.time).toBe(3);
+
+      audio._flushPending();
+
+      expect(playSpy).toHaveBeenCalledWith(sound, expect.objectContaining({ volume: 0.5, time: 3 }));
+      expect(voice.time).toBe(3);
+      expect(voice.loop).toBe(true);
+      expect(voice.playbackRate).toBe(2);
+      expect(voice.detune).toBe(100);
+
+      voice.stop();
+      sound.destroy();
+      system.destroy();
+    });
+
+    test('stop() before the flush prevents the late start', () => {
+      const { system, app } = createRealApp();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+      const playSpy = vi.spyOn(system, 'play');
+
+      const voice = asFull(audio.play(sound));
+
+      voice.pause();
+      voice.stop();
+      audio._flushPending();
+
+      expect(playSpy).not.toHaveBeenCalled();
+      expect(voice.ended).toBe(true);
+
+      // Controls on a cancelled voice are inert, like on any ended voice.
+      voice.resume();
+      voice.seek(2);
+      expect(playSpy).not.toHaveBeenCalled();
+
+      sound.destroy();
+      system.destroy();
+    });
+
+    test('a flushed deferred voice is part of the retention set', () => {
+      const { system, app } = createRealApp();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = asFull(audio.play(sound));
+
+      audio._flushPending();
+      audio.suspend();
+      expect(voice.paused).toBe(true);
+
+      audio.restore();
+      expect(voice.paused).toBe(false);
+
+      voice.stop();
+      sound.destroy();
+      system.destroy();
+    });
+  });
+
+  describe('AudioStream', () => {
+    test('bus resolves to the default music bus from the moment play() returns', () => {
+      const { system, app } = createRealApp();
+      const stream = new AudioStream(createAudioElementStub());
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = audio.play(stream);
+
+      expect(voice.bus).toBe(system.music);
+
+      audio._flushPending();
+
+      expect(voice.bus).toBe(system.music);
+
+      stream.destroy();
+      system.destroy();
+    });
+
+    test('the returned handle carries the stream capabilities before and after the flush', () => {
+      const { system, app } = createRealApp();
+      const el = createAudioElementStub();
+      const stream = new AudioStream(el);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = asFull(audio.play(stream));
+
+      expect(voice.duration).toBe(30);
+
+      audio._flushPending();
+
+      asFull(voice);
+      expect(voice.paused).toBe(false);
+      voice.pause();
+      expect(voice.paused).toBe(true);
+      expect(el.pause).toHaveBeenCalled();
+      voice.seek(12);
+      expect(el.currentTime).toBe(12);
+      voice.resume();
+      expect(voice.paused).toBe(false);
+
+      stream.destroy();
+      system.destroy();
+    });
+
+    test('pause() before the flush leaves the stream paused at activation', () => {
+      const { system, app } = createRealApp();
+      const el = createAudioElementStub();
+      const stream = new AudioStream(el);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = asFull(audio.play(stream));
+
+      voice.pause();
+      voice.seek(5);
+      audio._flushPending();
+
+      expect(voice.paused).toBe(true);
+      expect(el.currentTime).toBe(5);
+
+      voice.resume();
+      expect(voice.paused).toBe(false);
+
+      stream.destroy();
+      system.destroy();
+    });
+
+    test('stop() before the flush prevents the late start', () => {
+      const { system, app } = createRealApp();
+      const el = createAudioElementStub();
+      const stream = new AudioStream(el);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = audio.play(stream);
+
+      voice.stop();
+      audio._flushPending();
+
+      expect(el.play).not.toHaveBeenCalled();
+      expect(voice.ended).toBe(true);
+
+      stream.destroy();
+      system.destroy();
+    });
+  });
+
+  describe('AudioGenerator', () => {
+    test('is pausable but never claims to seek or loop, before or after the flush', () => {
+      const { system, app } = createRealApp();
+      const generator = new AudioGenerator({ frequency: 440 });
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = audio.play(generator);
+
+      expect(voice.bus).toBe(system.sound);
+      expect(hasCapability(voice, 'pause')).toBe(true);
+      expect(hasCapability(voice, 'detune')).toBe(true);
+      expect(hasCapability(voice, 'seek')).toBe(false);
+      expect(hasCapability(voice, 'loop')).toBe(false);
+
+      (voice as Voice & Pausable).pause();
+      audio._flushPending();
+
+      expect(hasCapability(voice, 'seek')).toBe(false);
+      expect(hasCapability(voice, 'loop')).toBe(false);
+      expect((voice as Voice & Pausable).paused).toBe(true);
+
+      voice.stop();
+      generator.destroy();
+      system.destroy();
+    });
+  });
+
+  describe('a Playable that does not describe its voice', () => {
+    test('reports the system sound bus and only the base Voice surface', () => {
+      const { system, app } = createRealApp();
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = audio.play(fakePlayable);
+
+      expect(voice.bus).toBe(system.sound);
+      expect(hasCapability(voice, 'pause')).toBe(false);
+      expect(hasCapability(voice, 'seek')).toBe(false);
+
+      voice.stop();
+      system.destroy();
+    });
+  });
+
+  // The autoplay unlock gate belongs to AudioSystem and the assets, not to the
+  // scene: a pending voice is flushed at activation whether or not audio is
+  // unlocked, and whatever the gate does with that play call is what the caller
+  // observes through the same handle.
+  describe('activation while audio is still locked', () => {
+    test('a pending Sound goes through the unlock gate once: it ends and is not re-deferred', () => {
+      const { system, app } = createRealApp();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+      const playSpy = vi.spyOn(system, 'play');
+      const onEnd = vi.fn();
+
+      const voice = asFull(audio.play(sound));
+
+      voice.onEnd.add(onEnd);
+      setContextState('suspended');
+      audio._flushPending();
+
+      expect(playSpy).toHaveBeenCalledTimes(1);
+      expect(voice.ended).toBe(true);
+      expect(onEnd).toHaveBeenCalledTimes(1);
+
+      // An ended voice ignores controls instead of throwing for the missing capability.
+      expect(() => {
+        voice.pause();
+        voice.resume();
+        voice.seek(1);
+      }).not.toThrow();
+
+      setContextState('running');
+      onAudioContextReady.dispatch(getAudioContext());
+
+      expect(playSpy).toHaveBeenCalledTimes(1);
+
+      sound.destroy();
+      system.destroy();
+    });
+
+    test('a pending stream paused before activation stays paused through the unlock', () => {
+      const { system, app } = createRealApp();
+      const el = createAudioElementStub();
+      const stream = new AudioStream(el);
+      const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+      const voice = asFull(audio.play(stream));
+
+      voice.pause();
+      setContextState('suspended');
+      audio._flushPending();
+
+      setContextState('running');
+      onAudioContextReady.dispatch(getAudioContext());
+
+      expect(el.play).not.toHaveBeenCalled();
+      expect(voice.paused).toBe(true);
+
+      voice.resume();
+      expect(el.play).toHaveBeenCalledTimes(1);
+
+      stream.destroy();
+      system.destroy();
     });
   });
 });

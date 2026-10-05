@@ -1,5 +1,5 @@
 // #region guide:required-scene
-import { type RenderingContext, Scene, Sprite, type Texture } from '@codexo/exojs';
+import { Scene, Sprite, type Texture } from '@codexo/exojs';
 
 export class HeroScene extends Scene {
   private texture!: Texture;
@@ -13,10 +13,6 @@ export class HeroScene extends Scene {
 
     hero.setAnchor(0.5).setPosition(this.app.width / 2, this.app.height / 2);
     this.root.addChild(hero);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 // #endregion guide:required-scene

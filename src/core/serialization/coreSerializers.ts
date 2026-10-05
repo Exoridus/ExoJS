@@ -68,7 +68,7 @@ const spriteSerializer: NodeSerializer<Sprite> = {
     return out;
   },
   read(data, ctx) {
-    const texture = ctx.resolveAsset(typeof data.texture === 'string' ? data.texture : null, Texture);
+    const texture = ctx.resolveAsset(data.texture, Texture);
     const sprite = new Sprite(texture);
     const frame = data.frame;
 

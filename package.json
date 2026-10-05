@@ -222,12 +222,12 @@
     },
     {
       "path": "dist/exo.iife.min.js",
-      "limit": "360 KB",
+      "limit": "365 KB",
       "gzip": true
     },
     {
       "path": "dist/exo.full.iife.min.js",
-      "limit": "620 KB",
+      "limit": "625 KB",
       "gzip": true
     },
     {

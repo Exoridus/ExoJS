@@ -42,9 +42,6 @@ class GameScene extends Scene {
     this.time += delta;
     this.sprite.setRotation(this.time * 80);
   }
-  draw(context) {
-    context.render(this.root);
-  }
   destroy() {
     this.blurTween?.stop();
     this.app.input.onPointerDown.remove(this.onPointerDown);

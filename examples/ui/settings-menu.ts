@@ -8,7 +8,6 @@ import {
   Keyboard,
   Label,
   Panel,
-  type RenderingContext,
   Scene,
   type Seconds,
   Slider,
@@ -133,10 +132,6 @@ class SettingsMenuScene extends Scene {
       this.angle += delta * 45;
     }
     this.preview.setRotation(this.angle);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

@@ -1,0 +1,95 @@
+{
+  "title": "LeaflessCatalogEntry",
+  "description": "The diagnostic an entry of a type without a catalog leaf turns into at the catalog literal. Such an asset loads directly, but a catalog has nothing to hand out for it until it arrives.",
+  "symbol": "LeaflessCatalogEntry",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The diagnostic an entry of a type without a catalog leaf turns into at the catalog literal. Such an asset loads directly, but a catalog has nothing to hand out for it until it arrives."
+      ],
+      "importLine": "import { LeaflessCatalogEntry } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LeaflessCatalogEntry",
+          "signature": "string extends K ? \"ExoJS: this asset type has no catalog leaf and cannot be held by a catalog. Load it directly with loader.load(...) instead.\" : templateLiteral",
+          "signatureTokens": [
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ExoJS: this asset type has no catalog leaf and cannot be held by a catalog. Load it directly with loader.load(...) instead.\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "templateLiteral",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+}

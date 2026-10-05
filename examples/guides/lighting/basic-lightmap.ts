@@ -1,10 +1,10 @@
 // #region guide:basic-lightmap
-import { Application, Color, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene } from '@codexo/exojs';
 import { LightmapLighting, PointLight } from '@codexo/exojs-lighting';
 
 class LightingScene extends Scene {
   override init(): void {
-    const lighting = new LightmapLighting(this.app, { ambient: new Color(25, 25, 35) });
+    const lighting = new LightmapLighting(this.app, { ambient: new Color(25, 25, 35), scene: this });
     const floor = new Graphics();
     const lamp = new PointLight({ radius: 360, color: new Color(255, 190, 100) });
 
@@ -14,10 +14,6 @@ class LightingScene extends Scene {
     lamp.setPosition(this.app.width / 2, this.app.height / 2);
     this.root.addChild(floor, lamp);
     lighting.add(lamp);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

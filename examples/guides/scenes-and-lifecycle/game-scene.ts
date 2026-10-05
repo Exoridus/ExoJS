@@ -1,4 +1,4 @@
-import { Keyboard, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { Keyboard, type RenderingContext, Scene, type Seconds, Sprite, Text } from '@codexo/exojs';
 import { PhysicsWorld } from '@codexo/exojs-physics';
 
 interface Player {
@@ -9,6 +9,7 @@ class GameScene extends Scene {
   private hero!: Sprite;
   private player!: Player;
   private world = new PhysicsWorld();
+  private readonly debugLabel = new Text('debug', { fontSize: 14 });
 
   // #region guide:init-hook
   override init(): void {
@@ -33,7 +34,8 @@ class GameScene extends Scene {
 
   // #region guide:draw-hook
   override draw(context: RenderingContext): void {
-    context.render(this.root);
+    super.draw(context); // the root, through the camera view
+    context.render(this.debugLabel, { view: context.screenView }); // not part of the root
   }
   // #endregion guide:draw-hook
 

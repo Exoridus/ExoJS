@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, Keyboard, Label, Panel, type RenderingContext, Scene, SceneAvailability, type Seconds, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, Color, Keyboard, Label, Panel, Scene, SceneAvailability, type Seconds, Sprite } from '@codexo/exojs';
 
 // #region guide:pause-scene
 class GameScene extends Scene {
@@ -37,10 +37,6 @@ class GameScene extends Scene {
   override update(_delta: Seconds): void {
     // Not called while paused - the director skips update() + systems.
     // ... normal game logic ...
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 
   override destroy(): void {

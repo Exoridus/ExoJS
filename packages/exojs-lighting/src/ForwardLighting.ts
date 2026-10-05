@@ -41,9 +41,10 @@ const isHost = (value: ForwardLightingOptions | LightingHost | undefined): value
  * texture.
  *
  * ```ts
- * const lighting = new ForwardLighting(app, { maxLights: 16, ambient: new Color(20, 20, 24) });
+ * // In Scene.init():
+ * const lighting = new ForwardLighting(this.app, { maxLights: 16, ambient: new Color(20, 20, 24), scene: this });
  *
- * scene.systems.add(lighting);
+ * this.systems.add(lighting);
  * ```
  *
  * One draw and no extra render targets, which is what makes it the floor
@@ -60,7 +61,9 @@ const isHost = (value: ForwardLightingOptions | LightingHost | undefined): value
  * const lighting = new ForwardLighting({ maxLights: 16 });
  * ```
  *
- * A filter chain is a frame pass, so `post` needs the host.
+ * A filter chain is a frame pass, so `post` needs the host - and, for a
+ * system built for one scene, {@link LightingOptions.scene}, which keeps the
+ * chain out of the frame while that scene is not the one on screen.
  */
 export class ForwardLighting extends Lighting {
   public constructor(options?: StandaloneForwardLightingOptions);

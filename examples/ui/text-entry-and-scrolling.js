@@ -87,9 +87,6 @@ class TextEntryScene extends Scene {
     this.list.content.addChild(text);
     this.count++;
   }
-  draw(context) {
-    context.render(this.root);
-  }
 }
 const app = new Application({
   scenes: { TextEntryScene },

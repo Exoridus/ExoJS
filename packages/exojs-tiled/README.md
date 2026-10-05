@@ -15,7 +15,7 @@ Core and the tilemap runtime are peer dependencies. Install them explicitly and 
 `tiledExtension` installs the map loader and depends on `tilemapExtension`, which supplies rendering. Importing the package alone does not activate it.
 
 ```ts
-import { Application, Asset, Scene, type RenderingContext } from '@codexo/exojs';
+import { Application, Asset, Scene } from '@codexo/exojs';
 import { TileMapNode, tiledExtension } from '@codexo/exojs-tiled';
 
 class MapScene extends Scene {
@@ -23,10 +23,6 @@ class MapScene extends Scene {
     const map = await this.loader.load(Asset.type('tileMap', 'maps/world.tmj'));
 
     this.root.addChild(new TileMapNode(map));
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

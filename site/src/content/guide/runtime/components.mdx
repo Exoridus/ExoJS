@@ -1,0 +1,123 @@
+---
+title: 'Components'
+description: 'Attach state and per-object behaviour to scene nodes with Component and BehaviorComponent, follow their lifecycle through scene activation, pause and teardown, and process them together with Scene.query and systems.'
+---
+
+import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+
+# Components
+
+A component is an object you attach to a scene node to give it state or a capability: a health pool, a velocity, a highlight ring, a spin. Every `SceneNode` — containers, sprites, text, UI widgets — can carry components, and the node stays the object you build your scene from. There is no separate entity type and no world to create.
+
+Components are ordinary classes. You construct them yourself, keep them in fields when you want direct access, and look them up by class when you do not.
+
+## State on a node
+
+Derive from [`Component`](/ExoJS/en/api/component/) and attach an instance with `addComponent()`. It returns the same instance, typed as you passed it, so it can go straight into a field:
+
+<SourceSnippet
+  source="examples/guides/components/components.ts"
+  region="state"
+  language="ts"
+  title="examples/guides/components/components.ts"
+/>
+
+The node API is small:
+
+```ts
+import { Component, Container } from '@codexo/exojs';
+
+class Health extends Component {
+  public current = 100;
+}
+
+const hero = new Container();
+
+const health = hero.addComponent(new Health()); // Health
+const found = hero.getComponent(Health); // Health | null
+const present = hero.hasComponent(Health); // boolean
+const removed = hero.removeComponent(health); // Health | null - by class or by instance
+const all = hero.components; // readonly snapshot, in attach order
+```
+
+A node holds at most one component per exact class. Attaching the instance that is already attached is a no-op; attaching a second instance of the same class, or an instance that is attached to another node, throws. Lookup is by exact class: a `BossHealth extends Health` is found under `BossHealth`, not under `Health`.
+
+`removeComponent()` detaches a component and returns it — it can be attached again later. `component.destroy()` ends it for good, and destroying a node destroys every component still attached to it.
+
+## Behaviour every frame
+
+A plain component is never called per frame. Behaviour that must run every frame derives from [`BehaviorComponent`](/ExoJS/en/api/behavior-component/) and overrides `update()`, `fixedUpdate()`, or both:
+
+<SourceSnippet
+  source="examples/guides/components/components.ts"
+  region="behavior"
+  language="ts"
+  title="examples/guides/components/components.ts"
+/>
+
+The type parameter is the node type the component needs: `BehaviorComponent<Sprite>` gives `this.node` the type `Sprite`, and attaching it to a node that is not a sprite is a compile error.
+
+The scene calls behaviours inside its own frame phases, between the scene's hook and its systems:
+
+```text
+Scene.fixedUpdate -> BehaviorComponent.fixedUpdate -> scene systems' fixedUpdate   (per fixed step)
+Scene.update      -> BehaviorComponent.update      -> scene systems' update        (once per frame)
+```
+
+Only hooks a class actually overrides are scheduled, and drawing never calls them, so a scene that renders several views still ticks each behaviour once. Like every frame hook, they must be synchronous.
+
+## Lifecycle
+
+<SourceSnippet
+  source="examples/guides/components/components.ts"
+  region="lifecycle"
+  language="ts"
+  title="examples/guides/components/components.ts"
+/>
+
+A component's hooks follow its node and the scene that node belongs to:
+
+| Hook | When |
+|---|---|
+| `onAttach()` | after `addComponent()`. The node may not be in any scene yet. |
+| `onEnable()` | once the component is attached, `enabled`, and its node is under the root or UI layer of an active scene. |
+| `onDisable()` | when any of that stops: the component is disabled, the node leaves the scene, the scene is retained or ends. |
+| `onDetach()` | after `removeComponent()`, or as part of `destroy()`. |
+| `onDestroy()` | once, at the end of `destroy()`. |
+
+Acquire in `onEnable()` what you release in `onDisable()`. Components on a scene that is still loading stay cold: they are attached, and visible to queries made in `init()`, but are not enabled until the scene becomes active.
+
+<Callout type="info" title="Pausing is not disabling">
+Pausing a scene stops behaviours from being called, nothing more. Components stay enabled, stay attached, and stay in query results; no `onDisable()` runs. Retaining a scene for later disables its components and restoring it enables them again — with their state intact.
+</Callout>
+
+`component.enabled = false` switches one component off without detaching it: an active component is disabled and a behaviour stops ticking, but it stays on its node and in queries. Changes made during a frame — a component attached, enabled, or a node added to the scene — take effect from the next frame; removing, disabling or destroying takes effect at once, so a component is never called again later in the same frame.
+
+## Querying many nodes at once
+
+[`Scene.query()`](/ExoJS/en/api/scene/) selects the nodes under the root and UI layer that carry every requested class. It returns a reusable [`ComponentQuery`](/ExoJS/en/api/component-query/); asking again with the same classes returns the same query, so a system can keep it:
+
+<SourceSnippet
+  source="examples/guides/components/components.ts"
+  region="query-system"
+  language="ts"
+  title="examples/guides/components/components.ts"
+/>
+
+Iterate with `for...of` for `[node, ...components]` rows, or with `forEach()`, which passes the components as arguments and allocates no row per match. Rows are typed in the order you listed the classes and never contain `null`. A query looks candidates up in an index per component class and starts from the rarest class you asked for, so its cost follows the number of matching nodes, not the size of the scene.
+
+Members a running iteration did not start with are not visited, and members removed meanwhile are skipped. Finish a `for...of` loop within the frame it started in, and never keep one open across an `await`.
+
+## Putting it together
+
+<SourceSnippet
+  source="examples/guides/components/components.ts"
+  region="scene"
+  language="ts"
+  title="examples/guides/components/components.ts"
+/>
+
+## Saving scenes with components
+
+Components are not part of the serialized format yet. `Scene.serialize()` and `Prefab.from()` therefore throw, naming the node and the component class, when the tree carries any — a save never drops them silently. Pass `{ omitComponents: true }` to write the visual data alone, and re-attach components in code after loading, as you do for other behaviour. See [Serialization & prefabs](/ExoJS/en/guide/runtime/serialization-and-prefabs/).

@@ -1,0 +1,108 @@
+{
+  "title": "LightingScene",
+  "description": "What a lighting system needs of the scene it belongs to: its state, and the lifecycle signals that move it into and out of the host's frame. A Scene satisfies this structurally. See LightingOptions.scene. The system only listens; it never drives or destroys the scene.",
+  "symbol": "LightingScene",
+  "kind": "type",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a lighting system needs of the scene it belongs to: its state, and the lifecycle signals that move it into and out of the host's frame. A Scene satisfies this structurally. See LightingOptions.scene.",
+        "The system only listens; it never drives or destroys the scene."
+      ],
+      "importLine": "import { LightingScene } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LightingScene",
+          "signature": "Pick<Scene, \"lifecycleSignal\" | \"onActivate\" | \"onSuspend\" | \"state\">",
+          "signatureTokens": [
+            {
+              "text": "Pick",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"lifecycleSignal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"onActivate\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"onSuspend\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"state\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/LightingHost.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LightingHost.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/LightingHost.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LightingHost.ts"
+}

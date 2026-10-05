@@ -6,7 +6,6 @@ import {
   Keyboard,
   Label,
   Panel,
-  type RenderingContext,
   Scene,
   SceneAvailability,
   type Seconds,
@@ -63,10 +62,6 @@ class GameScene extends Scene {
   override update(delta: Seconds): void {
     this.time += delta;
     this.sprite.setRotation(this.time * 80);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 
   override destroy(): void {

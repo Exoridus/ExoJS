@@ -18,6 +18,5 @@ export class LightmapBackend extends FrameLightingBackend {
 
   public constructor(options: LightmapBackendOptions) {
     super(options);
-    this._attach();
   }
 }

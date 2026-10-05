@@ -1,6 +1,6 @@
 {
   "title": "RadianceLighting",
-  "description": "Lighting as radiance that propagates, filled by a chain of cascades traced over this frame's geometry. ```ts const lighting = new RadianceLighting(app, { probeSpacing: 2, interval: 1, bounce: 0.5 }); scene.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ``` Light propagates from what emits rather than falling off inside each light's radius, so a lamp fills the room it stands in, a wall between two rooms leaves the second one dark, a source with a size casts a penumbra that widens with distance, and a lit surface gives part of that light off again in its own colour (see RadianceLightingOptions.bounce). A `SpotLight` emits across its cone and a `SunLight` is the sky every unblocked ray ends in. It does NOT make a scene look the way LightmapLighting makes it look, and it is the only renderer whose cost is per probe rather than per light. Registered normal surfaces are recorded and ignored: the gather averages a probe's rays into one arriving colour, which leaves no incident direction for a normal to be measured against. The host is required and is the first argument. Float render targets are required too - a field of radiance has no ceiling to clamp at - and a device without them is refused at construction rather than shaded differently under the same name.",
+  "description": "Lighting as radiance that propagates, filled by a chain of cascades traced over this frame's geometry. ```ts // In Scene.init(): const lighting = new RadianceLighting(this.app, { probeSpacing: 2, interval: 1, bounce: 0.5, scene: this }); this.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ``` Light propagates from what emits rather than falling off inside each light's radius, so a lamp fills the room it stands in, a wall between two rooms leaves the second one dark, a source with a size casts a penumbra that widens with distance, and a lit surface gives part of that light off again in its own colour (see RadianceLightingOptions.bounce). A `SpotLight` emits across its cone and a `SunLight` is the sky every unblocked ray ends in. It does NOT make a scene look the way LightmapLighting makes it look, and it is the only renderer whose cost is per probe rather than per light. Registered normal surfaces are recorded and ignored: the gather averages a probe's rays into one arriving colour, which leaves no incident direction for a normal to be measured against. The host is required and is the first argument, and the scene the system belongs to goes in LightingOptions.scene. Float render targets are required too - a field of radiance has no ceiling to clamp at - and a device without them is refused at construction rather than shaded differently under the same name.",
   "symbol": "RadianceLighting",
   "kind": "class",
   "subsystem": "lighting",
@@ -20,11 +20,11 @@
       "members": [],
       "paragraphs": [
         "Lighting as radiance that propagates, filled by a chain of cascades traced over this frame's geometry.",
-        "```ts const lighting = new RadianceLighting(app, { probeSpacing: 2, interval: 1, bounce: 0.5 });",
-        "scene.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ```",
+        "```ts // In Scene.init(): const lighting = new RadianceLighting(this.app, { probeSpacing: 2, interval: 1, bounce: 0.5, scene: this });",
+        "this.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ```",
         "Light propagates from what emits rather than falling off inside each light's radius, so a lamp fills the room it stands in, a wall between two rooms leaves the second one dark, a source with a size casts a penumbra that widens with distance, and a lit surface gives part of that light off again in its own colour (see RadianceLightingOptions.bounce). A `SpotLight` emits across its cone and a `SunLight` is the sky every unblocked ray ends in.",
         "It does NOT make a scene look the way LightmapLighting makes it look, and it is the only renderer whose cost is per probe rather than per light. Registered normal surfaces are recorded and ignored: the gather averages a probe's rays into one arriving colour, which leaves no incident direction for a normal to be measured against.",
-        "The host is required and is the first argument. Float render targets are required too - a field of radiance has no ceiling to clamp at - and a device without them is refused at construction rather than shaded differently under the same name."
+        "The host is required and is the first argument, and the scene the system belongs to goes in LightingOptions.scene. Float render targets are required too - a field of radiance has no ceiling to clamp at - and a device without them is refused at construction rather than shaded differently under the same name."
       ],
       "importLine": "import { RadianceLighting } from '@codexo/exojs-lighting'",
       "sourceLink": null
@@ -271,7 +271,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release the renderer's resources. Registered lights and sources are unregistered, not destroyed."
+          "description": "Leave the host's frame slot and release the renderer's resources. Registered lights and sources are unregistered, not destroyed."
         },
         {
           "name": "normalsFrom",

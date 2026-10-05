@@ -97,7 +97,7 @@ These are alternative hosting patterns, not two components to mount for one appl
 | `ExoContext`                                      | context    | The underlying context (advanced / testing).                                                             |
 | `useScene(SceneClass, deps?)`                     | hook       | Instantiate + activate a single scene; returns it once live. Load failures route to `app.onError`.       |
 | `Scenes` / `Scene`                                | components | Declarative scene switch over the one-active-scene model. Load failures route to `app.onError`.          |
-| `useActiveScene()`                                | hook       | The active scene instance from the nearest `<Scenes>`.                                                   |
+| `useActiveScene(SceneClass?)`                     | hook       | The active scene from the nearest `<Scenes>`; with `SceneClass`, only an instance of it, else `null`.    |
 | `useSignal(signal, getSnapshot)`                  | hook       | Subscribes to an engine `Signal` and re-renders on every dispatch (e.g. `app.onFrame`).                  |
 
 ### Reactivity model

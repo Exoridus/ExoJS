@@ -5,7 +5,7 @@
 // is a strongly typed builder, not a `string`-keyed helper - without it,
 // `Asset.type` would be a regression over the `.of()` statics it replaces.
 
-import { Asset, Json, Loader, type Texture, type ValueAsset } from '@codexo/exojs';
+import { Asset, Json, Loader, type ResourceAsset, type Texture, type ValueAsset } from '@codexo/exojs';
 
 import { LoadPriority } from '#assets/Loader';
 
@@ -21,7 +21,7 @@ interface LevelData {
 
 // (1) resource inference from kind - no <T>, resource type comes from the kind.
 const shipDesc = Asset.type('texture', 'p.png');
-type _ShipIsTexture = Expect<Equal<typeof shipDesc, Asset<Texture>>>;
+type _ShipIsTexture = Expect<Equal<typeof shipDesc, ResourceAsset<Texture>>>;
 
 // (2) value kind: <T> annotates the decoded value - branded ValueAsset.
 const levelDesc = Asset.type<LevelData>('json', 'l.json');

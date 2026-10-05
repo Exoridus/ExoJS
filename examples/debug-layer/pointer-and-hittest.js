@@ -42,9 +42,6 @@ class PointerAndHittestScene extends Scene {
     });
     this.hud.setStatus(`Front: ${index + 1} (${['red', 'green', 'blue'][index]})`);
   }
-  draw(context) {
-    context.render(this.root);
-  }
 }
 const app = new Application({
   scenes: { PointerAndHittestScene },

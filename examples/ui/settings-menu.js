@@ -117,9 +117,6 @@ class SettingsMenuScene extends Scene {
     }
     this.preview.setRotation(this.angle);
   }
-  draw(context) {
-    context.render(this.root);
-  }
 }
 const app = new Application({
   scenes: { SettingsMenuScene },

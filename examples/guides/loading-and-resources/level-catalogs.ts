@@ -3,7 +3,7 @@ import { Asset, Assets } from '@codexo/exojs';
 // #region guide:level-catalogs
 export const MenuAssets = Assets.from({
   logo: 'image/logo.png',
-  music: Asset.type('music', 'audio/theme.ogg'),
+  click: Asset.type('sound', 'audio/click.ogg'),
 });
 
 export const Level1Assets = Assets.from({

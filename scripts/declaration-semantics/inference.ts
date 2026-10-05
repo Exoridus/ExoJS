@@ -5,9 +5,19 @@
  * no longer recovers a scene's activation data, as opposed to an overload
  * integration problem further out in `Application` or `SceneDirector`.
  */
-import type { InferSceneData, SceneConstructor } from '@codexo/exojs';
+import {
+  Asset,
+  type ComponentQueryRow,
+  type DecodedImage,
+  type InferSceneData,
+  type KindByPath,
+  type Loader,
+  type Scene,
+  type SceneConstructor,
+  type SceneNode,
+} from '@codexo/exojs';
 
-import { BareScene, DataScene, type PlayerData } from './fixtures';
+import { Armor, BareScene, DataScene, Health, type PlayerData } from './fixtures';
 
 /** Mutual-assignability check; deliberately not an assignability check. */
 type Exact<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -36,3 +46,21 @@ type FromRegistryBare = InferSceneData<(typeof scenes)['BareScene']>;
 type FromRegistryData = InferSceneData<(typeof scenes)['DataScene']>;
 type _registryBareIsVoid = Expect<Exact<FromRegistryBare, void>>;
 type _registryDataIsPlayerData = Expect<Exact<FromRegistryData, PlayerData>>;
+
+// Suffix inference cuts the fragment before the query, as the runtime does.
+type _fragmentBeforeQuery = Expect<Exact<KindByPath<'data.json#preview.png?ignored'>, 'json'>>;
+
+// The image type resolves to what its factory produces.
+declare const loader: Loader;
+const loadImage = () => loader.load(Asset.type('image', 'a.png'));
+type _imageIsDecoded = Expect<Exact<Awaited<ReturnType<typeof loadImage>>, DecodedImage>>;
+
+// Component lookup and query rows keep their exact types through the emit.
+declare const node: SceneNode;
+declare const scene: Scene;
+const lookup = node.getComponent(Health);
+type _lookupIsExact = Expect<Exact<typeof lookup, Health | null>>;
+const query = scene.query(Health, Armor);
+type QueryRow = typeof query extends Iterable<infer Row> ? Row : never;
+type _rowIsExact = Expect<Exact<QueryRow, ComponentQueryRow<[typeof Health, typeof Armor]>>>;
+type _rowElements = Expect<Exact<[QueryRow[0], QueryRow[1], QueryRow[2]], [SceneNode, Health, Armor]>>;

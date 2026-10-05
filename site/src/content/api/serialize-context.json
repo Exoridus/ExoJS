@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "keyFor",
-          "signature": "keyFor(resource: null | object | undefined): null | string",
+          "signature": "keyFor(resource: null | object | undefined): SerializedAssetRef | null",
           "signatureTokens": [
             {
               "text": "keyFor",
@@ -77,15 +77,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "null",
-              "kind": "keyword"
+              "text": "SerializedAssetRef",
+              "kind": "type"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "null",
               "kind": "keyword"
             }
           ],
@@ -96,8 +96,8 @@
               "optional": false
             }
           ],
-          "returnType": "null | string",
-          "description": "Resolve a loaded asset object to the loader source key it was loaded under, or null for runtime-created / unkeyed resources (a one-time warning is emitted in that case)."
+          "returnType": "SerializedAssetRef | null",
+          "description": "Resolve a loaded asset object to the reference it was loaded under, or null for runtime-created / unkeyed resources (a one-time warning is emitted in that case). Store the result as it is; hand it back to DeserializeContext.resolveAsset unchanged."
         },
         {
           "name": "writeNode",

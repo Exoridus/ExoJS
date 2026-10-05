@@ -5,7 +5,7 @@ import { AudioGeneratorVoice } from './AudioGeneratorVoice';
 import type { AudioSystem } from './AudioSystem';
 import type { Envelope } from './Envelope';
 import { NoopVoice } from './NoopVoice';
-import type { Playable, PlayOptions, Voice } from './Playable';
+import type { Playable, PlayOptions, Voice, VoiceProfile } from './Playable';
 import { SoundPoolStrategy } from './Sound';
 import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatialOptions';
 
@@ -178,6 +178,18 @@ export class AudioGenerator implements Playable {
     this._activeVoices.push(pooled);
 
     return voice;
+  }
+
+  /** Implements {@link Playable._profileVoice}. @internal */
+  public _profileVoice(system: AudioSystem, options: PlayOptions): VoiceProfile {
+    return {
+      bus: options.bus ?? system.sound,
+      pausable: true,
+      duration: null,
+      loop: null,
+      playbackRate: 1,
+      detune: options.detune ?? this.detune,
+    };
   }
 
   /** Stop every currently active voice from this generator. */

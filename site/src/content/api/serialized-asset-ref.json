@@ -1,16 +1,16 @@
 {
   "title": "SerializedAssetRef",
-  "description": "Serialized reference to a loaded asset (e.g. a Texture). Stores the loader **source key** the asset was loaded under, not the asset data itself. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs.",
+  "description": "Serialized reference to a loaded asset (e.g. a Texture). Names the request the asset was loaded with, never the asset data: the logical source the caller wrote - the one an asset variant rule was declared for, not the file one device happened to select - and, when they change which resource the request produces, the identity-relevant options. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs; the reference then resolves to whatever that loader holds for the same request, including its own variant choice. A reference that needs no options is written as the bare source string, which is also the only form version 1 documents contain.",
   "symbol": "SerializedAssetRef",
-  "kind": "interface",
+  "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 1,
+  "memberCount": 0,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 1,
+    "properties": 0,
     "events": 0
   },
   "sections": [
@@ -20,19 +20,80 @@
       "members": [],
       "paragraphs": [
         "Serialized reference to a loaded asset (e.g. a Texture).",
-        "Stores the loader **source key** the asset was loaded under, not the asset data itself. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs."
+        "Names the request the asset was loaded with, never the asset data: the logical source the caller wrote - the one an asset variant rule was declared for, not the file one device happened to select - and, when they change which resource the request produces, the identity-relevant options. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs; the reference then resolves to whatever that loader holds for the same request, including its own variant choice.",
+        "A reference that needs no options is written as the bare source string, which is also the only form version 1 documents contain."
       ],
       "importLine": "import { SerializedAssetRef } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
-      "id": "properties",
-      "title": "Properties",
+      "id": "definition",
+      "title": "Definition",
       "members": [
         {
-          "name": "source",
-          "signature": "source: string",
+          "name": "SerializedAssetRef",
+          "signature": "string | { options: Readonly<Record<string, unknown>>; source: string }",
           "signatureTokens": [
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
             {
               "text": "source",
               "kind": "name"
@@ -44,11 +105,15 @@
             {
               "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Loader alias/source the asset was originally loaded under."
+          "description": ""
         }
       ],
       "paragraphs": [],

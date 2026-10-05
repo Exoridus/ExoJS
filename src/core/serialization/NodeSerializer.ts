@@ -2,7 +2,7 @@ import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { Loader } from '#assets/Loader';
 import type { SceneNode } from '#core/SceneNode';
 
-import type { SerializedNode } from './types';
+import type { SerializedAssetRef, SerializedNode } from './types';
 
 /**
  * Context handed to {@link NodeSerializer.write}. Carries the framework
@@ -22,11 +22,15 @@ export interface SerializeContext {
    */
   writeNode(node: SceneNode): SerializedNode;
   /**
-   * Resolve a loaded asset object to the loader source key it was loaded under,
-   * or `null` for runtime-created / unkeyed resources (a one-time warning is
-   * emitted in that case).
+   * Resolve a loaded asset object to the reference it was loaded under, or
+   * `null` for runtime-created / unkeyed resources (a one-time warning is
+   * emitted in that case). Store the result as it is; hand it back to
+   * {@link DeserializeContext.resolveAsset} unchanged.
+   *
+   * @throws If no single honest reference exists: the asset was reached through
+   *   several logical sources, or through options a document cannot carry.
    */
-  keyFor(resource: object | null | undefined): string | null;
+  keyFor(resource: object | null | undefined): SerializedAssetRef | null;
 }
 
 /**
@@ -43,11 +47,13 @@ export interface DeserializeContext {
   /** Fully deserialize a child node (inverse of {@link SerializeContext.writeNode}). */
   readNode(data: SerializedNode): SceneNode;
   /**
-   * Resolve a serialized asset source key back to a loaded resource of `type`,
-   * or `null` if the source is missing/unset or the asset was not pre-loaded
-   * (a one-time warning is emitted in the not-loaded case).
+   * Resolve a serialized asset reference back to a loaded resource of `type`,
+   * or `null` if the reference is missing, malformed, or names an asset that
+   * was not pre-loaded (a one-time warning is emitted in the not-loaded case).
+   * Accepts both reference forms, so a version 1 document's bare source strings
+   * keep resolving.
    */
-  resolveAsset<T>(source: string | null | undefined, type: AssetConstructor<T>): T | null;
+  resolveAsset<T>(reference: unknown, type: AssetConstructor<T>): T | null;
 }
 
 /**
