@@ -308,6 +308,21 @@ export class Collider {
   }
 
   /**
+   * @internal - forget the ids this collider and its chain edges held in the
+   * world they left. The body link stays: the collider still belongs to its
+   * body, which may join a world again.
+   */
+  public _detachFromWorld(): void {
+    this._id = -1;
+
+    if (this._chainEdges !== null) {
+      for (const edge of this._chainEdges) {
+        edge._id = -1;
+      }
+    }
+  }
+
+  /**
    * Fan a chain out into one proxy per edge. Each proxy carries the chain's own
    * local placement, so it needs no transform of its own, and its shape carries
    * the adjacency that keeps a body from snagging at a shared vertex.
