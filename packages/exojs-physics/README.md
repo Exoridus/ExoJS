@@ -48,6 +48,11 @@ The scene registry drives and destroys this world. The snippet creates simulatio
 `PhysicsBodyComponent` gives a node a body that follows the node's lifecycle: it joins the world while the node is active in a scene, leaves it with its state kept when the component is disabled, the node is removed or reparented, or its scene is retained, and is destroyed with the node.
 
 ```ts
+import { Graphics } from '@codexo/exojs';
+import { CircleShape, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 980 } });
+const ball = new Graphics();
 const physics = ball.addComponent(new PhysicsBodyComponent(world, { colliders: [{ shape: new CircleShape(12) }] }));
 
 physics.body.applyImpulse(0, -300);
