@@ -278,6 +278,31 @@ describe('PhysicsBodyComponent', () => {
     expect(scene.world.bodies).not.toContain(physics.body);
   });
 
+  it('adopts the node transform on the first activation that succeeds', async () => {
+    const { scene } = await worldScene();
+    const node = new Container();
+    const physics = node.addComponent(new PhysicsBodyComponent(scene.world, box()));
+
+    node.setPosition(10, 10);
+    node.skewX = 10;
+
+    try {
+      scene.addChild(node);
+    } catch {
+      // A failed first enable; see the test above.
+    }
+
+    node.skewX = 0;
+    node.setPosition(50, 60);
+    node.setRotation(30);
+    physics.enabled = false;
+    physics.enabled = true;
+
+    expect(physics.active).toBe(true);
+    expect([physics.body.x, physics.body.y]).toEqual([50, 60]);
+    expect(physics.body.angle).toBeCloseTo(-Math.PI / 6, 6);
+  });
+
   it('refuses joints on its body, including a mouse joint', () => {
     const world = new PhysicsWorld();
     const physics = new Container().addComponent(new PhysicsBodyComponent(world, { colliders: [{ shape: new CircleShape(5) }] }));

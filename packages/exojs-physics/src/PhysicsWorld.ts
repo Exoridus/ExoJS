@@ -1057,7 +1057,11 @@ export class PhysicsWorld implements BodyOwner {
     return this._query.overlapShape(shape, position, filter, angle);
   }
 
-  /** Release every body, collider, binding and backend resource. */
+  /**
+   * Release every body, collider, binding and backend resource. Changes queued
+   * from an event callback are applied first; if one of them throws, the world
+   * is still fully released and the first such error is rethrown afterwards.
+   */
   public destroy(): void {
     if (this._destroyed) {
       return;
@@ -1069,7 +1073,17 @@ export class PhysicsWorld implements BodyOwner {
     // from inside the event dispatch that triggered this destroy() is not in
     // `_bodies` yet, and clearing `_commands` without running them first would
     // leave it reporting `attached === true` / `destroyed === false` forever.
-    this._drainCommands();
+    // A command that throws is reported only once the teardown below is done,
+    // so a failure there never leaves a half-destroyed world.
+    let drainFailed = false;
+    let drainFailure: unknown;
+
+    try {
+      this._drainCommands();
+    } catch (error) {
+      drainFailed = true;
+      drainFailure = error;
+    }
 
     // Mark colliders before their bodies: a collider that still reported
     // `destroyed === false` while `collider.body.destroyed === true` would look
@@ -1099,6 +1113,10 @@ export class PhysicsWorld implements BodyOwner {
     this.onCollisionEnd.destroy();
     this.onSensorEnter.destroy();
     this.onSensorExit.destroy();
+
+    if (drainFailed) {
+      throw drainFailure;
+    }
   }
 
   // ── BodyOwner ──────────────────────────────────────────────────────────
@@ -1586,9 +1604,25 @@ export class PhysicsWorld implements BodyOwner {
     }
 
     const commands = this._commands.splice(0);
+    let failed = false;
+    let failure: unknown;
 
+    // Every queued command runs even when one throws: a command skipped here
+    // is lost for good, and the state it settles - a pending removal, a
+    // pending joint - would stay half-applied.
     for (const command of commands) {
-      command();
+      try {
+        command();
+      } catch (error) {
+        if (!failed) {
+          failed = true;
+          failure = error;
+        }
+      }
+    }
+
+    if (failed) {
+      throw failure;
     }
   }
 

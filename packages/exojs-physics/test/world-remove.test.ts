@@ -397,4 +397,50 @@ describe('PhysicsWorld.remove during event dispatch', () => {
     world.add(box);
     expect(world.colliders.filter(collider => collider === added)).toHaveLength(1);
   });
+
+  it('applies the commands queued after one that throws, then reports that error', () => {
+    const foreign = new PhysicsWorld().add(kinematicBox(500, 500));
+    let later: PhysicsBody | null = null;
+    const world = new PhysicsWorld();
+
+    colliderAt(world, new BoxShape(100, 10), { x: 0, y: 0 });
+
+    const box = world.add(kinematicBox(0, -8));
+
+    later = world.add(kinematicBox(200, 200));
+    world.onCollisionStart.add(() => {
+      // The joint's foreign-world check runs when the queue drains and throws there.
+      world.addJoint(new DistanceJoint({ bodyA: box, bodyB: foreign }));
+      world.remove(later!);
+    });
+
+    expect(() => world.step(DT)).toThrow(/another world/);
+    expect(later.attached).toBe(false);
+    expect(() => world.add(later!)).not.toThrow();
+  });
+
+  it('finishes destroying the world when a queued command throws', () => {
+    const foreign = new PhysicsWorld().add(kinematicBox(500, 500));
+    const world = new PhysicsWorld();
+
+    colliderAt(world, new BoxShape(100, 10), { x: 0, y: 0 });
+
+    const box = world.add(kinematicBox(0, -8));
+    let error: unknown = null;
+
+    world.onCollisionStart.add(() => {
+      world.addJoint(new DistanceJoint({ bodyA: box, bodyB: foreign }));
+
+      try {
+        world.destroy();
+      } catch (caught) {
+        error = caught;
+      }
+    });
+    world.step(DT);
+
+    expect((error as Error).message).toMatch(/another world/);
+    expect(box.destroyed).toBe(true);
+    expect(() => world.remove(box)).toThrow(/world has been destroyed/);
+  });
 });

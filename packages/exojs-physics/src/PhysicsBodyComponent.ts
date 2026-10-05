@@ -55,12 +55,11 @@ export class PhysicsBodyComponent extends Component {
     const body = this.body;
     const node = this.node;
 
-    // Only the first activation reads the node: from then on the body is the
-    // transform authority, and the node merely shows where it is.
+    // Only the first successful activation reads the node: from then on the
+    // body is the transform authority, and the node merely shows where it is.
+    // A failed attempt leaves the flags set, so the retry reads the node anew.
     if (this._adoptNodePosition || this._adoptNodeAngle) {
       body.setTransform(this._adoptNodePosition ? nodeWorldPosition(node) : body.position, this._adoptNodeAngle ? nodeWorldAngle(node) : body.angle);
-      this._adoptNodePosition = false;
-      this._adoptNodeAngle = false;
     }
 
     this.world.add(body);
@@ -73,6 +72,9 @@ export class PhysicsBodyComponent extends Component {
       this.world.remove(body);
       throw error;
     }
+
+    this._adoptNodePosition = false;
+    this._adoptNodeAngle = false;
   }
 
   protected override onDisable(): void {
