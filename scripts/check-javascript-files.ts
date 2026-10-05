@@ -55,10 +55,6 @@ const EXEMPTIONS: readonly Exemption[] = [
     reason:
       'shared presets that ESLint, Prettier, Vitest and Rolldown load at runtime, typed through JSDoc under `checkJs` (see tsconfig.scripts.json)',
   },
-  {
-    path: 'site/public/brand/svgo.config.js',
-    reason: 'read by the `svgo` CLI, which loads a config module and understands no TypeScript',
-  },
 ];
 
 // A `never` return only ends control flow for the caller when the callee is a
