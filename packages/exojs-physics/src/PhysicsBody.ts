@@ -615,6 +615,27 @@ export class PhysicsBody {
     return this._owner !== null && this._owner !== owner;
   }
 
+  /** @internal - whether this body currently belongs to `owner`. */
+  public _isMemberOf(owner: BodyOwner): boolean {
+    return this._attached && this._owner === owner;
+  }
+
+  /**
+   * @internal - leave the owning world without being destroyed. Drops the
+   * world link and every id; transform, motion, mass model and colliders stay,
+   * so a later `_attachToWorld` re-registers the same body. The world has
+   * already taken the colliders out of detection.
+   */
+  public _detachFromWorld(): void {
+    this._owner = null;
+    this._id = -1;
+    this._attached = false;
+
+    for (const collider of this._colliders) {
+      collider._detachFromWorld();
+    }
+  }
+
   /**
    * A dynamic body has to carry mass. Boundary geometry (a segment, a chain)
    * reports no mass properties, and a collider may also be given zero density,

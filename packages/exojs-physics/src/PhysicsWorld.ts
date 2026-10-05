@@ -358,13 +358,13 @@ export class PhysicsWorld implements BodyOwner {
   public readonly onCollisionStart = new Signal<[CollisionEvent]>();
   /**
    * Fires when two solid colliders stop touching. A pair also ends when one of
-   * its colliders is destroyed; that end arrives with the next step's events,
-   * ahead of them. `destroy()` ends no pairs.
+   * its colliders leaves the world (destroyed or removed); that end arrives with
+   * the next step's events, ahead of them. `destroy()` ends no pairs.
    */
   public readonly onCollisionEnd = new Signal<[CollisionEvent]>();
   /** Fires when a collider enters a sensor. */
   public readonly onSensorEnter = new Signal<[SensorEvent]>();
-  /** Fires when a collider leaves a sensor, including by being destroyed; see {@link onCollisionEnd}. */
+  /** Fires when a collider leaves a sensor, including by leaving the world; see {@link onCollisionEnd}. */
   public readonly onSensorExit = new Signal<[SensorEvent]>();
 
   /** World gravity (px/s², +Y down). Integrated each sub-step. */
@@ -548,7 +548,8 @@ export class PhysicsWorld implements BodyOwner {
    * the colliders, computes the mass model and tracks the body for stepping.
    * Construct the body freely first (`new PhysicsBody({ ... })`), then add it.
    * Safe to call inside an event callback - the body push is deferred to the end
-   * of the step, exactly like collider registration. Returns the body.
+   * of the step, exactly like collider registration. Returns the body. A body
+   * taken out with {@link remove} can be added again, here or to another world.
    *
    * @throws if the body has already been added to a world.
    */
@@ -563,6 +564,10 @@ export class PhysicsWorld implements BodyOwner {
     // old createBody, which allocated the id synchronously); only the body-list
     // push is deferred so it is safe inside an event dispatch.
     body._attachToWorld(this, this._nextBodyId++);
+
+    // A body coming back from `remove` may have slept through the loss of
+    // whatever it rested on; only the removal woke its neighbours, never it.
+    body.wake();
 
     this._defer(() => {
       if (!body.destroyed) {
@@ -609,6 +614,41 @@ export class PhysicsWorld implements BodyOwner {
     this.bind(body, node);
 
     return body;
+  }
+
+  /**
+   * Take a body out of the simulation without destroying it. Its transform,
+   * velocities, mass model and colliders are kept and its ids are released; a
+   * later {@link add}, into this world or another, assigns new ones and wakes
+   * it. Touching pairs end with the usual end and exit events, delivered with
+   * the next step's events, and bodies resting on it are woken. A binding to a
+   * node ends.
+   *
+   * The colliders in those end events are the body's own, so by the time the
+   * events arrive their ids read `-1`, or the new ids of a re-add.
+   *
+   * @throws if the body is destroyed, does not belong to this world, or is
+   *   constrained by a joint of this world (remove the joint first, or end the
+   *   body with {@link destroyBody}).
+   */
+  public remove(body: PhysicsBody): void {
+    this._assertAlive();
+
+    if (body.destroyed) {
+      throw new Error('PhysicsWorld.remove: cannot remove a destroyed body.');
+    }
+
+    if (!body._isMemberOf(this)) {
+      throw new Error('PhysicsWorld.remove: this body does not belong to this world.');
+    }
+
+    if (this._isJointed(body)) {
+      throw new Error(
+        'PhysicsWorld.remove: this body is constrained by a joint. Remove the joint with removeJoint() first, or end the body with destroyBody().',
+      );
+    }
+
+    this._defer(() => this._detachBody(body));
   }
 
   /**
@@ -1587,6 +1627,17 @@ export class PhysicsWorld implements BodyOwner {
     }
   }
 
+  /** Whether a live joint of this world constrains `body`. */
+  private _isJointed(body: PhysicsBody): boolean {
+    for (const joint of this._joints) {
+      if (joint.bodyA === body || joint.bodyB === body) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private _removeCollider(collider: Collider): void {
     this._detachCollider(collider);
     this._backend.contactGraph.sealRemovalEnds();
@@ -1594,6 +1645,12 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _detachCollider(collider: Collider): void {
+    this._leaveDetection(collider);
+    collider._markDestroyed();
+  }
+
+  /** Take a collider (and a chain's edge proxies) out of every world structure, waking what touched it. */
+  private _leaveDetection(collider: Collider): void {
     const index = this._colliders.indexOf(collider);
 
     if (index !== -1) {
@@ -1611,8 +1668,24 @@ export class PhysicsWorld implements BodyOwner {
         this._removeDetectionCollider(edge);
       }
     }
+  }
 
-    collider._markDestroyed();
+  /** Take a body out of the world without destroying it; see {@link remove}. */
+  private _detachBody(body: PhysicsBody): void {
+    const index = this._bodies.indexOf(body);
+
+    if (index !== -1) {
+      this._bodies.splice(index, 1);
+    }
+
+    for (const collider of body.colliders) {
+      this._leaveDetection(collider);
+    }
+
+    // Before the ids are reset: the seal sorts by them.
+    this._backend.contactGraph.sealRemovalEnds();
+    this._bindings.unbind(body);
+    body._detachFromWorld();
   }
 
   /** Drop one broad-phase leaf: an authored collider, or one chain edge proxy. */
