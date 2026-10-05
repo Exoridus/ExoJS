@@ -13,8 +13,8 @@
 // with it.
 import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
 import { reactConfig } from '@codexo/exojs-config/eslint/react';
+import { prettierCompatConfig } from '@codexo/exojs-config/eslint/style';
 import { defineConfig } from 'eslint/config';
-import prettier from 'eslint-config-prettier';
 
 export default defineConfig([
   // `.astro/` is Astro's generated type/content cache and `public/` carries
@@ -41,16 +41,7 @@ export default defineConfig([
     },
   },
 
-  // Function style is a repository-wide convention. The engine and the
-  // extension packages get it from the shared correctness rules; the site has
-  // its own config, so it carries the rule itself.
-  {
-    files: ['src/**/*.{ts,tsx}', '*.config.{ts,mjs,js}', 'scripts/**/*.ts'],
-    rules: {
-      'func-style': ['error', 'expression'],
-    },
-  },
-
-  // Prettier compatibility: keep this last
-  prettier,
+  // Prettier compatibility: keep this last. It also re-enables `curly`,
+  // which Prettier compatibility would otherwise leave off.
+  ...prettierCompatConfig({ files: ['src/**/*.{ts,tsx}', '*.config.{ts,mjs,js}', 'scripts/**/*.ts'] }),
 ]);

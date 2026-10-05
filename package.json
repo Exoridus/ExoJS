@@ -81,10 +81,6 @@
     }
   },
   "prettier": "@codexo/exojs-config/prettier",
-  "lint-staged": {
-    "*.{ts,tsx,mts,cts,mjs,js,json,jsonc,md,mdx,css,yml,yaml,html}": "prettier --write",
-    "{src,test,examples,scripts,packages}/**/*.{ts,tsx,mts,cts}": "eslint --fix --no-warn-ignored --max-warnings=0"
-  },
   "scripts": {
     "bootstrap": "pnpm install --frozen-lockfile --ignore-scripts && pnpm build:tooling",
     "bootstrap:dev": "pnpm bootstrap && pnpm exec husky && pnpm build:all && pnpm bench:setup && pnpm exec playwright install chromium && pnpm doctor",
@@ -119,6 +115,7 @@
     "lint:fast": "pnpm lint --cache --cache-location .cache/eslintcache",
     "lint:site": "pnpm --filter @codexo/exojs-examples lint",
     "lint:all": "pnpm lint && pnpm lint:site",
+    "lint:fix": "pnpm lint --fix && pnpm lint:site --fix",
     "lint:source-hygiene": "tsx scripts/check-source-hygiene.ts",
     "lint:inline-source": "tsx scripts/check-inline-source.ts",
     "lint:changelog": "tsx scripts/check-changelog-untouched.ts",
