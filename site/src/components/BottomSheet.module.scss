@@ -51,7 +51,6 @@
   border-bottom: 0;
   background: var(--color-panel);
   max-height: min(80dvh, calc(100dvh - 0.65rem));
-  box-shadow: var(--shadow-xl);
   transform: translateY(102%);
   transition: transform 210ms ease;
   display: flex;

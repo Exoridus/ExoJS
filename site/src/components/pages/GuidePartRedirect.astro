@@ -3,20 +3,21 @@ import { GUIDE_PARTS } from '../../lib/guide-structure';
 import GuideChapterRedirect from './GuideChapterRedirect.astro';
 
 interface Props {
-    locale: 'en' | 'de';
-    partSlug: string;
+  locale: 'en' | 'de';
+  partSlug: string;
 }
 
 const { locale, partSlug } = Astro.props;
 const part = GUIDE_PARTS.find(entry => entry.slug === partSlug);
 
 if (!part) {
-    throw new Error(`Unknown guide part: ${partSlug}`);
+  throw new Error(`Unknown guide part: ${partSlug}`);
 }
 
 const firstChapter = part.chapters[0];
+
 if (!firstChapter) {
-    throw new Error(`Guide part has no chapters: ${partSlug}`);
+  throw new Error(`Guide part has no chapters: ${partSlug}`);
 }
 ---
 
