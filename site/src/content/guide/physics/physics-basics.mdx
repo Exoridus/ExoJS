@@ -50,11 +50,11 @@ Keep the visual node's origin aligned with the collider's intended origin. The e
 
 ## Bodies as components
 
-`PhysicsBodyComponent` ties a body's place in the world to its node. The body joins the world when the node becomes active in a scene and leaves it, keeping its position, velocity and colliders, whenever the component is disabled, the node is removed or reparented, or the scene is retained. It comes back on the next activation. Destroying the node destroys the body, so a removed enemy no longer leaves an invisible collider behind. Pausing the scene changes nothing; the world simply stops stepping.
+`PhysicsBodyComponent` ties a body's place in the world to its node. The body joins the world when the node becomes active in a scene and leaves it, keeping its position, velocity and colliders, whenever the component is disabled, the node is removed or reparented, or the scene is retained. It comes back on the next activation. Destroying the node destroys the body, so a removed enemy no longer leaves an invisible collider behind. Pausing the scene changes nothing here: a world registered as the scene's system stops stepping with it, while a world owned elsewhere keeps running.
 
 <SourceSnippet source="examples/guides/physics-basics/body-component.ts" region="body-component" language="ts" title="Bodies owned by their nodes" />
 
-Pass the world explicitly; the component never looks one up. Without a `position`, the body starts at the node's world position. `scene.query(PhysicsBodyComponent)` lists every simulated node, and `node.getComponent(PhysicsBodyComponent)?.body` reaches the body from gameplay code.
+Pass the world explicitly; the component never looks one up. Without a `position`, the body starts at the node's world position. `scene.query(PhysicsBodyComponent)` lists every node that carries one, including disabled components whose bodies are out of the world, and `node.getComponent(PhysicsBodyComponent)?.body` reaches the body from gameplay code.
 
 A component-managed body cannot take part in a joint yet, mouse joints included. Use `world.add` and `world.bind` for bodies that need joints. `world.attach`, `world.add` and `world.bind` remain available whenever you want to manage a body's lifetime yourself, and `world.remove(body)` takes a body out of the simulation without destroying it.
 

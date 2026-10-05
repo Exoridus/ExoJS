@@ -1660,7 +1660,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Take a body out of the simulation without destroying it. Its transform, velocities, mass model and colliders are kept and its ids are released; a later add, into this world or another, assigns new ones and wakes it. Touching pairs end with the usual end and exit events, delivered with the next step's events, and bodies resting on it are woken. A binding to a node ends. The colliders in those end events are the body's own, so by the time the events arrive their ids read -1, or the new ids of a re-add. Deferred when called inside an event callback. Adding the body back before that dispatch ends cancels the removal, and calling remove again in the meantime does nothing."
+          "description": "Take a body out of the simulation without destroying it. Its transform, velocities, mass model and colliders are kept and its ids are released; a later add, into this world or another, assigns new ones and wakes it. Touching pairs end with the usual end and exit events, delivered with the next step's events, and bodies resting on it are woken. A binding to a node ends. The colliders in those end events are the body's own, so by the time the events arrive their ids read -1, or the new ids of a re-add. A removed body cannot be constrained by a joint until it is added again. Deferred when called inside an event callback. Adding the body back before that dispatch ends cancels the removal, and calling remove again in the meantime does nothing."
         },
         {
           "name": "removeJoint",

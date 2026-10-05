@@ -11,7 +11,8 @@ import type { PhysicsWorld } from './PhysicsWorld';
  * switched off, its node removed or reparented, its scene retained or ended -
  * the body leaves the world with its state kept, and the next activation puts
  * the same body back. Destroying the component, or its node, destroys the
- * body. Pausing the scene changes nothing; the world simply stops stepping.
+ * body. Pausing the scene changes nothing here: a world registered as that
+ * scene's system stops stepping with it, a world owned elsewhere keeps going.
  *
  * The body exists from construction, so {@link body} can be configured before
  * the node enters a scene. Unless `options.position` or `options.angle` is

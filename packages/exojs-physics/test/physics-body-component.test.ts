@@ -75,6 +75,25 @@ describe('PhysicsBodyComponent', () => {
     expect([explicit.x, explicit.y]).toEqual([5, 6]);
   });
 
+  it('adopts the node rotation on first activation unless an angle is given', async () => {
+    const { scene } = await worldScene();
+    const adopted = new Container();
+    const explicit = new Container();
+
+    adopted.setRotation(30);
+    explicit.setRotation(30);
+
+    const fromNode = adopted.addComponent(new PhysicsBodyComponent(scene.world, box()));
+    const fromOptions = explicit.addComponent(new PhysicsBodyComponent(scene.world, box({ angle: 0.25 })));
+
+    scene.addChild(adopted);
+    scene.addChild(explicit);
+
+    // Node rotation is counter-clockwise degrees, body angle clockwise radians.
+    expect(fromNode.body.angle).toBeCloseTo(-Math.PI / 6, 6);
+    expect(fromOptions.body.angle).toBe(0.25);
+  });
+
   it('destroys its body with the node', async () => {
     const { scene } = await worldScene();
     const node = new Container();

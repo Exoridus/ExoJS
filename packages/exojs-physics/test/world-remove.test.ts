@@ -1,7 +1,7 @@
 import { Container } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
-import type { CollisionEvent } from '../src/index';
+import type { Collider, CollisionEvent } from '../src/index';
 import { BoxShape, ChainShape, CircleShape, DistanceJoint, PhysicsBody, PhysicsWorld } from '../src/index';
 import { colliderAt } from './support';
 
@@ -223,6 +223,35 @@ describe('PhysicsWorld.remove', () => {
     expect(body.destroyed).toBe(true);
     expect(body.colliders[0]!.destroyed).toBe(true);
   });
+
+  it('ends sensor overlaps with an exit event', () => {
+    const world = new PhysicsWorld();
+
+    colliderAt(world, new BoxShape(100, 10), { x: 0, y: 0 }, 0, 'static', { isSensor: true });
+
+    const box = world.add(kinematicBox(0, -8));
+    let exits = 0;
+
+    world.onSensorExit.add(() => exits++);
+    world.step(DT);
+    world.remove(box);
+    world.step(DT);
+
+    expect(exits).toBe(1);
+  });
+
+  it('rejects a joint on a body that was removed until it is added back', () => {
+    const world = new PhysicsWorld();
+    const a = world.add(new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new CircleShape(5) }] }));
+    const b = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 30, y: 0 }, colliders: [{ shape: new CircleShape(5) }] }));
+
+    world.remove(a);
+    expect(() => world.addJoint(new DistanceJoint({ bodyA: a, bodyB: b }))).toThrow(/removed from its world/);
+    expect(world.joints).toHaveLength(0);
+
+    world.add(a);
+    expect(() => world.addJoint(new DistanceJoint({ bodyA: a, bodyB: b }))).not.toThrow();
+  });
 });
 
 describe('PhysicsWorld.remove during event dispatch', () => {
@@ -351,5 +380,21 @@ describe('PhysicsWorld.remove during event dispatch', () => {
 
     expect(box.attached).toBe(false);
     expect(box.destroyed).toBe(false);
+  });
+
+  it('keeps a collider added during a pending removal out of the world until the body returns', () => {
+    let added: Collider | null = null;
+
+    const { world, box } = onFirstContact((world, box) => {
+      world.remove(box);
+      added = box.addCollider({ shape: new BoxShape(4, 4) });
+    });
+
+    expect(box.attached).toBe(false);
+    expect(world.colliders).not.toContain(added);
+    expect(world.queryPoint({ x: 0, y: -8 })).toEqual([]);
+
+    world.add(box);
+    expect(world.colliders.filter(collider => collider === added)).toHaveLength(1);
   });
 });

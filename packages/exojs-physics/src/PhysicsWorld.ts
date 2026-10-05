@@ -600,7 +600,8 @@ export class PhysicsWorld implements BodyOwner {
    * node ends.
    *
    * The colliders in those end events are the body's own, so by the time the
-   * events arrive their ids read `-1`, or the new ids of a re-add.
+   * events arrive their ids read `-1`, or the new ids of a re-add. A removed
+   * body cannot be constrained by a joint until it is added again.
    *
    * Deferred when called inside an event callback. Adding the body back before
    * that dispatch ends cancels the removal, and calling `remove` again in the
@@ -691,6 +692,10 @@ export class PhysicsWorld implements BodyOwner {
 
     if (joint.bodyA.destroyed || joint.bodyB.destroyed) {
       throw new Error('PhysicsWorld.addJoint: a joint cannot constrain a destroyed body.');
+    }
+
+    if (joint.bodyA._wasRemoved || joint.bodyB._wasRemoved) {
+      throw new Error('PhysicsWorld.addJoint: a joint cannot constrain a body that was removed from its world. Add the body back first.');
     }
 
     if (this._pendingBodyRemovals.has(joint.bodyA) || this._pendingBodyRemovals.has(joint.bodyB)) {
@@ -1106,7 +1111,10 @@ export class PhysicsWorld implements BodyOwner {
   /** @internal */
   public _registerCollider(collider: Collider): void {
     this._defer(() => {
-      if (collider.destroyed) {
+      // A body removed after queueing this registration has already left;
+      // registering now would leave a live collider behind for a body the
+      // world no longer steps, and register it twice on re-add.
+      if (collider.destroyed || !collider.body._isMemberOf(this)) {
         return;
       }
 
