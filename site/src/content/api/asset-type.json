@@ -108,7 +108,7 @@
       "members": [
         {
           "name": "asset",
-          "signature": "asset(source: string, options?: Options): Asset<Resource>",
+          "signature": "asset(source: string, options: AssetOptionsArgument<Options>): AssetDescriptor<AssetLeaf<Resource>, Resource>",
           "signatureTokens": [
             {
               "text": "asset",
@@ -139,16 +139,24 @@
               "kind": "param"
             },
             {
-              "text": "?",
+              "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": ": ",
+              "text": "AssetOptionsArgument",
+              "kind": "type"
+            },
+            {
+              "text": "<",
               "kind": "punctuation"
             },
             {
               "text": "Options",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -159,11 +167,31 @@
               "kind": "punctuation"
             },
             {
-              "text": "Asset",
+              "text": "AssetDescriptor",
               "kind": "type"
             },
             {
               "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
               "kind": "punctuation"
             },
             {
@@ -183,12 +211,12 @@
             },
             {
               "name": "options",
-              "type": "Options",
-              "optional": true
+              "type": "AssetOptionsArgument<Options>",
+              "optional": false
             }
           ],
-          "returnType": "Asset<Resource>",
-          "description": "A typed, loadable descriptor for one asset of this type. The resource and option types come from the type instance, so a custom type is fully typed at every call site without declaring anything to the module system: ts const world = await loader.load(worldType.asset('level.world')); "
+          "returnType": "AssetDescriptor<AssetLeaf<Resource>, Resource>",
+          "description": "A typed, loadable descriptor for one asset of this type. The resource and option types come from the type instance, so a custom type is fully typed at every call site without declaring anything to the module system: ts const world = await loader.load(worldType.asset('level.world'));  The descriptor is branded with this type's leaf policy, so a catalog types its entry as the leaf the runtime hands out. options is required when the option bag has a required field. type and source are reserved for the request: an option bag carrying either throws."
         },
         {
           "name": "createFactory",

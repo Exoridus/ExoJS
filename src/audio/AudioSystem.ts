@@ -4,11 +4,13 @@ import type { Seconds } from '#core/units';
 
 import { AudioBus } from './AudioBus';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
+import type { AudioGenerator } from './AudioGenerator';
 import type { AudioInput } from './AudioInput';
 import { AudioListener } from './AudioListener';
+import type { AudioStream } from './AudioStream';
 import type { SpatialVoice } from './BaseVoice';
 import { InputVoice } from './InputVoice';
-import type { Playable, PlayOptions, Voice } from './Playable';
+import type { Loopable, Pausable, Playable, PlayOptions, RatePitched, Seekable, Voice } from './Playable';
 import type { Sound, SoundPlayOptions } from './Sound';
 import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from './spatialSmoothing';
 import { SpatialZones } from './SpatialZones';
@@ -374,12 +376,22 @@ export class AudioSystem {
    *
    * Throws once the system has been destroyed - see {@link AudioSystem.destroy}.
    *
+   * The return type names the capabilities the source supports. An
+   * {@link AudioStream} always yields a {@link Seekable}, {@link Pausable},
+   * {@link Loopable}, {@link RatePitched} voice. A {@link Sound} yields the same
+   * surface, or an already-ended voice without capabilities when the play call
+   * is skipped (locked, not loaded, offset past the end), so narrow it with a
+   * capability check (`'seek' in voice`). An {@link AudioGenerator} voice is
+   * {@link Pausable} and {@link RatePitched}, never {@link Seekable}.
+   *
    * @param source - Any {@link Playable} asset (Sound, AudioStream, AudioGenerator).
    * @param options - Per-play overrides (bus, volume, loop, playbackRate, detune,
    * time, muted, plus `position` and the spatial attenuation fields).
    * @returns A {@link Voice} handle for the new instance.
    */
-  public play(source: Sound, options?: SoundPlayOptions): Voice;
+  public play(source: Sound, options?: SoundPlayOptions): Voice | (Voice & Seekable & Pausable & Loopable & RatePitched);
+  public play(source: AudioStream, options?: PlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched;
+  public play(source: AudioGenerator, options?: PlayOptions): Voice | (Voice & Pausable & RatePitched);
   public play(source: Playable, options?: PlayOptions): Voice;
   public play(source: Playable, options?: PlayOptions): Voice {
     this._assertLive('play');

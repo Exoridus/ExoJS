@@ -7,7 +7,7 @@ export { ForwardLighting } from './ForwardLighting';
 export type { FrameLightingOptions } from './frameLighting';
 export type { LightingDebugView, LightingOptions, LightingQuality } from './Lighting';
 export { Lighting } from './Lighting';
-export type { LightingHost } from './LightingHost';
+export type { LightingHost, LightingScene } from './LightingHost';
 export type { LightmapLightingOptions } from './LightmapLighting';
 export { LightmapLighting } from './LightmapLighting';
 export type { LightOptions } from './lights/Light';

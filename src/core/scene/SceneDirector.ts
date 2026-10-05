@@ -1396,13 +1396,6 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     try {
       await scope.prepare(data);
 
-      if (scene.root.children.length > 0 && scene.draw === Scene.prototype.draw) {
-        logger.warn(
-          `Scene.root has ${scene.root.children.length} child(ren) after init() but draw() is not overridden. Scene.root is not auto-rendered — call context.render(this.root) inside draw().`,
-          { source: 'SceneDirector' },
-        );
-      }
-
       return scope;
     } catch (error) {
       scope.destroyFailedActivation();

@@ -7,10 +7,11 @@ import { tilemapExtension } from '../src/tilemapExtension';
 import { TileMapNode } from '../src/TileMapNode';
 import { tileMapNodeSerializer } from '../src/tilemapSerializers';
 
-/** Minimal Loader stand-in implementing the two methods the serialization context uses. */
+/** Minimal Loader stand-in implementing the methods the serialization context uses. */
 const fakeLoader = (map: TileMap, source: string): Loader => {
   return {
     keyFor: (resource: object) => (resource === map ? { type: TileMap, source } : null),
+    _assetReference: (resource: object) => (resource === map ? { kind: 'request', source } : null),
     _peekResource: (type: Loadable, source_: string) => (type === TileMap && source_ === source ? map : null),
   } as unknown as Loader;
 };
@@ -56,13 +57,13 @@ describe('tilemap serialization', () => {
   });
 
   it('throws when the referenced map is not pre-loaded', () => {
-    const emptyLoader = { keyFor: () => null, _peekResource: () => null } as unknown as Loader;
+    const emptyLoader = { keyFor: () => null, _assetReference: () => null, _peekResource: () => null } as unknown as Loader;
 
     expect(() => Prefab.fromJSON(prefabDocument({ type: 'TileMapNode', map: 'missing.tmj' })).instantiate(emptyLoader)).toThrow(/pre-loaded/);
   });
 
   it('throws when no map field is present at all (procedural map, never given a source key)', () => {
-    const emptyLoader = { keyFor: () => null, _peekResource: () => null } as unknown as Loader;
+    const emptyLoader = { keyFor: () => null, _assetReference: () => null, _peekResource: () => null } as unknown as Loader;
 
     expect(() => Prefab.fromJSON(prefabDocument({ type: 'TileMapNode' })).instantiate(emptyLoader)).toThrow(/pre-loaded/);
   });
@@ -73,7 +74,7 @@ describe('tilemap serialization', () => {
     // default the writer omits against - so it is written, and a reader on a
     // future default still restores the mode this node actually had.
     const node = new TileMapNode(map);
-    const loaderWithoutSourceKey = { keyFor: () => null, _peekResource: () => null } as unknown as Loader;
+    const loaderWithoutSourceKey = { keyFor: () => null, _assetReference: () => null, _peekResource: () => null } as unknown as Loader;
 
     const data = Prefab.from(node, loaderWithoutSourceKey).toJSON();
 

@@ -1,11 +1,7 @@
-import { Application, type RenderingContext, Scene } from '@codexo/exojs';
+import { Application, Scene } from '@codexo/exojs';
 
 // #region guide:start-loop
-class HelloScene extends Scene {
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
-  }
-}
+class HelloScene extends Scene {}
 
 const app = new Application({ scenes: { HelloScene } });
 await app.start(HelloScene);

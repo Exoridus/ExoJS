@@ -4040,7 +4040,7 @@
         },
         {
           "name": "SERIALIZATION_VERSION",
-          "signature": "SERIALIZATION_VERSION: 1",
+          "signature": "SERIALIZATION_VERSION: 2",
           "signatureTokens": [
             {
               "text": "SERIALIZATION_VERSION",
@@ -4051,7 +4051,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "1",
+              "text": "2",
               "kind": "keyword"
             }
           ],

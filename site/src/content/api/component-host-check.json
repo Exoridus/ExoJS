@@ -1,0 +1,147 @@
+{
+  "title": "ComponentHostCheck",
+  "description": "Accepts a component of type `C` on a node of type `H` when `H` is the component's declared host type or a subtype of it, and otherwise requires a ComponentHost no component carries. A conditional rather than a contravariant function member, so the check also holds for consumers that compile without `strictFunctionTypes`.",
+  "symbol": "ComponentHostCheck",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Accepts a component of type `C` on a node of type `H` when `H` is the component's declared host type or a subtype of it, and otherwise requires a ComponentHost no component carries. A conditional rather than a contravariant function member, so the check also holds for consumers that compile without `strictFunctionTypes`."
+      ],
+      "importLine": "import { ComponentHostCheck } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ComponentHostCheck",
+          "signature": "H extends C[typeof componentHost] ? unknown : ComponentHost<C[typeof componentHost]>",
+          "signatureTokens": [
+            {
+              "text": "H",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "componentHost",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentHost",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "componentHost",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Component.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Component.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Component.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Component.ts"
+}

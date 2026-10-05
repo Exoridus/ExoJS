@@ -102,26 +102,18 @@ voice.stop();                          // stop now and release the voice
 voice.stop(Time.seconds(0.8));         // fade out over 0.8s, then stop
 ```
 
-Every `Voice` carries `volume` (get/set), `fade(to, duration)`, `stop(fade?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` node you can tap for analysis. Beyond that base, a voice mixes in only the capabilities its backing node actually supports — narrow with a cast or an `'x' in voice` check:
+Every `Voice` carries `volume` (get/set), `fade(to, duration)`, `stop(fade?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` node you can tap for analysis. Beyond that base, a voice mixes in only the capabilities its backing node actually supports, and the type `play()` returns says which. An `AudioStream` voice always carries them. A `Sound` voice carries the same set, but a skipped play call (audio locked, sound not loaded) returns an already-ended voice without them, so narrow it with an `'x' in voice` check. An `AudioGenerator` voice is pausable and rate-pitched, never seekable:
 
 ```ts
-import {
-    type Application,
-    AudioStream,
-    type Loopable,
-    type Pausable,
-    type RatePitched,
-    type Seekable,
-    type Voice,
-} from '@codexo/exojs';
+import { type Application, AudioStream, Sound } from '@codexo/exojs';
 
 declare const application: Application;
 declare const stream: AudioStream;
-type StreamVoice = Voice & Seekable & Pausable & Loopable & RatePitched;
+declare const sound: Sound;
 
 // Both a SoundVoice and an AudioStreamVoice are
 // Seekable + Pausable + Loopable + RatePitched + Spatializable.
-const streamVoice = application.audio.play(stream, { loop: true }) as StreamVoice;
+const streamVoice = application.audio.play(stream, { loop: true });
 
 streamVoice.seek(10);        // Seekable: jump to 10s
 streamVoice.time;            // current position in seconds
@@ -132,6 +124,12 @@ streamVoice.detune = 1200;   // RatePitched: cents (one octave up)
 streamVoice.pause();         // Pausable
 streamVoice.resume();
 streamVoice.paused;          // boolean
+
+const soundVoice = application.audio.play(sound);
+
+if ('seek' in soundVoice) {
+    soundVoice.seek(0.5);    // narrowed to the full SoundVoice surface
+}
 ```
 
 <Callout type="note" title="Pausing a Sound is a restart, not a freeze">
@@ -139,6 +137,8 @@ A `Sound` plays through an `AudioBufferSourceNode`, which can be neither reposit
 </Callout>
 
 Because `SoundVoice` is `Pausable`, `scene.audio` freezes buffer sounds along with everything else: `app.scenes.pause()` pauses voices registered with `when: 'active'`, and scene retention (`suspend()`/`restore()`) pauses and reinstates whatever was playing.
+
+`scene.audio.play()` called in `init()`, before the scene is active, returns a stand-in voice right away and starts playback when the scene activates. It is the same handle for the whole playback: `voice.bus` is valid immediately, it carries the capabilities of its source before and after activation, and requests made early are applied when playback starts. `stop()` cancels the start, `pause()` makes it start paused, and `seek(t)` sets the start offset. Activation then plays through `app.audio` under the unlock rules above, so a `Sound` started in `init()` before the first user gesture is still skipped.
 
 For "one voice at a time" scenarios like voice-over lines, `Sound`'s play options also accept a `replace` flag (`app.audio.play(sound, { replace: true })`) that stops all other pooled voices of that sound before starting this one.
 

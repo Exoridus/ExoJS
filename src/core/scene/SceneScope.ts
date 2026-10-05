@@ -1,4 +1,5 @@
 import type { Application } from '#core/Application';
+import { ComponentRuntime } from '#core/ComponentRuntime';
 import type { FrameBudget } from '#core/FrameBudget';
 import { logger } from '#core/Logger';
 import { Perf } from '#core/Perf';
@@ -61,6 +62,9 @@ export class SceneScope<Data = unknown> {
   private _rootsAttached = false;
   private _unloadCalled = false;
   private _destroyCalled = false;
+  private _components: ComponentRuntime | null = null;
+  private _componentsDisposed = false;
+  private _inFrame = false;
 
   public constructor(app: Application, scene: Scene<Data>, onStateChange: (previous: SceneState, next: SceneState) => void = () => {}) {
     this._app = app;
@@ -84,6 +88,46 @@ export class SceneScope<Data = unknown> {
     this.animations = new SceneAnimations();
 
     scene._attach(app, this);
+
+    // Components attached while the scene was being constructed join now;
+    // later arrivals create the runtime themselves.
+    if (scene.root._componentNodes > 0 || (scene._peekUI()?._componentNodes ?? 0) > 0) {
+      this.componentRuntime(true);
+    }
+  }
+
+  /**
+   * This activation's component runtime, created on demand when `create` is
+   * set. A scene that never carries a component and never queries never
+   * builds one. `null` once the scope has ended.
+   */
+  public componentRuntime(create: boolean): ComponentRuntime | null {
+    if (this._components !== null || !create || this._componentsDisposed) {
+      return this._components;
+    }
+
+    const runtime = new ComponentRuntime({
+      scene: this.scene as Scene,
+      isLive: () => this._state === SceneState.Active,
+      isTicking: () => this._state === SceneState.Active && !this._paused,
+      reportError: error => this._reportError(error),
+    });
+
+    this._components = runtime;
+
+    if (this._inFrame) {
+      runtime.beginFrame();
+    }
+
+    runtime.attachSubtree(this.scene.root);
+
+    const ui = this.scene._peekUI();
+
+    if (ui !== null) {
+      runtime.attachSubtree(ui);
+    }
+
+    return runtime;
   }
 
   public get state(): SceneState {
@@ -146,6 +190,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.tweens.activate());
     this._guard(errors, () => this.coroutines.activate());
     this._guard(errors, () => this.audio._flushPending());
+    this._guard(errors, () => this._components?.setLive(true));
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
@@ -236,6 +281,8 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.inputs.suspend());
     this._guard(errors, () => this.interaction.suspend());
+    this._guard(errors, () => this._components?.setLive(false));
+    this._guard(errors, () => this._closeComponentFrame());
     this._guard(errors, () => {
       if (this._rootsAttached) {
         this._detachAutoRoots();
@@ -282,6 +329,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.audio.restore());
     this._guard(errors, () => this.animations.restore());
     this._guard(errors, () => this.audio._flushPending());
+    this._guard(errors, () => this._components?.setLive(true));
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
@@ -313,6 +361,7 @@ export class SceneScope<Data = unknown> {
 
     if (result !== undefined) this._requireSynchronousFrameHook(result, 'fixedUpdate');
 
+    this._components?.fixedUpdate(step);
     this.systems._fixedUpdate(step);
 
     if (__DEV__) {
@@ -337,6 +386,7 @@ export class SceneScope<Data = unknown> {
 
     if (result !== undefined) this._requireSynchronousFrameHook(result, 'update');
 
+    this._components?.update(delta);
     this.systems._update(delta);
 
     if (__DEV__) {
@@ -384,14 +434,18 @@ export class SceneScope<Data = unknown> {
     this.systems._postFrame(delta, budget);
   }
 
-  /** @internal Forwards to {@link SystemRegistry._beginFrame}. */
+  /** @internal Opens this frame's mutation-buffering window for systems and components. */
   public _beginFrame(): void {
+    this._inFrame = true;
     this.systems._beginFrame();
+    this._components?.beginFrame();
   }
 
-  /** @internal Forwards to {@link SystemRegistry._endFrame}. */
+  /** @internal Closes the window {@link SceneScope._beginFrame} opened and applies what it buffered. */
   public _endFrame(): void {
+    this._inFrame = false;
     this.systems._endFrame();
+    this._components?.endFrame();
   }
 
   /**
@@ -426,6 +480,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.interaction.destroy());
     this._callSceneDestroy(errors);
     this._guard(errors, () => this.scene._teardownInternals());
+    this._guard(errors, () => this._disposeComponents());
     this._guard(errors, () => this.loader.destroy());
 
     this._state = SceneState.Destroyed;
@@ -462,6 +517,7 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.inputs.suspend());
     this._guard(errors, () => this.interaction.suspend());
+    this._guard(errors, () => this._components?.setLive(false));
 
     if (!this._unloadCalled) {
       this._unloadCalled = true;
@@ -478,12 +534,36 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this._detachRoots());
     this._callSceneDestroy(errors);
     this._guard(errors, () => this.scene._teardownInternals());
+    this._guard(errors, () => this._disposeComponents());
     this._guard(errors, () => this.loader.destroy());
 
     this._state = SceneState.Destroyed;
     this._onStateChange(SceneState.Destroying, this._state);
 
     this._reportErrors(errors);
+  }
+
+  /**
+   * A scope that stops being the active one mid-frame never receives that
+   * frame's {@link SceneScope._endFrame} - the director forwards it to the
+   * scope active by then - so it applies what its runtime buffered itself.
+   */
+  private _closeComponentFrame(): void {
+    if (this._inFrame) {
+      this._inFrame = false;
+      this._components?.endFrame();
+    }
+  }
+
+  /**
+   * Drop the component runtime once the structural teardown has destroyed
+   * every node - and with them every component - so nothing re-creates it
+   * for a scene that is gone.
+   */
+  private _disposeComponents(): void {
+    this._componentsDisposed = true;
+    this._components?.dispose();
+    this._components = null;
   }
 
   private _callSceneDestroy(errors: unknown[]): void {

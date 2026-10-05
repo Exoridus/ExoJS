@@ -1,4 +1,4 @@
-import { type RenderingContext, Scene, Sprite } from '@codexo/exojs';
+import { Scene, Sprite } from '@codexo/exojs';
 
 // #region guide:hero-scene
 class HeroScene extends Scene {
@@ -11,10 +11,6 @@ class HeroScene extends Scene {
   override init(): void {
     this.hero = new Sprite(this.loader.get('image/hero.png'));
     this.addChild(this.hero);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 
   private centerHero(): void {

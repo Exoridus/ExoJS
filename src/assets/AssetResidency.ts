@@ -6,8 +6,10 @@ import type { AssetConstructor } from './AssetConstructor';
 import type { AssetDecoder } from './AssetDecoder';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
+import { type AssetReferenceLookup, AssetRequestLog } from './AssetRequestLog';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { AssetLocator, CanonicalAsset, ResourceKey } from './canonicalKey';
+import { _bindLeaves as bindCatalogLeaves } from './catalogLeaf';
 import type { LoaderScope, LoaderScopeKind } from './LoaderScope';
 import { residentBytes } from './residentBytes';
 import type { SeamlessAdapter } from './seamless';
@@ -156,6 +158,29 @@ export interface AssetStats {
   readonly largest: readonly AssetSizeStats[];
 }
 
+/**
+ * One open load operation's stake in a key, from the moment the load claims it
+ * until the load settles or is cancelled.
+ *
+ * Kept apart from settled ownership because a scope can have several loads of
+ * the same key open at once, and cancelling one of them must withdraw exactly
+ * that operation's stake - never the scope's settled claim, and never a sibling
+ * operation's.
+ * @internal
+ */
+export interface ClaimParticipation {
+  readonly key: ResourceKey;
+  readonly scope: LoaderScope;
+}
+
+/** Who holds a key: scopes with a settled claim, plus scopes with an open load operation on it. */
+interface ClaimEntry {
+  readonly asset: CanonicalAsset;
+  /** Settled, idempotent claims. Dropped only by an explicit release or scope teardown. */
+  readonly scopes: Set<LoaderScope>;
+  readonly pending: Map<LoaderScope, Set<ClaimParticipation>>;
+}
+
 /** One resident payload, kept together with the canonical identity it was stored under. */
 interface ResidentEntry {
   readonly asset: CanonicalAsset;
@@ -178,10 +203,12 @@ export class AssetResidency {
   private readonly _hooks: AssetResidencyHooks;
 
   private readonly _resources = new Map<ResourceKey, ResidentEntry>();
+  // Identity this residency binds catalog leaves to; see `_bindLeaves`.
+  private readonly _leafOwner = {};
   // Reverse lookup: loaded resource object → the (type, source) it was first
   // stored under. Backs Loader.keyFor for scene serialization. A WeakMap so
   // it never retains resources; only object resources participate.
-  private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string }>();
+  private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string; key: ResourceKey }>();
   private readonly _inFlight = new Map<ResourceKey, Promise<unknown>>();
   private readonly _preventStoreKeys = new Set<ResourceKey>();
 
@@ -189,10 +216,7 @@ export class AssetResidency {
   // waiting on it, so aborting is never a property of one consumer's cancel but
   // of the LAST holder leaving.
   private readonly _abort = new Map<ResourceKey, SharedAbort>();
-
-  // Every source string that has resolved to a given canonical key. Purely
-  // diagnostic - an alias never participates in identity or ownership.
-  private readonly _aliases = new Map<ResourceKey, Set<string>>();
+  private readonly _requestLog: AssetRequestLog;
 
   // ── Seamless deferred handles ──────────────────────────────────────────────
   private readonly _deferred = new Map<ResourceKey, { readonly asset: CanonicalAsset; readonly handles: WeakHandleSet; readonly options: unknown }>();
@@ -209,7 +233,7 @@ export class AssetResidency {
   private readonly _refs = new Map<ResourceKey, { readonly asset: CanonicalAsset; readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
-  private readonly _claims = new Map<ResourceKey, { scopes: Set<LoaderScope>; asset: CanonicalAsset }>();
+  private readonly _claims = new Map<ResourceKey, ClaimEntry>();
   // The scope that owns whatever sub-assets a key's own load pulled in. Owned by
   // the PARENT KEY, never by whichever consumer happened to start the fetch: a
   // deduped load serves many consumers, and the first one to release must not
@@ -236,6 +260,7 @@ export class AssetResidency {
   /** @internal */
   public constructor(typeRegistry: AssetTypeRegistry, decoder: AssetDecoder, signals: AssetResidencySignals, concurrency: number, hooks: AssetResidencyHooks) {
     this._typeRegistry = typeRegistry;
+    this._requestLog = new AssetRequestLog(typeRegistry);
     this._decoder = decoder;
     this._signals = signals;
     this._concurrency = concurrency;
@@ -280,14 +305,14 @@ export class AssetResidency {
       const queuedInBackground = backgroundKeys.has(key);
       const handleState = this._inspectHandleState(key, asset.type);
       const state = this._inspectState({ stored, handleState, queuedInBackground, inFlight });
-      const scopes = [...(this._claims.get(key)?.scopes ?? [])].sort((left, right) => left.id - right.id);
+      const scopes = this._holders(this._claims.get(key)).sort((left, right) => left.id - right.id);
 
       rows.push(
         Object.freeze({
           canonicalKey: key,
           type: asset.type,
           locator: asset.locator,
-          aliases: Object.freeze([...(this._aliases.get(key) ?? [asset.source])].sort()),
+          aliases: this._requestLog.aliases(key, asset.source),
           state,
           claims: scopes.length,
           owners: Object.freeze(scopes.map(scope => Object.freeze({ id: scope.id, ...(scope.name !== undefined && { name: scope.name }), kind: scope.kind }))),
@@ -440,18 +465,6 @@ export class AssetResidency {
   // Claim / release
   // -----------------------------------------------------------------------
 
-  /** Record that `source` resolved to `key`, for diagnostics only. */
-  private _recordAlias(asset: CanonicalAsset): void {
-    let aliases = this._aliases.get(asset.key);
-
-    if (aliases === undefined) {
-      aliases = new Set<string>();
-      this._aliases.set(asset.key, aliases);
-    }
-
-    aliases.add(asset.source);
-  }
-
   /**
    * Register a claim on a canonical asset under a claim scope (idempotent per
    * scope). On an evicted key, kick a re-fetch into the existing, already
@@ -459,16 +472,108 @@ export class AssetResidency {
    * @internal
    */
   public _claim(asset: CanonicalAsset, claimer: LoaderScope): void {
+    this._claimEntry(asset).scopes.add(claimer);
+    this._refetchIfEvicted(asset);
+  }
+
+  /**
+   * Register an open load operation's stake in a key under `claimer`. The
+   * scope holds the key while the participation is open; {@link _settleParticipation}
+   * turns it into the scope's settled claim and {@link _cancelParticipation}
+   * withdraws only this operation's stake.
+   * @internal
+   */
+  public _participate(asset: CanonicalAsset, claimer: LoaderScope): ClaimParticipation {
+    const entry = this._claimEntry(asset);
+    const participation: ClaimParticipation = { key: asset.key, scope: claimer };
+    let open = entry.pending.get(claimer);
+
+    if (open === undefined) {
+      open = new Set<ClaimParticipation>();
+      entry.pending.set(claimer, open);
+    }
+
+    open.add(participation);
+    this._refetchIfEvicted(asset);
+
+    return participation;
+  }
+
+  /**
+   * Convert a settled load's participation into its scope's settled claim. A
+   * participation already cancelled, or withdrawn by an explicit release of its
+   * scope in the meantime, is a no-op: settling must never resurrect a claim
+   * its owner gave up while the load was in flight.
+   * @internal
+   */
+  public _settleParticipation(participation: ClaimParticipation): void {
+    const entry = this._takeParticipation(participation);
+
+    entry?.scopes.add(participation.scope);
+  }
+
+  /**
+   * Withdraw a cancelled load's participation. The key is released - and an
+   * in-flight fetch aborted - only when no scope holds it any more.
+   * @internal
+   */
+  public _cancelParticipation(participation: ClaimParticipation): void {
+    const entry = this._takeParticipation(participation);
+
+    if (entry !== undefined && !this._isHeld(entry)) {
+      this._claims.delete(participation.key);
+      this._evictKey(entry.asset);
+    }
+  }
+
+  private _takeParticipation(participation: ClaimParticipation): ClaimEntry | undefined {
+    const entry = this._claims.get(participation.key);
+    const open = entry?.pending.get(participation.scope);
+
+    if (entry === undefined || open?.delete(participation) !== true) {
+      return undefined;
+    }
+
+    if (open.size === 0) {
+      entry.pending.delete(participation.scope);
+    }
+
+    return entry;
+  }
+
+  private _isHeld(entry: ClaimEntry): boolean {
+    return entry.scopes.size > 0 || entry.pending.size > 0;
+  }
+
+  private _holders(entry: ClaimEntry | undefined): LoaderScope[] {
+    if (entry === undefined) {
+      return [];
+    }
+
+    const holders = new Set(entry.scopes);
+
+    for (const scope of entry.pending.keys()) {
+      holders.add(scope);
+    }
+
+    return [...holders];
+  }
+
+  private _claimEntry(asset: CanonicalAsset): ClaimEntry {
     let entry = this._claims.get(asset.key);
 
     if (entry === undefined) {
-      entry = { scopes: new Set<LoaderScope>(), asset };
+      entry = { asset, scopes: new Set<LoaderScope>(), pending: new Map<LoaderScope, Set<ClaimParticipation>>() };
       this._claims.set(asset.key, entry);
     }
 
-    this._recordAlias(asset);
-    entry.scopes.add(claimer);
+    this._requestLog.record(asset);
 
+    return entry;
+  }
+
+  /** On an evicted key, kick a re-fetch into the existing, already re-armed handle so every dangling consumer heals in place. */
+  private _refetchIfEvicted(asset: CanonicalAsset): void {
     if (this._evicted.has(asset.key)) {
       this._evicted.delete(asset.key);
 
@@ -495,9 +600,12 @@ export class AssetResidency {
       return;
     }
 
+    // An explicit release withdraws the scope entirely, open loads included, so
+    // none of them can turn back into a claim when it settles.
     entry.scopes.delete(claimer);
+    entry.pending.delete(claimer);
 
-    if (entry.scopes.size === 0) {
+    if (!this._isHeld(entry)) {
       this._claims.delete(key);
       this._evictKey(entry.asset);
     }
@@ -513,7 +621,7 @@ export class AssetResidency {
     const held: ResourceKey[] = [];
 
     for (const [key, entry] of this._claims) {
-      if (entry.scopes.has(claimer)) {
+      if (entry.scopes.has(claimer) || entry.pending.has(claimer)) {
         held.push(key);
       }
     }
@@ -654,12 +762,26 @@ export class AssetResidency {
   // -----------------------------------------------------------------------
 
   /**
+   * Bind catalog leaves to this residency before any of them is adopted, so a
+   * catalog another application's loader already serves is rejected as a whole
+   * instead of being partially taken over. See {@link _bindLeaves}.
+   * @internal
+   */
+  public _bindLeaves(leaves: Iterable<object>): void {
+    bindCatalogLeaves(leaves, this._leafOwner);
+  }
+
+  /**
    * Adopt an externally-created handle-hybrid leaf (from `Assets.from()`) into
    * residency: register it as the deferred/ref handle under its canonical key,
    * claim it under `claimer`, and drive the fetch. The existing fill site
    * ({@link _storeResource}) transplants the fetched payload into this exact
    * object, so every consumer that already holds the leaf pops in. Idempotent
    * for a handle already adopted under the same key (no duplicate fetch).
+   *
+   * With `participations`, the claim is opened as a load operation's
+   * participation (see {@link _participate}) and appended there instead of
+   * being settled right away.
    *
    * With `background`, the leaf is still registered + claimed + healed in place,
    * but its fetch is diverted into the low-priority background queue instead of
@@ -669,7 +791,7 @@ export class AssetResidency {
   // Claim tracking, multi-handle fill and options equivalence are one branchy
   // state machine; splitting the branches apart would hide the transitions.
   // eslint-disable-next-line complexity
-  public _adopt(handle: object, claimer: LoaderScope, background = false): void {
+  public _adopt(handle: object, claimer: LoaderScope, background = false, participations?: ClaimParticipation[]): void {
     const meta = _readMeta(handle);
 
     if (meta === undefined) {
@@ -681,6 +803,8 @@ export class AssetResidency {
     if (ctor === undefined) {
       throw new Error(`Loader._adopt: no constructor registered for type "${meta.kind}".`);
     }
+
+    this._bindLeaves([handle]);
 
     // A freshly-created catalog leaf is 'idle' until adopted. A failed leaf
     // is a retry request and must be re-armed before the shared fetch restarts.
@@ -774,7 +898,7 @@ export class AssetResidency {
         }
       }
 
-      this._claim(asset, claimer);
+      this._claimFor(asset, claimer, participations);
 
       return;
     }
@@ -785,7 +909,7 @@ export class AssetResidency {
 
     if (deferredEntry === undefined && stored === undefined) {
       this._createDeferredEntry(asset, handle, meta.opts);
-      this._claim(asset, claimer);
+      this._claimFor(asset, claimer, participations);
 
       if (background) {
         this._enqueueBackgroundFetch(asset, meta.opts);
@@ -857,7 +981,16 @@ export class AssetResidency {
       else this._startFetch(asset, deferredEntry.options);
     }
 
-    this._claim(asset, claimer);
+    this._claimFor(asset, claimer, participations);
+  }
+
+  /** Claim for `claimer`, or - when the caller collects participations - open one for the load in progress. */
+  private _claimFor(asset: CanonicalAsset, claimer: LoaderScope, participations: ClaimParticipation[] | undefined): void {
+    if (participations === undefined) {
+      this._claim(asset, claimer);
+    } else {
+      participations.push(this._participate(asset, claimer));
+    }
   }
 
   /**
@@ -1070,7 +1203,7 @@ export class AssetResidency {
    * @internal
    */
   public async _loadSingle(asset: CanonicalAsset, options?: unknown): Promise<unknown> {
-    this._recordAlias(asset);
+    this._requestLog.record(asset);
 
     const resident = this._resources.get(asset.key);
 
@@ -1307,8 +1440,12 @@ export class AssetResidency {
   // eslint-disable-next-line complexity
   public _storeResource(asset: CanonicalAsset, resource: unknown): unknown {
     const key = asset.key;
+    // Marked evicted while unclaimed: every holder left while this payload was
+    // still being produced, and the abort could not stop a factory that ignores
+    // its signal.
+    const abandoned = this._evicted.has(key) && !this._claims.has(key);
 
-    this._recordAlias(asset);
+    this._requestLog.record(asset);
 
     if (this._preventStoreKeys.delete(key)) {
       // The asset was unloaded while its fetch was in flight. A deferred handle
@@ -1412,7 +1549,7 @@ export class AssetResidency {
 
     // Record the canonical reverse key (first source wins) for object resources.
     if (typeof resource === 'object' && resource !== null && !this._resourceKeys.has(resource)) {
-      this._resourceKeys.set(resource, { type: asset.type, source: asset.source });
+      this._resourceKeys.set(resource, { type: asset.type, source: asset.source, key });
     }
 
     // Register the stored seamless resource as its key's representative so a
@@ -1432,9 +1569,9 @@ export class AssetResidency {
     // awaiter holding that promise still resolves (the asset WAS complete);
     // evicting here drops the payload in place (re-arming `.loaded` to
     // 'loading') so it does not linger unclaimed. Gated on an actual deferred
-    // fill: a never-claimed container store (no `_deferred` entry) must
-    // persist, not be freed on arrival.
-    if (filledDeferredHandle && !this._claims.has(key)) {
+    // fill or an abandoned load: a never-claimed container store (no
+    // `_deferred` entry) must persist, not be freed on arrival.
+    if ((filledDeferredHandle || abandoned) && !this._claims.has(key)) {
       this._evictKey(asset);
     }
 
@@ -1663,7 +1800,7 @@ export class AssetResidency {
 
     this._claims.clear();
     this._evicted.clear();
-    this._aliases.clear();
+    this._requestLog.clear();
     this._dependencyScopes.clear();
   }
 
@@ -1688,7 +1825,7 @@ export class AssetResidency {
 
     this._inFlight.delete(key);
     this._preventStoreKeys.delete(key);
-    this._aliases.delete(key);
+    this._requestLog.delete(key);
 
     const deferred = this._deferred.get(key);
     if (deferred !== undefined) {
@@ -1744,7 +1881,31 @@ export class AssetResidency {
    * @internal
    */
   public _keyFor(resource: object): { readonly type: AssetConstructor; readonly source: string } | null {
-    return this._resourceKeys.get(resource) ?? null;
+    const entry = this._resourceKeys.get(resource);
+
+    return entry === undefined ? null : { type: entry.type, source: entry.source };
+  }
+
+  /**
+   * The portable reference for a loaded resource, or `null` when it was never
+   * loaded through this residency.
+   *
+   * It names the logical source (the one a variant rule was declared for, not
+   * the file this device happened to select) and the identity-relevant
+   * options. When several distinct logical requests resolved to the same
+   * resource - two variant rules selecting one file, or two names for one
+   * payload - no single request is honest, and the answer is an error naming
+   * them rather than whichever was loaded first.
+   * @internal
+   */
+  public _referenceFor(resource: object): AssetReferenceLookup | null {
+    const key = this._resourceKeys.get(resource)?.key ?? this._handleKeys.get(resource);
+
+    if (key === undefined) {
+      return null;
+    }
+
+    return this._requestLog.lookup(key, this._resourceKeys.get(resource)?.source);
   }
 
   /**
@@ -1788,7 +1949,7 @@ export class AssetResidency {
     this._resources.clear();
     this._inFlight.clear();
     this._preventStoreKeys.clear();
-    this._aliases.clear();
+    this._requestLog.clear();
     this._deferred.clear();
     this._refs.clear();
     this._claims.clear();

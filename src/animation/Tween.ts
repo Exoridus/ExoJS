@@ -5,9 +5,69 @@ import type { TweenSystem } from './TweenSystem';
 import type { EasingFunction, TweenLifecycleCallback, TweenUpdateCallback } from './types';
 import { TweenState } from './types';
 
-type NumericKeys<T> = {
-  [K in keyof T]-?: NonNullable<T[K]> extends number ? K : never;
+/** Whether `K` is a readonly property of `T` - including a getter without a setter. */
+// Mapped over `K extends keyof T`, the left side keeps `T`'s readonly modifier
+// and the right side strips it; a `Record` keeps neither, so both stay mapped.
+type IsReadonlyKey<T, K extends keyof T> =
+  // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style -- see above.
+  (<G>() => G extends { [Q in K]: T[K] } ? 1 : 2) extends <G>() => G extends { -readonly [Q in K]: T[K] } ? 1 : 2 ? false : true;
+
+/**
+ * Whether `V` is a continuous number a tween can pass fractional values
+ * through: plain `number`, or a branded unit over it (`number & { brand }`).
+ * A numeric literal union or numeric enum is discrete - an intermediate value
+ * like `1.5` is no member of it.
+ */
+// `number` is assignable to a numeric enum and to each of its members, so plain
+// assignability cannot tell an enum from `number`; their template-literal forms
+// differ (`${number}` versus `"0" | "1"`). A brand shows as an extra key.
+type IsContinuousNumber<V> = V extends number ? (`${number}` extends `${V}` ? true : [Exclude<keyof V, keyof number>] extends [never] ? false : true) : false;
+
+/**
+ * The properties of `T` a tween may write: mutable, continuous numbers.
+ * Readonly and getter-only properties and discrete numeric types (literal
+ * unions, numeric enums) are excluded.
+ */
+export type TweenableKeys<T> = {
+  [K in keyof T]-?: IsContinuousNumber<NonNullable<T[K]>> extends true ? (IsReadonlyKey<T, K> extends true ? never : K) : never;
 }[keyof T];
+
+/** Number-valued properties of `T` a tween must not write: readonly, getter-only or discrete. */
+type BlockedNumericKeys<T> = Exclude<{ [K in keyof T]-?: NonNullable<T[K]> extends number ? K : never }[keyof T], TweenableKeys<T>>;
+
+/**
+ * The end values {@link Tween.to} accepts for `T`. Blocked numeric properties
+ * are spelled out as `never` rather than left out: a target whose only numbers
+ * are blocked would otherwise collapse to `{}`, which accepts any object.
+ */
+type TweenProperties<T> = Partial<Record<TweenableKeys<T>, number>> & Partial<Record<BlockedNumericKeys<T>, never>>;
+
+/**
+ * Why `key` cannot be assigned on `target`, or `null` when it can. Only what the
+ * runtime can observe: an accessor without a setter, a non-writable data
+ * property, or a missing property on a non-extensible object.
+ */
+const writeBlocker = (target: object, key: string): string | null => {
+  for (let owner: object | null = target; owner !== null; owner = Object.getPrototypeOf(owner) as object | null) {
+    const descriptor = Object.getOwnPropertyDescriptor(owner, key);
+
+    if (descriptor === undefined) {
+      continue;
+    }
+
+    if (descriptor.get !== undefined || descriptor.set !== undefined) {
+      return descriptor.set === undefined ? 'has a getter but no setter' : null;
+    }
+
+    if (descriptor.writable === false) {
+      return 'is read-only';
+    }
+
+    return owner === target || Object.isExtensible(target) ? null : 'is inherited and the target is not extensible';
+  }
+
+  return Object.isExtensible(target) ? null : 'does not exist and the target is not extensible';
+};
 
 /**
  * Animates numeric properties of `target` from their current value to a
@@ -43,7 +103,7 @@ export class Tween<T extends object = object> {
   private readonly _target: T;
   private _state: TweenState = TweenState.Idle;
 
-  private _properties: Partial<Record<NumericKeys<T>, number>> = {};
+  private _properties: TweenProperties<T> = {};
   private _startValues: Record<string, number> | null = null;
   private _duration = 0;
   private _delay = 0;
@@ -106,11 +166,26 @@ export class Tween<T extends object = object> {
    * The starting values are captured lazily on first update() after start(),
    * so mutating target between to() and start() is safe.
    *
-   * Only numeric properties of `target` are accepted. Non-numeric keys are
-   * rejected at compile time; the runtime guard in update() remains as a
-   * safety net for untyped callers.
+   * Only mutable, continuous numeric properties of `target` are accepted (see
+   * {@link TweenableKeys}): readonly and getter-only properties and discrete
+   * numeric types such as numeric enums are rejected at compile time. For
+   * untyped callers, a property the runtime can tell is not assignable - a
+   * getter without a setter, a read-only data property - throws here rather
+   * than on the first frame; a discrete type cannot be told apart from a
+   * number at runtime. Non-numeric keys are still skipped with a warning when
+   * the tween starts.
+   *
+   * @throws TypeError If a listed property cannot be assigned on `target`.
    */
-  public to(properties: Partial<Record<NumericKeys<T>, number>>, duration: number): this {
+  public to(properties: TweenProperties<T>, duration: number): this {
+    for (const key of Object.keys(properties)) {
+      const blocker = writeBlocker(this._target, key);
+
+      if (blocker !== null) {
+        throw new TypeError(`Tween: property "${key}" ${blocker} on the target, so it cannot be tweened.`);
+      }
+    }
+
     this._properties = { ...properties };
     this._duration = duration;
     this._startValues = null;

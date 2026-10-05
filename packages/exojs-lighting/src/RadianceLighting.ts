@@ -41,9 +41,10 @@ export interface RadianceLightingOptions extends FrameLightingOptions {
  * over this frame's geometry.
  *
  * ```ts
- * const lighting = new RadianceLighting(app, { probeSpacing: 2, interval: 1, bounce: 0.5 });
+ * // In Scene.init():
+ * const lighting = new RadianceLighting(this.app, { probeSpacing: 2, interval: 1, bounce: 0.5, scene: this });
  *
- * scene.systems.add(lighting);
+ * this.systems.add(lighting);
  * lighting.occludeFrom(new PhysicsOccluder(world));
  * ```
  *
@@ -60,7 +61,8 @@ export interface RadianceLightingOptions extends FrameLightingOptions {
  * probe's rays into one arriving colour, which leaves no incident direction for
  * a normal to be measured against.
  *
- * The host is required and is the first argument. Float render targets are
+ * The host is required and is the first argument, and the scene the system
+ * belongs to goes in {@link LightingOptions.scene}. Float render targets are
  * required too - a field of radiance has no ceiling to clamp at - and a device
  * without them is refused at construction rather than shaded differently under
  * the same name.

@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 98,
+  "memberCount": 103,
   "counts": {
     "constructors": 1,
-    "methods": 43,
-    "properties": 40,
+    "methods": 47,
+    "properties": 41,
     "events": 14
   },
   "sections": [
@@ -276,6 +276,81 @@
           ],
           "returnType": "this",
           "description": "Insert child at index in the child list. The child is detached from any previous parent first. Throws if index is out of bounds, if child has already been destroy()ed, or if child is an ancestor of this container (would create a cycle). Self-as-child is a no-op. When child already belongs to this container the call is a pure reorder: the node keeps its parent, its stage and its keyboard focus."
+        },
+        {
+          "name": "addComponent",
+          "signature": "addComponent(component: C & ComponentHostCheck<ImageLayerNode, C>): C",
+          "signatureTokens": [
+            {
+              "text": "addComponent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "component",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentHostCheck",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "component",
+              "type": "C & ComponentHostCheck<ImageLayerNode, C>",
+              "optional": false
+            }
+          ],
+          "returnType": "C",
+          "description": "Attach component and return it - the same instance, typed as passed, so it can be kept in a field. A node holds at most one component per exact class. Attaching the instance that is already attached here is a no-op. Runs the component's Component.onAttach at once; if the node belongs to an active scene, Component.onEnable follows - during a frame, at the frame's end. The component's host type is checked at compile time: a Component<Sprite> cannot be attached to a plain container."
         },
         {
           "name": "addFilter",
@@ -781,6 +856,73 @@
           "description": ""
         },
         {
+          "name": "getComponent",
+          "signature": "getComponent(type: ComponentClass<C>): C | null",
+          "signatureTokens": [
+            {
+              "text": "getComponent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentClass",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "ComponentClass<C>",
+              "optional": false
+            }
+          ],
+          "returnType": "C | null",
+          "description": "The component attached under exactly type, or null. A subclass instance is not found under its base class."
+        },
+        {
           "name": "getGlobalTransform",
           "signature": "getGlobalTransform(): Matrix",
           "signatureTokens": [
@@ -928,6 +1070,53 @@
           "params": [],
           "returnType": "Matrix",
           "description": "The node's TRUE world-space transform, composed through every transform-group boundary (RetainedContainer) in the ancestor chain. getGlobalTransform deliberately stops at the nearest engaged boundary (descendants resolve group-RELATIVE transforms; the renderer multiplies the group matrix back in on the GPU), so it is the right space for rendering but the wrong one for spatial queries. Use THIS accessor whenever a real world position/orientation is needed - picking, spatial audio, physics, world-space math against nodes outside the group. Without any engaged boundary ancestor it returns the exact getGlobalTransform matrix (same instance, no extra work). With one, it lazily caches groupLocal × groupWorld and revalidates on read via version/stamp compares - including runtime space flips such as RetainedContainer's deep-barrier sub-branch escape."
+        },
+        {
+          "name": "hasComponent",
+          "signature": "hasComponent(type: ComponentClass): boolean",
+          "signatureTokens": [
+            {
+              "text": "hasComponent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentClass",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "ComponentClass",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether a component of exactly type is attached."
         },
         {
           "name": "intersectsWith",
@@ -1378,6 +1567,81 @@
           ],
           "returnType": "this",
           "description": "Remove children in the half-open range [begin, end). Defaults to the entire child list. Throws if the range is invalid."
+        },
+        {
+          "name": "removeComponent",
+          "signature": "removeComponent(target: C | ComponentClass<C>): C | null",
+          "signatureTokens": [
+            {
+              "text": "removeComponent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ComponentClass",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "C | ComponentClass<C>",
+              "optional": false
+            }
+          ],
+          "returnType": "C | null",
+          "description": "Detach a component - by class or by instance - and return it, or null when no such component is attached here. Detaching is not destroying: the component runs Component.onDisable if it was active, then Component.onDetach, and can be attached again afterwards."
         },
         {
           "name": "removeFilter",
@@ -2530,6 +2794,51 @@
           "params": [],
           "returnType": null,
           "description": "Clip region used when clip is true. A Rectangle (or null for the node's bounds) maps to the scissor fast path; a Geometry maps to the stencil path. Has no effect while clip is false."
+        },
+        {
+          "name": "components",
+          "signature": "components: readonly Component<SceneNode>[]",
+          "signatureTokens": [
+            {
+              "text": "components",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Component",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The components attached to this node, in attach order. A snapshot: it does not change when components are added or removed later."
         },
         {
           "name": "cullable",

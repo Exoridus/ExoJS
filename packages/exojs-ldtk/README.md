@@ -11,7 +11,7 @@ npm install --save-exact @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-ldtk
 Core and the tilemap runtime are peer dependencies. `ldtkExtension` depends on `tilemapExtension`, so selecting the adapter installs both its loading capability and the generic tile renderer.
 
 ```ts
-import { Application, type RenderingContext, Scene } from '@codexo/exojs';
+import { Application, Scene } from '@codexo/exojs';
 import { ldtkExtension } from '@codexo/exojs-ldtk';
 import { TileMapNode } from '@codexo/exojs-tilemap';
 
@@ -24,10 +24,6 @@ class LevelScene extends Scene {
       throw new Error('The LDtk project contains no loadable level.');
     }
     this.root.addChild(new TileMapNode(level));
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

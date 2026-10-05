@@ -391,7 +391,7 @@
         },
         {
           "name": "image",
-          "signature": "image: { config: { colorSpace?: \"none\"; mimeType?: string; source: string }; resource: HTMLImageElement }",
+          "signature": "image: { config: { colorSpace?: \"none\"; mimeType?: string; source: string }; resource: DecodedImage }",
           "signatureTokens": [
             {
               "text": "image",
@@ -486,7 +486,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "HTMLImageElement",
+              "text": "DecodedImage",
               "kind": "type"
             },
             {

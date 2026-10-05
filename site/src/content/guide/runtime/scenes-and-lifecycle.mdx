@@ -3,6 +3,7 @@ title: 'Scenes and lifecycle'
 description: 'Place loading, simulation, rendering, pause, and cleanup in the right part of a scene lifetime.'
 ---
 
+import Callout from '../../../components/Callout.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 
@@ -39,11 +40,19 @@ Await essential assets in `load`, then build the scene in `init`. An acquisition
 
 The sample expects `image/hero.png` below the loader's configured asset base path. See [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) for the distinction between an awaited resource and a placeholder.
 
-## Rendering is explicit
+## Rendering the scene
 
-Adding nodes to `this.root` creates a hierarchy; it does not submit that hierarchy automatically. Render it from `draw` with `context.render(this.root)`. You can render a different root or several objects when the scene needs separate passes.
+A scene renders its root every frame without any code of its own: the default `draw(context)` is `context.render(this.root)`. Adding a node to `this.root` (or calling `this.addChild`) is all a simple scene needs.
 
-`this.ui` is different: the scene's screen-fixed UI layer is rendered automatically above its world content. Do not render it again from `draw`. Use [UI and widgets](/ExoJS/en/guide/runtime/ui-and-widgets/) for HUDs, forms, and focus handling.
+Override `draw` when the scene needs control over what is rendered - selected subtrees, a second view, a render texture. An override replaces the default completely; the engine does not render the root again after it. Call `super.draw(context)` to keep the root pass and add work around it, or leave the override empty to render nothing.
+
+<SourceSnippet source="examples/guides/scenes-and-lifecycle/game-scene.ts" region="draw-hook" language="ts" title="An override decides what is rendered" />
+
+`this.ui` is different: the scene's screen-fixed UI layer is rendered automatically above its world content, after `draw` and after the scene's systems, whether or not `draw` is overridden. Do not render it again from `draw`. Use [UI and widgets](/ExoJS/en/guide/runtime/ui-and-widgets/) for HUDs, forms, and focus handling.
+
+<Callout type="note" title="Upgrading from releases with an empty default draw">
+Earlier releases left `Scene.draw` empty, so every scene had to render its root itself. A `draw` override that only calls `context.render(this.root)` is now redundant and can be deleted; overrides that render something else keep working unchanged. An override that calls `super.draw(context)` and then also renders `this.root` now renders the root twice - remove one of the two.
+</Callout>
 
 Keep loading, object construction, and event binding out of `draw`. Repeating those operations every frame creates work and lifetimes unrelated to the scene's actual changes.
 

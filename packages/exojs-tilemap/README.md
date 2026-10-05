@@ -42,44 +42,56 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 ## Usage — procedural map
 
 ```ts
-import { Application, TextureRegion } from '@codexo/exojs';
+import { Application, Scene, type Texture, TextureRegion } from '@codexo/exojs';
 import { TileLayer, TileMap, TileMapNode, TileSet, tilemapExtension, TILE_TRANSFORM_IDENTITY } from '@codexo/exojs-tilemap';
+
+class WorldScene extends Scene {
+  private atlas: Texture | null = null;
+
+  public override async load(): Promise<void> {
+    // A Loader-owned atlas texture: the tilemap runtime never destroys it.
+    this.atlas = await this.loader.load('tiles.png');
+  }
+
+  public override init(): void {
+    const atlas = this.atlas!;
+    const terrain = new TileSet({
+      name: 'terrain',
+      texture: new TextureRegion(atlas, { x: 0, y: 0, width: atlas.width, height: atlas.height }),
+      tileWidth: 16,
+      tileHeight: 16,
+      tileCount: 256,
+    });
+
+    const ground = new TileLayer({
+      id: 1,
+      name: 'ground',
+      width: 64,
+      height: 64,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [terrain],
+    });
+    ground.setTileAt(0, 0, { tileset: terrain, localTileId: 5, transform: TILE_TRANSFORM_IDENTITY });
+
+    const map = new TileMap({
+      name: 'world',
+      width: 64,
+      height: 64,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [terrain],
+      layers: [ground],
+    });
+
+    // Render the whole map: a scene draws its root without a draw() override.
+    this.addChild(new TileMapNode(map));
+  }
+}
 
 const app = new Application({ extensions: [tilemapExtension] /* canvas, … */ });
 
-// Tileset over a Loader-owned atlas texture (the runtime never destroys it).
-const atlas = await app.loader.load('tiles.png');
-const terrain = new TileSet({
-  name: 'terrain',
-  texture: new TextureRegion(atlas, { x: 0, y: 0, width: atlas.width, height: atlas.height }),
-  tileWidth: 16,
-  tileHeight: 16,
-  tileCount: 256,
-});
-
-const ground = new TileLayer({
-  id: 1,
-  name: 'ground',
-  width: 64,
-  height: 64,
-  tileWidth: 16,
-  tileHeight: 16,
-  tilesets: [terrain],
-});
-ground.setTileAt(0, 0, { tileset: terrain, localTileId: 5, transform: TILE_TRANSFORM_IDENTITY });
-
-const map = new TileMap({
-  name: 'world',
-  width: 64,
-  height: 64,
-  tileWidth: 16,
-  tileHeight: 16,
-  tilesets: [terrain],
-  layers: [ground],
-});
-
-// Render the whole map.
-app.scenes.root.addChild(new TileMapNode(map));
+await app.start(WorldScene);
 ```
 
 ### Interleaving actors between layers — `TileMapView`

@@ -1,6 +1,7 @@
 export { AnimationSystem } from './AnimationSystem';
 export type { EasingFunction } from './Ease';
 export { Ease } from './Ease';
+export type { TweenableKeys } from './Tween';
 export { Tween } from './Tween';
 export { TweenSequencer, TweenSequencerState } from './TweenSequencer';
 export type { Ticker } from './TweenSystem';

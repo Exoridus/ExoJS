@@ -3,7 +3,7 @@
  * {@link SerializedScene} and checked on deserialize so saved data can outlive
  * the code that produced it (see the migration chain in `migrate`).
  */
-export const SERIALIZATION_VERSION = 1;
+export const SERIALIZATION_VERSION = 2;
 
 /**
  * Plain-old-JSON description of a single scene-graph node.
@@ -54,13 +54,31 @@ export interface SerializedPrefab {
 }
 
 /**
+ * Options for {@link Scene.serialize} and {@link Prefab.from}.
+ */
+export interface SerializeOptions {
+  /**
+   * Components are not part of the serialized format, so serializing a tree
+   * whose nodes carry any throws by default rather than writing a document
+   * that silently lacks them. Set this to write the tree's visual data alone:
+   * structure, transforms, visuals and asset references, with every component
+   * left out. Restoring such a document yields nodes without components.
+   */
+  readonly omitComponents?: boolean;
+}
+
+/**
  * Serialized reference to a loaded asset (e.g. a {@link Texture}).
  *
- * Stores the loader **source key** the asset was loaded under, not the asset
- * data itself. The contract is that referenced assets are pre-loaded into the
- * target {@link Loader} before {@link Scene.deserialize} runs.
+ * Names the request the asset was loaded with, never the asset data: the
+ * logical source the caller wrote - the one an asset variant rule was declared
+ * for, not the file one device happened to select - and, when they change which
+ * resource the request produces, the identity-relevant options. The contract is
+ * that referenced assets are pre-loaded into the target {@link Loader} before
+ * {@link Scene.deserialize} runs; the reference then resolves to whatever that
+ * loader holds for the same request, including its own variant choice.
+ *
+ * A reference that needs no options is written as the bare source string,
+ * which is also the only form version 1 documents contain.
  */
-export interface SerializedAssetRef {
-  /** Loader alias/source the asset was originally loaded under. */
-  source: string;
-}
+export type SerializedAssetRef = string | { readonly source: string; readonly options: Readonly<Record<string, unknown>> };

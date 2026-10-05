@@ -3,7 +3,7 @@ import type { SceneNode } from '#core/SceneNode';
 
 import type { SerializationRegistry } from './SerializationRegistry';
 import { deserializeTree, migratePrefab, serializeTree } from './serialize';
-import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab } from './types';
+import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type SerializeOptions } from './types';
 
 /**
  * A reusable, data-driven template captured from a configured scene-graph
@@ -32,9 +32,13 @@ export class Prefab {
    * other asset references resolve to their source keys. Pass `app.serializers`
    * as `registry` to resolve app-scoped (extension) serializers; defaults to the
    * global registry.
+   *
+   * @throws If a node in the subtree carries components, unless
+   *   {@link SerializeOptions.omitComponents} is set - a prefab never drops
+   *   them silently.
    */
-  public static from(node: SceneNode, loader: Loader | null = null, registry?: SerializationRegistry): Prefab {
-    return new Prefab(serializeTree(node, loader, registry));
+  public static from(node: SceneNode, loader: Loader | null = null, registry?: SerializationRegistry, options?: SerializeOptions): Prefab {
+    return new Prefab(serializeTree(node, loader, registry, options));
   }
 
   /**

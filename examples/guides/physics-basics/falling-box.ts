@@ -1,5 +1,5 @@
 // #region guide:falling-box
-import { Application, Color, Graphics, type RenderingContext, Scene, SystemOrder } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, SystemOrder } from '@codexo/exojs';
 import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
 
 class FallingBoxScene extends Scene {
@@ -26,10 +26,6 @@ class FallingBoxScene extends Scene {
       restitution: 0.2,
     });
     this.root.addChild(floor, box);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

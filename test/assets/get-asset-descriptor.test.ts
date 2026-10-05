@@ -91,6 +91,8 @@ describe('get(Asset.type()) descriptor access', () => {
     const loader = createCoreLoader();
 
     // bmFont is a non-leaf resource kind (no seamless adapter, not a value kind).
+    // Typed callers are already stopped at compile time; the runtime guard is for untyped ones.
+    // @ts-expect-error - a leafless descriptor is not a catalog leaf.
     expect(() => loader.get(Asset.type('bmFont', 'font.fnt'))).toThrow(/get\(\) hands out a catalog leaf/);
   });
 

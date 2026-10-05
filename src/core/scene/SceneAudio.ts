@@ -1,8 +1,23 @@
 import type { AudioBus } from '#audio/AudioBus';
 import { getAudioContext } from '#audio/audioContext';
 import type { AudioEffect } from '#audio/AudioEffect';
+import type { AudioGenerator } from '#audio/AudioGenerator';
 import { AudioSend } from '#audio/AudioSend';
-import type { DistanceModel, Pausable, Playable, PlayOptions, Spatializable, SpatialPoint, Voice } from '#audio/Playable';
+import type { AudioStream } from '#audio/AudioStream';
+import type {
+  DistanceModel,
+  Loopable,
+  Pausable,
+  Playable,
+  PlayOptions,
+  RatePitched,
+  Seekable,
+  Spatializable,
+  SpatialPoint,
+  Voice,
+  VoiceProfile,
+} from '#audio/Playable';
+import type { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
 import { SceneAvailability } from '#core/scene/SceneAvailability';
 import { SceneState } from '#core/scene/SceneState';
@@ -77,25 +92,123 @@ const copyPoint = (target: Vector | null, value: Vector | SpatialPoint | null): 
   return target;
 };
 
+/** The capability members a flushed real voice may or may not carry. */
+type CapabilityVoice = Voice & Partial<Seekable & Pausable & Loopable & RatePitched>;
+
 /**
  * Stand-in {@link Voice} returned by {@link SceneAudio.play} while the owning
- * scope is still `Preparing`. Buffers `volume`/`bus`/effect, a pending
- * {@link PendingVoice.fade} and {@link Spatializable} writes and replays them
- * onto the real voice once {@link PendingVoice._flush} runs at activation;
- * `stop()` before flush cancels playback entirely - the real voice is never
- * created. Narrower than a real `Voice`: capability mixins (`Pausable`,
- * `Seekable`, ...) are unavailable until flush, and reading `bus` before flush
- * returns `undefined` (despite the type) unless an explicit `options.bus`
- * override was given - the system's default bus isn't resolvable until the real
- * voice exists. A documented limitation of Preparing-phase playback, not a
- * general `Voice` capability.
+ * scope is dormant. Buffers `volume`/`bus`/effect, a pending
+ * {@link PendingVoice.fade}, {@link Spatializable} writes and capability
+ * writes, and replays them onto the real voice once {@link PendingVoice._flush}
+ * runs at activation; `stop()` before flush cancels playback entirely - the
+ * real voice is never created.
+ *
+ * The capability members (`Seekable`, `Pausable`, `Loopable`, `RatePitched`)
+ * are installed at construction from the source's {@link VoiceProfile}, so a
+ * `'seek' in voice` check answers the same before and after flush, and after
+ * flush every member forwards to the real voice. A real voice that came back
+ * without a capability (an ended placeholder) leaves the member inert.
  * @internal
  */
 class PendingVoice implements Voice {
-  private _real: Voice | null = null;
+  private static readonly _seekableMembers: PropertyDescriptorMap = {
+    time: {
+      get(this: PendingVoice): number {
+        return this._getTime();
+      },
+      set(this: PendingVoice, value: number): void {
+        this._seek(value);
+      },
+    },
+    duration: {
+      get(this: PendingVoice): number {
+        return this._real === null ? (this._describe().duration ?? 0) : (this._real.duration ?? 0);
+      },
+    },
+    seek: {
+      value(this: PendingVoice, t: number): void {
+        this._seek(t);
+      },
+    },
+  };
+
+  private static readonly _pausableMembers: PropertyDescriptorMap = {
+    paused: {
+      get(this: PendingVoice): boolean {
+        return this._real === null ? this._paused : (this._real.paused ?? false);
+      },
+    },
+    pause: {
+      value(this: PendingVoice): void {
+        this._setPaused(true);
+      },
+    },
+    resume: {
+      value(this: PendingVoice): void {
+        this._setPaused(false);
+      },
+    },
+  };
+
+  private static readonly _loopableMembers: PropertyDescriptorMap = {
+    loop: {
+      get(this: PendingVoice): boolean {
+        return this._real === null ? (this._loop ?? this._describe().loop ?? false) : (this._real.loop ?? false);
+      },
+      set(this: PendingVoice, value: boolean): void {
+        const real = this._real;
+
+        if (real === null) {
+          this._loop = value;
+        } else if ('loop' in real) {
+          real.loop = value;
+        }
+      },
+    },
+  };
+
+  private static readonly _ratePitchedMembers: PropertyDescriptorMap = {
+    playbackRate: {
+      get(this: PendingVoice): number {
+        return this._real === null ? (this._playbackRate ?? this._describe().playbackRate ?? 1) : (this._real.playbackRate ?? 1);
+      },
+      set(this: PendingVoice, value: number): void {
+        const real = this._real;
+
+        if (real === null) {
+          this._playbackRate = value;
+        } else if ('playbackRate' in real) {
+          real.playbackRate = value;
+        }
+      },
+    },
+    detune: {
+      get(this: PendingVoice): number {
+        return this._real === null ? (this._detune ?? this._describe().detune ?? 0) : (this._real.detune ?? 0);
+      },
+      set(this: PendingVoice, value: number): void {
+        const real = this._real;
+
+        if (real === null) {
+          this._detune = value;
+        } else if ('detune' in real) {
+          real.detune = value;
+        }
+      },
+    },
+  };
+
+  private _real: CapabilityVoice | null = null;
   private _cancelled = false;
   private _volume: number;
   private _bus: AudioBus | undefined;
+  /** Requested start offset from a {@link Seekable} write before flush; handed to the real voice as `PlayOptions.time`. */
+  private _startTime: number | undefined;
+  /** Pause requested before flush: the real voice is paused in the same task it is created in, before any audio is rendered. */
+  private _paused = false;
+  private _loop: boolean | undefined;
+  private _playbackRate: number | undefined;
+  private _detune: number | undefined;
   private readonly _pendingEffects: AudioEffect[] = [];
   /**
    * Sends opened before the real voice existed. Each is wired to
@@ -117,14 +230,40 @@ class PendingVoice implements Voice {
   /** The `when` policy this voice was created with - carried across to the real `Voice` at flush. */
   public readonly when: SceneAvailability;
 
+  /**
+   * @param _createReal - Starts the real voice from the given options.
+   * @param _options - The options of the originating play call.
+   * @param _describe - Reports the source's {@link VoiceProfile}. Read once here to
+   * fix the capability surface, and again for every pre-flush read so source
+   * defaults changed before activation are reported as the real voice will see them.
+   */
   public constructor(
-    private readonly _createReal: () => Voice,
-    options: SceneAudioPlayOptions,
+    private readonly _createReal: (options: PlayOptions) => Voice,
+    private readonly _options: SceneAudioPlayOptions,
+    private readonly _describe: () => VoiceProfile,
   ) {
-    this._volume = options.volume ?? 1;
-    this._bus = options.bus;
-    this.when = options.when ?? SceneAvailability.Always;
+    this._volume = _options.volume ?? 1;
+    this._bus = _options.bus;
+    this.when = _options.when ?? SceneAvailability.Always;
     this._dummyOutput = getAudioContext().createGain();
+
+    const profile = _describe();
+
+    if (profile.duration !== null) {
+      Object.defineProperties(this, PendingVoice._seekableMembers);
+    }
+
+    if (profile.pausable) {
+      Object.defineProperties(this, PendingVoice._pausableMembers);
+    }
+
+    if (profile.loop !== null) {
+      Object.defineProperties(this, PendingVoice._loopableMembers);
+    }
+
+    if (profile.playbackRate !== null) {
+      Object.defineProperties(this, PendingVoice._ratePitchedMembers);
+    }
   }
 
   public get ended(): boolean {
@@ -149,7 +288,7 @@ class PendingVoice implements Voice {
   }
 
   public get bus(): AudioBus {
-    return this._real?.bus ?? this._bus!;
+    return this._real?.bus ?? this._bus ?? this._describe().bus;
   }
 
   public set bus(value: AudioBus) {
@@ -190,6 +329,38 @@ class PendingVoice implements Voice {
       this._cancelled = true;
       this._releasePoints();
       this.onEnd.dispatch();
+    }
+  }
+
+  private _getTime(): number {
+    if (this._real !== null) {
+      return this._real.time ?? 0;
+    }
+
+    return Math.max(0, this._startTime ?? this._options.time ?? 0);
+  }
+
+  private _seek(t: number): void {
+    const real = this._real;
+
+    if (real !== null) {
+      real.seek?.(t);
+    } else if (!this._cancelled) {
+      this._startTime = t;
+    }
+  }
+
+  private _setPaused(paused: boolean): void {
+    const real = this._real;
+
+    if (real === null) {
+      if (!this._cancelled) {
+        this._paused = paused;
+      }
+    } else if (paused) {
+      real.pause?.();
+    } else {
+      real.resume?.();
     }
   }
 
@@ -453,13 +624,26 @@ class PendingVoice implements Voice {
    * so the caller (`SceneAudio._flushPending`) can swap its own tracking to
    * the capability-bearing voice; returns `null` when there was nothing to
    * flush.
+   *
+   * A buffered seek becomes the start offset rather than a seek after start, so
+   * a buffer source is not started twice. A real voice that is already ended
+   * when it comes back (the play call was skipped, e.g. audio still locked)
+   * ends this voice too: the caller may have subscribed to `onEnd` while the
+   * voice still looked live, and a born-ended voice never dispatches.
    */
   public _flush(): Voice | null {
     if (this._cancelled || this._real !== null) {
       return null;
     }
 
-    const real = this._createReal();
+    let options: PlayOptions = this._options;
+
+    if (this._startTime !== undefined) {
+      options = { ...options, time: this._startTime };
+    }
+
+    const real: CapabilityVoice = this._createReal(options);
+    let endForwarded = false;
 
     this._real = real;
 
@@ -489,10 +673,39 @@ class PendingVoice implements Voice {
     this._sendList.length = 0;
     this._replaySpatial(real);
     real.onEnd.add((): void => {
+      endForwarded = true;
       this.onEnd.dispatch();
     });
+    this._replayCapabilities(real);
+
+    if (real.ended && !endForwarded) {
+      this.onEnd.dispatch();
+    }
 
     return real;
+  }
+
+  /**
+   * Replay buffered capability writes. Pause goes last: the voice has to exist
+   * in its final configuration before it is frozen, and pausing in the same
+   * task it was started in means no audio is rendered in between.
+   */
+  private _replayCapabilities(real: CapabilityVoice): void {
+    if (this._loop !== undefined && 'loop' in real) {
+      real.loop = this._loop;
+    }
+
+    if (this._playbackRate !== undefined && 'playbackRate' in real) {
+      real.playbackRate = this._playbackRate;
+    }
+
+    if (this._detune !== undefined && 'detune' in real) {
+      real.detune = this._detune;
+    }
+
+    if (this._paused) {
+      real.pause?.();
+    }
   }
 
   /**
@@ -590,17 +803,30 @@ class PendingVoice implements Voice {
  * {@link SceneAudio.play} only reaches `app.audio` while the scene is active.
  * Called before activation, or while the scene is retained, it returns a
  * stand-in voice immediately and starts real playback when the scene next
- * becomes active. The stand-in behaves like a voice for everything the facade
- * can buffer - `volume`, `bus`, effects, sends, `fade` and the
- * {@link Spatializable} surface, all replayed in order onto the real voice -
- * and `stop()` on it cancels playback outright, so nothing is ever heard.
+ * becomes active. The stand-in stays the caller's handle for the whole life of
+ * the playback: before activation it buffers `volume`, `bus`, effects, sends,
+ * `fade` and the {@link Spatializable} surface, all replayed in order onto the
+ * real voice; afterwards it forwards everything to the real voice.
  *
- * Two things it cannot do before playback starts: capability mixins
- * (`Pausable`, `Seekable`, `Loopable`, ...) are absent, so a `'seek' in voice`
- * check fails where it would succeed on a live voice; and `bus` reads back
- * `undefined` unless the play call passed one, because the system default is
- * not resolvable until the real voice exists. A caller that needs either has to
- * wait for the scene to be active.
+ * `bus` reports the bus the voice will route into from the moment `play()`
+ * returns. The stand-in carries the capability mixins of the voice its source
+ * starts - {@link Sound} and {@link AudioStream}: `Seekable`, `Pausable`,
+ * `Loopable`, `RatePitched`; {@link AudioGenerator}: `Pausable`, `RatePitched`;
+ * any other {@link Playable}: none - so a `'seek' in voice` check answers the
+ * same before and after activation. Requests made before activation are
+ * applied when playback starts:
+ *
+ * - `stop()` cancels playback outright; the real voice is never created.
+ * - `pause()` starts the real voice paused; `resume()` before activation
+ *   withdraws the request.
+ * - `seek(t)` (or a `time` write) becomes the start offset.
+ * - `loop`, `playbackRate` and `detune` writes are applied to the new voice.
+ *
+ * Activation starts playback through `app.audio` whether or not the browser has
+ * unlocked audio yet, so the {@link AudioSystem.locked} rules apply exactly as
+ * for a direct play call: a {@link Sound} or {@link AudioGenerator} is skipped
+ * and the stand-in ends (dispatching `onEnd`), an {@link AudioStream} waits for
+ * the unlock gesture.
  *
  * ## Pause and retention
  *
@@ -636,17 +862,27 @@ export class SceneAudio implements Destroyable {
   /**
    * Play `source` through the application audio system and track the
    * resulting {@link Voice} for scene-lifetime cleanup. While the scope is
-   * `Preparing`, `Ready`, or `Suspended`, returns a {@link PendingVoice}
-   * stand-in immediately and defers the real `app.audio.play(...)` call
-   * until (re)activation - including a call made while already `Suspended`
-   * (a new registration while dormant must buffer, not
-   * play for real, regardless of how the scope became dormant). While
-   * `Destroying`/`Destroyed`, rejects instead: a dev build throws a clear
-   * lifecycle error (playback requested during permanent teardown can
+   * `Preparing`, `Ready`, or `Suspended`, returns a stand-in voice
+   * immediately and defers the real `app.audio.play(...)` call until
+   * (re)activation - including a call made while already `Suspended` (a new
+   * registration while dormant must buffer, not play for real, regardless of
+   * how the scope became dormant). See "Deferred playback" above for what the
+   * stand-in reports and how requests made before activation are applied.
+   * While `Destroying`/`Destroyed`, rejects instead: a dev build throws a
+   * clear lifecycle error (playback requested during permanent teardown can
    * never be scheduled); a production build returns an inert, already-
    * `ended` stand-in rather than crashing a teardown path.
+   *
+   * The return type follows {@link AudioSystem.play}: an {@link AudioStream}
+   * voice always carries its capabilities, a {@link Sound} or
+   * {@link AudioGenerator} voice is narrowed with a capability check because
+   * the play call may yield an already-ended voice without them.
    */
-  public play(source: Playable, options?: SceneAudioPlayOptions): Voice {
+  public play(source: Sound, options?: SceneAudioPlayOptions): Voice | (Voice & Seekable & Pausable & Loopable & RatePitched);
+  public play(source: AudioStream, options?: SceneAudioPlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched;
+  public play(source: AudioGenerator, options?: SceneAudioPlayOptions): Voice | (Voice & Pausable & RatePitched);
+  public play(source: Playable, options?: SceneAudioPlayOptions): Voice;
+  public play(source: Playable, options: SceneAudioPlayOptions = {}): Voice {
     const state = this._getState();
 
     if (state === SceneState.Destroying || state === SceneState.Destroyed) {
@@ -656,11 +892,15 @@ export class SceneAudio implements Destroyable {
         );
       }
 
-      return this._createDeadVoice(options ?? {});
+      return this._createDeadVoice(source, options);
     }
 
     if (state !== SceneState.Active) {
-      const pending = new PendingVoice(() => this._app.audio.play(source, options ?? {}), options ?? {});
+      const pending = new PendingVoice(
+        startOptions => this._app.audio.play(source, startOptions),
+        options,
+        () => this._profile(source, options),
+      );
 
       this._pending.add(pending);
       this._tracked.set(pending, pending.when);
@@ -672,16 +912,40 @@ export class SceneAudio implements Destroyable {
   }
 
   /**
+   * The source's own {@link VoiceProfile}, or the base surface on the sound bus
+   * for a {@link Playable} that does not describe its voice.
+   */
+  private _profile(source: Playable, options: SceneAudioPlayOptions): VoiceProfile {
+    const system = this._app.audio;
+
+    return (
+      source._profileVoice?.(system, options) ?? {
+        bus: options.bus ?? system.sound,
+        pausable: false,
+        duration: null,
+        loop: null,
+        playbackRate: null,
+        detune: null,
+      }
+    );
+  }
+
+  /**
    * Production-build fallback for {@link SceneAudio.play} called during
    * `Destroying`/`Destroyed`: an already-cancelled {@link PendingVoice}
    * whose `_createReal` callback is never invoked (a cancelled voice is
-   * never flushed) - inert, but Voice-shaped, so calling code that doesn't
-   * dev-guard its `play()` calls doesn't crash mid-teardown.
+   * never flushed) - inert, but shaped like the voice the source would have
+   * started, so calling code that doesn't dev-guard its `play()` calls doesn't
+   * crash mid-teardown.
    */
-  private _createDeadVoice(options: SceneAudioPlayOptions): Voice {
-    const dead = new PendingVoice(() => {
-      throw new Error('SceneAudio: a dead voice (created during Destroying/Destroyed) must never be flushed.');
-    }, options);
+  private _createDeadVoice(source: Playable, options: SceneAudioPlayOptions): Voice {
+    const dead = new PendingVoice(
+      () => {
+        throw new Error('SceneAudio: a dead voice (created during Destroying/Destroyed) must never be flushed.');
+      },
+      options,
+      () => this._profile(source, options),
+    );
 
     dead.stop();
 

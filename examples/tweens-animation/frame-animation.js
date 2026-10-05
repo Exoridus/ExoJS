@@ -57,9 +57,6 @@ class FrameAnimationScene extends Scene {
   updateHud(frame) {
     this.hud.setStatus(`${CHARACTERS[this.characterIndex]} · frame ${frame + 1}/2 · ${this.playing ? 'playing' : 'paused'}`);
   }
-  draw(context) {
-    context.render(this.root);
-  }
   destroy() {
     this.hud.dispose();
     super.destroy();

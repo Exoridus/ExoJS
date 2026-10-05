@@ -6,7 +6,6 @@ import {
   Keyboard,
   Label,
   Panel,
-  type RenderingContext,
   Scene,
   ScrollContainer,
   Stack,
@@ -94,10 +93,6 @@ class TextEntryScene extends Scene {
     text.setPosition(20, 24 + this.count * 76);
     this.list.content.addChild(text);
     this.count++;
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

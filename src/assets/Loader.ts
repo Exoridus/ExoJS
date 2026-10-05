@@ -9,13 +9,14 @@ import { ContainerReader } from '#assets/container/ContainerReader';
 import type { Connectivity } from '#core/Connectivity';
 import { Signal } from '#core/Signal';
 
-import { type Asset, AssetImpl, type ValueAsset } from './Asset';
+import { type Asset, AssetImpl, type ResourceAsset, type ValueAsset } from './Asset';
 import type { AssetConstructor } from './AssetConstructor';
 import { AssetDecoder } from './AssetDecoder';
 import type { AssetDefinitions, AssetInput, AssetTypeName, CatalogEntry, InferLoadedEntry, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
 import { _readMeta, type CatalogResourceLeaf, type CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
-import { type AssetInspection, AssetResidency, type AssetResidencySignals, type AssetStats } from './AssetResidency';
+import type { AssetReferenceLookup } from './AssetRequestLog';
+import { type AssetInspection, AssetResidency, type AssetResidencySignals, type AssetStats, type ClaimParticipation } from './AssetResidency';
 import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import type { AnyAssetType } from './AssetType';
 import { AssetTypeRegistry } from './AssetTypeRegistry';
@@ -136,7 +137,7 @@ export interface LoadOptions {
  *
  * The `Loader` orchestrates fetching, processing, caching, and retrieval of
  * all engine asset types. It ships with a built-in {@link AssetType} for every first-party
- * kind (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, JSON,
+ * kind (Texture, Sound, AudioStream, Video, FontFace, ImageBitmap or HTMLImageElement, JSON,
  * text, SVG, subtitles, binary, and WASM); an application adds its own by
  * listing them in an extension.
  *
@@ -264,6 +265,8 @@ export class Loader {
       locator,
       type,
       source: selected,
+      requested: source,
+      ...(options !== undefined && { options }),
     };
   }
 
@@ -788,6 +791,13 @@ export class Loader {
    * unclaimed suffixes are rejected here;
    * name them with `load(Asset.type(type, path))` instead.
    *
+   * The runtime is more lenient than the types, for untyped callers: a font
+   * suffix an installed type claims still loads, and the `family` the `font`
+   * type otherwise requires defaults to the file's base name (`ui/Inter.woff2`
+   * registers `Inter`). A descriptor never gets that default: `Asset.type('font',
+   * path)` and `fontType.asset(path)` require `family`, and a load of one
+   * without it rejects.
+   *
    * ```ts
    * const texture = await loader.load('image/hero.png');                     // Texture
    * const level   = await loader.load('data/level.json');                    // unknown
@@ -841,11 +851,9 @@ export class Loader {
       const entries = Object.entries((arg0 as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
       const background = (arg1 as LoadOptions | undefined)?.priority === LoadPriority.Background;
 
-      for (const [, leaf] of entries) {
-        this._adopt(leaf, claimer, background);
-      }
+      const participations = this._adoptAll(entries, claimer, background);
 
-      return this._createAdoptedQueue(claimer, entries, results => {
+      return this._createAdoptedQueue(claimer, entries, participations, results => {
         const out: Record<string, unknown> = {};
 
         for (const [alias] of entries) {
@@ -861,9 +869,10 @@ export class Loader {
     if (_readMeta(arg0) !== undefined) {
       const leaf = arg0 as object;
       const background = (arg1 as LoadOptions | undefined)?.priority === LoadPriority.Background;
-      this._adopt(leaf, claimer, background);
+      const entries: Array<[string, object]> = [['value', leaf]];
+      const participations = this._adoptAll(entries, claimer, background);
 
-      return this._createAdoptedQueue(claimer, [['value', leaf]], results => results.get('value'));
+      return this._createAdoptedQueue(claimer, entries, participations, results => results.get('value'));
     }
 
     // 2b. Bare path string - normalize it to a `{ type, source }` descriptor and
@@ -881,24 +890,29 @@ export class Loader {
       // The font type requires a family option - infer it from the filename when not provided
       const options: unknown = type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
-      const canonical = this._canonicalize(ctor, path, options);
+      // Canonicalized from the caller's logical path, not the variant selected for
+      // it: the selection happens again inside, and the request keeps the name a
+      // saved reference must repeat.
+      const canonical = this._canonicalize(ctor, arg0, options);
 
-      this._claim(canonical, claimer);
+      const participation = this._residency._participate(canonical, claimer);
       this._onFgBatchStart(claimer, path, path);
       let notifyFn: ((success: boolean) => void) | null = null;
       const promise = this._residency._loadSingle(canonical, options).then(
         v => {
+          this._residency._settleParticipation(participation);
           notifyFn?.(true);
           this._onFgBatchSettled(claimer, path, true);
           return v;
         },
         (error: unknown) => {
+          this._residency._settleParticipation(participation);
           notifyFn?.(false);
           this._onFgBatchSettled(claimer, path, false, this._settleError(error));
           throw error;
         },
       );
-      const queue = new LoadingQueue(promise, 1, () => this._cancelClaims(claimer, [canonical.key]));
+      const queue = new LoadingQueue(promise, 1, () => this._cancelParticipations([participation]));
       notifyFn = queue._notifyItem.bind(queue);
       return queue;
     }
@@ -1037,7 +1051,7 @@ export class Loader {
   // A materialized VALUE LEAF resolves exactly like a value descriptor - it is
   // adopted and handed back unchanged - so both share one signature.
   public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): CatalogValueLeaf<T>;
-  public get<T>(asset: Asset<T>): CatalogResourceLeaf<T>;
+  public get<T>(asset: ResourceAsset<T>): CatalogResourceLeaf<T>;
 
   /**
    * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
@@ -1069,6 +1083,8 @@ export class Loader {
       const out: Record<string, unknown> = {};
 
       const entries = Object.entries((input as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
+      this._residency._bindLeaves(entries.map(([, leaf]) => leaf));
+
       for (const [k, leaf] of entries) {
         this._adopt(leaf, claimer);
         out[k] = leaf;
@@ -1125,7 +1141,7 @@ export class Loader {
     const { type, source: path, ctor } = this._resolveBarePath(input);
 
     const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
-    const canonical = this._canonicalize(ctor, path, options);
+    const canonical = this._canonicalize(ctor, input, options);
 
     if (adapter !== undefined) {
       const handle = this._residency._getSeamless(canonical, adapter, options);
@@ -1197,10 +1213,8 @@ export class Loader {
       // carrying them must peek the key it would actually load.
       options = Object.keys(rest).length > 0 ? rest : undefined;
     } else if (typeof input === 'string') {
-      const resolved = this._resolveBarePath(input);
-
-      ctor = resolved.ctor;
-      source = resolved.source;
+      ctor = this._resolveBarePath(input).ctor;
+      source = input;
     } else {
       throw new Error(
         'Loader: peek() accepts a path string or an Asset.type(...) descriptor. A catalog leaf is already a handle - read its loadState instead.',
@@ -1285,6 +1299,17 @@ export class Loader {
    */
   public keyFor(resource: object): { readonly type: AssetConstructor; readonly source: string } | null {
     return this._residency._keyFor(resource);
+  }
+
+  /**
+   * The portable request a loaded resource can be referenced by in a saved
+   * document: the logical source callers wrote (before variant selection) and
+   * the identity-relevant options, so loading it again on another device
+   * resolves the same interpretation. See {@link AssetResidency._referenceFor}.
+   * @internal
+   */
+  public _assetReference(resource: object): AssetReferenceLookup | null {
+    return this._residency._referenceFor(resource);
   }
 
   /**
@@ -1508,7 +1533,7 @@ export class Loader {
     buildResult: (results: Map<string, unknown>) => T,
   ): LoadingQueue<T> {
     const results = new Map<string, unknown>();
-    const claimedKeys: string[] = [];
+    const participations: ClaimParticipation[] = [];
     let notifyFn: ((success: boolean) => void) | null = null;
 
     const itemPromises = items.map(({ alias, asset }) => {
@@ -1533,16 +1558,18 @@ export class Loader {
       const options = Object.keys(rest).length > 0 ? rest : undefined;
       const canonical = this._canonicalize(ctor, assetSource, options);
 
-      claimedKeys.push(canonical.key);
-      this._claim(canonical, claimer);
+      const participation = this._residency._participate(canonical, claimer);
+      participations.push(participation);
 
       return this._residency._loadSingle(canonical, options).then(
         resource => {
+          this._residency._settleParticipation(participation);
           results.set(alias, resource);
           notifyFn?.(true);
           this._onFgBatchSettled(claimer, alias, true);
         },
         (error: unknown) => {
+          this._residency._settleParticipation(participation);
           notifyFn?.(false);
           this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
           throw error;
@@ -1552,10 +1579,32 @@ export class Loader {
 
     const promise = Promise.all(itemPromises).then(() => buildResult(results));
 
-    const queue = new LoadingQueue<T>(promise, items.length, () => this._cancelClaims(claimer, claimedKeys));
+    const queue = new LoadingQueue<T>(promise, items.length, () => this._cancelParticipations(participations));
     notifyFn = queue._notifyItem.bind(queue);
 
     return queue;
+  }
+
+  /**
+   * Adopt every leaf of a load under `claimer`, opening one participation per
+   * leaf in entry order. A leaf that cannot be adopted withdraws the
+   * participations already opened, so a load that throws leaves no stake behind.
+   */
+  private _adoptAll(entries: ReadonlyArray<readonly [string, object]>, claimer: LoaderScope, background: boolean): ClaimParticipation[] {
+    const participations: ClaimParticipation[] = [];
+
+    this._residency._bindLeaves(entries.map(([, leaf]) => leaf));
+
+    try {
+      for (const [, leaf] of entries) {
+        this._residency._adopt(leaf, claimer, background, participations);
+      }
+    } catch (error) {
+      this._cancelParticipations(participations);
+      throw error;
+    }
+
+    return participations;
   }
 
   /**
@@ -1565,31 +1614,34 @@ export class Loader {
    * fetch is already driven by `_adopt`; each item's promise is simply the
    * leaf's own readiness promise (`leaf.loaded` - `Promise<this>` for a resource
    * handle, `Promise<T>` for an `AssetRef`). No `_claim` here: adoption already
-   * claimed each key - `claimer` is carried only so {@link LoadingQueue.cancel}
-   * can drop those very claims again. `buildResult` shapes the resolved values
-   * into the return.
+   * opened one participation per entry, in entry order, and each settles with
+   * its own leaf. `buildResult` shapes the resolved values into the return.
    * @internal
    */
-  private _createAdoptedQueue<T>(claimer: LoaderScope, entries: Array<[string, object]>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
+  private _createAdoptedQueue<T>(
+    claimer: LoaderScope,
+    entries: Array<[string, object]>,
+    participations: readonly ClaimParticipation[],
+    buildResult: (results: Map<string, unknown>) => T,
+  ): LoadingQueue<T> {
     const results = new Map<string, unknown>();
-    // Adoption registered every leaf under its residency key, so the reverse
-    // lookup is the honest source for what this queue claimed - the Loader does
-    // not re-derive the keys the residency just resolved.
-    const claimedKeys = entries.map(([, leaf]) => this._residency._getHandleKey(leaf)).filter((key): key is string => key !== undefined);
     let notifyFn: ((success: boolean) => void) | null = null;
 
-    const itemPromises = entries.map(([alias, leaf]) => {
+    const itemPromises = entries.map(([alias, leaf], index) => {
       const src = _readMeta(leaf)?.src ?? alias;
+      const participation = participations[index];
       this._onFgBatchStart(claimer, alias, src);
       const loaded = (leaf as { loaded: Promise<unknown> }).loaded;
 
       return loaded.then(
         value => {
+          if (participation !== undefined) this._residency._settleParticipation(participation);
           results.set(alias, value);
           notifyFn?.(true);
           this._onFgBatchSettled(claimer, alias, true);
         },
         (error: unknown) => {
+          if (participation !== undefined) this._residency._settleParticipation(participation);
           notifyFn?.(false);
           this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
           throw error;
@@ -1599,21 +1651,23 @@ export class Loader {
 
     const promise = Promise.all(itemPromises).then(() => buildResult(results));
 
-    const queue = new LoadingQueue<T>(promise, entries.length, () => this._cancelClaims(claimer, claimedKeys));
+    const queue = new LoadingQueue<T>(promise, entries.length, () => this._cancelParticipations(participations));
     notifyFn = queue._notifyItem.bind(queue);
 
     return queue;
   }
 
   /**
-   * Back {@link LoadingQueue.cancel}: drop the claims this load registered
-   * under its own scope. Whether that actually stops a download is decided one
-   * level down - the residency aborts the in-flight fetch only once the key has
-   * no claim scope left, so a sibling scene loading the same asset keeps it.
+   * Back {@link LoadingQueue.cancel}: withdraw the participations this load
+   * still has open. A participation that already settled became its scope's
+   * claim and is left alone, as is a claim the scope earned through another
+   * load. Whether that actually stops a download is decided one level down -
+   * the residency aborts the in-flight fetch only once no scope holds the key,
+   * so a sibling scene loading the same asset keeps it.
    */
-  private _cancelClaims(claimer: LoaderScope, keys: readonly ResourceKey[]): void {
-    for (const key of keys) {
-      this._release(key, claimer);
+  private _cancelParticipations(participations: readonly ClaimParticipation[]): void {
+    for (const participation of participations) {
+      this._residency._cancelParticipation(participation);
     }
   }
 

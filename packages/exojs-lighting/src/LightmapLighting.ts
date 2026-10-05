@@ -10,9 +10,10 @@ export type LightmapLightingOptions = FrameLightingOptions;
  * Lighting accumulated into a target of its own and multiplied onto the frame.
  *
  * ```ts
- * const lighting = new LightmapLighting(app, { lightResolution: 0.5, shadowResolution: 256 });
+ * // In Scene.init():
+ * const lighting = new LightmapLighting(this.app, { lightResolution: 0.5, shadowResolution: 256, scene: this });
  *
- * scene.systems.add(lighting);
+ * this.systems.add(lighting);
  * lighting.occludeFrom(new PhysicsOccluder(world));
  * ```
  *
@@ -24,7 +25,9 @@ export type LightmapLightingOptions = FrameLightingOptions;
  *
  * The host is required and is the first argument: this renderer lights the
  * frame that host drew, installs its passes in that host's frame slot, and
- * follows its surface when it resizes. It is read, never owned.
+ * follows its surface when it resizes. It is read, never owned. Pass the
+ * scene the system belongs to as {@link LightingOptions.scene}, so its passes
+ * are in that frame slot only while the scene is the one on screen.
  */
 export class LightmapLighting extends Lighting {
   public constructor(host: LightingHost, options: LightmapLightingOptions = {}) {

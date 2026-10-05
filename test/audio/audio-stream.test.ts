@@ -382,6 +382,53 @@ describe('AudioStream', () => {
     stream.destroy();
   });
 
+  test('pause() while playback is deferred to unlock cancels the deferred start', () => {
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    mutable(ctx).state = 'suspended';
+
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const playSpy = vi.spyOn(el, 'play');
+    const stream = new AudioStream(el);
+
+    const voice = system.play(stream) as AudioStreamVoice;
+    voice.pause();
+
+    mutable(ctx).state = originalState;
+    onAudioContextReady.dispatch(ctx);
+
+    expect(playSpy).not.toHaveBeenCalled();
+    expect(voice.paused).toBe(true);
+    expect(voice.ended).toBe(false);
+
+    stream.destroy();
+  });
+
+  test('resume() while still locked defers the start to unlock instead of playing into a suspended context', () => {
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    mutable(ctx).state = 'suspended';
+
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const playSpy = vi.spyOn(el, 'play');
+    const stream = new AudioStream(el);
+
+    const voice = system.play(stream) as AudioStreamVoice;
+    voice.pause();
+    voice.resume();
+
+    expect(playSpy).not.toHaveBeenCalled();
+
+    mutable(ctx).state = originalState;
+    onAudioContextReady.dispatch(ctx);
+
+    expect(playSpy).toHaveBeenCalledTimes(1);
+
+    stream.destroy();
+  });
+
   // ---- descriptor getters ----
 
   test('audioElement getter exposes the backing HTMLMediaElement', () => {

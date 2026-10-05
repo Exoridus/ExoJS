@@ -113,6 +113,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['container', 'drawable'],
       },
       {
+        path: 'runtime/components',
+        level: 'intermediate',
+        learningGoals: [
+          'Attach state and per-frame behaviour to scene nodes with component classes',
+          'Tell attach, enable, pause and destroy apart, and process components together through queries',
+        ],
+        prerequisites: ['runtime/scene-graph'],
+        examples: [],
+        apiLinks: ['component', 'behavior-component', 'component-query'],
+      },
+      {
         path: 'runtime/coordinates-and-views',
         level: 'intermediate',
         learningGoals: [

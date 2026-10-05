@@ -1,5 +1,5 @@
 // #region guide:spectrum-scene
-import { Color, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
+import { Color, Graphics, Scene } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
 export class SpectrumScene extends Scene {
@@ -22,10 +22,6 @@ export class SpectrumScene extends Scene {
       const height = (levels[index] / 255) * this.app.height * 0.6;
       this.bars.drawRectangle(index * width, this.app.height - height, Math.max(1, width - 2), height);
     }
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 // #endregion guide:spectrum-scene

@@ -348,7 +348,7 @@
         },
         {
           "name": "get",
-          "signature": "get(asset: Asset<T>): CatalogResourceLeaf<T>",
+          "signature": "get(asset: ResourceAsset<T>): CatalogResourceLeaf<T>",
           "signatureTokens": [
             {
               "text": "get",
@@ -367,7 +367,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Asset",
+              "text": "ResourceAsset",
               "kind": "type"
             },
             {
@@ -410,7 +410,7 @@
           "params": [
             {
               "name": "asset",
-              "type": "Asset<T>",
+              "type": "ResourceAsset<T>",
               "optional": false
             }
           ],

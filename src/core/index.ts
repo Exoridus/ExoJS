@@ -1,4 +1,5 @@
 export { Application, ApplicationState } from './Application';
+export { BehaviorComponent } from './BehaviorComponent';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
 export { Capabilities, type HostRealm } from './Capabilities';
@@ -7,6 +8,10 @@ export type { DecompressFormat } from './Codec';
 export { Codec } from './Codec';
 export type { ColorInput } from './Color';
 export { Color } from './Color';
+export type { ComponentClass, ComponentHost, ComponentHostCheck } from './Component';
+export { Component } from './Component';
+export type { ComponentQueryComponents, ComponentQueryRow } from './ComponentQuery';
+export { ComponentQuery } from './ComponentQuery';
 export type { ConnectivityState, NetworkMode } from './Connectivity';
 export { Connectivity } from './Connectivity';
 export type { CoroutineBody, CoroutineOptions, CoroutineStatus, CoroutineSystemOptions } from './CoroutineSystem';
@@ -110,7 +115,7 @@ export type { DeserializeContext, NodeSerializer, SerializeContext } from '#core
 export { Prefab } from '#core/serialization/Prefab';
 export type { SceneNodeConstructor } from '#core/serialization/SerializationRegistry';
 export { registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
-export type { SerializedAssetRef, SerializedNode, SerializedPrefab, SerializedScene } from '#core/serialization/types';
+export type { SerializedAssetRef, SerializedNode, SerializedPrefab, SerializedScene, SerializeOptions } from '#core/serialization/types';
 export { SERIALIZATION_VERSION } from '#core/serialization/types';
 export { CanvasSizing, type CanvasSizingContext, type CanvasSizingHostMetrics, type CanvasSizingMetrics } from '#core/sizing/CanvasSizing';
 export { CappedResolutionCanvasSizing } from '#core/sizing/CappedResolutionCanvasSizing';

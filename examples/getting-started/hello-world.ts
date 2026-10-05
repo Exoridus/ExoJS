@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, type Seconds, Sprite } from '@codexo/exojs';
 
 // #region guide:first-scene
 class HelloWorldScene extends Scene {
@@ -24,10 +24,6 @@ class HelloWorldScene extends Scene {
     if (this.playing) {
       this.sprite.rotate(delta * 120);
     }
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 // #endregion guide:first-scene

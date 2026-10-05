@@ -1,0 +1,475 @@
+{
+  "title": "Component",
+  "description": "A unit of state or capability attached to a SceneNode: a tag, a stat block, an event-driven helper. A component is constructed by the caller and attached with SceneNode.addComponent; the node keeps at most one instance per exact component class. A plain component is never called per frame. Behaviour that must run every frame derives from BehaviorComponent instead, or is written as a system over a Scene.query. Lifecycle, as seen from the hooks: - onAttach when the component is attached to a node, and onDetach when it is removed from it. They concern the node alone: `onAttach` can run while the node is not in any scene yet. - onEnable once the component is attached, enabled, and its node belongs to the root or UI layer of an active scene; onDisable when any of that stops being true - the component is disabled, its node leaves the scene, the scene is retained or ends. Pausing the scene is not one of them: a paused scene's components stay enabled. - onDestroy once, after destroy. Every hook must be synchronous, exactly like Scene.update. `N` is the node type this component may be attached to: a component written for sprites declares `Component<Sprite>`, and attaching it to a plain container is a compile error.",
+  "symbol": "Component",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 14,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A unit of state or capability attached to a SceneNode: a tag, a stat block, an event-driven helper. A component is constructed by the caller and attached with SceneNode.addComponent; the node keeps at most one instance per exact component class.",
+        "A plain component is never called per frame. Behaviour that must run every frame derives from BehaviorComponent instead, or is written as a system over a Scene.query.",
+        "Lifecycle, as seen from the hooks:",
+        "- onAttach when the component is attached to a node, and onDetach when it is removed from it. They concern the node alone: `onAttach` can run while the node is not in any scene yet. - onEnable once the component is attached, enabled, and its node belongs to the root or UI layer of an active scene; onDisable when any of that stops being true - the component is disabled, its node leaves the scene, the scene is retained or ends. Pausing the scene is not one of them: a paused scene's components stay enabled. - onDestroy once, after destroy.",
+        "Every hook must be synchronous, exactly like Scene.update.",
+        "`N` is the node type this component may be attached to: a component written for sprites declares `Component<Sprite>`, and attaching it to a plain container is a compile error."
+      ],
+      "importLine": "import { Component } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Component<N>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Component",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "N",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "Component<N>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "End the component for good: disable it if active, detach it from its node if attached, then run onDestroy. Idempotent. Destroying a node destroys every component still attached to it. Every step runs even when a hook throws; the first error is rethrown afterwards."
+        },
+        {
+          "name": "onAttach",
+          "signature": "onAttach(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onAttach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called after the component was attached to node. The node may not be in any scene yet."
+        },
+        {
+          "name": "onDestroy",
+          "signature": "onDestroy(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDestroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called once, at the end of destroy."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called after the component was removed from its node; node is no longer readable."
+        },
+        {
+          "name": "onDisable",
+          "signature": "onDisable(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDisable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called when the component stops being active."
+        },
+        {
+          "name": "onEnable",
+          "signature": "onEnable(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onEnable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called when the component becomes active. Release in onDisable what this acquires."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "[componentHost]",
+          "signature": "[componentHost]: N",
+          "signatureTokens": [
+            {
+              "text": "[componentHost]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "N",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-only carrier of the accepted host type, read by ComponentHostCheck. Never present at runtime."
+        },
+        {
+          "name": "active",
+          "signature": "active: boolean",
+          "signatureTokens": [
+            {
+              "text": "active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is enabled in an active scene right now: between its onEnable and onDisable. Stays true while the scene is paused."
+        },
+        {
+          "name": "attached",
+          "signature": "attached: boolean",
+          "signatureTokens": [
+            {
+              "text": "attached",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is attached to a node."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether destroy has run. A destroyed component cannot be attached again."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The component's own switch. true by default. Turning it off disables an active component (and stops a BehaviorComponent's frame hooks) without detaching it: it stays on its node and in Scene.query results. Turning it back on enables it again once its node is in an active scene - during a frame, from the next frame on."
+        },
+        {
+          "name": "node",
+          "signature": "node: N",
+          "signatureTokens": [
+            {
+              "text": "node",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "N",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node this component is attached to."
+        },
+        {
+          "name": "scene",
+          "signature": "scene: Scene<void, Application<object>> | null",
+          "signatureTokens": [
+            {
+              "text": "scene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene whose root or UI layer the component's node belongs to, or null while it belongs to none. A retained scene still counts."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Component.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Component.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Component.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Component.ts"
+}

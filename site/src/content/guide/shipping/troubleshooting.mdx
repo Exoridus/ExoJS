@@ -26,11 +26,11 @@ Await `app.start(YourScene)` and surface its rejection. Calling `app.start()` wi
 
 Check that the canvas is mounted and that its element and container have nonzero visible dimensions. An application can perform work on a canvas that the page never displays.
 
-The normal scene graph is rendered explicitly:
+A scene renders its root by default, so a node added with `this.addChild` is drawn without any `draw` code. A `draw` override replaces that default: if the scene overrides `draw`, the override has to submit the root (or the subtree the node lives in) itself, or keep the default pass with `super.draw(context)`:
 
-<SourceSnippet source="examples/guides/troubleshooting/draw-hook.ts" region="draw-root" language="ts" title="Submit the scene root" />
+<SourceSnippet source="examples/guides/troubleshooting/draw-hook.ts" region="draw-root" language="ts" title="Keep the root pass in an override" />
 
-The application clears the frame by default. If `draw` never submits content, a flat clear color is expected. Also check whether the object belongs to the submitted tree, is inside the current view, has usable dimensions, and is hidden by opacity, clipping, or masking. A custom pipeline can submit different roots; do not add a second root draw blindly to a pipeline that already renders it.
+The application clears the frame by default. If an overriding `draw` never submits content, a flat clear color is expected. Also check whether the object belongs to the submitted tree, is inside the current view, has usable dimensions, and is hidden by opacity, clipping, or masking. A custom pipeline can submit different roots; do not add a second root draw blindly to a pipeline that already renders it.
 
 The scene's `ui` layer is automatic and separate from `root`. A visible HUD with an empty world is a useful clue that startup succeeded but the world draw or camera is wrong.
 

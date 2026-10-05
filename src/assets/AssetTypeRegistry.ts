@@ -31,6 +31,12 @@ const mintToken = (id: string): AssetConstructor => {
   return token;
 };
 
+interface PendingAssetType {
+  readonly type: AnyAssetType;
+  readonly token: AssetConstructor;
+  readonly extensions: readonly string[];
+}
+
 /**
  * The asset types installed on one {@link Loader}: what each is called, which
  * suffixes name it, what dispatches to it, and the factory that builds it.
@@ -47,18 +53,54 @@ export class AssetTypeRegistry {
   /** Explicit app-local overrides, written only by {@link registerType}. */
   private readonly _extensionOverrides = new Map<string, AssetTypeName>();
 
+  private _installing = false;
+
   /**
    * Installs a set of types, atomically: every key the whole set claims is
    * validated - against each other and against what is already installed -
-   * before anything is written, so a rejected set leaves the registry exactly
-   * as it was.
+   * and every factory is created before anything is written, so a rejected
+   * set leaves the registry exactly as it was.
    *
    * `createFactory` runs here, which is what makes the mutable half of a type
    * loader-local: a descriptor shared between applications never shares the
-   * instance it describes.
+   * instance it describes. When one of them throws, the factories already
+   * created for the set are destroyed, newest first, and the error is
+   * rethrown; nothing installed before the call is touched. A `createFactory`
+   * that installs types on the same registry is rejected, because it would
+   * invalidate the validation its own set already passed.
    */
   public installAll(assetTypes: readonly AnyAssetType[]): void {
-    const pending: Array<{ readonly type: AnyAssetType; readonly token: AssetConstructor; readonly extensions: readonly string[] }> = [];
+    if (this._installing) {
+      throw new Error('AssetTypeRegistry: installAll() cannot be called from a createFactory() of a set still being installed.');
+    }
+
+    this._installing = true;
+
+    try {
+      this._installAll(assetTypes);
+    } finally {
+      this._installing = false;
+    }
+  }
+
+  private _installAll(assetTypes: readonly AnyAssetType[]): void {
+    const prepared = this._prepare(this._validate(assetTypes));
+
+    for (const { installed, extensions } of prepared) {
+      const { type, token } = installed;
+
+      this._byId.set(type.id, installed);
+      this._byToken.set(token, installed);
+
+      for (const extension of extensions) {
+        this._extensionTypes.set(extension, type.id);
+      }
+    }
+  }
+
+  /** Check a whole set against itself and the installed types before anything is created. */
+  private _validate(assetTypes: readonly AnyAssetType[]): PendingAssetType[] {
+    const pending: PendingAssetType[] = [];
     const seenIds = new Set<string>();
     const seenTokens = new Set<AssetConstructor>();
     const seenExtensions = new Set<string>();
@@ -76,27 +118,7 @@ export class AssetTypeRegistry {
 
       seenIds.add(id);
 
-      const extensions = type.extensions.map(normalizeExtension);
-      const ownExtensions = new Set<string>();
-
-      for (const extension of extensions) {
-        if (ownExtensions.has(extension)) {
-          throw new Error(`Asset type "${id}" declares the extension ".${extension}" twice.`);
-        }
-
-        ownExtensions.add(extension);
-
-        if (seenExtensions.has(extension) || this._extensionTypes.has(extension)) {
-          const owner = this._extensionTypes.get(extension) ?? '(another type in this set)';
-
-          throw new Error(
-            `File extension ".${extension}" is already claimed by asset type "${owner}" on this application, so "${id}" cannot claim it too. ` +
-              `Use a compound suffix (e.g. "${id}.${extension}") or name individual assets explicitly.`,
-          );
-        }
-
-        seenExtensions.add(extension);
-      }
+      const extensions = this._validateExtensions(id, type.extensions.map(normalizeExtension), seenExtensions);
 
       // A minted token is fresh per install and can never collide, so only a
       // type that brought its own can conflict.
@@ -110,16 +132,56 @@ export class AssetTypeRegistry {
       pending.push({ type, token, extensions });
     }
 
-    for (const { type, token, extensions } of pending) {
-      const installed: InstalledAssetType = { type, token, factory: type.createFactory() as AssetFactory<unknown, unknown, unknown> };
+    return pending;
+  }
 
-      this._byId.set(type.id, installed);
-      this._byToken.set(token, installed);
+  private _validateExtensions(id: string, extensions: readonly string[], seenExtensions: Set<string>): readonly string[] {
+    const ownExtensions = new Set<string>();
 
-      for (const extension of extensions) {
-        this._extensionTypes.set(extension, type.id);
+    for (const extension of extensions) {
+      if (ownExtensions.has(extension)) {
+        throw new Error(`Asset type "${id}" declares the extension ".${extension}" twice.`);
       }
+
+      ownExtensions.add(extension);
+
+      if (seenExtensions.has(extension) || this._extensionTypes.has(extension)) {
+        const owner = this._extensionTypes.get(extension) ?? '(another type in this set)';
+
+        throw new Error(
+          `File extension ".${extension}" is already claimed by asset type "${owner}" on this application, so "${id}" cannot claim it too. ` +
+            `Use a compound suffix (e.g. "${id}.${extension}") or name individual assets explicitly.`,
+        );
+      }
+
+      seenExtensions.add(extension);
     }
+
+    return extensions;
+  }
+
+  /** Create every factory of a validated set, destroying the ones already created, newest first, if one throws. */
+  private _prepare(pending: readonly PendingAssetType[]): Array<{ readonly installed: InstalledAssetType; readonly extensions: readonly string[] }> {
+    const prepared: Array<{ readonly installed: InstalledAssetType; readonly extensions: readonly string[] }> = [];
+
+    try {
+      for (const { type, token, extensions } of pending) {
+        prepared.push({ installed: { type, token, factory: type.createFactory() as AssetFactory<unknown, unknown, unknown> }, extensions });
+      }
+    } catch (error) {
+      for (let i = prepared.length - 1; i >= 0; i--) {
+        try {
+          prepared[i]?.installed.factory.destroy?.();
+        } catch {
+          // The creation failure is the error the caller needs; a factory that
+          // also fails to tear down must not hide it or stop the rest.
+        }
+      }
+
+      throw error;
+    }
+
+    return prepared;
   }
 
   /** The type installed under `token`, or `undefined`. @internal */

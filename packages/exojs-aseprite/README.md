@@ -11,7 +11,7 @@ npm install --save-exact @codexo/exojs @codexo/exojs-aseprite
 Core is a peer dependency. Add `asepriteExtension` to the application; importing the package alone does not install a loader.
 
 ```ts
-import { Application, Asset, type RenderingContext, Scene } from '@codexo/exojs';
+import { Application, Asset, Scene } from '@codexo/exojs';
 import { asepriteExtension } from '@codexo/exojs-aseprite';
 
 class CharacterScene extends Scene {
@@ -24,10 +24,6 @@ class CharacterScene extends Scene {
     }
     character.setPosition(100, 100);
     this.root.addChild(character);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

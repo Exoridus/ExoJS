@@ -34,7 +34,7 @@ This example needs no external images:
 
 `LightmapLighting` and `RadianceLighting` need the application host. Construct them in `init`, not in a field initializer that reads `this.app` before attachment. Scene systems update after scene code has moved its lights, so the lighting system sees that frame's positions.
 
-The scene root owns the light node; registering it with `lighting.add` does not transfer node ownership. The scene system registry owns the lighting system and its frame-pass lifetime. The light node emits but does not draw a visible lamp image by itself.
+The scene root owns the light node; registering it with `lighting.add` does not transfer node ownership. The scene system registry owns the lighting system. The application's frame slot is shared by every scene, so pass `scene: this`: a bound system installs its passes only while its scene is active, and leaves the frame slot while the scene is preloaded, retained, or being torn down. Without `scene`, lighting is application-wide and stays in the frame slot until it is destroyed. The light node emits but does not draw a visible lamp image by itself.
 
 ## Keep emitters and occluders separate
 

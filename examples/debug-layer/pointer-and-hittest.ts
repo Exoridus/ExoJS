@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 import { mountControls } from '@examples/runtime';
 
@@ -44,10 +44,6 @@ class PointerAndHittestScene extends Scene {
       sprite.zIndex = i === index ? 3 : i;
     });
     this.hud.setStatus(`Front: ${index + 1} (${['red', 'green', 'blue'][index]})`);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 }
 

@@ -248,3 +248,103 @@ describe('AssetTypeRegistry.registerType', () => {
     expect(() => registry.registerType('json', 'json')).toThrow(/already registered/);
   });
 });
+
+describe('AssetTypeRegistry.installAll atomicity', () => {
+  const factoryType = (id: string, createFactory: () => unknown, extensions: readonly string[] = []): never =>
+    ({ id, extensions, leaf: 'ref', createFactory }) as never;
+
+  test('a throwing factory leaves the registry as it was and destroys the factories already created, once', () => {
+    const registry = new AssetTypeRegistry();
+    const existingDestroy = vi.fn();
+    registry.installAll([type({ id: 'existing', extensions: ['ex'], destroy: existingDestroy })]);
+
+    const firstDestroy = vi.fn();
+    const secondDestroy = vi.fn();
+    const order: string[] = [];
+    const first = factoryType('first', () => ({ create: async () => 1, destroy: () => (firstDestroy(), order.push('first')) }), ['first']);
+    const second = factoryType('second', () => ({ create: async () => 2, destroy: () => (secondDestroy(), order.push('second')) }), ['second']);
+    const failing = factoryType('failing', () => {
+      throw new Error('factory failed');
+    });
+
+    expect(() => registry.installAll([first, second, failing])).toThrow('factory failed');
+
+    expect(registry.hasAssetType('first')).toBe(false);
+    expect(registry.hasAssetType('second')).toBe(false);
+    expect(registry.hasExtension('first')).toBe(false);
+    expect(registry.hasAssetType('existing')).toBe(true);
+    expect(registry.hasExtension('ex')).toBe(true);
+    expect(firstDestroy).toHaveBeenCalledTimes(1);
+    expect(secondDestroy).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['second', 'first']);
+    expect(existingDestroy).not.toHaveBeenCalled();
+
+    // The rollback a failed application construction runs destroys the
+    // registry; the factories the rejected set created are not destroyed again.
+    registry.destroy();
+
+    expect(firstDestroy).toHaveBeenCalledTimes(1);
+    expect(existingDestroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('a factory whose teardown throws during rollback neither hides the creation error nor stops the rest', () => {
+    const registry = new AssetTypeRegistry();
+    const firstDestroy = vi.fn();
+    const first = factoryType('first', () => ({ create: async () => 1, destroy: firstDestroy }));
+    const second = factoryType('second', () => ({
+      create: async () => 2,
+      destroy: () => {
+        throw new Error('teardown failed');
+      },
+    }));
+    const failing = factoryType('failing', () => {
+      throw new Error('factory failed');
+    });
+
+    expect(() => registry.installAll([first, second, failing])).toThrow('factory failed');
+    expect(firstDestroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('a throwing getter fails validation before any factory exists', () => {
+    const registry = new AssetTypeRegistry();
+    const createFactory = vi.fn(() => ({ create: async () => 1 }));
+    const healthy = factoryType('healthy', createFactory);
+    const broken = {
+      id: 'broken',
+      get extensions(): readonly string[] {
+        throw new Error('extensions getter failed');
+      },
+      leaf: 'ref',
+      createFactory,
+    } as never;
+
+    expect(() => registry.installAll([healthy, broken])).toThrow('extensions getter failed');
+    expect(createFactory).not.toHaveBeenCalled();
+    expect(registry.hasAssetType('healthy')).toBe(false);
+  });
+
+  test('a validation error creates no factory at all', () => {
+    const registry = new AssetTypeRegistry();
+    const createFactory = vi.fn(() => ({ create: async () => 1 }));
+
+    expect(() => registry.installAll([factoryType('dup', createFactory), factoryType('dup', createFactory)])).toThrow(/already installed/);
+    expect(createFactory).not.toHaveBeenCalled();
+  });
+
+  test('a factory that installs types on the same registry while its set installs is rejected', () => {
+    const registry = new AssetTypeRegistry();
+    const reentrant = factoryType('outer', () => {
+      registry.installAll([factoryType('inner', () => ({ create: async () => 1 }))]);
+
+      return { create: async () => 1 };
+    });
+
+    expect(() => registry.installAll([reentrant])).toThrow(/cannot be called from a createFactory/);
+    expect(registry.hasAssetType('outer')).toBe(false);
+    expect(registry.hasAssetType('inner')).toBe(false);
+
+    registry.installAll([factoryType('later', () => ({ create: async () => 1 }))]);
+
+    expect(registry.hasAssetType('later')).toBe(true);
+  });
+});

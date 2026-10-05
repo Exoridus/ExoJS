@@ -30,7 +30,7 @@ The constructor only creates local objects. Application-bound services such as `
 
 `update(delta)` receives elapsed time in **seconds**. The starter rotates the square by `90 * delta`, giving a rate of 90 degrees per second. Changing `90` changes the speed; omitting `delta` makes the motion depend on the number of frames rendered.
 
-`draw(context)` chooses what to render. `context.render(this.root)` draws the scene hierarchy. Adding an object to `root` does not by itself make the scene draw it: the explicit draw call is required. Avoid creating objects or starting asset requests in `draw`; it should use state that already exists.
+The scene draws what is attached to its root each frame, so the starter has no `draw` method of its own. Override `draw(context)` only when the scene needs to choose what is rendered - the [lifecycle chapter](/ExoJS/en/guide/runtime/scenes-and-lifecycle/) shows how. Avoid creating objects or starting asset requests in `draw`; it should use state that already exists.
 
 The application clears its output each frame by default. Persistent-frame effects are a separate rendering workflow, not something this scene needs.
 

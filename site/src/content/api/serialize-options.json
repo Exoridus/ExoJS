@@ -1,0 +1,75 @@
+{
+  "title": "SerializeOptions",
+  "description": "Options for Scene.serialize and Prefab.from.",
+  "symbol": "SerializeOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for Scene.serialize and Prefab.from."
+      ],
+      "importLine": "import { SerializeOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "omitComponents",
+          "signature": "omitComponents?: boolean",
+          "signatureTokens": [
+            {
+              "text": "omitComponents",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Components are not part of the serialized format, so serializing a tree whose nodes carry any throws by default rather than writing a document that silently lacks them. Set this to write the tree's visual data alone: structure, transforms, visuals and asset references, with every component left out. Restoring such a document yields nodes without components."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/serialization/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/serialization/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+}

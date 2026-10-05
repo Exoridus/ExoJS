@@ -1,0 +1,99 @@
+{
+  "title": "LeaflessAsset",
+  "description": "A descriptor whose type has no catalog leaf (`leaf: 'none'`): it loads directly, but cannot be held by a catalog or handed out by `get()`. The brand is a phantom.",
+  "symbol": "LeaflessAsset",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A descriptor whose type has no catalog leaf (`leaf: 'none'`): it loads directly, but cannot be held by a catalog or handed out by `get()`. The brand is a phantom."
+      ],
+      "importLine": "import { LeaflessAsset } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LeaflessAsset",
+          "signature": "Asset<T> & { [LEAFLESS_ASSET]: true }",
+          "signatureTokens": [
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[LEAFLESS_ASSET]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "true",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/Asset.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/Asset.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+}

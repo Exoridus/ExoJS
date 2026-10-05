@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess, type SpawnOptions } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createWriteStream, mkdirSync, openSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
@@ -58,6 +58,32 @@ class TailBuffer {
   }
 }
 
+/**
+ * Read-only listing of the process tree this run owns. Uses the same ownership
+ * rule as the stop path - descendants of the child, never a sweep by executable
+ * name - and terminates nothing.
+ */
+const describeOwnedTree = (root: number | undefined): string[] => {
+  if (root === undefined) return ['(no pid)'];
+  const script =
+    '$rootPid = [int]$env:EXOJS_TREE_ROOT;' +
+    '$all = Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId, Name;' +
+    '$ids = New-Object System.Collections.Generic.HashSet[int];' +
+    '[void]$ids.Add($rootPid);' +
+    'do { $added = $false; foreach ($p in $all) { if ($ids.Contains([int]$p.ParentProcessId) -and -not $ids.Contains([int]$p.ProcessId)) { [void]$ids.Add([int]$p.ProcessId); $added = $true } } } while ($added);' +
+    '$all | Where-Object { $ids.Contains([int]$_.ProcessId) } | ForEach-Object { "$($_.ProcessId)<-$($_.ParentProcessId) $($_.Name)" }';
+  const out = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+    encoding: 'utf8',
+    timeout: 10_000,
+    env: { ...process.env, EXOJS_TREE_ROOT: String(root) },
+  });
+  const text = (out.stdout || out.stderr || 'snapshot failed').trim();
+  return text
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+};
+
 /** Runs a noninteractive validation command with optional deadlines and persistent logs in every output mode. */
 export const runCommand = async (options: RunCommandOptions): Promise<RunCommandResult> => {
   const timeoutMs = options.timeoutMs === undefined ? undefined : positiveTimer(options.timeoutMs, 'timeoutMs');
@@ -111,6 +137,30 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
     let child: ChildProcess;
     const spawnStarted = Date.now();
     let exitedAt: number | undefined;
+
+    // `runCommand` settles on `close`, which only fires once every inherited
+    // stdio handle is released. A finished command held open by a surviving
+    // descendant and a command that never finished look identical from outside,
+    // and they need opposite fixes - so each transition is timestamped into the
+    // run's own log while the hang is still observable.
+    const trace = (event: string, extra = ''): void => {
+      // Stdio and child events still arrive after `report` has ended the log: a
+      // failed spawn settles on `error` before its pipes close, and the child's
+      // `close` is emitted from inside the last pipe's `close`, ahead of the
+      // listeners registered here. `writable` is false once the log is ended,
+      // errored or destroyed.
+      if (!log.writable) return;
+      const at = Date.now() - spawnStarted;
+      const streams = (['stdout', 'stderr'] as const)
+        .map(name => {
+          const stream = child[name];
+          if (!stream) return `${name}=absent`;
+          const readable = stream as Readable & { readableLength?: number };
+          return `${name}[ended=${readable.readableEnded ?? false} destroyed=${stream.destroyed} paused=${readable.isPaused?.() ?? false} buffered=${readable.readableLength ?? 0}]`;
+        })
+        .join(' ');
+      log.write(`trace t+${at}ms pid=${child.pid ?? '?'} ${event} exitedAt=${exitedAt === undefined ? 'no' : 'yes'} ${streams} ${extra}\n`);
+    };
     try {
       child = windowsShell
         ? spawn(
@@ -131,9 +181,18 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
     }
 
     const spawnFinished = Date.now();
-    child.once('exit', () => {
+    trace('spawn');
+    child.once('exit', (code, signal) => {
       exitedAt = Date.now();
+      trace('child-exit', `code=${code} signal=${signal}`);
     });
+    for (const name of ['stdout', 'stderr'] as const) {
+      const stream = child[name];
+      if (!stream) continue;
+      stream.once('end', () => trace(`${name}-end`));
+      stream.once('close', () => trace(`${name}-close`));
+      stream.once('error', error => trace(`${name}-error`, error.message));
+    }
 
     const resume = (): void => {
       for (const stream of paused) stream.resume();
@@ -144,6 +203,7 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       closing = true;
       clearTimeout(timeout);
       clearInterval(heartbeat);
+      clearInterval(idle);
       clearTimeout(drainTimer);
       process.removeListener('SIGINT', onInterrupt);
       process.removeListener('SIGTERM', onTerminate);
@@ -190,6 +250,7 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       if (finished || closing || stopping) return;
       reason = why;
       requestedSignal = signal;
+      trace('stop', `why=${why} signal=${signal ?? 'none'} tree=[${describeOwnedTree(child.pid).join(' | ')}]`);
       process.stderr.write(`STOP ${options.label}: ${why}; owned PID ${child.pid ?? 'not started'}; log ${displayPath}\n`);
       stopping = stopProcessTree(child, graceMs, { earliest: spawnStarted, latest: spawnFinished, ...(exitedAt === undefined ? {} : { exitedAt }) })
         .then(error => {
@@ -240,6 +301,26 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
     });
     log.on('drain', resume);
     log.write(`$ ${options.command}${options.args?.length ? ` ${options.args.join(' ')}` : ''}\ncwd=${cwd}\ntimeoutMs=${timeoutMs ?? 'none'}\n`);
+
+    // A stall is only diagnosable while it is happening. After a minute without
+    // output the owned tree is recorded, so a log that later ends in a deadline
+    // says which processes were still alive at the moment nothing was happening.
+    // Observation only - nothing here terminates anything.
+    const IDLE_MS = 60_000;
+    let lastActivity = Date.now();
+    child.stdout?.on('data', () => {
+      lastActivity = Date.now();
+    });
+    child.stderr?.on('data', () => {
+      lastActivity = Date.now();
+    });
+    const idle = setInterval(() => {
+      const idleMs = Date.now() - lastActivity;
+      if (finished || closing || idleMs < IDLE_MS) return;
+      const tree = describeOwnedTree(child.pid);
+      trace('idle-snapshot', `idleMs=${idleMs} tree=[${tree.join(' | ')}]`);
+    }, 15_000);
+    idle.unref?.();
     if (showProgress)
       process.stdout.write(
         `RUN ${options.label}; PID ${child.pid ?? '?'}; timeout ${timeoutMs === undefined ? 'no deadline' : duration(timeoutMs)}; log ${displayPath}\n`,
@@ -251,6 +332,7 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
         if (!logError && !log.destroyed && !log.write(chunk)) {
           stream.pause();
           paused.add(stream);
+          trace('log-backpressure', `paused=${paused.size} needDrain=${log.writableNeedDrain ?? 'n/a'}`);
         }
       });
       stream.on('error', error => {
@@ -271,6 +353,7 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
     });
     child.once('close', (status, signal) => {
       closed = { status: status ?? 1, signal };
+      trace('child-close', `code=${status} signal=${signal}`);
       report();
     });
   });

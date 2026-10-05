@@ -2,7 +2,7 @@ import type { ManifestPack } from '#assets/container/AssetManifest';
 import { Signal } from '#core/Signal';
 import type { Destroyable } from '#core/types';
 
-import type { Asset, ValueAsset } from './Asset';
+import type { Asset, ResourceAsset, ValueAsset } from './Asset';
 import type { AssetConstructor } from './AssetConstructor';
 import type { CatalogEntry, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
@@ -168,7 +168,7 @@ export class LoaderScope implements Destroyable {
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
   // A value-kind descriptor (or a materialized value leaf) resolves to a value leaf.
   public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): CatalogValueLeaf<T>;
-  public get<T>(asset: Asset<T>): CatalogResourceLeaf<T>;
+  public get<T>(asset: ResourceAsset<T>): CatalogResourceLeaf<T>;
   public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
   // Brand-matched: only a materialized catalog leaf, never a raw resource.
   public get<T extends object>(leaf: CatalogResourceLeaf<T>): CatalogResourceLeaf<T>;

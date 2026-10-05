@@ -25,6 +25,8 @@ import { Vector } from '#math/Vector';
 import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
+import type { Component, ComponentClass, ComponentHostCheck } from './Component';
+import type { ComponentAnchor, ComponentRuntime } from './ComponentRuntime';
 import { detachedNodeDirtyIndex, DirtyChannel, type NodeDirtyIndex } from './nodeDirtyIndex';
 import { nextNodeRevision, NodeRevision } from './NodeRevision';
 import type { Stage } from './Stage';
@@ -96,6 +98,16 @@ let dirtyWalkEpoch = 1;
  * take (e.g. 0 once versions also started at 0), or the collision returns.
  */
 const NO_PARENT_VERSION = 0;
+
+const noComponents: readonly Component[] = Object.freeze([]);
+
+const describeNode = (node: SceneNode): string => {
+  const type = node.constructor.name || 'SceneNode';
+
+  return node.name === null ? type : `${type} "${node.name}"`;
+};
+
+const describeComponent = (component: Component): string => component.constructor.name || 'a component';
 
 /**
  * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
@@ -209,6 +221,16 @@ export class SceneNode implements Collidable {
   private _parentNode: Container | null = null;
   private _zIndex = 0;
   private _isDestroyed = false;
+  // Allocated with the first component; a node without components keeps only
+  // this null and the counter below.
+  private _components: Map<ComponentClass, Component> | null = null;
+  /**
+   * How many nodes in this subtree, this one included, carry at least one
+   * component. Lets structural changes skip component work entirely for a
+   * subtree without any.
+   * @internal
+   */
+  public _componentNodes = 0;
   /** Lazily-built oriented bounding box (the local bounds under the global transform) for rotated-node SAT. */
   private _orientedBounds: Polygon | null = null;
 
@@ -864,6 +886,11 @@ export class SceneNode implements Collidable {
 
     this._isDestroyed = true;
     this._parentNode?.removeChild(this as unknown as RenderNode);
+
+    // After the unlink, which disabled them, and before the node's own state
+    // is released, so their teardown hooks can still read it.
+    const componentErrors = this._destroyComponents();
+
     this._transform.destroy();
     this._position.destroy();
     this._scale.destroy();
@@ -882,6 +909,212 @@ export class SceneNode implements Collidable {
     // frames advance, so a node destroyed with the frame loop already gone
     // would otherwise stay reachable through it forever.
     this._dirtyIndex().release(this);
+
+    if (componentErrors.length > 0) {
+      throw componentErrors[0];
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Components
+  // -------------------------------------------------------------------------
+
+  /**
+   * The components attached to this node, in attach order. A snapshot: it
+   * does not change when components are added or removed later.
+   */
+  public get components(): readonly Component[] {
+    return this._components === null ? noComponents : Object.freeze([...this._components.values()]);
+  }
+
+  /**
+   * Attach `component` and return it - the same instance, typed as passed, so
+   * it can be kept in a field.
+   *
+   * A node holds at most one component per exact class. Attaching the instance
+   * that is already attached here is a no-op. Runs the component's
+   * {@link Component.onAttach} at once; if the node belongs to an active
+   * scene, {@link Component.onEnable} follows - during a frame, at the frame's
+   * end.
+   *
+   * The component's host type is checked at compile time: a
+   * `Component<Sprite>` cannot be attached to a plain container.
+   *
+   * @throws If this node or the component is destroyed, if the component is
+   *   attached to another node (remove it there first), or if this node
+   *   already holds a different instance of the same class. If `onAttach`
+   *   throws, the attachment is rolled back and the error rethrown.
+   */
+  public addComponent<C extends Component>(component: C & ComponentHostCheck<this, C>): C {
+    if (component.attached && component.node === this) {
+      return component;
+    }
+
+    if (component.destroyed) {
+      throw new Error(`SceneNode.addComponent(): ${describeComponent(component)} has been destroyed and cannot be attached again.`);
+    }
+
+    if (this._isDestroyed) {
+      throw new Error(`SceneNode.addComponent(): ${describeNode(this)} has been destroyed; attach components to a live node.`);
+    }
+
+    if (component.attached) {
+      throw new Error(
+        `SceneNode.addComponent(): ${describeComponent(component)} is already attached to ${describeNode(component.node)}. ` +
+          'Remove it there first; a component belongs to one node at a time.',
+      );
+    }
+
+    const type = component.constructor as ComponentClass;
+
+    if (this._components?.has(type) === true) {
+      throw new Error(
+        `SceneNode.addComponent(): ${describeNode(this)} already has a ${describeComponent(component)}. ` +
+          'A node holds one instance per component class; remove the existing one first.',
+      );
+    }
+
+    if (this._components === null) {
+      this._components = new Map();
+      this._adjustComponentNodes(1);
+    }
+
+    const slots = this._components;
+
+    slots.set(type, component);
+    component._attachTo(this, () => this._releaseSlot(type));
+
+    // onAttach may already have removed or destroyed it again.
+    if (component.attached && component.node === this) {
+      this._componentRuntime(true)?.join(component);
+    }
+
+    return component;
+  }
+
+  /**
+   * The component attached under exactly `type`, or `null`. A subclass
+   * instance is not found under its base class.
+   */
+  public getComponent<C extends Component>(type: ComponentClass<C>): C | null {
+    return (this._components?.get(type) as C | undefined) ?? null;
+  }
+
+  /** Whether a component of exactly `type` is attached. */
+  public hasComponent(type: ComponentClass): boolean {
+    return this._components?.has(type) === true;
+  }
+
+  /**
+   * Detach a component - by class or by instance - and return it, or `null`
+   * when no such component is attached here. Detaching is not destroying: the
+   * component runs {@link Component.onDisable} if it was active, then
+   * {@link Component.onDetach}, and can be attached again afterwards.
+   */
+  public removeComponent<C extends Component>(target: ComponentClass<C> | C): C | null {
+    const slots = this._components;
+
+    if (slots === null) {
+      return null;
+    }
+
+    const component = typeof target === 'function' ? (slots.get(target) as C | undefined) : target;
+
+    if (component === undefined || slots.get(component.constructor as ComponentClass) !== component) {
+      return null;
+    }
+
+    const errors: unknown[] = [];
+
+    try {
+      component._runtime?.leave(component);
+    } catch (error) {
+      errors.push(error);
+    }
+
+    this._releaseSlot(component.constructor as ComponentClass);
+
+    try {
+      component._detachFromNode();
+    } catch (error) {
+      errors.push(error);
+    }
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
+
+    return component;
+  }
+
+  /** The component attached under exactly `type`, without a typed cast. @internal */
+  public _componentOf(type: ComponentClass): Component | undefined {
+    return this._components?.get(type);
+  }
+
+  /** Visit every component in this subtree, skipping branches that carry none. @internal */
+  public _forEachComponent(visit: (component: Component) => void): void {
+    if (this._components !== null) {
+      for (const component of [...this._components.values()]) {
+        visit(component);
+      }
+    }
+  }
+
+  /** Add `delta` to the component-node count of this node and every ancestor. @internal */
+  public _adjustComponentNodes(delta: number): void {
+    this._componentNodes += delta;
+
+    for (let node: SceneNode | null = this._parentNode; node !== null; node = node._parentNode) {
+      node._componentNodes += delta;
+    }
+  }
+
+  /**
+   * The component runtime of the scene this node belongs to, through the anchor
+   * at the top of its tree; created there when `create` is set.
+   * @internal
+   */
+  public _componentRuntime(create: boolean): ComponentRuntime | null {
+    if (this._parentNode !== null) {
+      return this._parentNode._componentRuntime(create);
+    }
+
+    return this._componentAnchor()?.componentRuntime(create) ?? null;
+  }
+
+  /** The scene anchor this node is, if it is the root of one. {@link Container} overrides it. @internal */
+  public _componentAnchor(): ComponentAnchor | null {
+    return null;
+  }
+
+  private _releaseSlot(type: ComponentClass): void {
+    const slots = this._components;
+
+    if (slots === null || !slots.delete(type) || slots.size > 0) {
+      return;
+    }
+
+    this._components = null;
+    this._adjustComponentNodes(-1);
+  }
+
+  private _destroyComponents(): unknown[] {
+    const errors: unknown[] = [];
+
+    if (this._components === null) {
+      return errors;
+    }
+
+    for (const component of [...this._components.values()]) {
+      try {
+        component.destroy();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+
+    return errors;
   }
 
   /**

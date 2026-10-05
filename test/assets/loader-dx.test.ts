@@ -396,14 +396,14 @@ describe('Loader.inspect() snapshot contract', () => {
     const residency = (
       loader as unknown as {
         _residency: {
-          _claims: Map<string, { scopes: Set<LoaderScope>; asset: unknown }>;
+          _claims: Map<string, { scopes: Set<LoaderScope>; pending: Map<LoaderScope, Set<unknown>>; asset: unknown }>;
           _resources: Map<string, { asset: unknown; value: unknown }>;
           _backgroundQueue: Array<{ asset: unknown; options: unknown }>;
         };
       }
     )._residency;
 
-    residency._claims.set(asset.key, { scopes: new Set<LoaderScope>([loader.createScope({ name: 'scope' })]), asset });
+    residency._claims.set(asset.key, { scopes: new Set<LoaderScope>([loader.createScope({ name: 'scope' })]), pending: new Map(), asset });
     residency._backgroundQueue.push({ asset, options: undefined });
     residency._resources.set(asset.key, { asset, value: {} });
 

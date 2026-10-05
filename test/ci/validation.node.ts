@@ -297,6 +297,18 @@ void test('spawn failure remains nonzero', async () => {
   assert.match(stderr, /Full log: /);
 });
 
+// A failed spawn settles on the child's `error` event, while the stdio pipes it
+// had already opened close afterwards. Their lifecycle events must not write
+// into a log that the settled run has already ended.
+void test('child events after the run settled never write past the end of its log', async () => {
+  const { result } = await capture(() =>
+    runCommand({ label: 'missing', command: 'exojs-no-such-command', args: ['--test'], cwd: directory(), output: 'silent' }),
+  );
+  assert.equal(result.status, 1);
+  assert.equal(result.logError, undefined);
+  assert.match(readFileSync(result.logPath!, 'utf8'), /\nexit=1\nsignal=none\nreason=exit\ndurationMs=\d+\n$/);
+});
+
 test.after(() => {
   for (const path of temporary) rmSync(path, { recursive: true, force: true });
 });

@@ -627,7 +627,7 @@
         },
         {
           "name": "get",
-          "signature": "get(asset: Asset<T>): CatalogResourceLeaf<T>",
+          "signature": "get(asset: ResourceAsset<T>): CatalogResourceLeaf<T>",
           "signatureTokens": [
             {
               "text": "get",
@@ -646,7 +646,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Asset",
+              "text": "ResourceAsset",
               "kind": "type"
             },
             {
@@ -689,7 +689,7 @@
           "params": [
             {
               "name": "asset",
-              "type": "Asset<T>",
+              "type": "ResourceAsset<T>",
               "optional": false
             }
           ],
@@ -1607,7 +1607,7 @@
             }
           ],
           "returnType": "LoadingQueue<ResourceForKind<KindByPath<S>>>",
-          "description": "Fetches an asset by path, normalizing the suffix to an AssetDefinitions type before dispatch. Resolution is basename-only and longest-suffix-first (hero.aseprite.json tries aseprite.json before json), and consults the app-local registerType override, then the type that claimed the suffix. Only suffixes a catalog can also materialize are accepted at compile time (ExtensionKindMap, the map to augment by declaration merging). Types that hand out no leaf (bmFont, font, svg, image, music, video) and unclaimed suffixes are rejected here; name them with load(Asset.type(type, path)) instead. ts const texture = await loader.load('image/hero.png'); // Texture const level = await loader.load('data/level.json'); // unknown const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont "
+          "description": "Fetches an asset by path, normalizing the suffix to an AssetDefinitions type before dispatch. Resolution is basename-only and longest-suffix-first (hero.aseprite.json tries aseprite.json before json), and consults the app-local registerType override, then the type that claimed the suffix. Only suffixes a catalog can also materialize are accepted at compile time (ExtensionKindMap, the map to augment by declaration merging). Types that hand out no leaf (bmFont, font, svg, image, music, video) and unclaimed suffixes are rejected here; name them with load(Asset.type(type, path)) instead. The runtime is more lenient than the types, for untyped callers: a font suffix an installed type claims still loads, and the family the font type otherwise requires defaults to the file's base name (ui/Inter.woff2 registers Inter). A descriptor never gets that default: Asset.type('font', path) and fontType.asset(path) require family, and a load of one without it rejects. ts const texture = await loader.load('image/hero.png'); // Texture const level = await loader.load('data/level.json'); // unknown const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont "
         },
         {
           "name": "loadContainer",

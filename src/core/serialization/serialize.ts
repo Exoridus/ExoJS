@@ -1,5 +1,6 @@
 import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { Loader } from '#assets/Loader';
+import type { Component } from '#core/Component';
 import { logger } from '#core/Logger';
 import type { SceneNode } from '#core/SceneNode';
 import type { Container } from '#rendering/Container';
@@ -10,7 +11,7 @@ import { registerCoreSerializers } from './coreSerializers';
 import type { DeserializeContext, SerializeContext } from './NodeSerializer';
 import { asObject, asSerializedNode } from './read';
 import { defaultSerializationRegistry, type SerializationRegistry } from './SerializationRegistry';
-import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type SerializedScene } from './types';
+import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type SerializedScene, type SerializeOptions } from './types';
 
 // Core serializers register lazily (not as an import side effect) so they
 // survive `sideEffects: false` tree-shaking: the registration is reachable
@@ -54,9 +55,9 @@ const createSerializeContext = (loader: Loader | null, registry: SerializationRe
         return null;
       }
 
-      const key = loader.keyFor(resource);
+      const lookup = loader._assetReference(resource);
 
-      if (key === null) {
+      if (lookup === null) {
         logger.warn(
           'An asset referenced by a node has no Loader key (runtime-created, or not loaded through the Loader). The reference is omitted from serialization.',
           {
@@ -68,7 +69,11 @@ const createSerializeContext = (loader: Loader | null, registry: SerializationRe
         return null;
       }
 
-      return key.source;
+      if (lookup.kind === 'error') {
+        throw new Error(`Cannot serialize an asset reference: ${lookup.message}`);
+      }
+
+      return lookup.options === undefined ? lookup.source : { source: lookup.source, options: lookup.options };
     },
   };
 
@@ -80,12 +85,15 @@ const createDeserializeContext = (loader: Loader | null, version: number, regist
     version,
     loader,
     readNode: data => readNodeWith(data, ctx, registry),
-    resolveAsset: <T>(source: string | null | undefined, type: AssetConstructor<T>): T | null => {
-      if (source === null || source === undefined || loader === null) {
+    resolveAsset: <T>(reference: unknown, type: AssetConstructor<T>): T | null => {
+      const request = readAssetReference(reference);
+
+      if (request === null || loader === null) {
         return null;
       }
 
-      const resource = loader._peekResource(type, source) as T | null;
+      const { source, options } = request;
+      const resource = loader._peekResource(type, source, options) as T | null;
 
       if (resource === null) {
         logger.warn(`An asset referenced by a node was not pre-loaded into the Loader before deserialize (e.g. "${source}"); it resolves to null.`, {
@@ -99,6 +107,23 @@ const createDeserializeContext = (loader: Loader | null, version: number, regist
   };
 
   return ctx;
+};
+
+/** The `(source, options)` request a stored reference names, or `null` for anything that is not one. */
+const readAssetReference = (reference: unknown): { readonly source: string; readonly options?: Readonly<Record<string, unknown>> } | null => {
+  if (typeof reference === 'string') {
+    return { source: reference };
+  }
+
+  const value = asObject(reference);
+
+  if (value === null || typeof value.source !== 'string') {
+    return null;
+  }
+
+  const options = asObject(value.options);
+
+  return options === null ? { source: value.source } : { source: value.source, options };
 };
 
 const writeNodeWith = (node: SceneNode, ctx: SerializeContext, registry: SerializationRegistry): SerializedNode => {
@@ -130,17 +155,53 @@ const readNodeWith = (data: SerializedNode, ctx: DeserializeContext, registry: S
   return node;
 };
 
+const describeNode = (node: SceneNode): string => {
+  const type = node.constructor.name || 'SceneNode';
+
+  return node.name === null ? type : `${type} "${node.name}"`;
+};
+
+/** Refuse a tree carrying components, naming the first node and component class found. */
+const rejectComponents = (root: SceneNode): void => {
+  if (root._componentNodes === 0) {
+    return;
+  }
+
+  const found: Component[] = [];
+
+  root._forEachComponent(component => found.push(component));
+
+  const first = found[0];
+
+  if (first === undefined) {
+    return;
+  }
+
+  const others = found.length > 1 ? ` (and ${found.length - 1} more component${found.length > 2 ? 's' : ''} in the tree)` : '';
+
+  throw new Error(
+    `Cannot serialize ${describeNode(root)}: ${describeNode(first.node)} carries a ${first.constructor.name || 'component'} component${others}, ` +
+      'and components are not part of the serialized format. Remove them before serializing, or pass { omitComponents: true } to write the visual data alone.',
+  );
+};
+
 /**
  * Serialize a single node and its subtree to a {@link SerializedNode}. Pass a
  * {@link Loader} so texture/asset references resolve to their source keys.
+ * Throws for a tree carrying components unless `options.omitComponents` is set.
  * @internal
  */
 export const serializeTree = (
   node: SceneNode,
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
+  options: SerializeOptions = {},
 ): SerializedNode => {
   ensureCoreSerializers();
+
+  if (options.omitComponents !== true) {
+    rejectComponents(node);
+  }
 
   return writeNodeWith(node, createSerializeContext(loader, registry), registry);
 };
@@ -202,8 +263,10 @@ export const deserializeInto = (
  * a version newer than supported, or a missing/invalid root; an invalid `ui` is
  * dropped (it is optional) rather than thrown.
  *
- * The migration chain is empty at v1; future version bumps register
- * version→version+1 transforms here.
+ * Version 2 widened asset references from a bare source string to also allow
+ * a `{ source, options }` object. A version 1 document is already valid
+ * version 2 data, so its migration step is the identity. Future version bumps
+ * register version→version+1 transforms here.
  * @internal
  */
 export const migrate = (data: unknown): SerializedScene => {
@@ -240,8 +303,8 @@ export const migrate = (data: unknown): SerializedScene => {
  * on a non-object document, a version newer than supported, or a missing/invalid
  * root.
  *
- * The migration chain is empty at v1, exactly as for scenes; a future version
- * bump registers its version→version+1 transform in both places.
+ * A version 1 document is valid version 2 data, exactly as for scenes; a
+ * future version bump registers its version→version+1 transform in both places.
  * @internal
  */
 export const migratePrefab = (data: unknown): SerializedPrefab => {

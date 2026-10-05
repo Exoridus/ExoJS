@@ -101,6 +101,7 @@ export class ForwardBackend implements LightingBackend {
   private readonly _app: LightingHost | null = null;
   private readonly _postPass: FilterPass | null = null;
   private _activeCount = 0;
+  private _attached = false;
 
   public constructor(options: ForwardBackendOptions) {
     this.maxLights = options.maxLights;
@@ -117,7 +118,31 @@ export class ForwardBackend implements LightingBackend {
     if (options.post.length > 0 && options.app !== null) {
       this._app = options.app;
       this._postPass = new FilterPass(options.app.frameTexture, options.post, { label: 'lighting:post' });
-      options.app.framePasses.addPass(this._postPass);
+    }
+  }
+
+  /** Install the `post` chain in the frame slot. Without one there is nothing to install. */
+  public attach(): void {
+    if (this._attached) {
+      return;
+    }
+
+    this._attached = true;
+
+    if (this._postPass !== null) {
+      this._app?.framePasses.addPass(this._postPass);
+    }
+  }
+
+  public detach(): void {
+    if (!this._attached) {
+      return;
+    }
+
+    this._attached = false;
+
+    if (this._postPass !== null) {
+      this._app?.framePasses.removePass(this._postPass);
     }
   }
 
@@ -175,14 +200,11 @@ export class ForwardBackend implements LightingBackend {
   }
 
   public destroy(): void {
+    this.detach();
     this._activeCount = 0;
     this._texture.destroy();
-
-    if (this._postPass !== null) {
-      this._app?.framePasses.removePass(this._postPass);
-      // The filters are the caller's; the pass only releases what it allocated.
-      this._postPass.destroy();
-    }
+    // The filters are the caller's; the pass only releases what it allocated.
+    this._postPass?.destroy();
   }
 }
 

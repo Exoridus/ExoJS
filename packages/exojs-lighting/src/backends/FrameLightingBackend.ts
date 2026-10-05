@@ -293,6 +293,7 @@ export abstract class FrameLightingBackend implements LightingBackend {
   private _surfaceCount = 0;
   private _debug: LightingDebugView = null;
   private _debugExposure = 1;
+  private _attached = false;
 
   protected constructor(options: FrameLightingBackendOptions) {
     this._app = options.app;
@@ -421,12 +422,18 @@ ${sunQuadWgsl}`,
   /**
    * Take this renderer's place in the frame.
    *
-   * Called by the concrete renderer once its own resources exist, because the
-   * order the passes are installed in is the order they run in and a walk's
-   * passes sit between the mask and the accumulation. Nothing here may run
-   * from this class's constructor: a subclass has no fields yet at that point.
+   * The passes are appended as one contiguous run, in the order they execute:
+   * a walk's passes sit between the mask and the accumulation. Called by the
+   * owning system once the renderer is fully built - never from a constructor,
+   * where a subclass has no fields yet - and only while the frame it would
+   * shade is the one on screen.
    */
-  protected _attach(): void {
+  public attach(): void {
+    if (this._attached) {
+      return;
+    }
+
+    this._attached = true;
     this._syncMask();
     this._app.framePasses.addPass(this._maskPass);
     this._attachMaskReaders();
@@ -448,6 +455,23 @@ ${sunQuadWgsl}`,
     this._app.onResize.add(this._onResize);
   }
 
+  /** Leave the frame, keeping every pass and target for the next {@link attach}. */
+  public detach(): void {
+    if (!this._attached) {
+      return;
+    }
+
+    this._attached = false;
+    this._app.onResize.remove(this._onResize);
+    this._detachOwnPasses();
+
+    for (const pass of [this._maskPass, this._filler?.pass, this._normalPass, this._lightPass, this._compositePass, this._postPass, this._debugPass]) {
+      if (pass) {
+        this._app.framePasses.removePass(pass);
+      }
+    }
+  }
+
   /* eslint-disable @typescript-eslint/no-empty-function -- these are the seams a renderer that walks the scene fills in; the one that lays quads down has nothing to put in any of them. */
 
   /** Passes that read the occluder mask, installed straight after it is drawn. */
@@ -456,8 +480,11 @@ ${sunQuadWgsl}`,
   /** Passes that fill the light field before the accumulation would have. */
   protected _attachFieldPasses(): void {}
 
-  /** Take those passes out again, before the shared ones go. */
+  /** Take those passes out of the frame again, keeping them for the next attach. */
   protected _detachOwnPasses(): void {}
+
+  /** Release what the walk owns, once the renderer has left the frame for good. */
+  protected _destroyOwnResources(): void {}
 
   /* eslint-enable @typescript-eslint/no-empty-function */
 
@@ -1053,30 +1080,16 @@ ${sunQuadWgsl}`,
   }
 
   public destroy(): void {
-    this._app.onResize.remove(this._onResize);
-    this._app.framePasses.removePass(this._maskPass);
-    this._detachOwnPasses();
-
-    if (this._filler !== null) {
-      this._app.framePasses.removePass(this._filler.pass);
-      this._filler.destroy();
-    }
-
-    this._app.framePasses.removePass(this._normalPass);
-    this._app.framePasses.removePass(this._lightPass);
-    this._app.framePasses.removePass(this._compositePass);
-    this._app.framePasses.removePass(this._debugPass);
+    this.detach();
+    this._destroyOwnResources();
+    this._filler?.destroy();
     this._maskPass.destroy();
     this._normalPass.destroy();
     this._lightPass.destroy();
     this._compositePass.destroy();
     this._debugPass.destroy();
-
-    if (this._postPass !== null) {
-      this._app.framePasses.removePass(this._postPass);
-      // The filters are the caller's; the pass only releases what it allocated.
-      this._postPass.destroy();
-    }
+    // The filters are the caller's; the pass only releases what it allocated.
+    this._postPass?.destroy();
 
     this._shaded?.destroy();
     this._compositeBatch.destroy();
