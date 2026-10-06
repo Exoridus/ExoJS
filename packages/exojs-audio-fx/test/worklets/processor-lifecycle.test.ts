@@ -211,3 +211,31 @@ describe('a reactivated channel does not replay its previous activation', () => 
     });
   }
 });
+
+describe('vocoder envelope while the carrier is disconnected', () => {
+  test('keeps following the modulator, so a returning carrier is shaped by the current modulator', () => {
+    const Processor = buildProcessorClass(vocoderWorkletSource);
+    const processor = new Processor({ processorOptions: { numBands: 8 } });
+    const parameters = { envelopeSmoothing: param(0.01) };
+    const silence = new Float32Array(BLOCK);
+    const stereoOut = (): Float32Array[] => [new Float32Array(BLOCK), new Float32Array(BLOCK)];
+    let offset = 0;
+
+    // Carrier and a loud modulator: the envelopes open up.
+    for (let block = 0; block < 40; block++, offset += BLOCK) {
+      processor.process([[tone(440, offset), tone(880, offset)], [tone(660, offset)]], [stereoOut()], parameters);
+    }
+
+    // Carrier gone, modulator silent for a while: live envelopes decay to nothing.
+    for (let block = 0; block < 200; block++, offset += BLOCK) {
+      processor.process([[], [silence]], [stereoOut()], parameters);
+    }
+
+    // Carrier back, modulator still silent: nothing passes.
+    const outputs = stereoOut();
+    processor.process([[tone(440, offset), tone(880, offset)], [silence]], [outputs], parameters);
+
+    const peak = Math.max(...outputs.flatMap(channel => Array.from(channel, Math.abs)));
+    expect(peak).toBeLessThan(1e-3);
+  });
+});

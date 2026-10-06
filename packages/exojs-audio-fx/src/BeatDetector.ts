@@ -1,6 +1,16 @@
-import { type AudioBus, getAudioContext, isAudioContextReady, onAudioContextReady, registerAudioWorkletProcessor, Signal, type Voice } from '@codexo/exojs';
+import {
+  type AudioBus,
+  getAudioContext,
+  isAudioContextReady,
+  logger,
+  onAudioContextReady,
+  registerAudioWorkletProcessor,
+  Signal,
+  type Voice,
+} from '@codexo/exojs';
 
 import { AudioTap } from './AudioTap';
+import { ReadyGate } from './ReadyGate';
 import beatDetectorWorkletSource from './worklets/beat-detector.worklet.ts?worklet';
 
 // ---------------------------------------------------------------------------
@@ -190,7 +200,7 @@ export class BeatDetector {
   // ---- Audio plumbing ----
   private _workletNode: AudioWorkletNode | null = null;
   private readonly _tap = new AudioTap();
-  private _ready: Promise<void> | null = null;
+  private readonly _ready = new ReadyGate('The beat detector was destroyed before it became ready.');
   private _destroyed = false;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
@@ -280,8 +290,14 @@ export class BeatDetector {
   // Ready promise
   // -----------------------------------------------------------------------
 
+  /**
+   * Resolves once the analysis worklet is loaded and listening. Stays pending
+   * while the shared AudioContext is locked. Rejects with the load error when
+   * the worklet cannot load, and with an `AbortError` when the detector is
+   * destroyed before it became ready.
+   */
   public get ready(): Promise<void> {
-    return this._ready ?? Promise.resolve();
+    return this._ready.promise;
   }
 
   // -----------------------------------------------------------------------
@@ -453,7 +469,7 @@ export class BeatDetector {
     this._workletNode?.port.postMessage({ type: 'destroy' });
     this._workletNode?.disconnect();
     this._workletNode = null;
-    this._ready = null;
+    this._ready.abort();
     this.onBeat.clear();
     this.onTempoChange.clear();
     this.onDownbeat.clear();
@@ -467,33 +483,46 @@ export class BeatDetector {
 
   private _setup(audioContext: AudioContext): void {
     const opts = this._options;
-    this._ready = registerAudioWorkletProcessor(audioContext, workletName, beatDetectorWorkletSource).then(() => {
-      // Destroyed while the module loaded: a node created now would never be released.
-      if (this._destroyed) return;
+    // Not stored: the gate turns the outcome into `ready` on demand, so a load
+    // failure nobody awaits raises no unhandled rejection.
+    void registerAudioWorkletProcessor(audioContext, workletName, beatDetectorWorkletSource).then(
+      () => {
+        // Destroyed while the module loaded: a node created now would never be released.
+        if (this._destroyed) return;
 
-      const node = new AudioWorkletNode(audioContext, workletName, {
-        numberOfInputs: 1,
-        numberOfOutputs: 0,
-        processorOptions: {
-          fftSize: opts.fftSize,
-          hopSize: opts.hopSize,
-          minBpm: opts.minBpm,
-          maxBpm: opts.maxBpm,
-          melBands: opts.melBands,
-          minSettlingMs: opts.minSettlingMs,
-          emitProvisionalBeats: opts.emitProvisionalBeats,
-          fastTempoWindowSec: opts.fastTempoWindowSec,
-          stableTempoWindowSec: opts.stableTempoWindowSec,
-          acfIntervalHops: opts.acfIntervalHops,
-          enableTimeSignatureDetection: opts.enableTimeSignatureDetection,
-        },
-      });
+        const node = new AudioWorkletNode(audioContext, workletName, {
+          numberOfInputs: 1,
+          numberOfOutputs: 0,
+          processorOptions: {
+            fftSize: opts.fftSize,
+            hopSize: opts.hopSize,
+            minBpm: opts.minBpm,
+            maxBpm: opts.maxBpm,
+            melBands: opts.melBands,
+            minSettlingMs: opts.minSettlingMs,
+            emitProvisionalBeats: opts.emitProvisionalBeats,
+            fastTempoWindowSec: opts.fastTempoWindowSec,
+            stableTempoWindowSec: opts.stableTempoWindowSec,
+            acfIntervalHops: opts.acfIntervalHops,
+            enableTimeSignatureDetection: opts.enableTimeSignatureDetection,
+          },
+        });
 
-      this._workletNode = node;
-      node.port.onmessage = this._onWorkletMessage.bind(this);
+        this._workletNode = node;
+        node.port.onmessage = this._onWorkletMessage.bind(this);
 
-      this._tap.attach(node, audioContext);
-    });
+        this._tap.attach(node, audioContext);
+        this._ready.resolve();
+      },
+      (error: unknown) => {
+        logger.warn(`BeatDetector: the analysis worklet "${workletName}" failed to load; no beats will be detected.`, {
+          source: 'BeatDetector',
+          once: `beatdetector-load-failed:${workletName}`,
+          ...(error instanceof Error && { error }),
+        });
+        this._ready.fail(error);
+      },
+    );
   }
 
   private _onWorkletMessage(event: MessageEvent): void {

@@ -87,6 +87,22 @@ class VocoderProcessor extends DisposableProcessor {
     this._envelopes = new Float32Array(bandCount);
   }
 
+  /** Advances the modulator filter bank and envelopes by `length` samples without a carrier. */
+  private _trackModulator(modulator: Float32Array[] | undefined, length: number, envSmoothing: number): void {
+    const modulatorChannels = modulator?.length ?? 0;
+
+    for (let i = 0; i < length; i++) {
+      let modulatorSample = 0;
+      for (let ch = 0; ch < modulatorChannels; ch++) modulatorSample += modulator![ch]![i]!;
+      if (modulatorChannels > 1) modulatorSample /= modulatorChannels;
+
+      for (let b = 0; b < this._bands.length; b++) {
+        const modBand = this._processBiquad(this._modulatorStates[b]!, this._bands[b]!, modulatorSample);
+        this._envelopes[b]! += (Math.abs(modBand) - this._envelopes[b]!) * envSmoothing;
+      }
+    }
+  }
+
   private _createStates(): BiquadState[] {
     return this._bands.map(() => ({ x1: 0, x2: 0, y1: 0, y2: 0 }));
   }
@@ -108,7 +124,11 @@ class VocoderProcessor extends DisposableProcessor {
     if (!carrier || !output || output.length === 0) return true;
     const channels = Math.min(carrier.length, output.length);
     if (channels === 0) {
+      // The modulator envelope keeps following the modulator while no carrier
+      // is connected, so a returning carrier is shaped by the modulator as it
+      // is now, not by an envelope frozen when the carrier left.
       this._activeChannels = 0;
+      this._trackModulator(modulator, output[0]!.length, parameters['envelopeSmoothing']![0]!);
       return true;
     }
     // Grown on a channel-count increase only, never per block.
