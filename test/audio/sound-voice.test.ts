@@ -556,7 +556,7 @@ describe('SoundVoice — capabilities', () => {
 
     expect(node.getWorldTransform).toHaveBeenCalled();
     expect(pannerSpy.panners[0].positionX.setValueAtTime).toHaveBeenCalledWith(10, expect.any(Number));
-    expect(pannerSpy.panners[0].positionY.setValueAtTime).toHaveBeenCalledWith(20, expect.any(Number));
+    expect(pannerSpy.panners[0].positionZ.setValueAtTime).toHaveBeenCalledWith(20, expect.any(Number));
 
     pannerSpy.restore();
     factory.restore();

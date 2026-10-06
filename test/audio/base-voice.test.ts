@@ -441,7 +441,7 @@ describe('BaseVoice — _tickSpatial()', () => {
     voice.position = { x: 7, y: 8 };
     voice._tickSpatial();
 
-    expect(setPosition).toHaveBeenCalledWith(7, 8, 0);
+    expect(setPosition).toHaveBeenCalledWith(7, 0, 8);
 
     spy.mockRestore();
     sound.destroy();

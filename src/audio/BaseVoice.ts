@@ -617,20 +617,25 @@ export abstract class BaseVoice implements Voice {
     const listener = this._system.listener;
     const listenerPosition = listener.position;
     const relativeX = x - listenerPosition.x;
-    const relativeY = y - listenerPosition.y;
-    const relativeZ = this._elevation - listener.elevation;
+    const relativeDepth = y - listenerPosition.y;
+    const relativeHeight = this._elevation - listener.elevation;
 
+    // The world plane is the panner's horizontal X/Z plane and elevation is
+    // its Y: the listener's up axis is +Y (see AudioListener), and Web Audio
+    // derives azimuth only after projecting that axis away. Writing world y to
+    // panner Y would leave every planar source at zero depth, so equalpower
+    // would hard-pan it left or right and flip sides as x crosses zero.
     if (panner.positionX) {
       // Route through the smoothing layer (setTargetAtTime + epsilon-skip +
       // teleport-snap) to eliminate per-frame zipper noise on moving sources (AU4).
       // This now also carries listener motion, which used to be smoothed once
       // centrally on the listener's own params.
       this._smoothX.write(panner.positionX, relativeX, t, settings);
-      this._smoothY.write(panner.positionY!, relativeY, t, settings);
-      this._smoothZ.write(panner.positionZ!, relativeZ, t, settings);
+      this._smoothY.write(panner.positionY!, relativeHeight, t, settings);
+      this._smoothZ.write(panner.positionZ!, relativeDepth, t, settings);
     } else if (panner.setPosition) {
       // Legacy AudioParam-less API: snap only (no smoothing available).
-      panner.setPosition(relativeX, relativeY, relativeZ);
+      panner.setPosition(relativeX, relativeHeight, relativeDepth);
     }
 
     this._writeOrientation();
@@ -720,20 +725,23 @@ export abstract class BaseVoice implements Voice {
   }
 
   /**
-   * Convert `_orientation` (degrees, `SceneNode.rotation` convention) to a
-   * unit XY vector and write it through the same smoothing layer used for
-   * position, so a fast-rotating emitter's cone direction never zippers.
+   * Convert `_orientation` (degrees, `SceneNode.rotation` convention) to the
+   * world direction a node's local +X points at, mapped onto the panner's X/Z
+   * plane like a position, and write it through the same smoothing layer, so a
+   * fast-rotating emitter's cone direction never zippers.
    *
-   * Z stays 0 even for an elevated source: `orientation` is a single in-plane
-   * angle, so a cone always points along the world plane. Tilting one would need
-   * a second angle, which no caller can supply today.
+   * Panner Y stays 0 even for an elevated source: `orientation` is a single
+   * in-plane angle, so a cone always points along the world plane. Tilting one
+   * would need a second angle, which no caller can supply today.
    */
   private _writeOrientation(): void {
     if (this._panner === null || this._ended) return;
 
+    // SceneNode rotation is counter-clockwise on the Y-down screen: local +X
+    // lands on (cos, -sin) in world space, not (cos, sin).
     const radians = degreesToRadians(this._orientation);
     const x = Math.cos(radians);
-    const y = Math.sin(radians);
+    const depth = -Math.sin(radians);
 
     const panner = this._panner as unknown as Partial<{
       orientationX: AudioParam;
@@ -746,10 +754,10 @@ export abstract class BaseVoice implements Voice {
 
     if (panner.orientationX) {
       this._smoothOrientX.write(panner.orientationX, x, t, settings);
-      this._smoothOrientY.write(panner.orientationY!, y, t, settings);
-      this._smoothOrientZ.write(panner.orientationZ!, 0, t, settings);
+      this._smoothOrientY.write(panner.orientationY!, 0, t, settings);
+      this._smoothOrientZ.write(panner.orientationZ!, depth, t, settings);
     } else if (panner.setOrientation) {
-      panner.setOrientation(x, y, 0);
+      panner.setOrientation(x, 0, depth);
     }
   }
 

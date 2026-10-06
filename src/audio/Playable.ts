@@ -208,8 +208,8 @@ export interface Spatializable {
   panningModel: PanningModelType | null;
   /**
    * Facing direction for cone attenuation, in degrees - same convention as
-   * `SceneNode.rotation` (0° = local +X / "east", clockwise-positive on a
-   * Y-down screen). Has no audible effect unless `coneInnerAngle`/
+   * `SceneNode.rotation` (0° = local +X / "east", counter-clockwise-positive
+   * on a Y-down screen). Has no audible effect unless `coneInnerAngle`/
    * `coneOuterAngle` are narrowed below 360°. Default `0`.
    */
   orientation: number;
