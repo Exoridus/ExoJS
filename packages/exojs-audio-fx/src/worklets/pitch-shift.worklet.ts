@@ -11,7 +11,9 @@
 // Consumed via `import pitchShiftWorkletSource from './pitch-shift.worklet.ts?worklet'`
 // (see `../effects/PitchShiftEffect.ts`).
 
-class PitchShiftProcessor extends AudioWorkletProcessor {
+import { DisposableProcessor } from './disposable-processor';
+
+class PitchShiftProcessor extends DisposableProcessor {
   public static get parameterDescriptors(): AudioParamDescriptor[] {
     return [{ name: 'pitch', defaultValue: 1, minValue: 0.25, maxValue: 4, automationRate: 'k-rate' }];
   }
@@ -33,6 +35,7 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
   private readonly _outLen: number;
   private readonly _outBufs: Float32Array[];
   private _channels = 1;
+  private _activeChannels = 0;
   private _synthPos = 0; // total stretched samples synthesized
   private _readPos = 0; // fractional resample read position
   private _aPos = 0; // analysis position (absolute input coords)
@@ -129,17 +132,29 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
   }
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
+    if (this._destroyed) return false;
     const input = inputs[0];
     const output = outputs[0];
     if (!input || !output) return true;
     const channels = Math.min(input.length, output.length);
-    if (channels === 0) return true;
+    if (channels === 0) {
+      this._activeChannels = 0;
+      return true;
+    }
     // Grown on a channel-count increase only, never per block; a late channel
     // starts from silent history.
     while (this._inBufs.length < channels) {
       this._inBufs.push(new Float32Array(this._inLen));
       this._outBufs.push(new Float32Array(this._outLen));
     }
+    // A channel that reappears after the input narrowed (stereo, then mono,
+    // then stereo again) starts silent: replaying the history it had in its
+    // previous activation would leak stale audio onto that side.
+    for (let ch = this._activeChannels; ch < channels; ch++) {
+      this._inBufs[ch]!.fill(0);
+      this._outBufs[ch]!.fill(0);
+    }
+    this._activeChannels = channels;
     this._channels = channels;
 
     const pitch = parameters['pitch']![0]!;

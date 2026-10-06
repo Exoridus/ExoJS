@@ -37,6 +37,7 @@ import {
   type TempoCandidateResult,
   tempoPrior,
 } from '../dsp/tempogram';
+import { DisposableProcessor } from './disposable-processor';
 
 interface UpcomingBeatInline {
   audioTime: number;
@@ -147,7 +148,7 @@ const LOCK_PROMOTE_BEATS = 3; // beats emitted after the authoritative lock befo
 const LOCK_PROMOTE_CONFIDENCE = 0.1; // confidence floor that must be cleared to promote to locked
 
 // ---- Processor ----
-class BeatDetectorProcessor extends AudioWorkletProcessor {
+class BeatDetectorProcessor extends DisposableProcessor {
   private readonly _sampleRate: number;
   private readonly _fftSize: number;
   private readonly _hopSize: number;
@@ -400,6 +401,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   }
 
   public override process(inputs: Float32Array[][], _outputs: Float32Array[][], _parameters: Record<string, Float32Array>): boolean {
+    if (this._destroyed) return false;
     const input = inputs[0];
     if (!input || input.length === 0) return true;
 

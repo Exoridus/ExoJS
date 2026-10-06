@@ -18,6 +18,8 @@
 // definition), then restore it - an instance created later (e.g. from a test's
 // `beforeAll`) would otherwise see the global's restored (unset) value. Capturing
 // it here, at eval time, is what makes construction see the right value.
+import { DisposableProcessor } from './disposable-processor';
+
 const sampleRate: number = (globalThis as unknown as { sampleRate: number }).sampleRate;
 
 interface BiquadCoef {
@@ -35,7 +37,7 @@ interface BiquadState {
   y2: number;
 }
 
-class VocoderProcessor extends AudioWorkletProcessor {
+class VocoderProcessor extends DisposableProcessor {
   public static get parameterDescriptors(): AudioParamDescriptor[] {
     return [{ name: 'envelopeSmoothing', defaultValue: 0.005, minValue: 0.0001, maxValue: 0.1, automationRate: 'k-rate' }];
   }
@@ -51,6 +53,7 @@ class VocoderProcessor extends AudioWorkletProcessor {
   // to every carrier channel so the stereo carrier keeps its image.
   private readonly _envelopes: Float32Array;
   private _bandSums = new Float64Array(1);
+  private _activeChannels = 0;
 
   public constructor(options?: unknown) {
     super();
@@ -98,14 +101,30 @@ class VocoderProcessor extends AudioWorkletProcessor {
   }
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
+    if (this._destroyed) return false;
     const carrier = inputs[0];
     const modulator = inputs[1];
     const output = outputs[0];
     if (!carrier || !output || output.length === 0) return true;
     const channels = Math.min(carrier.length, output.length);
-    if (channels === 0) return true;
+    if (channels === 0) {
+      this._activeChannels = 0;
+      return true;
+    }
     // Grown on a channel-count increase only, never per block.
     while (this._carrierStates.length < channels) this._carrierStates.push(this._createStates());
+    // A channel that reappears after the input narrowed (stereo, then mono,
+    // then stereo again) starts silent: replaying the history it had in its
+    // previous activation would leak stale audio onto that side.
+    for (let ch = this._activeChannels; ch < channels; ch++) {
+      for (const state of this._carrierStates[ch]!) {
+        state.x1 = 0;
+        state.x2 = 0;
+        state.y1 = 0;
+        state.y2 = 0;
+      }
+    }
+    this._activeChannels = channels;
     if (this._bandSums.length < channels) this._bandSums = new Float64Array(channels);
 
     const envSmoothing = parameters['envelopeSmoothing']![0]!;

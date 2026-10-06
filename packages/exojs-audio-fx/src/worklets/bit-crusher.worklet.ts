@@ -10,7 +10,9 @@
 //
 // Consumed via `import bitCrusherWorkletSource from './bit-crusher.worklet.ts?worklet'`
 // (see `../effects/BitCrusherEffect.ts`).
-class BitCrusherProcessor extends AudioWorkletProcessor {
+import { DisposableProcessor } from './disposable-processor';
+
+class BitCrusherProcessor extends DisposableProcessor {
   public static get parameterDescriptors(): AudioParamDescriptor[] {
     return [
       { name: 'bits', defaultValue: 8, minValue: 1, maxValue: 16, automationRate: 'k-rate' },
@@ -23,18 +25,28 @@ class BitCrusherProcessor extends AudioWorkletProcessor {
   // channel's last latched value.
   private _phase = 0;
   private _held = new Float32Array(2);
+  private _activeChannels = 0;
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
+    if (this._destroyed) return false;
     const input = inputs[0];
     const output = outputs[0];
     if (!input || !output) return true;
     const channels = Math.min(input.length, output.length);
-    if (channels === 0) return true;
+    if (channels === 0) {
+      this._activeChannels = 0;
+      return true;
+    }
     if (this._held.length < channels) {
       const held = new Float32Array(channels);
       held.set(this._held);
       this._held = held;
     }
+    // A channel that reappears after the input narrowed (stereo, then mono,
+    // then stereo again) starts silent: replaying the history it had in its
+    // previous activation would leak stale audio onto that side.
+    for (let ch = this._activeChannels; ch < channels; ch++) this._held[ch] = 0;
+    this._activeChannels = channels;
 
     const bitsParam = parameters['bits']?.[0] ?? 8;
     const normFreqParam = parameters['normFreq']?.[0] ?? 0.5;

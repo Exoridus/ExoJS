@@ -31,7 +31,7 @@ const buildProcessorClass = (): BitCrusherProcessorConstructor => {
 
   g['sampleRate'] = SAMPLE_RATE;
   g['AudioWorkletProcessor'] = class {
-    constructor() {}
+    port = { postMessage: (): void => undefined, onmessage: null as ((event: { data: unknown }) => void) | null };
   };
   g['registerProcessor'] = (_name: string, cls: BitCrusherProcessorConstructor): void => {
     klass = cls;

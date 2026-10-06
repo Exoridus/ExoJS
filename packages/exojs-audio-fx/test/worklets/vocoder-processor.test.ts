@@ -39,7 +39,7 @@ const buildProcessorClass = (): VocoderProcessorConstructor => {
   // Install stubs expected by the worklet source.
   (globalThis as Record<string, unknown>)['sampleRate'] = SAMPLE_RATE;
   (globalThis as Record<string, unknown>)['AudioWorkletProcessor'] = class {
-    constructor() {}
+    port = { postMessage: (): void => undefined, onmessage: null as ((event: { data: unknown }) => void) | null };
   };
   (globalThis as Record<string, unknown>)['registerProcessor'] = (_name: string, cls: VocoderProcessorConstructor): void => {
     klass = cls;

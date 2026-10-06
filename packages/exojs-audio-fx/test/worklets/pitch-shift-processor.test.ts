@@ -28,7 +28,7 @@ const buildProcessorClass = (): PitchProcessorConstructor => {
   const savedSampleRate = g['sampleRate'];
   g['sampleRate'] = SAMPLE_RATE;
   g['AudioWorkletProcessor'] = class {
-    constructor() {}
+    port = { postMessage: (): void => undefined, onmessage: null as ((event: { data: unknown }) => void) | null };
   };
   g['registerProcessor'] = (_name: string, cls: PitchProcessorConstructor): void => {
     klass = cls;

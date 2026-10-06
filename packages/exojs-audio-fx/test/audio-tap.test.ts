@@ -105,6 +105,23 @@ describe('AudioTap', () => {
     tap.destroy();
   });
 
+  test('changing or destroying the source unregisters a pending bus setup callback', () => {
+    const dispose = vi.fn();
+    const pendingBus = { getOutputNode: (): null => null, onceSetup: vi.fn(() => dispose) };
+    const tap = new AudioTap();
+
+    tap.attach(makeNode(), context);
+    tap.source = pendingBus as never;
+    expect(pendingBus.onceSetup).toHaveBeenCalledTimes(1);
+
+    tap.source = makeNode();
+    expect(dispose).toHaveBeenCalledTimes(1);
+
+    tap.source = pendingBus as never;
+    tap.destroy();
+    expect(dispose).toHaveBeenCalledTimes(2);
+  });
+
   test('a bus finishing setup after the source changed is not connected', () => {
     const tap = new AudioTap();
     const target = makeNode();
