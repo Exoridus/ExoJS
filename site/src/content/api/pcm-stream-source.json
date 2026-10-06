@@ -417,7 +417,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Stable source tap. Bus routing changes preserve caller-created connections; terminal cleanup disconnects it."
+          "description": "Stable source tap for Web Audio interop; routing through a bus needs no access to it. Bus routing changes preserve caller-created connections; terminal cleanup disconnects it."
         },
         {
           "name": "ready",

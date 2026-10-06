@@ -1711,7 +1711,7 @@
           ],
           "params": [],
           "returnType": "AudioContext",
-          "description": "Return the global singleton AudioContext, creating it if it does not yet exist. Also starts interaction-unlock monitoring so the context will resume on the first user gesture. Throws AudioUnsupportedError when the environment provides no AudioContext."
+          "description": "Return the global singleton AudioContext, creating it if it does not yet exist. Also starts interaction-unlock monitoring so the context will resume on the first user gesture. Throws AudioUnsupportedError when the environment provides no AudioContext. Web Audio interop for custom effects and nodes; playback goes through AudioSystem and never needs the context directly."
         },
         {
           "name": "getDistance",

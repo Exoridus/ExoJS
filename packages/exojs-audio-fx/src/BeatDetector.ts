@@ -6,6 +6,11 @@ import beatDetectorWorkletSource from './worklets/beat-detector.worklet.ts?workl
 // Public types
 // ---------------------------------------------------------------------------
 
+/**
+ * What to analyse: a bus or voice (the usual case), a `MediaStream` such as a
+ * microphone, or `null` for none yet. A raw `AudioNode` is Web Audio interop
+ * for graphs built outside the engine.
+ */
 export type BeatDetectorSource = AudioBus | Voice | MediaStream | AudioNode | null;
 
 export interface BeatDetectorOptions {

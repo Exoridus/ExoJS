@@ -46,9 +46,10 @@ export interface Voice extends Spatializable {
   /** Fires once when this voice ends (natural end or {@link Voice.stop}). */
   readonly onEnd: Signal;
   /**
-   * The voice's output node - the last node before the {@link AudioBus}. Use it
-   * as a parallel tap for an analyser, or (later) as the insertion point for
-   * per-voice effects.
+   * The voice's output node - the last node before the {@link AudioBus}. A Web
+   * Audio interop hook for custom routing or analysis; gameplay code does not
+   * need it, and an `AudioAnalyser` accepts the voice itself.
+   * @advanced
    */
   readonly output: AudioNode;
   /** The {@link AudioBus} this voice routes into. Reassign to reroute live. */

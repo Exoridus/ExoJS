@@ -1,6 +1,6 @@
 {
   "title": "AudioAnalyserSource",
-  "description": "",
+  "description": "What to analyse: a bus or voice (the usual case), a `MediaStream` such as a microphone, or `null` for none yet. A raw `AudioNode` is Web Audio interop for graphs built outside the engine.",
   "symbol": "AudioAnalyserSource",
   "kind": "type",
   "subsystem": "audio",
@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
+      "paragraphs": [
+        "What to analyse: a bus or voice (the usual case), a `MediaStream` such as a microphone, or `null` for none yet. A raw `AudioNode` is Web Audio interop for graphs built outside the engine."
+      ],
       "importLine": "import { AudioAnalyserSource } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

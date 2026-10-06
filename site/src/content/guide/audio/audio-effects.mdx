@@ -267,7 +267,7 @@ application.audio.music.addEffect(pingPong);
 
 ### LimiterEffect
 
-A brick-wall limiter — a `DynamicsCompressorNode` fixed at a high ratio and hard knee — meant as a safety net at the end of a chain to catch peaks before they clip:
+A limiter-style compressor — a `DynamicsCompressorNode` at its highest ratio with a hard knee — meant for the end of a chain to tame peaks. It is not a brick-wall limiter: without lookahead, transients faster than `attack` slip through before gain reduction engages, so keep some headroom below 0 dBFS:
 
 ```ts
 import type { Application } from '@codexo/exojs';

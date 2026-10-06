@@ -698,7 +698,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The voice's output node - the last node before the AudioBus. Use it as a parallel tap for an analyser, or (later) as the insertion point for per-voice effects."
+          "description": "The voice's output node - the last node before the AudioBus. A Web Audio interop hook for custom routing or analysis; gameplay code does not need it, and an AudioAnalyser accepts the voice itself."
         },
         {
           "name": "panningModel",

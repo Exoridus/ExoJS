@@ -2,6 +2,11 @@ import { type AudioBus, getAudioContext, isAudioContextReady, onAudioContextRead
 
 import { buildMelFilterbank, type MelBand } from './dsp/mel';
 
+/**
+ * What to analyse: a bus or voice (the usual case), a `MediaStream` such as a
+ * microphone, or `null` for none yet. A raw `AudioNode` is Web Audio interop
+ * for graphs built outside the engine.
+ */
 export type AudioAnalyserSource = AudioBus | Voice | MediaStream | AudioNode | null;
 
 /** Construction options for {@link AudioAnalyser}. */

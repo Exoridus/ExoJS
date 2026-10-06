@@ -274,6 +274,7 @@ export class AudioBus {
    * it - the chain is rebuilt on context recovery.
    *
    * Part of the audio extension contract for custom effects and analysers.
+   * @advanced
    */
   public getInputNode(): GainNode | null {
     return this._setup?.inputNode ?? null;
@@ -286,6 +287,7 @@ export class AudioBus {
    * same no-caching rule.
    *
    * Part of the audio extension contract for custom effects and analysers.
+   * @advanced
    */
   public getOutputNode(): GainNode | null {
     return this._setup?.outputNode ?? null;

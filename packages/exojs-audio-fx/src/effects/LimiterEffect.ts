@@ -23,8 +23,9 @@ export interface LimiterEffectOptions {
    */
   wet?: number;
   /**
-   * Input-to-output dB ratio above the threshold. Range 1..20, default 20
-   * (brick-wall). Lower it for a softer, more compressor-like limiter.
+   * Input-to-output dB ratio above the threshold. Range 1..20, default 20, the
+   * steepest a `DynamicsCompressorNode` allows. Lower it for a softer, more
+   * compressor-like limiter.
    */
   ratio?: number;
   /**
@@ -44,12 +45,16 @@ interface LimiterEffectSetup {
 }
 
 /**
- * Brick-wall limiter backed by a Web Audio `DynamicsCompressorNode` configured
- * for hard limiting: a fixed high ratio (~20), zero knee (hard knee), and a
- * fast attack. Use it as a final-chain safety net to prevent clipping and
- * protect downstream output.
+ * Limiter-style compressor backed by a Web Audio `DynamicsCompressorNode` set
+ * for hard limiting: the highest ratio the node allows (20), zero knee (hard
+ * knee), and a fast attack. Use it at the end of a chain to tame peaks.
  *
- * The compressor `ratio` and `knee` default to brick-wall values (20 and 0
+ * It is not a brick-wall peak limiter: the node has no lookahead, so a
+ * transient faster than `attack` passes before gain reduction engages, and
+ * above the threshold the level still rises by 1 dB per 20 dB of input.
+ * Leave headroom below 0 dBFS rather than relying on it to stop every clip.
+ *
+ * The compressor `ratio` and `knee` default to the hardest values (20 and 0
  * respectively) but remain configurable, unlike a truly fixed limiter,
  * because callers occasionally want a softer, more compressor-like limiting
  * curve (lower ratio) or a gentler transition into limiting (larger knee)
