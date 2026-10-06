@@ -57,11 +57,13 @@ describe('worklet effects keep stereo channels separate', () => {
   });
 
   it('Granular processes both channels', async () => {
+    // spread 0 pins every grain to the same offset, so the render is
+    // deterministic despite the processor's random grain placement.
     const [left, right] = await renderWorkletChannels({
       source: granularWorkletSource,
       processorName: 'exojs-granular',
       processorOptions: { bufferSeconds: 1 },
-      params: { grainSize: 0.05, density: 40, spread: 0.1, pitchMin: 1, pitchMax: 1 },
+      params: { grainSize: 0.05, density: 40, spread: 0, pitchMin: 1, pitchMax: 1 },
       channelFreqs: [LEFT_HZ, RIGHT_HZ],
       durationSeconds: 1,
     });
