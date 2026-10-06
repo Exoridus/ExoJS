@@ -393,7 +393,7 @@ describe('Real de-spatialization — AudioSystem tick-set membership', () => {
 
     const freshPanner = pannerSpy.panners[1];
     expect(freshPanner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
-    expect(freshPanner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
+    expect(freshPanner.orientationZ.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(-1, 5), expect.any(Number));
 
     pannerSpy.restore();
     sound.destroy();

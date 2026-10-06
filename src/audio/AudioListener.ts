@@ -173,7 +173,8 @@ export class AudioListener {
       setPosition: (x: number, y: number, z: number) => void;
     }>;
 
-    // Set 2D orientation: forward = -Z (into screen), up = +Y (screen up).
+    // The world plane is the horizontal X/Z plane, so up = +Y is elevation and
+    // forward = -Z is world -y, the top of a Y-down screen.
     // Identical for every Application, so writing it from each one is harmless.
     if (listener.forwardX && listener.forwardY && listener.forwardZ && listener.upX && listener.upY && listener.upZ) {
       listener.forwardX.setValueAtTime(0, t);

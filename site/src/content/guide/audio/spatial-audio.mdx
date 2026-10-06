@@ -152,7 +152,7 @@ voice.panningModel = null;
 
 ## Directional emitters (cone)
 
-A spatial voice can face a direction and attenuate sound outside a cone in front of it — useful for directional sources like a turret's alarm, a megaphone, or a flashlight-mounted speaker. `orientation` is in degrees and follows the same convention as [`SceneNode.rotation`](/ExoJS/en/api/scene-node/): `0°` is local +X ("east"), and positive values rotate clockwise.
+A spatial voice can face a direction and attenuate sound outside a cone in front of it — useful for directional sources like a turret's alarm, a megaphone, or a flashlight-mounted speaker. `orientation` is in degrees and follows the same convention as [`SceneNode.rotation`](/ExoJS/en/api/scene-node/): `0°` is local +X ("east"), and positive values rotate counter-clockwise on screen, so a cone set to a node's `rotation` points where the node's local +X points.
 
 `orientation` alone has no audible effect — a source is omnidirectional until you narrow `coneInnerAngle`/`coneOuterAngle` below the default `360°`. Inside `coneInnerAngle` the source plays at full volume; between `coneInnerAngle` and `coneOuterAngle` it fades toward `coneOuterGain`; beyond `coneOuterAngle` it plays at `coneOuterGain`.
 
@@ -276,7 +276,7 @@ voice.position = { x: 400, y: 300, z: 200 };
 
 `position` stays two-dimensional when you read it — that is the world plane, and it is the part `follow(node)` can fill in. A point you pass **without** a `z` leaves the current height alone, so following a node never drops a source back onto the plane behind your back.
 
-Elevation contributes to distance attenuation, to panning, and to Doppler: `voice.elevationVelocity` (and `listener.elevationVelocity`) is the vertical component, so a source rising straight away from the listener genuinely pitches down.
+Elevation contributes to distance attenuation, to Doppler, and to HRTF's height cues — `equalpower` panning ignores it, so raising a source never moves it left or right: `voice.elevationVelocity` (and `listener.elevationVelocity`) is the vertical component, so a source rising straight away from the listener genuinely pitches down.
 
 <Callout type="hint" title="Cones stay in the plane">
 `orientation` is a single in-plane angle, so a cone always points along the world plane however high its source sits. Tilting one would need a second angle, which no API takes today.
@@ -357,7 +357,7 @@ Crossing a boundary is a level ramp on the existing send, not a teardown and reb
 
 ## Browser constraints
 
-The Web Audio `PannerNode` maps to 3D space. ExoJS uses forward=-Z with up=+Y, which produces correct left/right panning for 2D scenes, and writes the source's `elevation` relative to the listener's as the panner's Z. A scene that never sets an elevation is therefore exactly co-planar, as before.
+The Web Audio `PannerNode` maps to 3D space with +Y as up. ExoJS lays the world plane onto the panner's horizontal plane: world x is the panner's X, world y its Z (depth), and `elevation` its Y, with the listener facing world `-y`, the top of the screen. Left/right panning therefore follows the direction to a source — one straight above or below the listener on screen is centred, one beside it is hard left or right, and a source moving past the listener pans smoothly between them. A scene that never sets an elevation is exactly co-planar.
 
 `AudioContext.listener`, though, is a property of the process-wide `AudioContext`: there is exactly one, shared by every `Application`. ExoJS therefore pins it at the origin and pans each voice by its offset from *its own* application's `app.audio.listener` — so two applications in one page each keep their own viewpoint instead of overwriting one another every frame. Distance, attenuation and the distance model are unaffected; the only observable difference is that `app.audio.spatial.teleportThreshold` is measured on the source-to-listener offset, so warping the listener snaps every spatial voice rather than snapping one listener.
 

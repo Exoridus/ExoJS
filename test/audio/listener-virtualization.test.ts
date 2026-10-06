@@ -157,9 +157,10 @@ describe('per-Application virtual listener', () => {
     const panner = factory.panners[0];
     const x = panner.positionX.setValueAtTime.mock.calls[0][0] as number;
     const y = panner.positionY.setValueAtTime.mock.calls[0][0] as number;
+    const z = panner.positionZ.setValueAtTime.mock.calls[0][0] as number;
 
     // Listener is at the origin, so the panner position IS the offset vector.
-    expect(Math.hypot(x, y)).toBeCloseTo(50, 6);
+    expect(Math.hypot(x, y, z)).toBeCloseTo(50, 6);
 
     factory.restore();
     system.destroy();

@@ -14,7 +14,9 @@ import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import { AudioZone } from '#audio/AudioZone';
 import { Sound } from '#audio/Sound';
+import { SceneNode } from '#core/SceneNode';
 import { Rectangle } from '#math/Rectangle';
+import { Vector } from '#math/Vector';
 
 const createAudioBufferStub = (): AudioBuffer => ({ duration: 2 }) as AudioBuffer;
 
@@ -163,14 +165,15 @@ describe('elevation - the third axis', () => {
     sound.destroy();
   });
 
-  test('elevation reaches the panner Z param', () => {
+  test('elevation reaches the panner height param', () => {
     const panners = spyPanners();
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const voice = system.play(sound, { position: { x: 0, y: 0 }, elevation: 30 });
 
     expect(voice.elevation).toBe(30);
-    expect(lastWritten(panners.panners[0]!.positionZ)).toBe(30);
+    expect(lastWritten(panners.panners[0]!.positionY)).toBe(30);
+    expect(lastWritten(panners.panners[0]!.positionZ)).toBe(0);
 
     panners.restore();
     sound.destroy();
@@ -208,7 +211,7 @@ describe('elevation - the third axis', () => {
     sound.destroy();
   });
 
-  test('listener elevation shifts the relative Z a voice writes', () => {
+  test('listener elevation shifts the relative height a voice writes', () => {
     const panners = spyPanners();
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
@@ -217,7 +220,7 @@ describe('elevation - the third axis', () => {
     system.listener.elevation = 10;
     tickSpatial(voice);
 
-    expect(lastWritten(panners.panners[0]!.positionZ)).toBe(20);
+    expect(lastWritten(panners.panners[0]!.positionY)).toBe(20);
 
     panners.restore();
     sound.destroy();
@@ -251,6 +254,94 @@ describe('elevation - the third axis', () => {
     tickSpatial(voice);
 
     expect(ratios.at(-1)).toBeCloseTo(1.2, 5);
+
+    panners.restore();
+    sound.destroy();
+  });
+});
+
+/**
+ * Lateral share of a panner position as Web Audio derives it: the source
+ * direction is projected onto the listener's horizontal plane (the listener's
+ * up axis is +Y, so the Y component is dropped) and the result is read against
+ * the listener's right axis (+X). `-1` is hard left, `1` hard right.
+ */
+const lateral = (panner: MockPanner): number => {
+  const x = lastWritten(panner.positionX) ?? 0;
+  const depth = lastWritten(panner.positionZ) ?? 0;
+
+  return x / Math.hypot(x, depth);
+};
+
+describe('world plane to panner axes', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test('world Y is written as panner depth, never as height', () => {
+    const panners = spyPanners();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+
+    system.listener.position.set(10, 20);
+    const voice = system.play(sound, { position: { x: 40, y: -30 } });
+
+    tickSpatial(voice);
+
+    const panner = panners.panners[0]!;
+
+    expect(lastWritten(panner.positionX)).toBe(30);
+    expect(lastWritten(panner.positionY)).toBe(0);
+    expect(lastWritten(panner.positionZ)).toBe(-50);
+
+    panners.restore();
+    sound.destroy();
+  });
+
+  test('a source passing in front of the listener pans continuously from left to right', () => {
+    const panners = spyPanners();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = system.play(sound, { position: { x: -200, y: -100 } });
+    const panner = panners.panners[0]!;
+    const shares: number[] = [];
+
+    for (let x = -200; x <= 200; x += 5) {
+      voice.position = { x, y: -100 };
+      tickSpatial(voice);
+      shares.push(lateral(panner));
+    }
+
+    expect(shares[0]).toBeLessThan(-0.8);
+    expect(shares.at(-1)).toBeGreaterThan(0.8);
+    expect(shares[40]).toBeCloseTo(0, 5);
+
+    for (let index = 1; index < shares.length; index++) {
+      const step = shares[index]! - shares[index - 1]!;
+
+      expect(step).toBeGreaterThan(0);
+      expect(step).toBeLessThan(0.05);
+    }
+
+    panners.restore();
+    sound.destroy();
+  });
+
+  test('a cone faces the same world direction as a node with the same rotation', () => {
+    const panners = spyPanners();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const node = new SceneNode();
+
+    node.rotation = 90;
+    system.play(sound, { position: { x: 0, y: 0 }, orientation: node.rotation, coneInnerAngle: 30 });
+
+    const facing = new Vector(1, 0).transform(node.getGlobalTransform());
+    const panner = panners.panners[0]!;
+
+    expect(lastWritten(panner.orientationX)).toBeCloseTo(facing.x, 5);
+    expect(lastWritten(panner.orientationY)).toBe(0);
+    expect(lastWritten(panner.orientationZ)).toBeCloseTo(facing.y, 5);
 
     panners.restore();
     sound.destroy();

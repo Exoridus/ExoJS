@@ -152,7 +152,7 @@ describe('Voice — spatial (PannerNode)', () => {
     sound.destroy();
   });
 
-  test('update() writes voice position x/y to PannerNode, then skips a stationary source', () => {
+  test('update() writes voice position x/y to the PannerNode X/Z plane, then skips a stationary source', () => {
     const spy = setupPannerSpy();
     const mixer = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
@@ -160,8 +160,8 @@ describe('Voice — spatial (PannerNode)', () => {
     const panner = spy.panners[0];
 
     expect(panner.positionX.setValueAtTime).toHaveBeenCalledWith(55, expect.any(Number));
-    expect(panner.positionY.setValueAtTime).toHaveBeenCalledWith(66, expect.any(Number));
-    expect(panner.positionZ.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(panner.positionY.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(panner.positionZ.setValueAtTime).toHaveBeenCalledWith(66, expect.any(Number));
 
     panner.positionX.setValueAtTime.mockClear();
     panner.positionX.setTargetAtTime.mockClear();
@@ -245,16 +245,16 @@ describe('Voice — spatial (PannerNode)', () => {
     const panner = spy.panners[0];
 
     expect(panner.positionX.setValueAtTime).toHaveBeenCalledWith(305, expect.any(Number));
-    expect(panner.positionY.setValueAtTime).toHaveBeenCalledWith(406, expect.any(Number));
+    expect(panner.positionZ.setValueAtTime).toHaveBeenCalledWith(406, expect.any(Number));
 
     group.setPosition(-100, 0);
     panner.positionX.setTargetAtTime.mockClear();
-    panner.positionY.setTargetAtTime.mockClear();
+    panner.positionZ.setTargetAtTime.mockClear();
 
     voice._tickSpatial();
 
     expect(panner.positionX.setTargetAtTime).toHaveBeenCalledWith(-95, expect.any(Number), expect.any(Number));
-    expect(panner.positionY.setTargetAtTime).toHaveBeenCalledWith(6, expect.any(Number), expect.any(Number));
+    expect(panner.positionZ.setTargetAtTime).toHaveBeenCalledWith(6, expect.any(Number), expect.any(Number));
 
     spy.restore();
     group.destroy();
@@ -459,7 +459,8 @@ describe('Voice — spatial (PannerNode)', () => {
     expect(panner.coneOuterAngle).toBe(60);
     expect(panner.coneOuterGain).toBeCloseTo(0.2);
     expect(panner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
-    expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
+    expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(panner.orientationZ.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(-1, 5), expect.any(Number));
     spy.restore();
     sound.destroy();
   });
@@ -471,7 +472,8 @@ describe('Voice — spatial (PannerNode)', () => {
     system.play(sound, { position: { x: 0, y: 0 }, orientation: 0, coneInnerAngle: 10 });
     const panner = spy.panners[0];
     expect(panner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
-    expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
+    expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(panner.orientationZ.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
     spy.restore();
     sound.destroy();
   });

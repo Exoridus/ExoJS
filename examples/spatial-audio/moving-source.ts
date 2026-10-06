@@ -92,7 +92,9 @@ class MovingSourceScene extends Scene {
     const dy = source.y - this.listener.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const volume = linearAttenuation(dist);
-    const pan = Math.max(-1, Math.min(1, dx / ORBIT_X));
+    // Equalpower pans by direction, not by horizontal offset: a source on the
+    // listener's horizontal line is hard left/right, one straight above or below it is centred.
+    const pan = dist > 0 ? Math.asin(dx / dist) / (Math.PI / 2) : 0;
     const panText = pan < -0.05 ? `L ${Math.abs(pan).toFixed(2)}` : pan > 0.05 ? `R ${pan.toFixed(2)}` : 'center';
     this.label.text = `distance: ${dist.toFixed(0)} px   volume: ${(volume * 100).toFixed(0)}%   pan: ${panText}`;
 
