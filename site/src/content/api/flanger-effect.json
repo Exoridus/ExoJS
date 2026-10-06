@@ -173,7 +173,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Run setup with the shared AudioContext: immediately when it is ready, otherwise once it unlocks. setup must create the nodes behind inputNode and outputNode; the effect counts as wired as soon as it returns. Returning a promise defers ready until it settles, and a rejection or a synchronous throw makes ready reject with that error. Call it at the end of the subclass constructor, after the fields setup reads are initialized - from a base constructor it could run before them. A subclass's destroy() calls AudioEffect._teardown."
+          "description": "Run setup with the shared AudioContext: immediately when it is ready, otherwise once it unlocks. setup must create the nodes behind inputNode and outputNode; the effect counts as wired as soon as it returns. Returning a promise defers ready until it settles, and a rejection or a throw makes ready reject with that error. A throw while the context is already running propagates from the call. A throw from a setup deferred to the unlock is logged instead, so one broken effect cannot cut short the unlock for every listener after it. Call it at the end of the subclass constructor, after the fields setup reads are initialized - from a base constructor it could run before them. A subclass's destroy() calls AudioEffect._teardown."
         },
         {
           "name": "_teardown",

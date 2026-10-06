@@ -145,6 +145,33 @@ describe('BeatDetector', () => {
       expect(node.port.postMessage.mock.invocationCallOrder.at(-1)!).toBeLessThan(node.disconnect.mock.invocationCallOrder.at(-1)!);
     });
 
+    it('ready rejects with an AbortError when destroyed while its worklet loads', async () => {
+      const d = new BeatDetector();
+      const ready = d.ready;
+
+      d.destroy();
+
+      await expect(ready).rejects.toMatchObject({ name: 'AbortError' });
+    });
+
+    it('a worklet that fails to load rejects ready, and nobody asking raises no unhandled rejection', async () => {
+      const failure = new Error('blocked by CSP');
+      // A fresh registry gets a fresh context, so no earlier successful
+      // registration is cached for it.
+      vi.resetModules();
+      const fresh = await import('@codexo/exojs');
+      const ctx = fresh.getAudioContext() as unknown as { audioWorklet: { addModule: (url: string) => Promise<void> } };
+      ctx.audioWorklet.addModule = vi.fn().mockRejectedValue(failure);
+      const { BeatDetector: FreshBeatDetector } = await import('../src/BeatDetector');
+
+      const unasked = new FreshBeatDetector();
+      const asked = new FreshBeatDetector();
+
+      await expect(asked.ready).rejects.toBe(failure);
+      unasked.destroy();
+      asked.destroy();
+    });
+
     it('a detector destroyed while its worklet loads never creates the node', async () => {
       const OrigAWN = globalThis.AudioWorkletNode;
       const created = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
@@ -981,16 +1008,33 @@ describe('BeatDetector', () => {
   // ---- Deferred construction / source connection (context not yet ready) ----
 
   describe('deferred setup when constructed before the context is ready', () => {
-    it('registers via onAudioContextReady and resolves the worklet once ready', async () => {
+    it('ready stays pending while the context is locked and resolves once the worklet loaded', async () => {
       await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector, flipToReady }) => {
         const d = new FreshBeatDetector();
+        let settled = false;
+        void d.ready.then(() => {
+          settled = true;
+        });
         expect(d.tempo).toBe(0);
-        // Before _setup() has ever run, `_ready` is still null - the `ready`
-        // getter falls back to an already-resolved promise (`?? Promise.resolve()`).
-        await expect(d.ready).resolves.toBeUndefined();
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(settled).toBe(false);
+
         flipToReady();
         await expect(d.ready).resolves.toBeUndefined();
+        expect(getMockWorkletNode(d)).not.toBeNull();
         d.destroy();
+      });
+    });
+
+    it('ready rejects with an AbortError when destroyed while the context is locked', async () => {
+      await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector }) => {
+        const d = new FreshBeatDetector();
+        const ready = d.ready;
+
+        d.destroy();
+
+        await expect(ready).rejects.toMatchObject({ name: 'AbortError' });
       });
     });
 

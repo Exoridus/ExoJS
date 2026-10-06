@@ -82,19 +82,7 @@ export class VocoderEffect extends WorkletEffect {
 
     this._setAudioParam('envelopeSmoothing', this._envelopeSmoothing);
 
-    // Wire modulator bus output to input 1 of the worklet
-    const modulator = this._modulator;
-    const modOutput = modulator.getOutputNode();
-    if (modOutput && this._workletNode) {
-      modOutput.connect(this._workletNode, 0, 1);
-    } else {
-      modulator.onceSetup(() => {
-        const node = modulator.getOutputNode();
-        if (node && this._workletNode) {
-          node.connect(this._workletNode, 0, 1);
-        }
-      });
-    }
+    this._connectAuxInput(this._modulator, 1);
   }
 
   /** One-pole envelope follower coefficient. Smaller values produce slower, smoother envelope tracking. Range 0.0001..0.1, default 0.005. */

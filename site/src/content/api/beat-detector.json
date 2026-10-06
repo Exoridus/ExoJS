@@ -617,7 +617,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Resolves once the analysis worklet is loaded and listening. Stays pending while the shared AudioContext is locked. Rejects with the load error when the worklet cannot load, and with an AbortError when the detector is destroyed before it became ready."
         },
         {
           "name": "rms",

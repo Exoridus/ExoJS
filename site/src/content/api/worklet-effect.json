@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
-    "methods": 5,
+    "methods": 6,
     "properties": 4,
     "events": 0
   },
@@ -67,6 +67,74 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "_connectAuxInput",
+          "signature": "_connectAuxInput(source: AudioBus, input: number): void",
+          "signatureTokens": [
+            {
+              "text": "_connectAuxInput",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "AudioBus",
+              "optional": false
+            },
+            {
+              "name": "input",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Feeds source's output into the worklet's input input (a sidechain or modulator), waiting for the bus to build its nodes when it has not yet. Call from WorkletEffect._onWorkletReady. The edge and any pending wait are released by destroy(); the bus itself stays the caller's. Part of the effect SDK contract for extension audio effects."
+        },
         {
           "name": "_deferSetup",
           "signature": "_deferSetup(setup: (context: AudioContext) => Promise<void> | void): void",
@@ -152,7 +220,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Run setup with the shared AudioContext: immediately when it is ready, otherwise once it unlocks. setup must create the nodes behind inputNode and outputNode; the effect counts as wired as soon as it returns. Returning a promise defers ready until it settles, and a rejection or a synchronous throw makes ready reject with that error. Call it at the end of the subclass constructor, after the fields setup reads are initialized - from a base constructor it could run before them. A subclass's destroy() calls AudioEffect._teardown."
+          "description": "Run setup with the shared AudioContext: immediately when it is ready, otherwise once it unlocks. setup must create the nodes behind inputNode and outputNode; the effect counts as wired as soon as it returns. Returning a promise defers ready until it settles, and a rejection or a throw makes ready reject with that error. A throw while the context is already running propagates from the call. A throw from a setup deferred to the unlock is logged instead, so one broken effect cannot cut short the unlock for every listener after it. Call it at the end of the subclass constructor, after the fields setup reads are initialized - from a base constructor it could run before them. A subclass's destroy() calls AudioEffect._teardown."
         },
         {
           "name": "_onWorkletReady",

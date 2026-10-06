@@ -62,19 +62,7 @@ export class DuckingEffect extends WorkletEffect {
     this._setAudioParam('attack', this._msToCoeff(this._attackMs, audioContext.sampleRate));
     this._setAudioParam('release', this._msToCoeff(this._releaseMs, audioContext.sampleRate));
 
-    // Wire sidechain to input 1 of the worklet
-    const sidechain = this._sidechain;
-    const sidechainOut = sidechain.getOutputNode();
-    if (sidechainOut && this._workletNode) {
-      sidechainOut.connect(this._workletNode, 0, 1);
-    } else {
-      sidechain.onceSetup(() => {
-        const node = sidechain.getOutputNode();
-        if (node && this._workletNode) {
-          node.connect(this._workletNode, 0, 1);
-        }
-      });
-    }
+    this._connectAuxInput(this._sidechain, 1);
   }
 
   /** Convert ms time-constant to one-pole filter coefficient at given sample rate. */

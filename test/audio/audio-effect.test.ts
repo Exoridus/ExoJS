@@ -48,6 +48,19 @@ const freshLockedModules = async (): Promise<{ MinimalEffect: ReturnType<typeof 
   return { MinimalEffect: defineMinimalEffect(FreshAudioEffect), audio };
 };
 
+/** Like {@link freshLockedModules}, also handing out the fresh base class for ad-hoc subclasses. */
+const freshLockedModulesWithBase = async (): Promise<{
+  MinimalEffect: ReturnType<typeof defineMinimalEffect>;
+  audio: AudioContextModule;
+  FreshAudioEffect: typeof AudioEffect;
+}> => {
+  vi.resetModules();
+  const { AudioEffect: FreshAudioEffect } = await import('#audio/AudioEffect');
+  const audio = (await import('#audio/audioContext')) as unknown as AudioContextModule;
+
+  return { MinimalEffect: defineMinimalEffect(FreshAudioEffect), audio, FreshAudioEffect };
+};
+
 const isSettled = async (promise: Promise<void>): Promise<boolean> => {
   let settled = false;
 
@@ -184,6 +197,43 @@ describe('AudioEffect', () => {
       effect = new ThrowingEffect();
     }).toThrow(failure);
     expect(effect).toBeNull();
+  });
+
+  test('a setup failing at unlock rejects only its own ready and lets the unlock reach every other listener', async () => {
+    const { MinimalEffect, audio, FreshAudioEffect } = await freshLockedModulesWithBase();
+    const failure = new Error('broken custom effect');
+
+    class BrokenEffect extends FreshAudioEffect {
+      public constructor() {
+        super();
+        this._deferSetup(() => {
+          throw failure;
+        });
+      }
+
+      public get inputNode(): AudioNode {
+        throw new Error('never built');
+      }
+
+      public get outputNode(): AudioNode {
+        throw new Error('never built');
+      }
+
+      public override destroy(): void {
+        this._teardown();
+      }
+    }
+
+    const broken = new BrokenEffect();
+    const healthy = new MinimalEffect();
+
+    expect(() => audio.onAudioContextReady.dispatch(new AudioContext())).not.toThrow();
+
+    await expect(broken.ready).rejects.toBe(failure);
+    await expect(healthy.ready).resolves.toBeUndefined();
+    expect(isEffectReady(broken)).toBe(false);
+    broken.destroy();
+    healthy.destroy();
   });
 
   test('ready rejects with an AbortError when the effect is destroyed while the context is locked', async () => {

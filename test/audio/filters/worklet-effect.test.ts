@@ -126,6 +126,71 @@ describe('WorkletEffect', () => {
     expect(() => filter.outputNode).toThrow('output node accessed before audio context is ready');
   });
 
+  describe('aux inputs', () => {
+    interface FakeBus {
+      getOutputNode: () => AudioNode | null;
+      onceSetup: MockInstance;
+    }
+
+    const makeOutput = (): AudioNode & { connect: MockInstance; disconnect: MockInstance } =>
+      ({ connect: vi.fn(), disconnect: vi.fn() }) as unknown as AudioNode & { connect: MockInstance; disconnect: MockInstance };
+
+    const auxEffect = (bus: FakeBus): TestWorkletEffect => {
+      class AuxWorkletEffect extends TestWorkletEffect {
+        protected override _onWorkletReady(): void {
+          this._connectAuxInput(bus as never, 1);
+        }
+      }
+      return new AuxWorkletEffect();
+    };
+
+    it('connects a ready bus to the requested input and cuts that edge on destroy', async () => {
+      const output = makeOutput();
+      const filter = auxEffect({ getOutputNode: () => output, onceSetup: vi.fn() });
+      await filter.ready;
+      const node = filter['_workletNode'];
+
+      expect(output.connect).toHaveBeenCalledWith(node, 0, 1);
+
+      filter.destroy();
+
+      expect(output.disconnect).toHaveBeenCalledWith(node, 0, 1);
+    });
+
+    it('waits for a bus that has no nodes yet and connects once it is set up', async () => {
+      const output = makeOutput();
+      let ready = false;
+      let finishSetup: (() => void) | null = null;
+      const bus: FakeBus = {
+        getOutputNode: () => (ready ? output : null),
+        onceSetup: vi.fn((callback: () => void) => {
+          finishSetup = callback;
+          return vi.fn();
+        }),
+      };
+      const filter = auxEffect(bus);
+      await filter.ready;
+
+      expect(output.connect).not.toHaveBeenCalled();
+
+      ready = true;
+      finishSetup!();
+
+      expect(output.connect).toHaveBeenCalledWith(filter['_workletNode'], 0, 1);
+      filter.destroy();
+    });
+
+    it('destroy unregisters a bus setup callback that is still waiting', async () => {
+      const cancel = vi.fn();
+      const filter = auxEffect({ getOutputNode: () => null, onceSetup: vi.fn(() => cancel) });
+      await filter.ready;
+
+      filter.destroy();
+
+      expect(cancel).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('destroy tells the processor to stop before disconnecting it', async () => {
     const filter = new TestWorkletEffect();
     await filter.ready;

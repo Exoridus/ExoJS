@@ -1,3 +1,5 @@
+import { logger } from '#core/Logger';
+
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
 
 /**
@@ -78,22 +80,30 @@ export abstract class AudioEffect {
    * otherwise once it unlocks. `setup` must create the nodes behind
    * {@link inputNode} and {@link outputNode}; the effect counts as wired as soon
    * as it returns. Returning a promise defers {@link ready} until it settles,
-   * and a rejection or a synchronous throw makes {@link ready} reject with that
-   * error.
+   * and a rejection or a throw makes {@link ready} reject with that error.
+   *
+   * A throw while the context is already running propagates from the call. A
+   * throw from a setup deferred to the unlock is logged instead, so one broken
+   * effect cannot cut short the unlock for every listener after it.
    *
    * Call it at the end of the subclass constructor, after the fields `setup`
    * reads are initialized - from a base constructor it could run before them.
    * A subclass's `destroy()` calls {@link AudioEffect._teardown}.
    */
   protected _deferSetup(setup: (context: AudioContext) => void | Promise<void>): void {
-    const run = (context: AudioContext): void => {
+    const run = (context: AudioContext, deferred: boolean): void => {
       let pending: void | Promise<void>;
 
       try {
         pending = setup(context);
       } catch (error) {
         this._fail(error);
-        throw error;
+        if (!deferred) throw error;
+        logger.error(`${this.constructor.name}: its audio setup failed when the audio context unlocked; the effect is bypassed.`, {
+          source: 'AudioEffect',
+          ...(error instanceof Error && { error }),
+        });
+        return;
       }
 
       this._wired = true;
@@ -109,14 +119,14 @@ export abstract class AudioEffect {
     };
 
     if (isAudioContextReady()) {
-      run(getAudioContext());
+      run(getAudioContext(), false);
 
       return;
     }
 
     const listener = (context: AudioContext): void => {
       this._removePendingSetup();
-      run(context);
+      run(context, true);
     };
 
     this._pendingSetup = listener;

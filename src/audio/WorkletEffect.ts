@@ -1,3 +1,4 @@
+import type { AudioBus } from '#audio/AudioBus';
 import { AudioEffect } from '#audio/AudioEffect';
 import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
 import { logger } from '#core/Logger';
@@ -23,6 +24,11 @@ export abstract class WorkletEffect extends AudioEffect {
   protected _dryDelay: DelayNode | null = null;
   protected _workletNode: AudioWorkletNode | null = null;
   protected _wet = 1;
+  // Edges into extra worklet inputs (a sidechain, a modulator). The worklet's
+  // own disconnect() only cuts its outgoing edges, so these are cut from the
+  // source side on destroy, together with any setup callback still waiting.
+  private readonly _auxInputs: Array<{ output: AudioNode; input: number }> = [];
+  private readonly _pendingAuxSetups: Array<() => void> = [];
 
   /** The processor name registered via `registerProcessor()` in the worklet source. */
   protected abstract get _workletName(): string;
@@ -95,6 +101,10 @@ export abstract class WorkletEffect extends AudioEffect {
   /** Disconnects all nodes, cancels any pending worklet load, and releases resources. */
   public override destroy(): void {
     this._teardown();
+    for (const cancel of this._pendingAuxSetups.splice(0)) cancel();
+    for (const { output, input } of this._auxInputs.splice(0)) {
+      if (this._workletNode) output.disconnect(this._workletNode, 0, input);
+    }
     // Disconnecting alone leaves the processor rendering every quantum until
     // the AudioContext closes; the message lets it return false and be released.
     this._workletNode?.port.postMessage({ type: 'destroy' });
@@ -117,6 +127,47 @@ export abstract class WorkletEffect extends AudioEffect {
    * wet path. Use for additional wiring (e.g. a sidechain input).
    */
   protected _onWorkletReady?(audioContext: AudioContext): void;
+
+  /**
+   * Feeds `source`'s output into the worklet's input `input` (a sidechain or
+   * modulator), waiting for the bus to build its nodes when it has not yet.
+   * Call from {@link WorkletEffect._onWorkletReady}. The edge and any pending
+   * wait are released by `destroy()`; the bus itself stays the caller's.
+   *
+   * Part of the effect SDK contract for extension audio effects.
+   */
+  protected _connectAuxInput(source: AudioBus, input: number): void {
+    const connect = (): void => {
+      const output = source.getOutputNode();
+      const node = this._workletNode;
+      if (!output || !node) return;
+      output.connect(node, 0, input);
+      this._auxInputs.push({ output, input });
+    };
+
+    if (source.getOutputNode()) {
+      connect();
+      return;
+    }
+
+    // A bus that is already set up runs the callback synchronously, before
+    // onceSetup() returns its canceller; nothing is left to cancel then.
+    let ran = false;
+    let cancel: (() => void) | null = null;
+    const pending = (): void => {
+      ran = true;
+      if (cancel !== null) {
+        this._pendingAuxSetups.splice(this._pendingAuxSetups.indexOf(cancel), 1);
+        cancel = null;
+      }
+      connect();
+    };
+    const dispose = source.onceSetup(pending);
+    if (!ran) {
+      cancel = dispose;
+      this._pendingAuxSetups.push(dispose);
+    }
+  }
 
   /**
    * Ramps an `AudioParam` on the underlying `AudioWorkletNode` to `value` using
