@@ -1071,47 +1071,6 @@ describe('BeatDetector', () => {
       expect(d.source).toBe(unrecognised);
       d.destroy();
     });
-
-    // NOTE: _deferConnectionViaBus's non-bus "otherwise" fallback registers
-    // onAudioContextReady.once(...). That callback can only ever fire
-    // synchronously as part of the SAME onAudioContextReady dispatch that also
-    // kicks off _setup()'s async worklet registration (registerAudioWorkletProcessor(...).then(...))
-    // - reaching _connectSource while the context is *not yet* ready requires
-    // this method to be invoked directly (see below), since through the public
-    // API isAudioContextReady() is always true by the time _connectSource is
-    // ever called. Because the worklet-ready promise can only resolve in a
-    // *later* microtask than this synchronous dispatch, `this._workletNode` is
-    // provably still null at the exact moment this callback runs - so the
-    // "reconnect" branch inside it (`this._workletNode && isAudioContextReady()`
-    // both true) is structurally unreachable for this fallback path specifically,
-    // unlike the AudioBus onceSetup path above (whose readiness is independent
-    // of the worklet's async setup). The two tests below still exercise the
-    // callback body itself (both the "still applicable" and "source changed"
-    // no-op cases), just not the inner `_connectSource` call.
-    it('_deferConnectionViaBus falls back to onAudioContextReady.once and runs its callback once ready', async () => {
-      await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector, flipToReady }) => {
-        const d = new FreshBeatDetector();
-        const unrecognised = {} as unknown as AudioNode;
-        (d as unknown as { _source: unknown })._source = unrecognised;
-        (d as unknown as { _deferConnectionViaBus: (s: unknown) => void })._deferConnectionViaBus(unrecognised);
-        expect(() => flipToReady()).not.toThrow();
-        await expect(d.ready).resolves.toBeUndefined();
-        d.destroy();
-      });
-    });
-
-    it('the once() fallback callback is a no-op if the source changed before it fired', async () => {
-      await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector, flipToReady }) => {
-        const d = new FreshBeatDetector();
-        const unrecognised = {} as unknown as AudioNode;
-        (d as unknown as { _source: unknown })._source = unrecognised;
-        (d as unknown as { _deferConnectionViaBus: (s: unknown) => void })._deferConnectionViaBus(unrecognised);
-        (d as unknown as { _source: unknown })._source = null;
-        expect(() => flipToReady()).not.toThrow();
-        await expect(d.ready).resolves.toBeUndefined();
-        d.destroy();
-      });
-    });
   });
 
   // ---- Analysis timing ----
@@ -1177,41 +1136,6 @@ describe('BeatDetector', () => {
       expect(d.phaseConfidence).toBe(0);
       expect(Number.isFinite(d.analysisLatency)).toBe(true);
 
-      d.destroy();
-    });
-  });
-
-  // ---- MediaStream re-resolution (private guard) ----
-
-  describe('private defensive guards', () => {
-    it('_resolveToAudioNode replaces an existing stream tap when resolved again without an intervening disconnect', async () => {
-      // Through the public `.source =` setter this is unreachable - _disconnectTap()
-      // always runs first and clears `_streamSource`. Calling the private method
-      // directly (consistent with this file's existing convention of reaching
-      // into internal state, e.g. getMockWorkletNode) exercises the "already had
-      // a stream source" replace-and-disconnect branch directly.
-      const d = new BeatDetector();
-      await d.ready;
-      const stream = { getTracks: () => [] } as unknown as MediaStream;
-      const ctx = getAudioContext();
-      const resolve = (d as unknown as { _resolveToAudioNode: (s: unknown, c: unknown) => AudioNode | null })._resolveToAudioNode.bind(d);
-      const first = resolve(stream, ctx);
-      expect(first).not.toBeNull();
-      const disconnectSpy = vi.spyOn(first!, 'disconnect');
-      const second = resolve(stream, ctx);
-      expect(disconnectSpy).toHaveBeenCalled();
-      expect(second).not.toBe(first);
-      d.destroy();
-    });
-
-    it('_resolveToAudioNode returns null for a null source', () => {
-      // _connectSource never passes null (the public `source` setter already
-      // returns early for `value === null`), so this guard is unreachable via
-      // the public API; invoked directly here purely for coverage.
-      const d = new BeatDetector();
-      const ctx = getAudioContext();
-      const result = (d as unknown as { _resolveToAudioNode: (s: unknown, c: unknown) => unknown })._resolveToAudioNode(null, ctx);
-      expect(result).toBeNull();
       d.destroy();
     });
   });

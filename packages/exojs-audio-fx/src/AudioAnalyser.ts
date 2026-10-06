@@ -1,5 +1,6 @@
 import { type AudioBus, getAudioContext, isAudioContextReady, onAudioContextReady, type Voice } from '@codexo/exojs';
 
+import { AudioTap } from './AudioTap';
 import { buildMelFilterbank, type MelBand } from './dsp/mel';
 
 /**
@@ -50,10 +51,7 @@ type RequiredAnalyserOptions = Required<AudioAnalyserOptions>;
 export class AudioAnalyser {
   private _analyser: AnalyserNode | null = null;
   private readonly _options: RequiredAnalyserOptions;
-  private _source: AudioAnalyserSource = null;
-  private _tapSource: AudioNode | null = null;
-  private _streamSource: MediaStreamAudioSourceNode | null = null;
-  private _pendingSourceSetup: ((ctx: AudioContext) => void) | null = null;
+  private readonly _tap = new AudioTap();
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._setupAnalyser(ctx);
@@ -111,37 +109,11 @@ export class AudioAnalyser {
    * source as a parallel branch without affecting the source's main routing.
    */
   public get source(): AudioAnalyserSource {
-    return this._source;
+    return this._tap.source;
   }
 
   public set source(value: AudioAnalyserSource) {
-    if (value === this._source) return;
-
-    // 1. Disconnect current tap
-    this._disconnectTap();
-
-    this._source = value;
-
-    if (value === null) return;
-
-    // 2. Resolve and connect new tap
-    if (isAudioContextReady()) {
-      this._pendingSourceSetup = null;
-      this._connectSource(value, getAudioContext());
-    } else {
-      if (this._pendingSourceSetup !== null) {
-        onAudioContextReady.remove(this._pendingSourceSetup);
-      }
-
-      const handler = (ctx: AudioContext): void => {
-        onAudioContextReady.remove(handler);
-        this._pendingSourceSetup = null;
-        this._connectSource(value, ctx);
-      };
-
-      this._pendingSourceSetup = handler;
-      onAudioContextReady.add(handler);
-    }
+    this._tap.source = value;
   }
 
   // -----------------------------------------------------------------------
@@ -381,14 +353,9 @@ export class AudioAnalyser {
   public destroy(): void {
     onAudioContextReady.remove(this._onAudioContextReady);
 
-    if (this._pendingSourceSetup !== null) {
-      onAudioContextReady.remove(this._pendingSourceSetup);
-      this._pendingSourceSetup = null;
-    }
-    this._disconnectTap();
+    this._tap.destroy();
     this._analyser?.disconnect();
     this._analyser = null;
-    this._source = null;
   }
 
   // -----------------------------------------------------------------------
@@ -432,98 +399,7 @@ export class AudioAnalyser {
     node.maxDecibels = this._options.maxDecibels;
     node.smoothingTimeConstant = this._options.smoothingTimeConstant;
     this._analyser = node;
-
-    // If a source was set before the context was ready, connect it now.
-    if (this._source !== null) {
-      this._connectSource(this._source, audioContext);
-    }
-  }
-
-  private _connectSource(source: AudioAnalyserSource, audioContext: AudioContext): void {
-    if (!this._analyser) return;
-
-    const tap = this._resolveToAudioNode(source, audioContext);
-    if (!tap) {
-      // AudioBus not ready yet - defer via its onceSetup
-      this._deferConnectionViaBus(source);
-      return;
-    }
-
-    this._tapSource = tap;
-    tap.connect(this._analyser);
-  }
-
-  private _resolveToAudioNode(source: AudioAnalyserSource, audioContext: AudioContext): AudioNode | null {
-    if (source === null) return null;
-
-    // MediaStream - detect by getTracks (duck-type, since AudioNode also doesn't exist in jsdom)
-    const asStream = source as Partial<{ getTracks: unknown }>;
-    if (typeof asStream.getTracks === 'function') {
-      if (this._streamSource) {
-        this._streamSource.disconnect();
-        this._streamSource = null;
-      }
-      const msNode = audioContext.createMediaStreamSource(source as MediaStream);
-      this._streamSource = msNode;
-      return msNode;
-    }
-
-    // AudioBus - has getOutputNode (checked first since bus nodes also have connect/disconnect)
-    const asBus = source as Partial<{ getOutputNode: () => AudioNode | null }>;
-    if (typeof asBus.getOutputNode === 'function') {
-      return asBus.getOutputNode();
-    }
-
-    // Voice - tap its output node
-    const asVoice = source as Partial<{ output: AudioNode }>;
-    if ('output' in asVoice && asVoice.output) {
-      return asVoice.output;
-    }
-
-    // Raw AudioNode - duck-type: has connect & disconnect
-    const asNode = source as Partial<{ connect: unknown; disconnect: unknown }>;
-    if (typeof asNode.connect === 'function' && typeof asNode.disconnect === 'function') {
-      return source as unknown as AudioNode;
-    }
-
-    return null;
-  }
-
-  private _deferConnectionViaBus(source: AudioAnalyserSource): void {
-    // AudioBus exposes onceSetup
-    const asBus = source as Partial<{ onceSetup: (callback: () => void) => void }>;
-    if (typeof asBus.onceSetup === 'function') {
-      asBus.onceSetup(() => {
-        if (this._source === source && this._analyser && isAudioContextReady()) {
-          this._connectSource(source, getAudioContext());
-        }
-      });
-      return;
-    }
-
-    // Otherwise retry once the audioContext is ready (same signal).
-    onAudioContextReady.once(() => {
-      if (this._source === source && this._analyser && isAudioContextReady()) {
-        this._connectSource(source, getAudioContext());
-      }
-    });
-  }
-
-  private _disconnectTap(): void {
-    if (this._tapSource && this._analyser) {
-      try {
-        this._tapSource.disconnect(this._analyser);
-      } catch {
-        // Ignore if already disconnected
-      }
-    }
-    this._tapSource = null;
-
-    // Clean up cached stream source
-    if (this._streamSource) {
-      this._streamSource.disconnect();
-      this._streamSource = null;
-    }
+    this._tap.attach(node, audioContext);
   }
 }
 
