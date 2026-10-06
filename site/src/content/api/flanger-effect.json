@@ -261,7 +261,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Base delay time in milliseconds. Range 0.5..20, default 3."
+          "description": "Base delay time in milliseconds. Range 0.5..20; lowering it below FlangerEffect.depthMs stops at depthMs. Default 3."
         },
         {
           "name": "depthMs",
@@ -282,7 +282,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "LFO modulation depth in milliseconds (peak deviation from base delay). Range 0..10, default 2."
+          "description": "LFO modulation depth in milliseconds (peak deviation from base delay). Range 0..10 and never above FlangerEffect.delayMs, so the swept delay never reaches below zero, which would flatten one half of the sweep. Default 2."
         },
         {
           "name": "feedback",

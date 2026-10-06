@@ -211,7 +211,7 @@ describe('ChorusEffect', () => {
     });
 
     it('clamps delayMs to minimum of 0', () => {
-      const filter = new ChorusEffect();
+      const filter = new ChorusEffect({ depthMs: 0 });
       filter.delayMs = -10;
       expect(filter.delayMs).toBe(0);
       filter.destroy();
@@ -259,6 +259,50 @@ describe('ChorusEffect', () => {
         filter.depthMs = 8;
       }).not.toThrow();
       expect(filter.depthMs).toBe(8);
+    });
+  });
+
+  describe('modulation range', () => {
+    it('sizes the DelayNode for the largest reachable delay, not the constructor values', () => {
+      const ctx = getAudioContext();
+      const createDelay = vi.spyOn(ctx, 'createDelay');
+
+      const filter = new ChorusEffect({ delayMs: 10, depthMs: 2 });
+      const maxDelayTime = createDelay.mock.calls[0]![0]!;
+
+      filter.delayMs = 1000;
+      filter.depthMs = 1000;
+      expect((filter.delayMs + filter.depthMs) / 1000).toBeLessThanOrEqual(maxDelayTime);
+      filter.destroy();
+    });
+
+    it('clamps delayMs to a maximum of 50', () => {
+      const filter = new ChorusEffect();
+      filter.delayMs = 1000;
+      expect(filter.delayMs).toBe(50);
+      filter.destroy();
+    });
+
+    it('clamps depthMs to the current delayMs, so the swept delay never goes negative', () => {
+      const filter = new ChorusEffect({ delayMs: 3 });
+      filter.depthMs = 10;
+      expect(filter.depthMs).toBe(3);
+      expect(filter.delayMs).toBe(3);
+      filter.destroy();
+    });
+
+    it('clamps delayMs to the current depthMs instead of lowering depthMs', () => {
+      const filter = new ChorusEffect({ delayMs: 20, depthMs: 2 });
+      filter.delayMs = 1;
+      expect(filter.delayMs).toBe(2);
+      expect(filter.depthMs).toBe(2);
+      filter.destroy();
+    });
+
+    it('clamps a constructor depthMs to the constructor delayMs', () => {
+      const filter = new ChorusEffect({ delayMs: 4, depthMs: 9 });
+      expect(filter.depthMs).toBe(4);
+      filter.destroy();
     });
   });
 

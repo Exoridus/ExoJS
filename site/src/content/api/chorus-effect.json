@@ -260,7 +260,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Base delay time in milliseconds. Default 25."
+          "description": "Base delay time in milliseconds, clamped to depthMs..50. Lowering it below ChorusEffect.depthMs stops at depthMs. Default 25."
         },
         {
           "name": "depthMs",
@@ -281,7 +281,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "LFO modulation depth in milliseconds (peak deviation from base delay). Default 5."
+          "description": "LFO modulation depth in milliseconds (peak deviation from base delay), clamped to 0..delayMs so the swept delay never reaches below zero, which would flatten one half of the sweep. Default 5."
         },
         {
           "name": "inputNode",

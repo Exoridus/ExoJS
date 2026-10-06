@@ -269,7 +269,7 @@ describe('FlangerEffect', () => {
 
   describe('delayMs setter', () => {
     it('clamps delayMs to minimum of 0.5', () => {
-      const effect = new FlangerEffect();
+      const effect = new FlangerEffect({ depthMs: 0 });
       effect.delayMs = 0;
       expect(effect.delayMs).toBe(0.5);
       effect.destroy();
@@ -304,6 +304,43 @@ describe('FlangerEffect', () => {
     });
   });
 
+  describe('modulation range', () => {
+    it('clamps depthMs to the current delayMs, so the swept delay never goes negative', () => {
+      const effect = new FlangerEffect({ delayMs: 3 });
+      effect.depthMs = 8;
+      expect(effect.depthMs).toBe(3);
+      expect(effect.delayMs).toBe(3);
+      effect.destroy();
+    });
+
+    it('clamps delayMs to the current depthMs instead of lowering depthMs', () => {
+      const effect = new FlangerEffect({ delayMs: 10, depthMs: 4 });
+      effect.delayMs = 1;
+      expect(effect.delayMs).toBe(4);
+      expect(effect.depthMs).toBe(4);
+      effect.destroy();
+    });
+
+    it('clamps a constructor depthMs to the constructor delayMs', () => {
+      const effect = new FlangerEffect({ delayMs: 2, depthMs: 6 });
+      expect(effect.depthMs).toBe(2);
+      effect.destroy();
+    });
+
+    it('sizes the DelayNode for the largest reachable delay', () => {
+      const ctx = getAudioContext();
+      const createDelay = vi.spyOn(ctx, 'createDelay');
+
+      const effect = new FlangerEffect({ delayMs: 1, depthMs: 0 });
+      const maxDelayTime = createDelay.mock.calls[0]![0]!;
+
+      effect.delayMs = 1000;
+      effect.depthMs = 1000;
+      expect((effect.delayMs + effect.depthMs) / 1000).toBeLessThanOrEqual(maxDelayTime);
+      effect.destroy();
+    });
+  });
+
   describe('depthMs setter', () => {
     it('clamps depthMs to minimum of 0', () => {
       const effect = new FlangerEffect();
@@ -313,7 +350,7 @@ describe('FlangerEffect', () => {
     });
 
     it('clamps depthMs to maximum of 10', () => {
-      const effect = new FlangerEffect();
+      const effect = new FlangerEffect({ delayMs: 20 });
       effect.depthMs = 50;
       expect(effect.depthMs).toBe(10);
       effect.destroy();
@@ -329,7 +366,7 @@ describe('FlangerEffect', () => {
       // lfoGain is index 5
       const lfoGain = gainNodes[5]!;
 
-      const effect = new FlangerEffect({ depthMs: 2 });
+      const effect = new FlangerEffect({ delayMs: 10, depthMs: 2 });
       effect.depthMs = 4;
       expect(effect.depthMs).toBe(4);
       expect(lfoGain.gain.setTargetAtTime).toHaveBeenCalledWith(0.004, expect.anything(), expect.anything());
@@ -337,7 +374,7 @@ describe('FlangerEffect', () => {
     });
 
     it('is a no-op on the node graph after destroy but still updates the field', () => {
-      const effect = new FlangerEffect();
+      const effect = new FlangerEffect({ delayMs: 10 });
       effect.destroy();
       expect(() => {
         effect.depthMs = 5;
@@ -479,7 +516,7 @@ describe('FlangerEffect', () => {
 
   describe('option clamping on construction', () => {
     it('clamps delayMs below minimum (0.5)', () => {
-      const effect = new FlangerEffect({ delayMs: 0 });
+      const effect = new FlangerEffect({ delayMs: 0, depthMs: 0 });
       expect(effect.delayMs).toBe(0.5);
       effect.destroy();
     });
@@ -497,7 +534,7 @@ describe('FlangerEffect', () => {
     });
 
     it('clamps depthMs above maximum (10)', () => {
-      const effect = new FlangerEffect({ depthMs: 100 });
+      const effect = new FlangerEffect({ delayMs: 20, depthMs: 100 });
       expect(effect.depthMs).toBe(10);
       effect.destroy();
     });

@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Base delay in ms. Typical 15-30ms. Default 25."
+          "description": "Base delay in ms, 0..50. Typical 15-30ms. Default 25."
         },
         {
           "name": "depthMs",
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Modulation depth in ms (peak deviation from base). Default 5."
+          "description": "Modulation depth in ms (peak deviation from base), 0..delayMs. Default 5."
         },
         {
           "name": "rateHz",

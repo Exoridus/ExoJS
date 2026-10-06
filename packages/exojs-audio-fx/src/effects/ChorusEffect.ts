@@ -2,15 +2,22 @@ import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link ChorusEffect}. */
 export interface ChorusEffectOptions {
-  /** Base delay in ms. Typical 15-30ms. Default 25. */
+  /** Base delay in ms, 0..50. Typical 15-30ms. Default 25. */
   delayMs?: number;
-  /** Modulation depth in ms (peak deviation from base). Default 5. */
+  /** Modulation depth in ms (peak deviation from base), 0..`delayMs`. Default 5. */
   depthMs?: number;
   /** LFO rate in Hz. Typical 0.1-5Hz for chorus, 5-15Hz for vibrato. Default 1.5. */
   rateHz?: number;
   /** Dry/wet mix, 0..1. Default 0.5 (equal mix). */
   wet?: number;
 }
+
+const MAX_DELAY_MS = 50;
+// The swept delay peaks at delayMs + depthMs, and depthMs never exceeds
+// delayMs. A DelayNode silently clamps delayTime to the maxDelayTime it was
+// created with, so the node is sized once for the largest reachable value
+// rather than for the construction-time settings.
+const MAX_DELAY_TIME_SECONDS = (2 * MAX_DELAY_MS) / 1000 + 0.05;
 
 interface ChorusEffectSetup {
   readonly inputGain: GainNode;
@@ -47,8 +54,8 @@ export class ChorusEffect extends AudioEffect {
 
   public constructor(options: ChorusEffectOptions = {}) {
     super();
-    this._delayMs = Math.max(0, options.delayMs ?? 25);
-    this._depthMs = Math.max(0, options.depthMs ?? 5);
+    this._delayMs = Math.max(0, Math.min(MAX_DELAY_MS, options.delayMs ?? 25));
+    this._depthMs = Math.max(0, Math.min(this._delayMs, options.depthMs ?? 5));
     this._rateHz = Math.max(0, options.rateHz ?? 1.5);
     this._wet = Math.max(0, Math.min(1, options.wet ?? 0.5));
     this._deferSetup(context => this._setupNodes(context));
@@ -68,23 +75,30 @@ export class ChorusEffect extends AudioEffect {
   // Getters / setters
   // -------------------------------------------------------------------------
 
-  /** Base delay time in milliseconds. Default 25. */
+  /**
+   * Base delay time in milliseconds, clamped to `depthMs..50`. Lowering it below
+   * {@link ChorusEffect.depthMs} stops at `depthMs`. Default 25.
+   */
   public get delayMs(): number {
     return this._delayMs;
   }
   public set delayMs(value: number) {
-    this._delayMs = Math.max(0, value);
+    this._delayMs = Math.max(this._depthMs, Math.min(MAX_DELAY_MS, value));
     if (this._nodes) {
       this._nodes.delayNode.delayTime.setTargetAtTime(this._delayMs / 1000, this._nodes.delayNode.context.currentTime, 0.01);
     }
   }
 
-  /** LFO modulation depth in milliseconds (peak deviation from base delay). Default 5. */
+  /**
+   * LFO modulation depth in milliseconds (peak deviation from base delay),
+   * clamped to `0..delayMs` so the swept delay never reaches below zero, which
+   * would flatten one half of the sweep. Default 5.
+   */
   public get depthMs(): number {
     return this._depthMs;
   }
   public set depthMs(value: number) {
-    this._depthMs = Math.max(0, value);
+    this._depthMs = Math.max(0, Math.min(this._delayMs, value));
     if (this._nodes) {
       this._nodes.lfoGain.gain.setTargetAtTime(this._depthMs / 1000, this._nodes.lfoGain.context.currentTime, 0.01);
     }
@@ -142,9 +156,7 @@ export class ChorusEffect extends AudioEffect {
     const outputGain = ctx.createGain();
     const dryGain = ctx.createGain();
     const wetGain = ctx.createGain();
-    // maxDelayTime must be larger than base + peak depth, with a small buffer.
-    const maxDelay = (this._delayMs + this._depthMs) / 1000 + 0.05;
-    const delayNode = ctx.createDelay(maxDelay);
+    const delayNode = ctx.createDelay(MAX_DELAY_TIME_SECONDS);
     const lfoGain = ctx.createGain();
 
     // Initial values
