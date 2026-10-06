@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link PhaserEffect}. */
 export interface PhaserEffectOptions {
@@ -87,10 +87,6 @@ export class PhaserEffect extends AudioEffect {
   private _depth: number;
   private _feedback: number;
   private _wet: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: PhaserEffectOptions = {}) {
     super();
@@ -101,11 +97,7 @@ export class PhaserEffect extends AudioEffect {
     this._depth = Math.max(0, Math.min(1, options.depth ?? 0.6));
     this._feedback = Math.max(0, Math.min(0.9, options.feedback ?? 0.3));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 0.5));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -220,7 +212,7 @@ export class PhaserEffect extends AudioEffect {
   // ---------------------------------------------------------------------------
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.lfoOscillator.stop();
       this._setup.lfoOscillator.disconnect();

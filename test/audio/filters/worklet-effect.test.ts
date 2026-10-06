@@ -154,10 +154,9 @@ describe('WorkletEffect', () => {
     filter.destroy();
   });
 
-  it('ready getter returns Promise.resolve() after destroy', () => {
+  it('ready is still a promise after destroy', () => {
     const filter = new TestWorkletEffect();
     filter.destroy();
-    // After destroy _ready is null, so getter returns Promise.resolve()
     expect(filter.ready).toBeInstanceOf(Promise);
   });
 

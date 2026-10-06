@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link DistortionEffect}. */
 export interface DistortionEffectOptions {
@@ -72,10 +72,6 @@ export class DistortionEffect extends AudioEffect {
   private _wet: number;
   private _oversample: OverSampleType;
   private _tone: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: DistortionEffectOptions = {}) {
     super();
@@ -83,11 +79,7 @@ export class DistortionEffect extends AudioEffect {
     this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
     this._oversample = options.oversample ?? '2x';
     this._tone = Math.max(0, Math.min(1, options.tone ?? 1));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -174,7 +166,7 @@ export class DistortionEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.waveShaper.disconnect();

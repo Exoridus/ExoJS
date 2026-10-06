@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link ChorusEffect}. */
 export interface ChorusEffectOptions {
@@ -41,10 +41,6 @@ interface ChorusEffectSetup {
 export class ChorusEffect extends AudioEffect {
   private _nodes: ChorusEffectSetup | null = null;
   private _delayMs: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
   private _depthMs: number;
   private _rateHz: number;
   private _wet: number;
@@ -55,11 +51,7 @@ export class ChorusEffect extends AudioEffect {
     this._depthMs = Math.max(0, options.depthMs ?? 5);
     this._rateHz = Math.max(0, options.rateHz ?? 1.5);
     this._wet = Math.max(0, Math.min(1, options.wet ?? 0.5));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   public get inputNode(): AudioNode {
@@ -127,7 +119,7 @@ export class ChorusEffect extends AudioEffect {
   // -------------------------------------------------------------------------
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._nodes) {
       this._nodes.lfoOscillator.stop();
       this._nodes.lfoOscillator.disconnect();

@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link DelayEffect}. */
 export interface DelayEffectOptions {
@@ -26,10 +26,6 @@ interface DelayEffectSetup {
 export class DelayEffect extends AudioEffect {
   private _setup: DelayEffectSetup | null = null;
   private _delaySeconds: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
   private _feedback: number;
   private _wet: number;
 
@@ -38,11 +34,7 @@ export class DelayEffect extends AudioEffect {
     this._delaySeconds = Math.max(0, Math.min(5, options.delaySeconds ?? 0.3));
     this._feedback = Math.max(0, Math.min(0.95, options.feedback ?? 0.4));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 0.5));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   public get inputNode(): AudioNode {
@@ -94,7 +86,7 @@ export class DelayEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.delayNode.disconnect();

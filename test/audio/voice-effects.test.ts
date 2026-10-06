@@ -11,7 +11,7 @@ const makeBufferStub = (): AudioBuffer => ({ duration: 2 }) as AudioBuffer;
 const makeStubEffect = (): AudioEffect => {
   const inputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
   const outputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
-  return { inputNode, outputNode, destroy: vi.fn(), ready: Promise.resolve() } as unknown as AudioEffect;
+  return { inputNode, outputNode, destroy: vi.fn(), ready: Promise.resolve(), _isWired: true } as unknown as AudioEffect;
 };
 
 /** An effect whose own node setup has not finished yet - `inputNode`/`outputNode` throw, as every built-in effect does pre-setup. */

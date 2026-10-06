@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link TremoloEffect}. */
 export interface TremoloEffectOptions {
@@ -85,10 +85,6 @@ export class TremoloEffect extends AudioEffect {
   private _depth: number;
   private readonly _autoPan: boolean;
   private _wet: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: TremoloEffectOptions = {}) {
     super();
@@ -96,11 +92,7 @@ export class TremoloEffect extends AudioEffect {
     this._depth = Math.max(0, Math.min(1, options.depth ?? 0.7));
     this._autoPan = options.autoPan ?? false;
     this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -181,7 +173,7 @@ export class TremoloEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.lfoOscillator.stop();
       this._setup.lfoOscillator.disconnect();

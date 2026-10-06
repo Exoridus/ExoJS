@@ -99,24 +99,24 @@ describe('CompressorEffect', () => {
   });
 
   describe('construction before the audio context is ready', () => {
-    it('registers a deferred onAudioContextReady setup and _onAudioContextReady wires the node', async () => {
+    it('defers setup to onAudioContextReady, which wires the node', async () => {
       // Using a fresh module registry via vi.resetModules() guarantees the
       // internal audio-context singleton starts in its virgin (not-ready)
       // state for this one test, regardless of what earlier tests in this
       // file already did with getAudioContext(). With no AudioContext created
       // yet, construction cannot set up the node synchronously - it registers
-      // `_onAudioContextReady` on the `onAudioContextReady` signal instead.
+      // its setup on the `onAudioContextReady` signal instead.
       vi.resetModules();
       const { CompressorEffect: FreshCompressorEffect } = await import('../../src/effects/CompressorEffect');
+      const { onAudioContextReady: freshAudioContextReady } = await import('@codexo/exojs');
       const effect = new FreshCompressorEffect();
       expect(() => effect.inputNode).toThrow('CompressorEffect not yet initialized.');
 
       // Simulate the AudioContext becoming ready (e.g. after the first user
-      // gesture) by invoking the deferred hook directly with a fresh mock
-      // AudioContext - this is exactly what onAudioContextReady.dispatch()
-      // would call in production.
+      // gesture) by dispatching the fresh registry's signal with a fresh mock
+      // AudioContext, exactly as production does.
       const ctx = new AudioContext();
-      (effect as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+      freshAudioContextReady.dispatch(ctx);
 
       expect(effect.inputNode).toBeDefined();
       expect(effect.inputNode).toBe(effect.outputNode);

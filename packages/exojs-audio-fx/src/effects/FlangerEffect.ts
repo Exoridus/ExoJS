@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link FlangerEffect}. */
 export interface FlangerEffectOptions {
@@ -76,10 +76,6 @@ export class FlangerEffect extends AudioEffect {
   private _rateHz: number;
   private _feedback: number;
   private _wet: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: FlangerEffectOptions = {}) {
     super();
@@ -88,11 +84,7 @@ export class FlangerEffect extends AudioEffect {
     this._rateHz = Math.max(0, Math.min(10, options.rateHz ?? 0.25));
     this._feedback = Math.max(0, Math.min(0.95, options.feedback ?? 0.5));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 0.5));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -187,7 +179,7 @@ export class FlangerEffect extends AudioEffect {
   // ---------------------------------------------------------------------------
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._nodes) {
       this._nodes.lfoOscillator.stop();
       this._nodes.lfoOscillator.disconnect();

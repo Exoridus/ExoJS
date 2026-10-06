@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link RingModulatorEffect}. */
 export interface RingModulatorEffectOptions {
@@ -70,21 +70,13 @@ export class RingModulatorEffect extends AudioEffect {
   private _frequency: number;
   private _waveform: OscillatorType;
   private _wet: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: RingModulatorEffectOptions = {}) {
     super();
     this._frequency = Math.max(0, Math.min(20000, options.frequency ?? 440));
     this._waveform = options.waveform ?? 'sine';
     this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -155,7 +147,7 @@ export class RingModulatorEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.carrierOsc.stop();
       this._setup.carrierOsc.disconnect();

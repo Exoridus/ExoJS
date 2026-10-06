@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link ReverbEffect}. */
 export interface ReverbEffectOptions {
@@ -26,10 +26,6 @@ interface ReverbEffectSetup {
 export class ReverbEffect extends AudioEffect {
   private _setup: ReverbEffectSetup | null = null;
   private _duration: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
   private _decay: number;
   private _wet: number;
 
@@ -38,11 +34,7 @@ export class ReverbEffect extends AudioEffect {
     this._duration = Math.max(0.1, Math.min(5, options.durationSeconds ?? 2));
     this._decay = Math.max(0.5, Math.min(10, options.decay ?? 2));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 0.4));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   public get inputNode(): AudioNode {
@@ -94,7 +86,7 @@ export class ReverbEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.convolver.disconnect();

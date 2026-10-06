@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link CompressorEffect}. All values are clamped to their valid ranges on assignment. */
 export interface CompressorEffectOptions {
@@ -20,10 +20,6 @@ export interface CompressorEffectOptions {
 export class CompressorEffect extends AudioEffect {
   private _node: DynamicsCompressorNode | null = null;
   private _threshold: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setup(ctx);
-  };
   private _knee: number;
   private _ratio: number;
   private _attack: number;
@@ -36,11 +32,7 @@ export class CompressorEffect extends AudioEffect {
     this._ratio = Math.max(1, Math.min(20, options.ratio ?? 12));
     this._attack = Math.max(0, Math.min(1, options.attack ?? 0.003));
     this._release = Math.max(0, Math.min(1, options.release ?? 0.25));
-    if (isAudioContextReady()) {
-      this._setup(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setup(context));
   }
 
   public get inputNode(): AudioNode {
@@ -126,7 +118,7 @@ export class CompressorEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     this._node?.disconnect();
     this._node = null;
   }

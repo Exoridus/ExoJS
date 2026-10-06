@@ -400,7 +400,7 @@ export class AudioBus {
 
       logger.warn(
         `AudioBus: effect ${effect.constructor.name} never finished its setup and is bypassed on bus "${this.name}". ` +
-          'Await its `ready` promise before attaching it, or check that a custom effect wires up its input and output nodes.',
+          'Await its `ready` promise before attaching it, or check that a custom effect builds its nodes through `_deferSetup()`.',
         { source: 'AudioBus', once: `audiobus-effect-unready:${effect.constructor.name}` },
       );
     }

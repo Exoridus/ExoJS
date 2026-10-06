@@ -130,19 +130,20 @@ describe('FlangerEffect', () => {
   });
 
   describe('construction before the audio context is ready', () => {
-    it('registers a deferred onAudioContextReady setup and _onAudioContextReady wires the nodes', async () => {
+    it('defers setup to onAudioContextReady, which wires the nodes', async () => {
       // A fresh module registry via vi.resetModules() guarantees the internal
       // audio-context singleton starts in its virgin (not-ready) state, so
       // construction defers node setup instead of creating it synchronously.
       vi.resetModules();
       const { FlangerEffect: FreshFlangerEffect } = await import('../../src/effects/FlangerEffect');
+      const { onAudioContextReady: freshAudioContextReady } = await import('@codexo/exojs');
       const effect = new FreshFlangerEffect();
       expect(() => effect.inputNode).toThrow('FlangerEffect not yet initialized.');
 
-      // Simulate the AudioContext becoming ready by invoking the deferred
-      // hook directly with a fresh mock AudioContext.
+      // Simulate the AudioContext becoming ready by dispatching the fresh
+      // registry's signal with a fresh mock AudioContext.
       const ctx = new AudioContext();
-      (effect as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+      freshAudioContextReady.dispatch(ctx);
 
       expect(effect.inputNode).toBeDefined();
       expect(effect.outputNode).toBeDefined();
