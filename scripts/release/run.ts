@@ -61,7 +61,8 @@ const die: Abort = message => {
 };
 
 const ensureBuilt = (): void => {
-  const dists = LOCKSTEP_PACKAGES.map(p => resolve(repoRoot, p.dir === '.' ? 'dist/esm' : `${p.dir}/dist/esm`));
+  // The scaffolder (`cli` profile) emits a flat `dist/`; only the libraries carry `dist/esm`.
+  const dists = LOCKSTEP_PACKAGES.map(p => resolve(repoRoot, p.dir, 'profile' in p && p.profile === 'cli' ? 'dist' : 'dist/esm'));
   const missing = dists.filter(d => !existsSync(d));
   if (missing.length > 0) {
     die(`Not built — missing ${missing.join(', ')}. Run "pnpm build" + extension builds, or pass --build.`);
