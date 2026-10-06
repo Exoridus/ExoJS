@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# Refuse commit messages that carry a session link.
+#
+# A commit here is its Conventional Commits subject; tooling-generated session
+# trailers ("Claude-Session: https://claude.ai/code/session_...") are not part
+# of it and must never reach history.
+
+if grep -Eiq '^[[:space:]]*Claude-Session:|claude\.ai/code/session_' "$1"; then
+    echo "refusing commit: the message contains a session link." >&2
+    echo "  Remove the 'Claude-Session:' line and commit again." >&2
+    exit 1
+fi

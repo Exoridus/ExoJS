@@ -12,7 +12,7 @@ ExoJS is a TypeScript-first, pnpm-workspace monorepo. Core (`@codexo/exojs`) liv
 
 ## Commit subjects, pull request descriptions, and prose
 
-A commit is its Conventional Commits subject. It carries the scope, the `!` for a breaking change and the pull request number, and that is the whole of what the changelog and the release notes ever read from it. The repository squashes with the pull request title alone, so a merged commit has no body at all and a breaking change must be marked with `!` in the subject - a `BREAKING CHANGE:` footer would have nowhere to survive. A body on a local commit is optional and short; the reasoning belongs in the pull request.
+A commit is its Conventional Commits subject. It carries the scope, the `!` for a breaking change and the pull request number, and that is the whole of what the changelog and the release notes ever read from it. The repository squashes with the pull request title alone, so a merged commit has no body at all and a breaking change must be marked with `!` in the subject - a `BREAKING CHANGE:` footer would have nowhere to survive. A body on a local commit is optional and short; the reasoning belongs in the pull request. Neither a commit nor a pull request description carries tooling attribution such as a `Claude-Session:` trailer or a session link; `.husky/commit-msg` rejects such a commit message.
 
 The pull request description is where the detail goes - what changed, why, what was measured, what a breaking change breaks and what to do about it. It is linked from the changelog line, so nothing needs saying twice.
 
