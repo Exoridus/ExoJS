@@ -357,7 +357,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The node where audio enters this effect. Throws until the effect's setup has run."
+          "description": "The node where audio enters this effect. Throws until the effect's setup has run. Wiring is the bus's or voice's job; read it only to build a custom effect or route outside the engine."
         },
         {
           "name": "outputNode",

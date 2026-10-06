@@ -16,9 +16,18 @@ export abstract class AudioEffect {
   private _resolveReady: (() => void) | null = null;
   private _pendingSetup: ((context: AudioContext) => void) | null = null;
 
-  /** The node where audio enters this effect. Throws until the effect's setup has run. */
+  /**
+   * The node where audio enters this effect. Throws until the effect's setup
+   * has run. Wiring is the bus's or voice's job; read it only to build a
+   * custom effect or route outside the engine.
+   * @advanced
+   */
   public abstract get inputNode(): AudioNode;
-  /** The node where audio exits this effect. Throws until the effect's setup has run. */
+  /**
+   * The node where audio exits this effect. Throws until the effect's setup
+   * has run.
+   * @advanced
+   */
   public abstract get outputNode(): AudioNode;
 
   /**
