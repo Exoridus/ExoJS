@@ -64,6 +64,9 @@ export class VocoderEffect extends WorkletEffect {
     return {
       numberOfInputs: 2,
       numberOfOutputs: 1,
+      // With two inputs the output no longer follows the carrier's channel
+      // count and would default to mono, collapsing a stereo carrier.
+      outputChannelCount: [2],
       processorOptions: {
         numBands: this._numBands,
         minHz: this._minHz,

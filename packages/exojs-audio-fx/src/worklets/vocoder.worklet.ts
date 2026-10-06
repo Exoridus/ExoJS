@@ -43,12 +43,14 @@ class VocoderProcessor extends AudioWorkletProcessor {
   // Log-spaced band centers + biquad coefficients
   private readonly _bands: BiquadCoef[] = [];
 
-  // Per-band biquad state (one for carrier, one for modulator)
-  private readonly _carrierStates: BiquadState[];
+  // Per-band biquad state: one carrier bank per channel, one shared modulator bank.
+  private readonly _carrierStates: BiquadState[][];
   private readonly _modulatorStates: BiquadState[];
 
-  // Per-band envelope follower
+  // Per-band envelope follower, derived from the mono modulator and applied
+  // to every carrier channel so the stereo carrier keeps its image.
   private readonly _envelopes: Float32Array;
+  private _bandSums = new Float64Array(1);
 
   public constructor(options?: unknown) {
     super();
@@ -76,10 +78,14 @@ class VocoderProcessor extends AudioWorkletProcessor {
       this._bands.push({ b0, b1, b2, a1, a2 });
     }
 
-    this._carrierStates = this._bands.map(() => ({ x1: 0, x2: 0, y1: 0, y2: 0 }));
+    this._carrierStates = [this._createStates()];
     this._modulatorStates = this._bands.map(() => ({ x1: 0, x2: 0, y1: 0, y2: 0 }));
 
     this._envelopes = new Float32Array(bandCount);
+  }
+
+  private _createStates(): BiquadState[] {
+    return this._bands.map(() => ({ x1: 0, x2: 0, y1: 0, y2: 0 }));
   }
 
   private _processBiquad(state: BiquadState, coef: BiquadCoef, x: number): number {
@@ -92,19 +98,29 @@ class VocoderProcessor extends AudioWorkletProcessor {
   }
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
-    const carrier = inputs[0]?.[0];
-    const modulator = inputs[1]?.[0];
-    const output = outputs[0]?.[0];
-    if (!carrier || !output) return true;
+    const carrier = inputs[0];
+    const modulator = inputs[1];
+    const output = outputs[0];
+    if (!carrier || !output || output.length === 0) return true;
+    const channels = Math.min(carrier.length, output.length);
+    if (channels === 0) return true;
+    // Grown on a channel-count increase only, never per block.
+    while (this._carrierStates.length < channels) this._carrierStates.push(this._createStates());
+    if (this._bandSums.length < channels) this._bandSums = new Float64Array(channels);
 
     const envSmoothing = parameters['envelopeSmoothing']![0]!;
     const bandCount = this._bands.length;
+    const modulatorChannels = modulator?.length ?? 0;
+    const bandSums = this._bandSums;
+    const length = carrier[0]!.length;
 
-    for (let i = 0; i < carrier.length; i++) {
-      const carrierSample = carrier[i]!;
-      const modulatorSample = modulator?.[i] ?? 0;
+    for (let i = 0; i < length; i++) {
+      // Modulator analysis is mono: the envelope describes one voice, not a side.
+      let modulatorSample = 0;
+      for (let ch = 0; ch < modulatorChannels; ch++) modulatorSample += modulator![ch]![i]!;
+      if (modulatorChannels > 1) modulatorSample /= modulatorChannels;
 
-      let bandSum = 0;
+      bandSums.fill(0);
       for (let b = 0; b < bandCount; b++) {
         const coef = this._bands[b]!;
 
@@ -114,16 +130,22 @@ class VocoderProcessor extends AudioWorkletProcessor {
         this._envelopes[b]! += (target - this._envelopes[b]!) * envSmoothing;
 
         // Carrier band, scaled by modulator envelope
-        const carBand = this._processBiquad(this._carrierStates[b]!, coef, carrierSample);
-        bandSum += carBand * this._envelopes[b]!;
+        for (let ch = 0; ch < channels; ch++) {
+          const carBand = this._processBiquad(this._carrierStates[ch]![b]!, coef, carrier[ch]![i]!);
+          bandSums[ch]! += carBand * this._envelopes[b]!;
+        }
       }
 
       // Multiply bandSum by bandCount: for a broadband carrier the energy is
       // split across N bands, so the raw product (carBand × envelope) is
       // O(1/N) of the carrier amplitude. Scaling by N restores unity gain
       // for typical broadband carrier + voice modulator inputs.
-      output[i] = bandSum * bandCount;
+      for (let ch = 0; ch < channels; ch++) output[ch]![i] = bandSums[ch]! * bandCount;
     }
+
+    // The output layout is fixed, so a mono carrier is spread onto the
+    // remaining output channels the way a mono signal is upmixed anyway.
+    for (let ch = channels; ch < output.length; ch++) output[ch]!.set(output[channels - 1]!);
     return true;
   }
 }

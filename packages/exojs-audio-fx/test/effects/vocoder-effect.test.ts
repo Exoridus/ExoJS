@@ -112,7 +112,7 @@ describe('VocoderEffect', () => {
       filter.destroy();
     });
 
-    it('after await filter.ready: workletNode has 2 inputs (carrier + modulator)', async () => {
+    it('after await filter.ready: workletNode has 2 inputs (carrier + modulator) and a stereo output', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
       (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
@@ -124,6 +124,7 @@ describe('VocoderEffect', () => {
       const filter = new VocoderEffect({ modulator });
       await filter.ready;
       expect(capturedOptions?.numberOfInputs).toBe(2);
+      expect(capturedOptions?.outputChannelCount).toEqual([2]);
       filter.destroy();
     });
 
