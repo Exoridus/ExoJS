@@ -39,7 +39,12 @@ class GranularProcessor extends AudioWorkletProcessor {
   }
 
   private readonly _bufferLength: number;
-  private readonly _buffer: Float32Array;
+  // One ring buffer per channel behind a single grain schedule: every grain
+  // reads the same position from each channel, so a stereo event stays
+  // together instead of each side scattering on its own random timeline.
+  private _buffers: Float32Array[];
+  // Per-channel grain sum for the current sample, kept in double precision.
+  private _mix = new Float64Array(1);
   private _writePos = 0;
   private _timeUntilNextGrainSamples = 0;
   private _grains: Grain[] = [];
@@ -50,14 +55,23 @@ class GranularProcessor extends AudioWorkletProcessor {
     const opts = (options as { processorOptions?: { bufferSeconds?: number; normalizeGain?: boolean } } | undefined)?.processorOptions ?? {};
     const bufferSeconds = opts.bufferSeconds ?? 2;
     this._bufferLength = Math.floor(bufferSeconds * sampleRate);
-    this._buffer = new Float32Array(this._bufferLength);
+    this._buffers = [new Float32Array(this._bufferLength)];
     this._normalizeGain = opts.normalizeGain ?? false;
   }
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
-    const input = inputs[0]?.[0];
-    const output = outputs[0]?.[0];
+    const input = inputs[0];
+    const output = outputs[0];
     if (!input || !output) return true;
+    const channels = Math.min(input.length, output.length);
+    if (channels === 0) return true;
+    // Grown on a channel-count increase only, never per block. A late channel
+    // starts with silent history rather than a copy of another channel's.
+    while (this._buffers.length < channels) this._buffers.push(new Float32Array(this._bufferLength));
+    if (this._mix.length < channels) this._mix = new Float64Array(channels);
+    const buffers = this._buffers;
+    const mix = this._mix;
+    const length = input[0]!.length;
 
     const grainSize = parameters['grainSize']![0]!;
     const density = parameters['density']![0]!;
@@ -78,9 +92,9 @@ class GranularProcessor extends AudioWorkletProcessor {
       normFactor = 1 / (0.6123724356957945 * Math.sqrt(Math.max(1e-6, expectedGrains)));
     }
 
-    for (let i = 0; i < input.length; i++) {
-      // Write input to circular buffer
-      this._buffer[this._writePos] = input[i]!;
+    for (let i = 0; i < length; i++) {
+      // Write input to the circular buffers
+      for (let ch = 0; ch < channels; ch++) buffers[ch]![this._writePos] = input[ch]![i]!;
       this._writePos = (this._writePos + 1) % this._bufferLength;
 
       // Spawn new grain if scheduled
@@ -98,7 +112,7 @@ class GranularProcessor extends AudioWorkletProcessor {
       }
 
       // Mix all active grains (apply Hann window)
-      let grainSum = 0;
+      mix.fill(0);
       for (let g = this._grains.length - 1; g >= 0; g--) {
         const grain = this._grains[g]!;
         if (grain.ageSamples >= grain.lengthSamples) {
@@ -111,12 +125,12 @@ class GranularProcessor extends AudioWorkletProcessor {
         const readPos = grain.startPos + grain.ageSamples * grain.pitch;
         const sampleIndex = Math.floor(readPos) % this._bufferLength;
         const safeIndex = (sampleIndex + this._bufferLength) % this._bufferLength;
-        grainSum += this._buffer[safeIndex]! * window;
+        for (let ch = 0; ch < channels; ch++) mix[ch]! += buffers[ch]![safeIndex]! * window;
 
         grain.ageSamples++;
       }
 
-      output[i] = grainSum * normFactor;
+      for (let ch = 0; ch < channels; ch++) output[ch]![i] = mix[ch]! * normFactor;
     }
     return true;
   }
