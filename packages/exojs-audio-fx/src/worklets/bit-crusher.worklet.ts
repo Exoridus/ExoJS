@@ -18,14 +18,23 @@ class BitCrusherProcessor extends AudioWorkletProcessor {
     ];
   }
 
-  // Phase accumulator for sample-and-hold; `_held` keeps the last latched value.
+  // One phase accumulator for all channels, so every channel latches on the
+  // same sample and the stereo image never smears; `_held` keeps each
+  // channel's last latched value.
   private _phase = 0;
-  private _held = 0;
+  private _held = new Float32Array(2);
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
-    const input = inputs[0]?.[0];
-    const output = outputs[0]?.[0];
+    const input = inputs[0];
+    const output = outputs[0];
     if (!input || !output) return true;
+    const channels = Math.min(input.length, output.length);
+    if (channels === 0) return true;
+    if (this._held.length < channels) {
+      const held = new Float32Array(channels);
+      held.set(this._held);
+      this._held = held;
+    }
 
     const bitsParam = parameters['bits']?.[0] ?? 8;
     const normFreqParam = parameters['normFreq']?.[0] ?? 0.5;
@@ -33,17 +42,19 @@ class BitCrusherProcessor extends AudioWorkletProcessor {
     const normFreq = Math.max(0, Math.min(1, normFreqParam));
     // Quantization step: 2 / 2^bits (maps [-1, 1] onto 2^bits levels).
     const step = 2 / Math.pow(2, bits);
+    const length = input[0]!.length;
 
-    for (let i = 0; i < input.length; i++) {
+    for (let i = 0; i < length; i++) {
       // Advance the sample-and-hold phase accumulator.
       this._phase += normFreq;
-      if (this._phase >= 1) {
-        // Wrap phase and latch a fresh, quantized sample.
-        this._phase -= 1;
-        this._held = step * Math.round(input[i]! / step);
+      const latch = this._phase >= 1;
+      if (latch) this._phase -= 1;
+
+      for (let ch = 0; ch < channels; ch++) {
+        // Latch a fresh, quantized sample on wrap; emit the held sample - pure wet, no dry mixing here.
+        if (latch) this._held[ch] = step * Math.round(input[ch]![i]! / step);
+        output[ch]![i] = this._held[ch]!;
       }
-      // Emit the held (quantized) sample - pure wet, no dry mixing here.
-      output[i] = this._held;
     }
     return true;
   }

@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Input-to-output dB ratio above the threshold. Range 1..20, default 20 (brick-wall). Lower it for a softer, more compressor-like limiter."
+          "description": "Input-to-output dB ratio above the threshold. Range 1..20, default 20, the steepest a DynamicsCompressorNode allows. Lower it for a softer, more compressor-like limiter."
         },
         {
           "name": "release",

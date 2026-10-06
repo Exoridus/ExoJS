@@ -2,7 +2,7 @@
 
 import { AudioBus } from '#audio/AudioBus';
 import { getAudioContext } from '#audio/audioContext';
-import type { AudioEffect } from '#audio/AudioEffect';
+import { AudioEffect } from '#audio/AudioEffect';
 import { Signal } from '#core/Signal';
 import { Time } from '#core/units';
 
@@ -88,19 +88,20 @@ const spyOnBusCreation = (): BusSpy => {
 };
 
 // A minimal concrete AudioEffect for testing.
-class StubFilter implements AudioEffect {
+class StubFilter extends AudioEffect {
   public readonly inputNode: AudioNode;
   public readonly outputNode: AudioNode;
-  public readonly ready: Promise<void> = Promise.resolve();
   public destroyed = false;
 
   public constructor() {
+    super();
     const ctx = getAudioContext();
     this.inputNode = ctx.createGain();
     this.outputNode = ctx.createGain();
+    this._deferSetup(() => undefined);
   }
 
-  public destroy(): void {
+  public override destroy(): void {
     this.destroyed = true;
   }
 }
@@ -110,10 +111,9 @@ class StubFilter implements AudioEffect {
  * `@codexo/exojs-audio-fx`: the edges leaving `inputNode` are the effect's own
  * internal wiring, not something the bus created.
  */
-class WiredFilter implements AudioEffect {
+class WiredFilter extends AudioEffect {
   public readonly inputNode: AudioNode;
   public readonly outputNode: AudioNode;
-  public readonly ready: Promise<void> = Promise.resolve();
   public destroyed = false;
 
   /** Records whether anything cut the edges leaving this effect's input. */
@@ -121,15 +121,17 @@ class WiredFilter implements AudioEffect {
   public readonly outputDisconnect: MockInstance;
 
   public constructor() {
+    super();
     const ctx = getAudioContext();
     this.inputNode = ctx.createGain();
     this.outputNode = ctx.createGain();
     this.inputNode.connect(this.outputNode);
     this.inputDisconnect = vi.spyOn(this.inputNode, 'disconnect');
     this.outputDisconnect = vi.spyOn(this.outputNode, 'disconnect');
+    this._deferSetup(() => undefined);
   }
 
-  public destroy(): void {
+  public override destroy(): void {
     this.destroyed = true;
   }
 }

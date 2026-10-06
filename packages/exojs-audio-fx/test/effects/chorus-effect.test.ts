@@ -103,19 +103,20 @@ describe('ChorusEffect', () => {
   });
 
   describe('construction before the audio context is ready', () => {
-    it('registers a deferred onAudioContextReady setup and _onAudioContextReady wires the nodes', async () => {
+    it('defers setup to onAudioContextReady, which wires the nodes', async () => {
       // A fresh module registry via vi.resetModules() guarantees the internal
       // audio-context singleton starts in its virgin (not-ready) state, so
       // construction defers node setup instead of creating it synchronously.
       vi.resetModules();
       const { ChorusEffect: FreshChorusEffect } = await import('../../src/effects/ChorusEffect');
+      const { onAudioContextReady: freshAudioContextReady } = await import('@codexo/exojs');
       const filter = new FreshChorusEffect();
       expect(() => filter.inputNode).toThrow('ChorusEffect not yet initialized.');
 
-      // Simulate the AudioContext becoming ready by invoking the deferred
-      // hook directly with a fresh mock AudioContext.
+      // Simulate the AudioContext becoming ready by dispatching the fresh
+      // registry's signal with a fresh mock AudioContext.
       const ctx = new AudioContext();
-      (filter as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+      freshAudioContextReady.dispatch(ctx);
 
       expect(filter.inputNode).toBeDefined();
       expect(filter.outputNode).toBeDefined();
@@ -210,7 +211,7 @@ describe('ChorusEffect', () => {
     });
 
     it('clamps delayMs to minimum of 0', () => {
-      const filter = new ChorusEffect();
+      const filter = new ChorusEffect({ depthMs: 0 });
       filter.delayMs = -10;
       expect(filter.delayMs).toBe(0);
       filter.destroy();
@@ -258,6 +259,50 @@ describe('ChorusEffect', () => {
         filter.depthMs = 8;
       }).not.toThrow();
       expect(filter.depthMs).toBe(8);
+    });
+  });
+
+  describe('modulation range', () => {
+    it('sizes the DelayNode for the largest reachable delay, not the constructor values', () => {
+      const ctx = getAudioContext();
+      const createDelay = vi.spyOn(ctx, 'createDelay');
+
+      const filter = new ChorusEffect({ delayMs: 10, depthMs: 2 });
+      const maxDelayTime = createDelay.mock.calls[0]![0]!;
+
+      filter.delayMs = 1000;
+      filter.depthMs = 1000;
+      expect((filter.delayMs + filter.depthMs) / 1000).toBeLessThanOrEqual(maxDelayTime);
+      filter.destroy();
+    });
+
+    it('clamps delayMs to a maximum of 50', () => {
+      const filter = new ChorusEffect();
+      filter.delayMs = 1000;
+      expect(filter.delayMs).toBe(50);
+      filter.destroy();
+    });
+
+    it('clamps depthMs to the current delayMs, so the swept delay never goes negative', () => {
+      const filter = new ChorusEffect({ delayMs: 3 });
+      filter.depthMs = 10;
+      expect(filter.depthMs).toBe(3);
+      expect(filter.delayMs).toBe(3);
+      filter.destroy();
+    });
+
+    it('clamps delayMs to the current depthMs instead of lowering depthMs', () => {
+      const filter = new ChorusEffect({ delayMs: 20, depthMs: 2 });
+      filter.delayMs = 1;
+      expect(filter.delayMs).toBe(2);
+      expect(filter.depthMs).toBe(2);
+      filter.destroy();
+    });
+
+    it('clamps a constructor depthMs to the constructor delayMs', () => {
+      const filter = new ChorusEffect({ delayMs: 4, depthMs: 9 });
+      expect(filter.depthMs).toBe(4);
+      filter.destroy();
     });
   });
 

@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link AutoWahEffect}. */
 export interface AutoWahEffectOptions {
@@ -84,10 +84,6 @@ export class AutoWahEffect extends AudioEffect {
   private _q: number;
   private _responseMs: number;
   private _wet: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: AutoWahEffectOptions = {}) {
     super();
@@ -96,11 +92,7 @@ export class AutoWahEffect extends AudioEffect {
     this._q = Math.max(0.1, Math.min(20, options.q ?? 4));
     this._responseMs = Math.max(1, Math.min(500, options.responseMs ?? 30));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 0.7));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -209,7 +201,7 @@ export class AutoWahEffect extends AudioEffect {
   // ---------------------------------------------------------------------------
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.dryGain.disconnect();

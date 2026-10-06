@@ -245,6 +245,10 @@ export const onAudioContextReady: Signal<[AudioContext]> = new AudioContextReady
  * exist. Also starts interaction-unlock monitoring so the context will resume
  * on the first user gesture. Throws {@link AudioUnsupportedError} when the
  * environment provides no `AudioContext`.
+ *
+ * Web Audio interop for custom effects and nodes; playback goes through
+ * {@link AudioSystem} and never needs the context directly.
+ * @advanced
  */
 export const getAudioContext = (): AudioContext => {
   const audioContext = getOrCreateAudioContext();
@@ -271,6 +275,7 @@ export const isAudioContextReady = (): boolean => {
  * otherwise a 44.1 kHz default is used. Never creates a live `AudioContext` -
  * decoding before the first user gesture must not spawn a suspended context
  * (AU2); buffers resample transparently on playback if the rates differ.
+ * @advanced
  */
 export const getOfflineAudioContext = (): OfflineAudioContext => getOrCreateOfflineAudioContext();
 

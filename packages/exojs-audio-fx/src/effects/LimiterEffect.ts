@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link LimiterEffect}. */
 export interface LimiterEffectOptions {
@@ -23,8 +23,9 @@ export interface LimiterEffectOptions {
    */
   wet?: number;
   /**
-   * Input-to-output dB ratio above the threshold. Range 1..20, default 20
-   * (brick-wall). Lower it for a softer, more compressor-like limiter.
+   * Input-to-output dB ratio above the threshold. Range 1..20, default 20, the
+   * steepest a `DynamicsCompressorNode` allows. Lower it for a softer, more
+   * compressor-like limiter.
    */
   ratio?: number;
   /**
@@ -44,12 +45,16 @@ interface LimiterEffectSetup {
 }
 
 /**
- * Brick-wall limiter backed by a Web Audio `DynamicsCompressorNode` configured
- * for hard limiting: a fixed high ratio (~20), zero knee (hard knee), and a
- * fast attack. Use it as a final-chain safety net to prevent clipping and
- * protect downstream output.
+ * Limiter-style compressor backed by a Web Audio `DynamicsCompressorNode` set
+ * for hard limiting: the highest ratio the node allows (20), zero knee (hard
+ * knee), and a fast attack. Use it at the end of a chain to tame peaks.
  *
- * The compressor `ratio` and `knee` default to brick-wall values (20 and 0
+ * It is not a brick-wall peak limiter: the node has no lookahead, so a
+ * transient faster than `attack` passes before gain reduction engages, and
+ * above the threshold the level still rises by 1 dB per 20 dB of input.
+ * Leave headroom below 0 dBFS rather than relying on it to stop every clip.
+ *
+ * The compressor `ratio` and `knee` default to the hardest values (20 and 0
  * respectively) but remain configurable, unlike a truly fixed limiter,
  * because callers occasionally want a softer, more compressor-like limiting
  * curve (lower ratio) or a gentler transition into limiting (larger knee)
@@ -79,10 +84,6 @@ export class LimiterEffect extends AudioEffect {
   private _wet: number;
   private _ratio: number;
   private _knee: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: LimiterEffectOptions = {}) {
     super();
@@ -92,11 +93,7 @@ export class LimiterEffect extends AudioEffect {
     this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
     this._ratio = Math.max(1, Math.min(20, options.ratio ?? 20));
     this._knee = Math.max(0, Math.min(40, options.knee ?? 0));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -212,7 +209,7 @@ export class LimiterEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.compressor.disconnect();

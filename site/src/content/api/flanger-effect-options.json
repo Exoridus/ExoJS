@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "LFO modulation depth in milliseconds - the peak deviation added to and subtracted from delayMs by the sine LFO. Range 0..10, default 2."
+          "description": "LFO modulation depth in milliseconds - the peak deviation added to and subtracted from delayMs by the sine LFO. Range 0..10 and never above delayMs, default 2."
         },
         {
           "name": "feedback",

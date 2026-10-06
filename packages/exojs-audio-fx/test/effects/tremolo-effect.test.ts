@@ -168,19 +168,20 @@ describe('TremoloEffect', () => {
   });
 
   describe('construction before the audio context is ready', () => {
-    it('registers a deferred onAudioContextReady setup and _onAudioContextReady wires the nodes', async () => {
+    it('defers setup to onAudioContextReady, which wires the nodes', async () => {
       // A fresh module registry via vi.resetModules() guarantees the internal
       // audio-context singleton starts in its virgin (not-ready) state, so
       // construction defers node setup instead of creating it synchronously.
       vi.resetModules();
       const { TremoloEffect: FreshTremoloEffect } = await import('../../src/effects/TremoloEffect');
+      const { onAudioContextReady: freshAudioContextReady } = await import('@codexo/exojs');
       const effect = new FreshTremoloEffect();
       expect(() => effect.inputNode).toThrow('TremoloEffect not yet initialized.');
 
-      // Simulate the AudioContext becoming ready by invoking the deferred
-      // hook directly with a fresh mock AudioContext.
+      // Simulate the AudioContext becoming ready by dispatching the fresh
+      // registry's signal with a fresh mock AudioContext.
       const ctx = new AudioContext();
-      (effect as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+      freshAudioContextReady.dispatch(ctx);
 
       expect(effect.inputNode).toBeDefined();
       expect(effect.outputNode).toBeDefined();
@@ -276,15 +277,24 @@ describe('TremoloEffect', () => {
       effect.destroy();
     });
 
-    it('sets tremoloGain base = 1 - depth on construction', () => {
+    it('sets tremoloGain base = 1 - depth / 2 on construction', () => {
       const effect = new TremoloEffect({ depth: 0.7 });
-      expect(tremoloGain.gain.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.3), expect.anything());
+      expect(tremoloGain.gain.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.65), expect.anything());
       effect.destroy();
     });
 
-    it('sets lfoGain amplitude = depth on construction', () => {
+    it('sets lfoGain amplitude = depth / 2 on construction', () => {
       const effect = new TremoloEffect({ depth: 0.7 });
-      expect(lfoGain.gain.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.7), expect.anything());
+      expect(lfoGain.gain.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.35), expect.anything());
+      effect.destroy();
+    });
+
+    it('swings the gain between 1 - depth and 1, so full depth reaches silence without inverting phase', () => {
+      const effect = new TremoloEffect({ depth: 1 });
+      const base = tremoloGain.gain.setValueAtTime.mock.calls.at(-1)![0] as number;
+      const amplitude = lfoGain.gain.setValueAtTime.mock.calls.at(-1)![0] as number;
+      expect(base + amplitude).toBeCloseTo(1);
+      expect(base - amplitude).toBeCloseTo(0);
       effect.destroy();
     });
   });
@@ -435,8 +445,8 @@ describe('TremoloEffect', () => {
 
       effect.depth = 0.3;
       expect(effect.depth).toBe(0.3);
-      expect(lfoGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.3), expect.anything(), expect.anything());
-      expect(tremoloGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.7), expect.anything(), expect.anything());
+      expect(lfoGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.15), expect.anything(), expect.anything());
+      expect(tremoloGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.85), expect.anything(), expect.anything());
       effect.destroy();
     });
 

@@ -245,6 +245,51 @@ describe('DistortionEffect', () => {
       biquadSpy.mockRestore();
     });
 
+    it('drive 0 loads an identity curve, so the wet path is transparent', () => {
+      const ctx = getAudioContext();
+      const { waveShaper, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
+      const effect = new DistortionEffect({ drive: 0 });
+      const curve = waveShaper.curve!;
+      for (let i = 0; i < curve.length; i++) {
+        expect(curve[i]).toBeCloseTo((i * 2) / (curve.length - 1) - 1, 6);
+      }
+      effect.destroy();
+      gainSpy.mockRestore();
+      waveShaperSpy.mockRestore();
+      biquadSpy.mockRestore();
+    });
+
+    it('a small drive stays close to the identity curve (no jump away from 0)', () => {
+      const ctx = getAudioContext();
+      const { waveShaper, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
+      const effect = new DistortionEffect({ drive: 0.01 });
+      const curve = waveShaper.curve!;
+      for (let i = 0; i < curve.length; i++) {
+        expect(Math.abs(curve[i]! - ((i * 2) / (curve.length - 1) - 1))).toBeLessThan(0.02);
+      }
+      effect.destroy();
+      gainSpy.mockRestore();
+      waveShaperSpy.mockRestore();
+      biquadSpy.mockRestore();
+    });
+
+    it('every drive keeps the curve monotonic and within [-1, 1]', () => {
+      const ctx = getAudioContext();
+      const { waveShaper, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
+      const effect = new DistortionEffect();
+      for (const drive of [0.25, 0.5, 1]) {
+        effect.drive = drive;
+        const curve = waveShaper.curve!;
+        expect(curve[0]).toBeCloseTo(-1, 6);
+        expect(curve[curve.length - 1]).toBeCloseTo(1, 6);
+        for (let i = 1; i < curve.length; i++) expect(curve[i]).toBeGreaterThanOrEqual(curve[i - 1]!);
+      }
+      effect.destroy();
+      gainSpy.mockRestore();
+      waveShaperSpy.mockRestore();
+      biquadSpy.mockRestore();
+    });
+
     it('sets toneFilter type to lowpass', () => {
       const ctx = getAudioContext();
       const { toneFilter, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);

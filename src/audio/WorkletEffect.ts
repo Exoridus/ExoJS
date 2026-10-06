@@ -1,4 +1,3 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audioContext';
 import { AudioEffect } from '#audio/AudioEffect';
 import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
 import { logger } from '#core/Logger';
@@ -23,12 +22,7 @@ export abstract class WorkletEffect extends AudioEffect {
   protected _wetGain: GainNode | null = null;
   protected _dryDelay: DelayNode | null = null;
   protected _workletNode: AudioWorkletNode | null = null;
-  protected _ready: Promise<void> | null = null;
   protected _wet = 1;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setup(ctx);
-  };
 
   /** The processor name registered via `registerProcessor()` in the worklet source. */
   protected abstract get _workletName(): string;
@@ -64,11 +58,10 @@ export abstract class WorkletEffect extends AudioEffect {
 
   public constructor() {
     super();
-    if (isAudioContextReady()) {
-      this._setup(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    // Deliberately from this base constructor: `_setup` only creates the gain
+    // staging here and reads subclass state after the worklet module loads,
+    // which always settles after the subclass constructor has finished.
+    this._deferSetup(context => this._setup(context));
   }
 
   public get inputNode(): AudioNode {
@@ -99,19 +92,9 @@ export abstract class WorkletEffect extends AudioEffect {
     }
   }
 
-  /**
-   * Resolves once the worklet is loaded and inserted into the wet path. Also
-   * resolves when the load fails - the effect then stays the clean passthrough
-   * it is until the worklet arrives, and the failure is reported through the
-   * engine log rather than by rejecting.
-   */
-  public override get ready(): Promise<void> {
-    return this._ready ?? Promise.resolve();
-  }
-
   /** Disconnects all nodes, cancels any pending worklet load, and releases resources. */
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     this._workletNode?.disconnect();
     this._inputGain?.disconnect();
     this._outputGain?.disconnect();
@@ -124,7 +107,6 @@ export abstract class WorkletEffect extends AudioEffect {
     this._dryGain = null;
     this._wetGain = null;
     this._dryDelay = null;
-    this._ready = null;
   }
 
   /**
@@ -147,7 +129,13 @@ export abstract class WorkletEffect extends AudioEffect {
     }
   }
 
-  private _setup(audioContext: AudioContext): void {
+  /**
+   * Resolves once the worklet is loaded and inserted into the wet path, and
+   * also when the load fails: the effect then stays a clean passthrough and the
+   * failure is reported through the engine log rather than by rejecting
+   * {@link AudioEffect.ready}.
+   */
+  private _setup(audioContext: AudioContext): Promise<void> {
     const inputGain = audioContext.createGain();
     const outputGain = audioContext.createGain();
     const dryGain = audioContext.createGain();
@@ -212,7 +200,7 @@ export abstract class WorkletEffect extends AudioEffect {
     // worker sources is the realistic case) must not surface as an unhandled
     // rejection: `ready` is a public promise most callers never await, and the
     // wet path is already silent, so the effect simply stays a passthrough.
-    this._ready = ready.catch((error: unknown) => {
+    return ready.catch((error: unknown) => {
       logger.warn(`${this.constructor.name}: the audio worklet "${this._workletName}" failed to load; the effect stays a passthrough.`, {
         source: 'WorkletEffect',
         once: `workleteffect-load-failed:${this._workletName}`,

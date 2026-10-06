@@ -27,13 +27,14 @@ describe('EqualizerEffect', () => {
       // construction defers node setup instead of creating it synchronously.
       vi.resetModules();
       const { EqualizerEffect: FreshEqualizerEffect } = await import('../../src/effects/EqualizerEffect');
+      const { onAudioContextReady: freshAudioContextReady } = await import('@codexo/exojs');
       const effect = new FreshEqualizerEffect();
       expect(() => effect.inputNode).toThrow('EqualizerEffect not yet initialized.');
 
-      // Simulate the AudioContext becoming ready by invoking the deferred
-      // hook directly with a fresh mock AudioContext.
+      // Simulate the AudioContext becoming ready by dispatching the fresh
+      // registry's signal with a fresh mock AudioContext.
       const ctx = new AudioContext();
-      (effect as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+      freshAudioContextReady.dispatch(ctx);
 
       expect(effect.inputNode).toBeDefined();
       expect(effect.outputNode).toBeDefined();

@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady, Sound } from '@codexo/exojs';
+import { AudioEffect, Sound } from '@codexo/exojs';
 
 /** Construction options for {@link ConvolutionEffect}. */
 export interface ConvolutionEffectOptions {
@@ -92,10 +92,6 @@ export class ConvolutionEffect extends AudioEffect {
 
   /** Bumped per impulse request so a slow resample cannot overwrite a newer IR. */
   private _impulseGeneration = 0;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: ConvolutionEffectOptions = {}) {
     super();
@@ -103,11 +99,7 @@ export class ConvolutionEffect extends AudioEffect {
     this._normalize = options.normalize ?? true;
     this._gain = Math.max(0, Math.min(4, options.gain ?? 1));
     this._pendingImpulse = options.impulse ?? null;
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -239,7 +231,7 @@ export class ConvolutionEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.convolver.disconnect();

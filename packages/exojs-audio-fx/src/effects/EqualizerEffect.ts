@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link EqualizerEffect}. */
 export interface EqualizerEffectOptions {
@@ -26,10 +26,6 @@ interface EqualizerEffectSetup {
 export class EqualizerEffect extends AudioEffect {
   private _setup: EqualizerEffectSetup | null = null;
   private _low: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
   private _mid: number;
   private _high: number;
   private _lowFrequency: number;
@@ -44,11 +40,7 @@ export class EqualizerEffect extends AudioEffect {
     this._lowFrequency = options.lowFrequency ?? 250;
     this._midFrequency = options.midFrequency ?? 1500;
     this._highFrequency = options.highFrequency ?? 6000;
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   public get inputNode(): AudioNode {
@@ -134,7 +126,7 @@ export class EqualizerEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.lowShelf.disconnect();
       this._setup.peaking.disconnect();

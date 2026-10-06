@@ -68,6 +68,91 @@ export const renderWorklet = async (opts: RenderOptions): Promise<Float32Array> 
   return rendered.getChannelData(0).slice();
 };
 
+interface ChannelRenderOptions {
+  /** Worklet source string (the `...WorkletSource` export). */
+  source: string;
+  /** Processor name registered via `registerProcessor()` in the source. */
+  processorName: string;
+  /** AudioWorkletNode processorOptions. */
+  processorOptions?: Record<string, unknown>;
+  /** k-rate AudioParam values to set. */
+  params?: Record<string, number>;
+  /** One oscillator frequency per input channel; also the channel count of the render. */
+  channelFreqs: number[];
+  /** Oscillator type for every channel. Default `'sine'`. */
+  inputType?: OscillatorType;
+  /** When set, a mono sine at this frequency feeds a second node input (the vocoder modulator). */
+  modulatorFreq?: number;
+  /** Render length in seconds. */
+  durationSeconds: number;
+}
+
+/**
+ * Render a worklet effect offline with one distinct oscillator per input
+ * channel and return every output channel. A processor that only touches
+ * channel 0 leaves the other channels silent here, and one that mixes channels
+ * leaks a tone into the wrong one.
+ */
+export const renderWorkletChannels = async (opts: ChannelRenderOptions): Promise<Float32Array[]> => {
+  const sr = SAMPLE_RATE;
+  const channels = opts.channelFreqs.length;
+  const ctx = new OfflineAudioContext(channels, Math.floor(opts.durationSeconds * sr), sr);
+
+  const url = URL.createObjectURL(new Blob([opts.source], { type: 'application/javascript' }));
+  await ctx.audioWorklet.addModule(url);
+  URL.revokeObjectURL(url);
+
+  // A two-input node no longer follows its input's channel count, so it gets
+  // the explicit output layout its effect class configures.
+  const node = new AudioWorkletNode(ctx, opts.processorName, {
+    numberOfInputs: opts.modulatorFreq === undefined ? 1 : 2,
+    numberOfOutputs: 1,
+    ...(opts.modulatorFreq === undefined ? {} : { outputChannelCount: [2] }),
+    processorOptions: opts.processorOptions ?? {},
+  });
+  if (opts.params) {
+    for (const [name, value] of Object.entries(opts.params)) {
+      const param = node.parameters.get(name);
+      if (param) param.value = value;
+    }
+  }
+
+  const merger = ctx.createChannelMerger(channels);
+  const sources: OscillatorNode[] = opts.channelFreqs.map((freq, channel) => {
+    const osc = ctx.createOscillator();
+    osc.type = opts.inputType ?? 'sine';
+    osc.frequency.value = freq;
+    osc.connect(merger, 0, channel);
+    return osc;
+  });
+  merger.connect(node, 0, 0);
+
+  if (opts.modulatorFreq !== undefined) {
+    const modulator = ctx.createOscillator();
+    modulator.frequency.value = opts.modulatorFreq;
+    modulator.connect(node, 0, 1);
+    sources.push(modulator);
+  }
+
+  node.connect(ctx.destination);
+  for (const source of sources) source.start();
+
+  const rendered = await ctx.startRendering();
+  return Array.from({ length: channels }, (_, channel) => rendered.getChannelData(channel).slice());
+};
+
+/** Normalized magnitude of a single frequency component (single-bin DFT). */
+export const magnitudeAt = (buf: Float32Array, freq: number, sampleRate = SAMPLE_RATE): number => {
+  let re = 0;
+  let im = 0;
+  const omega = (2 * Math.PI * freq) / sampleRate;
+  for (let i = 0; i < buf.length; i++) {
+    re += buf[i] * Math.cos(omega * i);
+    im -= buf[i] * Math.sin(omega * i);
+  }
+  return Math.sqrt(re * re + im * im) / buf.length;
+};
+
 /**
  * Hann-windowed power spectrum via an in-place radix-2 FFT over the largest
  * power-of-two prefix of `buf`. O(N log N) - far cheaper than a per-bin DFT

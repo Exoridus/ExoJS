@@ -22,14 +22,17 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
   private readonly _seek: number; // correlation search radius (±)
   private readonly _win: Float32Array;
 
-  // Input ring buffer: holds enough past input for the correlation search.
+  // Per-channel input rings: enough past input for the correlation search.
+  // Positions and grain alignment below are shared by all channels, so the
+  // channels are cut at the same points and never drift apart.
   private readonly _inLen: number;
-  private readonly _inBuf: Float32Array;
+  private readonly _inBufs: Float32Array[];
   private _inCount = 0; // total input samples written
 
-  // Stretched-stream overlap-add accumulator (also a ring).
+  // Per-channel stretched-stream overlap-add accumulators (also rings).
   private readonly _outLen: number;
-  private readonly _outBuf: Float32Array;
+  private readonly _outBufs: Float32Array[];
+  private _channels = 1;
   private _synthPos = 0; // total stretched samples synthesized
   private _readPos = 0; // fractional resample read position
   private _aPos = 0; // analysis position (absolute input coords)
@@ -51,10 +54,10 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
     this._win = this._buildHannWindow(grainSize);
 
     this._inLen = grainSize * 4 + 2 * this._seek;
-    this._inBuf = new Float32Array(this._inLen);
+    this._inBufs = [new Float32Array(this._inLen)];
 
     this._outLen = grainSize * 4;
-    this._outBuf = new Float32Array(this._outLen);
+    this._outBufs = [new Float32Array(this._outLen)];
   }
 
   private _buildHannWindow(n: number): Float32Array {
@@ -69,12 +72,11 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
 
   // Find the input offset (within ±seek of `nominal`) whose grain head best
   // matches the existing output overlap region - the waveform-similarity step
-  // that keeps successive grains in phase.
+  // that keeps successive grains in phase. The correlation is summed over all
+  // channels, so one offset serves every channel.
   private _correlate(nominal: number): number {
     const ov = this._overlap;
-    const ib = this._inBuf;
     const iL = this._inLen;
-    const ob = this._outBuf;
     const oL = this._outLen;
     const sp = this._synthPos;
     const seek = this._seek;
@@ -84,7 +86,11 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
       const base = nominal + d;
       if (base < 0 || base + ov > this._inCount) continue;
       let c = 0;
-      for (let k = 0; k < ov; k++) c += ob[(sp + k) % oL]! * ib[(base + k) % iL]!;
+      for (let ch = 0; ch < this._channels; ch++) {
+        const ib = this._inBufs[ch]!;
+        const ob = this._outBufs[ch]!;
+        for (let k = 0; k < ov; k++) c += ob[(sp + k) % oL]! * ib[(base + k) % iL]!;
+      }
       if (c > bestC) {
         bestC = c;
         bestD = d;
@@ -105,32 +111,44 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
     const F = this._frameLen;
     const H = this._hop;
     const win = this._win;
-    const ib = this._inBuf;
     const iL = this._inLen;
-    const ob = this._outBuf;
     const oL = this._outLen;
     const nominal = Math.round(this._aPos);
     const d = this._first ? 0 : this._correlate(nominal);
     this._first = false;
     const base = nominal + d;
-    // Zero the newly exposed tail, then overlap-add the windowed grain.
-    for (let j = H; j < F; j++) ob[(this._synthPos + j) % oL] = 0;
-    for (let j = 0; j < F; j++) ob[(this._synthPos + j) % oL]! += ib[(base + j) % iL]! * win[j]!;
+    for (let ch = 0; ch < this._channels; ch++) {
+      const ib = this._inBufs[ch]!;
+      const ob = this._outBufs[ch]!;
+      // Zero the newly exposed tail, then overlap-add the windowed grain.
+      for (let j = H; j < F; j++) ob[(this._synthPos + j) % oL] = 0;
+      for (let j = 0; j < F; j++) ob[(this._synthPos + j) % oL]! += ib[(base + j) % iL]! * win[j]!;
+    }
     this._synthPos += H;
     this._aPos += H / pitch; // analysis hop = synthesis hop / stretch
   }
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
-    const input = inputs[0]?.[0];
-    const output = outputs[0]?.[0];
+    const input = inputs[0];
+    const output = outputs[0];
     if (!input || !output) return true;
+    const channels = Math.min(input.length, output.length);
+    if (channels === 0) return true;
+    // Grown on a channel-count increase only, never per block; a late channel
+    // starts from silent history.
+    while (this._inBufs.length < channels) {
+      this._inBufs.push(new Float32Array(this._inLen));
+      this._outBufs.push(new Float32Array(this._outLen));
+    }
+    this._channels = channels;
 
     const pitch = parameters['pitch']![0]!;
-    const ob = this._outBuf;
     const oL = this._outLen;
+    const length = input[0]!.length;
 
-    for (let i = 0; i < input.length; i++) {
-      this._inBuf[this._inCount % this._inLen] = input[i]!;
+    for (let i = 0; i < length; i++) {
+      const slot = this._inCount % this._inLen;
+      for (let ch = 0; ch < channels; ch++) this._inBufs[ch]![slot] = input[ch]![i]!;
       this._inCount++;
 
       // Pull-generate stretched samples until the read pointer has a margin.
@@ -139,18 +157,21 @@ class PitchShiftProcessor extends AudioWorkletProcessor {
         this._generate(pitch);
       }
 
-      let shifted = 0;
       if (this._readPos + 1 < this._synthPos) {
         const p = this._readPos;
         const i0 = Math.floor(p);
         const frac = p - i0;
-        const a = ob[((i0 % oL) + oL) % oL]!;
-        const b = ob[(((i0 + 1) % oL) + oL) % oL]!;
-        shifted = a + (b - a) * frac;
+        const ia = ((i0 % oL) + oL) % oL;
+        const ib = (((i0 + 1) % oL) + oL) % oL;
+        for (let ch = 0; ch < channels; ch++) {
+          const ob = this._outBufs[ch]!;
+          const a = ob[ia]!;
+          output[ch]![i] = a + (ob[ib]! - a) * frac;
+        }
         this._readPos += pitch;
+      } else {
+        for (let ch = 0; ch < channels; ch++) output[ch]![i] = 0;
       }
-
-      output[i] = shifted;
     }
     return true;
   }

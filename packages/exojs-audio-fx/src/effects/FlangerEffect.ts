@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link FlangerEffect}. */
 export interface FlangerEffectOptions {
@@ -9,7 +9,8 @@ export interface FlangerEffectOptions {
   delayMs?: number;
   /**
    * LFO modulation depth in milliseconds - the peak deviation added to and
-   * subtracted from `delayMs` by the sine LFO. Range 0..10, default 2.
+   * subtracted from `delayMs` by the sine LFO. Range 0..10 and never above
+   * `delayMs`, default 2.
    */
   depthMs?: number;
   /**
@@ -76,23 +77,15 @@ export class FlangerEffect extends AudioEffect {
   private _rateHz: number;
   private _feedback: number;
   private _wet: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: FlangerEffectOptions = {}) {
     super();
     this._delayMs = Math.max(0.5, Math.min(20, options.delayMs ?? 3));
-    this._depthMs = Math.max(0, Math.min(10, options.depthMs ?? 2));
+    this._depthMs = Math.max(0, Math.min(10, this._delayMs, options.depthMs ?? 2));
     this._rateHz = Math.max(0, Math.min(10, options.rateHz ?? 0.25));
     this._feedback = Math.max(0, Math.min(0.95, options.feedback ?? 0.5));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 0.5));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -117,25 +110,33 @@ export class FlangerEffect extends AudioEffect {
   // Getters / setters
   // ---------------------------------------------------------------------------
 
-  /** Base delay time in milliseconds. Range 0.5..20, default 3. */
+  /**
+   * Base delay time in milliseconds. Range 0.5..20; lowering it below
+   * {@link FlangerEffect.depthMs} stops at `depthMs`. Default 3.
+   */
   public get delayMs(): number {
     return this._delayMs;
   }
 
   public set delayMs(value: number) {
-    this._delayMs = Math.max(0.5, Math.min(20, value));
+    this._delayMs = Math.max(0.5, this._depthMs, Math.min(20, value));
     if (this._nodes) {
       this._nodes.delayNode.delayTime.setTargetAtTime(this._delayMs / 1000, this._nodes.delayNode.context.currentTime, 0.01);
     }
   }
 
-  /** LFO modulation depth in milliseconds (peak deviation from base delay). Range 0..10, default 2. */
+  /**
+   * LFO modulation depth in milliseconds (peak deviation from base delay).
+   * Range 0..10 and never above {@link FlangerEffect.delayMs}, so the swept
+   * delay never reaches below zero, which would flatten one half of the sweep.
+   * Default 2.
+   */
   public get depthMs(): number {
     return this._depthMs;
   }
 
   public set depthMs(value: number) {
-    this._depthMs = Math.max(0, Math.min(10, value));
+    this._depthMs = Math.max(0, Math.min(10, this._delayMs, value));
     if (this._nodes) {
       this._nodes.lfoGain.gain.setTargetAtTime(this._depthMs / 1000, this._nodes.lfoGain.context.currentTime, 0.01);
     }
@@ -187,7 +188,7 @@ export class FlangerEffect extends AudioEffect {
   // ---------------------------------------------------------------------------
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._nodes) {
       this._nodes.lfoOscillator.stop();
       this._nodes.lfoOscillator.disconnect();
@@ -214,10 +215,10 @@ export class FlangerEffect extends AudioEffect {
     const feedbackGain = ctx.createGain();
     const lfoGain = ctx.createGain();
 
-    // maxDelayTime must accommodate base delay plus the full modulation depth,
-    // with a safety headroom of 50 ms so the DelayNode never clips.
-    const maxDelay = (this._delayMs + this._depthMs) / 1000 + 0.05;
-    const delayNode = ctx.createDelay(maxDelay);
+    // Sized for the largest reachable base delay plus depth (20 + 10 ms), not
+    // the construction-time values: a DelayNode silently clamps delayTime to
+    // the maxDelayTime it was created with.
+    const delayNode = ctx.createDelay(0.03 + 0.05);
 
     // Initial parameter values
     inputGain.gain.setValueAtTime(1, ctx.currentTime);

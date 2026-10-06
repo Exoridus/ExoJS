@@ -1,4 +1,3 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
 import { AudioEffect } from './AudioEffect';
 
 /** Construction options for {@link BiquadEffect}. */
@@ -31,10 +30,6 @@ export class BiquadEffect extends AudioEffect {
   private _resonance: number;
   private _gain: number;
   private _detune: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setup(ctx);
-  };
 
   public constructor(options: BiquadEffectOptions = {}) {
     super();
@@ -44,11 +39,7 @@ export class BiquadEffect extends AudioEffect {
     this._gain = options.gain ?? 0;
     this._detune = options.detune ?? 0;
 
-    if (isAudioContextReady()) {
-      this._setup(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setup(context));
   }
 
   public get inputNode(): AudioNode {
@@ -112,7 +103,7 @@ export class BiquadEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     this._node?.disconnect();
     this._node = null;
   }

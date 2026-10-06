@@ -1,11 +1,17 @@
 import { type AudioBus, getAudioContext, isAudioContextReady, onAudioContextReady, registerAudioWorkletProcessor, Signal, type Voice } from '@codexo/exojs';
 
+import { AudioTap } from './AudioTap';
 import beatDetectorWorkletSource from './worklets/beat-detector.worklet.ts?worklet';
 
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
+/**
+ * What to analyse: a bus or voice (the usual case), a `MediaStream` such as a
+ * microphone, or `null` for none yet. A raw `AudioNode` is Web Audio interop
+ * for graphs built outside the engine.
+ */
 export type BeatDetectorSource = AudioBus | Voice | MediaStream | AudioNode | null;
 
 export interface BeatDetectorOptions {
@@ -183,11 +189,8 @@ export class BeatDetector {
 
   // ---- Audio plumbing ----
   private _workletNode: AudioWorkletNode | null = null;
-  private _source: BeatDetectorSource = null;
-  private _tapSource: AudioNode | null = null;
-  private _streamSource: MediaStreamAudioSourceNode | null = null;
+  private readonly _tap = new AudioTap();
   private _ready: Promise<void> | null = null;
-  private _pendingSourceSetup: ((ctx: AudioContext) => void) | null = null;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._setup(ctx);
@@ -265,34 +268,11 @@ export class BeatDetector {
   // -----------------------------------------------------------------------
 
   public get source(): BeatDetectorSource {
-    return this._source;
+    return this._tap.source;
   }
 
   public set source(value: BeatDetectorSource) {
-    if (value === this._source) return;
-
-    this._disconnectTap();
-    this._source = value;
-
-    if (value === null) return;
-
-    if (isAudioContextReady()) {
-      this._pendingSourceSetup = null;
-      this._connectSource(value, getAudioContext());
-    } else {
-      if (this._pendingSourceSetup !== null) {
-        onAudioContextReady.remove(this._pendingSourceSetup);
-      }
-
-      const handler = (ctx: AudioContext): void => {
-        onAudioContextReady.remove(handler);
-        this._pendingSourceSetup = null;
-        this._connectSource(value, ctx);
-      };
-
-      this._pendingSourceSetup = handler;
-      onAudioContextReady.add(handler);
-    }
+    this._tap.source = value;
   }
 
   // -----------------------------------------------------------------------
@@ -465,11 +445,7 @@ export class BeatDetector {
   public destroy(): void {
     onAudioContextReady.remove(this._onAudioContextReady);
 
-    if (this._pendingSourceSetup !== null) {
-      onAudioContextReady.remove(this._pendingSourceSetup);
-      this._pendingSourceSetup = null;
-    }
-    this._disconnectTap();
+    this._tap.destroy();
     this._workletNode?.disconnect();
     this._workletNode = null;
     this._ready = null;
@@ -508,10 +484,7 @@ export class BeatDetector {
       this._workletNode = node;
       node.port.onmessage = this._onWorkletMessage.bind(this);
 
-      // If a source was set before worklet was ready, connect it now.
-      if (this._source !== null) {
-        this._connectSource(this._source, audioContext);
-      }
+      this._tap.attach(node, audioContext);
     });
   }
 
@@ -580,87 +553,4 @@ export class BeatDetector {
   // -----------------------------------------------------------------------
   // Private helpers - source tap
   // -----------------------------------------------------------------------
-
-  private _connectSource(source: BeatDetectorSource, audioContext: AudioContext): void {
-    if (!this._workletNode) return;
-
-    const tap = this._resolveToAudioNode(source, audioContext);
-    if (!tap) {
-      this._deferConnectionViaBus(source);
-      return;
-    }
-
-    this._tapSource = tap;
-    tap.connect(this._workletNode, 0, 0);
-  }
-
-  private _resolveToAudioNode(source: BeatDetectorSource, audioContext: AudioContext): AudioNode | null {
-    if (source === null) return null;
-
-    // MediaStream - duck-type via getTracks
-    const asStream = source as Partial<{ getTracks: unknown }>;
-    if (typeof asStream.getTracks === 'function') {
-      if (this._streamSource) {
-        this._streamSource.disconnect();
-        this._streamSource = null;
-      }
-      const msNode = audioContext.createMediaStreamSource(source as MediaStream);
-      this._streamSource = msNode;
-      return msNode;
-    }
-
-    // AudioBus - has getOutputNode (checked before raw AudioNode)
-    const asBus = source as Partial<{ getOutputNode: () => AudioNode | null }>;
-    if (typeof asBus.getOutputNode === 'function') {
-      return asBus.getOutputNode();
-    }
-
-    // Voice - tap its output node
-    const asVoice = source as Partial<{ output: AudioNode }>;
-    if ('output' in asVoice && asVoice.output) {
-      return asVoice.output;
-    }
-
-    // Raw AudioNode - duck-type: has connect & disconnect
-    const asNode = source as Partial<{ connect: unknown; disconnect: unknown }>;
-    if (typeof asNode.connect === 'function' && typeof asNode.disconnect === 'function') {
-      return source as unknown as AudioNode;
-    }
-
-    return null;
-  }
-
-  private _deferConnectionViaBus(source: BeatDetectorSource): void {
-    const asBus = source as Partial<{ onceSetup: (callback: () => void) => void }>;
-    if (typeof asBus.onceSetup === 'function') {
-      asBus.onceSetup(() => {
-        if (this._source === source && this._workletNode && isAudioContextReady()) {
-          this._connectSource(source, getAudioContext());
-        }
-      });
-      return;
-    }
-
-    onAudioContextReady.once(() => {
-      if (this._source === source && this._workletNode && isAudioContextReady()) {
-        this._connectSource(source, getAudioContext());
-      }
-    });
-  }
-
-  private _disconnectTap(): void {
-    if (this._tapSource && this._workletNode) {
-      try {
-        this._tapSource.disconnect(this._workletNode);
-      } catch {
-        // Ignore
-      }
-    }
-    this._tapSource = null;
-
-    if (this._streamSource) {
-      this._streamSource.disconnect();
-      this._streamSource = null;
-    }
-  }
 }

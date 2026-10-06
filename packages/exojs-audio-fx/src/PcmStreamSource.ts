@@ -51,7 +51,12 @@ export class PcmStreamSource {
   public readonly onEnd = new Signal();
   /** Reports module loading, processor or context closure failures. The source is terminal afterwards. */
   public readonly onError = new Signal<[Error]>();
-  /** Stable source tap. Bus routing changes preserve caller-created connections; terminal cleanup disconnects it. */
+  /**
+   * Stable source tap for Web Audio interop; routing through a bus needs no
+   * access to it. Bus routing changes preserve caller-created connections;
+   * terminal cleanup disconnects it.
+   * @advanced
+   */
   public readonly output: GainNode;
 
   private readonly _context: AudioContext;

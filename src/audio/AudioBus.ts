@@ -274,6 +274,7 @@ export class AudioBus {
    * it - the chain is rebuilt on context recovery.
    *
    * Part of the audio extension contract for custom effects and analysers.
+   * @advanced
    */
   public getInputNode(): GainNode | null {
     return this._setup?.inputNode ?? null;
@@ -286,6 +287,7 @@ export class AudioBus {
    * same no-caching rule.
    *
    * Part of the audio extension contract for custom effects and analysers.
+   * @advanced
    */
   public getOutputNode(): GainNode | null {
     return this._setup?.outputNode ?? null;
@@ -400,7 +402,7 @@ export class AudioBus {
 
       logger.warn(
         `AudioBus: effect ${effect.constructor.name} never finished its setup and is bypassed on bus "${this.name}". ` +
-          'Await its `ready` promise before attaching it, or check that a custom effect wires up its input and output nodes.',
+          'Await its `ready` promise before attaching it, or check that a custom effect builds its nodes through `_deferSetup()`.',
         { source: 'AudioBus', once: `audiobus-effect-unready:${effect.constructor.name}` },
       );
     }

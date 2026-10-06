@@ -167,7 +167,7 @@ Like `ChorusEffect`, the six filters below are built from native Web Audio nodes
 
 ### DistortionEffect
 
-Soft-clip saturation through a tanh-based `WaveShaperNode` curve, followed by a tone-control lowpass on the wet path. `drive` (0..1) controls clip intensity and `tone` (0..1) sweeps the wet-path cutoff logarithmically from 100 Hz to 20 kHz:
+Soft-clip saturation through a tanh-based `WaveShaperNode` curve, followed by a tone-control lowpass on the wet path. `drive` (0..1) controls clip intensity, from fully transparent at `0` to a near hard clip at `1`, and `tone` (0..1) sweeps the wet-path cutoff logarithmically from 100 Hz to 20 kHz:
 
 ```ts
 import type { Application } from '@codexo/exojs';
@@ -209,7 +209,7 @@ application.audio.sound.addEffect(flanger);
 
 ### TremoloEffect
 
-Amplitude-modulates the signal with a sine LFO for classic volume pulsing. Set `autoPan: true` to have the same LFO drive stereo panning in sync with the pulse:
+Amplitude-modulates the signal with a sine LFO for classic volume pulsing: the gain swings between `1 - depth` and `1`, so `depth: 1` dips all the way to silence. Set `autoPan: true` to have the same LFO drive stereo panning in sync with the pulse:
 
 ```ts
 import type { Application } from '@codexo/exojs';
@@ -267,7 +267,7 @@ application.audio.music.addEffect(pingPong);
 
 ### LimiterEffect
 
-A brick-wall limiter — a `DynamicsCompressorNode` fixed at a high ratio and hard knee — meant as a safety net at the end of a chain to catch peaks before they clip:
+A limiter-style compressor — a `DynamicsCompressorNode` at its highest ratio with a hard knee — meant for the end of a chain to tame peaks. It is not a brick-wall limiter: without lookahead, transients faster than `attack` slip through before gain reduction engages, so keep some headroom below 0 dBFS:
 
 ```ts
 import type { Application } from '@codexo/exojs';
@@ -305,7 +305,7 @@ Convolution cost scales with IR length. A two-second hall is already expensive o
 Four filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletEffect`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
 
 <Callout type="hint" title="Await ready before you depend on a worklet effect">
-A `WorkletEffect` loads its processor asynchronously — the bus rewires itself once it's ready, but until then the effect passes audio through untouched. `await effect.ready` before you rely on its output or read state from it.
+A `WorkletEffect` loads its processor asynchronously — the bus rewires itself once it's ready, but until then the effect passes audio through untouched. `await effect.ready` before you rely on its output or read state from it. Every effect's `ready` also waits for the audio context to unlock, so before the first user gesture it stays pending rather than resolving early.
 </Callout>
 
 ```ts no-check -- effect-constructor tour; modulatorBus is the caller's own bus

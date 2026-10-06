@@ -1,4 +1,4 @@
-import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady } from '@codexo/exojs';
+import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link PingPongDelayEffect}. */
 export interface PingPongDelayEffectOptions {
@@ -60,21 +60,13 @@ export class PingPongDelayEffect extends AudioEffect {
   private _delayTime: number;
   private _feedback: number;
   private _wet: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setupNodes(ctx);
-  };
 
   public constructor(options: PingPongDelayEffectOptions = {}) {
     super();
     this._delayTime = Math.max(0.01, Math.min(2, options.delayTime ?? 0.25));
     this._feedback = Math.max(0, Math.min(0.9, options.feedback ?? 0.4));
     this._wet = Math.max(0, Math.min(1, options.wet ?? 0.4));
-    if (isAudioContextReady()) {
-      this._setupNodes(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._deferSetup(context => this._setupNodes(context));
   }
 
   /**
@@ -150,7 +142,7 @@ export class PingPongDelayEffect extends AudioEffect {
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.outputGain.disconnect();
