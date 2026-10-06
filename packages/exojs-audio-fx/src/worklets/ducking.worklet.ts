@@ -11,7 +11,9 @@
 // Input 0 is the signal being ducked, input 1 the sidechain that drives the
 // gain reduction; `DuckingEffect` wires that second input and is the only
 // consumer.
-class DuckingProcessor extends AudioWorkletProcessor {
+import { DisposableProcessor } from './disposable-processor';
+
+class DuckingProcessor extends DisposableProcessor {
   public static get parameterDescriptors(): AudioParamDescriptor[] {
     return [
       { name: 'threshold', defaultValue: -20, minValue: -100, maxValue: 0, automationRate: 'k-rate' },
@@ -28,6 +30,7 @@ class DuckingProcessor extends AudioWorkletProcessor {
   private _envelope = 0;
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
+    if (this._destroyed) return false;
     const main = inputs[0];
     const sidechain = inputs[1];
     const output = outputs[0];

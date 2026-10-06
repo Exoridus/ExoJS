@@ -18,6 +18,10 @@ export class AudioTap {
   private _tapNode: AudioNode | null = null;
   private _streamSource: MediaStreamAudioSourceNode | null = null;
   private _pendingSourceSetup: ((context: AudioContext) => void) | null = null;
+  // A deferred retry for a source whose bus has not built its nodes yet. Kept
+  // so a source change or destroy can unregister it instead of leaving the old
+  // source referenced until that bus is set up or destroyed.
+  private _cancelDeferredRetry: (() => void) | null = null;
 
   public get source(): AudioTapSource {
     return this._source;
@@ -27,6 +31,7 @@ export class AudioTap {
     if (value === this._source) return;
 
     this._disconnect();
+    this._cancelDeferred();
     this._source = value;
 
     if (value === null) return;
@@ -60,6 +65,7 @@ export class AudioTap {
   /** Disconnects the tap, cancels pending setup and forgets source and target. */
   public destroy(): void {
     this._cancelPendingSetup();
+    this._cancelDeferred();
     this._disconnect();
     this._target = null;
     this._source = null;
@@ -115,20 +121,35 @@ export class AudioTap {
   }
 
   private _deferUntilBusSetup(source: AudioTapSource): void {
+    this._cancelDeferred();
+
     const retry = (): void => {
+      this._cancelDeferred();
       if (this._source === source && this._target && isAudioContextReady()) {
         this._connect(source, getAudioContext());
       }
     };
-    const asBus = source as Partial<{ onceSetup: (callback: () => void) => void }>;
+    const asBus = source as Partial<{ onceSetup: (callback: () => void) => () => void }>;
 
     if (typeof asBus.onceSetup === 'function') {
-      asBus.onceSetup(retry);
+      // Assigned before the call can run `retry`: a bus that is already set up
+      // invokes it synchronously, and its own cancel must find nothing to undo.
+      let dispose: (() => void) | null = null;
+      this._cancelDeferredRetry = () => dispose?.();
+      dispose = asBus.onceSetup(retry);
 
       return;
     }
 
-    onAudioContextReady.once(retry);
+    onAudioContextReady.add(retry);
+    this._cancelDeferredRetry = () => onAudioContextReady.remove(retry);
+  }
+
+  private _cancelDeferred(): void {
+    const cancel = this._cancelDeferredRetry;
+
+    this._cancelDeferredRetry = null;
+    cancel?.();
   }
 
   private _disconnect(): void {

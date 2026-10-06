@@ -305,7 +305,7 @@ Convolution cost scales with IR length. A two-second hall is already expensive o
 Four filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletEffect`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
 
 <Callout type="hint" title="Await ready before you depend on a worklet effect">
-A `WorkletEffect` loads its processor asynchronously — the bus rewires itself once it's ready, but until then the effect passes audio through untouched. `await effect.ready` before you rely on its output or read state from it. Every effect's `ready` also waits for the audio context to unlock, so before the first user gesture it stays pending rather than resolving early.
+A `WorkletEffect` loads its processor asynchronously — the bus rewires itself once it's ready, but until then the effect passes audio through untouched. `await effect.ready` before you rely on its output or read state from it. Every effect's `ready` also waits for the audio context to unlock, so before the first user gesture it stays pending rather than resolving early. It rejects if a worklet fails to load (the effect then keeps passing audio through dry) or if the effect is destroyed before it became ready.
 </Callout>
 
 ```ts no-check -- effect-constructor tour; modulatorBus is the caller's own bus

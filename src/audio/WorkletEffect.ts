@@ -95,6 +95,9 @@ export abstract class WorkletEffect extends AudioEffect {
   /** Disconnects all nodes, cancels any pending worklet load, and releases resources. */
   public override destroy(): void {
     this._teardown();
+    // Disconnecting alone leaves the processor rendering every quantum until
+    // the AudioContext closes; the message lets it return false and be released.
+    this._workletNode?.port.postMessage({ type: 'destroy' });
     this._workletNode?.disconnect();
     this._inputGain?.disconnect();
     this._outputGain?.disconnect();
@@ -130,10 +133,9 @@ export abstract class WorkletEffect extends AudioEffect {
   }
 
   /**
-   * Resolves once the worklet is loaded and inserted into the wet path, and
-   * also when the load fails: the effect then stays a clean passthrough and the
-   * failure is reported through the engine log rather than by rejecting
-   * {@link AudioEffect.ready}.
+   * Resolves once the worklet is loaded and inserted into the wet path. A failed
+   * load rejects, which rejects {@link AudioEffect.ready}; the effect then stays
+   * a clean passthrough.
    */
   private _setup(audioContext: AudioContext): Promise<void> {
     const inputGain = audioContext.createGain();
@@ -197,15 +199,17 @@ export abstract class WorkletEffect extends AudioEffect {
     });
 
     // A blocked `addModule` (a Content-Security-Policy that forbids `blob:`
-    // worker sources is the realistic case) must not surface as an unhandled
-    // rejection: `ready` is a public promise most callers never await, and the
-    // wet path is already silent, so the effect simply stays a passthrough.
+    // worker sources is the realistic case) is logged here as well: the wet path
+    // is already silent, so the effect stays a passthrough, and most callers
+    // never await `ready` to learn about it. The base class consumes the
+    // rejection, so it only surfaces through a `ready` someone asked for.
     return ready.catch((error: unknown) => {
       logger.warn(`${this.constructor.name}: the audio worklet "${this._workletName}" failed to load; the effect stays a passthrough.`, {
         source: 'WorkletEffect',
         once: `workleteffect-load-failed:${this._workletName}`,
         ...(error instanceof Error && { error }),
       });
+      throw error;
     });
   }
 }

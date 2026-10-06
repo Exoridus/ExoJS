@@ -191,6 +191,7 @@ export class BeatDetector {
   private _workletNode: AudioWorkletNode | null = null;
   private readonly _tap = new AudioTap();
   private _ready: Promise<void> | null = null;
+  private _destroyed = false;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._setup(ctx);
@@ -445,7 +446,11 @@ export class BeatDetector {
   public destroy(): void {
     onAudioContextReady.remove(this._onAudioContextReady);
 
+    this._destroyed = true;
     this._tap.destroy();
+    // Disconnecting alone leaves the processor rendering every quantum until
+    // the AudioContext closes; the message lets it return false and be released.
+    this._workletNode?.port.postMessage({ type: 'destroy' });
     this._workletNode?.disconnect();
     this._workletNode = null;
     this._ready = null;
@@ -463,6 +468,9 @@ export class BeatDetector {
   private _setup(audioContext: AudioContext): void {
     const opts = this._options;
     this._ready = registerAudioWorkletProcessor(audioContext, workletName, beatDetectorWorkletSource).then(() => {
+      // Destroyed while the module loaded: a node created now would never be released.
+      if (this._destroyed) return;
+
       const node = new AudioWorkletNode(audioContext, workletName, {
         numberOfInputs: 1,
         numberOfOutputs: 0,

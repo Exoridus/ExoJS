@@ -169,7 +169,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Run setup with the shared AudioContext: immediately when it is ready, otherwise once it unlocks. setup must create the nodes behind inputNode and outputNode; the effect counts as wired as soon as it returns. Returning a promise defers ready until it settles. Call it at the end of the subclass constructor, after the fields setup reads are initialized - from a base constructor it could run before them. A subclass's destroy() calls AudioEffect._teardown."
+          "description": "Run setup with the shared AudioContext: immediately when it is ready, otherwise once it unlocks. setup must create the nodes behind inputNode and outputNode; the effect counts as wired as soon as it returns. Returning a promise defers ready until it settles, and a rejection or a synchronous throw makes ready reject with that error. Call it at the end of the subclass constructor, after the fields setup reads are initialized - from a base constructor it could run before them. A subclass's destroy() calls AudioEffect._teardown."
         },
         {
           "name": "_teardown",
@@ -198,7 +198,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Marks the effect unwired and drops a setup still waiting for the AudioContext, so a destroyed effect is never wired again and never builds its nodes late."
+          "description": "Marks the effect unwired and drops a setup still waiting for the AudioContext, so a destroyed effect is never wired again and never builds its nodes late. An effect not yet ready rejects ready with an AbortError; a setup still in flight can no longer resolve it."
         },
         {
           "name": "destroy",
@@ -437,7 +437,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolves once the effect is fully initialized: its nodes exist and, for an effect with asynchronous setup such as a worklet effect, that setup has settled. Stays pending while the shared AudioContext is locked, and for an effect destroyed before its setup ran."
+          "description": "Resolves once the effect is fully initialized: its nodes exist and, for an effect with asynchronous setup such as a worklet effect, that setup has completed. Stays pending while the shared AudioContext is locked. Rejects with the setup's error when the setup fails (a worklet effect whose module cannot load keeps passing audio through dry, but is not ready), and with an AbortError when the effect is destroyed before it became ready."
         }
       ],
       "paragraphs": [],

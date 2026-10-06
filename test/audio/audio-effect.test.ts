@@ -134,6 +134,95 @@ describe('AudioEffect', () => {
     expect(isEffectReady(effect)).toBe(false);
   });
 
+  test('ready rejects with the error of a failed asynchronous setup', async () => {
+    const failure = new Error('setup failed');
+    const MinimalEffect = defineMinimalEffect(AudioEffect);
+    const effect = new MinimalEffect(Promise.reject(failure));
+
+    await expect(effect.ready).rejects.toBe(failure);
+    effect.destroy();
+  });
+
+  test('ready requested only after a setup failed still rejects with that error', async () => {
+    const failure = new Error('setup failed');
+    const MinimalEffect = defineMinimalEffect(AudioEffect);
+    const effect = new MinimalEffect(Promise.reject(failure));
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    await expect(effect.ready).rejects.toBe(failure);
+    effect.destroy();
+  });
+
+  test('a setup that throws rethrows from construction', () => {
+    const failure = new Error('sync failure');
+
+    class ThrowingEffect extends AudioEffect {
+      public constructor() {
+        super();
+        this._deferSetup(() => {
+          throw failure;
+        });
+      }
+
+      public get inputNode(): AudioNode {
+        throw new Error('never built');
+      }
+
+      public get outputNode(): AudioNode {
+        throw new Error('never built');
+      }
+
+      public override destroy(): void {
+        this._teardown();
+      }
+    }
+
+    let effect: ThrowingEffect | null = null;
+
+    expect(() => {
+      effect = new ThrowingEffect();
+    }).toThrow(failure);
+    expect(effect).toBeNull();
+  });
+
+  test('ready rejects with an AbortError when the effect is destroyed while the context is locked', async () => {
+    const { MinimalEffect } = await freshLockedModules();
+    const effect = new MinimalEffect();
+    const ready = effect.ready;
+
+    effect.destroy();
+
+    await expect(ready).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(effect.ready).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  test('a setup settling after destroy cannot resolve ready', async () => {
+    let finish!: () => void;
+    const MinimalEffect = defineMinimalEffect(AudioEffect);
+    const effect = new MinimalEffect(
+      new Promise<void>(resolve => {
+        finish = resolve;
+      }),
+    );
+    const ready = effect.ready;
+
+    effect.destroy();
+    finish();
+
+    await expect(ready).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  test('destroying an effect that is already ready keeps ready resolved', async () => {
+    const MinimalEffect = defineMinimalEffect(AudioEffect);
+    const effect = new MinimalEffect();
+
+    await effect.ready;
+    effect.destroy();
+
+    await expect(effect.ready).resolves.toBeUndefined();
+  });
+
   test('a destroyed effect is no longer wired', () => {
     const MinimalEffect = defineMinimalEffect(AudioEffect);
     const effect = new MinimalEffect();

@@ -134,6 +134,32 @@ describe('BeatDetector', () => {
       d.destroy();
     });
 
+    it('destroy tells the processor to stop before disconnecting it', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const node = getMockWorkletNode(d)!;
+
+      d.destroy();
+
+      expect(node.port.postMessage).toHaveBeenCalledWith({ type: 'destroy' });
+      expect(node.port.postMessage.mock.invocationCallOrder.at(-1)!).toBeLessThan(node.disconnect.mock.invocationCallOrder.at(-1)!);
+    });
+
+    it('a detector destroyed while its worklet loads never creates the node', async () => {
+      const OrigAWN = globalThis.AudioWorkletNode;
+      const created = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
+        return new OrigAWN(c, name, opts);
+      });
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = created;
+
+      const d = new BeatDetector();
+      d.destroy();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(created).not.toHaveBeenCalled();
+      globalThis.AudioWorkletNode = OrigAWN;
+    });
+
     it('worklet node has numberOfInputs:1 numberOfOutputs:0', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;

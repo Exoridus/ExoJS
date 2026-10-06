@@ -126,6 +126,34 @@ describe('WorkletEffect', () => {
     expect(() => filter.outputNode).toThrow('output node accessed before audio context is ready');
   });
 
+  it('destroy tells the processor to stop before disconnecting it', async () => {
+    const filter = new TestWorkletEffect();
+    await filter.ready;
+    const node = filter['_workletNode'] as unknown as { port: { postMessage: MockInstance }; disconnect: MockInstance };
+
+    filter.destroy();
+
+    expect(node.port.postMessage).toHaveBeenCalledWith({ type: 'destroy' });
+    expect(node.port.postMessage.mock.invocationCallOrder[0]!).toBeLessThan(node.disconnect.mock.invocationCallOrder[0]!);
+  });
+
+  it('a worklet that fails to load rejects ready and leaves a passthrough', async () => {
+    const failure = new Error('blocked by CSP');
+    class FailingWorkletEffect extends TestWorkletEffect {
+      protected override get _workletName(): string {
+        return 'test-worklet-load-failure';
+      }
+    }
+    addModuleMock.mockRejectedValue(failure);
+
+    const filter = new FailingWorkletEffect();
+
+    await expect(filter.ready).rejects.toBe(failure);
+    expect(filter['_workletNode']).toBeNull();
+    expect(() => filter.inputNode).not.toThrow();
+    filter.destroy();
+  });
+
   it('destroying during async load does not throw when worklet finishes loading', async () => {
     let resolveModule!: () => void;
     addModuleMock.mockReturnValue(
@@ -154,10 +182,10 @@ describe('WorkletEffect', () => {
     filter.destroy();
   });
 
-  it('ready is still a promise after destroy', () => {
+  it('ready rejects with an AbortError when destroyed before the worklet loaded', async () => {
     const filter = new TestWorkletEffect();
     filter.destroy();
-    expect(filter.ready).toBeInstanceOf(Promise);
+    await expect(filter.ready).rejects.toMatchObject({ name: 'AbortError' });
   });
 
   it('registration is cached: addModule not called again for same context+name after first load', async () => {
