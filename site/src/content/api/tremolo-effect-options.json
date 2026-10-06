@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true the same LFO also drives a StereoPannerNode.pan (amplitude = depth), sweeping the signal left and right in synchrony with the tremolo pulsing. This option is read-only after construction. Default false."
+          "description": "When true the same LFO also drives a StereoPannerNode.pan (swinging between -depth and depth), sweeping the signal left and right in synchrony with the tremolo pulsing. This option is read-only after construction. Default false."
         },
         {
           "name": "depth",
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Modulation depth, 0..1. Determines the amplitude of the LFO that modulates tremoloGain.gain. The base gain is 1 - depth; adding the LFO (peak = depth) makes the gain oscillate between 1 - 2 * depth and 1. At depth=0 the effect is transparent; at depth=0.5 the gain briefly reaches zero at the trough; at depth>0.5 the gain goes negative (phase inversion at the trough). Default 0.7."
+          "description": "Modulation depth, 0..1: the gain swings between 1 - depth and 1. At depth=0 the effect is transparent; at depth=1 the trough reaches silence. Default 0.7."
         },
         {
           "name": "rateHz",

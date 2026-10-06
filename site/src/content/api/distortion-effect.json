@@ -259,7 +259,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Drive amount controlling the soft-clip intensity. Range 0..1, default 0.4. Changing this rebuilds the wave-shaper curve immediately (sample-accurate on the next render quantum)."
+          "description": "Drive amount, 0..1: 0 is transparent, 1 a near hard clip. Default 0.4. Changing this rebuilds the wave-shaper curve immediately (sample-accurate on the next render quantum)."
         },
         {
           "name": "inputNode",

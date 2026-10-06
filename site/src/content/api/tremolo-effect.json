@@ -1,6 +1,6 @@
 {
   "title": "TremoloEffect",
-  "description": "Tremolo effect that amplitude-modulates the signal with a sine LFO using native WebAudio nodes. A sine-wave LFO drives a `GainNode`'s gain to produce the characteristic volume pulsing of tremolo. The base gain is `1 - depth` and the LFO peak deviation is `depth`, so the gain oscillates between `1 - 2 * depth` and `1`. Optionally the same LFO can drive a `StereoPannerNode.pan` for a synchronized auto-pan effect. Node graph (`autoPan = false`): ``` inputGain ┬── dryGain ──────────────────────────┐ │ ├── outputGain └── tremoloGain ── wetGain ─────────────┘ lfoOscillator ── lfoGain (depth) ── tremoloGain.gain ``` Node graph (`autoPan = true`): ``` inputGain ┬── dryGain ──────────────────────────────────┐ │ ├── outputGain └── tremoloGain ── panner ── wetGain ──────────┘ lfoOscillator ── lfoGain (depth) ── tremoloGain.gain lfoOscillator ── panGain (depth) ── panner.pan ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth`.",
+  "description": "Tremolo effect that amplitude-modulates the signal with a sine LFO using native WebAudio nodes. A sine-wave LFO drives a `GainNode`'s gain to produce the characteristic volume pulsing of tremolo. The base gain is `1 - depth / 2` and the LFO peak deviation is `depth / 2`, so the gain oscillates between `1 - depth` and `1`. Optionally the same LFO can drive a `StereoPannerNode.pan` for a synchronized auto-pan effect. Node graph (`autoPan = false`): ``` inputGain ┬── dryGain ──────────────────────────┐ │ ├── outputGain └── tremoloGain ── wetGain ─────────────┘ lfoOscillator ── lfoGain (depth / 2) ── tremoloGain.gain ``` Node graph (`autoPan = true`): ``` inputGain ┬── dryGain ──────────────────────────────────┐ │ ├── outputGain └── tremoloGain ── panner ── wetGain ──────────┘ lfoOscillator ── lfoGain (depth / 2) ── tremoloGain.gain lfoOscillator ── panGain (depth) ── panner.pan ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth / 2`.",
   "symbol": "TremoloEffect",
   "kind": "class",
   "subsystem": "audio",
@@ -20,12 +20,12 @@
       "members": [],
       "paragraphs": [
         "Tremolo effect that amplitude-modulates the signal with a sine LFO using native WebAudio nodes.",
-        "A sine-wave LFO drives a `GainNode`'s gain to produce the characteristic volume pulsing of tremolo. The base gain is `1 - depth` and the LFO peak deviation is `depth`, so the gain oscillates between `1 - 2 * depth` and `1`. Optionally the same LFO can drive a `StereoPannerNode.pan` for a synchronized auto-pan effect.",
+        "A sine-wave LFO drives a `GainNode`'s gain to produce the characteristic volume pulsing of tremolo. The base gain is `1 - depth / 2` and the LFO peak deviation is `depth / 2`, so the gain oscillates between `1 - depth` and `1`. Optionally the same LFO can drive a `StereoPannerNode.pan` for a synchronized auto-pan effect.",
         "Node graph (`autoPan = false`): ``` inputGain ┬── dryGain ──────────────────────────┐ │ ├── outputGain └── tremoloGain ── wetGain ─────────────┘",
-        "lfoOscillator ── lfoGain (depth) ── tremoloGain.gain ```",
+        "lfoOscillator ── lfoGain (depth / 2) ── tremoloGain.gain ```",
         "Node graph (`autoPan = true`): ``` inputGain ┬── dryGain ──────────────────────────────────┐ │ ├── outputGain └── tremoloGain ── panner ── wetGain ──────────┘",
-        "lfoOscillator ── lfoGain (depth) ── tremoloGain.gain lfoOscillator ── panGain (depth) ── panner.pan ```",
-        "Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth`."
+        "lfoOscillator ── lfoGain (depth / 2) ── tremoloGain.gain lfoOscillator ── panGain (depth) ── panner.pan ```",
+        "Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth / 2`."
       ],
       "importLine": "import { TremoloEffect } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
@@ -284,7 +284,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Modulation depth, 0..1. At 0 the effect is transparent; at 0.5 the gain briefly reaches zero at the trough; at depth>0.5 the gain goes negative (phase inversion). Default 0.7. Ramped via setTargetAtTime."
+          "description": "Modulation depth, 0..1: the gain swings between 1 - depth and 1, so 0 is transparent and 1 reaches silence at the trough. Default 0.7. Ramped via setTargetAtTime."
         },
         {
           "name": "inputNode",

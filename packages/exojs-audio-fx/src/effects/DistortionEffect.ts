@@ -3,11 +3,8 @@ import { AudioEffect } from '@codexo/exojs';
 /** Construction options for {@link DistortionEffect}. */
 export interface DistortionEffectOptions {
   /**
-   * Drive amount: controls the intensity of the tanh soft-clip curve.
-   * Range 0..1, default 0.4. Higher values produce heavier, more saturated
-   * distortion; lower values produce a milder soft-clip. Note that even at
-   * drive=0 the curve is not perfectly linear - the formula
-   * `tanh(x) / tanh(1)` has a gain of `1/tanh(1) ≈ 1.31` at the origin.
+   * Drive amount, 0..1, default 0.4. At 0 the wet path is transparent; higher
+   * values blend in a steeper tanh soft-clip, up to a near hard clip at 1.
    */
   drive?: number;
   /**
@@ -101,7 +98,7 @@ export class DistortionEffect extends AudioEffect {
   }
 
   /**
-   * Drive amount controlling the soft-clip intensity. Range 0..1, default 0.4.
+   * Drive amount, 0..1: 0 is transparent, 1 a near hard clip. Default 0.4.
    * Changing this rebuilds the wave-shaper curve immediately (sample-accurate
    * on the next render quantum).
    */
@@ -179,23 +176,22 @@ export class DistortionEffect extends AudioEffect {
   }
 
   /**
-   * Build a 256-point tanh-based soft-clip curve for the given drive (0..1).
+   * Build a 256-point curve for the given drive (0..1): the identity blended
+   * with a soft clip `tanh(x * a) / tanh(a)`, `a = drive * 400 + 1`, by `drive`.
    *
-   * Maps drive to a distortion amount `a = drive * 400 + 1`, then fills the
-   * curve with `tanh(x * a) / tanh(a)` so that the output is always bounded
-   * to [-1, 1]. At drive=0, `a = 1` and the curve is `tanh(x) / tanh(1)`,
-   * which has a small-signal gain of `1/tanh(1) ≈ 1.31` - not perfectly
-   * linear. At drive=1, `a = 401` and the curve approximates a hard-clipper.
+   * The blend is what makes drive=0 exactly transparent. A bare soft clip is
+   * never linear (at a = 1 its small-signal gain is 1/tanh(1) ≈ 1.31), and
+   * special-casing 0 would make the sound jump at the first step above it.
+   * Both curves run from -1 to 1 and rise monotonically, so the blend does too.
    */
   private static _buildCurve(drive: number): Float32Array<ArrayBuffer> {
     const n = 256;
     const curve: Float32Array<ArrayBuffer> = new Float32Array(n);
-    // drive=0 → amount=1 (mild curve: gain ≈ 1/tanh(1) ≈ 1.31 at origin); drive=1 → amount=401 (near hard-clip)
     const amount = drive * 400 + 1;
     const norm = Math.tanh(amount);
     for (let i = 0; i < n; i++) {
       const x = (i * 2) / (n - 1) - 1;
-      curve[i] = Math.tanh(x * amount) / norm;
+      curve[i] = x * (1 - drive) + (Math.tanh(x * amount) / norm) * drive;
     }
     return curve;
   }

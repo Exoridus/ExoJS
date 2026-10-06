@@ -8,15 +8,13 @@ export interface TremoloEffectOptions {
    */
   rateHz?: number;
   /**
-   * Modulation depth, 0..1. Determines the amplitude of the LFO that modulates
-   * `tremoloGain.gain`. The base gain is `1 - depth`; adding the LFO (peak = `depth`)
-   * makes the gain oscillate between `1 - 2 * depth` and `1`. At depth=0 the effect
-   * is transparent; at depth=0.5 the gain briefly reaches zero at the trough; at
-   * depth>0.5 the gain goes negative (phase inversion at the trough). Default 0.7.
+   * Modulation depth, 0..1: the gain swings between `1 - depth` and `1`. At
+   * depth=0 the effect is transparent; at depth=1 the trough reaches silence.
+   * Default 0.7.
    */
   depth?: number;
   /**
-   * When `true` the same LFO also drives a `StereoPannerNode.pan` (amplitude = `depth`),
+   * When `true` the same LFO also drives a `StereoPannerNode.pan` (swinging between `-depth` and `depth`),
    * sweeping the signal left and right in synchrony with the tremolo pulsing. This option
    * is read-only after construction. Default `false`.
    */
@@ -43,8 +41,8 @@ interface TremoloEffectSetup {
  * Tremolo effect that amplitude-modulates the signal with a sine LFO using native WebAudio nodes.
  *
  * A sine-wave LFO drives a `GainNode`'s gain to produce the characteristic volume pulsing of
- * tremolo. The base gain is `1 - depth` and the LFO peak deviation is `depth`, so the gain
- * oscillates between `1 - 2 * depth` and `1`. Optionally the same LFO can drive a
+ * tremolo. The base gain is `1 - depth / 2` and the LFO peak deviation is `depth / 2`, so the
+ * gain oscillates between `1 - depth` and `1`. Optionally the same LFO can drive a
  * `StereoPannerNode.pan` for a synchronized auto-pan effect.
  *
  * Node graph (`autoPan = false`):
@@ -53,7 +51,7 @@ interface TremoloEffectSetup {
  *           │                                       ├── outputGain
  *           └── tremoloGain ── wetGain ─────────────┘
  *
- * lfoOscillator ── lfoGain (depth) ── tremoloGain.gain
+ * lfoOscillator ── lfoGain (depth / 2) ── tremoloGain.gain
  * ```
  *
  * Node graph (`autoPan = true`):
@@ -62,11 +60,11 @@ interface TremoloEffectSetup {
  *           │                                               ├── outputGain
  *           └── tremoloGain ── panner ── wetGain ──────────┘
  *
- * lfoOscillator ── lfoGain (depth) ── tremoloGain.gain
+ * lfoOscillator ── lfoGain (depth / 2) ── tremoloGain.gain
  * lfoOscillator ── panGain (depth) ── panner.pan
  * ```
  *
- * Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth`.
+ * Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth / 2`.
  *
  * @example
  * ```ts
@@ -127,9 +125,9 @@ export class TremoloEffect extends AudioEffect {
   }
 
   /**
-   * Modulation depth, 0..1. At 0 the effect is transparent; at 0.5 the gain briefly
-   * reaches zero at the trough; at depth>0.5 the gain goes negative (phase inversion).
-   * Default 0.7. Ramped via `setTargetAtTime`.
+   * Modulation depth, 0..1: the gain swings between `1 - depth` and `1`, so 0 is
+   * transparent and 1 reaches silence at the trough. Default 0.7. Ramped via
+   * `setTargetAtTime`.
    */
   public get depth(): number {
     return this._depth;
@@ -139,8 +137,8 @@ export class TremoloEffect extends AudioEffect {
     this._depth = Math.max(0, Math.min(1, value));
     if (this._setup) {
       const t = this._setup.inputGain.context.currentTime;
-      this._setup.lfoGain.gain.setTargetAtTime(this._depth, t, 0.01);
-      this._setup.tremoloGain.gain.setTargetAtTime(1 - this._depth, t, 0.01);
+      this._setup.lfoGain.gain.setTargetAtTime(this._depth / 2, t, 0.01);
+      this._setup.tremoloGain.gain.setTargetAtTime(1 - this._depth / 2, t, 0.01);
       if (this._setup.panGain) {
         this._setup.panGain.gain.setTargetAtTime(this._depth, t, 0.01);
       }
@@ -201,10 +199,11 @@ export class TremoloEffect extends AudioEffect {
     outputGain.gain.setValueAtTime(1, ctx.currentTime);
     dryGain.gain.setValueAtTime(1 - this._wet, ctx.currentTime);
     wetGain.gain.setValueAtTime(this._wet, ctx.currentTime);
-    // Base gain = 1 - depth; the LFO (amplitude = depth) is added on top via AudioParam
-    // modulation, making the effective gain oscillate in [1 - 2*depth, 1].
-    tremoloGain.gain.setValueAtTime(1 - this._depth, ctx.currentTime);
-    lfoGain.gain.setValueAtTime(this._depth, ctx.currentTime);
+    // The LFO is added on top of the base gain via AudioParam modulation. Centring
+    // the swing at 1 - depth / 2 keeps the gain in [1 - depth, 1]: never above
+    // unity and never negative, which would invert the phase at the trough.
+    tremoloGain.gain.setValueAtTime(1 - this._depth / 2, ctx.currentTime);
+    lfoGain.gain.setValueAtTime(this._depth / 2, ctx.currentTime);
 
     const lfoOscillator = ctx.createOscillator();
     lfoOscillator.type = 'sine';

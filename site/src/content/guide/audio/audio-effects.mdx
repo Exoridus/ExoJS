@@ -167,7 +167,7 @@ Like `ChorusEffect`, the six filters below are built from native Web Audio nodes
 
 ### DistortionEffect
 
-Soft-clip saturation through a tanh-based `WaveShaperNode` curve, followed by a tone-control lowpass on the wet path. `drive` (0..1) controls clip intensity and `tone` (0..1) sweeps the wet-path cutoff logarithmically from 100 Hz to 20 kHz:
+Soft-clip saturation through a tanh-based `WaveShaperNode` curve, followed by a tone-control lowpass on the wet path. `drive` (0..1) controls clip intensity, from fully transparent at `0` to a near hard clip at `1`, and `tone` (0..1) sweeps the wet-path cutoff logarithmically from 100 Hz to 20 kHz:
 
 ```ts
 import type { Application } from '@codexo/exojs';
@@ -209,7 +209,7 @@ application.audio.sound.addEffect(flanger);
 
 ### TremoloEffect
 
-Amplitude-modulates the signal with a sine LFO for classic volume pulsing. Set `autoPan: true` to have the same LFO drive stereo panning in sync with the pulse:
+Amplitude-modulates the signal with a sine LFO for classic volume pulsing: the gain swings between `1 - depth` and `1`, so `depth: 1` dips all the way to silence. Set `autoPan: true` to have the same LFO drive stereo panning in sync with the pulse:
 
 ```ts
 import type { Application } from '@codexo/exojs';
