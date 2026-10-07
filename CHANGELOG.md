@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-10-07
+
 ### Changed
 
 - **BREAKING: Keep stereo through worklet effects and make effect readiness and parameter ranges truthful.** ([#813](https://github.com/Exoridus/ExoJS/pull/813))

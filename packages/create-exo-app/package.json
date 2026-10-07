@@ -1,6 +1,6 @@
 {
   "name": "create-exo-app",
-  "version": "0.19.0",
+  "version": "0.19.1",
   "description": "Official starter for ExoJS — scaffold a new app with npm create exo-app",
   "type": "module",
   "license": "MIT",
