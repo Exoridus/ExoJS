@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Keep stereo through worklet effects and make effect readiness and parameter ranges truthful.** ([#813](https://github.com/Exoridus/ExoJS/pull/813))
+
+### Fixed
+
+- **Settle BeatDetector.ready, own worklet aux inputs and isolate effect setup failures at unlock.** ([#815](https://github.com/Exoridus/ExoJS/pull/815))
+- **Release destroyed worklet processors and settle AudioEffect.ready on failure and destroy.** ([#814](https://github.com/Exoridus/ExoJS/pull/814))
+- **Map the world plane onto the panner's horizontal plane.** ([#811](https://github.com/Exoridus/ExoJS/pull/811))
+
 ## [0.19.0] - 2026-10-05
 
 ### Changed
