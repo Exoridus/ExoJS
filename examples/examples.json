@@ -1102,6 +1102,17 @@
       "level": "intro"
     },
     {
+      "slug": "character-movement",
+      "path": "physics/character-movement.js",
+      "language": "typescript",
+      "title": "Character Movement",
+      "description": "Run, jump and double-jump a capsule character over a slope, steps, a one-way platform and moving platforms, with live ground and velocity readouts.",
+      "backend": "core",
+      "tags": ["physics", "movement", "platformer", "keyboard"],
+      "capabilities": ["keyboard"],
+      "level": "intermediate"
+    },
+    {
       "slug": "tiled-map-physics-actor",
       "path": "physics/tiled-map-physics-actor.js",
       "language": "typescript",
