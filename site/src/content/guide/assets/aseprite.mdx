@@ -162,6 +162,9 @@ sheet.slices.get('hitbox').keys;   // AsepriteSliceKey[] — bounds per frame
 A slice's bounds can change per frame — each `AsepriteSlice` carries one `AsepriteSliceKey` per frame at which its shape changes, not one key per rendered frame. `sheet.getSlice(name, frameIndex)` resolves the key in effect on a sheet frame, joined with the slice's editor colour and user data, and returns `null` before the slice's first key. `clipFrameIndices` maps the frame a playing `AnimatedSprite` shows back to its sheet frame:
 
 ```ts
+const sprite = sheet.createAnimatedSprite();
+sprite.play('attack');
+
 const frame = sheet.clipFrameIndices.get(sprite.currentClip!)![sprite.currentFrame]!;
 const hitbox = sheet.getSlice('hitbox', frame);
 
