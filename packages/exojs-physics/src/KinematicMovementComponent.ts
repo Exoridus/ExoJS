@@ -3,7 +3,6 @@ import { Component, type PointLike, Vector } from '@codexo/exojs';
 import type { Collider } from './Collider';
 import type { PhysicsBody } from './PhysicsBody';
 import type { PhysicsBodyComponent } from './PhysicsBodyComponent';
-import type { StepController } from './PhysicsWorld';
 import { type CastState, createCastState } from './query/QueryEngine';
 
 /** Construction options for {@link KinematicMovementComponent}. */
@@ -76,7 +75,7 @@ const minApproach = 0.1;
  * }
  * ```
  */
-export class KinematicMovementComponent extends Component implements StepController {
+export class KinematicMovementComponent extends Component {
   /** The physics component whose body this component moves. */
   public readonly physics: PhysicsBodyComponent;
 
