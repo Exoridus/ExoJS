@@ -101,8 +101,16 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
     return this._geometryEquals(other);
   }
 
-  public toTexture(width: number, height: number, options?: GradientToTextureOptions & { format?: TextureFormat.Rgba8 }): DataTexture<TextureFormat.Rgba8>;
-  public toTexture(width: number, height: number, options: GradientToTextureOptions & { format: TextureFormat.Rgba32F }): DataTexture<TextureFormat.Rgba32F>;
+  public toTexture(
+    width: number,
+    height: number,
+    options?: GradientToTextureOptions & { format?: TextureFormat.Rgba8 },
+  ): DataTexture<TextureFormat.Rgba8>;
+  public toTexture(
+    width: number,
+    height: number,
+    options: GradientToTextureOptions & { format: TextureFormat.Rgba32F },
+  ): DataTexture<TextureFormat.Rgba32F>;
   public toTexture(
     width: number,
     height: number,

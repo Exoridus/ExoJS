@@ -14,6 +14,7 @@ vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
   const { MockApplication: MockApp, configureApplicationState } = await import('./support/mock-application');
   configureApplicationState(actual.ApplicationState);
+
   return { ...actual, Application: MockApp };
 });
 
@@ -22,12 +23,18 @@ vi.mock('@codexo/exojs', async importActual => {
  * an element - exercises the mount effect's early-return guard (`canvasRef.current`
  * stays null, so no Application is constructed).
  */
-function NoCanvasHarness({ options, expose }: { options?: ExoApplicationOptions; expose: (result: UseExoApplicationResult) => void }): ReactElement {
+const NoCanvasHarness = ({
+  options,
+  expose,
+}: {
+  options?: ExoApplicationOptions;
+  expose: (result: UseExoApplicationResult) => void;
+}): ReactElement => {
   const result = useExoApplication(options);
   expose(result);
 
   return <div data-testid="no-canvas" />;
-}
+};
 
 interface HarnessProps {
   options?: ExoApplicationOptions;
@@ -42,20 +49,23 @@ interface HarnessProps {
  * Application (it bails out when `canvasRef.current` is null). `expose` hands the
  * latest hook result back to the test on every render.
  */
-function Harness({ options, onReady, onError, expose }: HarnessProps): ReactElement {
+const Harness = ({ options, onReady, onError, expose }: HarnessProps): ReactElement => {
   const result = useExoApplication(options, onReady, onError);
   expose(result);
 
   return <canvas ref={result.canvasRef} data-testid="exo-canvas" />;
-}
+};
 
-function mount(initial: Omit<HarnessProps, 'expose'>): {
+const mount = (
+  initial: Omit<HarnessProps, 'expose'>,
+): {
   result: () => UseExoApplicationResult;
   rerender: (next: Omit<HarnessProps, 'expose'>) => void;
   unmount: () => void;
   getCanvas: () => HTMLElement;
-} {
+} => {
   let latest: UseExoApplicationResult | undefined;
+
   const expose = (r: UseExoApplicationResult): void => {
     latest = r;
   };
@@ -68,10 +78,11 @@ function mount(initial: Omit<HarnessProps, 'expose'>): {
     unmount: () => utils.unmount(),
     getCanvas: () => utils.getByTestId('exo-canvas'),
   };
-}
+};
 
 const onlyInstance = (): MockApplication => {
   expect(MockApplication.instances).toHaveLength(1);
+
   return MockApplication.instances[0]!;
 };
 
@@ -99,7 +110,11 @@ describe('useExoApplication — construction & wiring', () => {
     const app = onlyInstance();
 
     expect(app.options.clearColor).toBe(clearColor);
-    expect((app.options['rendering'] as { color?: unknown } | undefined)?.color).toEqual({ workingFormat: 'hdr', toneMapping: 'reinhard', exposure: 1 });
+    expect((app.options['rendering'] as { color?: unknown } | undefined)?.color).toEqual({
+      workingFormat: 'hdr',
+      toneMapping: 'reinhard',
+      exposure: 1,
+    });
   });
 
   it('returns a canvasRef whose identity is stable across re-renders', () => {

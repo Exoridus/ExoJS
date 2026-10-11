@@ -27,11 +27,20 @@ interface PackageOutcome {
 }
 
 const PACKAGE_OUTCOMES: Readonly<Record<string, PackageOutcome>> = {
-  'create-exo-app': { outcome: 'TEST', evidence: [{ file: 'test/rendering/package-color-contract.test.ts', includes: 'templates author colours' }] },
+  'create-exo-app': {
+    outcome: 'TEST',
+    evidence: [{ file: 'test/rendering/package-color-contract.test.ts', includes: 'templates author colours' }],
+  },
   'eslint-plugin-exojs': { outcome: 'NONE', evidence: [] },
-  'exojs-aseprite': { outcome: 'TEST', evidence: [{ file: 'packages/exojs-aseprite/src/asepriteType.ts', includes: "Asset.type('texture'" }] },
+  'exojs-aseprite': {
+    outcome: 'TEST',
+    evidence: [{ file: 'packages/exojs-aseprite/src/asepriteType.ts', includes: "Asset.type('texture'" }],
+  },
   'exojs-audio-fx': { outcome: 'NONE', evidence: [] },
-  'exojs-bench': { outcome: 'DOC', evidence: [{ file: 'packages/exojs-bench/docs/harness.md', includes: 'Measuring colour-pipeline cost' }] },
+  'exojs-bench': {
+    outcome: 'DOC',
+    evidence: [{ file: 'packages/exojs-bench/docs/harness.md', includes: 'Measuring colour-pipeline cost' }],
+  },
   'exojs-build': {
     outcome: 'TEST',
     evidence: [{ file: 'packages/exojs-cli/test/assets-pack.test.ts', includes: 'keeps its bytes and its DFD transfer and alpha meaning' }],
@@ -42,11 +51,23 @@ const PACKAGE_OUTCOMES: Readonly<Record<string, PackageOutcome>> = {
   },
   'exojs-config': { outcome: 'NONE', evidence: [] },
   'exojs-ldtk': { outcome: 'TEST', evidence: [{ file: 'packages/exojs-ldtk/src/loadLdtkMap.ts', includes: "Asset.type('texture'" }] },
-  'exojs-lighting': { outcome: 'CHANGE', evidence: [{ file: 'packages/exojs-lighting/test/color-contract.test.ts', includes: 'lighting colour contract' }] },
-  'exojs-particles': { outcome: 'CHANGE', evidence: [{ file: 'packages/exojs-particles/test/particle-color-rendering.test.ts', includes: 'describe(' }] },
+  'exojs-lighting': {
+    outcome: 'CHANGE',
+    evidence: [{ file: 'packages/exojs-lighting/test/color-contract.test.ts', includes: 'lighting colour contract' }],
+  },
+  'exojs-particles': {
+    outcome: 'CHANGE',
+    evidence: [{ file: 'packages/exojs-particles/test/particle-color-rendering.test.ts', includes: 'describe(' }],
+  },
   'exojs-pathfinding': { outcome: 'NONE', evidence: [] },
-  'exojs-physics': { outcome: 'TEST', evidence: [{ file: 'packages/exojs-physics/test/debug.test.ts', includes: 'PhysicsDebugDraw colours' }] },
-  'exojs-react': { outcome: 'TEST', evidence: [{ file: 'packages/exojs-react/test/useExoApplication.test.tsx', includes: 'colour pipeline options through' }] },
+  'exojs-physics': {
+    outcome: 'TEST',
+    evidence: [{ file: 'packages/exojs-physics/test/debug.test.ts', includes: 'PhysicsDebugDraw colours' }],
+  },
+  'exojs-react': {
+    outcome: 'TEST',
+    evidence: [{ file: 'packages/exojs-react/test/useExoApplication.test.tsx', includes: 'colour pipeline options through' }],
+  },
   'exojs-tiled': { outcome: 'CHANGE', evidence: [{ file: 'packages/exojs-tiled/test/TiledMap.test.ts', includes: 'parseTiledColor' }] },
   'exojs-tilemap': { outcome: 'CHANGE', evidence: [{ file: 'packages/exojs-tilemap/test/color-contract.test.ts', includes: 'describe(' }] },
   'exojs-tilemap-physics': { outcome: 'NONE', evidence: [] },

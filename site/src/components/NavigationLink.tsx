@@ -30,9 +30,18 @@ export const NavigationLink = ({
   const tooltip = unavailable ? `${title}\n${unavailableReason || 'Unavailable in this browser.'}` : description || title;
 
   const onClick = (event: MouseEvent<HTMLAnchorElement>): void => {
-    if (!path) return;
-    if (event.button !== 0) return;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!path) {
+      return;
+    }
+
+    if (event.button !== 0) {
+      return;
+    }
+
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+
     event.preventDefault();
     onSelectExample(path);
   };

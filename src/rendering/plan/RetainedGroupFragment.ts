@@ -275,7 +275,12 @@ export class RetainedGroupFragment {
   }
 
   /** Fold every draw record (nested groups included) into `map`; returns the running minimum. */
-  private _collectRowsInto(map: Map<Drawable, RetainedFragmentDraw>, entries: readonly RetainedFragmentEntry[], entryCount: number, min: number): number {
+  private _collectRowsInto(
+    map: Map<Drawable, RetainedFragmentDraw>,
+    entries: readonly RetainedFragmentEntry[],
+    entryCount: number,
+    min: number,
+  ): number {
     let currentMin = min;
 
     for (let index = 0; index < entryCount; index++) {
@@ -382,7 +387,10 @@ export class RetainedGroupFragment {
    * `true` to skip the capture.
    */
   public shouldSuppressCapture(contentRevision: number, structureRevision: number): boolean {
-    const verdict = this._thrash.evaluate(this._hasCapture, this._observedContent === contentRevision && this._observedStructure === structureRevision);
+    const verdict = this._thrash.evaluate(
+      this._hasCapture,
+      this._observedContent === contentRevision && this._observedStructure === structureRevision,
+    );
 
     if (verdict === CaptureVerdict.Capture) {
       return false;
@@ -413,7 +421,12 @@ export class RetainedGroupFragment {
   }
 
   public isClean(contentRevision: number, structureRevision: number, backend: RenderBackend): boolean {
-    return this._hasCapture && this._contentRevision === contentRevision && this._structureRevision === structureRevision && this._backend === backend;
+    return (
+      this._hasCapture &&
+      this._contentRevision === contentRevision &&
+      this._structureRevision === structureRevision &&
+      this._backend === backend
+    );
   }
 
   /**
@@ -440,15 +453,19 @@ export class RetainedGroupFragment {
       return true;
     }
 
-    const tolerable = this.dirtyIndex.readSince(this._contentCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
-      const changed = node as unknown as RenderNode;
+    const tolerable = this.dirtyIndex.readSince(
+      this._contentCursor,
+      DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect,
+      (node, marked) => {
+        const changed = node as unknown as RenderNode;
 
-      if (changed !== root && !isUnder(changed, root)) {
-        return true;
-      }
+        if (changed !== root && !isUnder(changed, root)) {
+          return true;
+        }
 
-      return changeBelongsToLiveEntry(changed, root, marked, candidate => this.hasLiveRecordFor(candidate), destinationOpaque);
-    });
+        return changeBelongsToLiveEntry(changed, root, marked, candidate => this.hasLiveRecordFor(candidate), destinationOpaque);
+      },
+    );
 
     if (!tolerable) {
       return false;

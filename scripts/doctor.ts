@@ -75,7 +75,11 @@ const checks: Check[] = [
       const actual = command('pnpm', ['--version']);
 
       if (actual === null) {
-        return { ok: false, detail: 'not found on PATH', fix: 'corepack enable, or install pnpm - it switches itself to the pinned version' };
+        return {
+          ok: false,
+          detail: 'not found on PATH',
+          fix: 'corepack enable, or install pnpm - it switches itself to the pinned version',
+        };
       }
 
       return { ok: actual === pinned, detail: `${actual} (pinned: ${pinned})`, fix: actual === pinned ? undefined : 'corepack enable' };
@@ -120,7 +124,9 @@ const checks: Check[] = [
       const report = checkFreshness();
       const problems = [...report.unbuilt.map(unit => `${unit.name} not built`), ...report.stale];
 
-      if (problems.length === 0) return { ok: true, detail: `${report.units.length} build unit(s) current` };
+      if (problems.length === 0) {
+        return { ok: true, detail: `${report.units.length} build unit(s) current` };
+      }
 
       return { ok: false, detail: problems.join('; '), fix: REBUILD_COMMAND };
     },
@@ -176,23 +182,32 @@ for (const check of checks) {
 
   console.log(`  ${mark}  ${check.name.padEnd(20)} ${outcome.detail}`);
 
-  if (!outcome.ok && outcome.fix !== undefined) console.log(`        fix: ${outcome.fix}`);
-  if (!outcome.ok && check.required) failed = true;
+  if (!outcome.ok && outcome.fix !== undefined) {
+    console.log(`        fix: ${outcome.fix}`);
+  }
+
+  if (!outcome.ok && check.required) {
+    failed = true;
+  }
 }
 
 const artifacts = presentArtifacts(repoRoot, RUN_ARTIFACTS);
 const caches = presentArtifacts(repoRoot, BUILD_CACHES);
-const sum = (items: readonly { bytes: number }[]): number => items.reduce((total, item) => total + item.bytes, 0);
+const sum = (items: ReadonlyArray<{ bytes: number }>): number => items.reduce((total, item) => total + item.bytes, 0);
 
 if (artifacts.length > 0 || caches.length > 0) {
   console.log('');
 
   if (artifacts.length > 0) {
-    console.log(`  info  run artifacts        ${formatBytes(sum(artifacts))} in ${artifacts.map(a => a.path).join(', ')} - pnpm clean:artifacts removes them`);
+    console.log(
+      `  info  run artifacts        ${formatBytes(sum(artifacts))} in ${artifacts.map(a => a.path).join(', ')} - pnpm clean:artifacts removes them`,
+    );
   }
 
   if (caches.length > 0) {
-    console.log(`  info  build caches         ${formatBytes(sum(caches))} in ${caches.map(c => c.path).join(', ')} - pnpm clean:all removes these too`);
+    console.log(
+      `  info  build caches         ${formatBytes(sum(caches))} in ${caches.map(c => c.path).join(', ')} - pnpm clean:all removes these too`,
+    );
   }
 }
 

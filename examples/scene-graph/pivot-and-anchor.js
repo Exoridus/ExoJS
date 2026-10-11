@@ -29,7 +29,9 @@ class PivotAndAnchorScene extends Scene {
     this.sprite.setAnchor(mode.anchor[0], mode.anchor[1]);
     const bounds = this.sprite.getLocalBounds();
     this.sprite.setOrigin(mode.origin?.[0] ?? bounds.width * mode.anchor[0], mode.origin?.[1] ?? bounds.height * mode.anchor[1]);
-    this.hud.setStatus(`${mode.name}: anchor (${mode.anchor.join(', ')}), origin (${this.sprite.origin.x.toFixed(0)}, ${this.sprite.origin.y.toFixed(0)})`);
+    this.hud.setStatus(
+      `${mode.name}: anchor (${mode.anchor.join(', ')}), origin (${this.sprite.origin.x.toFixed(0)}, ${this.sprite.origin.y.toFixed(0)})`,
+    );
   }
   update(delta) {
     this.sprite.rotate(delta * 45);

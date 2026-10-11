@@ -56,7 +56,8 @@ export const typescriptCompilerPath = () => {
   const major = Number.parseInt(version, 10);
   if (major !== REQUIRED_MAJOR) {
     throw new Error(
-      `${NATIVE_PACKAGE} must be TypeScript ${REQUIRED_MAJOR}.x, found ${version}. ` + 'Run `pnpm install` and check the alias in the root package.json.',
+      `${NATIVE_PACKAGE} must be TypeScript ${REQUIRED_MAJOR}.x, found ${version}. ` +
+        'Run `pnpm install` and check the alias in the root package.json.',
     );
   }
   // `bin/tsc` is not listed in the package `exports` map, so it cannot be

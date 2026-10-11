@@ -52,7 +52,13 @@ const createMockBackend = () => {
   });
 
   const instancedDraws: Array<{ mesh: Mesh; transforms: readonly Matrix[]; tints: readonly Color[]; count: number }> = [];
-  const drawInstanced = vi.fn(function (this: RenderBackend, mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number) {
+  const drawInstanced = vi.fn(function (
+    this: RenderBackend,
+    mesh: Mesh,
+    transforms: readonly Matrix[],
+    tints: readonly Color[],
+    count: number,
+  ) {
     instancedDraws.push({ mesh, transforms, tints, count });
 
     return this;

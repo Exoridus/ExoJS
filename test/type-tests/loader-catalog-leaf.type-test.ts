@@ -141,21 +141,15 @@ export const leafLoads = async (): Promise<void> => {
   expectType<Equal<typeof roundTripMetrics, LoadingQueue<AtlasMetrics>>>();
 };
 
-const getTexture = () => {
-  return loader.get(bag.player);
-};
-const getSound = () => {
-  return loader.get(bag.jump);
-};
-const getAtlas = () => {
-  return loader.get(bag.atlas);
-};
-const getConfig = () => {
-  return loader.get(bag.config);
-};
-const getMetrics = () => {
-  return loader.get(bag.metrics);
-};
+const getTexture = () => loader.get(bag.player);
+
+const getSound = () => loader.get(bag.jump);
+
+const getAtlas = () => loader.get(bag.atlas);
+
+const getConfig = () => loader.get(bag.config);
+
+const getMetrics = () => loader.get(bag.metrics);
 
 // --- composed / extended catalogs hand out the same branded leaves ----------
 
@@ -203,12 +197,9 @@ export const sceneLeaves = async (): Promise<void> => {
   expectType<Equal<typeof sceneValueRoundTrip, LoadingQueue<AtlasMetrics>>>();
 };
 
-const sceneGetTexture = () => {
-  return scene.loader.get(bag.player);
-};
-const sceneGetMetrics = () => {
-  return scene.loader.get(bag.metrics);
-};
+const sceneGetTexture = () => scene.loader.get(bag.player);
+
+const sceneGetMetrics = () => scene.loader.get(bag.metrics);
 
 // --- get(descriptor) is branded too, and round-trips ------------------------
 //
@@ -244,12 +235,9 @@ export const descriptorLeaves = (): void => {
   expectType<Equal<ReturnType<typeof sceneLoadDescriptorMetrics>, LoadingQueue<AtlasMetrics>>>();
 };
 
-const sceneLoadDescriptorTexture = () => {
-  return scene.loader.load(scene.loader.get(Asset.type('texture', 'player.png')));
-};
-const sceneLoadDescriptorMetrics = () => {
-  return scene.loader.load(scene.loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta')));
-};
+const sceneLoadDescriptorTexture = () => scene.loader.load(scene.loader.get(Asset.type('texture', 'player.png')));
+
+const sceneLoadDescriptorMetrics = () => scene.loader.load(scene.loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta')));
 
 // --- negative: only a MATERIALIZED leaf is a leaf ---------------------------
 

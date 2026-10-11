@@ -99,7 +99,13 @@ export class MapLevelRuntime<Result extends Destroyable = Destroyable> implement
   private _destroyed = false;
 
   /** Level runtimes are produced by {@link MapWorldRuntime.loadLevel}. @internal */
-  public constructor(level: MapLevel, scope: LoaderScope, map: TileMap, spawns: MapSpawnSession<Result> | null, onDestroy: (runtime: MapLevelRuntime) => void) {
+  public constructor(
+    level: MapLevel,
+    scope: LoaderScope,
+    map: TileMap,
+    spawns: MapSpawnSession<Result> | null,
+    onDestroy: (runtime: MapLevelRuntime) => void,
+  ) {
     this.id = level.id;
     this.level = level;
     this.scope = scope;
@@ -121,14 +127,19 @@ export class MapLevelRuntime<Result extends Destroyable = Destroyable> implement
    * texture the scope keeps resident.
    */
   public destroy(): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
 
     this._destroyed = true;
     this._onDestroy(this);
 
     // A failure in one step must not strand the next: the scope is what holds
     // the level's asset claims, and skipping it leaks them for good.
-    if (this.spawns !== null) guardedDestroy(this.spawns, `spawn session of level "${this.id}"`);
+    if (this.spawns !== null) {
+      guardedDestroy(this.spawns, `spawn session of level "${this.id}"`);
+    }
+
     guardedDestroy(this.map, `map of level "${this.id}"`);
     this.scope.destroy();
   }
@@ -219,7 +230,10 @@ export class MapWorldRuntime implements Destroyable {
   }
 
   public loadLevel(id: string, options?: MapLevelCancelOptions): Promise<MapLevelRuntime>;
-  public loadLevel<Context, Result extends Destroyable>(id: string, options: MapLevelLoadOptions<Context, Result>): Promise<MapLevelRuntime<Result>>;
+  public loadLevel<Context, Result extends Destroyable>(
+    id: string,
+    options: MapLevelLoadOptions<Context, Result>,
+  ): Promise<MapLevelRuntime<Result>>;
   /**
    * Load a level, or return the one already loaded.
    *
@@ -254,12 +268,19 @@ export class MapWorldRuntime implements Destroyable {
     }
 
     const live = this._live.get(id);
-    if (live !== undefined) return typed(Promise.resolve(live));
+
+    if (live !== undefined) {
+      return typed(Promise.resolve(live));
+    }
 
     const pending = this._inFlight.get(id);
-    if (pending !== undefined) return typed(pending.promise);
+
+    if (pending !== undefined) {
+      return typed(pending.promise);
+    }
 
     const level = this.world.getLevel(id);
+
     if (level === undefined) {
       return Promise.reject(new Error(`MapWorldRuntime: world "${this.world.name}" has no level with id "${id}".`));
     }
@@ -283,7 +304,9 @@ export class MapWorldRuntime implements Destroyable {
 
       // Only clear the entry this call installed: an unload during the load
       // may already have started a fresh one under the same id.
-      if (this._inFlight.get(id)?.controller === controller) this._inFlight.delete(id);
+      if (this._inFlight.get(id)?.controller === controller) {
+        this._inFlight.delete(id);
+      }
     });
 
     this._inFlight.set(id, { promise, controller });
@@ -308,6 +331,7 @@ export class MapWorldRuntime implements Destroyable {
       // that is on its way out and reject with it.
       this._inFlight.delete(id);
       pending.controller.abort();
+
       return true;
     }
 
@@ -315,6 +339,7 @@ export class MapWorldRuntime implements Destroyable {
 
     if (live !== undefined) {
       live.destroy();
+
       return true;
     }
 
@@ -329,7 +354,9 @@ export class MapWorldRuntime implements Destroyable {
    * whoever passed it in.
    */
   public destroy(): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
 
     this._destroyed = true;
 
@@ -373,14 +400,23 @@ export class MapWorldRuntime implements Destroyable {
     } catch (error) {
       // The scope must be released even when tearing down what came before it
       // fails, or the level's asset claims outlive the failed load forever.
-      if (spawns !== null) guardedDestroy(spawns, `spawn session of level "${level.id}"`);
-      if (map !== undefined) guardedDestroy(map, `map of level "${level.id}"`);
+      if (spawns !== null) {
+        guardedDestroy(spawns, `spawn session of level "${level.id}"`);
+      }
+
+      if (map !== undefined) {
+        guardedDestroy(map, `map of level "${level.id}"`);
+      }
+
       scope.destroy();
+
       throw error;
     }
 
     const runtime = new MapLevelRuntime<Result>(level, scope, map, spawns, destroyed => {
-      if (this._live.get(destroyed.id) === destroyed) this._live.delete(destroyed.id);
+      if (this._live.get(destroyed.id) === destroyed) {
+        this._live.delete(destroyed.id);
+      }
     });
 
     this._live.set(level.id, runtime);

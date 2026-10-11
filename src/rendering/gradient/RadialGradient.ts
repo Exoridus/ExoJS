@@ -47,6 +47,11 @@ export class RadialGradient extends Gradient {
   }
 
   protected override _geometryEquals(other: Gradient): boolean {
-    return other instanceof RadialGradient && this._center[0] === other._center[0] && this._center[1] === other._center[1] && this._radius === other._radius;
+    return (
+      other instanceof RadialGradient &&
+      this._center[0] === other._center[0] &&
+      this._center[1] === other._center[1] &&
+      this._radius === other._radius
+    );
   }
 }

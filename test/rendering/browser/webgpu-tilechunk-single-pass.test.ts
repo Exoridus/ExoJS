@@ -69,7 +69,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /** Render `body` inside a validation error scope; returns false on a device-loss skip. */
 const renderGuarded = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, body: () => void): Promise<boolean> => {
@@ -118,7 +119,12 @@ const countSubmits = (backend: WebGpuBackend, body: () => void): number => {
   return count;
 };
 
-const hexToRgba = (hex: string): RgbaTuple => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255];
+const hexToRgba = (hex: string): RgbaTuple => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16),
+  255,
+];
 
 // One 16x16 tile per node, each on its OWN tileset texture: a texture change is
 // what breaks the tile-chunk batch, so rendering these back to back produces one

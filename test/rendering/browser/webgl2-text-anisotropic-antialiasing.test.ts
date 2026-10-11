@@ -32,7 +32,9 @@ const rampOnRow = (frame: Uint8Array, row: number): number => {
   for (let x = 0; x < size; x++) {
     const value = frame[(row * size + x) * 4]!;
 
-    if (value > 12 && value < 243) count++;
+    if (value > 12 && value < 243) {
+      count++;
+    }
   }
 
   return count;
@@ -44,7 +46,9 @@ const rampOnColumn = (frame: Uint8Array, column: number): number => {
   for (let y = 0; y < size; y++) {
     const value = frame[(y * size + column) * 4]!;
 
-    if (value > 12 && value < 243) count++;
+    if (value > 12 && value < 243) {
+      count++;
+    }
   }
 
   return count;
@@ -53,7 +57,11 @@ const rampOnColumn = (frame: Uint8Array, column: number): number => {
 const litOnRow = (frame: Uint8Array, row: number): number => {
   let count = 0;
 
-  for (let x = 0; x < size; x++) if (frame[(row * size + x) * 4]! > 12) count++;
+  for (let x = 0; x < size; x++) {
+    if (frame[(row * size + x) * 4]! > 12) {
+      count++;
+    }
+  }
 
   return count;
 };
@@ -61,7 +69,11 @@ const litOnRow = (frame: Uint8Array, row: number): number => {
 const litOnColumn = (frame: Uint8Array, column: number): number => {
   let count = 0;
 
-  for (let y = 0; y < size; y++) if (frame[(y * size + column) * 4]! > 12) count++;
+  for (let y = 0; y < size; y++) {
+    if (frame[(y * size + column) * 4]! > 12) {
+      count++;
+    }
+  }
 
   return count;
 };
@@ -149,7 +161,13 @@ describe('SDF edge width under an anisotropic node scale', () => {
     // The crossbar's edge normal points along local y, so its ramp is decided by
     // the VERTICAL device density alone. These pairs hold that density fixed and
     // vary only the horizontal one.
-    expect(by('4x1').barRamp, `bar ramp must not follow the horizontal scale: ${by('1x1').barRamp} vs ${by('4x1').barRamp}`).toBeCloseTo(by('1x1').barRamp, 0);
-    expect(by('1x4').barRamp, `bar ramp must not follow the horizontal scale: ${by('4x4').barRamp} vs ${by('1x4').barRamp}`).toBeCloseTo(by('4x4').barRamp, 0);
+    expect(by('4x1').barRamp, `bar ramp must not follow the horizontal scale: ${by('1x1').barRamp} vs ${by('4x1').barRamp}`).toBeCloseTo(
+      by('1x1').barRamp,
+      0,
+    );
+    expect(by('1x4').barRamp, `bar ramp must not follow the horizontal scale: ${by('4x4').barRamp} vs ${by('1x4').barRamp}`).toBeCloseTo(
+      by('4x4').barRamp,
+      0,
+    );
   });
 });

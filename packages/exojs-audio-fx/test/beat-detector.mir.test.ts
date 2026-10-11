@@ -4,8 +4,15 @@ import { adversarialFixtures, clicktrack, djMix, softOnset, swing, tempoRamp } f
 import { computeMirMetrics, type MirMetrics } from './harness/beat-metrics';
 import { runDetector } from './harness/beat-sandbox';
 
-const fixtures = [clicktrack(120, 12), djMix(180, 12), tempoRamp(120, 150, 12), softOnset(90, 12), swing(120, 0.67, 12), ...adversarialFixtures()];
-const measurements: { default: MirMetrics; lockedOnly: MirMetrics }[] = [];
+const fixtures = [
+  clicktrack(120, 12),
+  djMix(180, 12),
+  tempoRamp(120, 150, 12),
+  softOnset(90, 12),
+  swing(120, 0.67, 12),
+  ...adversarialFixtures(),
+];
+const measurements: Array<{ default: MirMetrics; lockedOnly: MirMetrics }> = [];
 
 describe('synthetic MIR evaluation', () => {
   for (const fixture of fixtures) {
@@ -17,7 +24,9 @@ describe('synthetic MIR evaluation', () => {
       measurements.push({ default: metrics, lockedOnly: lockedMetrics });
 
       expect(normal.filter(message => message.type === 'state')).toEqual(lockedOnly.filter(message => message.type === 'state'));
-      expect(normal.filter(message => message.type === 'beat' && message.status === 'locked')).toEqual(lockedOnly.filter(message => message.type === 'beat'));
+      expect(normal.filter(message => message.type === 'beat' && message.status === 'locked')).toEqual(
+        lockedOnly.filter(message => message.type === 'beat'),
+      );
       expect(metrics.locked).toEqual(lockedMetrics.locked);
       expect(metrics.all.matchedCount + metrics.all.falsePositiveCount).toBe(metrics.all.emittedCount);
       expect(metrics.all.matchedCount + metrics.all.missCount).toBe(fixture.beatTimesSec.length);
@@ -28,19 +37,30 @@ describe('synthetic MIR evaluation', () => {
         expect(metrics.all.firstPostedSec).toBeLessThan(lockedMetrics.all.firstPostedSec!);
         expect(metrics.all.f1).toBeGreaterThan(lockedMetrics.all.f1!);
       }
-      if (fixture.label === 'silence' || fixture.label === 'sustained-tone') expect(metrics.all.emittedCount).toBe(0);
+
+      if (fixture.label === 'silence' || fixture.label === 'sustained-tone') {
+        expect(metrics.all.emittedCount).toBe(0);
+      }
 
       const f1Floors: Record<string, number> = {
         tempoRamp_120_to_150bpm: 0.45,
         swing_120bpm_67pct: 0.9,
         'missing-beats': 0.9,
       };
-      if (fixture.label in f1Floors) expect(metrics.all.f1).toBeGreaterThanOrEqual(f1Floors[fixture.label]);
+
+      if (fixture.label in f1Floors) {
+        expect(metrics.all.f1).toBeGreaterThanOrEqual(f1Floors[fixture.label]);
+      }
+
       if (fixture.label === 'offbeat-distractors') {
         expect(metrics.all.precision).toBeGreaterThanOrEqual(0.45);
         expect(metrics.all.falsePositiveCount).toBeLessThanOrEqual(24);
       }
-      if (fixture.label === 'seeded-noise') expect(metrics.all.falsePositiveCount).toBeLessThanOrEqual(10);
+
+      if (fixture.label === 'seeded-noise') {
+        expect(metrics.all.falsePositiveCount).toBeLessThanOrEqual(10);
+      }
+
       if (fixture.label === 'delayed-clicks' || fixture.label === 'quiet-clicks') {
         expect(metrics.all.firstPostedSec).not.toBeNull();
         const firstDeliveryUpperMs = (metrics.all.firstPostedSec! - fixture.beatTimesSec[0]) * 1000 + 128 / 48;
@@ -77,10 +97,11 @@ describe('synthetic MIR evaluation', () => {
         tempoAccuracy: result.tempo.accuracy?.toFixed(3) ?? null,
       })),
     );
+
     if (process.env.MIR_REPORT_PATH) {
       writeFileSync(
         process.env.MIR_REPORT_PATH,
-        JSON.stringify({ schemaVersion: 1, sampleRate: 48000, blockSize: 128, toleranceMs: 70, measurements }, null, 2) + '\n',
+        `${JSON.stringify({ schemaVersion: 1, sampleRate: 48000, blockSize: 128, toleranceMs: 70, measurements }, null, 2)}\n`,
       );
     }
   });

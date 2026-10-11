@@ -72,7 +72,8 @@ export const SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS: readonly number[] = [6, BE
 const SLUG_CHARACTERS = /^[a-z0-9-]+$/;
 
 /** True for a well-formed slug: lowercase ASCII words joined by single hyphens. */
-export const isProfileSlug = (slug: string): boolean => SLUG_CHARACTERS.test(slug) && !slug.startsWith('-') && !slug.endsWith('-') && !slug.includes('--');
+export const isProfileSlug = (slug: string): boolean =>
+  SLUG_CHARACTERS.test(slug) && !slug.startsWith('-') && !slug.endsWith('-') && !slug.includes('--');
 
 /** The operating system a profile was measured on, spelled out behind the slug's OS part. */
 export interface ProfilePlatform {

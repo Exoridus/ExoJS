@@ -123,7 +123,9 @@ const touchesBox = (ax: number, ay: number, bx: number, by: number, left: number
 };
 
 const emitter = (tables: TransportTables, id: number): number[] =>
-  Array.from(tables.emitters.subarray(id * transportEmitterTexels * transportChannels, (id + 1) * transportEmitterTexels * transportChannels));
+  Array.from(
+    tables.emitters.subarray(id * transportEmitterTexels * transportChannels, (id + 1) * transportEmitterTexels * transportChannels),
+  );
 
 describe('TransportGeometry', () => {
   test('lists a segment in every cell its bounding box touches', () => {
@@ -189,6 +191,7 @@ describe('TransportGeometry', () => {
   test('matches an exact cell-intersection reference across clipped and reversed segments', () => {
     const geometry = new TransportGeometry();
     let state = 0x9e3779b9;
+
     const random = (): number => {
       state = Math.imul(state ^ (state >>> 16), 0x21f0aaad);
       state = Math.imul(state ^ (state >>> 15), 0x735a2d97);
@@ -196,6 +199,7 @@ describe('TransportGeometry', () => {
 
       return (state >>> 0) / 0x1_0000_0000;
     };
+
     const cases: number[][] = [
       [20, 5, 20, 95],
       [5, 20, 95, 20],

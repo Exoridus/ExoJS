@@ -101,12 +101,14 @@ export class RenderPassInspectorLayer extends DebugLayer {
   public static describePipeline(pipeline: RenderPipeline): RenderPipelineRow[] {
     const rows: RenderPipelineRow[] = [];
     RenderPassInspectorLayer._collectPipelineRows(pipeline, 0, rows);
+
     return rows;
   }
 
   private static _collectPipelineRows(pipeline: RenderPipeline, depth: number, rows: RenderPipelineRow[]): void {
     for (const pass of pipeline) {
       rows.push({ depth, label: pass.label, enabled: pass.enabled, isPipeline: pass instanceof RenderPipeline });
+
       if (pass instanceof RenderPipeline) {
         RenderPassInspectorLayer._collectPipelineRows(pass, depth + 1, rows);
       }
@@ -131,6 +133,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
     this._entries.length = 0;
 
     const root = this._app.scenes.currentScene?.root;
+
     if (root) {
       this.collect(root);
     }
@@ -148,6 +151,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
       this._root.destroy();
       this._root = null;
     }
+
     this._bg = null;
     this._header = null;
     this._lines = [];
@@ -168,10 +172,15 @@ export class RenderPassInspectorLayer extends DebugLayer {
   /** Total pass count across all collected entries. */
   public get totalPasses(): number {
     let total = 0;
+
     for (const entry of this._entries) {
       total += entry.filters.length;
-      if (entry.hasMask) total++;
+
+      if (entry.hasMask) {
+        total++;
+      }
     }
+
     return total;
   }
 
@@ -195,7 +204,9 @@ export class RenderPassInspectorLayer extends DebugLayer {
   // -----------------------------------------------------------------------
 
   private collect(node: RenderNode): void {
-    if (!node.visible) return;
+    if (!node.visible) {
+      return;
+    }
 
     if (node.filters.length > 0) {
       const bounds = node.getBounds();
@@ -210,6 +221,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
     }
 
     const container = node as Partial<{ children: RenderNode[] }>;
+
     if (Array.isArray(container.children)) {
       for (const child of container.children) {
         this.collect(child);
@@ -232,6 +244,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
     this._header.y = panelY + panelPadding;
 
     this._lines = [];
+
     for (let i = 0; i < panelMaxLines; i++) {
       const line = new Text('', style);
       line.x = panelX + panelPadding;
@@ -242,11 +255,16 @@ export class RenderPassInspectorLayer extends DebugLayer {
     this._root = new Container();
     this._root.addChild(this._bg);
     this._root.addChild(this._header);
-    for (const line of this._lines) this._root.addChild(line);
+
+    for (const line of this._lines) {
+      this._root.addChild(line);
+    }
   }
 
   private _refreshPanel(): void {
-    if (this._header === null || this._bg === null) return;
+    if (this._header === null || this._bg === null) {
+      return;
+    }
 
     const lines: Array<{ text: string; dim: boolean }> = [];
 
@@ -255,26 +273,38 @@ export class RenderPassInspectorLayer extends DebugLayer {
     } else {
       for (const entry of this._entries) {
         const flags: string[] = [];
-        if (entry.hasMask) flags.push('mask');
-        if (entry.cachedAsTexture) flags.push('cached');
+
+        if (entry.hasMask) {
+          flags.push('mask');
+        }
+
+        if (entry.cachedAsTexture) {
+          flags.push('cached');
+        }
+
         const flagsText = flags.length > 0 ? ` [${flags.join(',')}]` : '';
         lines.push({
           text: `${entry.drawableLabel} ${entry.width}x${entry.height}${flagsText}`,
           dim: false,
         });
+
         for (let i = 0; i < entry.filters.length; i++) {
           const filter = entry.filters[i];
+
           if (filter === undefined) {
             continue;
           }
+
           lines.push({ text: `  ${i}. ${filter.constructor.name}`, dim: false });
         }
       }
     }
 
     const pipelineRows = this.pipelineRows();
+
     if (pipelineRows.length > 0) {
       lines.push({ text: 'Pipeline:', dim: true });
+
       for (const row of pipelineRows) {
         const indent = '  '.repeat(row.depth + 1);
         lines.push({ text: `${indent}${row.label}${row.enabled ? '' : ' [off]'}`, dim: !row.enabled });
@@ -284,12 +314,16 @@ export class RenderPassInspectorLayer extends DebugLayer {
     this._header.text = `Render Passes: ${this.totalPasses}`;
 
     const visibleCount = Math.min(lines.length, this._lines.length);
+
     for (let i = 0; i < this._lines.length; i++) {
       const line = this._lines[i];
+
       if (line === undefined) {
         continue;
       }
+
       const entry = i < visibleCount ? lines[i] : undefined;
+
       if (entry !== undefined) {
         line.text = entry.text;
         line.style.fillColor = entry.dim ? dimColor : textColor;
@@ -303,6 +337,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
     if (lines.length > this._lines.length) {
       const last = this._lines[this._lines.length - 1];
       const overflow = lines.length - this._lines.length;
+
       if (last !== undefined) {
         last.text = `... (+${overflow} more)`;
         last.style.fillColor = dimColor;

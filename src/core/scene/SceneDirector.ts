@@ -339,7 +339,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // - see the `catch` on the transitioned action below, which is
       // reachable via the frame-loop abort (`_abortInFlightNavigation`).
       const preloadEntry = this._preloaded.get(resolvedTarget);
-      const claimedEntry = preloadEntry !== undefined && preloadEntry.status !== 'cancelling' && Object.is(preloadEntry.data, data) ? preloadEntry : null;
+      const claimedEntry =
+        preloadEntry !== undefined && preloadEntry.status !== 'cancelling' && Object.is(preloadEntry.data, data) ? preloadEntry : null;
 
       if (claimedEntry !== null) {
         this._preloaded.delete(resolvedTarget);
@@ -462,7 +463,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         this._pendingOutgoingTeardown = this._trackTeardown(this._navigation.beginOutgoingTeardown(pendingStopScene));
       };
 
-      const resolvedTransition = resolveSceneTransitionSelection('change', options.transition, this._registry.defaultTransitions.get(resolvedTarget));
+      const resolvedTransition = resolveSceneTransitionSelection(
+        'change',
+        options.transition,
+        this._registry.defaultTransitions.get(resolvedTarget),
+      );
 
       try {
         await (resolvedTransition === null ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, resolvedTransition));
@@ -546,7 +551,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         return Promise.resolve();
       };
 
-      await (transition === undefined || transition === null ? commitDiscard() : this._runTransitionedAction(commitDiscard, context, transition));
+      await (transition === undefined || transition === null
+        ? commitDiscard()
+        : this._runTransitionedAction(commitDiscard, context, transition));
       await this._awaitPendingOutgoingTeardown();
     });
 
@@ -688,7 +695,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           // Order per spec: Scene.onActivate (fired synchronously inside
           // retainedScope.restore() above) -> Director.onStateChange ->
           // Director.onChangeScene.
-          this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, retainedScope.state, retainedScope.scene as Scene);
+          this.onStateChange.dispatchIsolated(
+            error => this._reportLifecycleError(error),
+            previousState,
+            retainedScope.state,
+            retainedScope.scene as Scene,
+          );
           this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
 
           this._navigation.dispatchStopScene(pendingStopScene);
@@ -697,7 +709,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           return Promise.resolve();
         };
 
-        const resolvedTransition = resolveSceneTransitionSelection('restore', options.transition, this._registry.defaultTransitions.get(resolvedTarget));
+        const resolvedTransition = resolveSceneTransitionSelection(
+          'restore',
+          options.transition,
+          this._registry.defaultTransitions.get(resolvedTarget),
+        );
 
         await (resolvedTransition === null ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, resolvedTransition));
         await this._awaitPendingOutgoingTeardown();
@@ -1224,7 +1240,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         await this._disposeScene(activeScope);
       } catch (error) {
-        logger.error('SceneDirector.destroy() failed to unload the active scene.', { source: 'SceneDirector', ...(error instanceof Error && { error }) });
+        logger.error('SceneDirector.destroy() failed to unload the active scene.', {
+          source: 'SceneDirector',
+          ...(error instanceof Error && { error }),
+        });
       }
     }
 
@@ -1236,7 +1255,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         await this._disposeScene(scope);
       } catch (error) {
-        logger.error('SceneDirector.destroy() failed to destroy a retained scene.', { source: 'SceneDirector', ...(error instanceof Error && { error }) });
+        logger.error('SceneDirector.destroy() failed to destroy a retained scene.', {
+          source: 'SceneDirector',
+          ...(error instanceof Error && { error }),
+        });
       }
     }
 
@@ -1265,7 +1287,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         await this._disposeScene(entry.scope, { dispatchStopScene: false });
       } catch (error) {
-        logger.error('SceneDirector.destroy() failed to destroy a preloaded scene.', { source: 'SceneDirector', ...(error instanceof Error && { error }) });
+        logger.error('SceneDirector.destroy() failed to destroy a preloaded scene.', {
+          source: 'SceneDirector',
+          ...(error instanceof Error && { error }),
+        });
       }
     }
 
@@ -1610,7 +1635,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * the frame loop goes live before the initial navigation runs, so a
    * frame-driven session always has something to drive it.
    */
-  private async _runTransitionedAction(commit: () => Promise<void>, context: SceneTransitionContext, transition: SceneTransition): Promise<void> {
+  private async _runTransitionedAction(
+    commit: () => Promise<void>,
+    context: SceneTransitionContext,
+    transition: SceneTransition,
+  ): Promise<void> {
     const requirements = transition.getRequirements(context);
     const resources = this._provisionTransitionResources(context, requirements);
     const environment = new DirectorTransitionEnvironment(context);
@@ -1826,7 +1855,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     const height = this._app.canvas.height;
 
     const outgoingSnapshot =
-      requirements.outgoingFrame === 'snapshot' && this._activeScope !== null ? this._captureOutgoingSnapshot(this._activeScope, width, height) : null;
+      requirements.outgoingFrame === 'snapshot' && this._activeScope !== null
+        ? this._captureOutgoingSnapshot(this._activeScope, width, height)
+        : null;
 
     let currentTexture: RenderTexture | null = null;
 
@@ -1879,7 +1910,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         }
 
         if (firstError !== undefined) {
-          throw firstError instanceof Error ? firstError : new Error('SceneDirector: releasing transition resources failed', { cause: firstError });
+          throw firstError instanceof Error
+            ? firstError
+            : new Error('SceneDirector: releasing transition resources failed', { cause: firstError });
         }
       },
     };

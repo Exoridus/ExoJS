@@ -20,7 +20,8 @@ export type SuiteKind = 'reference' | 'full';
  * so every load carries the unit it is counted in and the published page quotes
  * it beside the figure.
  */
-export type LoadUnit = 'sprites' | 'nodes' | 'labels' | 'tiles' | 'layers' | 'particles' | 'lights' | 'widgets' | 'rects' | 'bodies' | 'viewport';
+export type LoadUnit =
+  'sprites' | 'nodes' | 'labels' | 'tiles' | 'layers' | 'particles' | 'lights' | 'widgets' | 'rects' | 'bodies' | 'viewport';
 
 /** One selectable load of one scenario. */
 export interface LoadSpec {
@@ -83,8 +84,13 @@ const loads = (entries: ReadonlyArray<readonly [value: number, flags: string, la
  * value it names, and the two would then identify different cells under one key.
  */
 export const loadIdFor = (value: number): string => {
-  if (value >= 1_000_000 && value % 1_000_000 === 0) return `${String(value / 1_000_000)}m`;
-  if (value >= 1_000 && value % 1_000 === 0) return `${String(value / 1_000)}k`;
+  if (value >= 1_000_000 && value % 1_000_000 === 0) {
+    return `${String(value / 1_000_000)}m`;
+  }
+
+  if (value >= 1_000 && value % 1_000 === 0) {
+    return `${String(value / 1_000)}k`;
+  }
 
   return String(value);
 };
@@ -432,7 +438,8 @@ export const PHYSICS_SCENARIOS: readonly ScenarioLoads[] = [
 ];
 
 /** Scenario catalog for one benchmark domain. */
-export const scenariosFor = (domain: 'rendering' | 'physics'): readonly ScenarioLoads[] => (domain === 'rendering' ? RENDERING_SCENARIOS : PHYSICS_SCENARIOS);
+export const scenariosFor = (domain: 'rendering' | 'physics'): readonly ScenarioLoads[] =>
+  domain === 'rendering' ? RENDERING_SCENARIOS : PHYSICS_SCENARIOS;
 
 /** The scenario's headline load, i.e. the one a published card shows first. */
 export const primaryLoadOf = (scenario: ScenarioLoads): LoadSpec => {

@@ -68,7 +68,8 @@ export const isComposite = (spec: ArchetypeSpec): boolean => compositeBlurStreng
  * validated per-node equivalent sit these rows out rather than approximating
  * them and making the comparison answer a different question.
  */
-export const usesRenderTargets = (spec: ArchetypeSpec): boolean => filterChainDepth(spec) > 0 || maskDepth(spec) > 0 || isComposite(spec) || isBlurEffect(spec);
+export const usesRenderTargets = (spec: ArchetypeSpec): boolean =>
+  filterChainDepth(spec) > 0 || maskDepth(spec) > 0 || isComposite(spec) || isBlurEffect(spec);
 
 /**
  * Glyph string for text leaf `index`, `length` characters long.

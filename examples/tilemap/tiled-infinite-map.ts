@@ -1,4 +1,14 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, View } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  View,
+} from '@codexo/exojs';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { ChunkStreamer, TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
@@ -114,11 +124,14 @@ class TiledInfiniteMapScene extends Scene {
     this.propsStreamer.update();
 
     this.hudTimer += delta;
+
     if (this.hudTimer >= 0.25) {
       this.hudTimer = 0;
       const tx = Math.floor(this.camera.center.x / TILE);
       const ty = Math.floor(this.camera.center.y / TILE);
-      this.hud.setStatus(`ground ${this.groundStreamer.residentCount} chunks · props ${this.propsStreamer.residentCount} chunks · tile ${tx}, ${ty}`);
+      this.hud.setStatus(
+        `ground ${this.groundStreamer.residentCount} chunks · props ${this.propsStreamer.residentCount} chunks · tile ${tx}, ${ty}`,
+      );
     }
   }
 

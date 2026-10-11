@@ -391,7 +391,9 @@ export class SystemRegistry implements Destroyable {
       if (registration.active) {
         const result = registration.system.preFrame!(delta) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'preFrame');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'preFrame');
+        }
       }
     }
   }
@@ -411,7 +413,9 @@ export class SystemRegistry implements Destroyable {
       if (registration.active) {
         const result = registration.system.fixedUpdate!(step) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'fixedUpdate');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'fixedUpdate');
+        }
       }
     }
   }
@@ -431,7 +435,9 @@ export class SystemRegistry implements Destroyable {
       if (registration.active) {
         const result = registration.system.update!(delta) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'update');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'update');
+        }
       }
     }
   }
@@ -451,7 +457,9 @@ export class SystemRegistry implements Destroyable {
       if (registration.active) {
         const result = registration.system.draw!(context) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'draw');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'draw');
+        }
       }
     }
   }
@@ -471,7 +479,9 @@ export class SystemRegistry implements Destroyable {
       if (registration.active) {
         const result = registration.system.postFrame!(delta, budget) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'postFrame');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'postFrame');
+        }
       }
     }
   }
@@ -520,7 +530,10 @@ export class SystemRegistry implements Destroyable {
     this.onRemove.destroy();
 
     for (const error of failures) {
-      logger.error('SystemRegistry.destroy(): a system threw while being destroyed.', { source: 'SystemRegistry', ...(error instanceof Error && { error }) });
+      logger.error('SystemRegistry.destroy(): a system threw while being destroyed.', {
+        source: 'SystemRegistry',
+        ...(error instanceof Error && { error }),
+      });
     }
   }
 

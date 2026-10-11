@@ -2,7 +2,14 @@ import { describe, test } from 'vitest';
 
 import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
 import { BLUR_SCENE_SIZE, blurScene, CLEAR } from './_blurFilterFixture';
-import { BEFORE_SQUARE, constantDisplacementMap, DISPLACED_SQUARE, displacement, MIRRORED_SQUARE, VACATED_SQUARE } from './_displacementFixture';
+import {
+  BEFORE_SQUARE,
+  constantDisplacementMap,
+  DISPLACED_SQUARE,
+  displacement,
+  MIRRORED_SQUARE,
+  VACATED_SQUARE,
+} from './_displacementFixture';
 import { expectPixelNear } from './_pixels';
 
 describe('DisplacementFilter (WebGL2)', () => {

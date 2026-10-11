@@ -61,16 +61,23 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 };
 
 // A full-canvas quad in pixel space with UVs spanning the whole texture.
-const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
+const fullQuadVertices = (): Float32Array =>
+  new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
 
 // On the software (SwiftShader) adapter the WebGPU device can drop mid-test;
 // treat that as an unavailable-adapter skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a single mesh through the real flush path inside a validation error
 // scope. Returns false when the device dropped mid-test (caller should bail).
-const renderMesh = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, mesh: Mesh, encoded = false): Promise<boolean> => {
+const renderMesh = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  mesh: Mesh,
+  encoded = false,
+): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
@@ -79,7 +86,9 @@ const renderMesh = async (ctx: { skip: (reason: string) => void }, backend: WebG
 
   try {
     if (encoded) {
-      if (!(await renderWebGpuEncoded(ctx, backend, mesh))) return false;
+      if (!(await renderWebGpuEncoded(ctx, backend, mesh))) {
+        return false;
+      }
     } else {
       backend.resetStats();
       backend.clear(Color.black);
@@ -115,7 +124,13 @@ describe('WebGPU mesh tint and texture sampling', () => {
       data.set([levels[i], levels[i], levels[i], 255], i * 4);
     }
 
-    const texture = new DataTexture({ width, height: 1, format: TextureFormat.Rgba8, data, textureOptions: { scaleMode: ScaleModes.Nearest } });
+    const texture = new DataTexture({
+      width,
+      height: 1,
+      format: TextureFormat.Rgba8,
+      data,
+      textureOptions: { scaleMode: ScaleModes.Nearest },
+    });
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
     try {

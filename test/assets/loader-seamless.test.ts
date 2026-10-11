@@ -17,6 +17,7 @@ import { testAssetType } from './test-asset-type';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -199,7 +200,9 @@ describe('Loader seamless get (Texture)', () => {
     const loader = createCoreLoader();
     const warnings: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+      if (entry.severity === LogSeverity.Warning) {
+        warnings.push(entry.message);
+      }
     });
 
     try {
@@ -243,7 +246,9 @@ describe('Loader seamless get (Texture)', () => {
     const loader = createCoreLoader();
     const warnings: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+      if (entry.severity === LogSeverity.Warning) {
+        warnings.push(entry.message);
+      }
     });
 
     try {
@@ -305,7 +310,9 @@ describe('Loader seamless get (Texture)', () => {
     const loader = createCoreLoader();
     const warnings: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+      if (entry.severity === LogSeverity.Warning) {
+        warnings.push(entry.message);
+      }
     });
 
     try {
@@ -326,7 +333,9 @@ describe('Loader seamless get (Texture)', () => {
 
     // The hard reset path is internal-only: it forgets every scope's claim, so
     // it is deliberately not reachable through the public surface.
-    (loader as unknown as { _residency: { _unloadOne(asset: unknown): void } })._residency._unloadOne(loader['_canonicalize'](Texture, 'ship.png'));
+    (loader as unknown as { _residency: { _unloadOne(asset: unknown): void } })._residency._unloadOne(
+      loader['_canonicalize'](Texture, 'ship.png'),
+    );
 
     await expect(handle.loaded).rejects.toThrow('unloaded while');
     expect(handle.loadState).toBe('failed');
@@ -558,7 +567,12 @@ describe('Loader seamless get (Texture)', () => {
 
     expect(() =>
       loader._installAssetTypes([
-        testAssetType<string, unknown>({ id: 'secondTexture', token: Texture, leaf: textureSeamlessAdapter, create: async source => source }),
+        testAssetType<string, unknown>({
+          id: 'secondTexture',
+          token: Texture,
+          leaf: textureSeamlessAdapter,
+          create: async source => source,
+        }),
       ]),
     ).toThrow('another installed type already uses');
   });

@@ -51,7 +51,7 @@ const ROLE_FILENAMES = new Set(['index', 'types', 'utils', 'public']);
  * Files whose name cannot follow from their exports, with the reason each one
  * is exempt. An entry is a claim that the mismatch is the correct outcome.
  */
-const ALLOWED: readonly { readonly file: string; readonly reason: string }[] = [
+const ALLOWED: ReadonlyArray<{ readonly file: string; readonly reason: string }> = [
   {
     file: 'src/assets/Asset.ts',
     reason: 'the public `Asset` value and interface are declaration-merged here; the class behind them is `AssetImpl` on purpose',
@@ -127,16 +127,22 @@ interface Violation {
 }
 
 const checkFile = (file: string): Violation[] => {
-  if (isAllowed(file)) return [];
+  if (isAllowed(file)) {
+    return [];
+  }
 
   const stem = basename(file, '.ts');
 
-  if (ROLE_FILENAMES.has(stem) || stem.endsWith('.d')) return [];
+  if (ROLE_FILENAMES.has(stem) || stem.endsWith('.d')) {
+    return [];
+  }
 
   const surface = readSurface(join(REPO_ROOT, file));
 
   if (isPascalCase(stem)) {
-    if (surface.exported.has(stem)) return [];
+    if (surface.exported.has(stem)) {
+      return [];
+    }
 
     const nearest = surface.classes[0] ?? surface.otherValues[0];
 
@@ -163,13 +169,17 @@ const checkFile = (file: string): Violation[] => {
 const collectFiles = async (root: string): Promise<string[]> => {
   const absolute = join(REPO_ROOT, root);
 
-  if (statSync(absolute, { throwIfNoEntry: false })?.isFile()) return [relative(REPO_ROOT, absolute).replaceAll('\\', '/')];
+  if (statSync(absolute, { throwIfNoEntry: false })?.isFile()) {
+    return [relative(REPO_ROOT, absolute).replaceAll('\\', '/')];
+  }
 
   // The tree is live: a suite running in parallel can remove a directory
   // between this walk reaching it and reading it. Nothing to check is the
   // correct answer there, not a failed gate.
   const entries = await readdir(absolute, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === 'ENOENT') return [];
+    if (error.code === 'ENOENT') {
+      return [];
+    }
 
     throw error;
   });
@@ -196,7 +206,7 @@ const main = async (): Promise<void> => {
   const violations = files.flatMap(checkFile);
 
   if (violations.length > 0) {
-    console.error(`\x1b[31m${violations.length} file(s) named against their exports:\x1b[0m`);
+    console.error(`\x1B[31m${violations.length} file(s) named against their exports:\x1B[0m`);
 
     for (const violation of violations) {
       console.error(`  ${violation.file}  ${violation.message}`);
@@ -206,7 +216,7 @@ const main = async (): Promise<void> => {
     process.exit(1);
   }
 
-  console.log(`\x1b[32m${files.length} file(s) checked, every name matches its exports.\x1b[0m`);
+  console.log(`\x1B[32m${files.length} file(s) checked, every name matches its exports.\x1B[0m`);
 };
 
 await main();

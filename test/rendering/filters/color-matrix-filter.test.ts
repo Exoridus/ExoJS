@@ -30,7 +30,9 @@ const applyMatrix = (matrix: readonly number[], rgba: readonly [number, number, 
   for (let row = 0; row < 4; row++) {
     const base = row * 5;
 
-    out.push(matrix[base]! * rgba[0] + matrix[base + 1]! * rgba[1] + matrix[base + 2]! * rgba[2] + matrix[base + 3]! * rgba[3] + matrix[base + 4]!);
+    out.push(
+      matrix[base]! * rgba[0] + matrix[base + 1]! * rgba[1] + matrix[base + 2]! * rgba[2] + matrix[base + 3]! * rgba[3] + matrix[base + 4]!,
+    );
   }
 
   return out as [number, number, number, number];
@@ -203,7 +205,11 @@ describe('ColorMatrixFilter colorSpace', () => {
  * Mirrors `color-matrix.frag`'s `gated` branch exactly, so this is a
  * behavioural check of the shader's math, not just of the filter's TS glue.
  */
-const applyGatedIdentity = (premultiplied: readonly [number, number, number], alpha: number, domainSrgb: boolean): [number, number, number, number] => {
+const applyGatedIdentity = (
+  premultiplied: readonly [number, number, number],
+  alpha: number,
+  domainSrgb: boolean,
+): [number, number, number, number] => {
   const toDomain = domainSrgb ? linearToSrgb : (v: number): number => v;
   const fromDomain = domainSrgb ? srgbToLinear : (v: number): number => v;
   const straight = alpha > 0 ? premultiplied.map(c => c / alpha) : [0, 0, 0];

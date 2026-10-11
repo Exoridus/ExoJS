@@ -38,12 +38,10 @@ interface ResolvedExampleOptions {
   readonly strict: boolean;
 }
 
-const resolveExampleOptions = (opts: ExampleLoadOptions | undefined): ResolvedExampleOptions => {
-  return {
-    format: opts?.format ?? 'example',
-    strict: opts?.strict ?? true,
-  };
-};
+const resolveExampleOptions = (opts: ExampleLoadOptions | undefined): ResolvedExampleOptions => ({
+  format: opts?.format ?? 'example',
+  strict: opts?.strict ?? true,
+});
 
 /** A type that acquires nothing, so these cases exercise identity and options alone. */
 abstract class SourcelessAssetType<Resource, Options> extends AssetType<void, Resource, Options> {
@@ -318,7 +316,9 @@ describe('option-driven identity', () => {
 
     materializeAssetTypes(loader, [exampleType('captureExample', (_options, context) => void (seen = context))]);
 
-    await expect(loader.load(new Asset({ type: 'captureExample', source: 'thing.dat', format: 'alt', strict: false }))).resolves.toBeInstanceOf(ExampleAsset);
+    await expect(
+      loader.load(new Asset({ type: 'captureExample', source: 'thing.dat', format: 'alt', strict: false })),
+    ).resolves.toBeInstanceOf(ExampleAsset);
 
     expect(seen?.source).toBe('thing.dat');
     expect(seen?.options).toEqual({ format: 'alt', strict: false });

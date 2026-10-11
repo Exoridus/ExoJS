@@ -41,6 +41,7 @@ const makeFontData = (overrides: Partial<BmFontData> = {}): BmFontData => {
     [66, { x: 8, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }], // B
     [32, { x: 0, y: 0, width: 0, height: 0, xOffset: 0, yOffset: 0, xAdvance: 5, page: 0 }], // space
   ]);
+
   return {
     pages: ['font_0.png'],
     chars,
@@ -51,13 +52,9 @@ const makeFontData = (overrides: Partial<BmFontData> = {}): BmFontData => {
   };
 };
 
-const makeTex = (w = 64, h = 64): Texture => {
-  return { width: w, height: h } as unknown as Texture;
-};
+const makeTex = (w = 64, h = 64): Texture => ({ width: w, height: h }) as unknown as Texture;
 
-const makeFont = (overrides: Partial<BmFontData> = {}): BmFont => {
-  return new BmFont(makeFontData(overrides), [makeTex()]);
-};
+const makeFont = (overrides: Partial<BmFontData> = {}): BmFont => new BmFont(makeFontData(overrides), [makeTex()]);
 
 // ---------------------------------------------------------------------------
 // BmFontAdapter tests
@@ -295,7 +292,10 @@ describe('BitmapText', () => {
     // Gather unique Y values from the first vertex of each quad (y at index 1, 9, ...)
     const vertices = quads[0].vertices;
     const yValues = new Set<number>();
-    for (let i = 1; i < vertices.length; i += 8) yValues.add(vertices[i]);
+
+    for (let i = 1; i < vertices.length; i += 8) {
+      yValues.add(vertices[i]);
+    }
 
     expect(yValues.size).toBeGreaterThanOrEqual(2); // at least two distinct line Ys
   });
@@ -409,7 +409,7 @@ describe('BmFontAdapter missing-glyph warnings', () => {
   });
 
   test('warns once when an unknown glyph is requested', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
 
     adapter.getGlyph('Z', 0); // Z is not in the font fixture
@@ -420,7 +420,7 @@ describe('BmFontAdapter missing-glyph warnings', () => {
   });
 
   test('warning message contains the codepoint in hex (U+005A for Z)', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
 
     adapter.getGlyph('Z', 0);
@@ -433,7 +433,7 @@ describe('BmFontAdapter missing-glyph warnings', () => {
   });
 
   test('does not warn for glyphs that are present in the font', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
 
     adapter.getGlyph('A', 0);
@@ -445,7 +445,7 @@ describe('BmFontAdapter missing-glyph warnings', () => {
   });
 
   test('warns separately for each distinct missing glyph', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const adapter = new BmFontAdapter(makeFontData(), [makeTex()], 1);
 
     adapter.getGlyph('Y', 0);
@@ -456,7 +456,7 @@ describe('BmFontAdapter missing-glyph warnings', () => {
   });
 
   test('a second layout pass does not re-warn about an already-seen missing glyph', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const font = makeFont(); // font has A, B, space — not Z
     const text = new BitmapText('AZB', font);
 

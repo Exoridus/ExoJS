@@ -114,7 +114,14 @@ export class SourceRederivation {
    * containers are few per scope, and a per-frame map over them is the
    * allocation the delta exists to avoid.
    */
-  public carryGroup(host: SourceRederivationHost, node: RenderNode, scope: SourceScope, previous: SourceScope, seq: number, zIndex: number): boolean {
+  public carryGroup(
+    host: SourceRederivationHost,
+    node: RenderNode,
+    scope: SourceScope,
+    previous: SourceScope,
+    seq: number,
+    zIndex: number,
+  ): boolean {
     const group = recordedGroupOf(previous, node);
 
     if (group === null) {
@@ -123,7 +130,11 @@ export class SourceRederivation {
 
     const cursor = this._cursor;
 
-    if (node._transformMarkSequence > cursor || node._tintMarkSequence > cursor || group.preserveDrawOrder !== host._resolvePreserveDrawOrder(node)) {
+    if (
+      node._transformMarkSequence > cursor ||
+      node._tintMarkSequence > cursor ||
+      group.preserveDrawOrder !== host._resolvePreserveDrawOrder(node)
+    ) {
       return false;
     }
 

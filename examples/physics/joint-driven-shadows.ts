@@ -1,4 +1,13 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, SystemOrder } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  SystemOrder,
+} from '@codexo/exojs';
 import { LightmapLighting, PhysicsOccluder, PointLight } from '@codexo/exojs-lighting';
 import { BoxShape, CircleShape, type PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
@@ -12,6 +21,7 @@ const makeBar = (width: number, color: Color): Graphics => {
   bar.fillColor = new Color(255, 232, 177);
   bar.drawCircle(-width / 2 + 15, 0, 7);
   bar.drawCircle(width / 2 - 15, 0, 7);
+
   return bar;
 };
 
@@ -33,6 +43,7 @@ class JointShadowsScene extends Scene {
     this.backdrop.drawRectangle(0, 0, 1280, 720);
     this.backdrop.lineColor = new Color(72, 100, 128, 0.25);
     this.backdrop.lineWidth = 2;
+
     for (let x = 80; x < 1280; x += 80) {
       this.backdrop.drawLine(x, 0, x, 720);
     }
@@ -46,7 +57,9 @@ class JointShadowsScene extends Scene {
     this.lighting = new LightmapLighting(this.app, { ambient: new Color(42, 46, 66), lightResolution: 0.5, shadowResolution: 256 });
     this.systems.add(this.lighting);
     this.lighting.occludeFrom(new PhysicsOccluder(this.world, { staticOnly: false }));
-    this.lighting.add(new PointLight({ radius: 1000, intensity: 3.2, softness: 0.18, color: new Color(255, 211, 144) })).setPosition(430, 350);
+    this.lighting
+      .add(new PointLight({ radius: 1000, intensity: 3.2, softness: 0.18, color: new Color(255, 211, 144) }))
+      .setPosition(430, 350);
 
     this.anchor.fillColor = new Color(245, 217, 161);
     this.anchor.drawCircle(0, 0, 23);
@@ -62,7 +75,13 @@ class JointShadowsScene extends Scene {
     // the contact pushes the arm off the hinge the joint holds it to. The torque
     // has to exceed what gravity exerts on the 300 px arm about its end.
     this.hinge = this.world.addJoint(
-      new RevoluteJoint({ bodyA: fixed, bodyB: this.endBody, anchor: { x: 650, y: 220 }, maxMotorTorque: 1_000_000_000, collideConnected: false }),
+      new RevoluteJoint({
+        bodyA: fixed,
+        bodyB: this.endBody,
+        anchor: { x: 650, y: 220 },
+        maxMotorTorque: 1_000_000_000,
+        collideConnected: false,
+      }),
     );
 
     this.hud = mountControls({

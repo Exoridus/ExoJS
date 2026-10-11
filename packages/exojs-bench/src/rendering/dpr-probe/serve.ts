@@ -173,7 +173,9 @@ interface SubmitResponse {
  */
 const submitPlugin = (): unknown => ({
   name: 'dpr-probe-submit',
-  configureServer(server: { middlewares: { use: (handler: (request: SubmitRequest, response: SubmitResponse, next: () => void) => void) => void } }): void {
+  configureServer(server: {
+    middlewares: { use: (handler: (request: SubmitRequest, response: SubmitResponse, next: () => void) => void) => void };
+  }): void {
     server.middlewares.use((request, response, next) => {
       if (request.url !== '/submit' || request.method !== 'POST') {
         next();
@@ -234,7 +236,8 @@ const submitPlugin = (): unknown => ({
         }
 
         const stamp = typeof capture.timestamp === 'string' ? slug(capture.timestamp) : 'no-timestamp';
-        const device = typeof capture.deviceLabel === 'string' && capture.deviceLabel.trim().length > 0 ? slug(capture.deviceLabel) : 'unnamed-device';
+        const device =
+          typeof capture.deviceLabel === 'string' && capture.deviceLabel.trim().length > 0 ? slug(capture.deviceLabel) : 'unnamed-device';
         const target = join(CAPTURE_DIR, `${stamp}-${device}.json`);
 
         mkdirSync(CAPTURE_DIR, { recursive: true });
@@ -294,7 +297,8 @@ const main = async (): Promise<void> => {
       '',
       '  On the phone, open the first URL that answers:',
       ...candidates.map(
-        candidate => `    ${scheme}://${candidate.address}:${port}/   (${candidate.name}${candidate.virtual ? ', virtual adapter — unlikely' : ''})`,
+        candidate =>
+          `    ${scheme}://${candidate.address}:${port}/   (${candidate.name}${candidate.virtual ? ', virtual adapter — unlikely' : ''})`,
       ),
       `  On this machine:      ${scheme}://127.0.0.1:${port}/`,
       '',

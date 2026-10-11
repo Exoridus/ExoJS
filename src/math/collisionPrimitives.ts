@@ -82,7 +82,10 @@ const buildPolygonWorldPoints = ({ x: offsetX, y: offsetY, points }: PolygonLike
   points.map(({ x, y }) => ({ x: x + offsetX, y: y + offsetY }));
 
 const pointOnSegment = ({ x: px, y: py }: PointLike, { x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike): boolean =>
-  px <= Math.max(x1, x2) + epsilon && px >= Math.min(x1, x2) - epsilon && py <= Math.max(y1, y2) + epsilon && py >= Math.min(y1, y2) - epsilon;
+  px <= Math.max(x1, x2) + epsilon &&
+  px >= Math.min(x1, x2) - epsilon &&
+  py <= Math.max(y1, y2) + epsilon &&
+  py >= Math.min(y1, y2) - epsilon;
 
 const orientation = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, { x: x3, y: y3 }: PointLike): number => {
   const determinant = (y2 - y1) * (x3 - x2) - (x2 - x1) * (y3 - y2);
@@ -176,14 +179,20 @@ const polygonsIntersect = (polygonA: PointLike[], polygonB: PointLike[]): boolea
 };
 
 /** Return `true` when two points are within `threshold` distance of each other. */
-const intersectionPointPoint = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, threshold = 0): boolean => getDistance(x1, y1, x2, y2) <= threshold;
+const intersectionPointPoint = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, threshold = 0): boolean =>
+  getDistance(x1, y1, x2, y2) <= threshold;
 
 /**
  * Return `true` when `point` lies on the line segment `(x1,y1)-(x2,y2)`
  * within `threshold`. Uses sum-of-distances: the point is "on" the segment
  * when `d1 + d2 ≈ d3` within the tolerance.
  */
-const intersectionPointLineSegment = ({ x, y }: PointLike, { x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, threshold = 0.1): boolean => {
+const intersectionPointLineSegment = (
+  { x, y }: PointLike,
+  { x: x1, y: y1 }: PointLike,
+  { x: x2, y: y2 }: PointLike,
+  threshold = 0.1,
+): boolean => {
   const d1 = getDistance(x, y, x1, y1);
   const d2 = getDistance(x, y, x2, y2);
   const d3 = getDistance(x1, y1, x2, y2);

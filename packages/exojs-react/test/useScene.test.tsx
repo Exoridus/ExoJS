@@ -11,27 +11,32 @@ import { MockApplication } from './support/mock-application';
 // above this file's imports (top-level bindings are not initialised yet).
 vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
-  const { MockApplication: MockApp, configureApplicationState, configureConcurrentNavigationError } = await import('./support/mock-application');
+  const {
+    MockApplication: MockApp,
+    configureApplicationState,
+    configureConcurrentNavigationError,
+  } = await import('./support/mock-application');
   configureApplicationState(actual.ApplicationState);
   configureConcurrentNavigationError(actual.ConcurrentSceneNavigationError);
+
   return { ...actual, Application: MockApp };
 });
 
 class LevelScene extends ExoScene {}
 class MenuScene extends ExoScene {}
 
-function SceneProbe({ sceneClass, deps }: { sceneClass: new () => ExoScene; deps?: DependencyList }): ReactElement {
+const SceneProbe = ({ sceneClass, deps }: { sceneClass: new () => ExoScene; deps?: DependencyList }): ReactElement => {
   const scene = useScene(sceneClass, deps);
 
   return <span data-testid="scene">{scene?.constructor.name ?? 'loading'}</span>;
-}
+};
 
 // `app` is a MockApplication: the `@codexo/exojs` module is vi.mock'ed above, so
 // `new Application()` constructs the mock. The context still types its value as
 // the engine class, hence the cast on the way in.
-function provide(app: MockApplication, children: ReactNode): ReactElement {
-  return <ExoContext.Provider value={app as unknown as Application}>{children}</ExoContext.Provider>;
-}
+const provide = (app: MockApplication, children: ReactNode): ReactElement => (
+  <ExoContext.Provider value={app as unknown as Application}>{children}</ExoContext.Provider>
+);
 
 const makeApp = (): MockApplication => new Application() as unknown as MockApplication;
 

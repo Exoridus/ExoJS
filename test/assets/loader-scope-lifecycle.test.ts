@@ -179,6 +179,7 @@ describe('child scopes', () => {
     root.destroy();
 
     expect(loader.inspect()).toHaveLength(0);
+
     for (const handle of handles) {
       expect(handle.loadState).toBe('loading');
     }

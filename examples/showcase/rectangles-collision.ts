@@ -1,4 +1,13 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  type Texture,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const CLEAR_TINT = new Color(120, 200, 255);
@@ -46,6 +55,7 @@ class RectanglesCollisionScene extends Scene {
     box.setTint(CLEAR_TINT);
     box.interactive = true;
     box.draggable = true;
+
     return box;
   }
 

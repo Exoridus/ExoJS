@@ -70,15 +70,14 @@ export const createQuadrantTexture = (): Texture => {
 };
 
 /** A single 16×16 tile tileset over a texture (`tileCount` covering the grid). */
-export const makeTileset = (texture: Texture, name = 'tiles', tileCount = 1): TileSet => {
-  return new TileSet({
+export const makeTileset = (texture: Texture, name = 'tiles', tileCount = 1): TileSet =>
+  new TileSet({
     name,
     texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),
     tileWidth: 16,
     tileHeight: 16,
     tileCount,
   });
-};
 
 /** Build a 1×1 map containing a single tile with the given orientation. */
 export const singleTileMap = (texture: Texture, transform: TileTransform = TILE_TRANSFORM_IDENTITY): TileMap => {
@@ -94,10 +93,24 @@ export const singleTileMap = (texture: Texture, transform: TileTransform = TILE_
 export const isometricOverlapMap = (red: Texture, blue: Texture): TileMap => {
   const tilesets = [makeTileset(red, 'red'), makeTileset(blue, 'blue')];
   const projection = new TileProjection({ orientation: 'isometric', tileWidth: 16, tileHeight: 8, originX: 32 });
-  const layer = new TileLayer({ id: 1, name: 'iso', width: 4, height: 4, tileWidth: 16, tileHeight: 8, chunkWidth: 2, chunkHeight: 2, tilesets, projection });
-  for (let y = 3; y >= 0; y--)
+  const layer = new TileLayer({
+    id: 1,
+    name: 'iso',
+    width: 4,
+    height: 4,
+    tileWidth: 16,
+    tileHeight: 8,
+    chunkWidth: 2,
+    chunkHeight: 2,
+    tilesets,
+    projection,
+  });
+
+  for (let y = 3; y >= 0; y--) {
     for (let x = 3; x >= 0; x--) {
       layer.setTileAt(x, y, { tileset: tilesets[(x + y) % 2]!, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     }
+  }
+
   return new TileMap({ width: 4, height: 4, tileWidth: 16, tileHeight: 8, tilesets, layers: [layer], projection });
 };

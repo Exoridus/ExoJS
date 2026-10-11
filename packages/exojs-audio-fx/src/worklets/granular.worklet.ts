@@ -55,7 +55,8 @@ class GranularProcessor extends DisposableProcessor {
 
   public constructor(options?: unknown) {
     super();
-    const opts = (options as { processorOptions?: { bufferSeconds?: number; normalizeGain?: boolean } } | undefined)?.processorOptions ?? {};
+    const opts =
+      (options as { processorOptions?: { bufferSeconds?: number; normalizeGain?: boolean } } | undefined)?.processorOptions ?? {};
     const bufferSeconds = opts.bufferSeconds ?? 2;
     this._bufferLength = Math.floor(bufferSeconds * sampleRate);
     this._buffers = [new Float32Array(this._bufferLength)];
@@ -63,24 +64,44 @@ class GranularProcessor extends DisposableProcessor {
   }
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
-    if (this._destroyed) return false;
+    if (this._destroyed) {
+      return false;
+    }
+
     const input = inputs[0];
     const output = outputs[0];
-    if (!input || !output) return true;
-    const channels = Math.min(input.length, output.length);
-    if (channels === 0) {
-      this._activeChannels = 0;
+
+    if (!input || !output) {
       return true;
     }
+
+    const channels = Math.min(input.length, output.length);
+
+    if (channels === 0) {
+      this._activeChannels = 0;
+
+      return true;
+    }
+
     // Grown on a channel-count increase only, never per block. A late channel
     // starts with silent history rather than a copy of another channel's.
-    while (this._buffers.length < channels) this._buffers.push(new Float32Array(this._bufferLength));
+    while (this._buffers.length < channels) {
+      this._buffers.push(new Float32Array(this._bufferLength));
+    }
+
     // A channel that reappears after the input narrowed (stereo, then mono,
     // then stereo again) starts silent: replaying the history it had in its
     // previous activation would leak stale audio onto that side.
-    for (let ch = this._activeChannels; ch < channels; ch++) this._buffers[ch]!.fill(0);
+    for (let ch = this._activeChannels; ch < channels; ch++) {
+      this._buffers[ch]!.fill(0);
+    }
+
     this._activeChannels = channels;
-    if (this._mix.length < channels) this._mix = new Float64Array(channels);
+
+    if (this._mix.length < channels) {
+      this._mix = new Float64Array(channels);
+    }
+
     const buffers = this._buffers;
     const mix = this._mix;
     const length = input[0]!.length;
@@ -99,6 +120,7 @@ class GranularProcessor extends DisposableProcessor {
     // unity regardless of density/grainSize. Default off keeps the expressive
     // density dynamics that make granular sound the way it does.
     let normFactor = 1;
+
     if (this._normalizeGain) {
       const expectedGrains = density * grainSize; // simultaneous grains (dimensionless)
       normFactor = 1 / (0.6123724356957945 * Math.sqrt(Math.max(1e-6, expectedGrains)));
@@ -106,11 +128,15 @@ class GranularProcessor extends DisposableProcessor {
 
     for (let i = 0; i < length; i++) {
       // Write input to the circular buffers
-      for (let ch = 0; ch < channels; ch++) buffers[ch]![this._writePos] = input[ch]![i]!;
+      for (let ch = 0; ch < channels; ch++) {
+        buffers[ch]![this._writePos] = input[ch]![i]!;
+      }
+
       this._writePos = (this._writePos + 1) % this._bufferLength;
 
       // Spawn new grain if scheduled
       this._timeUntilNextGrainSamples -= 1;
+
       if (this._timeUntilNextGrainSamples <= 0) {
         // Random offset into recent past, biased by spread
         const maxOffset = Math.floor(spread * this._bufferLength);
@@ -125,8 +151,10 @@ class GranularProcessor extends DisposableProcessor {
 
       // Mix all active grains (apply Hann window)
       mix.fill(0);
+
       for (let g = this._grains.length - 1; g >= 0; g--) {
         const grain = this._grains[g]!;
+
         if (grain.ageSamples >= grain.lengthSamples) {
           this._grains.splice(g, 1);
           continue;
@@ -137,13 +165,19 @@ class GranularProcessor extends DisposableProcessor {
         const readPos = grain.startPos + grain.ageSamples * grain.pitch;
         const sampleIndex = Math.floor(readPos) % this._bufferLength;
         const safeIndex = (sampleIndex + this._bufferLength) % this._bufferLength;
-        for (let ch = 0; ch < channels; ch++) mix[ch]! += buffers[ch]![safeIndex]! * window;
+
+        for (let ch = 0; ch < channels; ch++) {
+          mix[ch]! += buffers[ch]![safeIndex]! * window;
+        }
 
         grain.ageSamples++;
       }
 
-      for (let ch = 0; ch < channels; ch++) output[ch]![i] = mix[ch]! * normFactor;
+      for (let ch = 0; ch < channels; ch++) {
+        output[ch]![i] = mix[ch]! * normFactor;
+      }
     }
+
     return true;
   }
 }

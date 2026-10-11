@@ -29,7 +29,10 @@ export const TILED_OBJECT_ALIGNMENTS: readonly TiledObjectAlignment[] = [
  * orientation, including staggered and hexagonal.
  * @advanced
  */
-export const resolveTiledObjectAlignment = (alignment: TiledObjectAlignment | undefined, orientation: TiledOrientation): TiledResolvedObjectAlignment => {
+export const resolveTiledObjectAlignment = (
+  alignment: TiledObjectAlignment | undefined,
+  orientation: TiledOrientation,
+): TiledResolvedObjectAlignment => {
   if (alignment !== undefined && alignment !== 'unspecified') {
     return alignment;
   }

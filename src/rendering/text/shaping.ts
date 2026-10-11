@@ -60,7 +60,9 @@ const _hasBidiControl = (text: string): boolean => {
   for (let i = 0; i < text.length; i++) {
     const unit = text.charCodeAt(i);
 
-    if (unit === 0x200e || unit === 0x200f || (unit >= 0x202a && unit <= 0x202e) || (unit >= 0x2066 && unit <= 0x2069)) return true;
+    if (unit === 0x200e || unit === 0x200f || (unit >= 0x202a && unit <= 0x202e) || (unit >= 0x2066 && unit <= 0x2069)) {
+      return true;
+    }
   }
 
   return false;
@@ -77,9 +79,17 @@ const _hasBidiControl = (text: string): boolean => {
 export const resolveShaping = (text: string, layout: LayoutOptions): ShapingMode => {
   const requested = layout.shaping ?? 'auto';
 
-  if (requested !== 'auto') return requested;
-  if (layout.direction === 'rtl') return 'browser';
-  if (_hasBidiControl(text)) return 'browser';
+  if (requested !== 'auto') {
+    return requested;
+  }
+
+  if (layout.direction === 'rtl') {
+    return 'browser';
+  }
+
+  if (_hasBidiControl(text)) {
+    return 'browser';
+  }
 
   return _simpleSafeScripts.test(text) ? 'simple' : 'browser';
 };

@@ -253,8 +253,14 @@ const isTilePropertyObjectRef = (value: TilePropertyValue): value is TilePropert
  * @internal
  */
 const tilePropertyValueEquals = (a: TilePropertyValue, b: TilePropertyValue): boolean => {
-  if (a === b) return true;
-  if (isTilePropertyObjectRef(a) && isTilePropertyObjectRef(b)) return a.id === b.id;
+  if (a === b) {
+    return true;
+  }
+
+  if (isTilePropertyObjectRef(a) && isTilePropertyObjectRef(b)) {
+    return a.id === b.id;
+  }
+
   return false;
 };
 
@@ -397,9 +403,11 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
     this.parallaxX = options.parallaxX ?? 1;
     this.parallaxY = options.parallaxY ?? 1;
     this.parallaxScale = options.parallaxScale ?? 1;
+
     if (!Number.isFinite(this.parallaxScale) || this.parallaxScale <= 0) {
       throw new Error('ObjectLayer parallaxScale must be a positive finite number.');
     }
+
     this.tintColor = options.tintColor ?? null;
     this.drawOrder = options.drawOrder ?? 'topdown';
     this.properties = options.properties ? Object.freeze({ ...options.properties }) : Object.freeze({});
@@ -415,9 +423,15 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
   public getDisplayObject(object: TileMapObject): TileMapObject {
     const projected = this.projection?.projectObject(object) ?? object;
     const position = { x: projected.x + this.offsetX, y: projected.y + this.offsetY };
+
     if (projected.kind === 'tile' && projected.rotationOrigin) {
-      return { ...projected, ...position, rotationOrigin: { x: projected.rotationOrigin.x + this.offsetX, y: projected.rotationOrigin.y + this.offsetY } };
+      return {
+        ...projected,
+        ...position,
+        rotationOrigin: { x: projected.rotationOrigin.x + this.offsetX, y: projected.rotationOrigin.y + this.offsetY },
+      };
     }
+
     return { ...projected, ...position };
   }
 
@@ -441,6 +455,7 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
         // read is a reliable "key absent" signal (equivalent to, but avoids
         // re-indexing after, an `in` check).
         const value = object.properties[filter.property];
+
         if (value === undefined) {
           return false;
         }

@@ -20,7 +20,10 @@ class RebindScene extends Scene {
 
     // Capture the next keydown as the new jump binding
     this.app.input.onKeyDown.add(channel => {
-      if (!this.rebindRequested) return;
+      if (!this.rebindRequested) {
+        return;
+      }
+
       this.jumpChannel = channel;
       this.rebindRequested = false;
       this.jumpDirty = true;
@@ -30,7 +33,10 @@ class RebindScene extends Scene {
   }
 
   _rebindJump(): void {
-    if (!this.jumpDirty) return;
+    if (!this.jumpDirty) {
+      return;
+    }
+
     this._jumpBinding?.unbind();
     this._jumpBinding = this.inputs.onTrigger(this.jumpChannel, () => {
       this.jumpVelocity = -260;

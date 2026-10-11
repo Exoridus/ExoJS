@@ -539,11 +539,21 @@ const flattenArc = (
   let sweep = endAngle - startAngle;
 
   if (anticlockwise) {
-    while (sweep > 0) sweep -= TAU;
-    if (sweep < -TAU) sweep = -TAU;
+    while (sweep > 0) {
+      sweep -= TAU;
+    }
+
+    if (sweep < -TAU) {
+      sweep = -TAU;
+    }
   } else {
-    while (sweep < 0) sweep += TAU;
-    if (sweep > TAU) sweep = TAU;
+    while (sweep < 0) {
+      sweep += TAU;
+    }
+
+    if (sweep > TAU) {
+      sweep = TAU;
+    }
   }
 
   // Largest turn per segment that keeps the chord's sagitta within tolerance.

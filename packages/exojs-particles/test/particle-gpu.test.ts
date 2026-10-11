@@ -28,6 +28,7 @@ const makeTexture = (): Texture => {
   const canvas = document.createElement('canvas');
   canvas.width = 16;
   canvas.height = 16;
+
   return new Texture(canvas);
 };
 
@@ -81,14 +82,29 @@ const installGlobals = (): (() => void) => {
   });
 
   return () => {
-    if (previous.mapMode) Object.defineProperty(globalThis, 'GPUMapMode', previous.mapMode);
-    else Reflect.deleteProperty(globalThis, 'GPUMapMode');
-    if (previous.bufferUsage) Object.defineProperty(globalThis, 'GPUBufferUsage', previous.bufferUsage);
-    else delete (globalThis as { GPUBufferUsage?: unknown }).GPUBufferUsage;
-    if (previous.shaderStage) Object.defineProperty(globalThis, 'GPUShaderStage', previous.shaderStage);
-    else delete (globalThis as { GPUShaderStage?: unknown }).GPUShaderStage;
-    if (previous.textureUsage) Object.defineProperty(globalThis, 'GPUTextureUsage', previous.textureUsage);
-    else delete (globalThis as { GPUTextureUsage?: unknown }).GPUTextureUsage;
+    if (previous.mapMode) {
+      Object.defineProperty(globalThis, 'GPUMapMode', previous.mapMode);
+    } else {
+      Reflect.deleteProperty(globalThis, 'GPUMapMode');
+    }
+
+    if (previous.bufferUsage) {
+      Object.defineProperty(globalThis, 'GPUBufferUsage', previous.bufferUsage);
+    } else {
+      delete (globalThis as { GPUBufferUsage?: unknown }).GPUBufferUsage;
+    }
+
+    if (previous.shaderStage) {
+      Object.defineProperty(globalThis, 'GPUShaderStage', previous.shaderStage);
+    } else {
+      delete (globalThis as { GPUShaderStage?: unknown }).GPUShaderStage;
+    }
+
+    if (previous.textureUsage) {
+      Object.defineProperty(globalThis, 'GPUTextureUsage', previous.textureUsage);
+    } else {
+      delete (globalThis as { GPUTextureUsage?: unknown }).GPUTextureUsage;
+    }
   };
 };
 
@@ -102,19 +118,21 @@ interface MockBuffer {
 
 const makeMockDevice = () => {
   const buffers: MockBuffer[] = [];
-  const textures: { destroy: MockInstance; createView: MockInstance }[] = [];
+  const textures: Array<{ destroy: MockInstance; createView: MockInstance }> = [];
   const pass: MockComputePass = {
     setPipeline: vi.fn(),
     setBindGroup: vi.fn(),
     dispatchWorkgroups: vi.fn(),
     end: vi.fn(),
   };
-  const copies: { source: unknown; sourceOffset: number; destination: MockBuffer; size: number }[] = [];
+  const copies: Array<{ source: unknown; sourceOffset: number; destination: MockBuffer; size: number }> = [];
   const encoder: MockEncoder = {
     beginComputePass: vi.fn(() => pass),
-    copyBufferToBuffer: vi.fn((source: unknown, sourceOffset: number, destination: MockBuffer, _destinationOffset: number, size: number) => {
-      copies.push({ source, sourceOffset, destination, size });
-    }),
+    copyBufferToBuffer: vi.fn(
+      (source: unknown, sourceOffset: number, destination: MockBuffer, _destinationOffset: number, size: number) => {
+        copies.push({ source, sourceOffset, destination, size });
+      },
+    ),
     finish: vi.fn(() => ({ label: 'cb' }) as unknown as GPUCommandBuffer),
   };
   const queue = {
@@ -126,10 +144,12 @@ const makeMockDevice = () => {
   const shaderSources: string[] = [];
   const createShaderModule = vi.fn((descriptor: GPUShaderModuleDescriptor) => {
     shaderSources.push(descriptor.code);
+
     return {} as GPUShaderModule;
   });
   const createComputePipeline = vi.fn((descriptor: GPUComputePipelineDescriptor) => {
     computePipelineDescriptors.push(descriptor);
+
     return {} as GPUComputePipeline;
   });
   const device = {
@@ -151,6 +171,7 @@ const makeMockDevice = () => {
         unmap: vi.fn(),
       };
       buffers.push(buffer);
+
       return buffer as unknown as GPUBuffer;
     }),
     createTexture: vi.fn(() => {
@@ -159,6 +180,7 @@ const makeMockDevice = () => {
         createView: vi.fn(() => ({}) as GPUTextureView),
       };
       textures.push(texture);
+
       return texture as unknown as GPUTexture;
     }),
     createSampler: vi.fn(() => ({}) as GPUSampler),
@@ -170,7 +192,7 @@ const makeMockDevice = () => {
 
 /** Finds every mock GPUBuffer created with a given `label`, in creation order. */
 const findBuffersByLabel = (env: ReturnType<typeof makeMockDevice>, label: string): MockBuffer[] => {
-  const calls = (env.device.createBuffer as unknown as MockInstance).mock.calls as [GPUBufferDescriptor][];
+  const calls = (env.device.createBuffer as unknown as MockInstance).mock.calls as Array<[GPUBufferDescriptor]>;
 
   return calls.flatMap(([descriptor], index) => (descriptor.label === label ? [env.buffers[index]!] : []));
 };
@@ -179,7 +201,9 @@ const findBuffersByLabel = (env: ReturnType<typeof makeMockDevice>, label: strin
 const findBufferByLabel = (env: ReturnType<typeof makeMockDevice>, label: string): MockBuffer => {
   const [first] = findBuffersByLabel(env, label);
 
-  if (first === undefined) throw new Error(`No buffer created with label "${label}"`);
+  if (first === undefined) {
+    throw new Error(`No buffer created with label "${label}"`);
+  }
 
   return first;
 };
@@ -189,7 +213,7 @@ const findBufferByLabel = (env: ReturnType<typeof makeMockDevice>, label: string
  * staging ring occupied the way a device that maps slower than a frame does.
  */
 const holdDeathMaps = (env: ReturnType<typeof makeMockDevice>): { release: (index?: number) => void } => {
-  const waiting: (() => void)[] = [];
+  const waiting: Array<() => void> = [];
   const create = env.device.createBuffer as unknown as MockInstance;
   const inner = create.getMockImplementation()!;
 
@@ -710,7 +734,9 @@ describe('ParticleSystem._compile pre-existing dead slots', () => {
     expect(system.gpuMode).toBe(true);
 
     const positionsBuffer = findBufferByLabel(env, 'particle-positions');
-    const offsets = (env.queue.writeBuffer as unknown as MockInstance).mock.calls.filter(([buffer]) => buffer === positionsBuffer).map(([, offset]) => offset);
+    const offsets = (env.queue.writeBuffer as unknown as MockInstance).mock.calls
+      .filter(([buffer]) => buffer === positionsBuffer)
+      .map(([, offset]) => offset);
 
     // Slot a (alive) is uploaded at byte offset 0; slot b (dead pre-compile)
     // must be skipped, so its byte offset (8) never appears.
@@ -851,7 +877,9 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
     expect(deaths).toHaveLength(0);
     expect(child.liveCount).toBe(0);
 
-    stageDeathRecords(env, [{ x: 120, y: -40, velocityX: 55, velocityY: 5, rotation: 0.5, scaleX: 2, scaleY: 3, color: 0xff00ff00, slot: 0, elapsed: 0.1 }]);
+    stageDeathRecords(env, [
+      { x: 120, y: -40, velocityX: 55, velocityY: 5, rotation: 0.5, scaleX: 2, scaleY: 3, color: 0xff00ff00, slot: 0, elapsed: 0.1 },
+    ]);
     await flushDeathReadback();
 
     expect(deaths).toHaveLength(1);
@@ -1030,8 +1058,16 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
 
     expect(env.copies).toHaveLength(2);
 
-    stageDeathRecords(env, [{ x: 10, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 0, elapsed: 0.02 }], 0);
-    stageDeathRecords(env, [{ x: 20, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 1, elapsed: 0.04 }], 1);
+    stageDeathRecords(
+      env,
+      [{ x: 10, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 0, elapsed: 0.02 }],
+      0,
+    );
+    stageDeathRecords(
+      env,
+      [{ x: 20, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 1, elapsed: 0.04 }],
+      1,
+    );
 
     // The second batch resolves first: it still waits for the one ahead of it.
     maps.release(1);
@@ -1066,7 +1102,9 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
     const emitDying = (): void => {
       const particle = system.emit();
 
-      if (particle) particle.lifetime = 0.02;
+      if (particle) {
+        particle.lifetime = 0.02;
+      }
     };
 
     try {
@@ -1145,7 +1183,9 @@ describe('ParticleGpuState direct construction', () => {
       }
     }
 
-    expect(() => new ParticleGpuState(env.device, 4, [new NoWgslModule()], [], makeTexture(), new Rectangle(0, 0, 16, 16))).toThrow(/has no wgsl/);
+    expect(() => new ParticleGpuState(env.device, 4, [new NoWgslModule()], [], makeTexture(), new Rectangle(0, 0, 16, 16))).toThrow(
+      /has no wgsl/,
+    );
   });
 
   test('uploads backend-neutral texture bytes instead of invoking a legacy uploader', () => {
@@ -1202,7 +1242,9 @@ describe('ParticleGpuState direct construction', () => {
       }
     }
 
-    expect(() => new ParticleGpuState(env.device, 4, [new UploaderWithoutTextures()], [], makeTexture(), new Rectangle(0, 0, 16, 16))).not.toThrow();
+    expect(
+      () => new ParticleGpuState(env.device, 4, [new UploaderWithoutTextures()], [], makeTexture(), new Rectangle(0, 0, 16, 16)),
+    ).not.toThrow();
     expect(uploadCalls).toBe(1);
   });
 
@@ -1247,7 +1289,9 @@ describe('ParticleGpuState frame-UV packing (_writeFrames)', () => {
     const framesBuffer = findBufferByLabel(env, 'particle-frames-uniforms');
     const call = (env.queue.writeBuffer as unknown as MockInstance).mock.calls.find(([buffer]) => buffer === framesBuffer);
 
-    if (!call) throw new Error('frames uniform buffer was never written');
+    if (!call) {
+      throw new Error('frames uniform buffer was never written');
+    }
 
     return new Float32Array(call[2] as ArrayBuffer);
   };
@@ -1576,7 +1620,10 @@ describe('ParticleGpuState atlas UVs against a deferred texture', () => {
     // size, so the payload is reconstructed from those rather than from a view.
     return (env.queue.writeBuffer as unknown as MockInstance).mock.calls
       .filter(([target]) => target === buffer)
-      .map(([, , data, dataOffset, size]) => new Float32Array((data as ArrayBuffer).slice(dataOffset as number, (dataOffset as number) + (size as number))));
+      .map(
+        ([, , data, dataOffset, size]) =>
+          new Float32Array((data as ArrayBuffer).slice(dataOffset as number, (dataOffset as number) + (size as number))),
+      );
   };
 
   test('re-uploads finite atlas UVs once the texture finishes loading', async () => {

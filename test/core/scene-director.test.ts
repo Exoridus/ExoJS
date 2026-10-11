@@ -201,7 +201,7 @@ class FakeTransition extends SceneTransition {
 
 describe('SceneDirector', () => {
   test('keeps scene unset and cleans up when load() fails, without calling unload()', async () => {
-    const unload = vi.fn(async () => undefined);
+    const unload = vi.fn(async () => {});
     const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
     const FailScene = makeSceneClass({
       async load() {
@@ -225,8 +225,8 @@ describe('SceneDirector', () => {
   });
 
   test('keeps scene unset and cleans up when init() fails, without calling unload()', async () => {
-    const load = vi.fn(async () => undefined);
-    const unload = vi.fn(async () => undefined);
+    const load = vi.fn(async () => {});
+    const unload = vi.fn(async () => {});
     const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
     const FailScene = makeSceneClass({
       load,
@@ -262,7 +262,7 @@ describe('SceneDirector', () => {
     });
     const manager = new SceneDirector(app, { fail: FailScene });
     const errorSpy = vi.fn();
-    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
     app.onError.add(errorSpy);
 
@@ -289,7 +289,7 @@ describe('SceneDirector', () => {
     });
     const manager = new SceneDirector(app, { ok: OkScene });
     const errorSpy = vi.fn();
-    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
     app.onError.add(errorSpy);
 
@@ -306,8 +306,8 @@ describe('SceneDirector', () => {
   });
 
   test('setScene switches the active scene and ends the previous one permanently', async () => {
-    const firstUnload = vi.fn(async () => undefined);
-    const secondInit = vi.fn(() => undefined);
+    const firstUnload = vi.fn(async () => {});
+    const secondInit = vi.fn(() => {});
     const First = makeSceneClass({ unload: firstUnload });
     const Second = makeSceneClass({ init: secondInit });
     const manager = new SceneDirector(createApplicationStub(), { first: First, second: Second });
@@ -393,8 +393,8 @@ describe('SceneDirector', () => {
   });
 
   test('setScene always creates a fresh instance, even for the same constructor', async () => {
-    const init = vi.fn(() => undefined);
-    const unload = vi.fn(async () => undefined);
+    const init = vi.fn(() => {});
+    const unload = vi.fn(async () => {});
     const TestScene = makeSceneClass({ init, unload });
     const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
 
@@ -411,7 +411,7 @@ describe('SceneDirector', () => {
   });
 
   test('_clearScene() clears the active scene', async () => {
-    const unload = vi.fn(async () => undefined);
+    const unload = vi.fn(async () => {});
     const TestScene = makeSceneClass({ unload });
     const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
 
@@ -485,13 +485,17 @@ describe('SceneDirector', () => {
     test('rejects a duplicate constructor registered under two keys across mixed forms', () => {
       const DupScene = makeSceneClass();
 
-      expect(() => new SceneDirector(createApplicationStub(), { first: DupScene, second: { scene: DupScene } })).toThrow(DuplicateSceneRegistrationError);
+      expect(() => new SceneDirector(createApplicationStub(), { first: DupScene, second: { scene: DupScene } })).toThrow(
+        DuplicateSceneRegistrationError,
+      );
     });
 
     test('rejects an invalid descriptor whose scene is not a Scene subclass', () => {
       class NotAScene {}
 
-      expect(() => new SceneDirector(createApplicationStub(), { bad: { scene: NotAScene as never } })).toThrow(InvalidSceneRegistrationError);
+      expect(() => new SceneDirector(createApplicationStub(), { bad: { scene: NotAScene as never } })).toThrow(
+        InvalidSceneRegistrationError,
+      );
     });
   });
 
@@ -733,8 +737,8 @@ describe('SceneDirector — retention', () => {
 
   test('restoreScene() reactivates the same instance without re-running load()/init()', async () => {
     const app = createApplicationStub();
-    const load = vi.fn(async () => undefined);
-    const init = vi.fn(() => undefined);
+    const load = vi.fn(async () => {});
+    const init = vi.fn(() => {});
     const FirstScene = makeSceneClass({ load, init });
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
@@ -910,13 +914,19 @@ describe('SceneDirector — post-commit signal isolation', () => {
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
     director.onChangeScene.add(scene => {
-      if (scene instanceof SecondScene) order.push('onChangeScene');
+      if (scene instanceof SecondScene) {
+        order.push('onChangeScene');
+      }
     });
     director.onStartScene.add(scene => {
-      if (scene instanceof SecondScene) order.push('onStartScene');
+      if (scene instanceof SecondScene) {
+        order.push('onStartScene');
+      }
     });
     director.onStopScene.add(scene => {
-      if (scene instanceof FirstScene) order.push('onStopScene');
+      if (scene instanceof FirstScene) {
+        order.push('onStopScene');
+      }
     });
 
     await director.change(FirstScene);
@@ -945,7 +955,9 @@ describe('SceneDirector — post-commit signal isolation', () => {
     // onStateChange events of its own. Only the restored FirstScene's own
     // Suspended->Active edge is the one this test's ordering claim is about.
     director.onStateChange.add((_previous, _next, scene) => {
-      if (scene instanceof FirstScene) order.push('onStateChange');
+      if (scene instanceof FirstScene) {
+        order.push('onStateChange');
+      }
     });
     director.onChangeScene.add(() => order.push('onChangeScene'));
 
@@ -960,7 +972,7 @@ describe('SceneDirector — post-commit signal isolation', () => {
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
     const errorSpy = vi.fn();
-    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
     app.onError.add(errorSpy);
     await director.change(FirstScene);
@@ -985,7 +997,7 @@ describe('SceneDirector — post-commit signal isolation', () => {
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
     const errorSpy = vi.fn();
-    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
     app.onError.add(errorSpy);
     await director.change(FirstScene);
@@ -1292,7 +1304,7 @@ describe('SceneDirector — preload', () => {
 
   test('a racing second preload() call for the same target and data shares the same in-flight preparation', async () => {
     const app = createApplicationStub();
-    const load = vi.fn(async () => undefined);
+    const load = vi.fn(async () => {});
     const PreloadedScene = makeSceneClass({ load });
     const director = new SceneDirector(app, { preloaded: PreloadedScene });
 
@@ -1345,7 +1357,7 @@ describe('SceneDirector — preload', () => {
 
   test('change() consumes a matching preload without re-running load()/init()', async () => {
     const app = createApplicationStub();
-    const load = vi.fn(async () => undefined);
+    const load = vi.fn(async () => {});
     const init = vi.fn();
     const GameScene = makeSceneClass({ load, init });
     const director = new SceneDirector(app, { game: GameScene });
@@ -1558,7 +1570,7 @@ describe('SceneDirector — unload', () => {
     const app = createApplicationStub();
     let resolveLoad!: () => void;
     const initSpy = vi.fn();
-    const unloadHook = vi.fn(async () => undefined);
+    const unloadHook = vi.fn(async () => {});
     const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
     const SlowScene = makeSceneClass({
       load: () =>
@@ -1596,7 +1608,7 @@ describe('SceneDirector — unload', () => {
   test('a fresh preload() call racing an in-flight unload()-cancellation of the same target does not interfere with it', async () => {
     const app = createApplicationStub();
     let resolveFirstLoad!: () => void;
-    const firstUnloadHook = vi.fn(async () => undefined);
+    const firstUnloadHook = vi.fn(async () => {});
     const secondInit = vi.fn();
     let loadCallCount = 0;
     const RacyScene = makeSceneClass({
@@ -1609,7 +1621,7 @@ describe('SceneDirector — unload', () => {
           });
         }
 
-        return undefined;
+        return;
       },
       init: secondInit,
       unload: firstUnloadHook,
@@ -1661,6 +1673,7 @@ describe('SceneDirector — transition session driving', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -1702,15 +1715,19 @@ describe('SceneDirector — transition session driving', () => {
     class SelfCommittingSession implements SceneTransitionSession {
       public done = false;
       public placement: 'scene' | 'screen' = 'screen';
+
       public constructor(private readonly environment: SceneTransitionEnvironment) {
         this.environment.commit();
       }
+
       public update(_delta: Seconds): void {
         if (this.environment.committed) {
           this.done = true;
         }
       }
+
       public render(): void {}
+
       public destroy(): void {}
     }
 
@@ -1720,6 +1737,7 @@ describe('SceneDirector — transition session driving', () => {
 
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -1757,6 +1775,7 @@ describe('SceneDirector — transition session driving', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -1776,6 +1795,7 @@ describe('SceneDirector — transition session driving', () => {
     session.render = () => {
       throw new Error('render blew up post-commit');
     };
+
     tick(manager, app);
 
     await expect(navigation).rejects.toThrow('render blew up post-commit');
@@ -1810,6 +1830,7 @@ describe('SceneDirector — transition session driving', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -1838,6 +1859,7 @@ describe('SceneDirector — transition session driving', () => {
     session.update = () => {
       throw new Error('session update blew up mid-prepare');
     };
+
     tick(manager, app);
 
     // The navigation rejects from the session's own thrown error (settled by
@@ -1872,6 +1894,7 @@ describe('SceneDirector — transition resource provisioning', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'texture' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -1910,13 +1933,16 @@ describe('SceneDirector — transition resource provisioning', () => {
     let environmentRef = null as SceneTransitionEnvironment | null;
     const capturedFrames: SceneTransitionFrame[] = [];
     const session = new FakeSession();
+
     session.render = (_context, frame) => {
       capturedFrames.push(frame);
     };
+
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'snapshot', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -1962,6 +1988,7 @@ describe('SceneDirector — transition resource provisioning', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'snapshot', currentFrame: 'none' };
       }
+
       protected override createSession(): SceneTransitionSession {
         return session;
       }
@@ -1996,6 +2023,7 @@ describe('SceneDirector — transition resource provisioning', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'snapshot', currentFrame: 'texture' };
       }
+
       protected override createSession(): SceneTransitionSession {
         return session;
       }
@@ -2012,13 +2040,16 @@ describe('SceneDirector — transition resource provisioning', () => {
 
     let capturedFrame: SceneTransitionFrame | null = null;
     const session = new FakeSession();
+
     session.render = (_context, frame) => {
       capturedFrame = frame;
     };
+
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'snapshot', currentFrame: 'none' };
       }
+
       protected override createSession(): SceneTransitionSession {
         return session;
       }
@@ -2052,7 +2083,9 @@ describe('SceneDirector — transition resource provisioning', () => {
       }
 
       public update(): void {}
+
       public render(): void {}
+
       public destroy(): void {}
     }
 
@@ -2060,6 +2093,7 @@ describe('SceneDirector — transition resource provisioning', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(): SceneTransitionSession {
         return new ThrowingDoneSession();
       }
@@ -2089,7 +2123,9 @@ describe('SceneDirector — transition resource provisioning', () => {
       }
 
       public update(): void {}
+
       public render(): void {}
+
       public destroy(): void {}
     }
 
@@ -2097,6 +2133,7 @@ describe('SceneDirector — transition resource provisioning', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(): SceneTransitionSession {
         return new ThrowingPlacementSession();
       }
@@ -2123,6 +2160,7 @@ describe('SceneDirector — transition resource provisioning', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'texture' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2162,13 +2200,16 @@ describe('SceneDirector — transition lifecycle contract', () => {
 
     let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
+
     session.update = () => {
       environmentRef?.commit();
     };
+
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
         environment.commit(); // first call, synchronous, from createSession()
@@ -2255,6 +2296,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'texture' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2290,6 +2332,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2307,6 +2350,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
     session.update = () => {
       throw new Error('update blew up post-commit');
     };
+
     tick(manager, app);
 
     await expect(navigation).rejects.toThrow('update blew up post-commit');
@@ -2325,9 +2369,11 @@ describe('SceneDirector — transition lifecycle contract', () => {
     await manager.change(First);
 
     const session = new FakeSession();
+
     session.destroy = () => {
       throw new Error('destroy() itself failed');
     };
+
     const transition = new FakeTransition(session);
 
     const navigation = manager.change(Second, { transition });
@@ -2409,6 +2455,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
         session = new LifecycleGuardSession(environment);
@@ -2462,6 +2509,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2473,7 +2521,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
     // Attach a handler before the switch runs - the navigation rejects during
     // settle(), so observing it only afterwards would flag a spurious
     // "handled asynchronously" unhandled-rejection warning.
-    void navigation.catch(() => undefined);
+    void navigation.catch(() => {});
 
     environmentRef?.commit(); // triggers commitSwitch(), which awaits _prepareScene() — and that throws
     tick(manager, app);
@@ -2503,6 +2551,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2511,7 +2560,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
     })();
 
     const navigation = manager.change(Failing, { transition });
-    void navigation.catch(() => undefined);
+    void navigation.catch(() => {});
 
     environmentRef?.commit();
     tick(manager, app);
@@ -2536,6 +2585,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2589,6 +2639,7 @@ describe('SceneDirector — composability', () => {
 
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2626,6 +2677,7 @@ describe('SceneDirector — composability', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2657,13 +2709,16 @@ describe('SceneDirector — composability', () => {
     let environmentRef = null as SceneTransitionEnvironment | null;
     const capturedFrames: SceneTransitionFrame[] = [];
     const session = new FakeSession();
+
     session.render = (_context, frame) => {
       capturedFrames.push(frame);
     };
+
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'texture' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2698,7 +2753,9 @@ class RecordingPhaseForDirectorTest extends PhasedSceneTransition {
     return { outgoingFrame: 'none', currentFrame: 'direct' };
   }
 
-  public override beginSession(...args: Parameters<PhasedSceneTransition['beginSession']>): ReturnType<PhasedSceneTransition['beginSession']> {
+  public override beginSession(
+    ...args: Parameters<PhasedSceneTransition['beginSession']>
+  ): ReturnType<PhasedSceneTransition['beginSession']> {
     RecordingPhaseForDirectorTest.beginSessionCalls++;
 
     return super.beginSession(...args);
@@ -2835,7 +2892,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     const transition = new FakeTransition(session);
     const navigation = director.change(Second, { transition });
 
-    void navigation.catch(() => undefined);
+    void navigation.catch(() => {});
 
     expect(director._abortInFlightNavigation(new SceneNavigationAbortedError())).toBe(true);
     const destroyCountAfterFirstAbort = session.destroyCallCount;
@@ -2843,7 +2900,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     expect(director._abortInFlightNavigation(new SceneNavigationAbortedError())).toBe(false);
     expect(session.destroyCallCount).toBe(destroyCountAfterFirstAbort);
 
-    await navigation.catch(() => undefined);
+    await navigation.catch(() => {});
   });
 
   test('does nothing to a navigation that already committed (no session left to interrupt)', async () => {
@@ -2875,7 +2932,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     // awaiting SlowLoad.load(). No transition session is involved.
     const navigation = director.change(SlowLoad);
 
-    void navigation.catch(() => undefined);
+    void navigation.catch(() => {});
     await Promise.resolve(); // let commitSwitch reach its prepare await
 
     // SlowLoad's load()/init() is still pending - abort now, exactly what
@@ -2977,6 +3034,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -2986,7 +3044,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
 
     const navigation = director.change(Second, { transition });
 
-    void navigation.catch(() => undefined);
+    void navigation.catch(() => {});
 
     environmentRef?.commit();
     tick(director, app); // starts _performSessionCommit -> commitSwitch, now awaiting Second.load()
@@ -3038,6 +3096,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -3047,7 +3106,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
 
     const navigation = director.change(Second, { transition });
 
-    void navigation.catch(() => undefined);
+    void navigation.catch(() => {});
 
     environmentRef?.commit();
     tick(director, app); // starts _performSessionCommit -> commitSwitch, now awaiting Second.load()
@@ -3110,6 +3169,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 
@@ -3196,7 +3256,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 
     const navigation = director.change(SlowLoad);
 
-    void navigation.catch(() => undefined);
+    void navigation.catch(() => {});
     await Promise.resolve(); // commitSwitch is now suspended in SlowLoad.load()
 
     // Sanity: the ordinary navigation path genuinely loses to the lock here.
@@ -3229,6 +3289,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef.current = environment;
 
@@ -3238,7 +3299,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 
     const navigation = director.change(Second, { transition });
 
-    void navigation.catch(() => undefined);
+    void navigation.catch(() => {});
 
     environmentRef.current?.commit();
     tick(director, app);
@@ -3353,6 +3414,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
     const disposalError = new Error('scope destroy blew up');
     const destroySpy = vi.spyOn(SceneScope.prototype, 'destroy').mockRejectedValueOnce(disposalError);
     const unhandled: unknown[] = [];
+
     const onUnhandled = (event: PromiseRejectionEvent): void => {
       unhandled.push(event.reason);
     };
@@ -3394,6 +3456,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'none', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef.current = environment;
 
@@ -3403,7 +3466,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 
     const navigation = director.change(SlowLoad, { transition });
 
-    void navigation.catch(() => undefined);
+    void navigation.catch(() => {});
 
     environmentRef.current?.commit();
     tick(director, app); // _performSessionCommit -> commitSwitch, now awaiting SlowLoad.load()
@@ -3448,7 +3511,8 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 });
 
 describe('default root rendering', () => {
-  const rootRenders = (app: ApplicationStub, scene: Scene | null): number => app.rendering.render.mock.calls.filter(([node]) => node === scene?.root).length;
+  const rootRenders = (app: ApplicationStub, scene: Scene | null): number =>
+    app.rendering.render.mock.calls.filter(([node]) => node === scene?.root).length;
 
   test('the root exists before attachment and addChild/removeChild work on it', () => {
     const scene = new Scene();
@@ -3480,7 +3544,9 @@ describe('default root rendering', () => {
       order.push('ui');
     });
     app.rendering.render.mockImplementation((node: unknown) => {
-      if (node === scene.root) order.push('root');
+      if (node === scene.root) {
+        order.push('root');
+      }
     });
 
     tick(manager, app);
@@ -3501,7 +3567,7 @@ describe('default root rendering', () => {
     const manager = new SceneDirector(app, { test: TestScene });
 
     await manager.change(TestScene);
-    const ui = vi.spyOn(manager.currentScene!.ui, '_render').mockImplementation(() => undefined);
+    const ui = vi.spyOn(manager.currentScene!.ui, '_render').mockImplementation(() => {});
     tick(manager, app);
 
     expect(app.rendering.render.mock.calls.map(([node]) => node)).toEqual([world]);
@@ -3512,12 +3578,12 @@ describe('default root rendering', () => {
   test('an empty override suppresses the root but keeps systems and UI', async () => {
     const app = createApplicationStub();
     const systemDraw = vi.fn();
-    const TestScene = makeSceneClass({ draw: () => undefined });
+    const TestScene = makeSceneClass({ draw: () => {} });
     const manager = new SceneDirector(app, { test: TestScene });
 
     await manager.change(TestScene);
     manager.currentScene!.systems.add({ draw: systemDraw });
-    const ui = vi.spyOn(manager.currentScene!.ui, '_render').mockImplementation(() => undefined);
+    const ui = vi.spyOn(manager.currentScene!.ui, '_render').mockImplementation(() => {});
     tick(manager, app);
 
     expect(app.rendering.render).not.toHaveBeenCalled();
@@ -3602,6 +3668,7 @@ describe('default root rendering', () => {
       public getRequirements(): SceneTransitionRequirements {
         return { outgoingFrame: 'snapshot', currentFrame: 'none' };
       }
+
       protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
         environmentRef = environment;
 

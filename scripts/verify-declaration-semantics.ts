@@ -41,9 +41,9 @@ const CONTRACTS = join(import.meta.dirname, 'declaration-semantics');
  * pair covers the API compiler that ships and the native compiler that now
  * builds, so a change to either can be caught here.
  */
-const compilers = (): { label: string; bin: string }[] => {
+const compilers = (): Array<{ label: string; bin: string }> => {
   const require = createRequire(join(REPO_ROOT, 'package.json'));
-  const out: { label: string; bin: string }[] = [];
+  const out: Array<{ label: string; bin: string }> = [];
 
   const apiManifest = require.resolve('typescript/package.json');
   out.push({ label: 'TypeScript 6 (JavaScript compiler)', bin: join(join(apiManifest, '..'), 'bin', 'tsc') });
@@ -54,7 +54,9 @@ const compilers = (): { label: string; bin: string }[] => {
 };
 
 const newestMtime = (dir: string): number => {
-  if (!existsSync(dir)) return 0;
+  if (!existsSync(dir)) {
+    return 0;
+  }
 
   let newest = 0;
 
@@ -98,7 +100,10 @@ try {
   const target = join(workspace, 'node_modules', '@codexo', 'exojs');
   cpSync(DIST, join(target, 'dist'), { recursive: true });
   cpSync(join(REPO_ROOT, 'package.json'), join(target, 'package.json'));
-  writeFileSync(join(workspace, 'package.json'), JSON.stringify({ name: 'declaration-semantics-consumer', private: true, version: '0.0.0' }, null, 2));
+  writeFileSync(
+    join(workspace, 'package.json'),
+    JSON.stringify({ name: 'declaration-semantics-consumer', private: true, version: '0.0.0' }, null, 2),
+  );
 
   for (const file of ['fixtures.ts', 'positive.ts', 'negative.ts', 'inference.ts']) {
     cpSync(join(CONTRACTS, file), join(workspace, file));
@@ -128,12 +133,17 @@ try {
   );
 
   const contracts = ['positive', 'negative', 'inference'] as const;
+
   for (const name of contracts) {
-    writeFileSync(join(workspace, `tsconfig.${name}.json`), JSON.stringify({ extends: './tsconfig.base.json', files: [`${name}.ts`] }, null, 2));
+    writeFileSync(
+      join(workspace, `tsconfig.${name}.json`),
+      JSON.stringify({ extends: './tsconfig.base.json', files: [`${name}.ts`] }, null, 2),
+    );
   }
 
   const run = (bin: string, config: string): { code: number; out: string } => {
     const r = spawnSync(process.execPath, [bin, '--noEmit', '-p', join(workspace, config)], { encoding: 'utf8', cwd: workspace });
+
     return { code: r.status ?? 1, out: `${r.stdout ?? ''}${r.stderr ?? ''}` };
   };
 
@@ -145,9 +155,13 @@ try {
     for (const name of contracts) {
       const result = run(compiler.bin, `tsconfig.${name}.json`);
       const ok = result.code === 0;
-      if (!ok) failed = true;
+
+      if (!ok) {
+        failed = true;
+      }
 
       console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${name}.ts`);
+
       if (!ok) {
         for (const line of result.out
           .split(/\r?\n/)

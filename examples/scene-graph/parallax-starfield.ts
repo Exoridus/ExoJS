@@ -24,12 +24,14 @@ class ParallaxStarfieldScene extends Scene {
     this.layers = counts.map((count, index) => {
       const g = new Graphics();
       g.fillColor = colors[index];
+
       for (let i = 0; i < count; i++) {
         const x = Math.random() * (width + margin * 2) - margin;
         const y = Math.random() * (height + margin * 2) - margin;
         const r = 1 + index;
         g.drawCircle(x, y, r);
       }
+
       return g;
     });
 
@@ -44,6 +46,7 @@ class ParallaxStarfieldScene extends Scene {
   override draw(context: RenderingContext): void {
     const app = this.app;
     const { width, height } = app;
+
     for (let i = 0; i < this.layers.length; i++) {
       const layer = this.layers[i];
       const factor = speeds[i];

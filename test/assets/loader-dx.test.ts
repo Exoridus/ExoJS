@@ -29,6 +29,7 @@ class DxNonLeafResource {
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -36,7 +37,8 @@ const originalFetch = global.fetch;
 
 const mockFetchImage = (): void => {
   global.fetch = vi.fn(
-    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
+    async (): Promise<Response> =>
+      ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
   );
 };
 
@@ -45,7 +47,9 @@ const mockFetch404 = (): void => {
 };
 
 const mockFetchText = (text = 'raw'): void => {
-  global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => text }) as unknown as Response);
+  global.fetch = vi.fn(
+    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => text }) as unknown as Response,
+  );
 };
 
 interface Deferred<T> {
@@ -58,6 +62,7 @@ const deferred = <T>(): Deferred<T> => {
   const promise = new Promise<T>(res => {
     resolve = res;
   });
+
   return { promise, resolve };
 };
 
@@ -212,7 +217,13 @@ describe('Loader.inspect() snapshot contract', () => {
     const pending = deferred<string>();
     const loader = new Loader();
     loader._installAssetTypes([
-      testAssetType<string, string>({ id: 'text', token: TextAsset, extensions: ['txt'], acquires: false, create: async () => pending.promise }),
+      testAssetType<string, string>({
+        id: 'text',
+        token: TextAsset,
+        extensions: ['txt'],
+        acquires: false,
+        create: async () => pending.promise,
+      }),
     ]);
 
     const ref = loader.get('note.txt') as AssetRef<string>;
@@ -227,7 +238,17 @@ describe('Loader.inspect() snapshot contract', () => {
 
     const row = snapshot[0]!;
 
-    expect(Object.keys(row).sort()).toEqual(['aliases', 'background', 'canonicalKey', 'claims', 'inFlight', 'locator', 'owners', 'state', 'type']);
+    expect(Object.keys(row).sort()).toEqual([
+      'aliases',
+      'background',
+      'canonicalKey',
+      'claims',
+      'inFlight',
+      'locator',
+      'owners',
+      'state',
+      'type',
+    ]);
 
     for (const [field, value] of Object.entries(row)) {
       if (field === 'type') {
@@ -275,7 +296,13 @@ describe('Loader.inspect() snapshot contract', () => {
     const pending = deferred<string>();
     const loader = new Loader();
     loader._installAssetTypes([
-      testAssetType<string, string>({ id: 'text', token: TextAsset, extensions: ['txt'], acquires: false, create: async () => pending.promise }),
+      testAssetType<string, string>({
+        id: 'text',
+        token: TextAsset,
+        extensions: ['txt'],
+        acquires: false,
+        create: async () => pending.promise,
+      }),
     ]);
 
     const ref = loader.get('note.txt') as AssetRef<string>;
@@ -348,7 +375,7 @@ describe('Loader.inspect() snapshot contract', () => {
       bad: { type: 'text', source: 'note.txt', parse: () => Promise.resolve('nope') as unknown as string },
     });
 
-    await loader.load(catalog).catch(() => undefined);
+    await loader.load(catalog).catch(() => {});
 
     expect(catalog.bad.state).toBe('failed');
 
@@ -364,7 +391,7 @@ describe('Loader.inspect() snapshot contract', () => {
       bad: { type: 'text', source: 'note.txt', parse: () => Promise.resolve('nope') as unknown as string },
     });
 
-    await loader.load(catalog).catch(() => undefined);
+    await loader.load(catalog).catch(() => {});
     expect(catalog.bad.state).toBe('failed');
 
     // Re-claiming the same leaf (routinely: a second scene claiming the same
@@ -389,9 +416,13 @@ describe('Loader.inspect() snapshot contract', () => {
     const loader = new Loader();
     class FakeType {}
 
-    loader._installAssetTypes([testAssetType<string, string>({ id: 'fakeType', token: FakeType, acquires: false, create: async () => 'payload' })]);
+    loader._installAssetTypes([
+      testAssetType<string, string>({ id: 'fakeType', token: FakeType, acquires: false, create: async () => 'payload' }),
+    ]);
 
-    const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): { key: string } })._canonicalize.bind(loader);
+    const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): { key: string } })._canonicalize.bind(
+      loader,
+    );
     const asset = canonicalize(FakeType, 'bundled.bin');
     const residency = (
       loader as unknown as {

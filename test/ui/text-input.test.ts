@@ -371,6 +371,7 @@ describe('TextInput', () => {
     press(harness, 5, 18);
 
     const textarea = transportTextarea();
+
     const fire = (type: string, data: string): void => {
       const event = new Event(type, { cancelable: true, bubbles: true }) as CompositionEvent;
 
@@ -418,6 +419,7 @@ describe('TextInput', () => {
     press(harness, 5, 18);
 
     const textarea = transportTextarea();
+
     const fire = (type: string, data: string): void => {
       const event = new Event(type, { cancelable: true, bubbles: true }) as CompositionEvent;
 

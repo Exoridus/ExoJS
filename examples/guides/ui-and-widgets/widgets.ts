@@ -255,4 +255,15 @@ class GamepadMenuScene extends Scene {
 }
 // #endregion guide:focus-navigation
 
-export { DockedHudScene, FormScene, GamepadMenuScene, HudScene, InventoryScene, LoginScene, MenuScene, OptionsScene, SettingsScene, ShopScene };
+export {
+  DockedHudScene,
+  FormScene,
+  GamepadMenuScene,
+  HudScene,
+  InventoryScene,
+  LoginScene,
+  MenuScene,
+  OptionsScene,
+  SettingsScene,
+  ShopScene,
+};

@@ -592,11 +592,13 @@ describe('SceneAudio — deferred voice surface', () => {
     Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
     vi.spyOn(el, 'play').mockImplementation(function (this: HTMLAudioElement) {
       mutable(this).paused = false;
+
       return Promise.resolve();
     });
     vi.spyOn(el, 'pause').mockImplementation(function (this: HTMLAudioElement) {
       mutable(this).paused = true;
     });
+
     return el;
   };
 

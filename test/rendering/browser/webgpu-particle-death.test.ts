@@ -253,6 +253,7 @@ describe('WebGPU particle death context', () => {
       for (const field of ['x', 'y', 'velocityX', 'velocityY', 'rotation', 'scaleX', 'scaleY', 'elapsed', 'lifetime'] as const) {
         expect(actual[field]).toBeCloseTo(expected[field], 5);
       }
+
       expect(actual.color).toBe(expected.color);
       expect(actual.color).toBe(0x80402010);
     } finally {
@@ -310,7 +311,10 @@ describe('WebGPU particle death context', () => {
       await new Promise(resolve => setTimeout(resolve, 30));
       expect(deaths.records).toHaveLength(0);
     } finally {
-      if (action !== 'destroy') system.destroy();
+      if (action !== 'destroy') {
+        system.destroy();
+      }
+
       texture.destroy();
       backend.destroy();
     }

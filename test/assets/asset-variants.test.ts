@@ -83,7 +83,11 @@ describe('AssetVariantSet', () => {
   });
 
   test('the highest eligible density wins within one format rank', () => {
-    const set = new AssetVariantSet().define('ui.png', [{ source: 'ui.png' }, { source: 'ui@2x.png', resolution: 2 }, { source: 'ui@3x.png', resolution: 3 }]);
+    const set = new AssetVariantSet().define('ui.png', [
+      { source: 'ui.png' },
+      { source: 'ui@2x.png', resolution: 2 },
+      { source: 'ui@3x.png', resolution: 3 },
+    ]);
 
     set.profile = { textureFormats: [], resolution: 3 };
 

@@ -1,7 +1,7 @@
 import {
   Application,
   Asset,
-  AudioStream,
+  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
@@ -44,7 +44,11 @@ class MusicLoopScene extends Scene {
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now,
     // and all live control (volume, rate, loop, seek) lives on it.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.7, playbackRate: 1 }) as Voice & Seekable & Pausable & Loopable & RatePitched;
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.7, playbackRate: 1 }) as Voice &
+      Seekable &
+      Pausable &
+      Loopable &
+      RatePitched;
 
     this.graphics = new Graphics();
     this.status = new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.bar.x, this.bar.y - 36);
@@ -85,6 +89,7 @@ class MusicLoopScene extends Scene {
       value: this.musicVoice.loop,
       onChange: on => {
         this.musicVoice.loop = on;
+
         // Re-running off the end: if the track already finished while
         // loop was off, re-enabling and playing restarts it.
         if (on && this.musicVoice.paused) {

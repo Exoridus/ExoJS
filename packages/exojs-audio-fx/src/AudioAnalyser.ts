@@ -135,7 +135,10 @@ export class AudioAnalyser {
 
   public set smoothingTimeConstant(v: number) {
     this._options.smoothingTimeConstant = v;
-    if (this._analyser) this._analyser.smoothingTimeConstant = v;
+
+    if (this._analyser) {
+      this._analyser.smoothingTimeConstant = v;
+    }
   }
 
   public get minDecibels(): number {
@@ -144,7 +147,10 @@ export class AudioAnalyser {
 
   public set minDecibels(v: number) {
     this._options.minDecibels = v;
-    if (this._analyser) this._analyser.minDecibels = v;
+
+    if (this._analyser) {
+      this._analyser.minDecibels = v;
+    }
   }
 
   public get maxDecibels(): number {
@@ -153,7 +159,10 @@ export class AudioAnalyser {
 
   public set maxDecibels(v: number) {
     this._options.maxDecibels = v;
-    if (this._analyser) this._analyser.maxDecibels = v;
+
+    if (this._analyser) {
+      this._analyser.maxDecibels = v;
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -163,44 +172,52 @@ export class AudioAnalyser {
   /** Fill and return the byte frequency spectrum (0..255 per bin). */
   public getSpectrum(into?: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
     const buf = into ?? this._byteSpectrum;
+
     if (this._analyser) {
       this._analyser.getByteFrequencyData(buf);
     } else {
       buf.fill(0);
     }
+
     return buf;
   }
 
   /** Fill and return the float frequency spectrum (dB per bin). */
   public getSpectrumFloat(into?: Float32Array<ArrayBuffer>): Float32Array<ArrayBuffer> {
     const buf = into ?? this._floatSpectrum;
+
     if (this._analyser) {
       this._analyser.getFloatFrequencyData(buf);
     } else {
       buf.fill(0);
     }
+
     return buf;
   }
 
   /** Fill and return the byte time-domain waveform (0..255 per sample). */
   public getWaveform(into?: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
     const buf = into ?? this._byteWaveform;
+
     if (this._analyser) {
       this._analyser.getByteTimeDomainData(buf);
     } else {
       buf.fill(0);
     }
+
     return buf;
   }
 
   /** Fill and return the float time-domain waveform (-1..1 per sample). */
   public getWaveformFloat(into?: Float32Array<ArrayBuffer>): Float32Array<ArrayBuffer> {
     const buf = into ?? this._floatWaveform;
+
     if (this._analyser) {
       this._analyser.getFloatTimeDomainData(buf);
     } else {
       buf.fill(0);
     }
+
     return buf;
   }
 
@@ -213,7 +230,10 @@ export class AudioAnalyser {
    * Uses the byte spectrum (0..255), normalised by dividing by 255.
    */
   public getBandEnergy(fromHz: number, toHz: number): number {
-    if (!this._analyser) return 0;
+    if (!this._analyser) {
+      return 0;
+    }
+
     const ctx = getAudioContext();
     const nyquist = ctx.sampleRate / 2;
     const binCount = this.frequencyBinCount;
@@ -226,9 +246,11 @@ export class AudioAnalyser {
     const spectrum = this.getSpectrum();
     let sum = 0;
     const count = hi - lo + 1;
+
     for (let i = lo; i <= hi; i++) {
       sum += spectrum[i]!;
     }
+
     return sum / (count * 255);
   }
 
@@ -243,9 +265,13 @@ export class AudioAnalyser {
 
   /** Return overall RMS energy across all bins, normalised 0..1. */
   public getRms(): number {
-    if (!this._analyser) return 0;
+    if (!this._analyser) {
+      return 0;
+    }
+
     const ctx = getAudioContext();
     const nyquist = ctx.sampleRate / 2;
+
     return this.getBandEnergy(0, nyquist);
   }
 
@@ -276,6 +302,7 @@ export class AudioAnalyser {
 
     if (!this._analyser || filterbank === null) {
       out.fill(0);
+
       return out;
     }
 
@@ -293,6 +320,7 @@ export class AudioAnalyser {
 
     if (!this._analyser || filterbank === null) {
       out.fill(0);
+
       return out;
     }
 
@@ -315,6 +343,7 @@ export class AudioAnalyser {
 
     if (!this._analyser || ranges === null) {
       out.fill(0);
+
       return out;
     }
 
@@ -332,6 +361,7 @@ export class AudioAnalyser {
 
     if (!this._analyser || ranges === null) {
       out.fill(0);
+
       return out;
     }
 
@@ -363,32 +393,42 @@ export class AudioAnalyser {
   // -----------------------------------------------------------------------
 
   private _getMelFilterbank(bands: number, fMin: number, fMax: number): MelBand[] | null {
-    if (!this._analyser) return null;
+    if (!this._analyser) {
+      return null;
+    }
+
     const ctx = getAudioContext();
     const fftSize = this._options.fftSize;
     const clampedFmax = Math.min(fMax, ctx.sampleRate / 2);
     const key = `${bands}|${fMin}|${clampedFmax}|${fftSize}`;
 
     let cached = this._melCache.get(key);
+
     if (cached === undefined) {
       cached = buildMelFilterbank(bands, fMin, clampedFmax, fftSize, ctx.sampleRate);
       this._melCache.set(key, cached);
     }
+
     return cached;
   }
 
   private _getLogRanges(bands: number, fMin: number, fMax: number): LogBandRange[] | null {
-    if (!this._analyser) return null;
+    if (!this._analyser) {
+      return null;
+    }
+
     const ctx = getAudioContext();
     const fftSize = this._options.fftSize;
     const clampedFmax = Math.min(fMax, ctx.sampleRate / 2);
     const key = `${bands}|${fMin}|${clampedFmax}|${fftSize}`;
 
     let cached = this._logCache.get(key);
+
     if (cached === undefined) {
       cached = buildLogRanges(bands, fMin, clampedFmax, fftSize, ctx.sampleRate);
       this._logCache.set(key, cached);
     }
+
     return cached;
   }
 
@@ -436,9 +476,11 @@ const applyFilterbank = (spectrum: Uint8Array | Float32Array, bands: MelBand[], 
   for (let b = 0; b < bands.length; b++) {
     const { startBin, weights } = bands[b]!;
     let sum = 0;
+
     for (let i = 0; i < weights.length; i++) {
       sum += spectrum[startBin + i]! * weights[i]!;
     }
+
     out[b] = sum;
   }
 };
@@ -448,9 +490,11 @@ const applyLogRanges = (spectrum: Uint8Array | Float32Array, ranges: LogBandRang
     const { startBin, endBin } = ranges[b]!;
     let sum = 0;
     const count = endBin - startBin + 1;
+
     for (let i = startBin; i <= endBin; i++) {
       sum += spectrum[i]!;
     }
+
     out[b] = sum / count;
   }
 };

@@ -42,6 +42,7 @@ const wireAll = (ctx: AudioContext) => {
   const waveShaperSpy = vi.spyOn(ctx, 'createWaveShaper').mockReturnValue(waveShaper as unknown as WaveShaperNode);
   const biquadSpy = vi.spyOn(ctx, 'createBiquadFilter').mockReturnValue(toneFilter as unknown as BiquadFilterNode);
   const [inputGain, outputGain, dryGain, wetGain] = gains;
+
   return { waveShaper, toneFilter, gains, inputGain, outputGain, dryGain, wetGain, gainSpy, waveShaperSpy, biquadSpy };
 };
 
@@ -55,7 +56,7 @@ describe('DistortionEffect', () => {
 
     it('uses default wet of 1.0', () => {
       const effect = new DistortionEffect();
-      expect(effect.wet).toBe(1.0);
+      expect(effect.wet).toBe(1);
       effect.destroy();
     });
 
@@ -202,7 +203,7 @@ describe('DistortionEffect', () => {
     it('sets complementary dry/wet gains on construction (wet=1 → dry=0, wet=1)', () => {
       const ctx = getAudioContext();
       const { dryGain, wetGain, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
-      const effect = new DistortionEffect({ wet: 1.0 });
+      const effect = new DistortionEffect({ wet: 1 });
       expect(dryGain.gain.setValueAtTime).toHaveBeenCalledWith(0, expect.anything());
       expect(wetGain.gain.setValueAtTime).toHaveBeenCalledWith(1, expect.anything());
       effect.destroy();
@@ -250,9 +251,11 @@ describe('DistortionEffect', () => {
       const { waveShaper, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
       const effect = new DistortionEffect({ drive: 0 });
       const curve = waveShaper.curve!;
+
       for (let i = 0; i < curve.length; i++) {
         expect(curve[i]).toBeCloseTo((i * 2) / (curve.length - 1) - 1, 6);
       }
+
       effect.destroy();
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();
@@ -264,9 +267,11 @@ describe('DistortionEffect', () => {
       const { waveShaper, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
       const effect = new DistortionEffect({ drive: 0.01 });
       const curve = waveShaper.curve!;
+
       for (let i = 0; i < curve.length; i++) {
         expect(Math.abs(curve[i]! - ((i * 2) / (curve.length - 1) - 1))).toBeLessThan(0.02);
       }
+
       effect.destroy();
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();
@@ -277,13 +282,18 @@ describe('DistortionEffect', () => {
       const ctx = getAudioContext();
       const { waveShaper, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
       const effect = new DistortionEffect();
+
       for (const drive of [0.25, 0.5, 1]) {
         effect.drive = drive;
         const curve = waveShaper.curve!;
         expect(curve[0]).toBeCloseTo(-1, 6);
         expect(curve[curve.length - 1]).toBeCloseTo(1, 6);
-        for (let i = 1; i < curve.length; i++) expect(curve[i]).toBeGreaterThanOrEqual(curve[i - 1]!);
+
+        for (let i = 1; i < curve.length; i++) {
+          expect(curve[i]).toBeGreaterThanOrEqual(curve[i - 1]!);
+        }
       }
+
       effect.destroy();
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();
@@ -454,7 +464,11 @@ describe('DistortionEffect', () => {
       const effect = new DistortionEffect({ tone: 1 });
       effect.tone = 0.5;
       // 100 * 200^0.5 ≈ 1414 Hz
-      expect(toneFilter.frequency.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(100 * Math.pow(200, 0.5), 0), expect.anything(), expect.anything());
+      expect(toneFilter.frequency.setTargetAtTime).toHaveBeenCalledWith(
+        expect.closeTo(100 * Math.pow(200, 0.5), 0),
+        expect.anything(),
+        expect.anything(),
+      );
       effect.destroy();
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();
@@ -479,9 +493,11 @@ describe('DistortionEffect', () => {
       effect.destroy();
       expect(waveShaper.disconnect).toHaveBeenCalled();
       expect(toneFilter.disconnect).toHaveBeenCalled();
+
       for (const gain of gains) {
         expect(gain.disconnect).toHaveBeenCalled();
       }
+
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();
       biquadSpy.mockRestore();

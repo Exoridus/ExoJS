@@ -17,7 +17,7 @@ const setContextState = (state: AudioContextState): void => {
 const settleFirstUnlock = async (): Promise<void> => {
   getAudioContext();
   setContextState('running');
-  onAudioContextReady.add(() => undefined);
+  onAudioContextReady.add(() => {});
   await Promise.resolve();
 };
 

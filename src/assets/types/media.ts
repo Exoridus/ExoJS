@@ -83,7 +83,11 @@ export class MusicAssetType extends AssetType<MediaAssetSource, AudioStream, Mus
   public override readonly _token: AssetConstructor = AudioStream;
   public override readonly codec = mediaSourceCodec;
 
-  public override unacquiredSource(_request: AssetRequest<MusicAssetOptions>, url: string, network: NetworkSnapshot): { source: MediaAssetSource } | undefined {
+  public override unacquiredSource(
+    _request: AssetRequest<MusicAssetOptions>,
+    url: string,
+    network: NetworkSnapshot,
+  ): { source: MediaAssetSource } | undefined {
     return streamsFromUrl(network) ? { source: { url } } : undefined;
   }
 
@@ -103,7 +107,11 @@ export class VideoAssetType extends AssetType<MediaAssetSource, Video, VideoAsse
   public override readonly _token: AssetConstructor = Video;
   public override readonly codec = mediaSourceCodec;
 
-  public override unacquiredSource(_request: AssetRequest<VideoAssetOptions>, url: string, network: NetworkSnapshot): { source: MediaAssetSource } | undefined {
+  public override unacquiredSource(
+    _request: AssetRequest<VideoAssetOptions>,
+    url: string,
+    network: NetworkSnapshot,
+  ): { source: MediaAssetSource } | undefined {
     return streamsFromUrl(network) ? { source: { url } } : undefined;
   }
 

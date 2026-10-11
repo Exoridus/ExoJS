@@ -1,24 +1,26 @@
-export function createAssetUrl(path: string, baseUrl = '/assets/'): string {
-    const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-    const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
-    return `${normalizedBase}${normalizedPath}`;
-}
+export const createAssetUrl = (path: string, baseUrl = '/assets/'): string => {
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
 
-export function resolveAssetCatalog<T extends Record<string, unknown>>(
-    catalog: T,
-    baseUrl = '/assets/',
-): { [K in keyof T]: T[K] extends string ? string : T[K] extends Record<string, unknown> ? ReturnType<typeof resolveAssetCatalog<T[K]>> : T[K] } {
-    const resolved = {} as Record<string, unknown>;
+  return `${normalizedBase}${normalizedPath}`;
+};
 
-    for (const [key, value] of Object.entries(catalog)) {
-        if (typeof value === 'string') {
-            resolved[key] = createAssetUrl(value, baseUrl);
-        } else if (value && typeof value === 'object') {
-            resolved[key] = resolveAssetCatalog(value as Record<string, unknown>, baseUrl);
-        } else {
-            resolved[key] = value;
-        }
+type ResolvedCatalog<T extends Record<string, unknown>> = {
+  [K in keyof T]: T[K] extends string ? string : T[K] extends Record<string, unknown> ? ResolvedCatalog<T[K]> : T[K];
+};
+
+export const resolveAssetCatalog = <T extends Record<string, unknown>>(catalog: T, baseUrl = '/assets/'): ResolvedCatalog<T> => {
+  const resolved = {} as Record<string, unknown>;
+
+  for (const [key, value] of Object.entries(catalog)) {
+    if (typeof value === 'string') {
+      resolved[key] = createAssetUrl(value, baseUrl);
+    } else if (value && typeof value === 'object') {
+      resolved[key] = resolveAssetCatalog(value as Record<string, unknown>, baseUrl);
+    } else {
+      resolved[key] = value;
     }
+  }
 
-    return resolved as ReturnType<typeof resolveAssetCatalog<T>>;
-}
+  return resolved as ResolvedCatalog<T>;
+};

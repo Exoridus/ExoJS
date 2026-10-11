@@ -3,7 +3,7 @@ import {
   CallbackRenderPass,
   Color,
   Container,
-  RenderingContext,
+  type RenderingContext,
   RenderNodePass,
   RenderPipeline,
   RenderTexture,

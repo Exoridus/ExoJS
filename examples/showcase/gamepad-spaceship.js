@@ -23,7 +23,12 @@ class GamepadSpaceshipScene extends Scene {
   velocity = new Vector(0, 0);
   actions = new ActionMap({
     move: new VectorAction([
-      { up: [Keyboard.W, Keyboard.Up], down: [Keyboard.S, Keyboard.Down], left: [Keyboard.A, Keyboard.Left], right: [Keyboard.D, Keyboard.Right] },
+      {
+        up: [Keyboard.W, Keyboard.Up],
+        down: [Keyboard.S, Keyboard.Down],
+        left: [Keyboard.A, Keyboard.Left],
+        right: [Keyboard.D, Keyboard.Right],
+      },
       { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
     ]),
     fire: new ButtonAction([Keyboard.Space, GamepadButton.RightTrigger]),

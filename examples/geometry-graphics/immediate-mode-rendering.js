@@ -74,7 +74,14 @@ class ImmediateModeScene extends Scene {
     const centerX = width / 2;
     const centerY = height / 2;
     // --- Procedural gears: each drawn with its own drawGeometry call. ---
-    const gearPalette = [new Color(0xffd700), new Color(0x87ceeb), new Color(0xff69b4), new Color(0x00fa9a), new Color(0xffa500), new Color(0x9370db)];
+    const gearPalette = [
+      new Color(0xffd700),
+      new Color(0x87ceeb),
+      new Color(0xff69b4),
+      new Color(0x00fa9a),
+      new Color(0xffa500),
+      new Color(0x9370db),
+    ];
     this.gears = [];
     for (let i = 0; i < GEAR_COUNT; i++) {
       const tint = gearPalette[i % gearPalette.length];

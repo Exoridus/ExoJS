@@ -32,7 +32,11 @@ import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#r
 import { lightCompositeShader } from '../../../packages/exojs-lighting/src/backends/FrameLightingBackend';
 import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
-import { angularAverageShader, transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
+import {
+  angularAverageShader,
+  transportCascadeShader,
+  transportGatherShader,
+} from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
 import { composeParticleGlSource } from '../../../packages/exojs-particles/src/gpu/particleGlSource';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
@@ -112,12 +116,24 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
 const composedCascade = transportCascadeShader(cascadeUniforms);
 const composedGather = transportGatherShader(gatherUniforms);
 const composedFragments: ReadonlyMap<string, string> = new Map([
-  ['cascade-transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
-  ['cascade-gather-transport.frag', withGlslUniformDeclarations(composedGather.glsl!.fragment, generateGlslUniformDeclarations(composedGather.uniformSchema!))],
+  [
+    'cascade-transport.frag',
+    withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!)),
+  ],
+  [
+    'cascade-gather-transport.frag',
+    withGlslUniformDeclarations(composedGather.glsl!.fragment, generateGlslUniformDeclarations(composedGather.uniformSchema!)),
+  ],
   // Neither the chunk nor the preamble has a body of its own; the cascade's
   // composition is the smallest whole program that contains them.
-  ['transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
-  ['transport-filter.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
+  [
+    'transport.frag',
+    withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!)),
+  ],
+  [
+    'transport-filter.frag',
+    withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!)),
+  ],
 ]);
 
 // Stages that call the shared colour helpers directly (tint decode,
@@ -147,7 +163,10 @@ const needsColorHelpers: ReadonlySet<string> = new Set([
 // handing a source to the driver, so a shader that reads the shared transform
 // store only compiles in its resolved form - the same form the renderer submits.
 const composeRuntimeSource = (name: string, source: string): string => {
-  if (name === 'particle-simulate.vert') return composeParticleGlSource([], source);
+  if (name === 'particle-simulate.vert') {
+    return composeParticleGlSource([], source);
+  }
+
   const composedChunk = composedFragments.get(name);
 
   if (composedChunk !== undefined) {

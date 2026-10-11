@@ -21,7 +21,13 @@ type IsReadonlyKey<T, K extends keyof T> =
 // `number` is assignable to a numeric enum and to each of its members, so plain
 // assignability cannot tell an enum from `number`; their template-literal forms
 // differ (`${number}` versus `"0" | "1"`). A brand shows as an extra key.
-type IsContinuousNumber<V> = V extends number ? (`${number}` extends `${V}` ? true : [Exclude<keyof V, keyof number>] extends [never] ? false : true) : false;
+type IsContinuousNumber<V> = V extends number
+  ? `${number}` extends `${V}`
+    ? true
+    : [Exclude<keyof V, keyof number>] extends [never]
+      ? false
+      : true
+  : false;
 
 /**
  * The properties of `T` a tween may write: mutable, continuous numbers.
@@ -154,7 +160,10 @@ export class Tween<T extends object = object> {
    * the configured delay has not yet elapsed).
    */
   public get progress(): number {
-    if (this._duration === 0) return 1;
+    if (this._duration === 0) {
+      return 1;
+    }
+
     const rawT = Math.min(this._elapsed / this._duration, 1);
     const t = this._direction === 1 ? rawT : 1 - rawT;
 
@@ -368,7 +377,9 @@ export class Tween<T extends object = object> {
    * manually for stand-alone usage. No-ops when Paused, Stopped, or Complete.
    */
   public update(deltaSeconds: number): void {
-    if (this._state !== TweenState.Active) return;
+    if (this._state !== TweenState.Active) {
+      return;
+    }
 
     // A destroyed target (SceneNode's `destroyed` flag) has nothing left to
     // interpolate. Without this, an infinitely repeating tween outlives its
@@ -383,7 +394,9 @@ export class Tween<T extends object = object> {
     if (this._delayElapsed < this._delay) {
       this._delayElapsed += deltaSeconds;
 
-      if (this._delayElapsed < this._delay) return;
+      if (this._delayElapsed < this._delay) {
+        return;
+      }
 
       // Carry overflow past delay into elapsed.
       const overflow = this._delayElapsed - this._delay;
@@ -469,7 +482,9 @@ export class Tween<T extends object = object> {
   }
 
   private _applyProgress(): void {
-    if (this._startValues === null) return;
+    if (this._startValues === null) {
+      return;
+    }
 
     const rawT = this._duration === 0 ? 1 : Math.min(this._elapsed / this._duration, 1);
     const t = this._direction === 1 ? rawT : 1 - rawT;
@@ -481,7 +496,11 @@ export class Tween<T extends object = object> {
     for (const key of keys) {
       const start = this._startValues[key];
       const end = properties[key];
-      if (start === undefined || end === undefined) continue;
+
+      if (start === undefined || end === undefined) {
+        continue;
+      }
+
       (this._target as Record<string, unknown>)[key] = start + (end - start) * easedT;
     }
 

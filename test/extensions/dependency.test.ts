@@ -28,6 +28,7 @@ interface CycleNode {
 
 const createStubBackend = (): RenderBackend => {
   const registry = new RendererRegistry<RenderBackend>();
+
   return {
     backendType: RenderBackendType.WebGl2,
     rendererRegistry: registry,
@@ -35,28 +36,26 @@ const createStubBackend = (): RenderBackend => {
     renderTarget: null as never,
     stats: null as never,
     initialize: () => Promise.resolve(),
-    resetStats: () => undefined,
-    clear: () => undefined,
-    resize: () => undefined,
-    setView: () => undefined,
-    setRenderTarget: () => undefined,
-    pushScissorRect: () => undefined,
-    popScissorRect: () => undefined,
-    pushStencilClip: () => undefined,
-    popStencilClip: () => undefined,
-    acquireRenderTexture: () => undefined,
-    releaseRenderTexture: () => undefined,
-    composeWithAlphaMask: () => undefined,
-    draw: () => undefined,
-    execute: () => undefined,
-    flush: () => undefined,
-    destroy: () => undefined,
+    resetStats: () => {},
+    clear: () => {},
+    resize: () => {},
+    setView: () => {},
+    setRenderTarget: () => {},
+    pushScissorRect: () => {},
+    popScissorRect: () => {},
+    pushStencilClip: () => {},
+    popStencilClip: () => {},
+    acquireRenderTexture: () => {},
+    releaseRenderTexture: () => {},
+    composeWithAlphaMask: () => {},
+    draw: () => {},
+    execute: () => {},
+    flush: () => {},
+    destroy: () => {},
   } as unknown as RenderBackend;
 };
 
-const ids = (snapshot: ReturnType<typeof buildSnapshot>): string[] => {
-  return snapshot.extensions.map(e => e.id);
-};
+const ids = (snapshot: ReturnType<typeof buildSnapshot>): string[] => snapshot.extensions.map(e => e.id);
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -215,11 +214,13 @@ describe('Extension dependency graph', () => {
       c.dependencies = [d];
 
       let error: Error | undefined;
+
       try {
         buildSnapshot([d]);
       } catch (e) {
         error = e as Error;
       }
+
       expect(error).toBeDefined();
       expect(error!.message).toContain('D → B → C → D');
     });
@@ -306,7 +307,9 @@ describe('Extension dependency graph', () => {
       const snapshot = buildSnapshot([extA, extB]);
       const backend = createStubBackend();
 
-      expect(() => materializeRendererBindings(backend, [...snapshot.renderers])).toThrow('Two bindings target the same drawable type DrawableX');
+      expect(() => materializeRendererBindings(backend, [...snapshot.renderers])).toThrow(
+        'Two bindings target the same drawable type DrawableX',
+      );
     });
 
     it('dependency dedup happens before binding-conflict validation', () => {
@@ -389,9 +392,7 @@ describe('Extension dependency graph', () => {
 // ---------------------------------------------------------------------------
 
 describe('Per-application selection', () => {
-  const ids = (snapshot: ReturnType<typeof buildSnapshot>): string[] => {
-    return snapshot.extensions.map(e => e.id);
-  };
+  const ids = (snapshot: ReturnType<typeof buildSnapshot>): string[] => snapshot.extensions.map(e => e.id);
 
   it('a dependency is pulled in without being selected', () => {
     const tilemap = extension('tilemap');

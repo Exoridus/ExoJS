@@ -8,7 +8,7 @@ import {
   type RenderingContext,
   Scene,
   type Seconds,
-  Sprite,
+  type Sprite,
   Spritesheet,
   type SpritesheetData,
   TextureRegion,
@@ -56,18 +56,23 @@ const biomeTileId = (value: number): number => {
   if (value < 0.34) {
     return TILE_DEEP_WATER;
   }
+
   if (value < 0.42) {
     return TILE_WATER;
   }
+
   if (value < 0.5) {
     return TILE_SAND;
   }
+
   if (value < 0.68) {
     return TILE_GRASS;
   }
+
   if (value < 0.8) {
     return TILE_ROCK;
   }
+
   return TILE_SNOW;
 };
 
@@ -105,7 +110,13 @@ class WorkerStreamedTerrainScene extends Scene {
     // No width/height: the layer (and map) are unbounded - chunks exist
     // only where something writes them.
     this.terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
-    const map = new TileMap({ name: 'infinite-world', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.terrain] });
+    const map = new TileMap({
+      name: 'infinite-world',
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [this.tileset],
+      layers: [this.terrain],
+    });
     this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
 
     const characters = new Spritesheet(
@@ -157,6 +168,7 @@ class WorkerStreamedTerrainScene extends Scene {
 
     const seed = this.seed;
     const cost = this.extraCost;
+
     if (this.providerMode === 'worker') {
       this.workerSourceHandle = createWorkerSampledChunkSource(this.terrain, {
         // The worker runs the same fbm this file imports - bundled into
@@ -173,9 +185,11 @@ class WorkerStreamedTerrainScene extends Scene {
       const source = createSampledChunkSource(this.terrain, {
         sample: (tx, ty) => {
           let value = fbm(seed, tx / FEATURE_SIZE, ty / FEATURE_SIZE);
+
           for (let i = 0; i < cost; i++) {
             value = fbm(seed, tx / FEATURE_SIZE, ty / FEATURE_SIZE);
           }
+
           return value;
         },
         mapValueToTile: value => ({ tileset: this.tileset, localTileId: biomeTileId(value), transform: TILE_TRANSFORM_IDENTITY }),

@@ -282,7 +282,9 @@ const writeBufferBytes = (args: readonly unknown[]): number => {
 
   if (typeof size === 'number') {
     const elementSize =
-      ArrayBuffer.isView(data) && !(data instanceof DataView) ? ((data as unknown as { BYTES_PER_ELEMENT: number }).BYTES_PER_ELEMENT ?? 1) : 1;
+      ArrayBuffer.isView(data) && !(data instanceof DataView)
+        ? ((data as unknown as { BYTES_PER_ELEMENT: number }).BYTES_PER_ELEMENT ?? 1)
+        : 1;
 
     return size * elementSize;
   }

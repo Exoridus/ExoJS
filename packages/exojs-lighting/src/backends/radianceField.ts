@@ -82,7 +82,11 @@ const radianceColorRgb = (color: Color): { r: number; g: number; b: number } => 
  * every stretch as unobstructed and empty. `toField` is the view the mask was
  * drawn through, which is the wider field view rather than the camera's.
  */
-const writeTransportUniforms = (target: UniformFieldAccessors<typeof transportUniforms>, binding: TransportBinding, toField: Matrix): void => {
+const writeTransportUniforms = (
+  target: UniformFieldAccessors<typeof transportUniforms>,
+  binding: TransportBinding,
+  toField: Matrix,
+): void => {
   target.uGridOrigin.set(binding.originX, binding.originY);
   target.uGridCells.set(binding.cellsX, binding.cellsY);
   target.uCellSize.set(binding.cellSize);

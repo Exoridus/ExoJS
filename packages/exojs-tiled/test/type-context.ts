@@ -14,9 +14,7 @@ import { tileMapType } from '../src/tileMapType';
 const PKG_DIR = basename(process.cwd()) === 'exojs-tiled' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-tiled');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
-export const loadFixture = (name: string): unknown => {
-  return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
-};
+export const loadFixture = (name: string): unknown => JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
 
 /**
  * Drives the two Tiled types against a set of in-memory fixtures.
@@ -47,7 +45,9 @@ export const makeTiledContext = (fixtures: Record<string, unknown>, textureSizes
     }
 
     if (type === 'json') {
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
+      if (Object.hasOwn(fixtures, source)) {
+        return fixtures[source];
+      }
 
       throw new Error(`makeTiledContext: no fixture registered for "${source}"`);
     }
@@ -81,9 +81,8 @@ export const makeTiledContext = (fixtures: Record<string, unknown>, textureSizes
   };
 
   /** Runs the runtime type, which reaches its document through the dependency scope. */
-  const loadRuntime = async (source: string, options?: unknown): Promise<TileMap> => {
-    return tileMapType.createFactory().create(undefined, contextFor(source, options) as never);
-  };
+  const loadRuntime = async (source: string, options?: unknown): Promise<TileMap> =>
+    tileMapType.createFactory().create(undefined, contextFor(source, options) as never);
 
   return { load, textureLoad, contextFor, loadSource, loadRuntime };
 };

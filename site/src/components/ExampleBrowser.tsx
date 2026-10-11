@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { resolveExampleToolRelocation } from '../lib/example-aliases';
-import { getExampleByPath, getExamplesList, getLoadErrorFor, getNestedExamples, hasExamplesFor, loadExamples, onExamplesLoaded } from '../lib/example-store';
+import {
+  getExampleByPath,
+  getExamplesList,
+  getLoadErrorFor,
+  getNestedExamples,
+  hasExamplesFor,
+  loadExamples,
+  onExamplesLoaded,
+} from '../lib/example-store';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
 import { showToast } from '../lib/toast-store';
 import type { Example, ExamplesMap } from '../lib/types';
@@ -73,16 +81,35 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
   }, []);
 
   const resolveSelectedVersion = useCallback((): VersionInfo | null => {
-    if (!hasVersions()) return null;
+    if (!hasVersions()) {
+      return null;
+    }
+
     const fromUrl = getVersionById(readUrlState().version);
-    if (fromUrl) return fromUrl;
+
+    if (fromUrl) {
+      return fromUrl;
+    }
+
     const stored = loadStoredVersion();
     const fromStored = getVersionById(stored);
-    if (fromStored) return fromStored;
+
+    if (fromStored) {
+      return fromStored;
+    }
+
     const current = getVersionById(CURRENT_VERSION_ID);
-    if (current) return current;
+
+    if (current) {
+      return current;
+    }
+
     const latest = getVersionById(getLatestStableId());
-    if (latest) return latest;
+
+    if (latest) {
+      return latest;
+    }
+
     return getVersions()[0] ?? null;
   }, []);
 
@@ -94,7 +121,11 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
             label: `Back to v${previousId}`,
             onClick: () => {
               const next = getVersionById(previousId);
-              if (!next) return;
+
+              if (!next) {
+                return;
+              }
+
               previousVersionIdRef.current = selectedVersionRef.current?.id ?? null;
               missingExampleToastEnabledRef.current = true;
               setSelectedVersion(next);
@@ -110,7 +141,10 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
   const resolveActiveExample = useCallback(
     (options: { canonicaliseUrl: boolean }): void => {
       const selected = selectedVersionRef.current;
-      if (!selected || !hasExamplesFor(selected.id)) return;
+
+      if (!selected || !hasExamplesFor(selected.id)) {
+        return;
+      }
 
       const versionId = selected.id;
       const requestedPath = readUrlState().example ?? null;
@@ -118,6 +152,7 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
 
       if (relocation !== null) {
         window.location.replace(`${baseUrl}${locale}/${relocation}`);
+
         return;
       }
 
@@ -130,6 +165,7 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
       if (options.canonicaliseUrl) {
         const nextExample = example?.path ?? null;
         const current = readUrlState();
+
         if (current.example !== nextExample || current.version !== versionId) {
           writeUrlState({ example: nextExample, version: versionId }, { replace: true });
         }
@@ -137,7 +173,10 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
 
       if (missingExampleToastEnabledRef.current) {
         missingExampleToastEnabledRef.current = false;
-        if (fellBack && requestedPath) showMissingExampleToast(requestedPath, versionId);
+
+        if (fellBack && requestedPath) {
+          showMissingExampleToast(requestedPath, versionId);
+        }
       }
     },
     [baseUrl, locale, showMissingExampleToast],
@@ -145,7 +184,11 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
 
   const syncExampleState = useCallback((): void => {
     const selected = selectedVersionRef.current;
-    if (!selected) return;
+
+    if (!selected) {
+      return;
+    }
+
     setLoaded(hasExamplesFor(selected.id));
     setLoadError(getLoadErrorFor(selected.id));
     setExamples(getNestedExamples(selected.id));
@@ -156,8 +199,10 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
     async (versionId: string): Promise<void> => {
       if (hasExamplesFor(versionId)) {
         syncExampleState();
+
         return;
       }
+
       await loadExamples(versionId);
     },
     [syncExampleState],
@@ -174,13 +219,17 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
 
     if (nextSelected) {
       const current = readUrlState().version;
+
       if (current !== nextSelected.id) {
         writeUrlState({ version: nextSelected.id }, { replace: true });
       }
     }
 
     const versionError = getVersionLoadError();
-    if (versionError) setLoadError(versionError);
+
+    if (versionError) {
+      setLoadError(versionError);
+    }
 
     if (nextSelected) {
       void ensureExamplesLoaded(nextSelected.id);
@@ -191,7 +240,10 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
     configureUrlsFromLocation(baseUrl);
 
     const unsubscribeExamples = onExamplesLoaded(versionId => {
-      if (selectedVersionRef.current?.id !== versionId) return;
+      if (selectedVersionRef.current?.id !== versionId) {
+        return;
+      }
+
       syncExampleState();
     });
     const unsubscribeVersions = onVersionsLoaded(syncVersionState);
@@ -213,6 +265,7 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
   useEffect(() => {
     const desktopMediaQuery = window.matchMedia('(min-width: 1120px)');
     const compactMobileMediaQuery = window.matchMedia('(max-width: 760px)');
+
     const syncBreakpoints = (): void => {
       // Mirror viewport media-query state into React - the canonical
       // "subscribe to an external system, setState on change" effect use.
@@ -220,12 +273,17 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
       /* eslint-disable @eslint-react/set-state-in-effect */
       setIsCompactMobile(compactMobileMediaQuery.matches);
       setSidebarOpen(desktopMediaQuery.matches && !compactMobileMediaQuery.matches);
-      if (!compactMobileMediaQuery.matches) setExamplesSheetOpen(false);
+
+      if (!compactMobileMediaQuery.matches) {
+        setExamplesSheetOpen(false);
+      }
       /* eslint-enable @eslint-react/set-state-in-effect */
     };
+
     syncBreakpoints();
     desktopMediaQuery.addEventListener('change', syncBreakpoints);
     compactMobileMediaQuery.addEventListener('change', syncBreakpoints);
+
     return () => {
       desktopMediaQuery.removeEventListener('change', syncBreakpoints);
       compactMobileMediaQuery.removeEventListener('change', syncBreakpoints);
@@ -236,9 +294,11 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
     const onPopState = (): void => {
       const versionId = readUrlState().version;
       const next = getVersionById(versionId);
+
       if (next && selectedVersionRef.current?.id !== next.id) {
         setSelectedVersion(next);
         selectedVersionRef.current = next;
+
         if (hasExamplesFor(next.id)) {
           setLoaded(true);
           setLoadError(getLoadErrorFor(next.id));
@@ -247,44 +307,67 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
         } else {
           void loadExamples(next.id);
         }
+
         return;
       }
+
       resolveActiveExample({ canonicaliseUrl: false });
     };
+
     window.addEventListener('popstate', onPopState);
+
     return () => window.removeEventListener('popstate', onPopState);
   }, [resolveActiveExample]);
 
   useEffect(() => {
     if (sidebarOpen && !window.matchMedia('(min-width: 1120px)').matches && !isCompactMobile) {
       lockBodyScroll();
+
       return;
     }
+
     unlockBodyScroll();
   }, [isCompactMobile, lockBodyScroll, sidebarOpen, unlockBodyScroll]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (!sidebarOpen || window.matchMedia('(min-width: 1120px)').matches) return;
+      if (!sidebarOpen || window.matchMedia('(min-width: 1120px)').matches) {
+        return;
+      }
+
       if (event.key === 'Escape') {
         event.preventDefault();
         setSidebarOpen(false);
         window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
       }
     };
+
     document.addEventListener('keydown', onKeyDown);
+
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [sidebarOpen]);
 
   const selectExample = (path: string): void => {
     const selected = selectedVersionRef.current;
-    if (!selected) return;
+
+    if (!selected) {
+      return;
+    }
+
     const example = getExampleByPath(selected.id, path);
-    if (!example || example.path === activeExampleRef.current?.path) return;
+
+    if (!example || example.path === activeExampleRef.current?.path) {
+      return;
+    }
+
     setActiveExample(example);
     writeUrlState({ version: selected.id, example: example.path });
-    if (isCompactMobile) setExamplesSheetOpen(false);
-    else if (!window.matchMedia('(min-width: 1120px)').matches) setSidebarOpen(false);
+
+    if (isCompactMobile) {
+      setExamplesSheetOpen(false);
+    } else if (!window.matchMedia('(min-width: 1120px)').matches) {
+      setSidebarOpen(false);
+    }
   };
 
   return (
@@ -293,7 +376,12 @@ export const ExampleBrowser = ({ baseUrl, locale }: ExampleBrowserProps): JSX.El
     // the preview then folds itself into the 280px meant for the list.
     <section className={css(styles, 'root')} data-sidebar={!isCompactMobile && sidebarOpen ? 'open' : 'closed'}>
       {!isCompactMobile && (
-        <aside id="playground-navigation" className={css(styles, 'side-content')} data-open={sidebarOpen ? 'true' : undefined} aria-hidden={!sidebarOpen}>
+        <aside
+          id="playground-navigation"
+          className={css(styles, 'side-content')}
+          data-open={sidebarOpen ? 'true' : undefined}
+          aria-hidden={!sidebarOpen}
+        >
           <Navigation
             examples={examples}
             activeExample={activeExample}

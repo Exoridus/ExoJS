@@ -149,7 +149,10 @@ const createFlatTexture = (): Texture => {
  * the surface's real resolution - and, when the content sits behind an effect or
  * a texture cache, of the INTERNAL target's resolution instead.
  */
-const buildSharpContent = (stageSize: number, withText: boolean): { node: Container; textures: Texture[]; spin: Graphics; textNodes: Text[] } => {
+const buildSharpContent = (
+  stageSize: number,
+  withText: boolean,
+): { node: Container; textures: Texture[]; spin: Graphics; textNodes: Text[] } => {
   const content = new Container();
   const edgeTexture = createEdgeTexture(64);
   const sprite = new Sprite(edgeTexture);

@@ -442,7 +442,12 @@
           "width": 8,
           "height": 8,
           "byteLength": 64,
-          "blockColors": ["R 0, B 0 (two-channel data)", "R 255, B 0 (two-channel data)", "R 0, B 255 (two-channel data)", "R 255, B 255 (two-channel data)"]
+          "blockColors": [
+            "R 0, B 0 (two-channel data)",
+            "R 255, B 0 (two-channel data)",
+            "R 0, B 255 (two-channel data)",
+            "R 255, B 255 (two-channel data)"
+          ]
         }
       ],
       "provenance": "scripts/generate-color-fixtures.ts; procedural texels and constant-colour blocks written from the published block layouts; no external encoder and no third-party asset",

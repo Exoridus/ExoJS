@@ -1,6 +1,15 @@
 // #region guide:basic-emitter
 import { Application, Color, type RenderingContext, Scene } from '@codexo/exojs';
-import { ApplyForce, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, RateSpawn, ScaleOverLifetime } from '@codexo/exojs-particles';
+import {
+  ApplyForce,
+  ConeDirection,
+  Constant,
+  Curve,
+  particlesExtension,
+  ParticleSystem,
+  RateSpawn,
+  ScaleOverLifetime,
+} from '@codexo/exojs-particles';
 
 class FountainScene extends Scene {
   private particles!: ParticleSystem;

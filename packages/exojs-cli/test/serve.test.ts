@@ -46,7 +46,7 @@ describe('exo serve', () => {
       // These three are the reason the server exists: a generic static server
       // answers all of them `application/octet-stream`, and streaming
       // instantiation then refuses the response.
-      const expected: readonly (readonly [string, string])[] = [
+      const expected: ReadonlyArray<readonly [string, string]> = [
         ['assets/module.wasm', 'application/wasm'],
         ['assets/atlas.ktx2', 'image/ktx2'],
         ['assets/level.exoa', 'application/vnd.exojs.container'],
@@ -55,7 +55,7 @@ describe('exo serve', () => {
         ['assets/data.bin', 'application/octet-stream'],
       ];
 
-      const served: [string, number, string | null][] = [];
+      const served: Array<[string, number, string | null]> = [];
 
       for (const [path] of expected) {
         const response = await fetch(`${server.url}${path}`);

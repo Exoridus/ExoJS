@@ -73,11 +73,15 @@ const main = (): void => {
   const outPath = resolve(args.get('out') ?? DEFAULT_OUT);
 
   if (renderingPaths.length === 0 && physicsPaths.length === 0) {
-    throw new Error('Nothing to compare: pass --rendering and/or --physics pointing at a run results.json. Repeat either flag once per run.');
+    throw new Error(
+      'Nothing to compare: pass --rendering and/or --physics pointing at a run results.json. Repeat either flag once per run.',
+    );
   }
 
-  const rendering = renderingPaths.length === 0 ? undefined : aggregateRenderingRuns(renderingPaths.map(path => readResults<ReportData>(path)));
-  const physics = physicsPaths.length === 0 ? undefined : aggregatePhysicsRuns(physicsPaths.map(path => readResults<PhysicsReportData>(path)));
+  const rendering =
+    renderingPaths.length === 0 ? undefined : aggregateRenderingRuns(renderingPaths.map(path => readResults<ReportData>(path)));
+  const physics =
+    physicsPaths.length === 0 ? undefined : aggregatePhysicsRuns(physicsPaths.map(path => readResults<PhysicsReportData>(path)));
   const document = renderComparison({ ...(rendering !== undefined && { rendering }), ...(physics !== undefined && { physics }) });
 
   mkdirSync(dirname(outPath), { recursive: true });

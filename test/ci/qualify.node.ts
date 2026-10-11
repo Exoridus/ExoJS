@@ -7,13 +7,17 @@ import { after, test } from 'node:test';
 import { qualify, type QualifyOptions, readRows } from '../../scripts/ci/qualify.ts';
 
 for (const name of Object.keys(process.env)) {
-  if (name.startsWith('GIT_')) delete process.env[name];
+  if (name.startsWith('GIT_')) {
+    delete process.env[name];
+  }
 }
 
 const temporary: string[] = [];
+
 const workspace = (): { cwd: string; records: string } => {
   const cwd = mkdtempSync(join(tmpdir(), 'exojs-qualify-'));
   temporary.push(cwd);
+
   return { cwd, records: join(cwd, 'records') };
 };
 
@@ -26,7 +30,9 @@ const options = (row: string, script: string, extra: Partial<QualifyOptions> = {
 });
 
 after(() => {
-  for (const path of temporary) rmSync(path, { recursive: true, force: true });
+  for (const path of temporary) {
+    rmSync(path, { recursive: true, force: true });
+  }
 });
 
 void test('a clean exit is recorded as PASS with the supervised log', async () => {
@@ -52,7 +58,11 @@ void test('a failing required row stays red and names a test failure', async () 
 
 void test('an informational failure is recorded but does not fail the job', async () => {
   const { cwd, records } = workspace();
-  const code = await qualify(options('Row / C', 'process.exit(1)', { policy: 'informational' }), { cwd, recordDirectory: records, output: 'silent' });
+  const code = await qualify(options('Row / C', 'process.exit(1)', { policy: 'informational' }), {
+    cwd,
+    recordDirectory: records,
+    output: 'silent',
+  });
 
   assert.equal(code, 0);
   assert.equal(readRows(records)[0]?.status, 'FAIL');
@@ -61,7 +71,11 @@ void test('an informational failure is recorded but does not fail the job', asyn
 void test('the outer deadline stops a wedged command and classifies it as a timeout', async () => {
   const { cwd, records } = workspace();
   const started = Date.now();
-  const code = await qualify(options('Row / D', 'setInterval(() => {}, 1000)', { timeoutMinutes: 0.03 }), { cwd, recordDirectory: records, output: 'silent' });
+  const code = await qualify(options('Row / D', 'setInterval(() => {}, 1000)', { timeoutMinutes: 0.03 }), {
+    cwd,
+    recordDirectory: records,
+    output: 'silent',
+  });
   const [row] = readRows(records);
 
   assert.equal(code, 124);
@@ -85,7 +99,14 @@ void test('a row after an unsupported parent is NOT RUN and never launches its c
 
   const { recordRow } = await import('../../scripts/ci/qualify.ts');
   recordRow(
-    { row: 'Parent', policy: 'informational', status: 'UNSUPPORTED HOST', detail: 'no adapter', durationMs: 1, finishedAt: new Date().toISOString() },
+    {
+      row: 'Parent',
+      policy: 'informational',
+      status: 'UNSUPPORTED HOST',
+      detail: 'no adapter',
+      durationMs: 1,
+      finishedAt: new Date().toISOString(),
+    },
     records,
   );
 

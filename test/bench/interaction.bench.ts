@@ -13,19 +13,31 @@ const makeInteractiveDrawable = (x: number, y: number, size = 32): Drawable => {
   d.setLocalBounds(0, 0, size, size);
   d.setPosition(x, y);
   d.interactive = true;
+
   return d;
 };
 
 const hitTestRecursive = (node: RenderNode, x: number, y: number): RenderNode | null => {
-  if (!node.visible) return null;
+  if (!node.visible) {
+    return null;
+  }
+
   if (node instanceof Container) {
     const children = node.children;
+
     for (let i = children.length - 1; i >= 0; i--) {
       const hit = hitTestRecursive(children[i], x, y);
-      if (hit) return hit;
+
+      if (hit) {
+        return hit;
+      }
     }
   }
-  if (node.interactive && node.contains(x, y)) return node;
+
+  if (node.interactive && node.contains(x, y)) {
+    return node;
+  }
+
   return null;
 };
 
@@ -39,27 +51,41 @@ const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: Array<QuadtreeItem<Index
   qt.queryPoint(x, y, buf);
   let bestOrder = -1;
   let bestNode: RenderNode | null = null;
+
   for (const candidate of buf) {
     const { node, order } = candidate.payload;
+
     if (order > bestOrder && node.contains(x, y)) {
       bestOrder = order;
       bestNode = node;
     }
   }
+
   return bestNode;
 };
 
 const buildIndex = (root: Container, worldBounds: Rectangle): Quadtree<IndexedNode> => {
   const qt = new Quadtree<IndexedNode>(new Rectangle(worldBounds.x, worldBounds.y, worldBounds.width, worldBounds.height));
   let order = 0;
+
   const collect = (node: RenderNode): void => {
-    if (!node.visible) return;
-    if (node.interactive) qt.insert({ bounds: node.getBounds(), payload: { node, order: order++ } });
+    if (!node.visible) {
+      return;
+    }
+
+    if (node.interactive) {
+      qt.insert({ bounds: node.getBounds(), payload: { node, order: order++ } });
+    }
+
     if (node instanceof Container) {
-      for (const child of node.children) collect(child);
+      for (const child of node.children) {
+        collect(child);
+      }
     }
   };
+
   collect(root);
+
   return qt;
 };
 
@@ -71,6 +97,7 @@ describe('interaction', { timeout: benchTimeoutMs }, () => {
   test('recursive hit-test (1k nodes, 100 queries/frame × 100 frames)', async ({ bench }) => {
     await bench('recursive hit-test (1k nodes, 100 queries/frame × 100 frames)', () => {
       const root = new Container();
+
       for (let i = 0; i < NODES; i++) {
         root.addChild(makeInteractiveDrawable((i % 40) * 25, Math.floor(i / 40) * 25));
       }
@@ -97,9 +124,11 @@ describe('interaction', { timeout: benchTimeoutMs }, () => {
 
       for (let frame = 0; frame < FRAMES; frame++) {
         const qt = buildIndex(root, worldBounds);
+
         for (let q = 0; q < QUERIES; q++) {
           hitTestIndexed(qt, buf, (frame * 97 + q * 31) % 1000, (frame * 53 + q * 17) % 625);
         }
+
         qt.destroy();
       }
 

@@ -1,11 +1,12 @@
 // Default import on purpose: the package's ESM build exports the plugin as
 // `default` only (the .d.ts advertises a named export it doesn't ship).
-import codecovAstroPlugin from '@codecov/astro-plugin';
-import { defineConfig } from 'astro/config';
-import mdx from '@astrojs/mdx';
-import react from '@astrojs/react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import mdx from '@astrojs/mdx';
+import react from '@astrojs/react';
+import codecovAstroPlugin from '@codecov/astro-plugin';
+import { defineConfig } from 'astro/config';
 
 import { isGeneratedAstroDirective } from './scripts/astro-warning-policy';
 import { SHIKI_THEMES } from './src/lib/shiki-theme';
@@ -75,7 +76,10 @@ export default defineConfig({
       rollupOptions: {
         onwarn(warning, warn) {
           // Astro carries propagated styles and links in this generated module's exports.
-          if (isGeneratedAstroDirective(warning, path.resolve(__dirname, 'src/content'))) return;
+          if (isGeneratedAstroDirective(warning, path.resolve(__dirname, 'src/content'))) {
+            return;
+          }
+
           warn(warning);
         },
         output: {
@@ -83,15 +87,19 @@ export default defineConfig({
             // Monaco editor core - isolated so its hash is stable across
             // app-code changes and workers/language-packs are kept separate
             // by Monaco's own internal dynamic imports.
-            if (id.includes('/node_modules/monaco-editor/')) return 'vendor-monaco';
+            if (id.includes('/node_modules/monaco-editor/')) {
+              return 'vendor-monaco';
+            }
+
             // React runtime - shared by all hydrated islands; stable vendor chunk.
             if (
               id.includes('/node_modules/react/') ||
               id.includes('/node_modules/react-dom/') ||
               id.includes('/node_modules/@astrojs/react/') ||
               id.includes('/node_modules/@monaco-editor/react/')
-            )
+            ) {
               return 'vendor-react';
+            }
           },
         },
       },

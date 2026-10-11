@@ -94,7 +94,12 @@ export const loadLdtkTileset = async (def: LdtkTilesetDef, ldtkSource: string, c
  */
 const loadExternalLevel = async (level: LdtkLevel, ldtkSource: string, context: AssetFactoryContext): Promise<LdtkLevel> => {
   // Already-inlined level, or no external file to fetch: return as-is.
-  if (level.layerInstances !== null || level.externalRelPath === undefined || level.externalRelPath === null || level.externalRelPath === '') {
+  if (
+    level.layerInstances !== null ||
+    level.externalRelPath === undefined ||
+    level.externalRelPath === null ||
+    level.externalRelPath === ''
+  ) {
     return level;
   }
 
@@ -130,8 +135,10 @@ const withResolvedLevels = (data: LdtkData, resolvedLevels: readonly LdtkLevel[]
     const worlds = data.worlds.map(world => {
       const levels = resolvedLevels.slice(cursor, cursor + world.levels.length);
       cursor += world.levels.length;
+
       return { ...world, levels };
     });
+
     return { ...data, worlds };
   }
 
@@ -169,6 +176,7 @@ export const loadLdtkMap = async (context: AssetFactoryContext): Promise<LdtkMap
     Promise.all(
       data.defs.tilesets.map(async def => {
         const ts = await loadLdtkTileset(def, source, context);
+
         return [def.uid, ts] as const;
       }),
     ),
@@ -176,8 +184,11 @@ export const loadLdtkMap = async (context: AssetFactoryContext): Promise<LdtkMap
   ]);
 
   const tilesets = new Map<number, TileSet>();
+
   for (const [uid, ts] of tilesetEntries) {
-    if (ts !== null) tilesets.set(uid, ts);
+    if (ts !== null) {
+      tilesets.set(uid, ts);
+    }
   }
 
   return ldtkToTileMap(withResolvedLevels(data, resolvedLevels), { source, tilesets });

@@ -16,13 +16,10 @@ import { LdtkFormatError } from '../src/validate';
 const PKG_DIR = basename(process.cwd()) === 'exojs-ldtk' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-ldtk');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
-const loadFixture = (name: string): unknown => {
-  return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
-};
+const loadFixture = (name: string): unknown => JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
 
-const fakeTexture = (): Texture => {
-  return { width: 4096, height: 4096, uid: 0, label: 'test', destroy: () => {}, destroyed: false } as unknown as Texture;
-};
+const fakeTexture = (): Texture =>
+  ({ width: 4096, height: 4096, uid: 0, label: 'test', destroy: () => {}, destroyed: false }) as unknown as Texture;
 
 /** A loader scope that records what it claims and when it is released. */
 interface FakeScope extends LoaderScope {
@@ -45,33 +42,43 @@ const fakeScope = (name: string, claims: string[], fixtures: Record<string, unkn
     async load(asset: { source?: string } | string) {
       const source = typeof asset === 'string' ? asset : (asset.source ?? '');
       claims.push(source);
-      if (source.endsWith('.png')) return fakeTexture();
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
+
+      if (source.endsWith('.png')) {
+        return fakeTexture();
+      }
+
+      if (Object.hasOwn(fixtures, source)) {
+        return fixtures[source];
+      }
+
       throw new Error(`ldtk-world.test: no fixture registered for "${source}"`);
     },
     createScope(options?: { name?: string }) {
       const child = fakeScope(options?.name ?? '', claims, fixtures);
       children.push(child);
+
       return child;
     },
     destroy() {
       released = true;
-      for (const child of children) child.destroy();
+
+      for (const child of children) {
+        child.destroy();
+      }
     },
   };
 
   return scope as unknown as FakeScope;
 };
 
-const makeContext = (claims: string[], fixtures: Record<string, unknown>, source: string): AssetFactoryContext => {
-  return {
+const makeContext = (claims: string[], fixtures: Record<string, unknown>, source: string): AssetFactoryContext =>
+  ({
     source,
     resourceKey: `test|${source}`,
     sourceKey: `url:${source}`,
     locator: `url:${source}`,
     dependencies: fakeScope('asset', claims, fixtures) as unknown as AssetFactoryContext['dependencies'],
-  } as AssetFactoryContext;
-};
+  }) as AssetFactoryContext;
 
 const STREAMING_FIXTURES: Record<string, unknown> = {
   'streaming.ldtk': loadFixture('streaming.ldtk'),
@@ -281,7 +288,7 @@ describe('LdtkProject streaming', () => {
 
   it('resolves an external level path against the document, not the working directory', async () => {
     const nested = structuredClone(loadFixture('streaming.ldtk')) as {
-      levels: { externalRelPath?: string | null }[];
+      levels: Array<{ externalRelPath?: string | null }>;
     };
     nested.levels[0]!.externalRelPath = '../levels/Forest.ldtkl';
 
@@ -332,7 +339,9 @@ describe('LdtkProject streaming', () => {
   it('rejects a world name the project does not have', async () => {
     const project = await loadLdtkProject(makeContext([], STREAMING_FIXTURES, 'streaming.ldtk'));
 
-    expect(() => project.createRuntime({ scope: fakeScope('root', [], STREAMING_FIXTURES), world: 'nope' })).toThrow(/has no world named "nope"/);
+    expect(() => project.createRuntime({ scope: fakeScope('root', [], STREAMING_FIXTURES), world: 'nope' })).toThrow(
+      /has no world named "nope"/,
+    );
   });
 
   it('streams a named world of a multi-world project', async () => {

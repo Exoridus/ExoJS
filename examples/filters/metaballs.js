@@ -80,7 +80,11 @@ class MetaballsScene extends Scene {
   setOrder(order) {
     this.balls.filters = order === 'field' ? [this.blur, this.threshold] : order === 'soft' ? [this.threshold, this.blur] : [];
     this.hud?.setStatus(
-      order === 'field' ? 'Blur → Threshold: merged shapes' : order === 'soft' ? 'Threshold → Blur: soft circles' : 'No filters: source circles',
+      order === 'field'
+        ? 'Blur → Threshold: merged shapes'
+        : order === 'soft'
+          ? 'Threshold → Blur: soft circles'
+          : 'No filters: source circles',
     );
   }
   update(delta) {

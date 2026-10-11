@@ -130,7 +130,9 @@ for (const sceneId of scenes) {
 
   if (top > 0) {
     for (const row of first.callsites ?? []) {
-      console.log(`    ${row.selfKbPerFrame.toFixed(3).padStart(9)} KB/f self  ${row.totalKbPerFrame.toFixed(3).padStart(9)} KB/f total  ${row.site}`);
+      console.log(
+        `    ${row.selfKbPerFrame.toFixed(3).padStart(9)} KB/f self  ${row.totalKbPerFrame.toFixed(3).padStart(9)} KB/f total  ${row.site}`,
+      );
     }
   }
 }

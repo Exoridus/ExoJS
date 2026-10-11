@@ -70,7 +70,11 @@ describe('recordBaseline', () => {
 
   test('sorts cells so the committed file has a stable diff', () => {
     const baseline = recordBaseline(
-      [cell({ archetype: 'overdraw', drawCalls: 1 }), cell({ archetype: 'deep-hierarchy', drawCalls: 1 }), cell({ archetype: 'mask-clip', drawCalls: 4 })],
+      [
+        cell({ archetype: 'overdraw', drawCalls: 1 }),
+        cell({ archetype: 'deep-hierarchy', drawCalls: 1 }),
+        cell({ archetype: 'mask-clip', drawCalls: 4 }),
+      ],
       recorded,
     );
     const ids = baseline.cells.map(gateCellId);
@@ -127,7 +131,9 @@ describe('compareToBaseline', () => {
   });
 
   test('the report names the cell and the counter that moved', () => {
-    const report = formatGateOutcome(compareToBaseline(baseline, [cell({ archetype: 'static-heavy', drawCalls: 25_000, bufferUploads: 2 })]));
+    const report = formatGateOutcome(
+      compareToBaseline(baseline, [cell({ archetype: 'static-heavy', drawCalls: 25_000, bufferUploads: 2 })]),
+    );
 
     expect(report).toContain('exojs/current/webgl2/static-heavy/1000');
     expect(report).toContain('drawCalls 1 -> 25000');

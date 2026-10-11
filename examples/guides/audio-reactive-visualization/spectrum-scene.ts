@@ -18,6 +18,7 @@ export class SpectrumScene extends Scene {
 
     this.bars.clear();
     this.bars.fillColor = this.barColor;
+
     for (let index = 0; index < levels.length; index++) {
       const height = (levels[index] / 255) * this.app.height * 0.6;
       this.bars.drawRectangle(index * width, this.app.height - height, Math.max(1, width - 2), height);

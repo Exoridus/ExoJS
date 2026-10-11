@@ -398,6 +398,7 @@ describe('RepeatPlanner — precision & boundaries', () => {
   test('round mode derives boundaries from index * segmentLength', () => {
     // Check that each segment starts at i * segmentLength
     const plan = planRepeat(7, 100, 'repeat', 'round');
+
     for (let i = 0; i < plan.segments.length; i++) {
       expect(plan.segments[i].destinationStart).toBeCloseTo(i * plan.segments[i].destinationLength, 10);
     }

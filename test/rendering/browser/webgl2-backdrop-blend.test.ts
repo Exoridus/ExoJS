@@ -84,9 +84,10 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
 
 const expectRgbNear = (actual: RgbaTuple, expected: [number, number, number], tolerance = 4): void => {
   for (let index = 0; index < 3; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected rgb [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
+    expect(
+      Math.abs(actual[index] - expected[index]),
+      `channel ${index}: got [${actual.join(', ')}] expected rgb [${expected.join(', ')}]`,
+    ).toBeLessThanOrEqual(tolerance);
   }
 };
 

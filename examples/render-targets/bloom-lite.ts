@@ -67,7 +67,10 @@ class BloomLiteScene extends Scene {
     const app = this.app;
     const { width, height } = app;
     this.time += delta;
-    this.bunny.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.32), height / 2 + Math.sin(this.time * 1.2) * (height * 0.32));
+    this.bunny.setPosition(
+      width / 2 + Math.cos(this.time * 1.7) * (width * 0.32),
+      height / 2 + Math.sin(this.time * 1.2) * (height * 0.32),
+    );
   }
 
   override draw(context: RenderingContext): void {

@@ -3,7 +3,7 @@ import {
   BlurFilter,
   CallbackRenderPass,
   Color,
-  RenderingContext,
+  type RenderingContext,
   RenderNodePass,
   RenderPipeline,
   RenderTexture,

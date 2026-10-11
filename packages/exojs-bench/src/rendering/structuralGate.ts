@@ -32,7 +32,8 @@ import type { ArchetypeId, Backend, CellResult, StructuralCounters } from './Eng
  * been dropped from the gate rather than given a tolerance.
  */
 export const UNGUARDED_ARCHETYPES: Readonly<Partial<Record<ArchetypeId, string>>> = {
-  'batch-breaking': 'the cell does not complete on a software rasterizer (40 distinct textures wedge it), so it has no counters there to compare',
+  'batch-breaking':
+    'the cell does not complete on a software rasterizer (40 distinct textures wedge it), so it has no counters there to compare',
   'text-dynamic': 'the cell aborts on a software rasterizer as too slow, so its counters cover an unpredictable number of frames',
   overdraw:
     'its fill cost dominates the gate wall clock in software (stacked full-viewport quads are hundreds of millions of shaded pixels per frame) while its draw structure is a single call that static-heavy already guards',
@@ -103,7 +104,8 @@ export interface GateOutcome {
 }
 
 /** Stable identity string for a cell. */
-export const gateCellId = (cell: GateCellKey): string => `${cell.engine}/${cell.config}/${cell.backend}/${cell.archetype}/${cell.nodeCount}`;
+export const gateCellId = (cell: GateCellKey): string =>
+  `${cell.engine}/${cell.config}/${cell.backend}/${cell.archetype}/${cell.nodeCount}`;
 
 /** Whether the gate guards this archetype; see {@link UNGUARDED_ARCHETYPES}. */
 export const isGuarded = (archetype: string): boolean => !(archetype in UNGUARDED_ARCHETYPES);
@@ -175,7 +177,8 @@ export const compareToBaseline = (baseline: GateBaseline, results: readonly Cell
 };
 
 /** Whether an outcome fails the gate. */
-export const isGateFailure = (outcome: GateOutcome): boolean => outcome.deviations.length > 0 || outcome.missing.length > 0 || outcome.unmeasured.length > 0;
+export const isGateFailure = (outcome: GateOutcome): boolean =>
+  outcome.deviations.length > 0 || outcome.missing.length > 0 || outcome.unmeasured.length > 0;
 
 /** Human-readable gate report, one line per finding. */
 export const formatGateOutcome = (outcome: GateOutcome): string => {

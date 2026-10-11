@@ -17,6 +17,7 @@ export class SpectrumHistory {
     for (let row = 0; row < 64; row++) {
       this.texture.buffer[row * 256 + this.column] = bands[row];
     }
+
     this.texture.commitRect(this.column, 0, 1, 64);
     this.column = (this.column + 1) % 256;
   }

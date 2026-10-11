@@ -37,7 +37,9 @@ const webglBackedCanvas = (edge = 16): HTMLCanvasElement => {
 
   const gl = canvas.getContext('webgl2');
 
-  if (gl === null) throw new Error('This suite needs a WebGL2 context to claim the canvas.');
+  if (gl === null) {
+    throw new Error('This suite needs a WebGL2 context to claim the canvas.');
+  }
 
   gl.clearColor(1, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT);
@@ -61,7 +63,9 @@ describe('WebGPU uploads a canvas-sourced texture whose canvas is not 2D', () =>
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expect(pixelAt(readWebGpuFrame(backend, SIZE), 16, 16)).toEqual([255, 0, 0, 255]);
     } finally {

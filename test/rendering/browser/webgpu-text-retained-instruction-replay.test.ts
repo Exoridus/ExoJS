@@ -78,7 +78,8 @@ const readCanvas = (backend: WebGpuBackend): ((x: number, y: number, w?: number,
   return (x: number, y: number, w = 1, h = 1): Uint8ClampedArray => ctx.getImageData(Math.floor(x), Math.floor(y), w, h).data;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /** Render a frame through the real plan path inside a validation error scope. */
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
@@ -155,8 +156,13 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
     try {
       expect(new WebGpuTextRenderer().supportsRetainedBatches).toBe(true);
 
-      if (!(await renderScene(ctx, backend, scene.root))) return; // F1: capture
-      if (!(await renderScene(ctx, backend, scene.root))) return; // F2: record (slow path)
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      } // F1: capture
+
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      } // F2: record (slow path)
 
       expect(fragmentOf(scene.group).instructions?.hasRecording).toBe(true);
 
@@ -168,7 +174,9 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
       const recordRegion = readCanvas(backend)(0, 0, canvasSize, canvasSize);
 
-      if (!(await renderScene(ctx, backend, scene.root))) return; // F3: replay (fast path)
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      } // F3: replay (fast path)
 
       const replayRegion = readCanvas(backend)(0, 0, canvasSize, canvasSize);
 
@@ -185,7 +193,9 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
     try {
       for (let frame = 0; frame < 3; frame++) {
-        if (!(await renderScene(ctx, backend, scene.root))) return;
+        if (!(await renderScene(ctx, backend, scene.root))) {
+          return;
+        }
       }
 
       const before = inkProbe(readCanvas(backend));
@@ -196,7 +206,9 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
 
-      if (!(await renderScene(ctx, backend, scene.root))) return;
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      }
 
       // No recapture: the SAME recorded instruction object still replays -
       // only the live projection uniform changed.
@@ -222,14 +234,18 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
     try {
       for (let frame = 0; frame < 3; frame++) {
-        if (!(await renderScene(ctx, backend, scene.root))) return;
+        if (!(await renderScene(ctx, backend, scene.root))) {
+          return;
+        }
       }
 
       const recordedInstruction = fragmentOf(scene.group).instructions!.instructions[0];
 
       scene.group.setPosition(28, 8);
 
-      if (!(await renderScene(ctx, backend, scene.root))) return;
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      }
 
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedInstruction);
       expect(fragmentOf(scene.group).instructions!.hasRecording).toBe(true);
@@ -252,14 +268,18 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
     try {
       for (let frame = 0; frame < 3; frame++) {
-        if (!(await renderScene(ctx, backend, scene.root))) return;
+        if (!(await renderScene(ctx, backend, scene.root))) {
+          return;
+        }
       }
 
       const recordedInstruction = fragmentOf(scene.group).instructions!.instructions[0];
 
       scene.text.setPosition(24, 4);
 
-      if (!(await renderScene(ctx, backend, scene.root))) return;
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      }
 
       // The O(1) patch rewrites the persisted row in place - the SAME
       // recorded instruction object replays; a full re-record would have
@@ -285,17 +305,23 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
     try {
       for (let frame = 0; frame < 3; frame++) {
-        if (!(await renderScene(ctx, backend, scene.root))) return;
+        if (!(await renderScene(ctx, backend, scene.root))) {
+          return;
+        }
       }
 
       expect(fragmentOf(scene.group).instructions?.hasRecording).toBe(true);
 
       scene.text.text = 'X';
 
-      if (!(await renderScene(ctx, backend, scene.root))) return; // content-dirty frame
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      } // content-dirty frame
 
       for (let frame = 0; frame < 3; frame++) {
-        if (!(await renderScene(ctx, backend, scene.root))) return;
+        if (!(await renderScene(ctx, backend, scene.root))) {
+          return;
+        }
       }
 
       expect(fragmentOf(scene.group).instructions?.hasRecording).toBe(true);
@@ -316,7 +342,9 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
     try {
       for (let frame = 0; frame < 2; frame++) {
-        if (!(await renderScene(ctx, backend, scene.root))) return;
+        if (!(await renderScene(ctx, backend, scene.root))) {
+          return;
+        }
       } // F1 capture, F2 record
 
       expect(fragmentOf(scene.group).instructions?.hasRecording).toBe(true);
@@ -333,7 +361,9 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
       // that never acquires a pass or issues `drawIndexed` leaves it at 0.
       WebGpuTextRenderer.prototype.replayRetainedBatch = function (): void {};
 
-      if (!(await renderScene(ctx, backend, scene.root))) return; // F3: broken replay
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      } // F3: broken replay
 
       expect(backend.stats.drawCalls).toBe(0);
       expect(backend.stats.drawCalls).not.toBe(recordDraws);

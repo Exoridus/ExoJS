@@ -89,7 +89,8 @@ class CachedAssetsScene extends Scene {
     try {
       await task();
       this.warmState.text = action === 'Warm' ? 'Generic prompts: warmed in IndexedDB' : 'Generic prompts: cache cleared';
-      this.result.text = action === 'Warm' ? 'Source stored without making an asset resident.' : 'Cache cleared. Retry while offline to see a miss.';
+      this.result.text =
+        action === 'Warm' ? 'Source stored without making an asset resident.' : 'Cache cleared. Retry while offline to see a miss.';
     } catch (error) {
       this.result.text = `${action} failed: ${error instanceof Error ? error.message : String(error)}`;
     } finally {

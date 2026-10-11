@@ -34,7 +34,8 @@ interface FragmentCarrier {
 
 const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as FragmentCarrier)._fragment;
 
-const bundleOf = (group: RetainedContainer): WebGl2RetainedGroupResources => fragmentOf(group).instructions!.ownedBundle as WebGl2RetainedGroupResources;
+const bundleOf = (group: RetainedContainer): WebGl2RetainedGroupResources =>
+  fragmentOf(group).instructions!.ownedBundle as WebGl2RetainedGroupResources;
 
 const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
   const harness = createWebGl2Harness();
@@ -84,7 +85,10 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       measureFrame(harness, root);
       const batch = fragmentOf(group).instructions!.instructions.find(instruction => instruction.kind === RetainedInstructionKind.Batch)!;
 
-      if (batch.kind !== RetainedInstructionKind.Batch) throw new Error('Expected a recorded batch');
+      if (batch.kind !== RetainedInstructionKind.Batch) {
+        throw new Error('Expected a recorded batch');
+      }
+
       const payload = batch.payload as WebGl2RetainedBatchPayload;
       const replayer = {
         scanRetainedNodeIndexRange: payload.replayer.scanRetainedNodeIndexRange.bind(payload.replayer),
@@ -104,34 +108,46 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     });
   });
 
-  it.each(['missing-vao', 'destroyed-bundle', 'disconnected-renderer'] as const)('counts submissions but no draws on %s replay', failure => {
-    withHarness(harness => {
-      const { root, group } = buildScene();
+  it.each(['missing-vao', 'destroyed-bundle', 'disconnected-renderer'] as const)(
+    'counts submissions but no draws on %s replay',
+    failure => {
+      withHarness(harness => {
+        const { root, group } = buildScene();
 
-      measureFrame(harness, root);
-      measureFrame(harness, root);
-      const batch = fragmentOf(group).instructions!.instructions.find(instruction => instruction.kind === RetainedInstructionKind.Batch)!;
+        measureFrame(harness, root);
+        measureFrame(harness, root);
+        const batch = fragmentOf(group).instructions!.instructions.find(instruction => instruction.kind === RetainedInstructionKind.Batch)!;
 
-      if (batch.kind !== RetainedInstructionKind.Batch) throw new Error('Expected a recorded batch');
-      const payload = { ...(batch.payload as WebGl2RetainedBatchPayload) };
-      const detached = new WebGl2SpriteRenderer(16);
+        if (batch.kind !== RetainedInstructionKind.Batch) {
+          throw new Error('Expected a recorded batch');
+        }
 
-      if (failure === 'missing-vao') payload.vao = null;
-      if (failure === 'destroyed-bundle') payload.bundle.destroy();
-      const replayPayload = failure === 'disconnected-renderer' ? { ...payload, replayer: detached } : payload;
+        const payload = { ...(batch.payload as WebGl2RetainedBatchPayload) };
+        const detached = new WebGl2SpriteRenderer(16);
 
-      harness.backend.resetStats();
-      harness.backend.replayRetainedBatch({ ...batch, nodeCount: 2, payload: replayPayload });
-      expect(harness.backend.stats.submittedNodes).toBe(2);
-      expect(harness.backend.stats.batches).toBe(0);
-      expect(harness.backend.stats.drawCalls).toBe(0);
-      harness.backend.replayRetainedBatch({ ...batch, nodeCount: 0, payload: replayPayload });
-      expect(harness.backend.stats.submittedNodes).toBe(2);
+        if (failure === 'missing-vao') {
+          payload.vao = null;
+        }
 
-      detached.destroy();
-      root.destroy();
-    });
-  });
+        if (failure === 'destroyed-bundle') {
+          payload.bundle.destroy();
+        }
+
+        const replayPayload = failure === 'disconnected-renderer' ? { ...payload, replayer: detached } : payload;
+
+        harness.backend.resetStats();
+        harness.backend.replayRetainedBatch({ ...batch, nodeCount: 2, payload: replayPayload });
+        expect(harness.backend.stats.submittedNodes).toBe(2);
+        expect(harness.backend.stats.batches).toBe(0);
+        expect(harness.backend.stats.drawCalls).toBe(0);
+        harness.backend.replayRetainedBatch({ ...batch, nodeCount: 0, payload: replayPayload });
+        expect(harness.backend.stats.submittedNodes).toBe(2);
+
+        detached.destroy();
+        root.destroy();
+      });
+    },
+  );
 
   it('walks capture -> record -> splice; the steady splice frame re-uploads ZERO instance bytes', () => {
     withHarness(harness => {

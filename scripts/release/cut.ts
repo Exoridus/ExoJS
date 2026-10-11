@@ -49,7 +49,7 @@ import {
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-const LOCKSTEP_DIRS: { name: string; dir: string }[] = LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir }));
+const LOCKSTEP_DIRS: Array<{ name: string; dir: string }> = LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir }));
 
 // `LOCKSTEP_PACKAGES` is `as const`, so mapping its names yields a literal
 // union and `Set.has` would accept only those literals - but the caller tests
@@ -60,6 +60,7 @@ const LOCKSTEP_NAMES: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.map(p => p
 const log = (msg: string): void => {
   process.stdout.write(`${msg}\n`);
 };
+
 // A `never` return only ends control flow for the caller when the callee is a
 // function declaration or a constant with an explicit type annotation.
 type Abort = (msg: string) => never;
@@ -72,14 +73,17 @@ const die: Abort = msg => {
 const parseVersionArg = (argv: string[]): string => {
   const idx = argv.indexOf('--version');
   const version = idx !== -1 ? argv[idx + 1] : undefined;
+
   if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
     die('Missing or invalid --version. Usage: pnpm release:cut --version 0.15.0');
   }
+
   return version;
 };
 
 const readPackageJson = (absDir: string): Record<string, unknown> => {
   const path = resolve(absDir, 'package.json');
+
   return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>;
 };
 
@@ -124,6 +128,7 @@ const assertChangelogSection = (version: string): void => {
 
 const assertTagAbsent = (version: string): void => {
   const tag = `v${version}`;
+
   try {
     execSync(`git rev-parse --verify refs/tags/${tag}`, { stdio: 'pipe', cwd: repoRoot });
     die(`Tag ${tag} already exists. Delete it first if you need to re-cut.`);
@@ -157,7 +162,10 @@ const resolveEvidenceHead = (): string => {
       return head;
     }
 
-    const changed = execSync(`git diff --name-only ${parent} ${head}`, { encoding: 'utf8', cwd: repoRoot }).trim().split('\n').filter(Boolean);
+    const changed = execSync(`git diff --name-only ${parent} ${head}`, { encoding: 'utf8', cwd: repoRoot })
+      .trim()
+      .split('\n')
+      .filter(Boolean);
 
     if (changed.length !== 1 || changed[0] !== EVIDENCE_PATH) {
       return head;
@@ -185,9 +193,9 @@ const assertEvidenceFresh = (doc: EvidenceDocument): void => {
 
   if (stale.length > 0) {
     die(
-      `Parity evidence is not current for HEAD (${head}):\n` +
-        stale.map(line => `  - ${line}`).join('\n') +
-        `\n\nThe matrix is published from ${EVIDENCE_PATH} and the release claims it holds as of this version.\n` +
+      `Parity evidence is not current for HEAD (${head}):\n${stale
+        .map(line => `  - ${line}`)
+        .join('\n')}\n\nThe matrix is published from ${EVIDENCE_PATH} and the release claims it holds as of this version.\n` +
         `Re-measure, commit the result, then re-run release:cut:\n` +
         `  pnpm test:parity\n` +
         `  pnpm test:parity:firefox`,
@@ -287,6 +295,7 @@ const bumped = bumpPackages(version);
 
 if (bumped) {
   log('\n→ verifying lockstep + release-matrix…');
+
   try {
     run('pnpm verify:lockstep');
     run('pnpm verify:release-matrix');

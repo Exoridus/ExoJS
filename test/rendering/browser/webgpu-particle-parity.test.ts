@@ -5,7 +5,14 @@ import { materializeRendererBindings } from '#extensions/materialize';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { createWebGl2TestBackend, createWebGpuTestBackend, readWebGl2Pixel, readWebGpuPixels, renderWebGl2Once, renderWebGpuOnce } from './_backendSetup';
+import {
+  createWebGl2TestBackend,
+  createWebGpuTestBackend,
+  readWebGl2Pixel,
+  readWebGpuPixels,
+  renderWebGl2Once,
+  renderWebGpuOnce,
+} from './_backendSetup';
 import { particleParityFixtures, seedParticleParity } from './_particleParity';
 import { expectPixelNear } from './_pixels';
 
@@ -29,6 +36,7 @@ const compareState = (actual: ParticleDeathContext, expected: ParticleDeathConte
   for (const field of ['x', 'y', 'velocityX', 'velocityY', 'rotation', 'scaleX', 'scaleY', 'elapsed', 'lifetime'] as const) {
     expect(Math.abs(actual[field] - expected[field])).toBeLessThanOrEqual(1e-4);
   }
+
   compareColor(actual.color, expected.color);
 };
 
@@ -41,6 +49,7 @@ const readGpuInstances = async (backend: WebGpuBackend, system: ParticleSystem):
     encoder.copyBufferToBuffer(system.gpuState!.instanceBuffer, 0, staging, 0, 120);
     backend.device.queue.submit([encoder.finish()]);
     await staging.mapAsync(GPUMapMode.READ);
+
     return staging.getMappedRange().slice(0);
   } finally {
     staging.destroy();
@@ -64,6 +73,7 @@ const compareInstances = (bytes: ArrayBuffer, stride: number, cpu: ParticleSyste
     ] as const) {
       expect(Math.abs(floats[base + offset]! - expected[field])).toBeLessThanOrEqual(1e-4);
     }
+
     compareColor(uints[base + 5]!, expected.color);
   }
 };
@@ -98,6 +108,7 @@ describe('particle CPU/WebGL2/WebGPU simulation parity', () => {
     const cpu = new ParticleSystem(texture, frames, { capacity: 3, simulation: 'cpu' });
     const gl = new ParticleSystem(texture, frames, { capacity: 3 });
     const gpu = new ParticleSystem(texture, frames, { capacity: 3 });
+
     try {
       for (const system of [cpu, gl, gpu]) {
         system.setScale(2);
@@ -115,9 +126,14 @@ describe('particle CPU/WebGL2/WebGPU simulation parity', () => {
         blue.rotation = 90;
         blue.lifetime = 2;
       }
+
       renderWebGl2Once(webgl, gl);
       await renderWebGpuOnce(context, webgpu, gpu);
-      for (const system of [cpu, gl, gpu]) system.update(Time.seconds(0.5));
+
+      for (const system of [cpu, gl, gpu]) {
+        system.update(Time.seconds(0.5));
+      }
+
       const points = [
         [24, 16],
         [40, 40],
@@ -130,12 +146,15 @@ describe('particle CPU/WebGL2/WebGPU simulation parity', () => {
       expectPixelNear(expected[1]!, [0, 0, 255, 255], 1);
       expectPixelNear(expected[2]!, [0, 0, 0, 255], 0);
       renderWebGl2Once(webgl, gl);
+
       for (let i = 0; i < points.length; i++) {
         const [x, y] = points[i]!;
         expectPixelNear(readWebGl2Pixel(webgl, x, y), expected[i]!, 1);
       }
+
       await renderWebGpuOnce(context, webgpu, gpu);
       const pixel = readWebGpuPixels(webgpu, 64);
+
       for (let i = 0; i < points.length; i++) {
         const [x, y] = points[i]!;
         expectPixelNear(pixel(x, y), expected[i]!, 1);
@@ -145,7 +164,10 @@ describe('particle CPU/WebGL2/WebGPU simulation parity', () => {
       gl.destroy();
       gpu.destroy();
       texture.destroy();
-      for (const frame of frames) frame.destroy();
+
+      for (const frame of frames) {
+        frame.destroy();
+      }
     }
   });
 
@@ -166,9 +188,13 @@ describe('particle CPU/WebGL2/WebGPU simulation parity', () => {
       for (let i = 0; i < systems.length; i++) {
         const system = systems[i]!;
 
-        for (const module of fixture.modules()) system.addUpdateModule(module);
+        for (const module of fixture.modules()) {
+          system.addUpdateModule(module);
+        }
+
         system.addDeathModule(captures[i]!);
       }
+
       gl.render(webgl);
       webgl.flush();
       gpu.render(webgpu);
@@ -180,7 +206,10 @@ describe('particle CPU/WebGL2/WebGPU simulation parity', () => {
       }
 
       for (let frame = 0; frame < 3; frame++) {
-        for (const system of systems) system.update(Time.seconds(1 / 16));
+        for (const system of systems) {
+          system.update(Time.seconds(1 / 16));
+        }
+
         expect(cpu.simulationBackend).toBe('cpu');
         expect(gl.simulationBackend).toBe('webgl2');
         expect(gpu.simulationBackend).toBe('webgpu');
@@ -204,14 +233,22 @@ describe('particle CPU/WebGL2/WebGPU simulation parity', () => {
         webgl.context.flush();
         await new Promise(resolve => setTimeout(resolve, 4));
       }
-      for (const capture of captures) expect(capture.records).toHaveLength(3);
+
+      for (const capture of captures) {
+        expect(capture.records).toHaveLength(3);
+      }
+
       for (let i = 0; i < 3; i++) {
         compareState(captures[1]!.records[i]!, captures[0]!.records[i]!);
         compareState(captures[2]!.records[i]!, captures[0]!.records[i]!);
       }
+
       expect(webgl.context.getError()).toBe(webgl.context.NO_ERROR);
     } finally {
-      for (const system of systems) system.destroy();
+      for (const system of systems) {
+        system.destroy();
+      }
+
       texture.destroy();
     }
   });

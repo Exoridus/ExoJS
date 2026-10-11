@@ -1,4 +1,13 @@
-import { Application, Asset, BitmapText, BmFont, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  BitmapText,
+  type BmFont,
+  Color,
+  FixedResolutionCanvasSizing,
+  type RenderingContext,
+  Scene,
+} from '@codexo/exojs';
 
 class BitmapTextBasicScene extends Scene {
   private font!: BmFont;

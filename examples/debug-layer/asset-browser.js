@@ -4,10 +4,12 @@ import { Application, Color, Graphics, Scene, Sprite, Spritesheet, Text, Texture
 // Dynamic category accessor: maps a category key to the correct sub-object
 // in the hierarchical assets catalog. Technical assets live under
 // assets.technical; everything else is under assets.demo.
-function getCategoryData(catKey) {
-  if (catKey === 'technical') return assets.technical;
+const getCategoryData = catKey => {
+  if (catKey === 'technical') {
+    return assets.technical;
+  }
   return assets.demo[catKey] ?? {};
-}
+};
 const W = 1280;
 const H = 720;
 const TOOLBAR_H = 110;
@@ -122,7 +124,10 @@ class AssetBrowserScene extends Scene {
     ['color', new Text('COLOR', { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' })],
   ]);
   txtTechPurpose = new Text('', { fillColor: C.dim, fontSize: 11 });
-  txtNoAssets = new Text('globalThis.assets is not available.\nRun this example in the ExoJS playground.', { fillColor: C.dim, fontSize: 16 });
+  txtNoAssets = new Text('globalThis.assets is not available.\nRun this example in the ExoJS playground.', {
+    fillColor: C.dim,
+    fontSize: 16,
+  });
   txtEmptyCat = new Text('(empty)', { fillColor: C.dimDark, fontSize: 13 });
   txtNoSel = new Text('Select an asset from the list.', { fillColor: C.dimDark, fontSize: 14 });
   txtLoading = new Text('Loading assets…', { fillColor: C.dim, fontSize: 14 });
@@ -148,7 +153,9 @@ class AssetBrowserScene extends Scene {
   }
   /** Load a category's assets (and build its preview objects) exactly once. */
   async ensureCategory(catId) {
-    if (this.loadedCats.has(catId) || this.loadingCats.has(catId)) return;
+    if (this.loadedCats.has(catId) || this.loadingCats.has(catId)) {
+      return;
+    }
     this.loadingCats.add(catId);
     try {
       await this.loadCategory(catId);
@@ -178,10 +185,15 @@ class AssetBrowserScene extends Scene {
       case 'sprites': {
         await Promise.all(
           Object.entries(assets.demo.sprites ?? {}).map(async ([k, entry]) => {
-            const [tex, data] = await Promise.all([loader.load(Asset.type('texture', entry.image)), loader.load(Asset.type('json', entry.data))]);
+            const [tex, data] = await Promise.all([
+              loader.load(Asset.type('texture', entry.image)),
+              loader.load(Asset.type('json', entry.data)),
+            ]);
             const ss = new Spritesheet(tex, data);
             this.sprSheets.set(k, ss);
-            for (const s of ss.sprites.values()) s.setAnchor(0.5);
+            for (const s of ss.sprites.values()) {
+              s.setAnchor(0.5);
+            }
           }),
         );
         break;
@@ -189,10 +201,15 @@ class AssetBrowserScene extends Scene {
       case 'spritesheets': {
         await Promise.all(
           Object.entries(assets.demo.spritesheets ?? {}).map(async ([k, entry]) => {
-            const [tex, data] = await Promise.all([loader.load(Asset.type('texture', entry.image)), loader.load(Asset.type('json', entry.data))]);
+            const [tex, data] = await Promise.all([
+              loader.load(Asset.type('texture', entry.image)),
+              loader.load(Asset.type('json', entry.data)),
+            ]);
             const ss = new Spritesheet(tex, data);
             this.sshSheets.set(k, ss);
-            for (const s of ss.sprites.values()) s.setAnchor(0.5);
+            for (const s of ss.sprites.values()) {
+              s.setAnchor(0.5);
+            }
           }),
         );
         break;
@@ -210,10 +227,15 @@ class AssetBrowserScene extends Scene {
       case 'inputPrompts': {
         await Promise.all(
           Object.entries(assets.demo.inputPrompts ?? {}).map(async ([k, entry]) => {
-            const [tex, data] = await Promise.all([loader.load(Asset.type('texture', entry.image)), loader.load(Asset.type('json', entry.data))]);
+            const [tex, data] = await Promise.all([
+              loader.load(Asset.type('texture', entry.image)),
+              loader.load(Asset.type('json', entry.data)),
+            ]);
             const ss = new Spritesheet(tex, data);
             this.inpSheets.set(k, ss);
-            for (const s of ss.sprites.values()) s.setAnchor(0.5);
+            for (const s of ss.sprites.values()) {
+              s.setAnchor(0.5);
+            }
           }),
         );
         break;
@@ -245,7 +267,10 @@ class AssetBrowserScene extends Scene {
       case 'soundSprites': {
         await Promise.all(
           Object.entries(assets.demo.soundSprites ?? {}).map(async ([k, entry]) => {
-            const [audio, data] = await Promise.all([loader.load(Asset.type('music', entry.audio)), loader.load(Asset.type('json', entry.data))]);
+            const [audio, data] = await Promise.all([
+              loader.load(Asset.type('music', entry.audio)),
+              loader.load(Asset.type('json', entry.data)),
+            ]);
             this.soundSpriteAudio.set(k, audio);
             this.soundSpriteData.set(k, data);
           }),
@@ -259,7 +284,9 @@ class AssetBrowserScene extends Scene {
             // bitmap-font sidecars (.fnt/.png) that FontFace cannot
             // parse. Load only the vector entries - the bitmap ones
             // fall back to a path readout.
-            if (!/\.(ttf|otf|woff2?)$/i.test(url)) return;
+            if (!/\.(ttf|otf|woff2?)$/i.test(url)) {
+              return;
+            }
             const family = `assetbrowser_${k}`;
             await loader.load(Asset.type('font', url, { family }));
             this.fontFamilies.set(k, family);
@@ -326,31 +353,47 @@ class AssetBrowserScene extends Scene {
     const out = [];
     for (const subcat of ['alpha', 'filtering', 'color']) {
       const items = assets.technical[subcat];
-      if (!items) continue;
+      if (!items) {
+        continue;
+      }
       out.push(subcat);
-      for (const k of Object.keys(items)) out.push(`${subcat}.${k}`);
+      for (const k of Object.keys(items)) {
+        out.push(`${subcat}.${k}`);
+      }
     }
     return out;
   }
   keys() {
-    if (this.cat === 'technical') return this.techFlatKeys();
+    if (this.cat === 'technical') {
+      return this.techFlatKeys();
+    }
     const cat = CATEGORIES.find(c => c.id === this.cat);
     const obj = getCategoryData(cat?.catKey ?? '');
     return obj ? Object.keys(obj) : [];
   }
   assetPath() {
-    if (!this.key) return '';
+    if (!this.key) {
+      return '';
+    }
     if (this.cat === 'technical') {
-      if (!this.key.includes('.')) return '';
+      if (!this.key.includes('.')) {
+        return '';
+      }
       const [subcat, itemKey] = this.key.split('.');
       return assets.technical[subcat]?.[itemKey] ?? '';
     }
     const cat = CATEGORIES.find(c => c.id === this.cat);
     const v = getCategoryData(cat?.catKey ?? '')[this.key];
-    if (typeof v === 'string') return v;
+    if (typeof v === 'string') {
+      return v;
+    }
     const record = v;
-    if (typeof record?.image === 'string') return record.image;
-    if (typeof record?.audio === 'string') return record.audio;
+    if (typeof record?.image === 'string') {
+      return record.image;
+    }
+    if (typeof record?.audio === 'string') {
+      return record.audio;
+    }
     return '';
   }
   assetExpression() {
@@ -384,23 +427,40 @@ class AssetBrowserScene extends Scene {
     return this.previewVoice !== null && !this.previewVoice.ended && !this.previewVoice.paused && this.previewKey === this.key;
   }
   currentPlayingMap() {
-    if (this.cat === 'audio') return this.audioMusics;
-    if (this.cat === 'sound') return this.soundMusics;
-    if (this.cat === 'music') return this.musicMusics;
-    if (this.cat === 'soundSprites') return this.soundSpriteAudio;
+    if (this.cat === 'audio') {
+      return this.audioMusics;
+    }
+    if (this.cat === 'sound') {
+      return this.soundMusics;
+    }
+    if (this.cat === 'music') {
+      return this.musicMusics;
+    }
+    if (this.cat === 'soundSprites') {
+      return this.soundSpriteAudio;
+    }
     return null;
   }
   toggleAudio() {
     const app = this.app;
-    if (!this.key) return;
+    if (!this.key) {
+      return;
+    }
     const map = this.currentPlayingMap();
-    if (!map) return;
+    if (!map) {
+      return;
+    }
     const stream = map.get(this.key);
-    if (!stream) return;
+    if (!stream) {
+      return;
+    }
     if (this.previewKey === this.key && this.previewVoice && !this.previewVoice.ended) {
       // Same asset selected: pause / resume the live voice.
-      if (this.previewVoice.paused) this.previewVoice.resume();
-      else this.previewVoice.pause();
+      if (this.previewVoice.paused) {
+        this.previewVoice.resume();
+      } else {
+        this.previewVoice.pause();
+      }
     } else {
       // New asset: stop the previous preview and start this one.
       this.previewVoice?.stop();
@@ -409,9 +469,15 @@ class AssetBrowserScene extends Scene {
     }
   }
   currentFrameKeys() {
-    if (this.cat === 'sprites') return [...(this.sprSheets.get(this.key ?? '')?.sprites.keys() ?? [])];
-    if (this.cat === 'spritesheets') return [...(this.sshSheets.get(this.key ?? '')?.sprites.keys() ?? [])];
-    if (this.cat === 'inputPrompts') return [...(this.inpSheets.get(this.key ?? '')?.sprites.keys() ?? [])];
+    if (this.cat === 'sprites') {
+      return [...(this.sprSheets.get(this.key ?? '')?.sprites.keys() ?? [])];
+    }
+    if (this.cat === 'spritesheets') {
+      return [...(this.sshSheets.get(this.key ?? '')?.sprites.keys() ?? [])];
+    }
+    if (this.cat === 'inputPrompts') {
+      return [...(this.inpSheets.get(this.key ?? '')?.sprites.keys() ?? [])];
+    }
     return [];
   }
   maxScroll() {
@@ -492,7 +558,9 @@ class AssetBrowserScene extends Scene {
       const idx = Math.floor((y - LIST_Y) / ITEM_H) + this.scrollOff;
       if (idx >= 0 && idx < keys.length) {
         const isHeader = this.cat === 'technical' && !keys[idx].includes('.');
-        if (!isHeader) this.hoverIdx = idx;
+        if (!isHeader) {
+          this.hoverIdx = idx;
+        }
       }
     }
   }
@@ -502,10 +570,16 @@ class AssetBrowserScene extends Scene {
     this.scrollOff = Math.max(0, Math.min(maxScroll, this.scrollOff + delta));
   }
   update(delta) {
-    if (!this.animPlaying) return;
-    if (this.cat !== 'sprites' && this.cat !== 'spritesheets' && this.cat !== 'inputPrompts') return;
+    if (!this.animPlaying) {
+      return;
+    }
+    if (this.cat !== 'sprites' && this.cat !== 'spritesheets' && this.cat !== 'inputPrompts') {
+      return;
+    }
     const frames = this.currentFrameKeys();
-    if (!frames.length) return;
+    if (!frames.length) {
+      return;
+    }
     this.frameTimer += delta;
     if (this.frameTimer >= 0.07) {
       this.frameTimer = 0;
@@ -590,7 +664,9 @@ class AssetBrowserScene extends Scene {
     const keys = this.keys();
     for (let i = 0; i < keys.length; i++) {
       const iy = LIST_Y + (i - this.scrollOff) * ITEM_H;
-      if (iy + ITEM_H <= TOOLBAR_H || iy >= H) continue;
+      if (iy + ITEM_H <= TOOLBAR_H || iy >= H) {
+        continue;
+      }
       const isHeader = this.cat === 'technical' && !keys[i].includes('.');
       const isSelected = !isHeader && keys[i] === this.key;
       const isHover = !isHeader && this.hoverIdx === i && !isSelected;
@@ -611,7 +687,9 @@ class AssetBrowserScene extends Scene {
     context.render(g);
     for (let i = 0; i < keys.length && i - this.scrollOff < this.itemTexts.length; i++) {
       const iy = LIST_Y + (i - this.scrollOff) * ITEM_H;
-      if (iy + ITEM_H <= TOOLBAR_H || iy >= H) continue;
+      if (iy + ITEM_H <= TOOLBAR_H || iy >= H) {
+        continue;
+      }
       if (this.cat === 'technical' && !keys[i].includes('.')) {
         const ht = this.techHeaderTexts.get(keys[i]);
         if (ht) {
@@ -621,7 +699,9 @@ class AssetBrowserScene extends Scene {
         continue;
       }
       const t = this.itemTexts[i - this.scrollOff];
-      if (!t) continue;
+      if (!t) {
+        continue;
+      }
       t.text = this.cat === 'technical' ? (keys[i].split('.')[1] ?? keys[i]) : keys[i];
       t.style.fillColor = keys[i] === this.key ? C.white : C.dim;
       t.setPosition(this.cat === 'technical' ? 18 : 10, iy + 10);
@@ -716,7 +796,9 @@ class AssetBrowserScene extends Scene {
     g.lineColor = C.border;
     g.drawLine(PREVIEW_X, PREVIEW_Y + 44, W, PREVIEW_Y + 44);
     context.render(g);
-    if (!this.key) return;
+    if (!this.key) {
+      return;
+    }
     this.txtKey.text = this.assetExpression();
     this.txtKey.setPosition(PREVIEW_X + 10, PREVIEW_Y + 5);
     context.render(this.txtKey);
@@ -729,7 +811,9 @@ class AssetBrowserScene extends Scene {
       this.txtType.setPosition(PREVIEW_X + PREVIEW_W - 160, PREVIEW_Y + 15);
       context.render(this.txtType);
     }
-    if (!this.copyBtnBg) this.copyBtnBg = new Graphics();
+    if (!this.copyBtnBg) {
+      this.copyBtnBg = new Graphics();
+    }
     const copyX = PREVIEW_X + PREVIEW_W - 84;
     const copyY = PREVIEW_Y + 9;
     this.copyBtnBg.clear();
@@ -751,7 +835,9 @@ class AssetBrowserScene extends Scene {
   }
   fitSprite(sprite, maxW, maxH, cx, cy) {
     const tex = sprite.texture;
-    if (!tex) return;
+    if (!tex) {
+      return;
+    }
     const tw = tex.width || 128;
     const th = tex.height || 128;
     const scale = Math.min(maxW / tw, maxH / th, 3);
@@ -760,16 +846,22 @@ class AssetBrowserScene extends Scene {
   }
   drawTexPreview(context) {
     const sprite = this.texSprites.get(this.key ?? '');
-    if (!sprite) return;
+    if (!sprite) {
+      return;
+    }
     const { cx, cy, maxW, maxH } = this.previewCenter();
     this.fitSprite(sprite, maxW, maxH, cx, cy);
     context.render(sprite);
   }
   drawSprPreview(context) {
     const ss = this.sprSheets.get(this.key ?? '');
-    if (!ss) return;
+    if (!ss) {
+      return;
+    }
     const frames = [...ss.sprites.keys()];
-    if (!frames.length) return;
+    if (!frames.length) {
+      return;
+    }
     const sprite = ss.getFrameSprite(frames[this.frameIdx % frames.length]);
     sprite.setAnchor(0.5);
     const { cx, cy, maxW, maxH } = this.previewCenter();
@@ -779,9 +871,13 @@ class AssetBrowserScene extends Scene {
   }
   drawSshPreview(context) {
     const ss = this.sshSheets.get(this.key ?? '');
-    if (!ss) return;
+    if (!ss) {
+      return;
+    }
     const frames = [...ss.sprites.keys()];
-    if (!frames.length) return;
+    if (!frames.length) {
+      return;
+    }
     const sprite = ss.getFrameSprite(frames[this.frameIdx % frames.length]);
     sprite.setAnchor(0.5);
     const { cx, cy, maxW, maxH } = this.previewCenter();
@@ -806,13 +902,17 @@ class AssetBrowserScene extends Scene {
   }
   drawSvgPreview(context) {
     const sprite = this.svgSprites.get(this.key ?? '');
-    if (!sprite) return;
+    if (!sprite) {
+      return;
+    }
     const { cx, cy, maxW, maxH } = this.previewCenter();
     this.fitSprite(sprite, maxW, maxH, cx, cy);
     context.render(sprite);
   }
   drawAudioPreview(context, musicMap) {
-    if (!this.audioG) this.audioG = new Graphics();
+    if (!this.audioG) {
+      this.audioG = new Graphics();
+    }
     const music = musicMap.get(this.key ?? '');
     const isPlaying = music ? this.previewIsPlaying() : false;
     const g = this.audioG;
@@ -833,7 +933,9 @@ class AssetBrowserScene extends Scene {
     context.render(this.txtMeta);
   }
   drawSoundSpritePreview(context) {
-    if (!this.audioG) this.audioG = new Graphics();
+    if (!this.audioG) {
+      this.audioG = new Graphics();
+    }
     const music = this.soundSpriteAudio.get(this.key ?? '');
     const data = this.soundSpriteData.get(this.key ?? '');
     const isPlaying = music ? this.previewIsPlaying() : false;
@@ -857,7 +959,9 @@ class AssetBrowserScene extends Scene {
       this.txtMeta.setPosition(PREVIEW_X + 30, y);
       context.render(this.txtMeta);
       y += 20;
-      if (y > H - 20) break;
+      if (y > H - 20) {
+        break;
+      }
     }
   }
   drawFontPreview(context) {
@@ -891,9 +995,13 @@ class AssetBrowserScene extends Scene {
     context.render(this.txtMeta);
   }
   drawTechPreview(context) {
-    if (!this.key?.includes('.')) return;
+    if (!this.key?.includes('.')) {
+      return;
+    }
     const sprite = this.techSprites.get(this.key);
-    if (!sprite) return;
+    if (!sprite) {
+      return;
+    }
     const { cx, cy, maxW, maxH } = this.previewCenter();
     this.fitSprite(sprite, maxW, maxH - 28, cx, cy - 14);
     context.render(sprite);
@@ -907,21 +1015,27 @@ class AssetBrowserScene extends Scene {
   }
   drawBgPreview(context) {
     const sprite = this.bgSprites.get(this.key ?? '');
-    if (!sprite) return;
+    if (!sprite) {
+      return;
+    }
     const { cx, cy, maxW, maxH } = this.previewCenter();
     this.fitSprite(sprite, maxW, maxH, cx, cy);
     context.render(sprite);
   }
   drawCursorPreview(context) {
     const sprite = this.cursorSprites.get(this.key ?? '');
-    if (!sprite) return;
+    if (!sprite) {
+      return;
+    }
     const { cx, cy, maxW, maxH } = this.previewCenter();
     this.fitSprite(sprite, Math.min(maxW, 256), Math.min(maxH, 256), cx, cy);
     context.render(sprite);
   }
   drawTilesetPreview(context) {
     const sprite = this.tilesetSprites.get(this.key ?? '');
-    if (!sprite) return;
+    if (!sprite) {
+      return;
+    }
     const entry = assets.demo.tilesets[this.key ?? ''];
     const { cx, cy, maxW, maxH } = this.previewCenter();
     this.fitSprite(sprite, maxW, maxH - 30, cx, cy - 15);
@@ -952,7 +1066,9 @@ class AssetBrowserScene extends Scene {
     context.render(this.txtMeta);
   }
   drawAnimControls(context, frameCount) {
-    if (!this.animG) this.animG = new Graphics();
+    if (!this.animG) {
+      this.animG = new Graphics();
+    }
     const g = this.animG;
     const bx = PREVIEW_X + 16;
     const by = H - 48;

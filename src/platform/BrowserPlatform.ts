@@ -342,7 +342,12 @@ export class BrowserPlatform implements PlatformAdapter {
    * options are forwarded verbatim, because `removeEventListener` only matches
    * a registration whose capture flag agrees.
    */
-  private _listen(target: EventTarget, type: string, listener: (event: never) => void, options?: PlatformListenerOptions): PlatformSubscription {
+  private _listen(
+    target: EventTarget,
+    type: string,
+    listener: (event: never) => void,
+    options?: PlatformListenerOptions,
+  ): PlatformSubscription {
     const handler = listener as EventListener;
     const capture = options?.capture ?? false;
 
@@ -359,6 +364,7 @@ export class BrowserPlatform implements PlatformAdapter {
   /** Wrap `undo` so it runs at most once and stops being held by {@link destroy}. */
   private _track(undo: () => void): PlatformSubscription {
     let done = false;
+
     const subscription = (): void => {
       if (done) {
         return;

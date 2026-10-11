@@ -9,7 +9,10 @@ const fixture = (name: string): ArrayBuffer => Uint8Array.from(readFileSync(`tes
 
 describe('Basis KTX2 descriptors', () => {
   test('committed codec fixtures match their source manifest', () => {
-    const manifest = JSON.parse(readFileSync('test/fixtures/basis/manifest.json', 'utf8')) as { fixtures: Array<{ file: string; sha256: string }> };
+    const manifest = JSON.parse(readFileSync('test/fixtures/basis/manifest.json', 'utf8')) as {
+      fixtures: Array<{ file: string; sha256: string }>;
+    };
+
     for (const entry of manifest.fixtures) {
       const bytes = readFileSync(`test/fixtures/basis/${entry.file}`);
       expect(createHash('sha256').update(bytes).digest('hex')).toBe(entry.sha256);

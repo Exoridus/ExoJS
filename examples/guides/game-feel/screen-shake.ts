@@ -1,5 +1,5 @@
 import { Scene, Time, Vector, View } from '@codexo/exojs';
-import { BurstSpawn, Constant, ParticleSystem } from '@codexo/exojs-particles';
+import { BurstSpawn, Constant, type ParticleSystem } from '@codexo/exojs-particles';
 
 class ShakeScene extends Scene {
   private view = new View(0, 0, 800, 600);

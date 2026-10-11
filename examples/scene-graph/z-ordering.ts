@@ -1,4 +1,14 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  Text,
+} from '@codexo/exojs';
 
 class ZOrderingScene extends Scene {
   private group!: Container;
@@ -24,6 +34,7 @@ class ZOrderingScene extends Scene {
       sprite.setTint([new Color(255, 120, 120), new Color(120, 255, 170), new Color(120, 170, 255)][index]);
       sprite.zIndex = index;
       this.group.addChild(sprite);
+
       return sprite;
     });
 

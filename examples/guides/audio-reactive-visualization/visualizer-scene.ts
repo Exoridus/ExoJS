@@ -1,5 +1,5 @@
 import type { Seconds } from '@codexo/exojs';
-import { Asset, AudioStream, Scene } from '@codexo/exojs';
+import { Asset, type AudioStream, Scene } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
 // #region guide:visualizer-scene

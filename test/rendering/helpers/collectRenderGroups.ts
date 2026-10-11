@@ -87,7 +87,12 @@ export const collectRenderGroups = (scope: GroupScope): RenderGroup[] => {
  *
  * @internal Test-only.
  */
-export const forEachGroupCommand = (entries: readonly ScopeEntry[], startIndex: number, count: number, visit: (command: DrawCommand) => void): void => {
+export const forEachGroupCommand = (
+  entries: readonly ScopeEntry[],
+  startIndex: number,
+  count: number,
+  visit: (command: DrawCommand) => void,
+): void => {
   for (let i = startIndex; i < startIndex + count; i++) {
     const entry = entries[i];
 

@@ -60,7 +60,11 @@ export class IndexedDbDatabase implements Database {
     migrations?: Record<number, (db: IDBDatabase, transaction: IDBTransaction) => boolean>,
   ) {
     if (!supportsIndexedDb) {
-      throw new AssetCacheError({ operation: 'connect', message: 'This host provides no IndexedDB, so no database can be opened.', store: name });
+      throw new AssetCacheError({
+        operation: 'connect',
+        message: 'This host provides no IndexedDB, so no database can be opened.',
+        store: name,
+      });
     }
 
     this.name = name;
@@ -127,7 +131,11 @@ export class IndexedDbDatabase implements Database {
 
   public async clearStorage(type: string): Promise<boolean> {
     const store = await this._objectStore('clear', type, 'readwrite');
-    const committed = transactionComplete(store.transaction, { operation: 'clear', message: 'An error occurred while clearing a storage.', store: type });
+    const committed = transactionComplete(store.transaction, {
+      operation: 'clear',
+      message: 'An error occurred while clearing a storage.',
+      store: type,
+    });
 
     store.clear();
     await committed;
@@ -170,7 +178,12 @@ export class IndexedDbDatabase implements Database {
    * on a closing connection. Both would otherwise escape as bare
    * `DOMException`s and break the promise this class makes about its failures.
    */
-  private async _objectStore(operation: AssetCacheOperation, type: string, mode: IDBTransactionMode, key?: string): Promise<IDBObjectStore> {
+  private async _objectStore(
+    operation: AssetCacheOperation,
+    type: string,
+    mode: IDBTransactionMode,
+    key?: string,
+  ): Promise<IDBObjectStore> {
     const database = await this._connect();
 
     try {
@@ -197,7 +210,10 @@ export class IndexedDbDatabase implements Database {
         if (this._destroyed) {
           database.close();
 
-          throw new AssetCacheError({ operation: 'connect', message: `The database "${this.name}" was destroyed while it was connecting.` });
+          throw new AssetCacheError({
+            operation: 'connect',
+            message: `The database "${this.name}" was destroyed while it was connecting.`,
+          });
         }
 
         database.addEventListener('close', this._onCloseHandler);

@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { EXAMPLE_ALIASES, EXAMPLE_TOOL_RELOCATIONS, resolveExampleAlias, resolveExampleToolRelocation } from '../../site/src/lib/example-aliases';
+import {
+  EXAMPLE_ALIASES,
+  EXAMPLE_TOOL_RELOCATIONS,
+  resolveExampleAlias,
+  resolveExampleToolRelocation,
+} from '../../site/src/lib/example-aliases';
 import { EXAMPLES_CATALOG } from '../../site/src/lib/examples-catalog';
 import { readUrlState } from '../../site/src/lib/url-state';
 import { CURRENT_VERSION_ID } from '../../site/src/lib/versions';
@@ -28,7 +33,10 @@ describe('playground legacy routes', () => {
   });
 
   it('sends a current-version query link to a relocated example to its tool page', () => {
-    expect(resolveRequest('/en/playground/?version=current&example=debug-layer/asset-browser')).toEqual({ tool: 'tools/asset-browser/', example: null });
+    expect(resolveRequest('/en/playground/?version=current&example=debug-layer/asset-browser')).toEqual({
+      tool: 'tools/asset-browser/',
+      example: null,
+    });
   });
 
   it('sends a current-version hash link to a relocated example to its tool page', () => {
@@ -36,8 +44,14 @@ describe('playground legacy routes', () => {
   });
 
   it('keeps a historical version on its own copy of a relocated example', () => {
-    expect(resolveRequest('/en/playground/#/0.17.0/debug-layer/asset-browser')).toEqual({ tool: null, example: 'debug-layer/asset-browser.js' });
-    expect(resolveRequest('/en/playground/?version=0.17.0&example=debug-layer/asset-browser')).toEqual({ tool: null, example: 'debug-layer/asset-browser.js' });
+    expect(resolveRequest('/en/playground/#/0.17.0/debug-layer/asset-browser')).toEqual({
+      tool: null,
+      example: 'debug-layer/asset-browser.js',
+    });
+    expect(resolveRequest('/en/playground/?version=0.17.0&example=debug-layer/asset-browser')).toEqual({
+      tool: null,
+      example: 'debug-layer/asset-browser.js',
+    });
   });
 
   it('keeps a historical version on its own copy of a merged example', () => {
@@ -45,12 +59,21 @@ describe('playground legacy routes', () => {
   });
 
   it('maps a merged example to its current replacement', () => {
-    expect(resolveRequest('/en/playground/#/current/text-fonts/basic-text')).toEqual({ tool: null, example: 'text-fonts/typographic-styling.js' });
-    expect(resolveRequest('/en/playground/?example=text-fonts/basic-text')).toEqual({ tool: null, example: 'text-fonts/typographic-styling.js' });
+    expect(resolveRequest('/en/playground/#/current/text-fonts/basic-text')).toEqual({
+      tool: null,
+      example: 'text-fonts/typographic-styling.js',
+    });
+    expect(resolveRequest('/en/playground/?example=text-fonts/basic-text')).toEqual({
+      tool: null,
+      example: 'text-fonts/typographic-styling.js',
+    });
   });
 
   it('opens a current example unchanged', () => {
-    expect(resolveRequest('/en/playground/#/current/text-fonts/typographic-styling')).toEqual({ tool: null, example: 'text-fonts/typographic-styling.js' });
+    expect(resolveRequest('/en/playground/#/current/text-fonts/typographic-styling')).toEqual({
+      tool: null,
+      example: 'text-fonts/typographic-styling.js',
+    });
   });
 
   it('resolves nothing for a link without an example', () => {

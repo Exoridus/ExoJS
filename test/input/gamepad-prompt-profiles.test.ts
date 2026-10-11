@@ -132,6 +132,8 @@ describe('GamepadPromptLayouts', () => {
 
     expect(GamepadPromptLayouts.getControlLabels(switchPro)).toBe(GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.SwitchPro));
     expect(GamepadPromptLayouts.getControlLabels(dualShock4)).toBe(GamepadPromptLayouts.getControlLabels(dualShock4));
-    expect(GamepadPromptLayouts.getControlLabels(dualShock4)).not.toBe(GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.PlayStation));
+    expect(GamepadPromptLayouts.getControlLabels(dualShock4)).not.toBe(
+      GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.PlayStation),
+    );
   });
 });

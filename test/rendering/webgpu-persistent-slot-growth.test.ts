@@ -25,8 +25,8 @@ const SLOTS_PER_BLOCK = 256;
 
 const createMockDevice = (): GPUDevice =>
   ({
-    createBuffer: () => ({ destroy: () => undefined }) as unknown as GPUBuffer,
-    queue: { writeBuffer: () => undefined },
+    createBuffer: () => ({ destroy: () => {} }) as unknown as GPUBuffer,
+    queue: { writeBuffer: () => {} },
   }) as unknown as GPUDevice;
 
 /**

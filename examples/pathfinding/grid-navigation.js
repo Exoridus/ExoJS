@@ -146,12 +146,19 @@ class GridNavigationScene extends Scene {
     mutate?.();
     // Replanning starts from the cell the walker currently stands in, not from
     // the previous path's start: it is usually somewhere between two cells.
-    this.result = this.pathfinder.findPathBetween(this.grid, this.agent.x, this.agent.y, (this.goal.x + 0.5) * CELL, (this.goal.y + 0.5) * CELL, {
-      smooth: this.smooth,
-      pruning: this.pruning,
-      agentSize: this.agentSize,
-      snapToNearest: true,
-    });
+    this.result = this.pathfinder.findPathBetween(
+      this.grid,
+      this.agent.x,
+      this.agent.y,
+      (this.goal.x + 0.5) * CELL,
+      (this.goal.y + 0.5) * CELL,
+      {
+        smooth: this.smooth,
+        pruning: this.pruning,
+        agentSize: this.agentSize,
+        snapToNearest: true,
+      },
+    );
     this.waypoint = 0;
     const { status, cost, nodes, expandedNodes } = this.result;
     const pruned = this.pruning && this.grid.pruning(this.agentSize) !== null;

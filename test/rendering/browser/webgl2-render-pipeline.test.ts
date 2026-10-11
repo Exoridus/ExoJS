@@ -79,7 +79,11 @@ const createSolidSprite = (color: string): { sprite: Sprite; texture: Texture } 
   source.width = canvasSize;
   source.height = canvasSize;
   const context = source.getContext('2d');
-  if (!context) throw new Error('2D context is required to create test textures.');
+
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
+
   context.fillStyle = color;
   context.fillRect(0, 0, canvasSize, canvasSize);
   const texture = new Texture(source);

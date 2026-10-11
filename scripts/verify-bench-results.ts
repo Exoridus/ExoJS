@@ -28,8 +28,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, extname, join, resolve } from 'node:path';
 
 import { isProfileSlug, SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS } from '../packages/exojs-bench/src/profile/schema.ts';
-import { scenariosFor } from '../packages/exojs-bench/src/suite/catalog.ts';
 import { computeProfileSignature, PROFILE_SIGNATURE_ALGORITHM } from '../packages/exojs-bench/src/profile/signature.ts';
+import { scenariosFor } from '../packages/exojs-bench/src/suite/catalog.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
@@ -60,9 +60,17 @@ const isRecord = (value: unknown): value is Fields => typeof value === 'object' 
 
 /** True for a value that is present and carries content - the bar every provenance field has to clear. */
 const isFilled = (value: unknown): boolean => {
-  if (typeof value === 'string') return value.trim().length > 0;
-  if (typeof value === 'number') return Number.isFinite(value);
-  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
 
   return typeof value === 'boolean' || isRecord(value);
 };
@@ -142,7 +150,9 @@ const checkPlatformVersion = (stamp: unknown, where: string, problems: string[])
   }
 
   if (typeof version['evidence'] !== 'string' || version['evidence'].trim().length === 0) {
-    problems.push(`${where}.platformVersion.evidence is missing or empty, so the version in the file name rests on nothing a reader can check`);
+    problems.push(
+      `${where}.platformVersion.evidence is missing or empty, so the version in the file name rests on nothing a reader can check`,
+    );
   }
 };
 
@@ -187,7 +197,18 @@ const checkRenderingStampShape = (stamp: unknown, where: string, problems: strin
   checkPrereleaseShape(stamp['prerelease'], `${where}.prerelease`, problems);
   checkPlatformVersion(stamp, where, problems);
 };
-const PHYSICS_STAMP_FIELDS = ['browser', 'browserVersion', 'host', 'prerelease', 'fixedDelta', 'clock', 'caveats', 'engineVersion', 'timestamp'] as const;
+
+const PHYSICS_STAMP_FIELDS = [
+  'browser',
+  'browserVersion',
+  'host',
+  'prerelease',
+  'fixedDelta',
+  'clock',
+  'caveats',
+  'engineVersion',
+  'timestamp',
+] as const;
 const HOST_FIELDS = ['cpu', 'cpuCount', 'os', 'platformVersion', 'arch'] as const;
 const PROFILE_FIELDS = ['slug', 'gpu', 'os', 'browser', 'platform', 'engineVersion', 'measuredAt', 'runs'] as const;
 const PLATFORM_FIELDS = ['name', 'version', 'versionSource', 'prerelease'] as const;
@@ -213,7 +234,11 @@ const ROW_FIELDS_SINCE = 7;
  * Cells the `reference` plan selects for one domain, as `archetype/loadId`.
  */
 const referencePlanOf = (domain: 'rendering' | 'physics'): ReadonlySet<string> =>
-  new Set(scenariosFor(domain).flatMap(scenario => scenario.loads.filter(load => load.reference).map(load => `${scenario.scenarioId}/${load.loadId}`)));
+  new Set(
+    scenariosFor(domain).flatMap(scenario =>
+      scenario.loads.filter(load => load.reference).map(load => `${scenario.scenarioId}/${load.loadId}`),
+    ),
+  );
 
 /**
  * A published profile has to be a `reference` run. The `full` suite adds the
@@ -229,17 +254,23 @@ const referencePlanOf = (domain: 'rendering' | 'physics'): ReadonlySet<string> =
 const checkReferencePlan = (domain: 'rendering' | 'physics', section: unknown, where: string, problems: string[]): void => {
   const rows = isRecord(section) ? section['rows'] : undefined;
 
-  if (!Array.isArray(rows)) return;
+  if (!Array.isArray(rows)) {
+    return;
+  }
 
   const plan = referencePlanOf(domain);
 
   for (const [index, row] of rows.entries()) {
-    if (!isRecord(row)) continue;
+    if (!isRecord(row)) {
+      continue;
+    }
 
     const archetype = row['archetype'];
     const loadId = row['loadId'];
 
-    if (typeof archetype !== 'string' || typeof loadId !== 'string') continue;
+    if (typeof archetype !== 'string' || typeof loadId !== 'string') {
+      continue;
+    }
 
     if (!plan.has(`${archetype}/${loadId}`)) {
       problems.push(
@@ -308,7 +339,9 @@ const checkProfilePlatform = (platform: unknown, os: unknown, problems: string[]
   const expected = `${String(platform['name'])}-${String(platform['version'])}${platform['prerelease'] === true ? '-beta' : ''}`;
 
   if (typeof os === 'string' && os !== expected) {
-    problems.push(`profile.os '${os}' does not spell out profile.platform ('${expected}'), so the file name claims a platform the document does not describe`);
+    problems.push(
+      `profile.os '${os}' does not spell out profile.platform ('${expected}'), so the file name claims a platform the document does not describe`,
+    );
   }
 };
 
@@ -508,7 +541,9 @@ const checkProfile = (path: string): string[] => {
   if (!isRecord(signature) || signature['algorithm'] !== PROFILE_SIGNATURE_ALGORITHM || typeof signature['value'] !== 'string') {
     problems.push('has no harness signature');
   } else if (signature['value'] !== computeProfileSignature(document)) {
-    problems.push('does not match its harness signature: its contents were changed after the run that wrote it, or were never written by bench:compare');
+    problems.push(
+      'does not match its harness signature: its contents were changed after the run that wrote it, or were never written by bench:compare',
+    );
   }
 
   return problems;

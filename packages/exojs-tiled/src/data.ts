@@ -136,7 +136,8 @@ export interface TiledWangSetData {
  * `'unspecified'` is Tiled's own default and is orientation-dependent - see
  * {@link import('./objectAlignment').resolveTiledObjectAlignment}.
  */
-export type TiledObjectAlignment = 'unspecified' | 'topleft' | 'top' | 'topright' | 'left' | 'center' | 'right' | 'bottomleft' | 'bottom' | 'bottomright';
+export type TiledObjectAlignment =
+  'unspecified' | 'topleft' | 'top' | 'topright' | 'left' | 'center' | 'right' | 'bottomleft' | 'bottom' | 'bottomright';
 
 /**
  * A Tiled tileset, as the root of a standalone `.tsj` file or (minus

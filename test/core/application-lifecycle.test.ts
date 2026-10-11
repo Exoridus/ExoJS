@@ -556,7 +556,9 @@ describe('Application lifecycle / getters / sizing', () => {
       const { logger: freshLogger, LogSeverity: freshLogSeverity } = await import('#core/Logger');
       const messages: string[] = [];
       const removeSink = freshLogger.addSink(entry => {
-        if (entry.severity >= freshLogSeverity.Warning) messages.push(entry.message);
+        if (entry.severity >= freshLogSeverity.Warning) {
+          messages.push(entry.message);
+        }
       });
 
       try {
@@ -720,9 +722,9 @@ describe('Application lifecycle / getters / sizing', () => {
       const { Application, FixedResolutionCanvasSizing } = await loadHarness();
       const canvas = document.createElement('canvas');
 
-      expect(() => new Application({ canvas: { element: canvas, sizing: new FixedResolutionCanvasSizing() }, backend: { type: 'webgl2' } })).toThrow(
-        /no parent element/,
-      );
+      expect(
+        () => new Application({ canvas: { element: canvas, sizing: new FixedResolutionCanvasSizing() }, backend: { type: 'webgl2' } }),
+      ).toThrow(/no parent element/);
     });
   });
 
@@ -1327,7 +1329,11 @@ describe('Application lifecycle / getters / sizing', () => {
       const { Application } = await loadHarness();
 
       expect(
-        () => new Application({ backend: { type: 'webgl2' }, extensions: null as unknown as ReadonlyArray<import('#extensions/Extension').Extension> }),
+        () =>
+          new Application({
+            backend: { type: 'webgl2' },
+            extensions: null as unknown as ReadonlyArray<import('#extensions/Extension').Extension>,
+          }),
       ).not.toThrow();
     });
 

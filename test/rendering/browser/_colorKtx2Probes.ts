@@ -15,7 +15,15 @@ import { ScaleModes, TextureFormat } from '#rendering/types';
 
 import { factoryContext } from '../../assets/factory-context';
 import { ktx2BlockBytes, ktx2Dfd } from '../../assets/ktx2-dfd';
-import { type ColorProbeHarness, drawInto, expectBytes, type OpenColorProbeHarness, spriteScene, srgbDecode, toByte } from './color-probe-fixtures';
+import {
+  type ColorProbeHarness,
+  drawInto,
+  expectBytes,
+  type OpenColorProbeHarness,
+  spriteScene,
+  srgbDecode,
+  toByte,
+} from './color-probe-fixtures';
 
 const headerBytes = 80;
 const levelIndexEntryBytes = 24;

@@ -15,10 +15,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { createWorkerPlugin } from '@codexo/exojs-build';
+import sharedPrettierConfig from '@codexo/exojs-config/prettier';
 import { format as formatSource } from 'prettier';
 import babelParser from 'prettier/plugins/babel';
 import estreePrinter from 'prettier/plugins/estree';
-import sharedPrettierConfig from '@codexo/exojs-config/prettier';
 import ts from 'typescript';
 
 /**
@@ -33,7 +33,8 @@ import ts from 'typescript';
 const WORKER_IMPORT = /^import\s+(\w+)\s+from\s+'([^']+)\?worker';[^\S\n]*$/gm;
 
 /** True for a `.ts` example that gets a generated `.js` sibling. */
-export const isTranspiledExampleSource = (name: string): boolean => name.endsWith('.ts') && !name.endsWith('.d.ts') && !name.endsWith('.worker.ts');
+export const isTranspiledExampleSource = (name: string): boolean =>
+  name.endsWith('.ts') && !name.endsWith('.d.ts') && !name.endsWith('.worker.ts');
 
 /**
  * Example subtrees that are not playground examples and therefore get no
@@ -60,12 +61,16 @@ const workerPlugin = createWorkerPlugin();
 const bundledWorkerSource = (entryPoint: string): string => {
   const id = workerPlugin.resolveId(`${entryPoint}?worker`);
 
-  if (id === null) throw new Error(`transpile-examples: the worker plugin did not claim ${entryPoint}.`);
+  if (id === null) {
+    throw new Error(`transpile-examples: the worker plugin did not claim ${entryPoint}.`);
+  }
 
   const moduleCode = workerPlugin.load.call({}, id);
   const match = moduleCode === null ? null : /^export default (.*);\n?$/s.exec(moduleCode);
 
-  if (!match) throw new Error(`transpile-examples: the worker plugin did not emit a default-exported string for ${entryPoint}.`);
+  if (!match) {
+    throw new Error(`transpile-examples: the worker plugin did not emit a default-exported string for ${entryPoint}.`);
+  }
 
   return JSON.parse(match[1]!) as string;
 };
@@ -83,7 +88,8 @@ const inlineWorkerImports = (source: string, tsFilePath: string): string =>
   });
 
 /** Header prepended to every generated example `.js` file. */
-export const generatedHeader = (tsFileBasename: string): string => `// Auto-generated from ${tsFileBasename} - edit the .ts source, not this file.\n`;
+export const generatedHeader = (tsFileBasename: string): string =>
+  `// Auto-generated from ${tsFileBasename} - edit the .ts source, not this file.\n`;
 
 /**
  * Transpiles a single example `.ts` source string to the exact `.js` content
@@ -134,8 +140,11 @@ export const findFiles = (dir: string, predicate: (file: string) => boolean): st
   const walk = (current: string): void => {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const fullPath = path.join(current, entry.name);
+
       if (entry.isDirectory()) {
-        if (NON_EXECUTED_EXAMPLE_DIRS.has(entry.name)) continue;
+        if (NON_EXECUTED_EXAMPLE_DIRS.has(entry.name)) {
+          continue;
+        }
 
         walk(fullPath);
       } else if (entry.isFile() && predicate(entry.name)) {
@@ -145,6 +154,7 @@ export const findFiles = (dir: string, predicate: (file: string) => boolean): st
   };
 
   walk(dir);
+
   return results;
 };
 

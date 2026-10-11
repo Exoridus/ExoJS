@@ -34,7 +34,15 @@ export const closestPointOnSegment = (px: number, py: number, ax: number, ay: nu
 };
 
 /** Squared distance from `(px, py)` to the segment `a → b`. */
-export const pointSegmentDistanceSquared = (px: number, py: number, ax: number, ay: number, bx: number, by: number, scratch: PointLike): number => {
+export const pointSegmentDistanceSquared = (
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  scratch: PointLike,
+): number => {
   closestPointOnSegment(px, py, ax, ay, bx, by, scratch);
 
   const dx = px - scratch.x;

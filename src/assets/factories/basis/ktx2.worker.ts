@@ -39,11 +39,17 @@ const matchesDescriptor = (file: BasisFile, request: Request): boolean =>
 const initialize = (): ReturnType<typeof createBasis> => {
   initPromise ??= (async () => {
     const response = await fetch(new URL('basis_transcoder.wasm', import.meta.url));
-    if (!response.ok) throw new Error(`Basis WASM fetch failed (${response.status}).`);
+
+    if (!response.ok) {
+      throw new Error(`Basis WASM fetch failed (${response.status}).`);
+    }
+
     const module = await createBasis({ wasmBinary: new Uint8Array(await response.arrayBuffer()) });
     module.initializeBasis();
+
     return module;
   })();
+
   return initPromise;
 };
 
@@ -51,35 +57,61 @@ const transcode = async (request: Request): Promise<void> => {
   const state = { cancelled: false };
   active.set(request.id, state);
   let file: InstanceType<Awaited<ReturnType<typeof createBasis>>['KTX2File']> | undefined;
+
   try {
     const module = await initialize();
-    if (state.cancelled) return;
+
+    if (state.cancelled) {
+      return;
+    }
+
     const input = request.buffer;
     file = new module.KTX2File(new Uint8Array(input));
+
     if (!matchesDescriptor(file, request)) {
       throw new Error('Basis payload is malformed or contradicts its validated descriptor.');
     }
-    if (!file.startTranscoding()) throw new Error('Basis could not decode the universal payload.');
+
+    if (!file.startTranscoding()) {
+      throw new Error('Basis could not decode the universal payload.');
+    }
+
     const levels: Array<Uint8Array<ArrayBuffer>> = [];
     let totalBytes = 0;
+
     for (let level = 0; level < request.levelCount; level++) {
-      if (state.cancelled) return;
+      if (state.cancelled) {
+        return;
+      }
+
       const length = file.getImageTranscodedSizeInBytes(level, 0, 0, request.target);
       totalBytes += length;
-      if (length === 0 || totalBytes > 256 * 1024 * 1024) throw new Error('Basis output exceeds its decoding budget or has an empty level.');
+
+      if (length === 0 || totalBytes > 256 * 1024 * 1024) {
+        throw new Error('Basis output exceeds its decoding budget or has an empty level.');
+      }
+
       const destination = new Uint8Array(length);
-      if (!file.transcodeImage(destination, level, 0, 0, request.target, 0, -1, -1)) throw new Error(`Basis failed to transcode level ${level}.`);
+
+      if (!file.transcodeImage(destination, level, 0, 0, request.target, 0, -1, -1)) {
+        throw new Error(`Basis failed to transcode level ${level}.`);
+      }
+
       levels.push(destination);
       // Yield between mips so cancellation can be observed without terminating unrelated requests.
       await yieldToMessages();
     }
-    if (!state.cancelled)
+
+    if (!state.cancelled) {
       worker.postMessage(
         { kind: 'result', id: request.id, levels },
         levels.map(level => level.buffer),
       );
+    }
   } catch (error) {
-    if (!state.cancelled) worker.postMessage({ kind: 'error', id: request.id, message: error instanceof Error ? error.message : String(error) });
+    if (!state.cancelled) {
+      worker.postMessage({ kind: 'error', id: request.id, message: error instanceof Error ? error.message : String(error) });
+    }
   } finally {
     file?.close();
     file?.delete();
@@ -90,11 +122,16 @@ const transcode = async (request: Request): Promise<void> => {
 worker.onmessage = ({ data }) => {
   if (data.kind === 'cancel') {
     const state = active.get(data.id);
-    if (state !== undefined) state.cancelled = true;
+
+    if (state !== undefined) {
+      state.cancelled = true;
+    }
   } else if (data.kind === 'init') {
     void initialize().then(
       () => worker.postMessage({ kind: 'ready' }),
       error => worker.postMessage({ kind: 'fatal', message: error instanceof Error ? error.message : String(error) }),
     );
-  } else void transcode(data);
+  } else {
+    void transcode(data);
+  }
 };

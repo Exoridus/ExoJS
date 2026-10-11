@@ -98,7 +98,11 @@ export const classifyPrerelease = (options: { browserVersion?: string | undefine
   const marker = options.browserVersion === undefined ? null : PRERELEASE_BROWSER_MARKER.exec(options.browserVersion);
 
   if (marker !== null) {
-    return { value: true, source: 'detected', evidence: `browser version '${String(options.browserVersion)}' names a '${marker[0].toLowerCase()}' build` };
+    return {
+      value: true,
+      source: 'detected',
+      evidence: `browser version '${String(options.browserVersion)}' names a '${marker[0].toLowerCase()}' build`,
+    };
   }
 
   const declared = options.declared?.trim() ?? '';

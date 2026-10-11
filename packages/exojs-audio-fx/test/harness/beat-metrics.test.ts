@@ -20,46 +20,43 @@ const SAMPLE_RATE = 48000;
 
 // ── Helpers to build synthetic message logs ────────────────────────────────────
 
-const makeBeat = (audioTime: number, tempo: number, audioTimeSec?: number, status: 'provisional' | 'locked' = 'locked'): BeatMessage => {
-  return {
-    type: 'beat',
-    _audioTimeSec: audioTimeSec ?? audioTime,
-    audioTime,
-    tempo,
-    confidence: 0.8,
-    beatPhase: 0,
-    energy: 0.5,
-    isDownbeat: false,
-    beatInBar: 1,
-    status,
-  };
-};
+const makeBeat = (audioTime: number, tempo: number, audioTimeSec?: number, status: 'provisional' | 'locked' = 'locked'): BeatMessage => ({
+  type: 'beat',
+  _audioTimeSec: audioTimeSec ?? audioTime,
+  audioTime,
+  tempo,
+  confidence: 0.8,
+  beatPhase: 0,
+  energy: 0.5,
+  isDownbeat: false,
+  beatInBar: 1,
+  status,
+});
 
-const makeState = (tempo: number, timeSec: number, confidence = 0.8): StateMessage => {
-  return {
-    type: 'state',
-    _audioTimeSec: timeSec,
-    analysisTime: timeSec,
-    tempo,
-    beatPhase: 0,
-    confidence,
-    phaseConfidence: confidence,
-    gridStability: confidence,
-    tempoCandidates: [{ bpm: tempo, score: 0.9 }],
-    rms: 0.3,
-    onsetStrength: 0.5,
-    bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
-    barPosition: 1,
-    barLength: 4,
-    timeSignature: { numerator: 4, denominator: 4 },
-    lookahead: [],
-    nextBeatTime: timeSec + 60 / tempo,
-    nextDownbeatTime: timeSec + 4 * (60 / tempo),
-  };
-};
+const makeState = (tempo: number, timeSec: number, confidence = 0.8): StateMessage => ({
+  type: 'state',
+  _audioTimeSec: timeSec,
+  analysisTime: timeSec,
+  tempo,
+  beatPhase: 0,
+  confidence,
+  phaseConfidence: confidence,
+  gridStability: confidence,
+  tempoCandidates: [{ bpm: tempo, score: 0.9 }],
+  rms: 0.3,
+  onsetStrength: 0.5,
+  bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
+  barPosition: 1,
+  barLength: 4,
+  timeSignature: { numerator: 4, denominator: 4 },
+  lookahead: [],
+  nextBeatTime: timeSec + 60 / tempo,
+  nextDownbeatTime: timeSec + 4 * (60 / tempo),
+});
 
 const makeFixture = (beatTimesSec: number[], bpm: number, durationSec: number): BeatFixture => {
   const totalSamples = Math.ceil(durationSec * SAMPLE_RATE);
+
   return {
     samples: new Float32Array(totalSamples),
     beatTimesSec,
@@ -100,7 +97,7 @@ describe('computeMetrics — perfect log', () => {
   });
 
   it('recall = 100%', () => {
-    expect(m.fpMiss.recall).toBeCloseTo(1.0, 6);
+    expect(m.fpMiss.recall).toBeCloseTo(1, 6);
   });
 
   it('miss count = 0', () => {
@@ -129,7 +126,10 @@ describe('computeMetrics — jittered beats', () => {
 
   // Each emitted beat is `jitterMs` late
   const emittedTimes = gtTimes.map(t => t + jitterSec);
-  const messages: WorkletMessage[] = [...Array.from({ length: 8 }, (_, i) => makeState(bpm, 1.5 + i * 0.5)), ...emittedTimes.map(t => makeBeat(t, bpm))];
+  const messages: WorkletMessage[] = [
+    ...Array.from({ length: 8 }, (_, i) => makeState(bpm, 1.5 + i * 0.5)),
+    ...emittedTimes.map(t => makeBeat(t, bpm)),
+  ];
 
   const fixture = makeFixture(gtTimes, bpm, durationSec);
   const m = computeMetrics(messages, fixture);
@@ -144,7 +144,7 @@ describe('computeMetrics — jittered beats', () => {
 
   it('all beats matched (no FP)', () => {
     expect(m.fpMiss.fpCount).toBe(0);
-    expect(m.fpMiss.recall).toBeCloseTo(1.0, 6);
+    expect(m.fpMiss.recall).toBeCloseTo(1, 6);
   });
 });
 
@@ -157,7 +157,7 @@ describe('computeMetrics — injected extra beat → 1 FP', () => {
   const gtTimes = Array.from({ length: 5 }, (_, i) => 2 + i * ibi);
 
   // Correct beats + 1 extra beat far from any GT time
-  const extraBeatTime = 8.0; // far from all GT times
+  const extraBeatTime = 8; // far from all GT times
   const messages: WorkletMessage[] = [
     ...Array.from({ length: 8 }, (_, i) => makeState(bpm, 1.5 + i * 0.5)),
     ...gtTimes.map(t => makeBeat(t, bpm)),
@@ -173,7 +173,7 @@ describe('computeMetrics — injected extra beat → 1 FP', () => {
 
   it('all GT beats are still matched', () => {
     expect(m.beatOffset.matchedCount).toBe(gtTimes.length);
-    expect(m.fpMiss.recall).toBeCloseTo(1.0, 6);
+    expect(m.fpMiss.recall).toBeCloseTo(1, 6);
   });
 });
 
@@ -213,7 +213,10 @@ describe('computeMetrics — octave error (half-octave: detecting 0.5x trueBpm)'
   const gtTimes = Array.from({ length: 8 }, (_, i) => 2 + i * (60 / trueBpm));
 
   // All state messages report wrong (half-octave) tempo
-  const messages: WorkletMessage[] = [...Array.from({ length: 10 }, (_, i) => makeState(wrongBpm, 2 + i * 0.5)), ...gtTimes.map(t => makeBeat(t, wrongBpm))];
+  const messages: WorkletMessage[] = [
+    ...Array.from({ length: 10 }, (_, i) => makeState(wrongBpm, 2 + i * 0.5)),
+    ...gtTimes.map(t => makeBeat(t, wrongBpm)),
+  ];
 
   const fixture = makeFixture(gtTimes, trueBpm, durationSec);
   const m = computeMetrics(messages, fixture);
@@ -233,7 +236,10 @@ describe('computeMetrics — octave error (double-octave: detecting 2x trueBpm)'
   const durationSec = 10;
   const gtTimes = Array.from({ length: 5 }, (_, i) => 2 + i * (60 / trueBpm));
 
-  const messages: WorkletMessage[] = [...Array.from({ length: 10 }, (_, i) => makeState(wrongBpm, 2 + i * 0.5)), ...gtTimes.map(t => makeBeat(t, wrongBpm))];
+  const messages: WorkletMessage[] = [
+    ...Array.from({ length: 10 }, (_, i) => makeState(wrongBpm, 2 + i * 0.5)),
+    ...gtTimes.map(t => makeBeat(t, wrongBpm)),
+  ];
 
   const fixture = makeFixture(gtTimes, trueBpm, durationSec);
   const m = computeMetrics(messages, fixture);
@@ -268,11 +274,11 @@ describe('computeMetrics — lock time', () => {
     const firstCorrectTime = 3.5;
     const messages: WorkletMessage[] = [
       // Two wrong, then 4 correct (K=3)
-      makeState(200, 1.0),
+      makeState(200, 1),
       makeState(200, 1.5),
       makeState(bpm, firstCorrectTime), // first correct
       makeState(bpm, firstCorrectTime + 0.5), // second
-      makeState(bpm, firstCorrectTime + 1.0), // third → lock!
+      makeState(bpm, firstCorrectTime + 1), // third → lock!
       makeState(bpm, firstCorrectTime + 1.5),
     ];
     const fixture = makeFixture(gtTimes, bpm, durationSec);
@@ -296,7 +302,7 @@ describe('computeMetrics — provisional/locked stats', () => {
     makeBeat(gtTimes[1] + 0.005, bpm, 2.505, 'provisional'),
     makeBeat(gtTimes[2] + 0.005, bpm, 3.005, 'provisional'),
     makeBeat(gtTimes[3], bpm, 3.5, 'locked'),
-    makeBeat(gtTimes[4], bpm, 4.0, 'locked'),
+    makeBeat(gtTimes[4], bpm, 4, 'locked'),
     makeBeat(gtTimes[5], bpm, 4.5, 'locked'),
     makeBeat(8.7, bpm, 8.7, 'locked'), // locked FP far from any GT onset
   ];

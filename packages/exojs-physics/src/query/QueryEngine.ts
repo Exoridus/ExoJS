@@ -180,6 +180,7 @@ export class QueryEngine {
     const resolved = filter ? resolveFilter(filter) : null;
 
     let best: RayHit | null = null;
+
     const consider = (collider: Collider): void => {
       const authored = authoredCollider(collider);
 
@@ -208,7 +209,13 @@ export class QueryEngine {
   }
 
   /** All collider hits along the ray, sorted by distance. Writes into `out` (cleared first) when given. */
-  public rayCastAll(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, out?: RayHit[], maxDistance = Infinity): RayHit[] {
+  public rayCastAll(
+    origin: Readonly<PointLike>,
+    direction: Readonly<PointLike>,
+    filter?: QueryFilter,
+    out?: RayHit[],
+    maxDistance = Infinity,
+  ): RayHit[] {
     const length = Math.hypot(direction.x, direction.y);
 
     if (length < 1e-9) {
@@ -220,6 +227,7 @@ export class QueryEngine {
     const resolved = filter ? resolveFilter(filter) : null;
     const result = out ?? [];
     result.length = 0;
+
     const consider = (collider: Collider): void => {
       const authored = authoredCollider(collider);
 
@@ -319,7 +327,10 @@ const pointInCollider = (collider: Collider, px: number, py: number): boolean =>
   if (collider.shape.type === 'capsule') {
     const spine = collider.worldVertices;
 
-    return pointSegmentDistanceSquared(px, py, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _pointScratch) <= collider.shape.radius * collider.shape.radius;
+    return (
+      pointSegmentDistanceSquared(px, py, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _pointScratch) <=
+      collider.shape.radius * collider.shape.radius
+    );
   }
 
   const verts = collider.worldVertices;
@@ -409,7 +420,15 @@ const rayCastSegment = (collider: Collider, ox: number, oy: number, dx: number, 
  * a fixed 40 bisections put the result far below the engine's contact slop. The
  * cost is a query-path concern only - the solver never runs this.
  */
-const rayCastCapsule = (collider: Collider, radius: number, ox: number, oy: number, dx: number, dy: number, maxDistance: number): RayHit | null => {
+const rayCastCapsule = (
+  collider: Collider,
+  radius: number,
+  ox: number,
+  oy: number,
+  dx: number,
+  dy: number,
+  maxDistance: number,
+): RayHit | null => {
   const spine = collider.worldVertices;
   const ax = spine[0]!;
   const ay = spine[1]!;

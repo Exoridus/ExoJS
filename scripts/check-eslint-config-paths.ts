@@ -33,7 +33,7 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
  * Patterns that intentionally match nothing in a clean checkout, each with the
  * reason. An entry is a claim that the pattern names something generated.
  */
-const ALLOWED: readonly { readonly pattern: string; readonly reason: string }[] = [
+const ALLOWED: ReadonlyArray<{ readonly pattern: string; readonly reason: string }> = [
   {
     pattern: '**/*.mts',
     reason: 'names a module kind the repository has none of yet; the rules should apply the day the first one appears',
@@ -58,17 +58,21 @@ const isAllowed = (pattern: string): boolean => ALLOWED.some(entry => entry.patt
 const collectPatterns = (): string[] => {
   const patterns = new Set<string>();
 
-  for (const block of config as readonly { files?: unknown }[]) {
+  for (const block of config as ReadonlyArray<{ files?: unknown }>) {
     const files = block.files;
 
-    if (files === undefined) continue;
+    if (files === undefined) {
+      continue;
+    }
 
     for (const entry of Array.isArray(files) ? files : [files]) {
       if (typeof entry === 'string') {
         patterns.add(entry);
       } else if (Array.isArray(entry)) {
         for (const nested of entry as unknown[]) {
-          if (typeof nested === 'string') patterns.add(nested);
+          if (typeof nested === 'string') {
+            patterns.add(nested);
+          }
         }
       }
     }
@@ -80,9 +84,13 @@ const collectPatterns = (): string[] => {
 const matchesSomething = async (pattern: string): Promise<boolean> => {
   // A negated pattern constrains an existing set rather than naming files of
   // its own, so its own match count says nothing.
-  if (pattern.startsWith('!')) return true;
+  if (pattern.startsWith('!')) {
+    return true;
+  }
 
-  for await (const _match of glob(pattern, { cwd: REPO_ROOT })) return true;
+  for await (const _match of glob(pattern, { cwd: REPO_ROOT })) {
+    return true;
+  }
 
   return false;
 };
@@ -92,22 +100,24 @@ const main = async (): Promise<void> => {
 
   console.log(`Checking ${patterns.length} ESLint path pattern(s) against the tree...\n`);
 
-  const dead = (await Promise.all(patterns.map(async pattern => ((await matchesSomething(pattern)) || isAllowed(pattern) ? null : pattern)))).filter(
-    (pattern): pattern is string => pattern !== null,
-  );
+  const dead = (
+    await Promise.all(patterns.map(async pattern => ((await matchesSomething(pattern)) || isAllowed(pattern) ? null : pattern)))
+  ).filter((pattern): pattern is string => pattern !== null);
 
   if (dead.length > 0) {
-    console.error(`\x1b[31m${dead.length} ESLint path pattern(s) match no file:\x1b[0m`);
+    console.error(`\x1B[31m${dead.length} ESLint path pattern(s) match no file:\x1B[0m`);
 
     for (const pattern of dead) {
       console.error(`  ${pattern}`);
     }
 
-    console.error('\nA files pattern that matches nothing scopes its rules to nothing - the file it named has moved, or the pattern never worked.');
+    console.error(
+      '\nA files pattern that matches nothing scopes its rules to nothing - the file it named has moved, or the pattern never worked.',
+    );
     process.exit(1);
   }
 
-  console.log(`\x1b[32m${patterns.length} pattern(s) checked, every one matches at least one file.\x1b[0m`);
+  console.log(`\x1B[32m${patterns.length} pattern(s) checked, every one matches at least one file.\x1B[0m`);
 };
 
 await main();

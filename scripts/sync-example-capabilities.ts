@@ -16,7 +16,18 @@ import { fileURLToPath } from 'node:url';
 import sharedPrettierConfig from '@codexo/exojs-config/prettier';
 import { format as formatSource } from 'prettier';
 
-type Capability = 'webgl2' | 'webgpu' | 'pointer' | 'keyboard' | 'gamepad' | 'touch' | 'audio' | 'fullscreen' | 'vibration' | 'offscreenCanvas' | 'webWorkers';
+type Capability =
+  | 'webgl2'
+  | 'webgpu'
+  | 'pointer'
+  | 'keyboard'
+  | 'gamepad'
+  | 'touch'
+  | 'audio'
+  | 'fullscreen'
+  | 'vibration'
+  | 'offscreenCanvas'
+  | 'webWorkers';
 
 interface CatalogEntry {
   slug: string;
@@ -64,11 +75,13 @@ const deriveCapabilities = (source: string, slug: string, sectionSlug: string): 
   if (source.includes("'@codexo/exojs/webgpu'") || source.includes('"@codexo/exojs/webgpu"')) {
     caps.add('webgpu');
   }
+
   if (/backend:\s*\{\s*type:\s*['"]webgpu['"]/.test(source) || /backend:\s*['"]webgpu['"]/.test(source)) {
     caps.add('webgpu');
   }
 
   const audioPattern = new RegExp(`\\b(${AUDIO_SYMBOLS.join('|')})\\b`);
+
   if (audioPattern.test(source)) {
     caps.add('audio');
   }
@@ -120,6 +133,7 @@ const deriveCapabilities = (source: string, slug: string, sectionSlug: string): 
     'offscreenCanvas',
     'webWorkers',
   ];
+
   return order.filter(c => caps.has(c));
 };
 
@@ -138,12 +152,14 @@ const syncCapabilities = async (): Promise<void> => {
 
       const before = JSON.stringify(entry.capabilities ?? []);
       const after = JSON.stringify(derived);
+
       if (before !== after) {
         if (derived.length === 0) {
           delete entry.capabilities;
         } else {
           entry.capabilities = derived;
         }
+
         changed++;
       } else {
         unchanged++;

@@ -85,7 +85,9 @@ export const text = (args: ParsedArgs, name: string, fallback: string): string =
 export const integer = (args: ParsedArgs, name: string, fallback: number): number => {
   const value = args.options.get(name);
 
-  if (typeof value !== 'string') return fallback;
+  if (typeof value !== 'string') {
+    return fallback;
+  }
 
   const parsed = Number(value);
 

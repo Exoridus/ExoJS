@@ -12,7 +12,7 @@ import {
   Texture,
   TextureFormat,
 } from '@codexo/exojs';
-import { ForwardLighting, Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, type Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControls } from '@examples/runtime';
 
 // Forward normal mapping on plain sprites. A LitMaterial samples a
@@ -30,8 +30,13 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
-  if (context === null) throw new Error('2D canvas context unavailable.');
+
+  if (context === null) {
+    throw new Error('2D canvas context unavailable.');
+  }
+
   paint(context);
+
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
 
@@ -40,6 +45,7 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
 const dataTexture = (size: number, fill: (data: Uint8Array) => void): Texture => {
   const data = new Uint8Array(size * size * 4);
   fill(data);
+
   return new DataTexture({
     width: size,
     height: size,
@@ -57,9 +63,13 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
   context.arc(half, half, half - 2, 0, Math.PI * 2);
   context.fill();
   context.fillStyle = '#8a8070';
+
   for (let y = 0; y < 4; y++) {
     for (let x = 0; x < 4; x++) {
-      if ((x + y) % 2 === 0) continue;
+      if ((x + y) % 2 === 0) {
+        continue;
+      }
+
       context.save();
       context.beginPath();
       context.arc(half, half, half - 2, 0, Math.PI * 2);
@@ -76,6 +86,7 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
 // on the way into the green channel.
 const normalTexture = dataTexture(TILE_SIZE, data => {
   const half = TILE_SIZE / 2;
+
   for (let y = 0; y < TILE_SIZE; y++) {
     for (let x = 0; x < TILE_SIZE; x++) {
       const dx = (x + 0.5 - half) / (half - 2);
@@ -100,7 +111,7 @@ class NormalMappedSpritesScene extends Scene {
   private lighting!: Lighting;
   private material!: LitMaterial;
   private lights!: PointLight[];
-  private tiles!: { sprite: Sprite; spin: number }[];
+  private tiles!: Array<{ sprite: Sprite; spin: number }>;
   private markers!: Sprite[];
   private elapsed = 0;
   private hud!: ReturnType<typeof mountControls>;
@@ -119,6 +130,7 @@ class NormalMappedSpritesScene extends Scene {
     this.lights = lightColors.map(color => {
       const light = new PointLight({ radius: 320, intensity: 1.4, height: 80, color });
       this.lighting.add(light);
+
       return light;
     });
 
@@ -131,6 +143,7 @@ class NormalMappedSpritesScene extends Scene {
     // A grid of lit tiles: every other one spins, every third one is mirrored,
     // so the basis rotation and the flip path both get exercised.
     this.tiles = [];
+
     for (let row = 0; row < rows; row++) {
       for (let column = 0; column < columns; column++) {
         const index = row * columns + column;
@@ -147,6 +160,7 @@ class NormalMappedSpritesScene extends Scene {
     this.markers = lightColors.map(color => {
       const marker = new Sprite(Texture.fromColor(color, 12)).setAnchor(0.5);
       this.layer.addChild(marker);
+
       return marker;
     });
 
@@ -162,7 +176,9 @@ class NormalMappedSpritesScene extends Scene {
     this.elapsed += delta;
 
     for (const tile of this.tiles) {
-      if (tile.spin !== 0) tile.sprite.rotate(delta * tile.spin);
+      if (tile.spin !== 0) {
+        tile.sprite.rotate(delta * tile.spin);
+      }
     }
 
     for (let index = 0; index < LIGHT_COUNT; index++) {

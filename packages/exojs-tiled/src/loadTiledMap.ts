@@ -22,7 +22,12 @@ type TiledContext = AssetFactoryContext<TiledLoadOptions>;
  * concurrent and repeated loads of the same normalized URL and releases them
  * with the map.
  */
-const loadTiledTilesetResources = async (data: TiledTilesetData, baseUrl: string, context: TiledContext, source?: string): Promise<TiledTilesetResources> => {
+const loadTiledTilesetResources = async (
+  data: TiledTilesetData,
+  baseUrl: string,
+  context: TiledContext,
+  source?: string,
+): Promise<TiledTilesetResources> => {
   let imageUrl: string | undefined;
   let texture: Texture | undefined;
 
@@ -79,7 +84,11 @@ const loadTiledTileset = async (ref: TiledTilesetRefData, mapSource: string, con
  * {@link TiledMap.toTileMap} can attach the pre-loaded {@link Texture} to each
  * runtime image layer without performing additional I/O.
  */
-const loadImageLayerTextures = async (layers: readonly TiledLayerData[], mapSource: string, context: TiledContext): Promise<Map<number, Texture>> => {
+const loadImageLayerTextures = async (
+  layers: readonly TiledLayerData[],
+  mapSource: string,
+  context: TiledContext,
+): Promise<Map<number, Texture>> => {
   const result = new Map<number, Texture>();
 
   for (const layer of layers) {
@@ -89,6 +98,7 @@ const loadImageLayerTextures = async (layers: readonly TiledLayerData[], mapSour
       result.set(layer.id, texture);
     } else if (layer.type === 'group') {
       const nested = await loadImageLayerTextures(layer.layers, mapSource, context);
+
       for (const [id, tex] of nested) {
         result.set(id, tex);
       }

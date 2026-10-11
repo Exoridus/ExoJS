@@ -55,7 +55,11 @@ export interface FrameLightingOptions extends LightingOptions {
 }
 
 /** The backend options a frame-composing renderer is built from. @internal */
-export const frameBackendOptions = (host: LightingHost, options: FrameLightingOptions, resolution: number): FrameLightingBackendOptions => ({
+export const frameBackendOptions = (
+  host: LightingHost,
+  options: FrameLightingOptions,
+  resolution: number,
+): FrameLightingBackendOptions => ({
   app: host,
   post: options.post ?? [],
   resolution: options.lightResolution ?? resolution,

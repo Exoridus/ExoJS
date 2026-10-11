@@ -120,7 +120,10 @@ export interface SceneRootScenarioResult {
  * one where the backend cannot be created, skips through `ctx` with the reason
  * instead of passing.
  */
-export const runSceneRootScenario = async (backend: 'webgl2' | 'webgpu', ctx: { skip: (reason: string) => void }): Promise<SceneRootScenarioResult> => {
+export const runSceneRootScenario = async (
+  backend: 'webgl2' | 'webgpu',
+  ctx: { skip: (reason: string) => void },
+): Promise<SceneRootScenarioResult> => {
   if (backend === 'webgpu' && (!('gpu' in navigator) || (await navigator.gpu.requestAdapter()) === null)) {
     ctx.skip('No WebGPU adapter is available in this browser.');
   }
@@ -130,6 +133,7 @@ export const runSceneRootScenario = async (backend: 'webgl2' | 'webgpu', ctx: { 
   const originalError = console.error;
 
   document.body.appendChild(container);
+
   console.error = (...args: unknown[]): void => {
     errors.push(args.map(String).join(' '));
     originalError(...args);
@@ -167,7 +171,9 @@ export const runSceneRootScenario = async (backend: 'webgl2' | 'webgpu', ctx: { 
 
   const expectPixel = (label: string, actual: RgbaTuple, expected: RgbaTuple): void => {
     for (let i = 0; i < 4; i++) {
-      expect.soft(Math.abs(actual[i]! - expected[i]!), `${label}: channel ${i} of [${actual.join(', ')}]`).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+      expect
+        .soft(Math.abs(actual[i]! - expected[i]!), `${label}: channel ${i} of [${actual.join(', ')}]`)
+        .toBeLessThanOrEqual(PIXEL_TOLERANCE);
     }
   };
 

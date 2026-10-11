@@ -54,7 +54,9 @@ const createSolidTexture = (fillStyle: string, options?: Partial<TextureOptions>
 
   const context = source.getContext('2d');
 
-  if (!context) throw new Error('2D context is required to create test textures.');
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
 
   context.fillStyle = fillStyle;
   context.fillRect(0, 0, 4, 4);
@@ -270,7 +272,9 @@ describe('lighting WebGPU browser', () => {
 
       throw error;
     } finally {
-      if (!albedo.destroyed) cleanup();
+      if (!albedo.destroyed) {
+        cleanup();
+      }
     }
   });
 });

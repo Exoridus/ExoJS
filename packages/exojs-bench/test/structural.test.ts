@@ -101,6 +101,7 @@ const makeFakeGpu = () => {
     ({
       beginRenderPass: () => {
         calls.push('beginRenderPass');
+
         return makePass();
       },
       finish: () => calls.push('finish'),
@@ -116,6 +117,7 @@ const makeFakeGpu = () => {
     queue,
     createCommandEncoder: () => {
       calls.push('createCommandEncoder');
+
       return makeEncoder();
     },
   } as unknown as GPUDevice & { calls: string[] };

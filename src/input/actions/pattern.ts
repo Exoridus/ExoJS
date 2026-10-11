@@ -79,7 +79,9 @@ const resolveToken = (token: string, owner: PatternOwner, patternText: string): 
   const channel = keyboardByName.get(normalized);
 
   if (channel === undefined) {
-    throw new Error(`${owner}: unknown keyboard token "${token.trim()}" in pattern "${patternText}". Use a Keyboard enum name or pass numeric channels.`);
+    throw new Error(
+      `${owner}: unknown keyboard token "${token.trim()}" in pattern "${patternText}". Use a Keyboard enum name or pass numeric channels.`,
+    );
   }
 
   return channel;
@@ -94,7 +96,13 @@ const resolveToken = (token: string, owner: PatternOwner, patternText: string): 
  * existing string-parsing errors, for an empty `'|'`-separated alternative
  * or an empty `'+'`-joined token.
  */
-const parseStepText = (stepText: string, stepIndex: number, chord: boolean, owner: PatternOwner, patternText: string): number[] | number[][] => {
+const parseStepText = (
+  stepText: string,
+  stepIndex: number,
+  chord: boolean,
+  owner: PatternOwner,
+  patternText: string,
+): number[] | number[][] => {
   const where = chord ? 'the chord' : `step ${stepIndex + 1}`;
   const alternativesText = stepText.split('|');
   const isAlternation = alternativesText.length > 1;
@@ -127,7 +135,12 @@ const parseStepText = (stepText: string, stepIndex: number, chord: boolean, owne
  * rejected - that shape can only ever be a copy/paste mistake, since neither
  * a chord nor an alternation is expressed that way.
  */
-const normalizeStep = (step: InputChannel | InputChord | InputAlternation, stepIndex: number, chord: boolean, owner: PatternOwner): NormalizedStep => {
+const normalizeStep = (
+  step: InputChannel | InputChord | InputAlternation,
+  stepIndex: number,
+  chord: boolean,
+  owner: PatternOwner,
+): NormalizedStep => {
   const where = chord ? 'the chord' : `step ${stepIndex + 1}`;
 
   if (!Array.isArray(step)) {
@@ -252,7 +265,8 @@ type TokenLookupKey<S extends string> = Lowercase<PatternTrim<S>> extends `keybo
  * duplicate check actually does. Sound because no two {@link Keyboard} members
  * share a channel, so equal channels and equal canonical names coincide.
  */
-type CanonicalToken<S extends string> = TokenLookupKey<S> extends infer Key extends keyof KeyboardAliasMap ? KeyboardAliasMap[Key] : TokenLookupKey<S>;
+type CanonicalToken<S extends string> =
+  TokenLookupKey<S> extends infer Key extends keyof KeyboardAliasMap ? KeyboardAliasMap[Key] : TokenLookupKey<S>;
 
 /** The first of two checks that found something, or `never` when neither did. Encodes the runtime's left-to-right, throw-on-first-problem order. */
 type FirstPatternError<First, Second> = [First] extends [never] ? Second : First;
@@ -290,7 +304,9 @@ type CheckAlternative<Text extends string, Pattern extends string, Owner extends
 
 /** One alternative of a step that DOES contain `'|'`, where an empty alternative is its own error rather than an empty token. */
 type CheckNamedAlternative<Text extends string, Pattern extends string, Owner extends PatternOwner, Where extends string> =
-  PatternTrim<Text> extends '' ? `${Owner}: ${Where} of pattern "${Pattern}" is empty — remove the stray '|'.` : CheckAlternative<Text, Pattern, Owner, Where>;
+  PatternTrim<Text> extends ''
+    ? `${Owner}: ${Where} of pattern "${Pattern}" is empty — remove the stray '|'.`
+    : CheckAlternative<Text, Pattern, Owner, Where>;
 
 /** Position label for the n-th `'|'`-separated alternative of a step, worded like `parseStepText`'s `location`. */
 type AlternativeWhere<Where extends string, Index extends readonly unknown[]> = `alternative ${[...Index, unknown]['length']} of ${Where}`;
@@ -310,9 +326,12 @@ type CheckAlternatives<
   : CheckNamedAlternative<Rest, Pattern, Owner, AlternativeWhere<Where, Index>>;
 
 /** One `'>'`-separated step. A step with no `'|'` is one implicit alternative and is never described as one, exactly as `parseStepText` words it. */
-type CheckStep<Step extends string, Pattern extends string, Owner extends PatternOwner, Where extends string> = Step extends `${string}|${string}`
-  ? CheckAlternatives<Step, Pattern, Owner, Where, []>
-  : CheckAlternative<Step, Pattern, Owner, Where>;
+type CheckStep<
+  Step extends string,
+  Pattern extends string,
+  Owner extends PatternOwner,
+  Where extends string,
+> = Step extends `${string}|${string}` ? CheckAlternatives<Step, Pattern, Owner, Where, []> : CheckAlternative<Step, Pattern, Owner, Where>;
 
 /** Position label for the n-th step - a {@link ChordAction} has no user-facing notion of "step N", only "the chord". */
 type StepWhere<Owner extends PatternOwner, Index extends readonly unknown[]> = Owner extends 'ChordAction'
@@ -330,7 +349,9 @@ type CheckSteps<
   : CheckStep<Rest, Pattern, Owner, StepWhere<Owner, Index>>;
 
 /** One alternative's tokens as canonical names, for {@link HasRepeatedToken}. */
-type TokenNames<Rest extends string> = Rest extends `${infer Head}+${infer Tail}` ? [CanonicalToken<Head>, ...TokenNames<Tail>] : [CanonicalToken<Rest>];
+type TokenNames<Rest extends string> = Rest extends `${infer Head}+${infer Tail}`
+  ? [CanonicalToken<Head>, ...TokenNames<Tail>]
+  : [CanonicalToken<Rest>];
 
 type HasRepeatedToken<Names extends readonly string[]> = Names extends readonly [infer Head extends string, ...infer Tail extends string[]]
   ? Head extends Tail[number]
@@ -348,7 +369,10 @@ type CheckDuplicateAlternatives<
   Where extends string,
   Index extends readonly unknown[],
 > = Rest extends `${infer Head}|${infer Tail}`
-  ? FirstPatternError<CheckDuplicates<Head, Owner, AlternativeWhere<Where, Index>>, CheckDuplicateAlternatives<Tail, Owner, Where, [...Index, unknown]>>
+  ? FirstPatternError<
+      CheckDuplicates<Head, Owner, AlternativeWhere<Where, Index>>,
+      CheckDuplicateAlternatives<Tail, Owner, Where, [...Index, unknown]>
+    >
   : CheckDuplicates<Rest, Owner, AlternativeWhere<Where, Index>>;
 
 type CheckDuplicateStep<Step extends string, Owner extends PatternOwner, Where extends string> = Step extends `${string}|${string}`
@@ -356,7 +380,11 @@ type CheckDuplicateStep<Step extends string, Owner extends PatternOwner, Where e
   : CheckDuplicates<Step, Owner, Where>;
 
 /** {@link CheckDuplicateStep} across every step - a pass of its own, because `normalizeSequence` parses every step before it normalizes any of them. */
-type CheckDuplicateSteps<Rest extends string, Owner extends PatternOwner, Index extends readonly unknown[]> = Rest extends `${infer Head}>${infer Tail}`
+type CheckDuplicateSteps<
+  Rest extends string,
+  Owner extends PatternOwner,
+  Index extends readonly unknown[],
+> = Rest extends `${infer Head}>${infer Tail}`
   ? FirstPatternError<CheckDuplicateStep<Head, Owner, StepWhere<Owner, Index>>, CheckDuplicateSteps<Tail, Owner, [...Index, unknown]>>
   : CheckDuplicateStep<Rest, Owner, StepWhere<Owner, Index>>;
 
@@ -397,7 +425,11 @@ type OrPatternError<Binding, Error> = [Error] extends [never] ? Binding : Error;
 export type ValidatedChordBinding<P> = P extends string ? (string extends P ? P : OrPatternError<P, ChordTextError<P>>) : P;
 
 /** {@link ValidatedChordBinding} for {@link SequenceAction}, which allows `'>'` and therefore more than one step. */
-export type ValidatedSequenceBinding<P> = P extends string ? (string extends P ? P : OrPatternError<P, PatternTextError<P, 'SequenceAction'>>) : P;
+export type ValidatedSequenceBinding<P> = P extends string
+  ? string extends P
+    ? P
+    : OrPatternError<P, PatternTextError<P, 'SequenceAction'>>
+  : P;
 
 // Compile-time guard: every alias is lowercase and none shadows a real member,
 // so the lowercased key `resolveToken` builds reaches exactly one entry.

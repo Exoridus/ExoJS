@@ -28,7 +28,9 @@ class SpriteFollowsBodyScene extends Scene {
   private spritesheetData!: SpritesheetData;
 
   override async load(): Promise<void> {
-    this.spritesheetData = (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData;
+    this.spritesheetData = (await this.loader.load(
+      Asset.type('json', assets.demo.spritesheets.platformerCharacters.data),
+    )) as SpritesheetData;
   }
 
   override init(): void {
@@ -93,8 +95,11 @@ class SpriteFollowsBodyScene extends Scene {
     if (Math.abs(pointer.x - this.actorBody.x) > 42 || Math.abs(pointer.y - this.actorBody.y) > 55) {
       return;
     }
+
     this.onEnd();
-    this.dragJoint = this.world.addJoint(new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }));
+    this.dragJoint = this.world.addJoint(
+      new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }),
+    );
   };
 
   private readonly onMove = (pointer: { x: number; y: number }): void => {
@@ -107,6 +112,7 @@ class SpriteFollowsBodyScene extends Scene {
     if (!this.dragJoint) {
       return;
     }
+
     this.world.removeJoint(this.dragJoint);
     this.dragJoint = null;
   };

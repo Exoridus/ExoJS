@@ -42,18 +42,21 @@ export const buildMelFilterbank = (bandCount: number, fMin: number, fMax: number
   const melMin = hzToMel(fMin);
   const melMax = hzToMel(fMax);
   const melPoints = new Float32Array(bandCount + 2);
+
   for (let i = 0; i < bandCount + 2; i++) {
     melPoints[i] = melMin + ((melMax - melMin) * i) / (bandCount + 1);
   }
 
   // Convert mel points to FFT bin indices
   const binPoints = new Float32Array(bandCount + 2);
+
   for (let i = 0; i < bandCount + 2; i++) {
     const hz = melToHz(melPoints[i]!);
     binPoints[i] = Math.round((hz / nyquist) * (binCount - 1));
   }
 
   const bands: MelBand[] = [];
+
   for (let b = 0; b < bandCount; b++) {
     const startBin = Math.max(0, Math.min(binCount - 1, binPoints[b]!));
     const peakBin = Math.max(0, Math.min(binCount - 1, binPoints[b + 1]!));
@@ -61,8 +64,10 @@ export const buildMelFilterbank = (bandCount: number, fMin: number, fMax: number
 
     const len = endBin - startBin + 1;
     const weights = new Float32Array(len);
+
     for (let i = 0; i < len; i++) {
       const bin = startBin + i;
+
       if (bin <= peakBin && peakBin > startBin) {
         weights[i] = (bin - startBin) / (peakBin - startBin);
       } else if (bin > peakBin && endBin > peakBin) {
@@ -89,13 +94,17 @@ export const buildMelFilterbank = (bandCount: number, fMin: number, fMax: number
  */
 export const computeMelBands = (mag: Float32Array, bands: readonly MelBand[], out?: Float32Array): Float32Array => {
   const result = out ?? new Float32Array(bands.length);
+
   for (let b = 0; b < bands.length; b++) {
     const { startBin, weights } = bands[b]!;
     let energy = 0;
+
     for (let i = 0; i < weights.length; i++) {
       energy += mag[startBin + i]! * weights[i]!;
     }
+
     result[b] = Math.log(1 + energy);
   }
+
   return result;
 };

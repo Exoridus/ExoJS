@@ -74,7 +74,15 @@ export class RenderEffectExecutor {
     const frame = RenderEffectExecutor._current();
     const { barrier, backend, cachedTexture } = frame;
 
-    barrier!.node._renderPlanDrawTexture(backend!, cachedTexture!, barrier!.left, barrier!.top, barrier!.width, barrier!.height, barrier!.effect.blendMode);
+    barrier!.node._renderPlanDrawTexture(
+      backend!,
+      cachedTexture!,
+      barrier!.left,
+      barrier!.top,
+      barrier!.width,
+      barrier!.height,
+      barrier!.effect.blendMode,
+    );
   };
 
   /** Body: composite the filter chain's output back into the enclosing target. */
@@ -173,7 +181,8 @@ export class RenderEffectExecutor {
     let pooledTexture: RenderTexture | null = null;
 
     try {
-      const sourceTexture = needsTextureCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(texelWidth, texelHeight, colorFormat);
+      const sourceTexture =
+        needsTextureCache && !hasFilters ? cacheTexture! : backend.acquireRenderTexture(texelWidth, texelHeight, colorFormat);
 
       if (sourceTexture !== cacheTexture) {
         pooledTexture = sourceTexture;
@@ -304,7 +313,15 @@ export class RenderEffectExecutor {
 
       const maskTexture = this._resolveMaskTexture(node, backend, mask, barrier, releasePool);
 
-      backend.composeWithAlphaMask(contentTexture, maskTexture, barrier.left, barrier.top, barrier.width, barrier.height, barrier.effect.blendMode);
+      backend.composeWithAlphaMask(
+        contentTexture,
+        maskTexture,
+        barrier.left,
+        barrier.top,
+        barrier.width,
+        barrier.height,
+        barrier.effect.blendMode,
+      );
     } finally {
       for (let i = 0; i < releasePool.length; i++) {
         // In-bounds: i < length.
@@ -321,7 +338,10 @@ export class RenderEffectExecutor {
     releasePool: RenderTexture[],
   ): Texture | RenderTexture {
     if (!(mask instanceof Texture) && !(mask instanceof RenderTexture)) {
-      const maskTexture = backend.acquireRenderTexture(targetTexels(barrier.width, barrier.resolution), targetTexels(barrier.height, barrier.resolution));
+      const maskTexture = backend.acquireRenderTexture(
+        targetTexels(barrier.width, barrier.resolution),
+        targetTexels(barrier.height, barrier.resolution),
+      );
       const frame = RenderEffectExecutor._current();
       const previousMask = frame.maskSource;
 
@@ -329,7 +349,15 @@ export class RenderEffectExecutor {
       frame.maskSource = mask;
 
       try {
-        node._renderPlanRenderToTexture(backend, maskTexture, barrier.left, barrier.top, barrier.width, barrier.height, this._renderMaskSource);
+        node._renderPlanRenderToTexture(
+          backend,
+          maskTexture,
+          barrier.left,
+          barrier.top,
+          barrier.width,
+          barrier.height,
+          this._renderMaskSource,
+        );
       } finally {
         frame.maskSource = previousMask;
       }

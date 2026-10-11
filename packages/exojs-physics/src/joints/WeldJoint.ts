@@ -181,7 +181,8 @@ export class WeldJoint extends Joint {
     // Angular lock first.
     const cdotAngle = bodyB.angularVelocity - bodyA.angularVelocity;
     const biasAngle = useBias ? this._angular.biasRate * this._angleError : 0;
-    const impulseAngle = -this._effMassAngle * this._angular.massScale * (cdotAngle + biasAngle) - this._angular.impulseScale * this._impulseAngle;
+    const impulseAngle =
+      -this._effMassAngle * this._angular.massScale * (cdotAngle + biasAngle) - this._angular.impulseScale * this._impulseAngle;
 
     this._impulseAngle += impulseAngle;
     bodyA.angularVelocity -= bodyA.invInertia * impulseAngle;

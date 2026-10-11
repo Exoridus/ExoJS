@@ -50,7 +50,8 @@ afterEach(() => {
   _resetDefaultSerializers();
 });
 
-const textures = (node: SceneNode): Array<Texture | RenderTexture | null> => (node as Container).children.map(child => (child as Sprite).texture);
+const textures = (node: SceneNode): Array<Texture | RenderTexture | null> =>
+  (node as Container).children.map(child => (child as Sprite).texture);
 
 describe('asset references keep their interpretation', () => {
   test('two textures of one source with different identity options round-trip to their own texture', async () => {
@@ -85,7 +86,7 @@ describe('asset references keep their interpretation', () => {
     tree.addChild(new Sprite(texture));
 
     const serialized = serializeTree(tree, source);
-    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const target = createCoreLoader();
 
     await target.load(Asset.type('texture', 'hero.png'));

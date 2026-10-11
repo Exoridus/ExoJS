@@ -63,7 +63,9 @@ export const collide = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold
 // ring with a radius, which is exactly why it shares the polygon routines: the
 // ring supplies `count` and `worldVertices`/`worldNormals`, the radius rounds
 // the result off.
-const radiusOf = (collider: CollisionProxy): number => (collider.shape.type === 'circle' || collider.shape.type === 'capsule' ? collider.shape.radius : 0);
+const radiusOf = (collider: CollisionProxy): number =>
+  collider.shape.type === 'circle' || collider.shape.type === 'capsule' ? collider.shape.radius : 0;
+
 const countOf = (collider: CollisionProxy): number => {
   switch (collider.shape.type) {
     case 'polygon':
@@ -400,7 +402,8 @@ const copyClip = (from: ClipVertex, to: ClipVertex): void => {
   to.id = from.id;
 };
 
-const encodeId = (flip: boolean, refEdge: number, incidentId: number): number => (flip ? 1 << 20 : 0) | ((refEdge & 0xff) << 12) | (incidentId & 0xfff);
+const encodeId = (flip: boolean, refEdge: number, incidentId: number): number =>
+  (flip ? 1 << 20 : 0) | ((refEdge & 0xff) << 12) | (incidentId & 0xfff);
 
 /**
  * Convex ring vs convex ring: SAT reference face + Sutherland-Hodgman clip, with
@@ -611,7 +614,9 @@ const circleSpineOverlap: OverlapPair = (circle, spineShape) => {
   const centre = circle.worldCenter;
   const radiusSum = radiusOf(circle) + radiusOf(spineShape);
 
-  return pointSegmentDistanceSquared(centre.x, centre.y, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _segmentScratch) <= radiusSum * radiusSum;
+  return (
+    pointSegmentDistanceSquared(centre.x, centre.y, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _segmentScratch) <= radiusSum * radiusSum
+  );
 };
 
 const circlePolygonOverlap: OverlapPair = (circle, polygon) => {

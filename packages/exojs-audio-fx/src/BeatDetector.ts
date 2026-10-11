@@ -307,12 +307,15 @@ export class BeatDetector {
   public get tempo(): number {
     return this._tempo;
   }
+
   public get beatPhase(): number {
     return this._beatPhase;
   }
+
   public get nextBeatTime(): number {
     return this._nextBeatTime;
   }
+
   public get confidence(): number {
     return this._confidence;
   }
@@ -362,12 +365,15 @@ export class BeatDetector {
   public get analysisLatency(): number {
     return this._analysisLatency;
   }
+
   public get rms(): number {
     return this._rms;
   }
+
   public get onsetStrength(): number {
     return this._onsetStrength;
   }
+
   public get bandEnergy(): BandEnergy {
     return this._bandEnergy;
   }
@@ -383,12 +389,15 @@ export class BeatDetector {
   public get barPosition(): number {
     return this._barPosition;
   }
+
   public get barLength(): number {
     return this._barLength;
   }
+
   public get timeSignature(): TimeSignature {
     return this._timeSignature;
   }
+
   public get nextDownbeatTime(): number {
     return this._nextDownbeatTime;
   }
@@ -406,7 +415,10 @@ export class BeatDetector {
    * and {@link tempo}. Returns 0 when the detector hasn't locked yet.
    */
   public get secondsSinceLastBeat(): number {
-    if (this._tempo === 0) return 0;
+    if (this._tempo === 0) {
+      return 0;
+    }
+
     return this._beatPhase * (60 / this._tempo);
   }
 
@@ -416,7 +428,10 @@ export class BeatDetector {
    * with a single multiplication: `sprite.scale = 1 + clock.pulse * 0.3`.
    */
   public get pulse(): number {
-    if (this._tempo === 0) return 0;
+    if (this._tempo === 0) {
+      return 0;
+    }
+
     return Math.pow(0.5, this.secondsSinceLastBeat / this.pulseHalfLife);
   }
 
@@ -426,10 +441,14 @@ export class BeatDetector {
    * each bar (e.g. brighter flash on "1" vs "2,3,4").
    */
   public get barPulse(): number {
-    if (this._tempo === 0 || this._barLength === 0) return 0;
+    if (this._tempo === 0 || this._barLength === 0) {
+      return 0;
+    }
+
     const secondsPerBeat = 60 / this._tempo;
     const lastDownbeat = this._nextDownbeatTime - this._barLength * secondsPerBeat;
     const elapsed = Math.max(0, getAudioContext().currentTime - lastDownbeat);
+
     return Math.pow(0.5, elapsed / this.barPulseHalfLife);
   }
 
@@ -451,7 +470,10 @@ export class BeatDetector {
    *   if (sixteenth < 0.05) flash();
    */
   public subdivisionPhase(division: number): number {
-    if (!Number.isFinite(division) || division <= 0) return 0;
+    if (!Number.isFinite(division) || division <= 0) {
+      return 0;
+    }
+
     return (this._beatPhase * division) % 1;
   }
 
@@ -488,7 +510,9 @@ export class BeatDetector {
     void registerAudioWorkletProcessor(audioContext, workletName, beatDetectorWorkletSource).then(
       () => {
         // Destroyed while the module loaded: a node created now would never be released.
-        if (this._destroyed) return;
+        if (this._destroyed) {
+          return;
+        }
 
         const node = new AudioWorkletNode(audioContext, workletName, {
           numberOfInputs: 1,
@@ -527,6 +551,7 @@ export class BeatDetector {
 
   private _onWorkletMessage(event: MessageEvent): void {
     const message = event.data as Record<string, unknown>;
+
     switch (message.type) {
       case 'state':
         this._analysisTime = (message.analysisTime as number) ?? 0;
@@ -545,13 +570,16 @@ export class BeatDetector {
         this._barPosition = (message.barPosition as number) ?? 1;
         this._barLength = (message.barLength as number) ?? 4;
         this._timeSignature = (message.timeSignature as TimeSignature) ?? { numerator: 4, denominator: 4 };
+
         {
           const lookahead = (message.lookahead as UpcomingBeat[]) ?? [];
           this._lookahead = Object.freeze(lookahead);
+
           if (lookahead.length > 0) {
             this.onBeatPredicted.dispatch(lookahead[0]!);
           }
         }
+
         break;
 
       case 'beat': {
@@ -566,7 +594,11 @@ export class BeatDetector {
           status: (message.status as 'provisional' | 'locked' | undefined) ?? 'locked',
         };
         this.onBeat.dispatch(bi);
-        if (bi.isDownbeat) this.onDownbeat.dispatch(bi);
+
+        if (bi.isDownbeat) {
+          this.onDownbeat.dispatch(bi);
+        }
+
         break;
       }
 

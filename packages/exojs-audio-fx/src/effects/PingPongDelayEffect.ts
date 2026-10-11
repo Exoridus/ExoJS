@@ -74,7 +74,10 @@ export class PingPongDelayEffect extends AudioEffect {
    * not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('PingPongDelayEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('PingPongDelayEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -83,7 +86,10 @@ export class PingPongDelayEffect extends AudioEffect {
    * not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('PingPongDelayEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('PingPongDelayEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -98,6 +104,7 @@ export class PingPongDelayEffect extends AudioEffect {
 
   public set delayTime(value: number) {
     this._delayTime = Math.max(0.01, Math.min(2, value));
+
     if (this._setup) {
       const time = this._setup.delayL.context.currentTime;
       this._setup.delayL.delayTime.setTargetAtTime(this._delayTime, time, 0.01);
@@ -117,6 +124,7 @@ export class PingPongDelayEffect extends AudioEffect {
 
   public set feedback(value: number) {
     this._feedback = Math.max(0, Math.min(0.9, value));
+
     if (this._setup) {
       const time = this._setup.feedbackGainA.context.currentTime;
       this._setup.feedbackGainA.gain.setTargetAtTime(this._feedback, time, 0.01);
@@ -134,6 +142,7 @@ export class PingPongDelayEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -143,6 +152,7 @@ export class PingPongDelayEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.outputGain.disconnect();

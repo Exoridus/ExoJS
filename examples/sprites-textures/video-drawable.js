@@ -95,7 +95,10 @@ class VideoDrawableScene extends Scene {
     this.elapsed += delta;
     const { width, height } = app;
     // Drift the composited sprite across the video so the overlay is obvious.
-    this.overlay.setPosition(width / 2 + Math.sin(this.elapsed) * (width * 0.3), height / 2 + Math.cos(this.elapsed * 0.7) * (height * 0.25));
+    this.overlay.setPosition(
+      width / 2 + Math.sin(this.elapsed) * (width * 0.3),
+      height / 2 + Math.cos(this.elapsed * 0.7) * (height * 0.25),
+    );
     this.overlay.rotate(delta * 60);
   }
   draw(context) {

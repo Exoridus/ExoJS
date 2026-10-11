@@ -204,7 +204,14 @@ export class DynamicAabbTree<T> {
    * the outer traversal). The stack is separate from `query`/`queryPoint`'s,
    * so a `rayCast` from within a `query` callback (or the reverse) is safe.
    */
-  public rayCast(originX: number, originY: number, dirX: number, dirY: number, maxDistance: number, callback: (payload: T, proxy: number) => void): void {
+  public rayCast(
+    originX: number,
+    originY: number,
+    dirX: number,
+    dirY: number,
+    maxDistance: number,
+    callback: (payload: T, proxy: number) => void,
+  ): void {
     if (this._root === NULL_NODE) {
       return;
     }
@@ -376,7 +383,17 @@ export class DynamicAabbTree<T> {
 
     const index = this._nodes.length;
 
-    this._nodes.push({ minX: 0, minY: 0, maxX: 0, maxY: 0, parent: NULL_NODE, child1: NULL_NODE, child2: NULL_NODE, height: -1, payload: null });
+    this._nodes.push({
+      minX: 0,
+      minY: 0,
+      maxX: 0,
+      maxY: 0,
+      parent: NULL_NODE,
+      child1: NULL_NODE,
+      child2: NULL_NODE,
+      height: -1,
+      payload: null,
+    });
 
     return index;
   }

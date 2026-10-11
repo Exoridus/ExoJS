@@ -40,10 +40,14 @@ export class InputVoice extends BaseVoice {
    * sparingly - routing a microphone to the speakers risks feedback.
    */
   public routeTo(bus: AudioBus): this {
-    if (this._ended) return this;
+    if (this._ended) {
+      return this;
+    }
+
     this._tail().disconnect();
     this._bus = bus;
     this._connectOutput();
+
     return this;
   }
 
@@ -57,7 +61,9 @@ export class InputVoice extends BaseVoice {
     const chunks: Blob[] = [];
 
     recorder.addEventListener('dataavailable', event => {
-      if (event.data.size > 0) chunks.push(event.data);
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
     });
 
     return new Promise<Sound>((resolve, reject) => {
@@ -77,7 +83,9 @@ export class InputVoice extends BaseVoice {
       recorder.start();
       setTimeout(
         () => {
-          if (recorder.state !== 'inactive') recorder.stop();
+          if (recorder.state !== 'inactive') {
+            recorder.stop();
+          }
         },
         Math.max(0, duration * 1000),
       );

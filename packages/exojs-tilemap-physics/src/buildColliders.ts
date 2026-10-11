@@ -1,6 +1,12 @@
 import { logger, type PointLike } from '@codexo/exojs';
 import { BoxShape, CapsuleShape, ChainShape, CircleShape, type ColliderOptions, toConvexPolygonShapes } from '@codexo/exojs-physics';
-import { ObjectKind, type TileCollisionGeometry, type TileCollisionRect, type TileCollisionShape, type TileMapObject } from '@codexo/exojs-tilemap';
+import {
+  ObjectKind,
+  type TileCollisionGeometry,
+  type TileCollisionRect,
+  type TileCollisionShape,
+  type TileMapObject,
+} from '@codexo/exojs-tilemap';
 
 import { materialKey, type ResolvedMaterial, resolveMaterial } from './material';
 import { traceCellOutlines } from './outline';
@@ -71,7 +77,9 @@ const ellipseShape = (width: number, height: number): BoxShape | CapsuleShape | 
     return new CircleShape(semiMinor);
   }
 
-  return width >= height ? new CapsuleShape(-spine / 2, 0, spine / 2, 0, semiMinor) : new CapsuleShape(0, -spine / 2, 0, spine / 2, semiMinor);
+  return width >= height
+    ? new CapsuleShape(-spine / 2, 0, spine / 2, 0, semiMinor)
+    : new CapsuleShape(0, -spine / 2, 0, spine / 2, semiMinor);
 };
 
 /** `true` when a polyline's endpoints coincide, i.e. the author drew a loop. */
@@ -217,7 +225,12 @@ interface ResolvedRect {
  * cells whose colliders would be indistinguishable are traced into one
  * boundary, and cells that resolve differently keep their own.
  */
-const chainsForRects = (regions: readonly ResolvedRect[], options: ColliderBuildOptions, originX: number, originY: number): ColliderOptions[] => {
+const chainsForRects = (
+  regions: readonly ResolvedRect[],
+  options: ColliderBuildOptions,
+  originX: number,
+  originY: number,
+): ColliderOptions[] => {
   const groups = new Map<string, { material: ResolvedMaterial; cells: number[] }>();
 
   for (const { rect, material } of regions) {

@@ -146,7 +146,11 @@ export class TileChunkNode extends Drawable {
    */
   public override getLocalBounds(): ReadonlyRectangle {
     const iso = this._projection.orientation === 'isometric';
-    if (!iso) return this._localBounds.set(0, 0, this._chunk.width * this._tileWidth, this._chunk.height * this._tileHeight);
+
+    if (!iso) {
+      return this._localBounds.set(0, 0, this._chunk.width * this._tileWidth, this._chunk.height * this._tileHeight);
+    }
+
     const d = this.diagonal;
     const minX = d === undefined ? 0 : Math.max(0, d - this._chunk.height + 1);
     const maxX = d === undefined ? this._chunk.width - 1 : Math.min(this._chunk.width - 1, d);
@@ -160,12 +164,14 @@ export class TileChunkNode extends Drawable {
     const baseTop = top;
     const baseRight = right;
     const baseBottom = bottom;
+
     for (const tileset of this._tilesets) {
       left = Math.min(left, baseLeft + tileset.offsetX);
       top = Math.min(top, baseTop + this._tileHeight - tileset.tileHeight + tileset.offsetY);
       right = Math.max(right, baseRight + tileset.tileWidth - this._tileWidth + tileset.offsetX);
       bottom = Math.max(bottom, baseBottom + tileset.offsetY);
     }
+
     return this._localBounds.set(left + this._geometryX, top + this._geometryY, right - left, bottom - top);
   }
 

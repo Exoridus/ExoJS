@@ -72,7 +72,12 @@ export class TiledMap {
   private readonly _imageTextures: ReadonlyMap<number, Texture>;
   private readonly _chunkSources = new Map<number, ChunkSource>();
 
-  public constructor(source: string, data: TiledMapData, tilesets: readonly TiledTileset[], imageTextures: ReadonlyMap<number, Texture> = new Map()) {
+  public constructor(
+    source: string,
+    data: TiledMapData,
+    tilesets: readonly TiledTileset[],
+    imageTextures: ReadonlyMap<number, Texture> = new Map(),
+  ) {
     this.source = source;
     this.data = data;
     this.orientation = data.orientation;
@@ -152,7 +157,11 @@ export class TiledMap {
     this._chunkSources.clear();
 
     if (this.orientation !== 'orthogonal' && this.orientation !== 'isometric') {
-      throw new TiledFormatError(this.source, 'orientation', `toTileMap() supports orthogonal and isometric maps, got "${this.orientation}"`);
+      throw new TiledFormatError(
+        this.source,
+        'orientation',
+        `toTileMap() supports orthogonal and isometric maps, got "${this.orientation}"`,
+      );
     }
 
     const projection = new TileProjection({
@@ -171,12 +180,15 @@ export class TiledMap {
     // indexToRuntime[i] = runtime TileSet for tilesets[i], or null for a hole in
     // the (caller-supplied) tilesets array.
     const indexToRuntime: Array<TileSet | null> = [];
+
     for (let i = 0; i < this.tilesets.length; i++) {
       const tiledTs = this.tilesets[i];
+
       if (!tiledTs) {
         indexToRuntime.push(null);
         continue;
       }
+
       if (!tiledTs.texture) {
         if (tiledTs.tileTextures.size > 0) {
           throw new TiledFormatError(
@@ -185,12 +197,14 @@ export class TiledMap {
             `tileset "${tiledTs.name}" is a collection-of-images tileset; ` + `toTileMap() requires atlas tilesets in this release`,
           );
         }
+
         throw new TiledFormatError(
           this.source,
           `tilesets/${tiledTs.name}`,
           `tileset "${tiledTs.name}" has no image; an atlas tileset needs an ` + `"image" that resolves to a loaded texture`,
         );
       }
+
       const tw = tiledTs.imageWidth ?? tiledTs.texture.width;
       const th = tiledTs.imageHeight ?? tiledTs.texture.height;
       const region = new TextureRegion(tiledTs.texture, { x: 0, y: 0, width: tw, height: th });
@@ -211,9 +225,11 @@ export class TiledMap {
       // tileset. Without this, Tiled tile animations and per-tile properties are
       // lost at conversion. Out-of-range entries are skipped defensively.
       const defs = buildTileDefinitions(tiledTs.tiles, tiledTs.tileCount);
+
       if (defs.length > 0) {
         rts.setDefinitions(defs);
       }
+
       runtimeTilesets.push(rts);
       indexToRuntime.push(rts);
     }
@@ -232,6 +248,7 @@ export class TiledMap {
     const runtimeObjectLayers: ObjectLayer[] = [];
     const runtimeImageLayers: ImageLayer[] = [];
     const order: number[] = [];
+
     const convertLayers = (layers: readonly TiledLayer[], group: TiledGroupStyle): void => {
       for (const layer of layers) {
         if (layer instanceof TiledGroupLayer) {
@@ -255,11 +272,13 @@ export class TiledMap {
             class: layer.class,
             tintColor: multiplyTiledTint(group.tintColor, parseTiledColor(layer.tintColor)),
           });
+
           if (layer.data) {
             populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime, layer.width);
           } else if (chunked) {
             this._chunkSources.set(layer.id, buildTiledChunkSource(layer, rLayer, this.tilesets, indexToRuntime, this.source));
           }
+
           runtimeLayers.push(rLayer);
           order.push(layer.id);
         } else if (layer instanceof TiledObjectLayer) {
@@ -288,6 +307,7 @@ export class TiledMap {
         }
       }
     };
+
     convertLayers(this.layers, rootGroupStyle);
 
     return new TileMap({
@@ -344,7 +364,10 @@ export class TiledMap {
 const findTilesetIndexForGid = (baseGid: number, tiledTilesets: readonly TiledTileset[]): number => {
   for (let t = tiledTilesets.length - 1; t >= 0; t--) {
     const candidate = tiledTilesets[t];
-    if (candidate && baseGid >= candidate.firstGid) return t;
+
+    if (candidate && baseGid >= candidate.firstGid) {
+      return t;
+    }
   }
 
   return -1;
@@ -354,8 +377,15 @@ const findTilesetIndexForGid = (baseGid: number, tiledTilesets: readonly TiledTi
  * Resolve a raw (flag-bearing) Tiled GID to a runtime {@link ResolvedTile}, or
  * `null` for an empty cell or a GID no tileset covers.
  */
-const resolveGid = (rawGid: number, tiledTilesets: readonly TiledTileset[], indexToRuntime: ReadonlyArray<TileSet | null>): ResolvedTile | null => {
-  if (rawGid === 0) return null;
+const resolveGid = (
+  rawGid: number,
+  tiledTilesets: readonly TiledTileset[],
+  indexToRuntime: ReadonlyArray<TileSet | null>,
+): ResolvedTile | null => {
+  if (rawGid === 0) {
+    return null;
+  }
+
   const baseGid = maskTiledGid(rawGid);
   const transform: TileTransform = {
     flipX: ((rawGid >>> 0) & TILED_FLIPPED_HORIZONTALLY_FLAG) !== 0,
@@ -363,10 +393,18 @@ const resolveGid = (rawGid: number, tiledTilesets: readonly TiledTileset[], inde
     diagonal: ((rawGid >>> 0) & TILED_FLIPPED_DIAGONALLY_FLAG) !== 0,
   };
   const tsIdx = findTilesetIndexForGid(baseGid, tiledTilesets);
-  if (tsIdx === -1) return null;
+
+  if (tsIdx === -1) {
+    return null;
+  }
+
   const owningTs = tiledTilesets[tsIdx];
   const runtimeTs = indexToRuntime[tsIdx];
-  if (!owningTs || !runtimeTs) return null; // hole in the tilesets array
+
+  if (!owningTs || !runtimeTs) {
+    return null;
+  } // hole in the tilesets array
+
   return {
     tileset: runtimeTs,
     localTileId: baseGid - owningTs.firstGid,
@@ -393,9 +431,17 @@ const populateTileLayer = (
 ): void => {
   for (let i = 0; i < gids.length; i++) {
     const gid = gids[i];
-    if (gid === undefined) continue;
+
+    if (gid === undefined) {
+      continue;
+    }
+
     const tile = resolveGid(gid, tiledTilesets, indexToRuntime);
-    if (!tile) continue;
+
+    if (!tile) {
+      continue;
+    }
+
     layer.setTileAt(i % width, Math.floor(i / width), tile);
   }
 };
@@ -424,6 +470,7 @@ const buildTiledChunkSource = (
   const index = new Map<string, TiledChunkData>();
   let onDiskWidth = 0;
   let onDiskHeight = 0;
+
   for (const chunk of layer.chunks ?? []) {
     if (onDiskWidth === 0) {
       onDiskWidth = chunk.width;
@@ -435,6 +482,7 @@ const buildTiledChunkSource = (
         `non-uniform infinite-map chunk size is not supported (expected ${onDiskWidth}x${onDiskHeight}, got ${chunk.width}x${chunk.height})`,
       );
     }
+
     if (chunk.x % onDiskWidth !== 0 || chunk.y % onDiskHeight !== 0) {
       throw new TiledFormatError(
         source,
@@ -442,12 +490,15 @@ const buildTiledChunkSource = (
         `misaligned infinite-map chunk in layer ${layer.id} at (${chunk.x}, ${chunk.y}) is not a multiple of the on-disk chunk size (${onDiskWidth}x${onDiskHeight})`,
       );
     }
+
     index.set(`${chunk.x},${chunk.y}`, chunk);
   }
 
   return {
     getChunk(cx: number, cy: number): ChunkPayload | null {
-      if (onDiskWidth === 0) return null; // layer had no chunks at all
+      if (onDiskWidth === 0) {
+        return null;
+      } // layer had no chunks at all
 
       const chunkWidth = runtimeLayer.chunkWidth;
       const chunkHeight = runtimeLayer.chunkHeight;
@@ -465,10 +516,14 @@ const buildTiledChunkSource = (
       const gy1 = Math.floor(qy1 / onDiskHeight) * onDiskHeight;
 
       let out: Uint32Array | null = null;
+
       for (let gy = gy0; gy <= gy1; gy += onDiskHeight) {
         for (let gx = gx0; gx <= gx1; gx += onDiskWidth) {
           const chunk = index.get(`${gx},${gy}`);
-          if (!chunk) continue;
+
+          if (!chunk) {
+            continue;
+          }
 
           const ix0 = Math.max(qx0, gx);
           const ix1 = Math.min(qx1, gx + onDiskWidth - 1);
@@ -478,10 +533,16 @@ const buildTiledChunkSource = (
           for (let ty = iy0; ty <= iy1; ty++) {
             for (let tx = ix0; tx <= ix1; tx++) {
               const rawGid = chunk.data[(ty - gy) * onDiskWidth + (tx - gx)];
-              if (rawGid === undefined || rawGid === 0) continue; // sparse hole, or empty cell
+
+              if (rawGid === undefined || rawGid === 0) {
+                continue;
+              } // sparse hole, or empty cell
 
               const resolved = resolveGid(rawGid, tiledTilesets, indexToRuntime);
-              if (!resolved) continue; // empty cell, or a GID no tileset covers
+
+              if (!resolved) {
+                continue;
+              } // empty cell, or a GID no tileset covers
 
               out ??= new Uint32Array(chunkWidth * chunkHeight);
               const tilesetIndex = runtimeLayer.tilesets.indexOf(resolved.tileset);
@@ -506,10 +567,15 @@ const convertObjectLayer = (
   projection: TileProjection,
 ): ObjectLayer => {
   const objects: TileMapObject[] = [];
+
   for (const object of layer.objects) {
     const converted = convertObject(object, tiledTilesets, indexToRuntime, orientation, projection);
-    if (converted) objects.push(normalizeIsometricRotation(converted, projection));
+
+    if (converted) {
+      objects.push(normalizeIsometricRotation(converted, projection));
+    }
   }
+
   return new ObjectLayer({
     projection,
     id: layer.id,
@@ -530,8 +596,16 @@ const convertObjectLayer = (
 
 /** Tiled rotates authored geometry in display space, after projecting its axes. */
 const normalizeIsometricRotation = (object: TileMapObject, projection: TileProjection): TileMapObject => {
-  if (projection.orientation !== 'isometric' || object.rotation === 0 || object.kind === 'tile' || object.kind === 'text' || object.kind === 'point')
+  if (
+    projection.orientation !== 'isometric' ||
+    object.rotation === 0 ||
+    object.kind === 'tile' ||
+    object.kind === 'text' ||
+    object.kind === 'point'
+  ) {
     return object;
+  }
+
   const display = projection.projectObject({ ...object, rotation: 0 });
   const pivot = projection.logicalToPixel(object.x, object.y);
   const angle = (object.rotation * Math.PI) / 180;
@@ -539,6 +613,7 @@ const normalizeIsometricRotation = (object: TileMapObject, projection: TileProje
   const sin = Math.sin(angle);
   const dx = display.x - pivot.x;
   const dy = display.y - pivot.y;
+
   return projection.unprojectObject({
     ...display,
     x: pivot.x + cos * dx - sin * dy,
@@ -596,29 +671,47 @@ const convertObject = (
       ...(t.halign !== undefined && { halign: t.halign }),
       ...(t.valign !== undefined && { valign: t.valign }),
     };
+
     return { ...base, kind: 'text', text: textStyle };
   }
 
   if (object.gid !== undefined) {
     const tile = resolveGid(object.gid, tiledTilesets, indexToRuntime);
-    if (!tile) return null;
+
+    if (!tile) {
+      return null;
+    }
+
     const anchor = tileObjectAnchorOffset(object.gid, object.width, object.height, tiledTilesets, orientation);
     const position = projection.logicalToPixel(base.x, base.y);
     const corner = projection.pixelToLogical(position.x - anchor.x, position.y - anchor.y);
-    return { ...base, x: corner.x, y: corner.y, kind: 'tile', tile, ...(orientation === 'isometric' ? { rotationOrigin: { x: base.x, y: base.y } } : {}) };
+
+    return {
+      ...base,
+      x: corner.x,
+      y: corner.y,
+      kind: 'tile',
+      tile,
+      ...(orientation === 'isometric' ? { rotationOrigin: { x: base.x, y: base.y } } : {}),
+    };
   }
+
   if (object.point) {
     return { ...base, kind: 'point' };
   }
+
   if (object.ellipse) {
     return { ...base, kind: 'ellipse' };
   }
+
   if (object.polygon) {
     return { ...base, kind: 'polygon', points: toPoints(object.polygon) };
   }
+
   if (object.polyline) {
     return { ...base, kind: 'polyline', points: toPoints(object.polyline) };
   }
+
   return { ...base, kind: 'rectangle' };
 };
 
@@ -641,7 +734,10 @@ const tileObjectAnchorOffset = (
   orientation: TiledOrientation,
 ): { readonly x: number; readonly y: number } => {
   const owningTs = tiledTilesets[findTilesetIndexForGid(maskTiledGid(gid), tiledTilesets)];
-  if (!owningTs) return ORIGIN_OFFSET;
+
+  if (!owningTs) {
+    return ORIGIN_OFFSET;
+  }
 
   const alignment = resolveTiledObjectAlignment(owningTs.objectAlignment, orientation);
 
@@ -695,8 +791,13 @@ const composeGroupStyle = (parent: TiledGroupStyle, group: TiledGroupLayer): Til
  * its children's tints untouched - and vice versa.
  */
 const multiplyTiledTint = (a: number | null, b: number | null): number | null => {
-  if (a === null) return b;
-  if (b === null) return a;
+  if (a === null) {
+    return b;
+  }
+
+  if (b === null) {
+    return a;
+  }
 
   const red = Math.round((((a >> 16) & 0xff) * ((b >> 16) & 0xff)) / 255);
   const green = Math.round((((a >> 8) & 0xff) * ((b >> 8) & 0xff)) / 255);
@@ -710,9 +811,13 @@ const multiplyTiledTint = (a: number | null, b: number | null): number | null =>
  * integer, dropping any alpha. Returns `null` for an absent or malformed value.
  */
 const parseTiledColor = (value: string | undefined): number | null => {
-  if (value === undefined || value === '') return null;
+  if (value === undefined || value === '') {
+    return null;
+  }
+
   const hex = value.startsWith('#') ? value.slice(1) : value;
   let rrggbb: string;
+
   if (hex.length === 8) {
     rrggbb = hex.slice(2); // drop leading alpha
   } else if (hex.length === 6) {
@@ -720,7 +825,9 @@ const parseTiledColor = (value: string | undefined): number | null => {
   } else {
     return null;
   }
+
   const parsed = Number.parseInt(rrggbb, 16);
+
   return Number.isNaN(parsed) ? null : parsed;
 };
 
@@ -733,27 +840,40 @@ const parseTiledColor = (value: string | undefined): number | null => {
  */
 const buildTileDefinitions = (tiles: readonly TiledTileData[], tileCount: number): TileDefinition[] => {
   const defs: TileDefinition[] = [];
+
   for (const tile of tiles) {
-    if (tile.id < 0 || tile.id >= tileCount) continue;
+    if (tile.id < 0 || tile.id >= tileCount) {
+      continue;
+    }
 
     const properties = tile.properties ? convertProperties(tile.properties) : undefined;
     const hasProps = properties !== undefined && Object.keys(properties).length > 0;
 
     let animation: readonly TileAnimationFrame[] | undefined;
+
     if (tile.animation && tile.animation.length > 0) {
       const frames = tile.animation
         .filter(frame => frame.tileid >= 0 && frame.tileid < tileCount)
         .map(frame => ({ localTileId: frame.tileid, duration: frame.duration }));
-      if (frames.length > 0) animation = frames;
+
+      if (frames.length > 0) {
+        animation = frames;
+      }
     }
 
     let collision: readonly TileMapObject[] | undefined;
+
     if (tile.objectgroup && tile.objectgroup.objects.length > 0) {
       const shapes = tile.objectgroup.objects.map(obj => convertCollisionObject(obj)).filter((obj): obj is TileMapObject => obj !== null);
-      if (shapes.length > 0) collision = shapes;
+
+      if (shapes.length > 0) {
+        collision = shapes;
+      }
     }
 
-    if (!hasProps && animation === undefined && collision === undefined) continue;
+    if (!hasProps && animation === undefined && collision === undefined) {
+      continue;
+    }
 
     defs.push({
       localTileId: tile.id,
@@ -762,6 +882,7 @@ const buildTileDefinitions = (tiles: readonly TiledTileData[], tileCount: number
       ...(collision !== undefined && { collision }),
     });
   }
+
   return defs;
 };
 
@@ -772,8 +893,13 @@ const buildTileDefinitions = (tiles: readonly TiledTileData[], tileCount: number
  * in tile objectgroups are almost exclusively plain geometry.
  */
 const convertCollisionObject = (obj: TiledObjectData): TileMapObject | null => {
-  if (obj.text) return null; // text not representable as a collision shape
-  if (obj.gid !== undefined) return null; // tile objects require GID resolution not available here
+  if (obj.text) {
+    return null;
+  } // text not representable as a collision shape
+
+  if (obj.gid !== undefined) {
+    return null;
+  } // tile objects require GID resolution not available here
 
   const base = {
     id: obj.id,
@@ -788,10 +914,22 @@ const convertCollisionObject = (obj: TiledObjectData): TileMapObject | null => {
     properties: convertProperties(obj.properties ?? []),
   };
 
-  if (obj.point === true) return { ...base, kind: 'point' };
-  if (obj.ellipse === true) return { ...base, kind: 'ellipse' };
-  if (obj.polygon) return { ...base, kind: 'polygon', points: toPoints(obj.polygon) };
-  if (obj.polyline) return { ...base, kind: 'polyline', points: toPoints(obj.polyline) };
+  if (obj.point === true) {
+    return { ...base, kind: 'point' };
+  }
+
+  if (obj.ellipse === true) {
+    return { ...base, kind: 'ellipse' };
+  }
+
+  if (obj.polygon) {
+    return { ...base, kind: 'polygon', points: toPoints(obj.polygon) };
+  }
+
+  if (obj.polyline) {
+    return { ...base, kind: 'polyline', points: toPoints(obj.polyline) };
+  }
+
   return { ...base, kind: 'rectangle' };
 };
 
@@ -804,14 +942,20 @@ const convertCollisionObject = (obj: TiledObjectData): TileMapObject | null => {
  * {@link TileProperties}.
  */
 const convertProperties = (properties: readonly TiledPropertyData[]): TileProperties => {
-  if (properties.length === 0) return Object.freeze({});
+  if (properties.length === 0) {
+    return Object.freeze({});
+  }
+
   const out: Record<string, TilePropertyValue> = {};
+
   for (const property of properties) {
     const value = convertPropertyValue(property);
+
     if (value !== undefined) {
       out[property.name] = value;
     }
   }
+
   return Object.freeze(out);
 };
 
@@ -836,6 +980,7 @@ const convertPropertyValue = (property: TiledPropertyData): TilePropertyValue | 
       // Exhaustiveness check: if a new TiledPropertyType is ever added,
       // `property.type` will fail to narrow to `never` here and tsc will error.
       property.type satisfies never;
+
       throw new Error(`convertProperties: unrecognised Tiled property type "${property.type as string}".`);
     }
   }
@@ -863,12 +1008,16 @@ const tiledClassNameProperty = 'tiledClassName';
  */
 const convertClassPropertyValue = (value: TiledClassPropertyValueData, propertytype?: string): TileProperties => {
   const out: Record<string, TilePropertyValue> = {};
+
   for (const [name, member] of Object.entries(value)) {
-    out[name] = typeof member === 'string' || typeof member === 'number' || typeof member === 'boolean' ? member : convertClassPropertyValue(member);
+    out[name] =
+      typeof member === 'string' || typeof member === 'number' || typeof member === 'boolean' ? member : convertClassPropertyValue(member);
   }
+
   if (propertytype !== undefined) {
     out[tiledClassNameProperty] = propertytype;
   }
+
   return Object.freeze(out);
 };
 
@@ -878,10 +1027,17 @@ const sortAndValidateTilesetRanges = (tilesets: readonly TiledTileset[], source:
   for (let i = 1; i < sorted.length; i++) {
     const previous = sorted[i - 1];
     const current = sorted[i];
-    if (previous === undefined || current === undefined) continue;
+
+    if (previous === undefined || current === undefined) {
+      continue;
+    }
 
     if (current.firstGid === previous.firstGid) {
-      throw new TiledFormatError(source, 'tilesets', `duplicate firstgid ${current.firstGid} (tilesets "${previous.name}" and "${current.name}")`);
+      throw new TiledFormatError(
+        source,
+        'tilesets',
+        `duplicate firstgid ${current.firstGid} (tilesets "${previous.name}" and "${current.name}")`,
+      );
     }
 
     if (current.firstGid <= previous.lastGid) {
@@ -899,7 +1055,11 @@ const sortAndValidateTilesetRanges = (tilesets: readonly TiledTileset[], source:
 const walkLayers = (layers: readonly TiledLayer[], path: string, visit: (layer: TiledLayer, layerPath: string) => void): void => {
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
-    if (layer === undefined) continue;
+
+    if (layer === undefined) {
+      continue;
+    }
+
     const layerPath = `${path}[${i}]`;
 
     visit(layer, layerPath);
@@ -913,7 +1073,10 @@ const walkLayers = (layers: readonly TiledLayer[], path: string, visit: (layer: 
 const checkGidArray = (gids: readonly number[], map: TiledMap, source: string, path: string): void => {
   for (let i = 0; i < gids.length; i++) {
     const gid = gids[i];
-    if (gid === undefined) continue;
+
+    if (gid === undefined) {
+      continue;
+    }
 
     if (gid !== 0 && map.findTilesetForGid(gid) === undefined) {
       throw new TiledFormatError(source, `${path}[${i}]`, `gid ${gid} (masked: ${maskTiledGid(gid)}) is not covered by any tileset`);
@@ -931,21 +1094,33 @@ const checkGidCoverage = (map: TiledMap, source: string): void => {
       if (layer.chunks !== undefined) {
         for (let c = 0; c < layer.chunks.length; c++) {
           const chunk = layer.chunks[c];
-          if (chunk === undefined) continue;
+
+          if (chunk === undefined) {
+            continue;
+          }
+
           checkGidArray(chunk.data, map, source, `${layerPath}.chunks[${c}].data`);
         }
       }
     } else if (layer instanceof TiledObjectLayer) {
       for (let o = 0; o < layer.objects.length; o++) {
         const object = layer.objects[o];
-        if (object === undefined) continue;
+
+        if (object === undefined) {
+          continue;
+        }
+
         const gid = object.gid;
 
         // gid 0 (after masking the flip bits) is the empty-cell sentinel, the
         // same as in tile-layer data - accept it as "no tile" instead of
         // rejecting it as uncovered.
         if (gid !== undefined && maskTiledGid(gid) !== 0 && map.findTilesetForGid(gid) === undefined) {
-          throw new TiledFormatError(source, `${layerPath}.objects[${o}].gid`, `gid ${gid} (masked: ${maskTiledGid(gid)}) is not covered by any tileset`);
+          throw new TiledFormatError(
+            source,
+            `${layerPath}.objects[${o}].gid`,
+            `gid ${gid} (masked: ${maskTiledGid(gid)}) is not covered by any tileset`,
+          );
         }
       }
     }

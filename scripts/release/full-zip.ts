@@ -58,7 +58,7 @@ export const CORE_BUNDLE_FILES = [
 /** `vendor/<dir>` for a lockstep package: the npm name without its scope. */
 export const vendorDirFor = (packageName: string): string => packageName.replace(/^@codexo\//, '');
 
-const FORBIDDEN_PATTERNS: { label: string; test: (text: string) => boolean }[] = [
+const FORBIDDEN_PATTERNS: Array<{ label: string; test: (text: string) => boolean }> = [
   { label: 'workspace: specifier', test: t => t.includes('workspace:') },
   { label: '@assets alias', test: t => /['"`]@assets['"`/]/.test(t) },
   { label: '@/ alias import', test: t => /(from|import)\s*\(?\s*['"`]@\//.test(t) },
@@ -67,12 +67,21 @@ const FORBIDDEN_PATTERNS: { label: string; test: (text: string) => boolean }[] =
 
 const walk = (dir: string): string[] => {
   const out: string[] = [];
-  if (!existsSync(dir)) return out;
+
+  if (!existsSync(dir)) {
+    return out;
+  }
+
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...walk(full));
-    else if (entry.isFile()) out.push(full);
+
+    if (entry.isDirectory()) {
+      out.push(...walk(full));
+    } else if (entry.isFile()) {
+      out.push(full);
+    }
   }
+
   return out;
 };
 
@@ -108,10 +117,16 @@ export const scanForbiddenContent = (treeDir: string): ForbiddenHit[] => {
         continue;
       }
 
-      if (!/\.(js|mjs|cjs|ts|json|map)$/.test(file)) continue;
+      if (!/\.(js|mjs|cjs|ts|json|map)$/.test(file)) {
+        continue;
+      }
+
       const text = readFileSync(file, 'utf8');
+
       for (const { label, test } of FORBIDDEN_PATTERNS) {
-        if (test(text)) hits.push({ file: rel, pattern: label });
+        if (test(text)) {
+          hits.push({ file: rel, pattern: label });
+        }
       }
     }
   }
@@ -183,8 +198,11 @@ const assembleExamples = (rootDir: string, examplesOut: string): void => {
 
   for (const file of walk(examplesSrc)) {
     const rel = relative(examplesSrc, file).split('\\').join('/');
+
     // assets/ and shared/ are copied wholesale below; skip here.
-    if (rel.startsWith('assets/') || rel.startsWith('shared/')) continue;
+    if (rel.startsWith('assets/') || rel.startsWith('shared/')) {
+      continue;
+    }
 
     if (file.endsWith('.ts') && !file.endsWith('.d.ts')) {
       const dest = join(srcOut, rel);
@@ -217,6 +235,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
 
   // npm/ - the official tarballs (manifest-driven).
   const npmOut = join(treeDir, 'npm');
+
   for (const record of options.manifest.packages) {
     copyFile(resolve(options.stagingDir, record.file), npmOut);
   }
@@ -230,22 +249,33 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
   // something they run once to write a project. It has no `dist/esm` to vendor,
   // and requiring one would fail the release on a shape it never had.
   for (const pkg of LOCKSTEP_PACKAGES) {
-    if (!pkg.isExtension && pkg.dir !== '.') continue;
+    if (!pkg.isExtension && pkg.dir !== '.') {
+      continue;
+    }
 
     const distDir = resolve(options.rootDir, pkg.dir, 'dist');
     const from = join(distDir, 'esm');
+
     if (!existsSync(from)) {
       throw new Error(`[full-zip] Missing built ESM for ${pkg.name} at ${from}. Build every lockstep package first.`);
     }
+
     const vendorDir = join(treeDir, 'vendor', vendorDirFor(pkg.name));
     cpSync(from, join(vendorDir, 'esm'), { recursive: true });
-    if (pkg.isExtension) continue;
+
+    if (pkg.isExtension) {
+      continue;
+    }
+
     cpSync(join(distDir, 'basis'), join(vendorDir, 'basis'), { recursive: true });
+
     for (const file of CORE_BUNDLE_FILES) {
       const bundle = join(distDir, file);
+
       if (!existsSync(bundle)) {
         throw new Error(`[full-zip] Missing Core bundle ${file} at ${bundle}. Run a production "pnpm build" first.`);
       }
+
       copyFile(bundle, vendorDir);
     }
   }
@@ -270,6 +300,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
   writeFileSync(join(treeDir, 'checksums.sha256'), renderChecksums(options.manifest, 'npm/'), 'utf8');
 
   const forbidden = scanForbiddenContent(treeDir);
+
   return { treeDir, treeName, forbidden };
 };
 
@@ -301,12 +332,14 @@ export const compressTree = (
   if (result.code !== 0) {
     throw new Error(`[full-zip] Compression failed:\n${result.stderr || result.stdout}`);
   }
+
   if (!existsSync(zipPath)) {
     throw new Error(`[full-zip] Expected ${zipPath} after compression, but it is missing.`);
   }
 
   const { sha256, bytes } = sha256File(zipPath);
   writeFileSync(`${zipPath}.sha256`, `${sha256}  ${basename(zipPath)}\n`, 'utf8');
+
   return { zipPath, sha256, bytes };
 };
 

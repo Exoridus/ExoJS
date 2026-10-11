@@ -53,6 +53,7 @@ export class Quadtree<T> {
     // If not subdivided and under capacity, store here.
     if (this._children === null && this._items.length < this._maxItems) {
       this._items.push(item);
+
       return;
     }
 
@@ -66,6 +67,7 @@ export class Quadtree<T> {
       for (const child of this._children) {
         if (child._bounds.containsRect(item.bounds)) {
           child.insert(item);
+
           return;
         }
       }
@@ -118,12 +120,22 @@ export class Quadtree<T> {
   public queryRect(rect: Rectangle, results: Array<QuadtreeItem<T>> = []): Array<QuadtreeItem<T>> {
     // Check intersection using left/right/top/bottom comparisons to avoid
     // needing a full Rectangle.intersectsWith() call with collision dispatch.
-    if (rect.right < this._bounds.left || rect.left > this._bounds.right || rect.bottom < this._bounds.top || rect.top > this._bounds.bottom) {
+    if (
+      rect.right < this._bounds.left ||
+      rect.left > this._bounds.right ||
+      rect.bottom < this._bounds.top ||
+      rect.top > this._bounds.bottom
+    ) {
       return results;
     }
 
     for (const item of this._items) {
-      if (!(item.bounds.right < rect.left || item.bounds.left > rect.right || item.bounds.bottom < rect.top || item.bounds.top > rect.bottom)) {
+      if (!(
+        item.bounds.right < rect.left ||
+        item.bounds.left > rect.right ||
+        item.bounds.bottom < rect.top ||
+        item.bounds.top > rect.bottom
+      )) {
         results.push(item);
       }
     }

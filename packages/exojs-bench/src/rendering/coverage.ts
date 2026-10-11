@@ -41,7 +41,8 @@ import { isScrolling } from './world';
  *   objects once on a fixed raster and `GameObjects.Grid` draws one; neither
  *   re-solves a box when a child resizes.
  */
-export const phaserCovers = (spec: ArchetypeSpec): boolean => !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec) && !isLit(spec);
+export const phaserCovers = (spec: ArchetypeSpec): boolean =>
+  !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec) && !isLit(spec);
 
 /**
  * Excalibur 0.32.

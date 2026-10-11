@@ -98,6 +98,7 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
 
   public set frequency(value: number) {
     this._frequency = value;
+
     // Paused: no live oscillator to ramp. `_startOscillator` reads the field, so
     // the value resume starts from is this one, not the one the pause froze.
     if (!this._ended && !this._paused) {
@@ -111,6 +112,7 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
 
   public set type(value: OscillatorType) {
     this._type = value;
+
     if (!this._ended && !this._paused) {
       this._oscillator.type = value;
     }
@@ -138,6 +140,7 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
 
   public set detune(value: number) {
     this._detune = value;
+
     if (!this._ended && !this._paused) {
       this._oscillator.detune.setTargetAtTime(value, this._audioContext.currentTime, 0.01);
     }
@@ -165,7 +168,9 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
    * left to finish it.
    */
   public pause(): void {
-    if (this._ended || this._paused) return;
+    if (this._ended || this._paused) {
+      return;
+    }
 
     if (this._stopping) {
       this._finish();
@@ -196,7 +201,9 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
    * time.
    */
   public resume(): void {
-    if (this._ended || !this._paused) return;
+    if (this._ended || !this._paused) {
+      return;
+    }
 
     const now = this._audioContext.currentTime;
 
@@ -219,18 +226,22 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
   // -------------------------------------------------------------------------
 
   public override stop(fade?: Seconds): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
 
     // Paused: there is no live oscillator to release or fade out, so both timed
     // paths would only keep an inaudible voice alive for their own duration.
     if (this._paused) {
       this._finish();
+
       return;
     }
 
     if (fade !== undefined && fade > 0) {
       this._stopping = true;
       super.stop(fade);
+
       return;
     }
 
@@ -239,11 +250,13 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
       this._stopping = true;
       this._envelope.releaseAt(this._envelopeGain.gain, now);
       const stopAt = now + this._envelope.release;
+
       try {
         this._oscillator.stop(stopAt);
       } catch {
         // already stopped
       }
+
       // _finish runs on the oscillator's onended at stopAt.
       return;
     }
@@ -279,11 +292,13 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
    */
   private _retireOscillator(): void {
     this._oscillator.onended = null;
+
     try {
       this._oscillator.stop(0);
     } catch {
       // already stopped
     }
+
     this._oscillator.disconnect();
   }
 

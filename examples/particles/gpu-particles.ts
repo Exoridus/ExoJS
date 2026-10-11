@@ -1,5 +1,14 @@
 import { Application, Color, FixedResolutionCanvasSizing, RenderBackendType, type RenderingContext, Scene, Vector } from '@codexo/exojs';
-import { AlphaFadeOverLifetime, ApplyForce, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn } from '@codexo/exojs-particles';
+import {
+  AlphaFadeOverLifetime,
+  ApplyForce,
+  ConeDirection,
+  Constant,
+  particlesExtension,
+  ParticleSystem,
+  Range,
+  RateSpawn,
+} from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Illustrative loads for the two GPU backends; measure on target hardware.

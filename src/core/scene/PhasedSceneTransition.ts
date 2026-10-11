@@ -39,7 +39,10 @@ const currentFrameRank = { none: 0, direct: 1, texture: 2 } as const;
  * `texture`-requesting session - a promoted phase that itself only
  * declared `direct` never needs to know it was promoted.
  */
-export const mergeSceneTransitionRequirements = (a: SceneTransitionPhaseRequirements, b: SceneTransitionPhaseRequirements): SceneTransitionRequirements => ({
+export const mergeSceneTransitionRequirements = (
+  a: SceneTransitionPhaseRequirements,
+  b: SceneTransitionPhaseRequirements,
+): SceneTransitionRequirements => ({
   outgoingFrame: outgoingFrameRank[a.outgoingFrame] >= outgoingFrameRank[b.outgoingFrame] ? a.outgoingFrame : b.outgoingFrame,
   currentFrame: currentFrameRank[a.currentFrame] >= currentFrameRank[b.currentFrame] ? a.currentFrame : b.currentFrame,
 });
@@ -388,5 +391,7 @@ const noOpPhasedSceneTransition = new NoOpPhasedSceneTransition({ duration: seco
  * see {@link NoOpPhasedSceneTransition}) into one composed
  * {@link SceneTransition}, ready to hand to {@link SceneTransition.beginSession}.
  */
-export const resolvePhasedSelection = (exit: PhasedSceneTransition | undefined, enter: PhasedSceneTransition | undefined): SceneTransition =>
-  composePhasedSceneTransition(exit ?? noOpPhasedSceneTransition, enter ?? noOpPhasedSceneTransition);
+export const resolvePhasedSelection = (
+  exit: PhasedSceneTransition | undefined,
+  enter: PhasedSceneTransition | undefined,
+): SceneTransition => composePhasedSceneTransition(exit ?? noOpPhasedSceneTransition, enter ?? noOpPhasedSceneTransition);

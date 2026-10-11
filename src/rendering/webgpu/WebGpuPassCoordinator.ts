@@ -289,6 +289,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     for (let index = 0; index < attachmentCount; index++) {
       this._colorAttachments[index] = backend.createColorAttachment(index);
     }
+
     descriptor.depthStencilAttachment =
       stencilEnabled || depthWrites ? this._createDepthStencilAttachment(backend.renderTarget, stencilEnabled, depthWrites) : undefined;
     // Written unconditionally for the same reason as the attachment above: the
@@ -590,7 +591,11 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     return stack;
   }
 
-  private _createDepthStencilAttachment(target: RenderTarget, stencilEnabled: boolean, depthWrites: boolean): GPURenderPassDepthStencilAttachment {
+  private _createDepthStencilAttachment(
+    target: RenderTarget,
+    stencilEnabled: boolean,
+    depthWrites: boolean,
+  ): GPURenderPassDepthStencilAttachment {
     // Size the attachment to the colour attachment's physical pixels, not the
     // target's logical size. The root canvas backing store is logical ×
     // pixelRatio, so a logical-sized buffer would mismatch the
@@ -600,7 +605,10 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     // A target that owns a depth texture brings its own attachment, so the clip
     // and the depth data share one buffer - and what the clip pass leaves in the
     // depth aspect is what a later sample reads back.
-    const view = target.depthTexture !== null ? this._backend._getDepthAttachmentView(target) : this._connectedStencilAttachmentView(target, width, height);
+    const view =
+      target.depthTexture !== null
+        ? this._backend._getDepthAttachmentView(target)
+        : this._connectedStencilAttachmentView(target, width, height);
     const attachment: GPURenderPassDepthStencilAttachment = { view };
 
     if (depthWrites) {

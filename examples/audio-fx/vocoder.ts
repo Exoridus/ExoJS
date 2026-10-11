@@ -8,7 +8,7 @@ import {
   Graphics,
   type RenderingContext,
   Scene,
-  Sound,
+  type Sound,
   Text,
   type Voice,
 } from '@codexo/exojs';
@@ -17,7 +17,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Spoken phrases (Kenney Voiceover Pack, CC0) - a voice modulator is what makes
 // a vocoder recognisable as the classic "robot voice" effect.
-const PHRASES: { key: string; label: string; asset: string }[] = [
+const PHRASES: Array<{ key: string; label: string; asset: string }> = [
   { key: 'congrats', label: 'Congratulations', asset: assets.demo.voice.congratulations },
   { key: 'mission', label: 'Mission complete', asset: assets.demo.voice.missionComplete },
   { key: 'objective', label: 'Objective achieved', asset: assets.demo.voice.objectiveAchieved },
@@ -63,8 +63,12 @@ class VocoderScene extends Scene {
     this.level = new AudioAnalyser({ source: app.audio.sound, smoothingTimeConstant: 0.6 });
 
     this.gfx = new Graphics();
-    this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, height / 2 - 130);
-    this.hintLabel = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 18 }).setAnchor(0.5, 0.5).setPosition(width / 2, height / 2 + 130);
+    this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height / 2 - 130);
+    this.hintLabel = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 18 })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height / 2 + 130);
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued carrier starts.
@@ -93,9 +97,11 @@ class VocoderScene extends Scene {
       onChange: value => {
         this.processed = value;
         this.vocoder.wet = value ? 1 : 0;
+
         if (this.carrierVoice) {
           this.carrierVoice.volume = value ? 0.45 : 0;
         }
+
         this.hud.setStatus(value ? 'Processed voice: phrase drives the carrier.' : 'Dry voice: phrase plays directly.');
       },
     });
@@ -117,6 +123,7 @@ class VocoderScene extends Scene {
       bus: this.app.audio.sound,
       volume: this.processed ? 0.45 : 0,
     });
+
     if (this.pendingPhrase) {
       this.pendingPhrase = false;
       this.speak();
@@ -136,6 +143,7 @@ class VocoderScene extends Scene {
     if (app.audio.locked) {
       this.pendingPhrase = true;
       this.hud.setStatus('Unlocking audio; the selected phrase will play when ready.');
+
       return;
     }
 
@@ -145,6 +153,7 @@ class VocoderScene extends Scene {
     if (sound) {
       app.audio.play(sound, { bus: this.processed ? this.modulatorBus : app.audio.sound });
     }
+
     this.hud.setStatus(`${this.processed ? 'Processed' : 'Dry'}: "${phrase.label}"`);
     this.phraseLabel.text = `"${phrase.label}"`;
   }

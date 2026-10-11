@@ -41,7 +41,9 @@ class JointShadowsScene extends Scene {
     this.lighting = new LightmapLighting(this.app, { ambient: new Color(42, 46, 66), lightResolution: 0.5, shadowResolution: 256 });
     this.systems.add(this.lighting);
     this.lighting.occludeFrom(new PhysicsOccluder(this.world, { staticOnly: false }));
-    this.lighting.add(new PointLight({ radius: 1000, intensity: 3.2, softness: 0.18, color: new Color(255, 211, 144) })).setPosition(430, 350);
+    this.lighting
+      .add(new PointLight({ radius: 1000, intensity: 3.2, softness: 0.18, color: new Color(255, 211, 144) }))
+      .setPosition(430, 350);
     this.anchor.fillColor = new Color(245, 217, 161);
     this.anchor.drawCircle(0, 0, 23);
     const fixed = this.world.attach(this.anchor, { type: 'static', position: { x: 650, y: 220 }, shape: new CircleShape(23) });
@@ -56,7 +58,13 @@ class JointShadowsScene extends Scene {
     // the contact pushes the arm off the hinge the joint holds it to. The torque
     // has to exceed what gravity exerts on the 300 px arm about its end.
     this.hinge = this.world.addJoint(
-      new RevoluteJoint({ bodyA: fixed, bodyB: this.endBody, anchor: { x: 650, y: 220 }, maxMotorTorque: 1_000_000_000, collideConnected: false }),
+      new RevoluteJoint({
+        bodyA: fixed,
+        bodyB: this.endBody,
+        anchor: { x: 650, y: 220 },
+        maxMotorTorque: 1_000_000_000,
+        collideConnected: false,
+      }),
     );
     this.hud = mountControls({
       title: 'Joint-Driven Shadows',

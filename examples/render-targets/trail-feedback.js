@@ -72,7 +72,7 @@ class TrailFeedbackScene extends Scene {
     this.decayTint.set(255, 255, 255, Math.pow(0.93, delta * 60));
     this.decayA.setTint(this.decayTint);
     this.decayB.setTint(this.decayTint);
-    this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
+    this.bunny.setPosition(width / 2 + Math.cos(this.time * 2) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
   }
   draw(context) {
     (this.forward ? this.pipeAtoB : this.pipeBtoA).execute(context);

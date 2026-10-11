@@ -48,21 +48,52 @@ const readModes = (value: unknown): NineSliceModes | undefined => {
   const out: { -readonly [K in keyof NineSliceModes]: NineSliceModes[K] } = {};
 
   const edges = readEnum(source, 'edges', REPEAT_MODES);
-  if (edges !== undefined) out.edges = edges;
+
+  if (edges !== undefined) {
+    out.edges = edges;
+  }
+
   const center = readEnum(source, 'center', REPEAT_MODES);
-  if (center !== undefined) out.center = center;
+
+  if (center !== undefined) {
+    out.center = center;
+  }
+
   const top = readEnum(source, 'top', REPEAT_MODES);
-  if (top !== undefined) out.top = top;
+
+  if (top !== undefined) {
+    out.top = top;
+  }
+
   const right = readEnum(source, 'right', REPEAT_MODES);
-  if (right !== undefined) out.right = right;
+
+  if (right !== undefined) {
+    out.right = right;
+  }
+
   const bottom = readEnum(source, 'bottom', REPEAT_MODES);
-  if (bottom !== undefined) out.bottom = bottom;
+
+  if (bottom !== undefined) {
+    out.bottom = bottom;
+  }
+
   const left = readEnum(source, 'left', REPEAT_MODES);
-  if (left !== undefined) out.left = left;
+
+  if (left !== undefined) {
+    out.left = left;
+  }
+
   const edgeFit = readEnum(source, 'edgeFit', REPEAT_FITS);
-  if (edgeFit !== undefined) out.edgeFit = edgeFit;
+
+  if (edgeFit !== undefined) {
+    out.edgeFit = edgeFit;
+  }
+
   const centerFit = readEnum(source, 'centerFit', REPEAT_FITS);
-  if (centerFit !== undefined) out.centerFit = centerFit;
+
+  if (centerFit !== undefined) {
+    out.centerFit = centerFit;
+  }
 
   return out;
 };
@@ -73,12 +104,23 @@ const meshSerializer: NodeSerializer<Mesh> = {
   write(node, ctx) {
     const out: Record<string, unknown> = { vertices: [...node.vertices] };
 
-    if (node.indices !== null) out.indices = [...node.indices];
-    if (node.uvs !== null) out.uvs = [...node.uvs];
-    if (node.colors !== null) out.colors = [...node.colors];
+    if (node.indices !== null) {
+      out.indices = [...node.indices];
+    }
+
+    if (node.uvs !== null) {
+      out.uvs = [...node.uvs];
+    }
+
+    if (node.colors !== null) {
+      out.colors = [...node.colors];
+    }
 
     const source = ctx.keyFor(node.texture);
-    if (source !== null) out.texture = source;
+
+    if (source !== null) {
+      out.texture = source;
+    }
 
     if (node.material !== null) {
       logger.warn('Mesh.material is not serialized (custom materials are deferred); the deserialized mesh uses the default material.', {
@@ -123,7 +165,10 @@ const graphicsSerializer: NodeSerializer<Graphics> = {
     if (Array.isArray(children)) {
       for (const child of children) {
         const childNode = asSerializedNode(child);
-        if (childNode !== null) node.addChild(ctx.readNode(childNode) as RenderNode);
+
+        if (childNode !== null) {
+          node.addChild(ctx.readNode(childNode) as RenderNode);
+        }
       }
     }
 
@@ -144,7 +189,10 @@ const nineSliceSerializer: NodeSerializer<NineSliceSprite> = {
     };
 
     const source = ctx.keyFor(node.texture);
-    if (source !== null) out.texture = source;
+
+    if (source !== null) {
+      out.texture = source;
+    }
 
     return out;
   },
@@ -184,7 +232,10 @@ const repeatingSerializer: NodeSerializer<RepeatingSprite> = {
     };
 
     const source = ctx.keyFor(node.texture);
-    if (source !== null) out.texture = source;
+
+    if (source !== null) {
+      out.texture = source;
+    }
 
     return out;
   },
@@ -220,7 +271,10 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
     const out: Record<string, unknown> = {};
 
     const source = ctx.keyFor(node.texture);
-    if (source !== null) out.texture = source;
+
+    if (source !== null) {
+      out.texture = source;
+    }
 
     const clips: Record<string, unknown> = {};
 
@@ -236,8 +290,13 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
 
     out.clips = clips;
 
-    if (node.currentClip !== null) out.currentClip = node.currentClip;
-    if (node.playing) out.playing = true;
+    if (node.currentClip !== null) {
+      out.currentClip = node.currentClip;
+    }
+
+    if (node.playing) {
+      out.playing = true;
+    }
 
     return out;
   },
@@ -299,14 +358,28 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
     const out: Record<string, unknown> = { text: node.text };
 
     const source = ctx.keyFor(node.font);
-    if (source !== null) out.font = source;
 
-    if (node.msdf) out.msdf = true;
-    if (node.fontScale !== 1) out.scale = node.fontScale;
+    if (source !== null) {
+      out.font = source;
+    }
+
+    if (node.msdf) {
+      out.msdf = true;
+    }
+
+    if (node.fontScale !== 1) {
+      out.scale = node.fontScale;
+    }
 
     const style = serializeStyle(node.style);
-    if (style !== undefined) out.style = style;
-    if (Object.keys(node.layout).length > 0) out.layout = { ...node.layout };
+
+    if (style !== undefined) {
+      out.style = style;
+    }
+
+    if (Object.keys(node.layout).length > 0) {
+      out.layout = { ...node.layout };
+    }
 
     return out;
   },
@@ -341,11 +414,25 @@ const videoSerializer: NodeSerializer<Video> = {
   write(node) {
     const out: Record<string, unknown> = { src: node.videoElement.src };
 
-    if (node.volume !== 1) out.volume = node.volume;
-    if (node.loop) out.loop = true;
-    if (node.playbackRate !== 1) out.playbackRate = node.playbackRate;
-    if (node.muted) out.muted = true;
-    if (node.currentTime > 0) out.time = node.currentTime;
+    if (node.volume !== 1) {
+      out.volume = node.volume;
+    }
+
+    if (node.loop) {
+      out.loop = true;
+    }
+
+    if (node.playbackRate !== 1) {
+      out.playbackRate = node.playbackRate;
+    }
+
+    if (node.muted) {
+      out.muted = true;
+    }
+
+    if (node.currentTime > 0) {
+      out.time = node.currentTime;
+    }
 
     return out;
   },

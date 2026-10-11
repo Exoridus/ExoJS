@@ -846,7 +846,16 @@ export class PhysicsWorld implements BodyOwner {
     const subStepCount = this.subStepCount;
     const h = this.timeStepper.fixedDelta / subStepCount;
 
-    this._stepOnce(h, subStepCount, this.gravity.x, this.gravity.y, this.contactHertz, this.dampingRatio, this._joints.length > 0, this._hasBullets());
+    this._stepOnce(
+      h,
+      subStepCount,
+      this.gravity.x,
+      this.gravity.y,
+      this.contactHertz,
+      this.dampingRatio,
+      this._joints.length > 0,
+      this._hasBullets(),
+    );
 
     this._dispatchEvents();
 
@@ -1048,7 +1057,13 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /** All collider hits along the ray, sorted by distance. Writes into `out` (cleared) if given. */
-  public rayCastAll(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, out?: RayHit[], maxDistance?: number): RayHit[] {
+  public rayCastAll(
+    origin: Readonly<PointLike>,
+    direction: Readonly<PointLike>,
+    filter?: QueryFilter,
+    out?: RayHit[],
+    maxDistance?: number,
+  ): RayHit[] {
     return this._query.rayCastAll(origin, direction, filter, out, maxDistance);
   }
 

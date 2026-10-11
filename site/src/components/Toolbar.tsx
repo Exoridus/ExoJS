@@ -10,12 +10,10 @@ export interface ToolbarProps {
   title: string;
 }
 
-export const Toolbar = ({ children, leading, title }: ToolbarProps): JSX.Element => {
-  return (
-    <div className={css(styles, 'root')}>
-      {leading}
-      <div className={css(styles, 'title')}>{title}</div>
-      {children}
-    </div>
-  );
-};
+export const Toolbar = ({ children, leading, title }: ToolbarProps): JSX.Element => (
+  <div className={css(styles, 'root')}>
+    {leading}
+    <div className={css(styles, 'title')}>{title}</div>
+    {children}
+  </div>
+);

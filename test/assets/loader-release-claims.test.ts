@@ -10,6 +10,7 @@ import { Texture } from '#rendering/texture/Texture';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -36,24 +37,19 @@ interface ResidencyInternals {
   unloadAll(type?: unknown): void;
 }
 
-const residencyOf = (loader: Loader): ResidencyInternals => {
-  return (loader as unknown as { _residency: ResidencyInternals })._residency;
-};
-const claimSize = (loader: Loader): number => {
-  return residencyOf(loader)._claims.size;
-};
-const deferredSize = (loader: Loader): number => {
-  return residencyOf(loader)._deferred.size;
-};
-const refSize = (loader: Loader): number => {
-  return residencyOf(loader)._refs.size;
-};
-const keyOf = (loader: Loader, type: unknown, source: string): string => {
-  return (loader as unknown as { _canonicalize(t: unknown, s: string): { key: string } })._canonicalize(type, source).key;
-};
-const scopesFor = (loader: Loader, type: unknown, source: string): Set<LoaderScope> | undefined => {
-  return residencyOf(loader)._claims.get(keyOf(loader, type, source))?.scopes;
-};
+const residencyOf = (loader: Loader): ResidencyInternals => (loader as unknown as { _residency: ResidencyInternals })._residency;
+
+const claimSize = (loader: Loader): number => residencyOf(loader)._claims.size;
+
+const deferredSize = (loader: Loader): number => residencyOf(loader)._deferred.size;
+
+const refSize = (loader: Loader): number => residencyOf(loader)._refs.size;
+
+const keyOf = (loader: Loader, type: unknown, source: string): string =>
+  (loader as unknown as { _canonicalize(t: unknown, s: string): { key: string } })._canonicalize(type, source).key;
+
+const scopesFor = (loader: Loader, type: unknown, source: string): Set<LoaderScope> | undefined =>
+  residencyOf(loader)._claims.get(keyOf(loader, type, source))?.scopes;
 
 describe('LoaderScope.release() scope safety', () => {
   beforeEach(() => {
@@ -217,7 +213,9 @@ describe('internal hard-reset claim consistency', () => {
     const key = keyOf(loader, Texture, 'ship.png');
     expect(residencyOf(loader)._claims.has(key)).toBe(true);
 
-    residencyOf(loader)._unloadOne((loader as unknown as { _canonicalize(t: unknown, s: string): unknown })._canonicalize(Texture, 'ship.png'));
+    residencyOf(loader)._unloadOne(
+      (loader as unknown as { _canonicalize(t: unknown, s: string): unknown })._canonicalize(Texture, 'ship.png'),
+    );
 
     // Resource is gone AND the stale claim was cleared (previously it leaked,
     // holding refcount > 0 forever).
@@ -230,9 +228,11 @@ describe('internal hard-reset claim consistency', () => {
 
     for (let cycle = 0; cycle < 5; cycle++) {
       const handles = [];
+
       for (let i = 0; i < 4; i++) {
         handles.push(loader.get(`cycle${cycle}-asset${i}.png`));
       }
+
       await Promise.all(handles.map(h => h.loaded));
 
       // Each distinct source registered a claim (and a deferred handle before it

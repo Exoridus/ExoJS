@@ -7,6 +7,7 @@ import { materializeAssetTypes } from '#extensions/materialize';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 

@@ -100,7 +100,9 @@ class TiledInfiniteMapScene extends Scene {
       this.hudTimer = 0;
       const tx = Math.floor(this.camera.center.x / TILE);
       const ty = Math.floor(this.camera.center.y / TILE);
-      this.hud.setStatus(`ground ${this.groundStreamer.residentCount} chunks · props ${this.propsStreamer.residentCount} chunks · tile ${tx}, ${ty}`);
+      this.hud.setStatus(
+        `ground ${this.groundStreamer.residentCount} chunks · props ${this.propsStreamer.residentCount} chunks · tile ${tx}, ${ty}`,
+      );
     }
   }
   draw(context) {

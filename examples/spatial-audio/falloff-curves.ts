@@ -10,7 +10,7 @@ interface FalloffModelDef {
 
 // Horizontal placement (0..1 of canvas width) for each source; absolute pixel
 // positions are resolved against the canvas in init().
-const MODELS: (FalloffModelDef & { tx: number })[] = [
+const MODELS: Array<FalloffModelDef & { tx: number }> = [
   { model: 'linear', tx: 0.25, color: new Color(255, 140, 140) },
   { model: 'inverse', tx: 0.5, color: new Color(140, 200, 255) },
   { model: 'exponential', tx: 0.75, color: new Color(200, 255, 140) },
@@ -20,16 +20,21 @@ const REF_DISTANCE = 60;
 const MAX_DISTANCE = 460;
 const ROLLOFF = 1;
 
-function attenuation(model: FalloffModel, d: number): number {
-  if (d <= REF_DISTANCE) return 1;
+const attenuation = (model: FalloffModel, d: number): number => {
+  if (d <= REF_DISTANCE) {
+    return 1;
+  }
+
   if (model === 'linear') {
     return Math.max(0, 1 - ROLLOFF * ((d - REF_DISTANCE) / (MAX_DISTANCE - REF_DISTANCE)));
   }
+
   if (model === 'inverse') {
     return REF_DISTANCE / (REF_DISTANCE + ROLLOFF * (d - REF_DISTANCE));
   }
+
   return Math.pow(d / REF_DISTANCE, -ROLLOFF);
-}
+};
 
 interface FalloffSource extends FalloffModelDef {
   x: number;
@@ -69,6 +74,7 @@ class FalloffCurvesScene extends Scene {
     this.labels = this.sources.map(({ model, x, y }) => {
       const label = new Text(model, { fillColor: Color.white, fontSize: 16, align: 'center' });
       label.setAnchor(0.5, 0).setPosition(x, y + 30);
+
       return label;
     });
 
@@ -107,6 +113,7 @@ class FalloffCurvesScene extends Scene {
           rolloffFactor: ROLLOFF,
         });
       }
+
       this.hud.setStatus('Move the pointer to relocate the listener');
     });
   }
@@ -119,8 +126,10 @@ class FalloffCurvesScene extends Scene {
     const { x: plotX, y: plotY, w: plotW, h: plotH } = this.plot;
     this.graphics.fillColor = new Color(40, 40, 50);
     this.graphics.drawRectangle(plotX, plotY, plotW, plotH);
+
     for (const { model, color } of this.sources) {
       this.graphics.fillColor = color;
+
       for (let i = 0; i < plotW; i += 2) {
         const d = (i / plotW) * MAX_DISTANCE * 1.2;
         const v = attenuation(model, d);
@@ -149,7 +158,10 @@ class FalloffCurvesScene extends Scene {
     }
 
     context.render(this.graphics);
-    for (const label of this.labels) context.render(label);
+
+    for (const label of this.labels) {
+      context.render(label);
+    }
 
     if (app.audio.locked) {
       context.render(this.tapPrompt);

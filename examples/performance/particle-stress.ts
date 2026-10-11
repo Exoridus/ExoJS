@@ -56,7 +56,7 @@ class TintCycle extends UpdateModule {
 
 class ParticleStressScene extends Scene {
   private sharedTexture!: Texture;
-  private particleSystems!: { instance: ParticleSystem; baseX: number; baseY: number }[];
+  private particleSystems!: Array<{ instance: ParticleSystem; baseX: number; baseY: number }>;
 
   override init(): void {
     const app = this.app;
@@ -216,7 +216,7 @@ app.start(ParticleStressScene).catch(() => {
   void app.destroy();
 });
 
-function createParticleTexture(): Texture {
+const createParticleTexture = (): Texture => {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d')!;
 
@@ -235,4 +235,4 @@ function createParticleTexture(): Texture {
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   return new Texture(canvas);
-}
+};

@@ -103,7 +103,10 @@ export class TweenSystem {
     for (let i = 0; i < tweens.length - 1; i++) {
       const current = tweens[i];
       const next = tweens[i + 1];
-      if (current !== undefined && next !== undefined) current.chain(next);
+
+      if (current !== undefined && next !== undefined) {
+        current.chain(next);
+      }
     }
 
     // Bind only - `Tween.start` does the registering, and every link after the
@@ -207,7 +210,9 @@ export class TweenSystem {
    * remove tweens/tickers do not corrupt mid-iteration.
    */
   public preFrame(delta: Seconds): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
 
     const deltaSeconds = delta;
     const tweens = fill(this._tweenCursor, this._tweens);

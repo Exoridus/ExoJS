@@ -220,9 +220,10 @@ ${spriteVertexMainWgsl}`;
  * @internal
  */
 export const buildSpriteTextureSlotWgsl = (textureSlots: number): string => {
-  const textureBindings = Array.from({ length: textureSlots }, (_, slot) => `@group(1) @binding(${slot})\nvar spriteTexture${slot}: texture_2d<f32>;`).join(
-    '\n',
-  );
+  const textureBindings = Array.from(
+    { length: textureSlots },
+    (_, slot) => `@group(1) @binding(${slot})\nvar spriteTexture${slot}: texture_2d<f32>;`,
+  ).join('\n');
   const samplerBindings = Array.from(
     { length: textureSlots },
     (_, slot) => `@group(1) @binding(${textureSlots + slot})\nvar spriteSampler${slot}: sampler;`,

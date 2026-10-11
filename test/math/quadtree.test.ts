@@ -2,9 +2,10 @@ import type { QuadtreeItem } from '#math/Quadtree';
 import { Quadtree } from '#math/Quadtree';
 import { Rectangle } from '#math/Rectangle';
 
-const makeItem = (x: number, y: number, width: number, height: number, payload = `${x},${y},${width},${height}`): QuadtreeItem<string> => {
-  return { bounds: new Rectangle(x, y, width, height), payload };
-};
+const makeItem = (x: number, y: number, width: number, height: number, payload = `${x},${y},${width},${height}`): QuadtreeItem<string> => ({
+  bounds: new Rectangle(x, y, width, height),
+  payload,
+});
 
 describe('Quadtree', () => {
   describe('insert()', () => {

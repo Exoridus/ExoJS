@@ -2,7 +2,7 @@ import { Application, Color, FixedResolutionCanvasSizing, Scene, type Seconds, S
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 class BoundingBoxesScene extends Scene {
-  private sprites!: { sprite: Sprite; speed: number }[];
+  private sprites!: Array<{ sprite: Sprite; speed: number }>;
   private time = 0;
 
   override init(): void {
@@ -19,6 +19,7 @@ class BoundingBoxesScene extends Scene {
       // the sprites must be attached to it - nodes that are only passed
       // to context.render() directly are invisible to the overlay.
       this.root.addChild(sprite);
+
       return { sprite, speed: 0.8 + i * 0.14 };
     });
   }
@@ -28,6 +29,7 @@ class BoundingBoxesScene extends Scene {
     const { height } = app;
 
     this.time += delta;
+
     for (const { sprite, speed } of this.sprites) {
       sprite.setRotation(this.time * 35 * speed);
       sprite.setPosition(sprite.position.x, height / 2 + Math.sin(this.time * speed) * 100);

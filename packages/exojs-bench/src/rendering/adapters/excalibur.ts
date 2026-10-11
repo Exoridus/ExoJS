@@ -3,7 +3,14 @@ import * as ex from 'excalibur';
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import { excaliburCovers } from '../coverage';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { createDigitAtlasCanvas, createDistinctTextureCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH, TEXT_FONT_SIZE } from '../sceneAssets';
+import {
+  createDigitAtlasCanvas,
+  createDistinctTextureCanvas,
+  DIGIT_ALPHABET,
+  DIGIT_CELL_HEIGHT,
+  DIGIT_CELL_WIDTH,
+  TEXT_FONT_SIZE,
+} from '../sceneAssets';
 import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, textForLeaf } from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 import { replaceExcaliburChild } from './excaliburLifecycle';
@@ -204,7 +211,8 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       glyphFont = textGlyphs > 0 ? createGlyphFont() : null;
 
       /** Resting grid position of leaf `index`, from the shared layout helpers. */
-      const leafPosition = (index: number): { x: number; y: number } => (overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN));
+      const leafPosition = (index: number): { x: number; y: number } =>
+        overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN);
 
       /** Build (but do not parent) the leaf at global index `index`; reused by the churn mutation. */
       const makeLeaf = (index: number): { actor: ex.Actor; text: ex.Text | null } => {

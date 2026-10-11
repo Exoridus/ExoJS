@@ -74,7 +74,8 @@ const createSolidTexture = (color: string, size = 16): Texture => {
   return new Texture(source);
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a frame through the real plan path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).
@@ -149,7 +150,15 @@ const buildScene = (): Scene => {
 
   const outsideLayer = new TileLayer({ id: 1, name: 'l', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tsBlue] });
   outsideLayer.setTileAt(0, 0, { tileset: tsBlue, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
-  const outsideMap = new TileMap({ name: 'outside', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tsBlue], layers: [outsideLayer] });
+  const outsideMap = new TileMap({
+    name: 'outside',
+    width: 1,
+    height: 1,
+    tileWidth: 16,
+    tileHeight: 16,
+    tilesets: [tsBlue],
+    layers: [outsideLayer],
+  });
   const outside = new TileMapNode(outsideMap);
 
   const redLayer = new TileLayer({ id: 1, name: 'l', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tsRed] });
@@ -159,7 +168,15 @@ const buildScene = (): Scene => {
 
   const greenLayer = new TileLayer({ id: 1, name: 'l', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tsGreen] });
   greenLayer.setTileAt(0, 0, { tileset: tsGreen, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
-  const greenMap = new TileMap({ name: 'green', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tsGreen], layers: [greenLayer] });
+  const greenMap = new TileMap({
+    name: 'green',
+    width: 1,
+    height: 1,
+    tileWidth: 16,
+    tileHeight: 16,
+    tilesets: [tsGreen],
+    layers: [greenLayer],
+  });
   const greenNode = new TileMapNode(greenMap);
 
   const root = new Container();

@@ -157,7 +157,9 @@ export class WebGl2StencilClipper {
     if (this._viewSource !== vertexData || this._view === null) {
       this._viewSource = vertexData;
       this._view =
-        vertexData instanceof Float32Array ? new DataView(vertexData.buffer, vertexData.byteOffset, vertexData.byteLength) : new DataView(vertexData);
+        vertexData instanceof Float32Array
+          ? new DataView(vertexData.buffer, vertexData.byteOffset, vertexData.byteLength)
+          : new DataView(vertexData);
     }
 
     return this._view;
@@ -225,7 +227,14 @@ export class WebGl2StencilClipper {
               lastBuffer = attribute.buffer;
             }
 
-            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+            gl.vertexAttribPointer(
+              attribute.location,
+              attribute.size,
+              attribute.type,
+              attribute.normalized,
+              attribute.stride,
+              attribute.start,
+            );
             gl.enableVertexAttribArray(attribute.location);
           }
 

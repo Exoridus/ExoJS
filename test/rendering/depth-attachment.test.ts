@@ -215,15 +215,18 @@ describe('WebGL2 depth attachment', () => {
         depthAttachments.push(handle);
       }
     };
+
     mutable['framebufferRenderbuffer'] = (_target: number, attachment: number, _rbTarget: number, handle: unknown): void => {
       if (attachment === gl.DEPTH_STENCIL_ATTACHMENT) {
         renderbufferAttachments.push(handle);
       }
     };
+
     mutable['depthMask'] = (flag: boolean): void => {
       depthMask = flag;
       depthStateCalls.push(`depthMask:${flag ? 1 : 0}`);
     };
+
     mutable['depthFunc'] = (func: number): void => {
       depthStateCalls.push(`depthFunc:${func === gl.ALWAYS ? 'always' : String(func)}`);
     };

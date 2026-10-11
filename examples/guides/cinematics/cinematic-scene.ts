@@ -1,4 +1,16 @@
-import { Asset, AudioStream, Color, Graphics, type RenderingContext, Scene, Sprite, Text, Texture, View, type Voice } from '@codexo/exojs';
+import {
+  Asset,
+  type AudioStream,
+  Color,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  Text,
+  type Texture,
+  View,
+  type Voice,
+} from '@codexo/exojs';
 
 // #region guide:cinematic-scene
 const TITLE = 'VOID EMPEROR';
@@ -18,7 +30,10 @@ class CinematicScene extends Scene {
     // AudioStream has no bare-path form, so use `Asset.type(...)` - and since
     // `get(Asset.type('music', ...))` isn't supported, keep the loaded
     // instances as direct references instead of looking them up later.
-    [this.bossTexture, this.trackStream] = await Promise.all([this.loader.load('image/boss.png'), this.loader.load(Asset.type('music', 'audio/track.ogg'))]);
+    [this.bossTexture, this.trackStream] = await Promise.all([
+      this.loader.load('image/boss.png'),
+      this.loader.load(Asset.type('music', 'audio/track.ogg')),
+    ]);
   }
 
   override init(): void {
@@ -44,7 +59,7 @@ class CinematicScene extends Scene {
     this.app.tweens.create(this.barSize).to({ v: 70 }, 0.6).start();
 
     // Camera pan - 2 seconds, starts immediately
-    this.app.tweens.create(this.view.center).to({ x: 520, y: 300 }, 2.0).start();
+    this.app.tweens.create(this.view.center).to({ x: 520, y: 300 }, 2).start();
 
     // Boss scale-in - 1.8 seconds, starts after 1.1s delay
     this.app.tweens.create(this.boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
@@ -56,7 +71,7 @@ class CinematicScene extends Scene {
 
     this.app.tweens
       .create(this.titleState)
-      .to({ count: TITLE.length }, 1.0)
+      .to({ count: TITLE.length }, 1)
       .delay(1.6)
       .onUpdate(() => {
         this.titleText.text = TITLE.slice(0, this.titleState.count | 0);
@@ -64,7 +79,7 @@ class CinematicScene extends Scene {
       .start();
 
     // Music fade - the Voice's volume is a plain get/set, so tween it directly.
-    this.app.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start();
+    this.app.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2).start();
   }
 
   override draw(context: RenderingContext): void {

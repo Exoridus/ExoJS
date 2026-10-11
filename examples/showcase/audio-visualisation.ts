@@ -1,7 +1,7 @@
 import {
   Application,
   Asset,
-  AudioStream,
+  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   type Pausable,
@@ -46,9 +46,11 @@ class AudioVisualisationScene extends Scene {
     // beat-pulse ring. Both read the music bus the stream plays through,
     // without altering playback.
     this.analyser = new AudioAnalyser({ source: app.audio.music });
+
     for (let i = 0; i <= BAND_LABELS.length; i++) {
       this.bandEdges.push(Math.round(Math.pow(this.analyser.frequencyBinCount, i / BAND_LABELS.length)));
     }
+
     this.detector = new BeatDetector();
     this.detector.source = app.audio.music;
 
@@ -98,6 +100,7 @@ class AudioVisualisationScene extends Scene {
       } else {
         this.musicVoice.pause();
       }
+
       this.hud.setStatus(this.musicVoice.paused ? 'Paused' : 'Playing…');
     });
 
@@ -164,13 +167,16 @@ class AudioVisualisationScene extends Scene {
     this.context.fillRect(0, height - 142, width, 142);
     this.context.textAlign = 'center';
     this.context.font = '17px sans-serif';
+
     for (let band = 0; band < BAND_LABELS.length; band++) {
       const start = this.bandEdges[band];
       const end = Math.max(start + 1, this.bandEdges[band + 1]);
       let sum = 0;
+
       for (let bin = start; bin < end; bin++) {
         sum += freqData[bin];
       }
+
       const level = sum / ((end - start) * 255);
       const x = band * bandWidth + bandWidth / 2;
       this.context.fillStyle = '#283342';

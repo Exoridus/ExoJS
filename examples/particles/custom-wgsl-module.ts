@@ -69,7 +69,7 @@ class CustomWgslModuleScene extends Scene {
     this.system.addSpawnModule(
       new RateSpawn({
         rate: new Constant(1800),
-        lifetime: new Constant(2.0),
+        lifetime: new Constant(2),
         velocity: new Constant(new Vector(0, -130)),
         scale: new Constant(new Vector(0.2, 0.2)),
       }),

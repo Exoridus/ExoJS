@@ -25,8 +25,11 @@ for (let index = 0; index < route.edges.length; index++) {
   const step = route.edges[index]!;
   const arrival = route.points[index + 1]!;
 
-  if (step.kind === 'jump' && step.data !== null) controller.jump(step.data.impulse);
-  else controller.walkTo(arrival.x, arrival.y);
+  if (step.kind === 'jump' && step.data !== null) {
+    controller.jump(step.data.impulse);
+  } else {
+    controller.walkTo(arrival.x, arrival.y);
+  }
 }
 // #endregion guide:waypoint-follow
 

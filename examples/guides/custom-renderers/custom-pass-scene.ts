@@ -1,4 +1,14 @@
-import { CallbackRenderPass, Color, Graphics, RenderingContext, RenderNodePass, RenderPipeline, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import {
+  CallbackRenderPass,
+  Color,
+  Graphics,
+  type RenderingContext,
+  RenderNodePass,
+  RenderPipeline,
+  Scene,
+  type Seconds,
+  Sprite,
+} from '@codexo/exojs';
 
 // #region guide:custom-pass-scene
 class CustomPassScene extends Scene {

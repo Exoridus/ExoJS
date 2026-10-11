@@ -45,12 +45,15 @@ class CameraNavigationScene extends Scene {
     this.grid = new Graphics();
     this.grid.lineWidth = 1;
     this.grid.lineColor = new Color(65, 74, 92);
+
     for (let x = -800; x <= width + 800; x += 80) {
       this.grid.drawLine(x, -600, x, height + 600);
     }
+
     for (let y = -600; y <= height + 600; y += 80) {
       this.grid.drawLine(-800, y, width + 800, y);
     }
+
     this.markers = new Graphics();
     this.readout = new Text('', { fillColor: Color.white, fontSize: 17 });
     this.readout.setPosition(18, height - 88);

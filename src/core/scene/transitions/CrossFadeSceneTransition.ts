@@ -1,6 +1,11 @@
 import type { EasingFunction } from '#animation/Ease';
 import { Ease } from '#animation/Ease';
-import type { SceneTransitionEnvironment, SceneTransitionFrame, SceneTransitionRequirements, SceneTransitionSession } from '#core/scene/SceneTransition';
+import type {
+  SceneTransitionEnvironment,
+  SceneTransitionFrame,
+  SceneTransitionRequirements,
+  SceneTransitionSession,
+} from '#core/scene/SceneTransition';
 import { SceneTransition } from '#core/scene/SceneTransition';
 import { type Seconds, seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';

@@ -118,7 +118,9 @@ export interface PersistentSlotDrawRecord {
 
 /** Whether `backend` implements the whole persistent-indexed contract. @internal */
 export const supportsPersistentSlots = (backend: PersistentSlotBackend): boolean =>
-  backend._acquirePersistentSlots !== undefined && backend._writePersistentSlots !== undefined && backend._drawPersistentOrder !== undefined;
+  backend._acquirePersistentSlots !== undefined &&
+  backend._writePersistentSlots !== undefined &&
+  backend._drawPersistentOrder !== undefined;
 
 /**
  * Whether a source's SHAPE allows its visible set to be drawn as an ordered

@@ -33,6 +33,7 @@ const themeColors: Record<Theme, Color> = {
 const loadSettings = (): Settings => {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<Settings>;
+
     return {
       volume: typeof saved.volume === 'number' && Number.isFinite(saved.volume) ? Math.max(0, Math.min(1, saved.volume)) : defaults.volume,
       motion: typeof saved.motion === 'boolean' ? saved.motion : defaults.motion,
@@ -119,6 +120,7 @@ class SettingsMenuScene extends Scene {
     this.preview.clear();
     this.preview.fillColor = themeColors[this.settings.theme];
     this.preview.drawRectangle(-62, -62, 124, 124);
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings));
       this.status.text = 'Saved in this browser. Tab or D-pad to focus.';
@@ -131,6 +133,7 @@ class SettingsMenuScene extends Scene {
     if (this.settings.motion) {
       this.angle += delta * 45;
     }
+
     this.preview.setRotation(this.angle);
   }
 }

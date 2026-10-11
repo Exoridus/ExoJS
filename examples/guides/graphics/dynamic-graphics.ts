@@ -9,6 +9,7 @@ class BarChartScene extends Scene {
     this.g.clear();
 
     this.g.fillColor = new Color(0xff6347);
+
     for (let i = 0; i < this.values.length; i++) {
       const h = this.values[i] * 200;
       this.g.drawRectangle(i * 30, -h, 26, h);

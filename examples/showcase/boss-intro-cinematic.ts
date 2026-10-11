@@ -1,7 +1,7 @@
 import {
   Application,
   Asset,
-  AudioStream,
+  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
@@ -34,7 +34,7 @@ class BossIntroCinematicScene extends Scene {
   private tapPrompt!: Text;
   private width = 0;
   private height = 0;
-  private readonly sequenceTweens: { stop(): void }[] = [];
+  private readonly sequenceTweens: Array<{ stop(): void }> = [];
 
   override async load(): Promise<void> {
     const app = this.app;
@@ -84,6 +84,7 @@ class BossIntroCinematicScene extends Scene {
 
   private readonly replay = (): void => {
     const app = this.app;
+
     if (app.audio.locked) {
       return;
     }
@@ -91,9 +92,11 @@ class BossIntroCinematicScene extends Scene {
     // Restart the sting from the top so the reveal beat lines up again.
     this.musicVoice.seek(0);
     this.musicVoice.volume = 0.2;
+
     if (this.musicVoice.paused) {
       this.musicVoice.resume();
     }
+
     this.playSequence();
     this.hud.setStatus('Replaying…');
   };
@@ -104,6 +107,7 @@ class BossIntroCinematicScene extends Scene {
     for (const tween of this.sequenceTweens) {
       tween.stop();
     }
+
     this.sequenceTweens.length = 0;
     this.view.reset(width * 0.42, height / 2, width, height);
     this.view.clearShake();
@@ -118,7 +122,7 @@ class BossIntroCinematicScene extends Scene {
     this.sequenceTweens.push(
       this.tweens
         .create(this.view.center)
-        .to({ x: width * 0.55, y: height / 2 }, 2.0)
+        .to({ x: width * 0.55, y: height / 2 }, 2)
         .start(),
     );
     // The boss looms larger as the camera arrives.
@@ -127,7 +131,7 @@ class BossIntroCinematicScene extends Scene {
     this.sequenceTweens.push(
       this.tweens
         .create(this.titleState)
-        .to({ count: titleText.length }, 1.0)
+        .to({ count: titleText.length }, 1)
         .delay(1.6)
         .onStart(() => {
           this.view.shake(18, Time.seconds(0.52), { frequency: 24, decay: true });
@@ -138,7 +142,7 @@ class BossIntroCinematicScene extends Scene {
         .start(),
     );
     // Music swells up under the reveal.
-    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start());
+    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2).start());
   };
 
   override draw(context: RenderingContext): void {
@@ -167,6 +171,7 @@ class BossIntroCinematicScene extends Scene {
     for (const tween of this.sequenceTweens) {
       tween.stop();
     }
+
     this.app.audio.onUnlock.remove(this.playSequence);
     this.app.input.onPointerDown.remove(this.replay);
     this.musicVoice?.stop();

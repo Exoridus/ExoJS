@@ -11,7 +11,9 @@ import { seconds } from '#core/units';
  * real driver behind it - what it asserts is which coroutines that driver is
  * allowed to step.
  */
-const createHarness = (state: () => SceneState): { app: Application; system: CoroutineSystem; coroutines: SceneCoroutines; frame: () => void } => {
+const createHarness = (
+  state: () => SceneState,
+): { app: Application; system: CoroutineSystem; coroutines: SceneCoroutines; frame: () => void } => {
   const system = new CoroutineSystem({ budget: seconds(1) });
   const app = { coroutines: system } as unknown as Application;
   const budget: FrameBudget = { timeRemaining: () => seconds(1) };

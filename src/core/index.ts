@@ -59,7 +59,11 @@ export type {
   WebGpuBackendConfig,
 } from '#core/application/ApplicationOptions';
 export { onAppInitialized } from '#core/application/devHooks';
-export type { PhasedSceneTransitionOptions, SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/scene/PhasedSceneTransition';
+export type {
+  PhasedSceneTransitionOptions,
+  SceneTransitionPhaseContext,
+  SceneTransitionPhaseRequirements,
+} from '#core/scene/PhasedSceneTransition';
 export { PhasedSceneTransition } from '#core/scene/PhasedSceneTransition';
 export { Scene } from '#core/scene/Scene';
 export { SceneAvailability } from '#core/scene/SceneAvailability';
@@ -110,7 +114,12 @@ export type {
 } from '#core/scene/sceneTypes';
 export { CrossFadeSceneTransition, type CrossFadeSceneTransitionOptions } from '#core/scene/transitions/CrossFadeSceneTransition';
 export { FadeSceneTransition, type FadeSceneTransitionOptions } from '#core/scene/transitions/FadeSceneTransition';
-export { type SlideDirection, type SlideMode, SlideSceneTransition, type SlideSceneTransitionOptions } from '#core/scene/transitions/SlideSceneTransition';
+export {
+  type SlideDirection,
+  type SlideMode,
+  SlideSceneTransition,
+  type SlideSceneTransitionOptions,
+} from '#core/scene/transitions/SlideSceneTransition';
 export type { DeserializeContext, NodeSerializer, SerializeContext } from '#core/serialization/NodeSerializer';
 export { Prefab } from '#core/serialization/Prefab';
 export type { SceneNodeConstructor } from '#core/serialization/SerializationRegistry';

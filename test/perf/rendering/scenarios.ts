@@ -39,8 +39,10 @@ const VIEW = { w: 1280, h: 720 };
 const spriteCounts = (profile: BenchProfile): number[] => (profile === 'quick' ? [1000] : [100, 1000, 10000, 50000]);
 const nineCounts = (profile: BenchProfile): number[] => (profile === 'quick' ? [100] : [10, 100, 1000]);
 const repeatCounts = (profile: BenchProfile): number[] => (profile === 'quick' ? [100] : [100, 1000, 5000]);
-const nineFills = (profile: BenchProfile): readonly RepeatMode[] => (profile === 'quick' ? ['stretch'] : ['stretch', 'repeat', 'mirror-repeat']);
-const tilemapMutations = (profile: BenchProfile): readonly TilemapMutation[] => (profile === 'quick' ? ['static'] : ['static', 'one-tile', 'pan']);
+const nineFills = (profile: BenchProfile): readonly RepeatMode[] =>
+  profile === 'quick' ? ['stretch'] : ['stretch', 'repeat', 'mirror-repeat'];
+const tilemapMutations = (profile: BenchProfile): readonly TilemapMutation[] =>
+  profile === 'quick' ? ['static'] : ['static', 'one-tile', 'pan'];
 const tilemapSizes = (profile: BenchProfile): Array<{ w: number; h: number; label: number }> =>
   profile === 'quick'
     ? [{ w: 32, h: 32, label: 1024 }]
@@ -85,6 +87,7 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
                 ? (): void => {
                     frame++;
                     const dx = frame % 2 === 0 ? 1 : -1;
+
                     for (const sprite of sprites) {
                       sprite.setPosition(sprite.position.x + dx, sprite.position.y);
                     }
@@ -107,7 +110,13 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
         tags: { count, textures: 1, blend: 'alternating', transforms: 'static' },
         build(): BuiltScene {
           const textures = makeTextures(1);
-          const { root } = buildSpriteScene({ count, textures, blendModes: [BlendModes.Normal, BlendModes.Additive], viewW: VIEW.w, viewH: VIEW.h });
+          const { root } = buildSpriteScene({
+            count,
+            textures,
+            blendModes: [BlendModes.Normal, BlendModes.Additive],
+            viewW: VIEW.w,
+            viewH: VIEW.h,
+          });
 
           return { root, teardown: () => root.destroy() };
         },
@@ -125,7 +134,17 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
           tags: { count, textures: textureCount, fill },
           build(): BuiltScene {
             const textures = makeTextures(textureCount);
-            const { root } = buildNineSliceScene({ count, textures, assign: 'cycle', slice: 16, width: 96, height: 96, fill, viewW: VIEW.w, viewH: VIEW.h });
+            const { root } = buildNineSliceScene({
+              count,
+              textures,
+              assign: 'cycle',
+              slice: 16,
+              width: 96,
+              height: 96,
+              fill,
+              viewW: VIEW.w,
+              viewH: VIEW.h,
+            });
 
             return { root, teardown: () => root.destroy() };
           },
@@ -189,6 +208,7 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
             harness.view.reset(scene.pixelWidth / 2, scene.pixelHeight / 2, scene.pixelWidth, scene.pixelHeight);
 
             let frame = 0;
+
             const beforeFrame =
               mutation === 'static'
                 ? undefined

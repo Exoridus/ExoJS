@@ -245,7 +245,12 @@ describe('Text atlas acquisition', () => {
     text._setSurfacePixelRatio(3);
     text.syncDirty();
 
-    expect(getAtlas).toHaveBeenCalledWith({ family: 'Arial', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }, 'color', 8, 3);
+    expect(getAtlas).toHaveBeenCalledWith(
+      { family: 'Arial', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' },
+      'color',
+      8,
+      3,
+    );
   });
 
   // A ratio nobody can rasterize into (an unsized canvas, a stand-in backend)

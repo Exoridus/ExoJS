@@ -98,7 +98,10 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   // nine-slice renderers): resolving `backend.getTextureBinding` is what
   // syncs a dirty/mutated texture's content to the GPU, so it must run every
   // flush/replay even when the bind group itself is served from cache.
-  private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler; premultiply: boolean }>();
+  private _textureBindGroups = new WeakMap<
+    Texture | RenderTexture,
+    { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler; premultiply: boolean }
+  >();
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
@@ -195,7 +198,11 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._instanceBuffer?.destroy();
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();
-    for (const buffer of this._sampleAlphaBuffers) buffer.destroy();
+
+    for (const buffer of this._sampleAlphaBuffers) {
+      buffer.destroy();
+    }
+
     this._sampleAlphaBuffers.length = 0;
     this._pipelines.clear();
     this._instanceBuffer = null;
@@ -204,7 +211,10 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._transformStorageBuffer = null;
     // Bind groups belong to the (possibly lost) device; drop the cache so
     // reconnect rebuilds them against the fresh device.
-    this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler; premultiply: boolean }>();
+    this._textureBindGroups = new WeakMap<
+      Texture | RenderTexture,
+      { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler; premultiply: boolean }
+    >();
     this._uniformBuffer = null;
     this._pipelineLayout = null;
     this._textureBindGroupLayout = null;
@@ -256,7 +266,14 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
   }
 
-  private _renderPage(backend: WebGpuBackend, texture: Texture, quads: readonly TileQuad[], blendMode: BlendModes, tintRgba: number, nodeIndex: number): void {
+  private _renderPage(
+    backend: WebGpuBackend,
+    texture: Texture,
+    quads: readonly TileQuad[],
+    blendMode: BlendModes,
+    tintRgba: number,
+    nodeIndex: number,
+  ): void {
     if (quads.length === 0) {
       return;
     }
@@ -405,7 +422,9 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // ending (submitting) the pass first.
     if (
       (ownDrawsInPass && (projectionChanged || (willDraw && targetInstanceBytes > this._instanceBufferCapacity))) ||
-      (willDraw && coordinator.passHasDraws && (backend.textureUploadWouldMutate(texture) || backend.transformStorageWouldGrow(this._maxNodeIndex + 1)))
+      (willDraw &&
+        coordinator.passHasDraws &&
+        (backend.textureUploadWouldMutate(texture) || backend.transformStorageWouldGrow(this._maxNodeIndex + 1)))
     ) {
       coordinator.endPass();
     }
@@ -425,7 +444,13 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       this._writtenViewUpdateId = view.updateId;
       this._hasWrittenProjection = true;
 
-      device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
+      device.queue.writeBuffer(
+        uniformBuffer,
+        0,
+        this._projectionData.buffer,
+        this._projectionData.byteOffset,
+        this._projectionData.byteLength,
+      );
     }
 
     // A flush whose quads are entirely clipped away by the mask draws nothing,
@@ -477,7 +502,18 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // already poisoned the capture in render().
     if (this._quadIndex > 0 && backend._retainedCaptureActive && blendMode !== null && texture !== null) {
       this._recordTextures[0] = texture;
-      backend.recordRetainedBatch(this, this._instanceData, flushBytes, this._quadIndex, blendMode, this._recordTextures, 1, null, null, this._batchNodeCount);
+      backend.recordRetainedBatch(
+        this,
+        this._instanceData,
+        flushBytes,
+        this._quadIndex,
+        blendMode,
+        this._recordTextures,
+        1,
+        null,
+        null,
+        this._batchNodeCount,
+      );
     }
 
     // The pass is deliberately left OPEN. It ends at genuine boundaries only
@@ -701,7 +737,10 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, false);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
-    if (!nativeCompatible) bundle.nativeReplay.skipPass();
+
+    if (!nativeCompatible) {
+      bundle.nativeReplay.skipPass();
+    }
 
     if (
       !nativeCompatible ||

@@ -38,12 +38,18 @@ export class ReverbEffect extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('ReverbEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('ReverbEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('ReverbEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('ReverbEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -54,6 +60,7 @@ export class ReverbEffect extends AudioEffect {
 
   public set durationSeconds(value: number) {
     this._duration = Math.max(0.1, Math.min(5, value));
+
     if (this._setup) {
       this._setup.convolver.buffer = this._generateImpulseResponse(this._setup.convolver.context as AudioContext);
     }
@@ -66,6 +73,7 @@ export class ReverbEffect extends AudioEffect {
 
   public set decay(value: number) {
     this._decay = Math.max(0.5, Math.min(10, value));
+
     if (this._setup) {
       this._setup.convolver.buffer = this._generateImpulseResponse(this._setup.convolver.context as AudioContext);
     }
@@ -78,6 +86,7 @@ export class ReverbEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -87,6 +96,7 @@ export class ReverbEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.convolver.disconnect();
@@ -100,14 +110,17 @@ export class ReverbEffect extends AudioEffect {
   private _generateImpulseResponse(ctx: AudioContext): AudioBuffer {
     const length = Math.floor(ctx.sampleRate * this._duration);
     const buffer = ctx.createBuffer(2, length, ctx.sampleRate);
+
     for (let channel = 0; channel < 2; channel++) {
       const data = buffer.getChannelData(channel);
+
       for (let i = 0; i < length; i++) {
         const t = i / length;
         const decayFactor = Math.pow(1 - t, this._decay);
         data[i] = (Math.random() * 2 - 1) * decayFactor;
       }
     }
+
     return buffer;
   }
 

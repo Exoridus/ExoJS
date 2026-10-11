@@ -152,13 +152,23 @@ describe('SceneNavigationTransaction', () => {
 
   describe('beginOutgoingTeardown()', () => {
     test('with null, resolves immediately without tearing anything down', () => {
-      const transaction = new SceneNavigationTransaction(new Map(), new Signal<[Scene]>(), new Signal<[SceneState, SceneState, Scene]>(), vi.fn());
+      const transaction = new SceneNavigationTransaction(
+        new Map(),
+        new Signal<[Scene]>(),
+        new Signal<[SceneState, SceneState, Scene]>(),
+        vi.fn(),
+      );
 
       return expect(transaction.beginOutgoingTeardown(null)).resolves.toBeUndefined();
     });
 
     test('with a scope, starts its permanent teardown and returns the settling promise', async () => {
-      const transaction = new SceneNavigationTransaction(new Map(), new Signal<[Scene]>(), new Signal<[SceneState, SceneState, Scene]>(), vi.fn());
+      const transaction = new SceneNavigationTransaction(
+        new Map(),
+        new Signal<[Scene]>(),
+        new Signal<[SceneState, SceneState, Scene]>(),
+        vi.fn(),
+      );
       const scope = makeFakeScope(SceneState.Destroying);
 
       const teardown = transaction.beginOutgoingTeardown(scope);

@@ -5,7 +5,14 @@ import type { Browser } from 'playwright';
 import { chromium, webkit } from 'playwright';
 
 import type { ClockReport } from '../shared/clock';
-import type { BaseProvenance, LibraryProvenance, PlatformDeclaration, PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
+import type {
+  BaseProvenance,
+  LibraryProvenance,
+  PlatformDeclaration,
+  PlatformVersionStamp,
+  PrereleaseStamp,
+  RenderingBrowser,
+} from '../shared/provenance';
 import {
   classifyPrerelease,
   declaredPrereleaseOf,
@@ -329,7 +336,10 @@ export interface WebGpuIdentity {
  * caller can emit `unavailable` cells instead of measuring a software rasterizer
  * and passing it off as a GPU number.
  */
-export const readWebGpuAdapter = async (page: import('playwright').Page, browser: RenderingBrowser = DEFAULT_RENDERING_BROWSER): Promise<WebGpuIdentity> => {
+export const readWebGpuAdapter = async (
+  page: import('playwright').Page,
+  browser: RenderingBrowser = DEFAULT_RENDERING_BROWSER,
+): Promise<WebGpuIdentity> => {
   const probe = await page.evaluate(async () => {
     const gpu = (navigator as Navigator & { gpu?: GPU }).gpu;
 
@@ -557,6 +567,7 @@ const runBackend = async (options: {
 
   const timestamp = new Date().toISOString();
   const results: CellResult[] = [];
+
   const collect = (result: CellResult): void => {
     results.push(result);
     onCellResult(result);
@@ -812,7 +823,9 @@ export const profileCell = async (options: {
   const browserName = options.browser ?? DEFAULT_RENDERING_BROWSER;
 
   if (browserName !== 'chromium') {
-    throw new Error(`CPU profiling needs the V8 sampler, which only Chromium exposes; '${browserName}' cannot be profiled. Drop --browser to profile.`);
+    throw new Error(
+      `CPU profiling needs the V8 sampler, which only Chromium exposes; '${browserName}' cannot be profiled. Drop --browser to profile.`,
+    );
   }
 
   const frames = options.frames ?? 200;
@@ -992,7 +1005,9 @@ export const resolveMatrixCells = (options: MatrixCellSelection): CellSpec[] => 
   const filtered = options.filter ? applyFilter(planned, options.filter) : planned;
   const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
 
-  return options.timedFramesOverride === undefined ? selected : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
+  return options.timedFramesOverride === undefined
+    ? selected
+    : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
 };
 
 export const runMatrix = async (options: {

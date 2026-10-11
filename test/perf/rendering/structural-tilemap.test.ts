@@ -9,7 +9,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { createWebGl2Harness, measureFrame, type WebGl2Harness } from './harness';
-import { buildTilemapScene, makeTilesets, readTilemapRebuilds, resetTilemapRebuilds, type TilemapScene, wireTilemapRenderers } from './tilemapFixtures';
+import {
+  buildTilemapScene,
+  makeTilesets,
+  readTilemapRebuilds,
+  resetTilemapRebuilds,
+  type TilemapScene,
+  wireTilemapRenderers,
+} from './tilemapFixtures';
 
 const withTilemapHarness = (fn: (harness: WebGl2Harness) => void): void => {
   const harness = createWebGl2Harness();
@@ -38,7 +45,12 @@ const measureWithRebuilds = (
   resetTilemapRebuilds();
   const metrics = measureFrame(harness, scene.node, beforeFrame);
 
-  return { drawCalls: metrics.drawCalls, instances: metrics.instances, visibleNodes: metrics.visibleNodes, rebuilds: readTilemapRebuilds() };
+  return {
+    drawCalls: metrics.drawCalls,
+    instances: metrics.instances,
+    visibleNodes: metrics.visibleNodes,
+    rebuilds: readTilemapRebuilds(),
+  };
 };
 
 describe('structural — Tilemap', () => {
@@ -65,7 +77,13 @@ describe('structural — Tilemap', () => {
   it('four interleaved tilesets in one chunk → one page (draw) per tileset', () => {
     withTilemapHarness(harness => {
       const tilesets = makeTilesets(4);
-      const scene = buildTilemapScene({ widthTiles: 32, heightTiles: 32, chunkSize: 32, tilesets, tilesetAssign: (tx, ty) => (tx + ty) % 4 });
+      const scene = buildTilemapScene({
+        widthTiles: 32,
+        heightTiles: 32,
+        chunkSize: 32,
+        tilesets,
+        tilesetAssign: (tx, ty) => (tx + ty) % 4,
+      });
       fitView(harness, scene);
 
       const result = measureWithRebuilds(harness, scene);
@@ -113,7 +131,11 @@ describe('structural — Tilemap', () => {
       let frame = 0;
       const result = measureWithRebuilds(harness, scene, () => {
         frame++;
-        scene.layers[0].setTileAt(0, 0, { tileset: tilesets[0], localTileId: 0, transform: { flipX: frame % 2 === 0, flipY: false, diagonal: false } });
+        scene.layers[0].setTileAt(0, 0, {
+          tileset: tilesets[0],
+          localTileId: 0,
+          transform: { flipX: frame % 2 === 0, flipY: false, diagonal: false },
+        });
       });
 
       expect(result.rebuilds).toBe(1);

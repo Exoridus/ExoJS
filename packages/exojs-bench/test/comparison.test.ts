@@ -61,7 +61,14 @@ const physicsCell = (options: {
   contactCount?: number;
   rayHits?: number;
 }): PhysicsCellResult => ({
-  spec: { engine: options.engine, config: 'default', archetype: options.archetype, bodyCount: options.bodyCount, warmupSteps: 10, timedSteps: 60 },
+  spec: {
+    engine: options.engine,
+    config: 'default',
+    archetype: options.archetype,
+    bodyCount: options.bodyCount,
+    warmupSteps: 10,
+    timedSteps: 60,
+  },
   stepMsMedian: options.stepMsMedian,
   stepMsP95: options.stepMsMedian * 1.2,
   stepsPerSample: 1,
@@ -209,7 +216,10 @@ describe('chooseHeadlineCount', () => {
 
 describe('renderingMechanism', () => {
   test('attributes a draw-call gap when the counters differ by half again', () => {
-    const mechanism = renderingMechanism({ drawCalls: 10, textureBinds: 5, bufferUploads: 5 }, { drawCalls: 100, textureBinds: 5, bufferUploads: 5 });
+    const mechanism = renderingMechanism(
+      { drawCalls: 10, textureBinds: 5, bufferUploads: 5 },
+      { drawCalls: 100, textureBinds: 5, bufferUploads: 5 },
+    );
 
     expect(mechanism).toContain('ExoJS issues fewer draw calls (10 vs 100 per frame)');
   });
@@ -218,26 +228,28 @@ describe('renderingMechanism', () => {
     // 3 vs 2 draw calls cannot account for a millisecond of CPU time on either
     // arm; offering it as the mechanism would be a coincidence that passed a
     // ratio test.
-    expect(renderingMechanism({ drawCalls: 3, textureBinds: 1, bufferUploads: 0 }, { drawCalls: 2, textureBinds: 1, bufferUploads: 1 })).toContain(
-      'the difference is CPU-side',
-    );
+    expect(
+      renderingMechanism({ drawCalls: 3, textureBinds: 1, bufferUploads: 0 }, { drawCalls: 2, textureBinds: 1, bufferUploads: 1 }),
+    ).toContain('the difference is CPU-side');
   });
 
   test('names the competitor when it is the one issuing fewer', () => {
-    expect(renderingMechanism({ drawCalls: 100, textureBinds: 1, bufferUploads: 1 }, { drawCalls: 10, textureBinds: 1, bufferUploads: 1 })).toContain(
-      'competitor issues fewer draw calls',
-    );
+    expect(
+      renderingMechanism({ drawCalls: 100, textureBinds: 1, bufferUploads: 1 }, { drawCalls: 10, textureBinds: 1, bufferUploads: 1 }),
+    ).toContain('competitor issues fewer draw calls');
   });
 
   test('reports identical structure as a CPU-side difference rather than inventing a cause', () => {
-    expect(renderingMechanism({ drawCalls: 8, textureBinds: 3, bufferUploads: 2 }, { drawCalls: 8, textureBinds: 3, bufferUploads: 2 })).toContain(
-      'the difference is CPU-side',
-    );
+    expect(
+      renderingMechanism({ drawCalls: 8, textureBinds: 3, bufferUploads: 2 }, { drawCalls: 8, textureBinds: 3, bufferUploads: 2 }),
+    ).toContain('the difference is CPU-side');
   });
 
   test('yields no mechanism when an arm reported no counters', () => {
     expect(renderingMechanism(null, { drawCalls: 8, textureBinds: 1, bufferUploads: 1 })).toBeNull();
-    expect(renderingMechanism({ drawCalls: 0, textureBinds: 0, bufferUploads: 0 }, { drawCalls: 0, textureBinds: 0, bufferUploads: 0 })).toBeNull();
+    expect(
+      renderingMechanism({ drawCalls: 0, textureBinds: 0, bufferUploads: 0 }, { drawCalls: 0, textureBinds: 0, bufferUploads: 0 }),
+    ).toBeNull();
   });
 });
 
@@ -314,7 +326,10 @@ describe('buildRenderingComparison', () => {
     const coarse: ClockReport = { resolutionMs: 0.5, crossOriginIsolated: false };
     const [block] = buildRenderingComparison([
       cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 1 }),
-      { ...cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 40, drawCalls: 50 }), clock: coarse },
+      {
+        ...cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 40, drawCalls: 50 }),
+        clock: coarse,
+      },
     ]);
     const row = block!.sections.flatMap(section => section.rows).find(entry => entry.archetype === 'static-heavy')!;
 
@@ -422,7 +437,9 @@ describe('buildPhysicsComparison', () => {
   test('drops only the rung an arm failed at, leaving every other rung of every archetype', () => {
     const ladder = ladderOf('box-stack');
     const results = [...sweep('box-stack', 1, 3), ...sweep('joints', 1, 3)].map(result =>
-      result.spec.archetype === 'box-stack' && result.spec.bodyCount === ladder.at(-1) ? { ...result, status: 'exceeded' as const } : result,
+      result.spec.archetype === 'box-stack' && result.spec.bodyCount === ladder.at(-1)
+        ? { ...result, status: 'exceeded' as const }
+        : result,
     );
     const section = buildPhysicsComparison(results);
     const counts = (archetype: string): number[] => section.rows.filter(row => row.archetype === archetype).map(row => row.count);
@@ -529,12 +546,17 @@ describe('aggregateRenderingRuns', () => {
   });
 
   test('rejects runs measured at different engine versions', () => {
-    expect(() => aggregateRenderingRuns([run(2), renderingRun(run(2).results, { engineVersion: '0.16.0' })])).toThrow(IncomparableRunsError);
+    expect(() => aggregateRenderingRuns([run(2), renderingRun(run(2).results, { engineVersion: '0.16.0' })])).toThrow(
+      IncomparableRunsError,
+    );
   });
 
   test('rejects runs measured against different library versions', () => {
     expect(() =>
-      aggregateRenderingRuns([run(2), renderingRun(run(2).results, { libraries: [{ name: 'pixi.js', version: '8.20.0', resolvedFrom: '' }] })]),
+      aggregateRenderingRuns([
+        run(2),
+        renderingRun(run(2).results, { libraries: [{ name: 'pixi.js', version: '8.20.0', resolvedFrom: '' }] }),
+      ]),
     ).toThrow(/library arms/);
   });
 
@@ -545,7 +567,9 @@ describe('aggregateRenderingRuns', () => {
   });
 
   test('rejects runs measured on different GPUs', () => {
-    const elsewhere = renderingRun(run(2).results, { stamp: { adapter: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)' } });
+    const elsewhere = renderingRun(run(2).results, {
+      stamp: { adapter: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)' },
+    });
 
     expect(() => aggregateRenderingRuns([run(2), run(2), elsewhere])).toThrow(/different machine or browser/);
   });
@@ -557,7 +581,9 @@ describe('aggregateRenderingRuns', () => {
   });
 
   test('rejects a pre-release run pooled with a shipping one, so half a number cannot pass as stable', () => {
-    const onBeta = renderingRun(run(2).results, { stamp: { prerelease: { value: true, source: 'declared', evidence: 'macOS 26.0 beta' } } });
+    const onBeta = renderingRun(run(2).results, {
+      stamp: { prerelease: { value: true, source: 'declared', evidence: 'macOS 26.0 beta' } },
+    });
 
     expect(() => aggregateRenderingRuns([run(2), onBeta])).toThrow(/different machine or browser/);
   });
@@ -681,7 +707,14 @@ describe('renderComparison', () => {
         [2, 3, 10].map(competitorMs =>
           renderingRun([
             cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
-            cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+            cell({
+              engine: 'pixi',
+              config: 'default',
+              archetype: 'static-heavy',
+              nodeCount: 1_000,
+              cpuMsMedian: competitorMs,
+              drawCalls: 40,
+            }),
           ]),
         ),
       ),
@@ -697,7 +730,14 @@ describe('renderComparison', () => {
         [1.05, 2, 2].map(competitorMs =>
           renderingRun([
             cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
-            cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+            cell({
+              engine: 'pixi',
+              config: 'default',
+              archetype: 'static-heavy',
+              nodeCount: 1_000,
+              cpuMsMedian: competitorMs,
+              drawCalls: 40,
+            }),
           ]),
         ),
       ),

@@ -60,12 +60,25 @@ export class AudioInput implements Destroyable {
     }
 
     const constraints: MediaTrackConstraints = {};
-    if (options.deviceId !== undefined) constraints.deviceId = options.deviceId;
-    if (options.echoCancellation !== undefined) constraints.echoCancellation = options.echoCancellation;
-    if (options.noiseSuppression !== undefined) constraints.noiseSuppression = options.noiseSuppression;
-    if (options.autoGainControl !== undefined) constraints.autoGainControl = options.autoGainControl;
+
+    if (options.deviceId !== undefined) {
+      constraints.deviceId = options.deviceId;
+    }
+
+    if (options.echoCancellation !== undefined) {
+      constraints.echoCancellation = options.echoCancellation;
+    }
+
+    if (options.noiseSuppression !== undefined) {
+      constraints.noiseSuppression = options.noiseSuppression;
+    }
+
+    if (options.autoGainControl !== undefined) {
+      constraints.autoGainControl = options.autoGainControl;
+    }
 
     const stream = await navigator.mediaDevices.getUserMedia({ audio: Object.keys(constraints).length === 0 || constraints });
+
     return new AudioInput(stream);
   }
 

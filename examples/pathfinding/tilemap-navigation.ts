@@ -11,7 +11,15 @@ import {
   TextureRegion,
 } from '@codexo/exojs';
 import { GridSpace, Pathfinder, type PathResult } from '@codexo/exojs-pathfinding';
-import { type ResolvedTile, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, type TileMapView, TileSet } from '@codexo/exojs-tilemap';
+import {
+  type ResolvedTile,
+  TILE_TRANSFORM_IDENTITY,
+  TileLayer,
+  TileMap,
+  tilemapExtension,
+  type TileMapView,
+  TileSet,
+} from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Pathfinding over a tilemap without a package dependency in either direction.
@@ -53,6 +61,7 @@ const tileAt = (x: number, y: number): number => {
   if (isBorder(x, y) || (x % 6 === 3 && y % 4 !== 2)) {
     return WALL_TILE;
   }
+
   if (y >= 4 && y <= 5 && x > 1 && x < COLUMNS - 2) {
     return ROUGH_TILE;
   }
@@ -96,7 +105,15 @@ class TilemapNavigationScene extends Scene {
       columns: 17,
     });
 
-    this.layer = new TileLayer({ id: 1, name: 'ground', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset] });
+    this.layer = new TileLayer({
+      id: 1,
+      name: 'ground',
+      width: COLUMNS,
+      height: ROWS,
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [tileset],
+    });
 
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLUMNS; x++) {
@@ -104,7 +121,15 @@ class TilemapNavigationScene extends Scene {
       }
     }
 
-    const map = new TileMap({ name: 'arena', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset], layers: [this.layer] });
+    const map = new TileMap({
+      name: 'arena',
+      width: COLUMNS,
+      height: ROWS,
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [tileset],
+      layers: [this.layer],
+    });
 
     this.mapView = map.createView({ bands: { ground: ['ground'] } });
     this.worldRoot = new Container();
@@ -216,6 +241,7 @@ class TilemapNavigationScene extends Scene {
   private readonly onTap = (pointer: { x: number; y: number }): void => {
     const x = Math.floor(pointer.x / TILE);
     const y = Math.floor(pointer.y / TILE);
+
     if (x < 0 || x >= COLUMNS || y < 0 || y >= ROWS) {
       return;
     }
@@ -224,6 +250,7 @@ class TilemapNavigationScene extends Scene {
       if (isBorder(x, y)) {
         return;
       }
+
       const tile = this.layer.getTileAt(x, y);
       const blocked = tile?.localTileId === WALL_TILE;
       const tileset = this.layer.tilesets[0]!;
@@ -233,16 +260,25 @@ class TilemapNavigationScene extends Scene {
       if (this.grid.nodeAt(x, y) < 0) {
         return;
       }
+
       this.goal = { x, y };
     }
+
     this.replan();
   };
 
   private replan(): void {
-    this.result = this.pathfinder.findPathBetween(this.grid, this.agent.x, this.agent.y, (this.goal.x + 0.5) * TILE, (this.goal.y + 0.5) * TILE, {
-      smooth: true,
-      snapToNearest: true,
-    });
+    this.result = this.pathfinder.findPathBetween(
+      this.grid,
+      this.agent.x,
+      this.agent.y,
+      (this.goal.x + 0.5) * TILE,
+      (this.goal.y + 0.5) * TILE,
+      {
+        smooth: true,
+        snapToNearest: true,
+      },
+    );
     this.waypoint = 0;
 
     const { status, cost, expandedNodes } = this.result;

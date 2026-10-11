@@ -114,12 +114,18 @@ export class TileMap {
 
   /** Pixel width, or `undefined` if unbounded. */
   public get pixelWidth(): number | undefined {
-    return this.width === undefined || this.height === undefined ? undefined : this.projection.getBounds(0, 0, this.width, this.height).width;
+    return this.width === undefined || this.height === undefined
+      ? undefined
+      : this.projection.getBounds(0, 0, this.width, this.height).width;
   }
+
   /** Pixel height, or `undefined` if unbounded. */
   public get pixelHeight(): number | undefined {
-    return this.width === undefined || this.height === undefined ? undefined : this.projection.getBounds(0, 0, this.width, this.height).height;
+    return this.width === undefined || this.height === undefined
+      ? undefined
+      : this.projection.getBounds(0, 0, this.width, this.height).height;
   }
+
   /** `true` if this map has a fixed width/height; `false` if unbounded. */
   public get bounded(): boolean {
     return this.width !== undefined && this.height !== undefined;
@@ -169,9 +175,11 @@ export class TileMap {
     this.tileWidth = options.tileWidth;
     this.tileHeight = options.tileHeight;
     this.projection = options.projection ?? new TileProjection({ tileWidth: options.tileWidth, tileHeight: options.tileHeight });
+
     if (this.projection.tileWidth !== this.tileWidth || this.projection.tileHeight !== this.tileHeight) {
       throw new Error('Projection tile dimensions must match the layer or map.');
     }
+
     this.chunkWidth = chunkWidth;
     this.chunkHeight = chunkHeight;
     this.class = options.class ?? '';
@@ -220,22 +228,28 @@ export class TileMap {
 
     for (const id of tileIds) {
       if (imageIds.has(id)) {
-        throw new Error(`Layer ID ${id} exists as both a tile layer and an image layer in map "${this.name}"; documentOrder cannot disambiguate them.`);
+        throw new Error(
+          `Layer ID ${id} exists as both a tile layer and an image layer in map "${this.name}"; documentOrder cannot disambiguate them.`,
+        );
       }
     }
 
     const seen = new Set<number>();
+
     for (const id of documentOrder) {
       if (!tileIds.has(id) && !imageIds.has(id)) {
         throw new Error(`documentOrder references unknown layer ID ${id} in map "${this.name}".`);
       }
+
       if (seen.has(id)) {
         throw new Error(`documentOrder lists layer ID ${id} more than once in map "${this.name}".`);
       }
+
       seen.add(id);
     }
 
     const totalLayers = tileIds.size + imageIds.size;
+
     if (seen.size !== totalLayers) {
       for (const id of [...tileIds, ...imageIds]) {
         if (!seen.has(id)) {
@@ -252,6 +266,7 @@ export class TileMap {
     // case throws instead of silently dropping an instance from
     // renderableLayers.
     const instanceCount = this._layers.length + this._imageLayers.length;
+
     if (documentOrder.length !== instanceCount) {
       throw new Error(
         `documentOrder has ${documentOrder.length} entries but map "${this.name}" has ${instanceCount} tile/image layer instances; check for a duplicate image-layer ID.`,
@@ -286,9 +301,11 @@ export class TileMap {
    */
   public addTileset(tileset: TileSet): void {
     this._checkDestroyed();
+
     if (this._tilesets.some(ts => ts.name === tileset.name)) {
       throw new Error(`Tileset "${tileset.name}" already exists in map "${this.name}".`);
     }
+
     this._tilesets.push(tileset);
     this._revision++;
   }
@@ -311,6 +328,7 @@ export class TileMap {
     if (this._layerById.has(layer.id)) {
       throw new Error(`Layer ID ${layer.id} already exists in map "${this.name}".`);
     }
+
     this._layerById.set(layer.id, layer);
     this._layers.push(layer);
   }
@@ -349,13 +367,22 @@ export class TileMap {
   public removeLayer(id: number): boolean {
     this._checkDestroyed();
     const layer = this._layerById.get(id);
-    if (!layer) return false;
+
+    if (!layer) {
+      return false;
+    }
+
     this._layers.splice(this._layers.indexOf(layer), 1);
     this._layerById.delete(id);
     const orderIndex = this._documentOrder.indexOf(layer);
-    if (orderIndex !== -1) this._documentOrder.splice(orderIndex, 1);
+
+    if (orderIndex !== -1) {
+      this._documentOrder.splice(orderIndex, 1);
+    }
+
     layer.destroy();
     this._revision++;
+
     return true;
   }
 
@@ -407,9 +434,14 @@ export class TileMap {
   public removeObjectLayer(id: number): boolean {
     this._checkDestroyed();
     const index = this._objectLayers.findIndex(layer => layer.id === id);
-    if (index === -1) return false;
+
+    if (index === -1) {
+      return false;
+    }
+
     this._objectLayers.splice(index, 1);
     this._revision++;
+
     return true;
   }
 
@@ -439,6 +471,7 @@ export class TileMap {
     if (this._imageLayers.some(existing => existing.id === layer.id)) {
       throw new Error(`Image layer ID ${layer.id} already exists in map "${this.name}".`);
     }
+
     this._imageLayers.push(layer);
   }
 
@@ -464,11 +497,20 @@ export class TileMap {
   public removeImageLayer(id: number): boolean {
     this._checkDestroyed();
     const layer = this._imageLayers.find(l => l.id === id);
-    if (!layer) return false;
+
+    if (!layer) {
+      return false;
+    }
+
     this._imageLayers.splice(this._imageLayers.indexOf(layer), 1);
     const orderIndex = this._documentOrder.indexOf(layer);
-    if (orderIndex !== -1) this._documentOrder.splice(orderIndex, 1);
+
+    if (orderIndex !== -1) {
+      this._documentOrder.splice(orderIndex, 1);
+    }
+
     this._revision++;
+
     return true;
   }
 
@@ -515,7 +557,11 @@ export class TileMap {
    */
   public getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null {
     const layer = this._layerById.get(layerId);
-    if (!layer) return null;
+
+    if (!layer) {
+      return null;
+    }
+
     return layer.getTileAt(tx, ty);
   }
 
@@ -527,7 +573,11 @@ export class TileMap {
    */
   public setTileAt(layerId: number, tx: number, ty: number, tile: ResolvedTile): void {
     const layer = this._layerById.get(layerId);
-    if (!layer) throw new Error(`Layer ${layerId} not found in map "${this.name}".`);
+
+    if (!layer) {
+      throw new Error(`Layer ${layerId} not found in map "${this.name}".`);
+    }
+
     layer.setTileAt(tx, ty, tile);
   }
 
@@ -538,7 +588,11 @@ export class TileMap {
    */
   public clearTileAt(layerId: number, tx: number, ty: number): void {
     const layer = this._layerById.get(layerId);
-    if (!layer) throw new Error(`Layer ${layerId} not found in map "${this.name}".`);
+
+    if (!layer) {
+      throw new Error(`Layer ${layerId} not found in map "${this.name}".`);
+    }
+
     layer.clearTileAt(tx, ty);
   }
 
@@ -590,11 +644,16 @@ export class TileMap {
    * any SceneNodes (those do not exist yet in this slice).
    */
   public destroy(): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
+
     this._destroyed = true;
+
     for (const layer of this._layers) {
       layer.destroy();
     }
+
     this._layers.length = 0;
     this._layerById.clear();
     this._objectLayers.length = 0;

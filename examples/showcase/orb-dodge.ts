@@ -40,7 +40,12 @@ class PlayScene extends Scene {
   private py = CANVAS_HEIGHT / 2;
   private readonly actions = new ActionMap({
     move: new VectorAction([
-      { up: [Keyboard.W, Keyboard.Up], down: [Keyboard.S, Keyboard.Down], left: [Keyboard.A, Keyboard.Left], right: [Keyboard.D, Keyboard.Right] },
+      {
+        up: [Keyboard.W, Keyboard.Up],
+        down: [Keyboard.S, Keyboard.Down],
+        left: [Keyboard.A, Keyboard.Left],
+        right: [Keyboard.D, Keyboard.Right],
+      },
       { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
     ]),
   });
@@ -82,6 +87,7 @@ class PlayScene extends Scene {
     const side = Math.floor(Math.random() * 4);
     let ox: number;
     let oy: number;
+
     switch (side) {
       case 0:
         ox = Math.random() * CANVAS_WIDTH;
@@ -100,6 +106,7 @@ class PlayScene extends Scene {
         oy = Math.random() * CANVAS_HEIGHT;
         break;
     }
+
     const tx = CANVAS_WIDTH / 2 + (Math.random() - 0.5) * (CANVAS_WIDTH * 0.6);
     const ty = CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * (CANVAS_HEIGHT * 0.6);
     const dist = Math.hypot(tx - ox, ty - oy) || 1;
@@ -107,11 +114,13 @@ class PlayScene extends Scene {
 
     const gfx = new Graphics();
     gfx.fillColor = danger ? new Color(255, 80, 80) : new Color(80, 220, 120);
+
     if (danger) {
       gfx.drawStar(0, 0, 4, ORB_RADIUS * 1.25, ORB_RADIUS * 0.68, Math.PI / 4);
     } else {
       gfx.drawCircle(0, 0, ORB_RADIUS);
     }
+
     gfx.setPosition(ox, oy);
     this.world.addChild(gfx);
     this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
@@ -131,10 +140,12 @@ class PlayScene extends Scene {
 
     const { x, y } = this.actions.move.value;
     const mag = Math.max(1, Math.hypot(x, y));
+
     if (x !== 0 || y !== 0) {
       this.px += (x / mag) * PLAYER_SPEED * delta;
       this.py += (y / mag) * PLAYER_SPEED * delta;
     }
+
     this.px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this.px));
     this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));
     this.player.setPosition(this.px, this.py);
@@ -162,17 +173,21 @@ class PlayScene extends Scene {
       }
 
       const dist = Math.hypot(ox - this.px, oy - this.py);
+
       if (dist < PLAYER_RADIUS + ORB_RADIUS) {
         this.world.removeChild(orb.gfx);
         orb.gfx.destroy();
+
         if (orb.danger) {
           for (const o of survived) {
             this.world.removeChild(o.gfx);
             o.gfx.destroy();
           }
+
           gameEnded = true;
           continue;
         }
+
         this.score++;
         this.scoreText.text = `Score: ${this.score}`;
         continue;
@@ -185,6 +200,7 @@ class PlayScene extends Scene {
 
     if (gameEnded) {
       void app.scenes.change(GameOverScene, { data: { score: this.score, time: this.elapsed } });
+
       return;
     }
 
@@ -206,6 +222,7 @@ class PlayScene extends Scene {
     for (const orb of this.orbs) {
       orb.gfx.destroy();
     }
+
     this.world?.destroy();
     super.destroy();
   }
@@ -253,6 +270,7 @@ class GameOverScene extends Scene<GameOverData> {
     const restart = (): void => {
       void app.scenes.change(PlayScene);
     };
+
     this.inputs.onTrigger(Keyboard.Space, restart);
     this.inputs.onTrigger(Keyboard.R, restart);
   }

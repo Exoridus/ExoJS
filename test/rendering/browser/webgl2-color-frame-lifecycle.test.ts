@@ -153,7 +153,10 @@ describe('WebGL2 working-frame multisampling', () => {
       const capabilities = backend.getColorFormatCapabilities(TextureFormat.Rgba8);
       const gl = backend.context;
       const reported = Array.from(
-        new Set([1, ...Array.from(gl.getInternalformatParameter(gl.RENDERBUFFER, gl.RGBA8, gl.SAMPLES) as Int32Array).filter(count => count > 0)]),
+        new Set([
+          1,
+          ...Array.from(gl.getInternalformatParameter(gl.RENDERBUFFER, gl.RGBA8, gl.SAMPLES) as Int32Array).filter(count => count > 0),
+        ]),
       ).sort((a, b) => a - b);
 
       // Answered by the driver, not by a constant: whatever this context

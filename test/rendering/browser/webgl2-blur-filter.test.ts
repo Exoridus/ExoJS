@@ -55,7 +55,12 @@ describe('BlurFilter kernel shape (WebGL2)', () => {
 
   test('the kernel is symmetric on both axes and both diagonals', async () => {
     await withScene(blur, pixel => {
-      const corners = [pixel(OUTSIDE_HIGH, OUTSIDE_HIGH), pixel(OUTSIDE_LOW, OUTSIDE_HIGH), pixel(OUTSIDE_HIGH, OUTSIDE_LOW), pixel(OUTSIDE_LOW, OUTSIDE_LOW)];
+      const corners = [
+        pixel(OUTSIDE_HIGH, OUTSIDE_HIGH),
+        pixel(OUTSIDE_LOW, OUTSIDE_HIGH),
+        pixel(OUTSIDE_HIGH, OUTSIDE_LOW),
+        pixel(OUTSIDE_LOW, OUTSIDE_LOW),
+      ];
 
       for (const corner of corners) {
         expect(Math.abs(corner[0]! - corners[0]![0]!)).toBeLessThanOrEqual(2);

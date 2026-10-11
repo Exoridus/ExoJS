@@ -127,7 +127,12 @@ export class SettingsScene extends Scene {
   private _refreshSummary(): void {
     const { playerName, volume, difficulty, fullscreen } = this._applied;
 
-    this._summary.text = [`Name: ${playerName}`, this._volumeText(volume), `Difficulty: ${difficulty}`, `Fullscreen: ${fullscreen ? 'on' : 'off'}`].join('\n');
+    this._summary.text = [
+      `Name: ${playerName}`,
+      this._volumeText(volume),
+      `Difficulty: ${difficulty}`,
+      `Fullscreen: ${fullscreen ? 'on' : 'off'}`,
+    ].join('\n');
   }
 
   private _volumeText(value: number): string {

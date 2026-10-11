@@ -19,9 +19,7 @@ import { mountControls } from '@examples/runtime';
 // as an enum number: tokens survive an engine upgrade, a different browser, and
 // a controller plugged into another port. This turns one back into something a
 // player can read on screen.
-const keyName = (token: InputToken | undefined): string => {
-  return token?.replace(/^keyboard\./, '').replaceAll('-', ' ') ?? 'unbound';
-};
+const keyName = (token: InputToken | undefined): string => token?.replace(/^keyboard\./, '').replaceAll('-', ' ') ?? 'unbound';
 
 // A BindingProfile stores only what the player CHANGED, so writing the whole
 // thing to localStorage still leaves every action the game gains later at its
@@ -106,7 +104,7 @@ class KeyRebindingScene extends Scene {
     return this.controls.jump.channels.map(inputToken)[0];
   }
 
-  private hudControls(): { keys: string; action: string }[] {
+  private hudControls(): Array<{ keys: string; action: string }> {
     return [
       { keys: keyName(this.jumpToken()), action: 'jump' },
       { keys: 'J', action: 'rebind jump' },

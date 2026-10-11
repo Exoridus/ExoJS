@@ -64,7 +64,9 @@ class ReverbAndDelayScene extends Scene {
   private applyWet(): void {
     this.reverb.wet = this.bypass ? 0 : this.reverbWet;
     this.delay.wet = this.bypass ? 0 : this.delayWet;
-    this.hud.setStatus(`${this.preset}${this.bypass ? ' (bypassed)' : ''}: reverb ${this.reverb.wet.toFixed(2)}, delay ${this.delay.wet.toFixed(2)}.`);
+    this.hud.setStatus(
+      `${this.preset}${this.bypass ? ' (bypassed)' : ''}: reverb ${this.reverb.wet.toFixed(2)}, delay ${this.delay.wet.toFixed(2)}.`,
+    );
   }
 
   override draw(context: RenderingContext): void {

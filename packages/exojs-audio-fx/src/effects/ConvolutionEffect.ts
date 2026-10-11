@@ -107,7 +107,10 @@ export class ConvolutionEffect extends AudioEffect {
    * not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('ConvolutionEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('ConvolutionEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -116,7 +119,10 @@ export class ConvolutionEffect extends AudioEffect {
    * not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('ConvolutionEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('ConvolutionEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -130,6 +136,7 @@ export class ConvolutionEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet * this._gain, ctx.currentTime, 0.01);
@@ -151,9 +158,11 @@ export class ConvolutionEffect extends AudioEffect {
 
   public set normalize(value: boolean) {
     this._normalize = value;
+
     if (this._setup) {
       const { convolver } = this._setup;
       convolver.normalize = this._normalize;
+
       if (convolver.buffer !== null) {
         // Re-assign so the new normalize value takes effect immediately.
         // (The Web Audio spec only applies normalize on buffer assignment.)
@@ -174,6 +183,7 @@ export class ConvolutionEffect extends AudioEffect {
 
   public set gain(value: number) {
     this._gain = Math.max(0, Math.min(4, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet * this._gain, ctx.currentTime, 0.01);
@@ -195,6 +205,7 @@ export class ConvolutionEffect extends AudioEffect {
     if (!this._setup) {
       // Store for application in _setupNodes once the context is ready.
       this._pendingImpulse = ir;
+
       return;
     }
 
@@ -203,6 +214,7 @@ export class ConvolutionEffect extends AudioEffect {
 
     if (resolved === null || resolved.sampleRate === rate) {
       this._applyImpulse(resolved);
+
       return;
     }
 
@@ -221,7 +233,9 @@ export class ConvolutionEffect extends AudioEffect {
 
   /** Assign an IR that is known to match the context rate. */
   private _applyImpulse(buffer: AudioBuffer | null): void {
-    if (!this._setup) return;
+    if (!this._setup) {
+      return;
+    }
 
     const { convolver } = this._setup;
 
@@ -232,6 +246,7 @@ export class ConvolutionEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.convolver.disconnect();
@@ -243,8 +258,14 @@ export class ConvolutionEffect extends AudioEffect {
   }
 
   private _resolveBuffer(ir: AudioBuffer | Sound | null): AudioBuffer | null {
-    if (ir === null) return null;
-    if (ir instanceof Sound) return ir.audioBuffer;
+    if (ir === null) {
+      return null;
+    }
+
+    if (ir instanceof Sound) {
+      return ir.audioBuffer;
+    }
+
     return ir;
   }
 

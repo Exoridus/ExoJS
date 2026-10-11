@@ -58,6 +58,7 @@ describe('lane table', () => {
       for (const command of [lane.run, lane.ciRun, lane.coverageRun].filter((value): value is string => value !== undefined)) {
         const named = scriptsIn(command);
         expect(named.length, `${lane.id}: ${command}`).toBeGreaterThan(0);
+
         for (const script of named) {
           expect(Object.keys(packageScripts.scripts), `${lane.id} runs \`pnpm ${script}\``).toContain(script);
         }
@@ -75,6 +76,7 @@ describe('lane table', () => {
           .filter(segment => /\bpnpm (test:browser|gate:bench)/.test(segment.replace(/^.*?-- /, '')) || segment.includes('pnpm qualify'));
 
         expect(segments.length, `${lane.id} has no qualification row`).toBeGreaterThan(0);
+
         for (const segment of segments) {
           expect(segment, `${lane.id}: ${segment}`).toMatch(/pnpm qualify --row "[^"]+"/);
           expect(segment, `${lane.id} needs a deadline`).toMatch(/--timeout \d+/);

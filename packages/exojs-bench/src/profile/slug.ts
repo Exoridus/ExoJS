@@ -166,8 +166,13 @@ export const normalizeCpuModel = (cpu: string): string =>
 export const normalizeOsName = (os: string): string => {
   const platform = slugify(os).split('-')[0] ?? '';
 
-  if (platform === 'win32' || platform === 'windows') return 'windows';
-  if (platform === 'darwin' || platform === 'macos') return 'macos';
+  if (platform === 'win32' || platform === 'windows') {
+    return 'windows';
+  }
+
+  if (platform === 'darwin' || platform === 'macos') {
+    return 'macos';
+  }
 
   return platform;
 };
@@ -179,9 +184,17 @@ export const normalizeOsName = (os: string): string => {
 const inferOsFromAdapter = (adapter: string): string | null => {
   const text = adapter.toLowerCase();
 
-  if (text.includes('d3d') || text.includes('direct3d')) return 'windows';
-  if (text.includes('metal')) return 'macos';
-  if (text.includes('opengl') || text.includes('vulkan') || text.includes('mesa')) return 'linux';
+  if (text.includes('d3d') || text.includes('direct3d')) {
+    return 'windows';
+  }
+
+  if (text.includes('metal')) {
+    return 'macos';
+  }
+
+  if (text.includes('opengl') || text.includes('vulkan') || text.includes('mesa')) {
+    return 'linux';
+  }
 
   return null;
 };
@@ -298,7 +311,10 @@ export const deriveProfileParts = (sources: SlugSources): ProfileParts => {
   // domains read it from the same `os` module, and inference is a guess the
   // adapter string only sometimes supports.
   const recordedOs = sources.physics === undefined ? (stamps.find(stamp => stamp.os.length > 0)?.os ?? '') : sources.physics.host.os;
-  const name = recordedOs.length > 0 ? normalizeOsName(recordedOs) : (stamps.map(stamp => inferOsFromAdapter(stamp.adapter)).find(part => part !== null) ?? '');
+  const name =
+    recordedOs.length > 0
+      ? normalizeOsName(recordedOs)
+      : (stamps.map(stamp => inferOsFromAdapter(stamp.adapter)).find(part => part !== null) ?? '');
 
   if (name.length === 0) {
     throw new ProfileSlugError(
@@ -315,7 +331,12 @@ export const deriveProfileParts = (sources: SlugSources): ProfileParts => {
   }
 
   const prerelease = stamps.some(stamp => stamp.prerelease.value) || sources.physics?.prerelease.value === true;
-  const platform: ProfilePlatform = { name, version: version.major, versionSource: version.source === 'detected' ? 'detected' : 'declared', prerelease };
+  const platform: ProfilePlatform = {
+    name,
+    version: version.major,
+    versionSource: version.source === 'detected' ? 'detected' : 'declared',
+    prerelease,
+  };
   const os = platformSegment(platform);
   const browser = chooseBrowser(stamps, sources.physics);
 

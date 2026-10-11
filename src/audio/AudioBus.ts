@@ -71,6 +71,7 @@ export class AudioBus {
     if (!name || typeof name !== 'string') {
       throw new Error('AudioBus requires a non-empty string name.');
     }
+
     this.name = name;
     this._parent = options.parent ?? null;
     this._volume = clamp(options.volume ?? 1, 0, 2);
@@ -98,7 +99,11 @@ export class AudioBus {
 
   public set volume(value: number) {
     const clamped = clamp(value, 0, 2);
-    if (this._volume === clamped) return;
+
+    if (this._volume === clamped) {
+      return;
+    }
+
     this._volume = clamped;
     this._applyVolume();
   }
@@ -108,7 +113,10 @@ export class AudioBus {
   }
 
   public set muted(value: boolean) {
-    if (this._muted === value) return;
+    if (this._muted === value) {
+      return;
+    }
+
     this._muted = value;
     this._applyVolume();
   }
@@ -119,8 +127,13 @@ export class AudioBus {
 
   public set pan(value: number) {
     const clamped = clamp(value, -1, 1);
-    if (this._pan === clamped) return;
+
+    if (this._pan === clamped) {
+      return;
+    }
+
     this._pan = clamped;
+
     if (this._setup) {
       this._setup.panNode.pan.setTargetAtTime(clamped, this._setup.audioContext.currentTime, 0.01);
     }
@@ -148,7 +161,9 @@ export class AudioBus {
    * loop. The dev build asserts; production ignores the second attach.
    */
   public addEffect(effect: AudioEffect): this {
-    if (this._destroyed) return this;
+    if (this._destroyed) {
+      return this;
+    }
 
     if (this._effects.includes(effect)) {
       assert(false, 'AudioBus.addEffect: this effect is already attached to the bus.');
@@ -158,6 +173,7 @@ export class AudioBus {
 
     this._effects.push(effect);
     this._rebuildEffectChain();
+
     return this;
   }
 
@@ -168,8 +184,10 @@ export class AudioBus {
    */
   public removeEffect(effect: AudioEffect): this {
     const index = this._effects.indexOf(effect);
+
     if (index !== -1) {
       this._effects.splice(index, 1);
+
       // Detach the removed effect's output from the graph before rewiring: the
       // rebuild below only touches the effects still in the chain, so an
       // outgoing edge left live would keep feeding the pan stage and let a
@@ -180,8 +198,10 @@ export class AudioBus {
       if (isEffectReady(effect)) {
         effect.outputNode.disconnect();
       }
+
       this._rebuildEffectChain();
     }
+
     return this;
   }
 
@@ -191,15 +211,18 @@ export class AudioBus {
    */
   public fadeIn(duration: Seconds): this {
     this._clearScheduledStop();
+
     if (duration <= 0 || !this._setup) {
       return this;
     }
+
     const ctx = this._setup.audioContext;
     const node = this._setup.outputNode;
     const target = this._muted ? 0 : this._volume;
     node.gain.cancelScheduledValues(ctx.currentTime);
     node.gain.setValueAtTime(0, ctx.currentTime);
     node.gain.linearRampToValueAtTime(target, ctx.currentTime + duration);
+
     return this;
   }
 
@@ -211,21 +234,28 @@ export class AudioBus {
   public fadeOut(duration: Seconds, options: { stopAfter?: boolean } = {}): this {
     const stopAfter = options.stopAfter ?? true;
     this._clearScheduledStop();
+
     if (duration <= 0 || !this._setup) {
-      if (stopAfter) this.muted = true;
+      if (stopAfter) {
+        this.muted = true;
+      }
+
       return this;
     }
+
     const ctx = this._setup.audioContext;
     const node = this._setup.outputNode;
     node.gain.cancelScheduledValues(ctx.currentTime);
     node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
     node.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
     if (stopAfter) {
       this._scheduledStopId = setTimeout(() => {
         this._scheduledStopId = null;
         this.muted = true;
       }, duration * 1000);
     }
+
     return this;
   }
 
@@ -247,6 +277,7 @@ export class AudioBus {
     // linger after teardown (AU3).
     this._pendingSetup = null;
     this._clearScheduledStop();
+
     // Detach, never destroy: a bus does not own the effects handed to it. The
     // same instance may also sit on a voice or on another bus, and destroying
     // it here would pull it out from under them. Mirrors
@@ -258,7 +289,9 @@ export class AudioBus {
         effect.outputNode.disconnect();
       }
     }
+
     this._effects.length = 0;
+
     if (this._setup) {
       this._setup.inputNode.disconnect();
       this._setup.outputNode.disconnect();
@@ -309,9 +342,13 @@ export class AudioBus {
   }
 
   private _connectUpstream(): void {
-    if (!this._setup) return;
+    if (!this._setup) {
+      return;
+    }
+
     if (this._parent) {
       const parentInput = this._parent.getInputNode();
+
       if (parentInput) {
         this._setup.outputNode.connect(parentInput);
       } else {
@@ -319,9 +356,13 @@ export class AudioBus {
         // disposer so a teardown before the parent unlocks unsubscribes (AU3).
         this._parentSetupDispose = this._parent.onceSetup(() => {
           this._parentSetupDispose = null;
+
           if (this._setup && this._parent) {
             const node = this._parent.getInputNode();
-            if (node) this._setup.outputNode.connect(node);
+
+            if (node) {
+              this._setup.outputNode.connect(node);
+            }
           }
         });
       }
@@ -333,8 +374,13 @@ export class AudioBus {
   /** Run every callback queued via {@link AudioBus.onceSetup} now that the nodes exist. */
   private _flushPendingSetup(): void {
     const pending = this._pendingSetup;
-    if (pending === null) return;
+
+    if (pending === null) {
+      return;
+    }
+
     this._pendingSetup = null;
+
     for (const callback of pending) {
       callback();
     }
@@ -354,6 +400,7 @@ export class AudioBus {
   public onceSetup(callback: () => void): () => void {
     if (this._setup) {
       callback();
+
       return (): void => undefined;
     }
 
@@ -361,14 +408,23 @@ export class AudioBus {
     pending.push(callback);
 
     return (): void => {
-      if (this._pendingSetup === null) return;
+      if (this._pendingSetup === null) {
+        return;
+      }
+
       const index = this._pendingSetup.indexOf(callback);
-      if (index !== -1) this._pendingSetup.splice(index, 1);
+
+      if (index !== -1) {
+        this._pendingSetup.splice(index, 1);
+      }
     };
   }
 
   private _rebuildEffectChain(retried = false): void {
-    if (!this._setup) return;
+    if (!this._setup) {
+      return;
+    }
+
     const { inputNode, panNode } = this._setup;
 
     // An effect attached via `addEffect()` before the shared AudioContext became
@@ -383,6 +439,7 @@ export class AudioBus {
     // already run.
     if (!retried && this._effects.some(effect => !isEffectReady(effect))) {
       queueMicrotask(() => this._rebuildEffectChain(true));
+
       return;
     }
 
@@ -414,23 +471,30 @@ export class AudioBus {
     // are its own internal wiring, and disconnecting them silences the effect
     // permanently.
     inputNode.disconnect();
+
     for (const effect of chain) {
       effect.outputNode.disconnect();
     }
+
     panNode.disconnect();
 
     // Rebuild: input → effect[0].input → effect[0].output → effect[1].input → ... → pan → output
     let prev: AudioNode = inputNode;
+
     for (const effect of chain) {
       prev.connect(effect.inputNode);
       prev = effect.outputNode;
     }
+
     prev.connect(panNode);
     panNode.connect(this._setup.outputNode);
   }
 
   private _applyVolume(): void {
-    if (!this._setup) return;
+    if (!this._setup) {
+      return;
+    }
+
     const target = this._muted ? 0 : this._volume;
     this._setup.outputNode.gain.setTargetAtTime(target, this._setup.audioContext.currentTime, 0.01);
   }

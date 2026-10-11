@@ -474,12 +474,22 @@ describe('DynamicAabbTree', () => {
 // test region - a farther box it would nonetheless cross is simply under-reported
 // (weakening the check, never over-reporting), which keeps `expected ⊆ actual`
 // sound: every box the oracle claims is one the ray truly enters.
-const orient = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number => Math.sign((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));
+const orient = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number =>
+  Math.sign((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));
 
 const onSegment = (ax: number, ay: number, bx: number, by: number, px: number, py: number): boolean =>
   Math.min(ax, bx) <= px && px <= Math.max(ax, bx) && Math.min(ay, by) <= py && py <= Math.max(ay, by);
 
-const segmentsIntersect = (p1x: number, p1y: number, p2x: number, p2y: number, p3x: number, p3y: number, p4x: number, p4y: number): boolean => {
+const segmentsIntersect = (
+  p1x: number,
+  p1y: number,
+  p2x: number,
+  p2y: number,
+  p3x: number,
+  p3y: number,
+  p4x: number,
+  p4y: number,
+): boolean => {
   const o1 = orient(p1x, p1y, p2x, p2y, p3x, p3y);
   const o2 = orient(p1x, p1y, p2x, p2y, p4x, p4y);
   const o3 = orient(p3x, p3y, p4x, p4y, p1x, p1y);

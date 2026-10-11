@@ -87,10 +87,13 @@
  * the current numbers.
  */
 
-import { mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+
 import ts from 'typescript';
 
+import { parseFences } from './guide-fences.ts';
+import { buildPageModule, type PageBlock } from './guide-page-module.ts';
 import {
   diffPartialBaseline,
   formatBaselineFailure,
@@ -99,8 +102,6 @@ import {
   readPartialBaseline,
   writePartialBaseline,
 } from './guide-partial-baseline.ts';
-import { parseFences } from './guide-fences.ts';
-import { buildPageModule, type PageBlock } from './guide-page-module.ts';
 
 const REPO_ROOT = join(import.meta.dirname, '..');
 const GUIDE_DIR = join(REPO_ROOT, 'site', 'src', 'content', 'guide');
@@ -126,7 +127,9 @@ const UPDATE_BASELINE = process.argv.includes('--update-baseline');
 
 /** Whether a guide-relative MDX path belongs to a folder this run visited. */
 const isInScope = (rel: string): boolean => {
-  if (FOLDER_FILTER.length === 0) return true;
+  if (FOLDER_FILTER.length === 0) {
+    return true;
+  }
 
   return FOLDER_FILTER.includes(rel.split('/')[0]);
 };
@@ -310,19 +313,22 @@ const RESERVED_OR_GLOBAL = new Set([
   'ThisType',
 ]);
 
-const firstRealCodeLine = (body: string): string | undefined => {
-  return body
+const firstRealCodeLine = (body: string): string | undefined =>
+  body
     .split('\n')
     .map(l => l.trimStart())
     .find(l => l && !l.startsWith('import ') && !l.startsWith('//') && !l.startsWith('/*') && !l.startsWith('*'));
-};
 
 /** A method-declaration-shaped first line (`update(delta) {`), as opposed to
  * a control-flow fragment shaped the same way (`if (x) {`) or a bare `this.`
  * statement. */
 const isGenuineMethodDeclLine = (firstCodeLine: string): boolean => {
-  if (TOPLEVEL_KEYWORD_RE.test(firstCodeLine)) return false;
+  if (TOPLEVEL_KEYWORD_RE.test(firstCodeLine)) {
+    return false;
+  }
+
   const m = firstCodeLine.match(/^(?:async\s+|override\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/);
+
   return m !== null && !CONTROL_KEYWORDS.has(m[1]);
 };
 
@@ -330,21 +336,30 @@ const isGenuineMethodDeclLine = (firstCodeLine: string): boolean => {
  * `this.*` / control-flow fragment shown without its enclosing class - the
  * gap this fix closes (see file header). */
 const isBareWrappable = (firstCodeLine: string): boolean => {
-  if (TOPLEVEL_KEYWORD_RE.test(firstCodeLine)) return false;
-  if (BARE_METHOD_RE.test(firstCodeLine)) return true; // genuine method OR control-flow fragment
+  if (TOPLEVEL_KEYWORD_RE.test(firstCodeLine)) {
+    return false;
+  }
+
+  if (BARE_METHOD_RE.test(firstCodeLine)) {
+    return true;
+  } // genuine method OR control-flow fragment
+
   return firstCodeLine.startsWith('this.');
 };
 
 const walkFiles = (dir: string, predicate: (name: string) => boolean): string[] => {
   const results: string[] = [];
+
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
+
     if (entry.isDirectory()) {
       results.push(...walkFiles(full, predicate));
     } else if (predicate(entry.name)) {
       results.push(full);
     }
   }
+
   return results;
 };
 
@@ -359,22 +374,43 @@ const walkFiles = (dir: string, predicate: (name: string) => boolean): string[] 
 const computeCoreExportNames = (): Set<string> => {
   const names = new Set<string>();
   const files = walkFiles(SRC_DIR, name => name.endsWith('.ts') && !name.endsWith('.test.ts') && !name.endsWith('.spec.ts'));
+
   for (const file of files) {
     const content = readFileSync(file, 'utf8');
-    for (const m of content.matchAll(/^export\s+(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/gm)) names.add(m[1]);
-    for (const m of content.matchAll(/^export\s+function\s+([A-Za-z_$][\w$]*)/gm)) names.add(m[1]);
-    for (const m of content.matchAll(/^export\s+const\s+([A-Za-z_$][\w$]*)/gm)) names.add(m[1]);
-    for (const m of content.matchAll(/^export\s+enum\s+([A-Za-z_$][\w$]*)/gm)) names.add(m[1]);
-    for (const m of content.matchAll(/^export\s+type\s+([A-Za-z_$][\w$]*)/gm)) names.add(m[1]);
+
+    for (const m of content.matchAll(/^export\s+(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/gm)) {
+      names.add(m[1]);
+    }
+
+    for (const m of content.matchAll(/^export\s+function\s+([A-Za-z_$][\w$]*)/gm)) {
+      names.add(m[1]);
+    }
+
+    for (const m of content.matchAll(/^export\s+const\s+([A-Za-z_$][\w$]*)/gm)) {
+      names.add(m[1]);
+    }
+
+    for (const m of content.matchAll(/^export\s+enum\s+([A-Za-z_$][\w$]*)/gm)) {
+      names.add(m[1]);
+    }
+
+    for (const m of content.matchAll(/^export\s+type\s+([A-Za-z_$][\w$]*)/gm)) {
+      names.add(m[1]);
+    }
+
     for (const m of content.matchAll(/^export\s+\{([^}]+)\}/gm)) {
       for (const item of m[1].split(',')) {
         const parts = item.trim().split(/\s+as\s+/);
         const exported = parts.length > 1 ? parts[1] : parts[0];
         const name = exported.replace(/^type\s+/, '').trim();
-        if (name) names.add(name);
+
+        if (name) {
+          names.add(name);
+        }
       }
     }
   }
+
   return names;
 };
 
@@ -385,14 +421,19 @@ const computeCoreExportNames = (): Set<string> => {
 // ---------------------------------------------------------------------------
 const SOURCE_SNIPPET_TAG_RE = /<SourceSnippet\s+([^>]*?)\/>/gs;
 
-const parseSourceSnippetRefs = (mdxContent: string): { source: string; region: string }[] => {
-  const refs: { source: string; region: string }[] = [];
+const parseSourceSnippetRefs = (mdxContent: string): Array<{ source: string; region: string }> => {
+  const refs: Array<{ source: string; region: string }> = [];
+
   for (const m of mdxContent.matchAll(SOURCE_SNIPPET_TAG_RE)) {
     const attrs = m[1];
     const source = attrs.match(/source="([^"]+)"/)?.[1];
     const region = attrs.match(/region="([^"]+)"/)?.[1];
-    if (source && region) refs.push({ source, region });
+
+    if (source && region) {
+      refs.push({ source, region });
+    }
   }
+
   return refs;
 };
 
@@ -411,25 +452,44 @@ const tryExtractSnippetRegion = (filePath: string, region: string): string | nul
     const snippetLines: string[] = [];
     let inside = false;
     let found = false;
+
     for (const line of lines) {
       const openMatch = line.match(REGION_OPEN_RE);
+
       if (openMatch?.[1].trim() === region) {
         inside = true;
         found = true;
         continue;
       }
+
       const closeMatch = line.match(REGION_CLOSE_RE);
+
       if (closeMatch?.[1].trim() === region) {
         inside = false;
         continue;
       }
-      if (inside) snippetLines.push(line);
+
+      if (inside) {
+        snippetLines.push(line);
+      }
     }
-    if (!found) return null;
-    while (snippetLines.length > 0 && snippetLines[snippetLines.length - 1].trim() === '') snippetLines.pop();
+
+    if (!found) {
+      return null;
+    }
+
+    while (snippetLines.length > 0 && snippetLines[snippetLines.length - 1].trim() === '') {
+      snippetLines.pop();
+    }
+
     const nonEmpty = snippetLines.filter(l => l.trim() !== '');
-    if (nonEmpty.length === 0) return null;
+
+    if (nonEmpty.length === 0) {
+      return null;
+    }
+
     const minIndent = nonEmpty.reduce((min, line) => Math.min(min, line.match(/^(\s*)/)?.[1].length ?? 0), Infinity);
+
     return snippetLines.map(line => (line.length >= minIndent ? line.slice(minIndent) : line)).join('\n');
   } catch {
     return null;
@@ -442,9 +502,11 @@ const tryExtractSnippetRegion = (filePath: string, region: string): string | nul
 const extractAnchorClass = (regionText: string): string | null => {
   const withoutLeading = regionText.replace(/^(?:[ \t]*(?:\/\/[^\n]*|import\s[\s\S]*?;)[ \t]*\n)+/, '');
   const trimmed = withoutLeading.trim();
+
   if (/^(?:export\s+)?class\s+[A-Za-z_$][\w$]*\s+extends\s+[\w.$]+/.test(trimmed) && trimmed.endsWith('}')) {
     return trimmed;
   }
+
   return null;
 };
 
@@ -455,6 +517,7 @@ const collectFileImportLines = (filePath: string): string[] => {
   try {
     const content = readFileSync(join(REPO_ROOT, filePath), 'utf8');
     const matches = content.match(/^import\s[\s\S]*?;\s*$/gm) ?? [];
+
     return matches.map(s => s.trim()).filter(s => /from\s+['"]@codexo\//.test(s));
   } catch {
     return [];
@@ -467,11 +530,13 @@ const collectFileClasses = (filePath: string): string[] => {
     const content = readFileSync(join(REPO_ROOT, filePath), 'utf8');
     const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.ES2022, true);
     const classes: string[] = [];
+
     for (const stmt of sourceFile.statements) {
       if (ts.isClassDeclaration(stmt) && stmt.heritageClauses?.length) {
         classes.push(content.slice(stmt.getStart(sourceFile), stmt.end).replace(/^export\s+/, ''));
       }
     }
+
     return classes;
   } catch {
     return [];
@@ -502,33 +567,49 @@ interface Anchor {
 const findAnchor = (mdxContent: string, thisRefs: Set<string>): Anchor | null => {
   const candidates: Anchor[] = [];
   const seenFiles = new Set<string>();
+
   for (const ref of parseSourceSnippetRefs(mdxContent)) {
     const regionText = tryExtractSnippetRegion(ref.source, ref.region);
+
     if (regionText) {
       const classText = extractAnchorClass(regionText);
-      if (classText) candidates.push({ classText, importLines: collectFileImportLines(ref.source) });
+
+      if (classText) {
+        candidates.push({ classText, importLines: collectFileImportLines(ref.source) });
+      }
     }
+
     if (!seenFiles.has(ref.source)) {
       seenFiles.add(ref.source);
+
       for (const classText of collectFileClasses(ref.source)) {
         candidates.push({ classText, importLines: collectFileImportLines(ref.source) });
       }
     }
   }
-  if (candidates.length === 0) return null;
+
+  if (candidates.length === 0) {
+    return null;
+  }
 
   let best = candidates[0];
   let bestScore = -1;
+
   for (const candidate of candidates) {
     let score = 0;
+
     for (const name of thisRefs) {
-      if (new RegExp(`\\b${name}\\b`).test(candidate.classText)) score++;
+      if (new RegExp(`\\b${name}\\b`).test(candidate.classText)) {
+        score++;
+      }
     }
+
     if (score > bestScore) {
       bestScore = score;
       best = candidate;
     }
   }
+
   return best;
 };
 
@@ -549,14 +630,20 @@ const renameMethodChunk = (chunk: string, methodNames: Set<string>): string => {
   const name = `__block${bareMemberCounter++}`;
   const lines = chunk.split('\n');
   const firstLineIdx = lines.findIndex(l => l.trim().length > 0 && !l.trimStart().startsWith('//'));
-  if (firstLineIdx === -1) return chunk;
+
+  if (firstLineIdx === -1) {
+    return chunk;
+  }
+
   lines[firstLineIdx] = lines[firstLineIdx].replace(
     /^(\s*)(async\s+)?(override\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*\()/,
     (_all, indent, asyncKw = '', _overrideKw, origName, paren) => {
       methodNames.add(origName);
+
       return `${indent}${asyncKw}${name}${paren}`;
     },
   );
+
   return lines.join('\n');
 };
 
@@ -565,6 +652,7 @@ const renameMethodChunk = (chunk: string, methodNames: Set<string>): string => {
  * it references are resolved separately via a fallback `var` declaration. */
 const wrapFragment = (body: string): string => {
   const name = `__block${bareMemberCounter++}`;
+
   return `${name}() {\n${body}\n}`;
 };
 
@@ -584,7 +672,11 @@ const splitSiblingMethods = (body: string): string[] => {
   const wrapped = `class __Probe {\n${body}\n}`;
   const sourceFile = ts.createSourceFile('__probe.ts', wrapped, ts.ScriptTarget.ES2022, true);
   const classDecl = sourceFile.statements.find(ts.isClassDeclaration);
-  if (!classDecl || classDecl.members.length === 0) return [body];
+
+  if (!classDecl || classDecl.members.length === 0) {
+    return [body];
+  }
+
   return classDecl.members.map(member => wrapped.slice(member.pos, member.end).trim()).filter(Boolean);
 };
 
@@ -593,11 +685,13 @@ const splitSiblingMethods = (body: string): string[] => {
  * renamed chunks are recorded in `methodNames`. */
 const bareBlockToMembers = (body: string, methodNames: Set<string>): string[] => {
   const firstCodeLine = firstRealCodeLine(body);
+
   if (firstCodeLine && isGenuineMethodDeclLine(firstCodeLine)) {
     return splitSiblingMethods(body).map(chunk =>
       isGenuineMethodDeclLine(firstRealCodeLine(chunk) ?? '') ? renameMethodChunk(chunk, methodNames) : wrapFragment(chunk),
     );
   }
+
   return [wrapFragment(body)];
 };
 
@@ -611,14 +705,13 @@ const bareBlockToMembers = (body: string, methodNames: Set<string>): string[] =>
  * theory - harmless here, since the result is only used for name scans that
  * tolerate both false negatives (an extra unused `var`) and rare false
  * positives (a missing one shows up as a clear compile error). */
-const stripStringsAndComments = (text: string): string => {
-  return text
+const stripStringsAndComments = (text: string): string =>
+  text
     .replace(/`(?:\\.|[^`\\])*`/g, '``')
     .replace(/'(?:\\.|[^'\\\n])*'/g, "''")
     .replace(/"(?:\\.|[^"\\\n])*"/g, '""')
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .replace(/\/\/[^\n]*/g, ' ');
-};
 
 // ---------------------------------------------------------------------------
 // Free-identifier resolution (import-for-real vs `var x;` any-fallback)
@@ -629,17 +722,21 @@ const FREE_IDENTIFIER_RE = /(?<![.\w$])([A-Za-z_$][\w$]*)/g;
 /** The `any`-fallback declaration(s) for one unresolved free identifier.
  * PascalCase names may be used in type position too (`orb: OrbData`), so
  * they get a merging `type X = any;` alongside the value declaration. */
-const anyFallbackDecl = (name: string): string[] => {
-  return /^[A-Z]/.test(name) ? [`var ${name}: any;`, `type ${name} = any;`] : [`var ${name}: any;`];
-};
+const anyFallbackDecl = (name: string): string[] =>
+  /^[A-Z]/.test(name) ? [`var ${name}: any;`, `type ${name} = any;`] : [`var ${name}: any;`];
 
 const collectFreeIdentifiers = (memberTexts: string[]): Set<string> => {
   const combined = stripStringsAndComments(memberTexts.join('\n'));
   const found = new Set<string>();
+
   for (const m of combined.matchAll(FREE_IDENTIFIER_RE)) {
     const name = m[1];
-    if (!RESERVED_OR_GLOBAL.has(name) && !/^__block\d+$/.test(name)) found.add(name);
+
+    if (!RESERVED_OR_GLOBAL.has(name) && !/^__block\d+$/.test(name)) {
+      found.add(name);
+    }
   }
+
   return found;
 };
 
@@ -662,17 +759,23 @@ const collectFreeIdentifiers = (memberTexts: string[]): Set<string> => {
 // ---------------------------------------------------------------------------
 const mineAssignedFields = (blockBodies: string[]): Set<string> => {
   const mined = new Set<string>();
+
   for (const body of blockBodies) {
     const text = stripStringsAndComments(body);
+
     // Plain and compound assignment: this.x = / += / ||= / ??= ...
     for (const m of text.matchAll(/this\.([A-Za-z_$][\w$]*)\s*(?:[+\-*/%&|^]|\|\||&&|\?\?)?=(?![=>])/g)) {
       mined.add(m[1]);
     }
+
     // Array-destructuring assignment: [this.a, this.b] = await Promise.all(...)
     for (const d of text.matchAll(/\[([^\]\n]*this\.[^\]\n]*)\]\s*=(?![=>])/g)) {
-      for (const m of d[1].matchAll(/this\.([A-Za-z_$][\w$]*)/g)) mined.add(m[1]);
+      for (const m of d[1].matchAll(/this\.([A-Za-z_$][\w$]*)/g)) {
+        mined.add(m[1]);
+      }
     }
   }
+
   return mined;
 };
 
@@ -680,9 +783,7 @@ const mineAssignedFields = (blockBodies: string[]): Set<string> => {
 // Main
 // ---------------------------------------------------------------------------
 
-const walkMdx = (dir: string): string[] => {
-  return walkFiles(dir, name => name.endsWith('.mdx') || name.endsWith('.md'));
-};
+const walkMdx = (dir: string): string[] => walkFiles(dir, name => name.endsWith('.mdx') || name.endsWith('.md'));
 
 // Clean and recreate output directory.
 rmSync(OUT_DIR, { recursive: true, force: true });
@@ -735,7 +836,9 @@ for (const file of files) {
   bareMemberCounter = 0;
 
   for (const { lang, meta, body } of parseFences(content)) {
-    if (!CHECKED_LANGS.has(lang)) continue;
+    if (!CHECKED_LANGS.has(lang)) {
+      continue;
+    }
 
     allCodeBodies.push(body);
 
@@ -785,7 +888,9 @@ for (const file of files) {
     }
   }
 
-  if (bareBodies.length === 0) continue;
+  if (bareBodies.length === 0) {
+    continue;
+  }
 
   bareFiles++;
   bareBlocksTotal += bareBodies.length;
@@ -796,8 +901,11 @@ for (const file of files) {
   // Distinct `this.x` names the bare blocks reference - used to pick the
   // best-matching anchor class.
   const thisRefs = new Set<string>();
+
   for (const m of stripStringsAndComments(memberTexts.join('\n')).matchAll(/this\.([A-Za-z_$][\w$]*)/g)) {
-    if (!/^__block\d+$/.test(m[1])) thisRefs.add(m[1]);
+    if (!/^__block\d+$/.test(m[1])) {
+      thisRefs.add(m[1]);
+    }
   }
 
   const anchor = findAnchor(content, thisRefs);
@@ -807,13 +915,18 @@ for (const file of files) {
   // scope (module-level consts like CANVAS_WIDTH, sibling classes, ...).
   // The anchor class's own name declares itself.
   const freeIdentifiers = collectFreeIdentifiers(anchor ? [...memberTexts, anchor.classText] : memberTexts);
+
   if (anchor) {
     const ownName = anchor.classText.match(/^class\s+([A-Za-z_$][\w$]*)/)?.[1];
-    if (ownName) freeIdentifiers.delete(ownName);
+
+    if (ownName) {
+      freeIdentifiers.delete(ownName);
+    }
   }
 
   const toImport = new Set<string>();
   const toDeclareAny = new Set<string>();
+
   for (const name of freeIdentifiers) {
     if (/^[A-Z]/.test(name) && coreExportNames.has(name)) {
       toImport.add(name);
@@ -831,24 +944,36 @@ for (const file of files) {
     // second import statement, and must not collide with a fallback `var`.
     for (const line of anchor.importLines) {
       const braceContent = line.match(/\{([^}]*)\}/)?.[1] ?? '';
+
       for (const item of braceContent.split(',')) {
         const parts = item.trim().split(/\s+as\s+/);
         const local = (parts.length > 1 ? parts[1] : parts[0]).replace(/^type\s+/, '').trim();
-        if (local) alreadyImported.add(local);
+
+        if (local) {
+          alreadyImported.add(local);
+        }
       }
     }
+
     importLines.push(...anchor.importLines);
     const extraImports = [...toImport].filter(n => !alreadyImported.has(n)).sort();
+
     if (extraImports.length > 0) {
       importLines.push(`import { ${extraImports.join(', ')} } from '@codexo/exojs';`);
     }
+
     for (const name of [...toDeclareAny].sort()) {
-      if (!alreadyImported.has(name)) varLines.push(...anyFallbackDecl(name));
+      if (!alreadyImported.has(name)) {
+        varLines.push(...anyFallbackDecl(name));
+      }
     }
   } else {
     const coreImports = ['Scene', ...[...toImport].sort()];
     importLines.push(`import { ${coreImports.join(', ')} } from '@codexo/exojs';`);
-    for (const name of [...toDeclareAny].sort()) varLines.push(...anyFallbackDecl(name));
+
+    for (const name of [...toDeclareAny].sort()) {
+      varLines.push(...anyFallbackDecl(name));
+    }
   }
 
   const membersBlock = memberTexts
@@ -861,6 +986,7 @@ for (const file of files) {
     .join('\n\n');
 
   let classText: string;
+
   if (anchor) {
     // ANCHORED page: the bare blocks narrate a real, fully-typed example
     // class - splice them into it (just before its final `}`) so every
@@ -874,10 +1000,15 @@ for (const file of files) {
     // anchor already declares are skipped (the real declaration wins).
     const minedNames = new Set<string>([...mineAssignedFields(allCodeBodies), ...bareMethodNames]);
     const fieldDeclLines: string[] = [];
+
     for (const name of [...minedNames].sort()) {
-      if (new RegExp(`\\b${name}\\b`).test(anchor.classText)) continue;
+      if (new RegExp(`\\b${name}\\b`).test(anchor.classText)) {
+        continue;
+      }
+
       fieldDeclLines.push(`    declare ${name}: any;`);
     }
+
     const classBody = [fieldDeclLines.join('\n'), membersBlock].filter(Boolean).join('\n\n');
     const trimmedAnchor = anchor.classText.trimEnd();
     classText = `${trimmedAnchor.slice(0, -1).trimEnd()}\n\n${classBody}\n}`;
@@ -895,7 +1026,9 @@ for (const file of files) {
   }
 
   const header = `// guide: ${rel} | ${bareBodies.length} bare block(s) merged (method-body/this-fragment snippets)\n`;
-  const fileText = [header, ...importLines, '', ...varLines, varLines.length > 0 ? '' : null, classText, ''].filter((l): l is string => l !== null).join('\n');
+  const fileText = [header, ...importLines, '', ...varLines, varLines.length > 0 ? '' : null, classText, '']
+    .filter((l): l is string => l !== null)
+    .join('\n');
 
   writeFileSync(join(OUT_DIR, `${slug}__bare.ts`), fileText);
 }
@@ -908,7 +1041,7 @@ console.log(
 
 if (brokenSnippetRefs.length > 0) {
   console.error(
-    `\nguide-snippets: ${brokenSnippetRefs.length} embedded region(s) do not resolve:\n` + brokenSnippetRefs.map(entry => `  - ${entry}`).join('\n'),
+    `\nguide-snippets: ${brokenSnippetRefs.length} embedded region(s) do not resolve:\n${brokenSnippetRefs.map(entry => `  - ${entry}`).join('\n')}`,
   );
   process.exit(1);
 }
@@ -923,7 +1056,9 @@ if (UPDATE_BASELINE) {
   const next = mergePartialBaseline({ ...baseline, note: BASELINE_NOTE }, partialsByFile, isInScope);
   writePartialBaseline(BASELINE_PATH, next);
   const budget = Object.values(next.files).reduce((sum, count) => sum + count, 0);
-  console.log(`guide-snippets: baseline written to ${BASELINE_REL} — ${budget} partial block(s) across ${Object.keys(next.files).length} file(s). Commit it.`);
+  console.log(
+    `guide-snippets: baseline written to ${BASELINE_REL} — ${budget} partial block(s) across ${Object.keys(next.files).length} file(s). Commit it.`,
+  );
 } else {
   const diff = diffPartialBaseline(baseline, partialsByFile, isInScope);
 

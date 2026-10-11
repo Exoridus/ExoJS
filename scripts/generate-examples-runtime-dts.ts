@@ -42,7 +42,9 @@ export const renderRuntimeDts = (repositoryRoot: string): string => {
   let output: string | null = null;
 
   const result = program.emit(undefined, (fileName, text) => {
-    if (fileName.endsWith('runtime.d.ts')) output = text;
+    if (fileName.endsWith('runtime.d.ts')) {
+      output = text;
+    }
   });
 
   if (output === null) {

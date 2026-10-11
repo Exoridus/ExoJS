@@ -171,7 +171,8 @@ const playFrame = (root: RenderNode, backend: RenderBackend): number => {
 
 const sourceOf = (root: RenderNode): RenderRootSource | null => root._retainedRootRepresentation().source;
 
-const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
+const fragmentOf = (group: RetainedContainer): RetainedGroupFragment =>
+  (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
 
 /**
  * One entry of the root scope in RECORDED order - the shape the source used to
@@ -372,7 +373,9 @@ describe('render-root source: discovery', () => {
     backend.setView(viewAt(1000));
     playFrame(root, backend);
 
-    expect(sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision)).toBe(false);
+    expect(
+      sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision),
+    ).toBe(false);
 
     root.destroy();
     backend.destroy();
@@ -414,7 +417,9 @@ describe('render-root source: stored bounds', () => {
     // over a moved subtree replays each container's unchanged drawables from its
     // own retained slot cache, which a live-bounds selection cannot do - it was
     // measured as the faster of the two, by a wide margin.
-    expect(sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision)).toBe(false);
+    expect(
+      sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision),
+    ).toBe(false);
 
     root.destroy();
     backend.destroy();
@@ -1156,7 +1161,10 @@ describe('render-root source: item-granular re-derivation', () => {
 
     expect(draws).toEqual(['a', 'b', 'x']);
     expect(entriesFor(root, left).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual(['a']);
-    expect(entriesFor(root, right).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual(['b', 'x']);
+    expect(entriesFor(root, right).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual([
+      'b',
+      'x',
+    ]);
 
     root.destroy();
     backend.destroy();

@@ -1,5 +1,19 @@
 import type { RenderingContext, Seconds, SpritesheetData } from '@codexo/exojs';
-import { Asset, Color, Container, Graphics, Keyboard, Label, Rectangle, Scene, Sprite, Spritesheet, SystemOrder, Vector, View } from '@codexo/exojs';
+import {
+  Asset,
+  Color,
+  Container,
+  Graphics,
+  Keyboard,
+  Label,
+  Rectangle,
+  Scene,
+  type Sprite,
+  Spritesheet,
+  SystemOrder,
+  type Vector,
+  View,
+} from '@codexo/exojs';
 import { GridSpace, Pathfinder } from '@codexo/exojs-pathfinding';
 import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 

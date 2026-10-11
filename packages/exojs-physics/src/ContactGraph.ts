@@ -151,7 +151,11 @@ export class ContactGraph {
 
       // Checked against the size first so a world without such a joint pays one
       // property read per pair rather than a map lookup.
-      if (this._uncollidablePairs !== null && this._uncollidablePairs.size > 0 && this._uncollidablePairs.has(bodyPairKey(ownerA.body.id, ownerB.body.id))) {
+      if (
+        this._uncollidablePairs !== null &&
+        this._uncollidablePairs.size > 0 &&
+        this._uncollidablePairs.has(bodyPairKey(ownerA.body.id, ownerB.body.id))
+      ) {
         continue;
       }
 

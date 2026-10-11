@@ -26,12 +26,17 @@ export interface TestAssetTypeSpec<Source = string, Resource = unknown, Options 
  * Builds one ad-hoc {@link AssetType} for a test, so a case that only cares
  * about how the loader treats a type does not have to spell out a class.
  */
-export const testAssetType = <Source = string, Resource = unknown, Options = undefined>(spec: TestAssetTypeSpec<Source, Resource, Options>): AnyAssetType => {
+export const testAssetType = <Source = string, Resource = unknown, Options = undefined>(
+  spec: TestAssetTypeSpec<Source, Resource, Options>,
+): AnyAssetType => {
   class TestAssetType extends AssetType<Source, Resource, Options, unknown> {
     public readonly id = spec.id;
     public override readonly extensions = spec.extensions ?? [];
     public override readonly leaf = spec.leaf ?? ('ref' as AssetLeaf<Resource>);
-    public override readonly codec = (spec.codec ?? (textSourceCodec as unknown as AssetSourceCodec<Source, unknown>)) as AssetSourceCodec<Source, unknown>;
+    public override readonly codec = (spec.codec ?? (textSourceCodec as unknown as AssetSourceCodec<Source, unknown>)) as AssetSourceCodec<
+      Source,
+      unknown
+    >;
 
     public createFactory(): AssetFactory<Source, Resource, Options> {
       return {

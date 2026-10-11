@@ -17,6 +17,7 @@ class WorkletNodeDouble {
     close: vi.fn(),
   };
   onprocessorerror: (() => void) | null = null;
+
   constructor(
     readonly context: AudioContext,
     readonly name: string,
@@ -24,6 +25,7 @@ class WorkletNodeDouble {
   ) {
     WorkletNodeDouble.latest = this;
   }
+
   report(type = 'status', releasedFrames = 0, playedFrames = releasedFrames, underrunFrames = 0, underruns = 0): void {
     this.port.onmessage?.({ data: { type, releasedFrames, playedFrames, underrunFrames, underruns } } as MessageEvent);
   }
@@ -31,9 +33,11 @@ class WorkletNodeDouble {
 
 describe('PcmStreamSource', () => {
   const owned: PcmStreamSource[] = [];
+
   const create = (options: ConstructorParameters<typeof PcmStreamSource>[0] = { channels: 2, capacityFrames: 8 }): PcmStreamSource => {
     const source = new PcmStreamSource(options);
     owned.push(source);
+
     return source;
   };
 
@@ -42,7 +46,10 @@ describe('PcmStreamSource', () => {
     vi.mocked(registerAudioWorkletProcessor).mockResolvedValue(undefined);
   });
   afterEach(() => {
-    for (const source of owned.splice(0)) source.destroy();
+    for (const source of owned.splice(0)) {
+      source.destroy();
+    }
+
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -55,7 +62,11 @@ describe('PcmStreamSource', () => {
     const node = WorkletNodeDouble.latest;
     expect(source.state).toBe('ready');
     expect(source.sampleRate).toBe(getAudioContext().sampleRate);
-    expect(node.options).toMatchObject({ numberOfInputs: 0, outputChannelCount: [2], processorOptions: { channels: 2, capacityFrames: 8 } });
+    expect(node.options).toMatchObject({
+      numberOfInputs: 0,
+      outputChannelCount: [2],
+      processorOptions: { channels: 2, capacityFrames: 8 },
+    });
     expect(source.start(12.5)).toBe(true);
     expect(source.start(20)).toBe(false);
     expect(node.port.postMessage).toHaveBeenCalledWith({ type: 'start', time: 12.5 });
@@ -205,6 +216,7 @@ describe('PcmStreamSource', () => {
     vi.spyOn(deferred, 'getInputNode').mockReturnValue(null);
     vi.spyOn(deferred, 'onceSetup').mockImplementation(callback => {
       setup = callback;
+
       return cancel;
     });
     const source = create({ channels: 1, bus: deferred });

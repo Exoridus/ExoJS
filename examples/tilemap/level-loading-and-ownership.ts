@@ -7,8 +7,24 @@ const ROOM_SIZE = { x: 0, y: 0, width: 1280, height: 768 };
 const world = new MapWorld({
   name: 'Two Rooms',
   levels: [
-    { id: 'harbor', name: 'Harbor', index: 0, bounds: ROOM_SIZE, external: true, neighbours: [{ id: 'workshop', side: MapLevelSide.East }], properties: {} },
-    { id: 'workshop', name: 'Workshop', index: 1, bounds: ROOM_SIZE, external: true, neighbours: [{ id: 'harbor', side: MapLevelSide.West }], properties: {} },
+    {
+      id: 'harbor',
+      name: 'Harbor',
+      index: 0,
+      bounds: ROOM_SIZE,
+      external: true,
+      neighbours: [{ id: 'workshop', side: MapLevelSide.East }],
+      properties: {},
+    },
+    {
+      id: 'workshop',
+      name: 'Workshop',
+      index: 1,
+      bounds: ROOM_SIZE,
+      external: true,
+      neighbours: [{ id: 'harbor', side: MapLevelSide.West }],
+      properties: {},
+    },
   ],
 });
 
@@ -21,12 +37,15 @@ const waitForTransition = (signal: AbortSignal): Promise<void> =>
   new Promise((resolve, reject) => {
     if (signal.aborted) {
       reject(new DOMException('Transition cancelled.', 'AbortError'));
+
       return;
     }
+
     const onAbort = (): void => {
       clearTimeout(timer);
       reject(new DOMException('Transition cancelled.', 'AbortError'));
     };
+
     const timer = setTimeout(() => {
       signal.removeEventListener('abort', onAbort);
       resolve();
@@ -50,6 +69,7 @@ class LevelOwnershipScene extends Scene {
       scope: this.loader,
       load: async ({ level, scope, signal }) => {
         await waitForTransition(signal);
+
         return scope.load(Asset.type('tileMap', roomPath[level.id]!));
       },
     });
@@ -139,6 +159,7 @@ class LevelOwnershipScene extends Scene {
     if (!this.activeId) {
       return;
     }
+
     const id = this.activeId;
     this.node?.destroy();
     this.node = null;
@@ -150,6 +171,7 @@ class LevelOwnershipScene extends Scene {
 
   private describeResidency(): string {
     const atlas = this.app.loader.inspect().find(row => row.aliases.some(alias => alias.includes('mapPack_tilesheet')));
+
     return `${this.runtime.levels.length} live room(s), shared atlas ${atlas?.claims ?? 0} claim(s)`;
   }
 
@@ -157,6 +179,7 @@ class LevelOwnershipScene extends Scene {
     if (this.node) {
       context.render(this.node);
     }
+
     context.render(this.roomLabel);
   }
 

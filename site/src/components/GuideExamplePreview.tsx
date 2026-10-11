@@ -17,7 +17,13 @@ export interface GuideExamplePreviewProps {
   title: string;
 }
 
-export const GuideExamplePreview = ({ capabilities = EMPTY_CAPABILITIES, chapter, slug, sourceCode, title }: GuideExamplePreviewProps): JSX.Element => {
+export const GuideExamplePreview = ({
+  capabilities = EMPTY_CAPABILITIES,
+  chapter,
+  slug,
+  sourceCode,
+  title,
+}: GuideExamplePreviewProps): JSX.Element => {
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
@@ -41,10 +47,16 @@ export const GuideExamplePreview = ({ capabilities = EMPTY_CAPABILITIES, chapter
 
   if (!started) {
     const previewTitle = title || slug;
+
     return (
       <div className={css(styles, 'root')}>
         <div className={css(styles, 'preview-gate')}>
-          <button type="button" className={css(styles, 'preview-play')} aria-label={`Play ${previewTitle} preview`} onClick={() => setStarted(true)}>
+          <button
+            type="button"
+            className={css(styles, 'preview-play')}
+            aria-label={`Play ${previewTitle} preview`}
+            onClick={() => setStarted(true)}
+          >
             <span className={css(styles, 'preview-play__icon')} aria-hidden="true" />
             <span>Play Preview</span>
           </button>
@@ -64,9 +76,13 @@ export const GuideExamplePreview = ({ capabilities = EMPTY_CAPABILITIES, chapter
 };
 
 const parseCapabilities = (value: Capability[] | string): Capability[] => {
-  if (Array.isArray(value)) return value;
+  if (Array.isArray(value)) {
+    return value;
+  }
+
   try {
     const raw = JSON.parse(value) as unknown;
+
     return Array.isArray(raw) ? (raw as Capability[]) : [];
   } catch {
     return [];

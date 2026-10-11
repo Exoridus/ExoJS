@@ -18,7 +18,7 @@ describe('Tween', () => {
     });
 
     test('start() transitions state to Active', () => {
-      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1).start();
       expect(tween.state).toBe(TweenState.Active);
     });
   });
@@ -26,7 +26,7 @@ describe('Tween', () => {
   describe('basic interpolation', () => {
     test('x is approximately 50 at t=0.5 with linear easing', () => {
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).start();
 
       tween.update(0.5);
       expect(sprite.x).toBeCloseTo(50, 10);
@@ -34,7 +34,7 @@ describe('Tween', () => {
 
     test('x === 100 exactly after full duration; state is Complete', () => {
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).start();
 
       tween.update(0.5);
       tween.update(0.5);
@@ -45,9 +45,9 @@ describe('Tween', () => {
     test('onComplete fires when tween finishes naturally', () => {
       const sprite = makeSprite();
       const onComplete = vi.fn();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).onComplete(onComplete).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).onComplete(onComplete).start();
 
-      tween.update(1.0);
+      tween.update(1);
       expect(onComplete).toHaveBeenCalledTimes(1);
     });
   });
@@ -55,7 +55,7 @@ describe('Tween', () => {
   describe('multiple properties', () => {
     test('x, y, alpha all interpolate in lockstep', () => {
       const sprite = makeSprite(0, 0, 0);
-      const tween = new Tween(sprite).to({ x: 100, y: 200, alpha: 0.5 }, 1.0).start();
+      const tween = new Tween(sprite).to({ x: 100, y: 200, alpha: 0.5 }, 1).start();
 
       tween.update(0.5);
       expect(sprite.x).toBeCloseTo(50, 10);
@@ -67,7 +67,7 @@ describe('Tween', () => {
   describe('delay', () => {
     test('progress does not advance during delay', () => {
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).delay(0.5).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).delay(0.5).start();
 
       tween.update(0.3);
       expect(sprite.x).toBe(0); // still in delay
@@ -76,7 +76,7 @@ describe('Tween', () => {
     test('onStart fires after delay, not before', () => {
       const sprite = makeSprite();
       const onStart = vi.fn();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).delay(0.5).onStart(onStart).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).delay(0.5).onStart(onStart).start();
 
       tween.update(0.4);
       expect(onStart).not.toHaveBeenCalled();
@@ -88,9 +88,9 @@ describe('Tween', () => {
     test('overflow past delay is applied to progress', () => {
       const sprite = makeSprite();
       // delay 0.5s, duration 1.0s; after 1.0s total: 0.5s into tween
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).delay(0.5).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).delay(0.5).start();
 
-      tween.update(1.0);
+      tween.update(1);
       expect(sprite.x).toBeCloseTo(50, 5);
     });
   });
@@ -98,11 +98,11 @@ describe('Tween', () => {
   describe('easing', () => {
     test('quadOut produces non-linear progression at t=0.5', () => {
       const spriteLinear = makeSprite();
-      const tweenLinear = new Tween(spriteLinear).to({ x: 100 }, 1.0).easing(Ease.linear).start();
+      const tweenLinear = new Tween(spriteLinear).to({ x: 100 }, 1).easing(Ease.linear).start();
       tweenLinear.update(0.5);
 
       const spriteQuadOut = makeSprite();
-      const tweenQuadOut = new Tween(spriteQuadOut).to({ x: 100 }, 1.0).easing(Ease.quadOut).start();
+      const tweenQuadOut = new Tween(spriteQuadOut).to({ x: 100 }, 1).easing(Ease.quadOut).start();
       tweenQuadOut.update(0.5);
 
       expect(spriteQuadOut.x).not.toBeCloseTo(spriteLinear.x, 1);
@@ -115,20 +115,20 @@ describe('Tween', () => {
       const sprite = makeSprite();
       const onRepeat = vi.fn();
       const onComplete = vi.fn();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(2).onRepeat(onRepeat).onComplete(onComplete).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).repeat(2).onRepeat(onRepeat).onComplete(onComplete).start();
 
       // Cycle 1
-      tween.update(1.0);
+      tween.update(1);
       expect(onRepeat).toHaveBeenCalledTimes(1);
       expect(onComplete).toHaveBeenCalledTimes(0);
 
       // Cycle 2
-      tween.update(1.0);
+      tween.update(1);
       expect(onRepeat).toHaveBeenCalledTimes(2);
       expect(onComplete).toHaveBeenCalledTimes(0);
 
       // Cycle 3 (final)
-      tween.update(1.0);
+      tween.update(1);
       expect(onRepeat).toHaveBeenCalledTimes(2); // no more repeats
       expect(onComplete).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Complete);
@@ -150,7 +150,7 @@ describe('Tween', () => {
     test('an overshooting update() applies the leftover time to the next cycle', () => {
       const sprite = makeSprite();
       const onRepeat = vi.fn();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(1).onRepeat(onRepeat).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).repeat(1).onRepeat(onRepeat).start();
 
       tween.update(1.5); // 1.0s completes cycle 1; 0.5s carries into cycle 2
 
@@ -163,15 +163,15 @@ describe('Tween', () => {
       // Drives the yoyo direction-flip twice with exact-duration updates to
       // independently cover both the 1 -> -1 and -1 -> 1 flip branches.
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(2).yoyo().start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).repeat(2).yoyo().start();
 
-      tween.update(1.0); // cycle 1 end: direction flips 1 -> -1
+      tween.update(1); // cycle 1 end: direction flips 1 -> -1
       expect(tween.state).toBe(TweenState.Active);
 
-      tween.update(1.0); // cycle 2 end: direction flips -1 -> 1
+      tween.update(1); // cycle 2 end: direction flips -1 -> 1
       expect(tween.state).toBe(TweenState.Active);
 
-      tween.update(1.0); // cycle 3 end: all repeats exhausted
+      tween.update(1); // cycle 3 end: all repeats exhausted
       expect(tween.state).toBe(TweenState.Complete);
     });
   });
@@ -179,14 +179,14 @@ describe('Tween', () => {
   describe('yoyo', () => {
     test('yoyo + repeat(1): cycle 1 forward, cycle 2 backward — x returns to start', () => {
       const sprite = makeSprite(0);
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(1).yoyo().start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).repeat(1).yoyo().start();
 
       // End of cycle 1 - x should be at target
-      tween.update(1.0);
+      tween.update(1);
       expect(sprite.x).toBeCloseTo(100, 5);
 
       // End of cycle 2 - x should be back at start (reversed)
-      tween.update(1.0);
+      tween.update(1);
       expect(sprite.x).toBeCloseTo(0, 5);
     });
   });
@@ -194,7 +194,7 @@ describe('Tween', () => {
   describe('pause and resume', () => {
     test('pause() — update() does nothing while paused', () => {
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).start();
 
       tween.update(0.3);
       tween.pause();
@@ -207,7 +207,7 @@ describe('Tween', () => {
 
     test('resume() continues from saved position', () => {
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).start();
 
       tween.update(0.3);
       tween.pause();
@@ -218,14 +218,14 @@ describe('Tween', () => {
     });
 
     test('pause() is a no-op when the tween is not Active (e.g. Idle)', () => {
-      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0);
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1);
 
       tween.pause();
       expect(tween.state).toBe(TweenState.Idle);
     });
 
     test('resume() is a no-op when the tween is not Paused (e.g. Active)', () => {
-      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1).start();
 
       tween.resume();
       expect(tween.state).toBe(TweenState.Active);
@@ -235,7 +235,7 @@ describe('Tween', () => {
   describe('stop', () => {
     test('stop() does not reset target values', () => {
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).start();
 
       tween.update(0.5);
       const xBeforeStop = sprite.x;
@@ -245,7 +245,7 @@ describe('Tween', () => {
 
     test('stop() sets state to Stopped', () => {
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).start();
 
       tween.stop();
       expect(tween.state).toBe(TweenState.Stopped);
@@ -254,7 +254,7 @@ describe('Tween', () => {
     test('stop() does not fire onComplete', () => {
       const sprite = makeSprite();
       const onComplete = vi.fn();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).onComplete(onComplete).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).onComplete(onComplete).start();
 
       tween.stop();
       expect(onComplete).not.toHaveBeenCalled();
@@ -262,24 +262,24 @@ describe('Tween', () => {
 
     test('update() after stop() is a no-op', () => {
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).start();
       tween.update(0.5);
       tween.stop();
       const xAtStop = sprite.x;
 
-      tween.update(1.0);
+      tween.update(1);
       expect(sprite.x).toBe(xAtStop);
     });
 
     test('stop() is a no-op when the tween is Idle (never started)', () => {
-      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0);
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1);
 
       tween.stop();
       expect(tween.state).toBe(TweenState.Idle);
     });
 
     test('stop() works when the tween is Paused', () => {
-      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1).start();
 
       tween.pause();
       tween.stop();
@@ -289,12 +289,12 @@ describe('Tween', () => {
     test('stop() removes tween from system', () => {
       const system = new TweenSystem();
       const sprite = makeSprite();
-      const tween = system.create(sprite).to({ x: 100 }, 1.0).start();
+      const tween = system.create(sprite).to({ x: 100 }, 1).start();
 
       tween.stop();
       // After stop, updating system should not move sprite.
       const xAtStop = sprite.x;
-      system.preFrame(sec(1.0));
+      system.preFrame(sec(1));
       expect(sprite.x).toBe(xAtStop);
     });
   });
@@ -302,7 +302,7 @@ describe('Tween', () => {
   describe('target lifetime', () => {
     test('update() stops the tween once the target reports destroyed', () => {
       const target = { ...makeSprite(), destroyed: false };
-      const tween = new Tween(target).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(target).to({ x: 100 }, 1).start();
 
       tween.update(0.5);
       expect(tween.state).toBe(TweenState.Active);
@@ -316,13 +316,13 @@ describe('Tween', () => {
     test('an infinitely repeating tween releases from its system once the target is destroyed', () => {
       const system = new TweenSystem();
       const target = { ...makeSprite(), destroyed: false };
-      system.create(target).to({ x: 100 }, 1.0).repeat(-1).start();
+      system.create(target).to({ x: 100 }, 1).repeat(-1).start();
 
-      system.preFrame(sec(1.0));
+      system.preFrame(sec(1));
       expect(system['_tweens']).toHaveLength(1);
 
       target.destroyed = true;
-      system.preFrame(sec(1.0));
+      system.preFrame(sec(1));
 
       // Released, not pinned in the system forever.
       expect(system['_tweens']).toHaveLength(0);
@@ -331,17 +331,17 @@ describe('Tween', () => {
     test('onComplete does not fire when a tween stops because its target was destroyed', () => {
       const onComplete = vi.fn();
       const target = { ...makeSprite(), destroyed: false };
-      const tween = new Tween(target).to({ x: 100 }, 1.0).onComplete(onComplete).start();
+      const tween = new Tween(target).to({ x: 100 }, 1).onComplete(onComplete).start();
 
       target.destroyed = true;
-      tween.update(1.0);
+      tween.update(1);
 
       expect(onComplete).not.toHaveBeenCalled();
     });
 
     test('a target without a destroyed property is unaffected', () => {
       const sprite = makeSprite();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).start();
 
       tween.update(0.5);
       expect(tween.state).toBe(TweenState.Active);
@@ -352,20 +352,20 @@ describe('Tween', () => {
   describe('chain', () => {
     test('chained tween starts when first completes', () => {
       const sprite = makeSprite();
-      const first = new Tween(sprite).to({ x: 100 }, 1.0);
-      const second = new Tween(sprite).to({ x: 200 }, 1.0);
+      const first = new Tween(sprite).to({ x: 100 }, 1);
+      const second = new Tween(sprite).to({ x: 200 }, 1);
 
       first.chain(second);
       first.start();
 
-      first.update(1.0); // first completes
+      first.update(1); // first completes
       expect(second.state).toBe(TweenState.Active);
     });
 
     test('chained tween does NOT start when first is stopped', () => {
       const sprite = makeSprite();
-      const first = new Tween(sprite).to({ x: 100 }, 1.0);
-      const second = new Tween(sprite).to({ x: 200 }, 1.0);
+      const first = new Tween(sprite).to({ x: 100 }, 1);
+      const second = new Tween(sprite).to({ x: 200 }, 1);
 
       first.chain(second);
       first.start();
@@ -376,8 +376,8 @@ describe('Tween', () => {
 
     test('chain returns next for fluent chaining', () => {
       const sprite = makeSprite();
-      const first = new Tween(sprite).to({ x: 100 }, 1.0);
-      const second = new Tween(sprite).to({ x: 200 }, 1.0);
+      const first = new Tween(sprite).to({ x: 100 }, 1);
+      const second = new Tween(sprite).to({ x: 200 }, 1);
 
       const returned = first.chain(second);
       expect(returned).toBe(second);
@@ -388,18 +388,18 @@ describe('Tween', () => {
     test('onStart fires once per lifecycle (not per repeat)', () => {
       const sprite = makeSprite();
       const onStart = vi.fn();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(2).onStart(onStart).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).repeat(2).onStart(onStart).start();
 
-      tween.update(1.0); // cycle 1 end
-      tween.update(1.0); // cycle 2 end
-      tween.update(1.0); // cycle 3 end (complete)
+      tween.update(1); // cycle 1 end
+      tween.update(1); // cycle 2 end
+      tween.update(1); // cycle 3 end (complete)
       expect(onStart).toHaveBeenCalledTimes(1);
     });
 
     test('onUpdate fires each update while active', () => {
       const sprite = makeSprite();
       const onUpdate = vi.fn();
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0).onUpdate(onUpdate).start();
+      const tween = new Tween(sprite).to({ x: 100 }, 1).onUpdate(onUpdate).start();
 
       tween.update(0.3);
       tween.update(0.3);
@@ -410,7 +410,7 @@ describe('Tween', () => {
   describe('lazy snapshot', () => {
     test('snapshot captures x at start() time, not at to() time', () => {
       const sprite = makeSprite(0);
-      const tween = new Tween(sprite).to({ x: 100 }, 1.0);
+      const tween = new Tween(sprite).to({ x: 100 }, 1);
 
       sprite.x = 50; // mutate after to()
       tween.start(); // snapshot should use x=50
@@ -426,10 +426,10 @@ describe('Tween', () => {
       // 'as never' simulates a JavaScript caller that bypasses TypeScript's
       // NumericKeys<T> constraint. The runtime guard in _captureStartValues()
       // must still warn and skip the non-numeric property.
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const target = { x: 0, label: 'hello' };
-      const tween = new Tween(target).to({ x: 100, label: 999 } as never, 1.0).start();
+      const tween = new Tween(target).to({ x: 100, label: 999 } as never, 1).start();
 
       tween.update(0.5);
       expect(warnSpy).toHaveBeenCalled();
@@ -444,7 +444,7 @@ describe('Tween', () => {
       // real number, so it IS captured into _startValues; the guard that
       // must trigger is the `end === undefined` check in _applyProgress().
       const target = { x: 0, y: 0 };
-      const tween = new Tween(target).to({ x: undefined, y: 100 } as never, 1.0).start();
+      const tween = new Tween(target).to({ x: undefined, y: 100 } as never, 1).start();
 
       tween.update(0.5);
       expect(target.x).toBe(0); // skipped — end value was undefined
@@ -459,15 +459,15 @@ describe('Tween', () => {
     });
 
     test('progress reflects the eased t while playing forward', () => {
-      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0).start();
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1).start();
       tween.update(0.5);
       expect(tween.progress).toBeCloseTo(0.5, 10); // linear easing, direction 1
     });
 
     test('progress reflects the reversed t after a yoyo direction flip', () => {
-      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0).repeat(1).yoyo().start();
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1).repeat(1).yoyo().start();
 
-      tween.update(1.0); // cycle 1 completes; direction flips to -1
+      tween.update(1); // cycle 1 completes; direction flips to -1
       tween.update(0.3); // 0.3s into the reversed cycle
 
       // rawT = 0.3, direction === -1 => t = 1 - 0.3 = 0.7 (linear easing)
@@ -500,16 +500,16 @@ describe('Tween', () => {
       // start() must re-register it so the system drives the next run.
       const system = new TweenSystem();
       const target = makeSprite();
-      const tween = system.create(target).to({ x: 100 }, 1.0).start();
+      const tween = system.create(target).to({ x: 100 }, 1).start();
 
-      system.preFrame(sec(1.0)); // complete — tween removed from system
+      system.preFrame(sec(1)); // complete — tween removed from system
       expect(tween.state).toBe(TweenState.Complete);
 
       const secondComplete = vi.fn();
       tween.onComplete(secondComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 
-      system.preFrame(sec(1.0)); // system must drive it — second completion fires
+      system.preFrame(sec(1)); // system must drive it — second completion fires
       expect(secondComplete).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Complete);
     });
@@ -517,7 +517,7 @@ describe('Tween', () => {
     test('managed tween driven to completion after start() following stop()', () => {
       const system = new TweenSystem();
       const target = makeSprite();
-      const tween = system.create(target).to({ x: 100 }, 1.0).start();
+      const tween = system.create(target).to({ x: 100 }, 1).start();
 
       system.preFrame(sec(0.3));
       tween.stop();
@@ -527,7 +527,7 @@ describe('Tween', () => {
       tween.onComplete(onComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 
-      system.preFrame(sec(1.0)); // system drives the restarted tween
+      system.preFrame(sec(1)); // system drives the restarted tween
       expect(onComplete).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Complete);
     });
@@ -537,7 +537,7 @@ describe('Tween', () => {
       // register the tween twice, causing double-speed advancement.
       const system = new TweenSystem();
       const target = makeSprite();
-      const tween = system.create(target).to({ x: 100 }, 1.0).start();
+      const tween = system.create(target).to({ x: 100 }, 1).start();
 
       tween.start(); // re-call while active — resets elapsed, no double-registration
       system.preFrame(sec(0.5));
@@ -556,8 +556,8 @@ describe('Tween', () => {
       let forwardCompleteCount = 0;
       let backwardCompleteCount = 0;
 
-      const forward = system.create(target).to({ x: 100 }, 1.0);
-      const backward = system.create(target).to({ x: 0 }, 1.0);
+      const forward = system.create(target).to({ x: 100 }, 1);
+      const backward = system.create(target).to({ x: 0 }, 1);
 
       forward.onComplete(() => {
         forwardCompleteCount++;
@@ -570,7 +570,9 @@ describe('Tween', () => {
       forward.start();
 
       // 50 × 0.1s = 5 seconds; enough for ≥2 complete cycles of each tween
-      for (let i = 0; i < 50; i++) system.preFrame(sec(0.1));
+      for (let i = 0; i < 50; i++) {
+        system.preFrame(sec(0.1));
+      }
 
       expect(forwardCompleteCount).toBeGreaterThanOrEqual(2);
       expect(backwardCompleteCount).toBeGreaterThanOrEqual(2);

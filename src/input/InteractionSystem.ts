@@ -593,7 +593,9 @@ export class InteractionSystem {
    * keep dragging a node with no button held once the gate lifts.
    */
   private _dispatchFrame(): void {
-    if (!this._dirty && !this._hoverDirty) return;
+    if (!this._dirty && !this._hoverDirty) {
+      return;
+    }
 
     const state = this._app.scenes.state;
     const gated = (state !== null && state !== SceneState.Active) || this._app.scenes._transitionGateOpen;
@@ -957,7 +959,12 @@ export class InteractionSystem {
     const lastIndex = journal.length - 1;
     const last = journal[lastIndex];
 
-    if (kind === InteractionPhaseKind.Move && last !== undefined && last.kind === InteractionPhaseKind.Move && last.pointer.id === pointer.id) {
+    if (
+      kind === InteractionPhaseKind.Move &&
+      last !== undefined &&
+      last.kind === InteractionPhaseKind.Move &&
+      last.pointer.id === pointer.id
+    ) {
       journal[lastIndex] = { kind, pointer, x, y, tap: false };
       this._dirty = true;
 
@@ -1842,6 +1849,7 @@ export class InteractionSystem {
 
       for (let i = children.length - 1; i >= 0; i--) {
         const child = children[i];
+
         if (child === undefined) {
           continue;
         }
@@ -2145,6 +2153,7 @@ export class InteractionSystem {
         // Push in reverse so iteration preserves child insertion order.
         for (let index = node.children.length - 1; index >= 0; index--) {
           const child = node.children[index];
+
           if (child !== undefined) {
             stack.push(child);
           }

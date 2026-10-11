@@ -858,9 +858,17 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
  * frames must not be presented as equal in confidence to one over 120.
  */
 export const timedFramesFor = (nodeCount: number): number => {
-  if (nodeCount >= 100_000) return 30;
-  if (nodeCount >= 25_000) return 60;
-  if (nodeCount >= 5_000) return 90;
+  if (nodeCount >= 100_000) {
+    return 30;
+  }
+
+  if (nodeCount >= 25_000) {
+    return 60;
+  }
+
+  if (nodeCount >= 5_000) {
+    return 90;
+  }
 
   return 120;
 };
@@ -876,8 +884,13 @@ export const timedFramesFor = (nodeCount: number): number => {
  * without touching the timed-frame budget the report already labels honestly.
  */
 export const warmupFramesFor = (nodeCount: number): number => {
-  if (nodeCount >= 100_000) return 40;
-  if (nodeCount >= 25_000) return 25;
+  if (nodeCount >= 100_000) {
+    return 40;
+  }
+
+  if (nodeCount >= 25_000) {
+    return 25;
+  }
 
   return 10;
 };
@@ -888,12 +901,16 @@ export const buildMatrix = (adapters: readonly EngineAdapter[], backends: readon
 
   for (const adapter of adapters) {
     for (const backend of backends) {
-      if (!adapter.supports(backend)) continue;
+      if (!adapter.supports(backend)) {
+        continue;
+      }
 
       for (const archetype of ARCHETYPES) {
         // Arms that are a variant of another arm cover only the archetypes
         // where the variation is the point (see `EngineAdapter.coversArchetype`).
-        if (adapter.coversArchetype?.(archetype) === false) continue;
+        if (adapter.coversArchetype?.(archetype) === false) {
+          continue;
+        }
 
         for (const nodeCount of archetype.nodeCounts) {
           cells.push({

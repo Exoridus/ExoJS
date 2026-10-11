@@ -1,6 +1,13 @@
 import { View } from '@codexo/exojs';
 import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-import { type ChunkPayload, type ChunkSource, ChunkStreamer, packTile, TILE_TRANSFORM_IDENTITY, type TileLayer } from '@codexo/exojs-tilemap';
+import {
+  type ChunkPayload,
+  type ChunkSource,
+  ChunkStreamer,
+  packTile,
+  TILE_TRANSFORM_IDENTITY,
+  type TileLayer,
+} from '@codexo/exojs-tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TileColliderStreamer } from '../src/TileColliderStreamer';
@@ -25,14 +32,18 @@ const world = (): PhysicsWorld => new PhysicsWorld({ gravity: { x: 0, y: 0 } });
 const colliderCount = (bridge: TileColliderStreamer): number => {
   let count = 0;
 
-  for (const body of bridge.bodies()) count += body.colliders.length;
+  for (const body of bridge.bodies()) {
+    count += body.colliders.length;
+  }
 
   return count;
 };
 
 const describeWorld = (bridge: TileColliderStreamer): string =>
   [...bridge.bodies()]
-    .map(body => [body.x, body.y, ...body.colliders.map(collider => `${collider.shape.type}@${collider.offsetX},${collider.offsetY}`)].join(':'))
+    .map(body =>
+      [body.x, body.y, ...body.colliders.map(collider => `${collider.shape.type}@${collider.offsetX},${collider.offsetY}`)].join(':'),
+    )
     .join('|');
 
 describe('TileColliderStreamer lifecycle', () => {
@@ -174,7 +185,9 @@ describe('TileColliderStreamer lifecycle', () => {
     // walk that is the only thing in `sync` that allocates.
     const walk = vi.spyOn(layer, 'loadedChunks');
 
-    for (let i = 0; i < 100; i++) bridge.sync();
+    for (let i = 0; i < 100; i++) {
+      bridge.sync();
+    }
 
     expect(walk).not.toHaveBeenCalled();
   });
@@ -201,7 +214,7 @@ describe('TileColliderStreamer lifecycle', () => {
   });
 
   it('produces the same colliders whichever order chunks arrive in', () => {
-    const build = (order: readonly (readonly [number, number])[]): string => {
+    const build = (order: ReadonlyArray<readonly [number, number]>): string => {
       const tileset = solidTileset();
       const layer = makeLayer(tileset, { width: 8, height: 8, chunkWidth: CHUNK, chunkHeight: CHUNK });
       const bridge = new TileColliderStreamer(world(), layer);
@@ -214,7 +227,7 @@ describe('TileColliderStreamer lifecycle', () => {
       return describeWorld(bridge);
     };
 
-    const forward: (readonly [number, number])[] = [
+    const forward: Array<readonly [number, number]> = [
       [0, 0],
       [1, 0],
       [4, 0],
@@ -228,7 +241,9 @@ describe('TileColliderStreamer lifecycle', () => {
     const tileset = solidTileset();
     const layer = makeLayer(tileset, { width: 8, height: 2, chunkWidth: 8, chunkHeight: 2 });
 
-    for (let tx = 0; tx < 8; tx++) place(layer, tileset, tx, 1);
+    for (let tx = 0; tx < 8; tx++) {
+      place(layer, tileset, tx, 1);
+    }
 
     const bridge = new TileColliderStreamer(world(), layer);
 
@@ -244,7 +259,9 @@ describe('TileColliderStreamer lifecycle', () => {
     const tileset = solidTileset();
     const layer = makeLayer(tileset, { width: 8, height: 2, chunkWidth: 8, chunkHeight: 2 });
 
-    for (let tx = 0; tx < 8; tx++) place(layer, tileset, tx, 1);
+    for (let tx = 0; tx < 8; tx++) {
+      place(layer, tileset, tx, 1);
+    }
 
     const bridge = new TileColliderStreamer(world(), layer, {
       friction: 0.25,
@@ -272,7 +289,9 @@ describe('TileColliderStreamer lifecycle', () => {
     const tileset = solidTileset();
     const layer = makeLayer(tileset, { width: 8, height: 4, chunkWidth: 8, chunkHeight: 4 });
 
-    for (let tx = 0; tx < 8; tx++) place(layer, tileset, tx, 3);
+    for (let tx = 0; tx < 8; tx++) {
+      place(layer, tileset, tx, 3);
+    }
 
     const physicsWorld = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
 
@@ -286,7 +305,9 @@ describe('TileColliderStreamer lifecycle', () => {
       }),
     );
 
-    for (let step = 0; step < 240; step++) physicsWorld.step(1 / 60);
+    for (let step = 0; step < 240; step++) {
+      physicsWorld.step(1 / 60);
+    }
 
     expect(body.y).toBeCloseTo(3 * TILE - 4, 0);
   });

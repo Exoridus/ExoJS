@@ -10,8 +10,8 @@ import { packTile, TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-const fakeTexture = (width = 512, height = 512): Texture => {
-  return {
+const fakeTexture = (width = 512, height = 512): Texture =>
+  ({
     width,
     height,
     flipY: false,
@@ -19,21 +19,19 @@ const fakeTexture = (width = 512, height = 512): Texture => {
     label: 'test',
     destroy: () => {},
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeTileset = (name = 'tiles', tileCount = 16, tw = 32, th = 32, texW = 512, texH = 512): TileSet => {
-  return new TileSet({
+const makeTileset = (name = 'tiles', tileCount = 16, tw = 32, th = 32, texW = 512, texH = 512): TileSet =>
+  new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(texW, texH), { x: 0, y: 0, width: texW, height: texH }),
     tileWidth: tw,
     tileHeight: th,
     tileCount,
   });
-};
 
-const makeLayer = (tilesets: TileSet[], width = 4, height = 4): TileLayer => {
-  return new TileLayer({
+const makeLayer = (tilesets: TileSet[], width = 4, height = 4): TileLayer =>
+  new TileLayer({
     id: 1,
     name: 'ground',
     width,
@@ -42,21 +40,18 @@ const makeLayer = (tilesets: TileSet[], width = 4, height = 4): TileLayer => {
     tileHeight: 32,
     tilesets,
   });
-};
 
 /** Minimal fixed-content chunk stub for the defensive out-of-range paths. */
-const stubChunk = (raw: number): ReadonlyTileChunk => {
-  return {
-    cx: 0,
-    cy: 0,
-    width: 1,
-    height: 1,
-    empty: false,
-    revision: 1,
-    getRawAt: () => raw,
-    cloneTiles: () => new Uint32Array([raw]),
-  };
-};
+const stubChunk = (raw: number): ReadonlyTileChunk => ({
+  cx: 0,
+  cy: 0,
+  width: 1,
+  height: 1,
+  empty: false,
+  revision: 1,
+  getRawAt: () => raw,
+  cloneTiles: () => new Uint32Array([raw]),
+});
 
 // ═══════════════════════════════════════════════════════════════════════
 

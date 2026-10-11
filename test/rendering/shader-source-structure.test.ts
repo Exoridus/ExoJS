@@ -50,9 +50,15 @@ const CHUNKS: ReadonlyMap<string, ChunkRole> = new Map([
     'transport-filter.frag',
     { opens: true, entry: false, reason: "the preamble the transport filters share; the walked textures' bindings are appended to it" },
   ],
-  ['transport.frag', { opens: false, entry: false, reason: 'the transport operator itself: functions, spliced into every shader that walks' }],
+  [
+    'transport.frag',
+    { opens: false, entry: false, reason: 'the transport operator itself: functions, spliced into every shader that walks' },
+  ],
   ['cascade-transport.frag', { opens: false, entry: true, reason: 'one cascade level, composed onto the preamble and the operator' }],
-  ['cascade-gather-transport.frag', { opens: false, entry: true, reason: 'the receiver reconstruction, composed onto the preamble and the operator' }],
+  [
+    'cascade-gather-transport.frag',
+    { opens: false, entry: true, reason: 'the receiver reconstruction, composed onto the preamble and the operator' },
+  ],
 ]);
 
 interface ShaderEntry {
@@ -96,7 +102,9 @@ const findBracketMismatch = (source: string): string | null => {
       const open = stack.pop();
 
       if (open === undefined || BRACKET_CLOSERS[open] !== char) {
-        return open === undefined ? `unexpected '${char}' with no matching opener` : `expected '${BRACKET_CLOSERS[open]}' but found '${char}'`;
+        return open === undefined
+          ? `unexpected '${char}' with no matching opener`
+          : `expected '${BRACKET_CLOSERS[open]}' but found '${char}'`;
       }
     }
   }

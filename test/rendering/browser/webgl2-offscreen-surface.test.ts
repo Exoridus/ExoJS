@@ -28,7 +28,9 @@ const filledOffscreenCanvas = (edge = 16): OffscreenCanvas => {
   const canvas = new OffscreenCanvas(edge, edge);
   const context = canvas.getContext('2d');
 
-  if (context === null) throw new Error('This suite needs a 2D context on an OffscreenCanvas.');
+  if (context === null) {
+    throw new Error('This suite needs a 2D context on an OffscreenCanvas.');
+  }
 
   context.fillStyle = '#ff0000';
   context.fillRect(0, 0, edge, edge);
@@ -55,7 +57,9 @@ const filledCanvas = (edge = 16): HTMLCanvasElement => {
 
   const context = canvas.getContext('2d');
 
-  if (context === null) throw new Error('This suite needs a 2D context.');
+  if (context === null) {
+    throw new Error('This suite needs a 2D context.');
+  }
 
   context.fillStyle = '#00ff00';
   context.fillRect(0, 0, edge, edge);
@@ -169,7 +173,11 @@ describe('an application given an OffscreenCanvas on the main thread', () => {
 
   test('leaves a caller-provided surface alone when it goes down', async () => {
     const surface = new OffscreenCanvas(SIZE, SIZE);
-    const app = new Application({ hello: false, backend: { type: 'webgl2' }, canvas: { element: surface, width: SIZE, height: SIZE, pixelRatio: 1 } });
+    const app = new Application({
+      hello: false,
+      backend: { type: 'webgl2' },
+      canvas: { element: surface, width: SIZE, height: SIZE, pixelRatio: 1 },
+    });
 
     await app.destroy();
 
@@ -199,7 +207,9 @@ describe('WebGL2 uploads the surface-only texture sources', () => {
   });
 
   test('a VideoFrame uploads, and the engine leaves it open for its owner to close', async ctx => {
-    if (!hasVideoFrame(ctx)) return;
+    if (!hasVideoFrame(ctx)) {
+      return;
+    }
 
     const backend = await createWebGl2TestBackend(SIZE);
     const root = new Container();

@@ -12,7 +12,11 @@ import {
 import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/materialSources';
-import { fillPersistentSpriteSlotTable, rekeyPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
+import {
+  fillPersistentSpriteSlotTable,
+  rekeyPersistentSpriteSlotTable,
+  writePersistentSpriteSlots,
+} from '#rendering/sprite/persistentSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -272,7 +276,12 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * slot's recorded texture index still names the texture it was written for.
    * @internal
    */
-  public _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+  public _rekeyPersistentSlotStore(
+    store: WebGl2PersistentSlotStore,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
     return rekeyPersistentSpriteSlotTable(source, store, this._maxTextureSlots, carried, previousHandleCount);
   }
 
@@ -295,7 +304,13 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * split it - the stream IS the draw order the plan built.
    * @internal
    */
-  public _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, offset: number, count: number, backend: WebGl2Backend): void {
+  public _drawPersistentSlots(
+    store: WebGl2PersistentSlotStore,
+    order: Uint32Array,
+    offset: number,
+    count: number,
+    backend: WebGl2Backend,
+  ): void {
     if (count === 0) {
       return;
     }
@@ -338,7 +353,11 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * never leave a pointer dangling; and on a GL handle of its own, so it never
    * disturbs the live batch's layout (see {@link _createVaoRuntime}).
    */
-  private _acquireIndexedVao(gl: WebGL2RenderingContext, store: WebGl2PersistentSlotStore, buffer: WebGl2RenderBuffer): WebGl2VertexArrayObject {
+  private _acquireIndexedVao(
+    gl: WebGL2RenderingContext,
+    store: WebGl2PersistentSlotStore,
+    buffer: WebGl2RenderBuffer,
+  ): WebGl2VertexArrayObject {
     if (store.indexedVao !== null) {
       return store.indexedVao;
     }
@@ -676,9 +695,36 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     this._vao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_localBounds'), gl.FLOAT, false, instanceStrideBytes, 0, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, 16, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, 24, true, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, 28, true, 1)
+      .addAttribute(
+        this._instanceBuffer,
+        this._shader.getAttribute('a_uvBounds'),
+        gl.UNSIGNED_SHORT,
+        true,
+        instanceStrideBytes,
+        16,
+        false,
+        1,
+      )
+      .addAttribute(
+        this._instanceBuffer,
+        this._shader.getAttribute('a_textureSlot'),
+        gl.UNSIGNED_INT,
+        false,
+        instanceStrideBytes,
+        24,
+        true,
+        1,
+      )
+      .addAttribute(
+        this._instanceBuffer,
+        this._shader.getAttribute('a_nodeIndex'),
+        gl.UNSIGNED_INT,
+        false,
+        instanceStrideBytes,
+        28,
+        true,
+        1,
+      )
       .connect(this._createVaoRuntime(this._connection, this._connection.vaoHandle));
 
     // Pin the per-slot sampler uniforms to texture units 0..N-1. Strict on
@@ -767,7 +813,13 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   /** Custom-material path: rotate the base texture through the material slot table, instanced. */
-  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: AnySpriteMaterial, backend: WebGl2Backend, nodeIndex: number): void {
+  private _renderCustom(
+    sprite: Sprite,
+    texture: Texture | RenderTexture,
+    material: AnySpriteMaterial,
+    backend: WebGl2Backend,
+    nodeIndex: number,
+  ): void {
     // The material owns its blend mode; the sprite's own blendMode overrides it
     // when set away from the default (Normal).
     const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
@@ -868,7 +920,10 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     // the engine's base-texture slot table spliced in, so `sampleBase` and the
     // `u_texture0..N-1` samplers behind it exist without the author declaring
     // them.
-    const shader = new WebGl2Shader(spliceGlslPrologue(spriteVertexGlsl, colorShaderSourcesGlsl), composeSpriteMaterialFragmentGlsl(glsl.fragment));
+    const shader = new WebGl2Shader(
+      spliceGlslPrologue(spriteVertexGlsl, colorShaderSourcesGlsl),
+      composeSpriteMaterialFragmentGlsl(glsl.fragment),
+    );
 
     shader.uniformBlockData = material._blocks;
     shader.connect(createWebGl2ShaderProgram(gl));
@@ -908,7 +963,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   private _stageCustomUniforms(shader: WebGl2Shader, material: AnySpriteMaterial): void {
     for (const name of material._bindingSchema.scalarUniformNames) {
       if (shader.uniforms.has(name)) {
-        shader.getUniform(name).setValue(this._marshalUniformValue(material._getUniformValue(name) as Exclude<UniformValue, Texture | RenderTexture>));
+        shader
+          .getUniform(name)
+          .setValue(this._marshalUniformValue(material._getUniformValue(name) as Exclude<UniformValue, Texture | RenderTexture>));
       }
     }
 
@@ -940,6 +997,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       if (shader.uniforms.has(name)) {
         backend.bindTexture(material._getUniformValue(name) as Texture | RenderTexture, textureSlot);
       }
+
       textureSlot++;
     }
 
@@ -947,6 +1005,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       if (shader.uniforms.has(name)) {
         backend.bindTexture(material._getTextureValue(name), textureSlot);
       }
+
       textureSlot++;
     }
   }
@@ -1049,7 +1108,14 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
             if (attribute.integer) {
               gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
             } else {
-              gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+              gl.vertexAttribPointer(
+                attribute.location,
+                attribute.size,
+                attribute.type,
+                attribute.normalized,
+                attribute.stride,
+                attribute.start,
+              );
             }
 
             gl.enableVertexAttribArray(attribute.location);

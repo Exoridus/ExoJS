@@ -28,7 +28,19 @@ import { Texture } from '#rendering/texture/Texture';
 
 // Text construction needs a GlyphAtlasPool; inject a mock so the Text-based
 // cases run without a real canvas 2D context (mirrors serialization.test.ts).
-const fixedGlyphInfo: GlyphInfo = { x: 0, y: 0, width: 8, height: 16, advance: 10, ascent: 13, page: 0, uvLeft: 0, uvTop: 0, uvRight: 0.01, uvBottom: 0.02 };
+const fixedGlyphInfo: GlyphInfo = {
+  x: 0,
+  y: 0,
+  width: 8,
+  height: 16,
+  advance: 10,
+  ascent: 13,
+  page: 0,
+  uvLeft: 0,
+  uvTop: 0,
+  uvRight: 0.01,
+  uvBottom: 0.02,
+};
 const mockAtlas: Partial<GlyphAtlas> = {
   getGlyph: vi.fn(() => fixedGlyphInfo),
   pages: [] as unknown as GlyphAtlas['pages'],
@@ -43,16 +55,15 @@ afterEach(() => resetDefaultGlyphAtlasPool());
 afterEach(_resetDefaultSerializers);
 
 /** Minimal Loader stand-in exposing only `_peekResource`/`keyFor` for asset resolution. */
-const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader => {
-  return {
+const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader =>
+  ({
     _peekResource: (type: Loadable, source: string) => entries.find(e => e.type === type && e.source === source)?.resource ?? null,
     keyFor: (resource: object) => {
       const entry = entries.find(e => e.resource === resource);
 
       return entry ? { type: entry.type, source: entry.source } : null;
     },
-  } as unknown as Loader;
-};
+  }) as unknown as Loader;
 
 // A SerializedNode is an open bag; the helpers must tolerate arbitrary garbage
 // in any field. Cast through `unknown` so the tests can feed wrong-typed values.
@@ -138,7 +149,10 @@ describe('serialization validation — node deserialization (untrusted input)', 
   it('drops invalid enum values on a RepeatingSprite, using the renderer defaults', () => {
     const texture = new Texture(Object.assign(document.createElement('canvas'), { width: 16, height: 16 }));
     const loader = fakeLoader([{ type: Texture as unknown as Loadable, source: 'tex', resource: texture }]);
-    const sprite = deserializeTree(node({ type: 'RepeatingSprite', texture: 'tex', modeX: 'bogus', offsetX: NaN, width: 64 }), loader) as RepeatingSprite;
+    const sprite = deserializeTree(
+      node({ type: 'RepeatingSprite', texture: 'tex', modeX: 'bogus', offsetX: NaN, width: 64 }),
+      loader,
+    ) as RepeatingSprite;
 
     expect(sprite.modeX).not.toBe('bogus'); // the bogus value was rejected
     expect(REPEAT_MODES).toContain(sprite.modeX); // …and replaced by a valid renderer default
@@ -147,7 +161,9 @@ describe('serialization validation — node deserialization (untrusted input)', 
   });
 
   it('skips non-object children instead of crashing', () => {
-    const result = deserializeTree(node({ type: 'Container', children: [null, 'x', 42, [], { type: 'Sprite' }, { notType: true }] })) as Container;
+    const result = deserializeTree(
+      node({ type: 'Container', children: [null, 'x', 42, [], { type: 'Sprite' }, { notType: true }] }),
+    ) as Container;
 
     expect(result.children.length).toBe(1); // only the one valid child node survives
     expect(result.children[0]).toBeInstanceOf(Sprite);

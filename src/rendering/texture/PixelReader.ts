@@ -79,8 +79,11 @@ export const resolvePixelRegion = (
     dataType === 'uint8'
       ? source.format === TextureFormat.Rgba8 || source.format === TextureFormat.Rgba8Srgb
       : dataType === 'float32' && (source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F);
+
   if (!valid) {
-    throw new Error(`${method} cannot read '${source.format}' as '${dataType}'. Use uint8 for rgba8/rgba8srgb or float32 for rgba16f/rgba32f.`);
+    throw new Error(
+      `${method} cannot read '${source.format}' as '${dataType}'. Use uint8 for rgba8/rgba8srgb or float32 for rgba16f/rgba32f.`,
+    );
   }
 
   return resolvePixelRegionBounds(method, source, region);
@@ -359,7 +362,9 @@ export class PixelReader<T extends PixelArray = Uint8ClampedArray> {
     this._heldSlots = [];
 
     for (let slot = 0; slot < this.slots; slot++) {
-      this._reads.push(new PixelRead(this, slot, { width: this._width, height: this._height, data: this._readback.data(slot) as T }, this._generation));
+      this._reads.push(
+        new PixelRead(this, slot, { width: this._width, height: this._height, data: this._readback.data(slot) as T }, this._generation),
+      );
       this._heldSlots.push(false);
     }
   }

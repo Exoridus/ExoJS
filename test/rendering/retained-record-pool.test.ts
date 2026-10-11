@@ -14,12 +14,25 @@ import { describe, expect, test } from 'vitest';
 import type { Drawable } from '#rendering/Drawable';
 import { type MaterialKey } from '#rendering/material/MaterialKey';
 import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
-import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawables, RetainedRecordPool } from '#rendering/plan/RetainedRecordPool';
+import {
+  copyRetainedDrawData,
+  type MutableRetainedDrawData,
+  releasePooledDrawables,
+  RetainedRecordPool,
+} from '#rendering/plan/RetainedRecordPool';
 
 const drawableA = { id: 'a' } as unknown as Drawable;
 const drawableB = { id: 'b' } as unknown as Drawable;
 
-const neutralKey = (): MaterialKey => ({ rendererId: 0, blendMode: 0, textureId: -1, shaderId: -1, pipelineKey: 0, bindKey: 0, ownMaterial: false });
+const neutralKey = (): MaterialKey => ({
+  rendererId: 0,
+  blendMode: 0,
+  textureId: -1,
+  shaderId: -1,
+  pipelineKey: 0,
+  bindKey: 0,
+  ownMaterial: false,
+});
 
 const createRecord = (): MutableRetainedDrawData => ({
   drawable: undefined as unknown as Drawable,
@@ -128,7 +141,15 @@ describe('copyRetainedDrawData', () => {
     // The key object is the record's own, never the command's: the command is
     // pooled per frame and would be rewritten under the capture.
     expect(record.material).toBe(pooledKey);
-    expect(record.material).toEqual({ rendererId: 3, blendMode: 1, textureId: 5, shaderId: 6, pipelineKey: 11, bindKey: 12, ownMaterial: true });
+    expect(record.material).toEqual({
+      rendererId: 3,
+      blendMode: 1,
+      textureId: 5,
+      shaderId: 6,
+      pipelineKey: 11,
+      bindKey: 12,
+      ownMaterial: true,
+    });
   });
 
   test('a second copy leaves nothing of the first behind', () => {

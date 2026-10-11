@@ -74,6 +74,7 @@ export class BmFontAdapter implements GlyphProvider {
           once: `bitmaptext:${this._fontId}:${cp}`,
         });
       }
+
       return {
         x: 0,
         y: 0,
@@ -121,7 +122,11 @@ export class BmFontAdapter implements GlyphProvider {
   public getKerning(prev: string, next: string, _fontSize: number): number {
     const a = prev.codePointAt(0);
     const b = next.codePointAt(0);
-    if (a === undefined || b === undefined) return 0;
+
+    if (a === undefined || b === undefined) {
+      return 0;
+    }
+
     return (this._fontData.kernings.get(`${a},${b}`) ?? 0) * this._scale;
   }
 }
@@ -179,7 +184,9 @@ export class BitmapText extends AbstractText {
    * @stable
    */
   public static measure(text: string, font: BmFont, options: BitmapTextOptions = {}): TextSize {
-    if (text.length === 0) return { width: 0, height: 0 };
+    if (text.length === 0) {
+      return { width: 0, height: 0 };
+    }
 
     const scale = options.scale ?? 1;
     const style = new TextStyle(options);
@@ -227,7 +234,10 @@ export class BitmapText extends AbstractText {
   }
 
   public set fontScale(v: number) {
-    if (this._fontScale === v) return;
+    if (this._fontScale === v) {
+      return;
+    }
+
     this._fontScale = v;
     this._adapter = new BmFontAdapter(this._font.fontData, this._font.textures, v);
     this._markDirty('font');
@@ -262,7 +272,9 @@ export class BitmapText extends AbstractText {
   // ── Private ──────────────────────────────────────────────────────────────
 
   protected override _runLayout(): TextLayoutResult {
-    if (this._text.length === 0) return emptyTextLayout();
+    if (this._text.length === 0) {
+      return emptyTextLayout();
+    }
 
     return layoutText(this._text, BitmapText._layoutStyle(this._font, this._fontScale, this._style), this._layout, this._adapter);
   }

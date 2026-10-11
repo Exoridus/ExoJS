@@ -96,13 +96,15 @@ const createStaticGamepadDefinition = (name: string, createMapping: () => Gamepa
 const normalizeId = (id: string): string => id.trim().toLowerCase();
 
 const parseProductKey = (id: string): string | null => {
-  const match = vendorProductHexPattern.exec(id) || vendorProductPattern.exec(id) || vidPidPattern.exec(id) || vendorProductPairPattern.exec(id);
+  const match =
+    vendorProductHexPattern.exec(id) || vendorProductPattern.exec(id) || vidPidPattern.exec(id) || vendorProductPairPattern.exec(id);
 
   if (!match) {
     return null;
   }
 
   const [, vendor, product] = match;
+
   if (vendor === undefined || product === undefined) {
     return null;
   }
@@ -286,9 +288,18 @@ export const resolveGamepadDefinition = (
 const exactDeviceDefinitions: GamepadDefinition[] = [
   createStaticGamepadDefinition('Xbox 360 Controller', () => createXboxGamepadMapping(), '045e:028e'),
   createStaticGamepadDefinition('Xbox One Controller', () => createXboxGamepadMapping(), ['045e:02d1', '045e:02dd']),
-  createStaticGamepadDefinition('Xbox Wireless Controller', () => createXboxGamepadMapping(), ['045e:02e0', '045e:02ea', '045e:02fd', '045e:0b20']),
+  createStaticGamepadDefinition('Xbox Wireless Controller', () => createXboxGamepadMapping(), [
+    '045e:02e0',
+    '045e:02ea',
+    '045e:02fd',
+    '045e:0b20',
+  ]),
   createStaticGamepadDefinition('Xbox One Elite Controller', () => createXboxGamepadMapping(), '045e:02e3'),
-  createStaticGamepadDefinition('Xbox Elite Wireless Controller Series 2', () => createXboxGamepadMapping(), ['045e:0b00', '045e:0b05', '045e:0b22']),
+  createStaticGamepadDefinition('Xbox Elite Wireless Controller Series 2', () => createXboxGamepadMapping(), [
+    '045e:0b00',
+    '045e:0b05',
+    '045e:0b22',
+  ]),
   createStaticGamepadDefinition('Xbox Series Controller', () => createXboxGamepadMapping(), ['045e:0b12', '045e:0b13']),
   createStaticGamepadDefinition('PlayStation 3 Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS3), '054c:0268'),
   createStaticGamepadDefinition('DualShock 4 Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), [
@@ -315,7 +326,11 @@ const exactDeviceDefinitions: GamepadDefinition[] = [
   createStaticGamepadDefinition('F310 Gamepad', () => createStandardGamepadMapping(), '046d:c216'),
   createStaticGamepadDefinition('F710 Gamepad', () => createStandardGamepadMapping(), ['046d:c219', '046d:c21f']),
   createStaticGamepadDefinition('8BitDo P30 Controller', () => createStandardGamepadMapping(), ['2dc8:5107', '2dc8:5108']),
-  createStaticGamepadDefinition('8BitDo SF30 Pro Controller', () => createSwitchProGamepadMapping(), ['2dc8:3000', '2dc8:6100', '2dc8:6101']),
+  createStaticGamepadDefinition('8BitDo SF30 Pro Controller', () => createSwitchProGamepadMapping(), [
+    '2dc8:3000',
+    '2dc8:6100',
+    '2dc8:6101',
+  ]),
   createStaticGamepadDefinition('8BitDo SN30 Controller', () => createSwitchProGamepadMapping(), [
     '2dc8:3001',
     '2dc8:5103',
@@ -328,19 +343,35 @@ const exactDeviceDefinitions: GamepadDefinition[] = [
   createStaticGamepadDefinition('PowerA Switch Controller', () => createSwitchProGamepadMapping(), '20d6:a713'),
   createStaticGamepadDefinition('PowerA OPS Pro Wireless Controller', () => createStandardGamepadMapping(), '20d6:4033'),
   createStaticGamepadDefinition('PowerA OPS Wireless Controller', () => createStandardGamepadMapping(), '20d6:4026'),
-  createStaticGamepadDefinition('Nacon Revolution 3 Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0611'),
-  createStaticGamepadDefinition('Nacon Revolution Unlimited Pro Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0d08'),
-  createStaticGamepadDefinition('Nacon Revolution Infinity Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0d10'),
+  createStaticGamepadDefinition(
+    'Nacon Revolution 3 Controller',
+    () => createPlayStationGamepadMapping(PlayStationGeneration.PS4),
+    '146b:0611',
+  ),
+  createStaticGamepadDefinition(
+    'Nacon Revolution Unlimited Pro Controller',
+    () => createPlayStationGamepadMapping(PlayStationGeneration.PS4),
+    '146b:0d08',
+  ),
+  createStaticGamepadDefinition(
+    'Nacon Revolution Infinity Controller',
+    () => createPlayStationGamepadMapping(PlayStationGeneration.PS4),
+    '146b:0d10',
+  ),
   createStaticGamepadDefinition('Nacon Revolution 5 Pro Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS5), [
     '3285:0d17',
     '3285:0d19',
   ]),
   createStaticGamepadDefinition('Razer Raiju Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), '1532:1000'),
-  createStaticGamepadDefinition('Razer Raiju Mobile Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), ['1532:0705', '1532:0707']),
-  createStaticGamepadDefinition('Razer Raiju Tournament Edition Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), [
-    '1532:1007',
-    '1532:100a',
+  createStaticGamepadDefinition('Razer Raiju Mobile Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), [
+    '1532:0705',
+    '1532:0707',
   ]),
+  createStaticGamepadDefinition(
+    'Razer Raiju Tournament Edition Controller',
+    () => createPlayStationGamepadMapping(PlayStationGeneration.PS4),
+    ['1532:1007', '1532:100a'],
+  ),
   createStaticGamepadDefinition('Razer Raiju Ultimate Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), [
     '1532:1004',
     '1532:1009',
@@ -366,4 +397,8 @@ const genericFallbackDefinition = createStaticGamepadDefinition('Generic Gamepad
  * Ordered as: exact product-ID matches → vendor-ID fallbacks → generic catch-all.
  * Register custom definitions by prepending to a copy and passing it explicitly.
  */
-export const builtInGamepadDefinitions: GamepadDefinition[] = [...exactDeviceDefinitions, ...vendorFallbackDefinitions, genericFallbackDefinition];
+export const builtInGamepadDefinitions: GamepadDefinition[] = [
+  ...exactDeviceDefinitions,
+  ...vendorFallbackDefinitions,
+  genericFallbackDefinition,
+];

@@ -46,7 +46,10 @@ class SplitScreenScene extends Scene {
       new Text('P1 · WASD / Pad 1', { fillColor: new Color(120, 190, 255), fontSize: 24 }).setPosition(24, 160),
       new Text('P2 · Arrows / Pad 2', { fillColor: new Color(255, 180, 120), fontSize: 24 }).setPosition(width / 2 + 24, 160),
     ];
-    mountControls({ title: 'Local Split Screen', hint: 'Move each player to see its camera follow independently. Controllers are optional.' });
+    mountControls({
+      title: 'Local Split Screen',
+      hint: 'Move each player to see its camera follow independently. Controllers are optional.',
+    });
     this.leftPlayer = new Sprite(this.texture)
       .setAnchor(0.5)
       .setPosition(-160, 0)
@@ -123,7 +126,10 @@ class SplitScreenScene extends Scene {
   update(delta) {
     const speed = 300 * delta;
     this.leftPlayer.move((this.move.d - this.move.a + this.padMove[0].x) * speed, (this.move.s - this.move.w + this.padMove[0].y) * speed);
-    this.rightPlayer.move((this.move.right - this.move.left + this.padMove[1].x) * speed, (this.move.down - this.move.up + this.padMove[1].y) * speed);
+    this.rightPlayer.move(
+      (this.move.right - this.move.left + this.padMove[1].x) * speed,
+      (this.move.down - this.move.up + this.padMove[1].y) * speed,
+    );
     this.leftView.setCenter(this.leftPlayer.position.x, this.leftPlayer.position.y);
     this.rightView.setCenter(this.rightPlayer.position.x, this.rightPlayer.position.y);
   }

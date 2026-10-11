@@ -59,8 +59,10 @@ const setupSourceSpy = (): { sources: MockBufferSource[]; restore: () => void } 
       buffer: null,
     };
     sources.push(node);
+
     return node as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 
@@ -106,8 +108,10 @@ const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
       positionZ: makeSpatialParamMock(),
     };
     panners.push(panner);
+
     return panner as unknown as PannerNode;
   });
+
   return { panners, restore: () => spy.mockRestore() };
 };
 

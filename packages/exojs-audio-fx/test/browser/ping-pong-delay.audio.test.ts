@@ -67,7 +67,7 @@ const renderPingPong = async (opts: PingPongRenderOptions): Promise<{ left: Floa
 
   // Single-sample impulse source.
   const impulseBuffer = ctx.createBuffer(1, 128, sr);
-  impulseBuffer.getChannelData(0)[0] = 1.0;
+  impulseBuffer.getChannelData(0)[0] = 1;
   const src = ctx.createBufferSource();
   src.buffer = impulseBuffer;
 
@@ -128,9 +128,13 @@ describe('PingPongDelayEffect — acoustic contract (real Web Audio)', () => {
     // Before the I1 fix (symmetric seeding), L = R at every sample → maxAbsDiff = 0.
     let maxAbsDiff = 0;
     const n = Math.min(L.length, R.length);
+
     for (let i = 0; i < n; i++) {
       const d = Math.abs(L[i]! - R[i]!);
-      if (d > maxAbsDiff) maxAbsDiff = d;
+
+      if (d > maxAbsDiff) {
+        maxAbsDiff = d;
+      }
     }
 
     // True ping-pong: alternating exclusive taps → peak L/R difference > 0.5.

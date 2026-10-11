@@ -4,7 +4,18 @@ import MonacoReactEditor, { loader, type OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-import { type ChangeEvent, type ReactNode, type Ref, type RefObject, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+  type ChangeEvent,
+  type ReactNode,
+  type Ref,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { findExampleCompanions } from '../lib/example-companions';
 import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsPromise } from '../lib/footgun-diagnostics';
@@ -168,7 +179,10 @@ export const EditorCode = ({
   }, [onDirty, sourceCode, sourcePath]);
 
   useEffect(() => {
-    if (!selectedVersionId) return;
+    if (!selectedVersionId) {
+      return;
+    }
+
     void ensureTypingsForVersion(selectedVersionId, selectedVersionRef, typingsAppliedVersionRef, () =>
       updateDiagnostics(modelRef.current, selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic),
     );
@@ -176,12 +190,21 @@ export const EditorCode = ({
 
   useEffect(() => {
     const onDocumentClick = (event: MouseEvent): void => {
-      if (!showMenu) return;
+      if (!showMenu) {
+        return;
+      }
+
       const anchor = document.querySelector('[data-editor-menu-anchor]');
-      if (anchor?.contains(event.target as Node)) return;
+
+      if (anchor?.contains(event.target as Node)) {
+        return;
+      }
+
       setShowMenu(false);
     };
+
     document.addEventListener('click', onDocumentClick);
+
     return () => document.removeEventListener('click', onDocumentClick);
   }, [showMenu]);
 
@@ -191,11 +214,16 @@ export const EditorCode = ({
         clearTimeout(autoRefreshTimerRef.current);
         autoRefreshTimerRef.current = null;
       }
+
       if (footgunTimerRef.current !== null) {
         clearTimeout(footgunTimerRef.current);
         footgunTimerRef.current = null;
       }
-      for (const disposable of disposablesRef.current) disposable.dispose();
+
+      for (const disposable of disposablesRef.current) {
+        disposable.dispose();
+      }
+
       disposablesRef.current = [];
     },
     [],
@@ -204,23 +232,34 @@ export const EditorCode = ({
   const triggerRefresh = useCallback(async (): Promise<void> => {
     // A read-only buffer shows already-compiled JS, not new source - refreshing
     // from it would feed that compiled text back into `sourceCode` upstream.
-    if (readOnly) return;
+    if (readOnly) {
+      return;
+    }
+
     const editor = editorRef.current;
-    if (!editor) return;
+
+    if (!editor) {
+      return;
+    }
+
     const code = editor.getValue();
+
     if (language !== 'typescript') {
       onUpdateCode({ code, executionCode: undefined });
       onDirty(false);
+
       return;
     }
 
     const executionCode = await getExecutionCode(editor, language);
+
     if (executionCode === null) {
       // TS worker couldn't emit JS (still warming up, or a transient
       // failure) - keep the last successfully-compiled preview running
       // instead of pushing raw, unparseable TypeScript into the iframe.
       return;
     }
+
     onUpdateCode({ code, executionCode });
     onDirty(false);
   }, [language, onUpdateCode, onDirty, readOnly]);
@@ -238,7 +277,11 @@ export const EditorCode = ({
     () => ({
       jumpToLine(lineNumber: number, column = 1): void {
         const editor = editorRef.current;
-        if (!editor) return;
+
+        if (!editor) {
+          return;
+        }
+
         editor.revealLineInCenter(lineNumber);
         editor.setPosition({ lineNumber, column });
         editor.focus();
@@ -270,23 +313,36 @@ export const EditorCode = ({
         // Scheduled from the content change rather than from
         // `onDidChangeMarkers`: this handler writes markers itself, and reacting
         // to marker changes would have it retrigger on its own output.
-        if (footgunTimerRef.current !== null) clearTimeout(footgunTimerRef.current);
+        if (footgunTimerRef.current !== null) {
+          clearTimeout(footgunTimerRef.current);
+        }
+
         footgunTimerRef.current = setTimeout(() => {
           footgunTimerRef.current = null;
           void updateFootgunMarkers(editor.getModel());
         }, FOOTGUN_DEBOUNCE_MS);
 
         if (autoRefreshRef.current && dirty) {
-          if (autoRefreshTimerRef.current !== null) clearTimeout(autoRefreshTimerRef.current);
+          if (autoRefreshTimerRef.current !== null) {
+            clearTimeout(autoRefreshTimerRef.current);
+          }
+
           autoRefreshTimerRef.current = setTimeout(() => {
             autoRefreshTimerRef.current = null;
-            if (autoRefreshRef.current) void triggerRefresh();
+
+            if (autoRefreshRef.current) {
+              void triggerRefresh();
+            }
           }, 800);
         }
       }),
       monacoApi.editor.onDidChangeMarkers((resources: monaco.Uri[]) => {
         const model = editor.getModel();
-        if (!model) return;
+
+        if (!model) {
+          return;
+        }
+
         if (resources.some(resource => resource.toString() === model.uri.toString())) {
           updateDiagnostics(model, selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
         }
@@ -294,6 +350,7 @@ export const EditorCode = ({
     );
 
     editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.Enter, () => void triggerRefreshRef.current());
+
     if (typeof monacoApi.KeyCode.KeyS === 'number') {
       editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS, () => void triggerRefreshRef.current());
     }
@@ -307,7 +364,10 @@ export const EditorCode = ({
   const beforeMount = (): void => {
     window.MonacoEnvironment = {
       getWorker(_workerId: string, label: string): Worker {
-        if (label === 'typescript' || label === 'javascript') return new TsWorker();
+        if (label === 'typescript' || label === 'javascript') {
+          return new TsWorker();
+        }
+
         return new EditorWorker();
       },
     };
@@ -316,7 +376,11 @@ export const EditorCode = ({
 
   const resetCode = (): void => {
     setShowMenu(false);
-    if (!canReset || !window.confirm('Reset the editor to the original example source?')) return;
+
+    if (!canReset || !window.confirm('Reset the editor to the original example source?')) {
+      return;
+    }
+
     onResetCode({ confirmed: true });
     onDirty(false);
   };
@@ -353,19 +417,32 @@ export const EditorCode = ({
 
   const importCode = (): void => {
     setShowMenu(false);
-    if (readOnly) return;
+
+    if (readOnly) {
+      return;
+    }
+
     fileInputRef.current?.click();
   };
 
   const onFileImport = (event: ChangeEvent<HTMLInputElement>): void => {
     const file = event.currentTarget.files?.[0];
-    if (!file) return;
+
+    if (!file) {
+      return;
+    }
+
     const reader = new FileReader();
+
     reader.onload = () => {
-      if (typeof reader.result !== 'string') return;
+      if (typeof reader.result !== 'string') {
+        return;
+      }
+
       setEditorValue(reader.result);
       editorRef.current?.setValue(reader.result);
     };
+
     reader.readAsText(file);
     event.currentTarget.value = '';
   };
@@ -439,7 +516,11 @@ export const EditorCode = ({
                       key={companion}
                       className={css(styles, 'menu-item')}
                       role="menuitem"
-                      href={isCurrentVersion(selectedVersionId) ? buildExampleUrl(companion) : buildGithubRawExampleUrl(selectedVersionId, companion)}
+                      href={
+                        isCurrentVersion(selectedVersionId)
+                          ? buildExampleUrl(companion)
+                          : buildGithubRawExampleUrl(selectedVersionId, companion)
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -508,20 +589,42 @@ export const EditorCode = ({
 const getModelUrl = (sourcePath: string): string => `file:///${sourcePath.replace(/^\/+/, '')}`;
 
 const monacoSeverityToString = (severity: number): EditorDiagnosticSeverity => {
-  if (severity >= 8) return 'error';
-  if (severity >= 4) return 'warning';
-  if (severity >= 2) return 'info';
+  if (severity >= 8) {
+    return 'error';
+  }
+
+  if (severity >= 4) {
+    return 'warning';
+  }
+
+  if (severity >= 2) {
+    return 'info';
+  }
+
   return 'hint';
 };
 
 const monacoMarkerCodeToString = (code: monaco.editor.IMarker['code']): string | undefined => {
-  if (code === undefined || code === null) return undefined;
-  if (typeof code === 'string') return code;
-  if (typeof code === 'number') return String(code);
+  if (code === undefined || code === null) {
+    return undefined;
+  }
+
+  if (typeof code === 'string') {
+    return code;
+  }
+
+  if (typeof code === 'number') {
+    return String(code);
+  }
+
   if (typeof code === 'object' && 'value' in code) {
     const value = (code as { value: unknown }).value;
-    if (typeof value === 'string' || typeof value === 'number') return String(value);
+
+    if (typeof value === 'string' || typeof value === 'number') {
+      return String(value);
+    }
   }
+
   return undefined;
 };
 
@@ -533,6 +636,7 @@ const updateDiagnostics = (
 ): void => {
   if (!model || typingsAppliedVersion !== selectedVersionId) {
     onDiagnostic([]);
+
     return;
   }
 
@@ -571,19 +675,23 @@ type QuickInfoClient = {
  * The next keystroke schedules another pass.
  */
 const updateFootgunMarkers = async (model: monaco.editor.ITextModel | null): Promise<void> => {
-  if (!model) return;
+  if (!model) {
+    return;
+  }
 
   const versionAtStart = model.getVersionId();
   const candidates = findFootgunCandidates(model.getValue());
 
   if (candidates.length === 0) {
     monaco.editor.setModelMarkers(model, FOOTGUN_OWNER, []);
+
     return;
   }
 
   try {
-    const monacoTs = (monaco.languages as unknown as { typescript: { getTypeScriptWorker(): Promise<(...uris: monaco.Uri[]) => Promise<QuickInfoClient>> } })
-      .typescript;
+    const monacoTs = (
+      monaco.languages as unknown as { typescript: { getTypeScriptWorker(): Promise<(...uris: monaco.Uri[]) => Promise<QuickInfoClient>> } }
+    ).typescript;
     const workerFactory = await monacoTs.getTypeScriptWorker();
     const client = await workerFactory(model.uri);
     const uri = model.uri.toString();
@@ -592,7 +700,10 @@ const updateFootgunMarkers = async (model: monaco.editor.ITextModel | null): Pro
 
     for (const candidate of candidates) {
       const info = await client.getQuickInfoAtPosition(uri, candidate.calleeOffset);
-      if (!returnsPromise(info)) continue;
+
+      if (!returnsPromise(info)) {
+        continue;
+      }
 
       markers.push({
         severity: monaco.MarkerSeverity.Warning,
@@ -608,7 +719,9 @@ const updateFootgunMarkers = async (model: monaco.editor.ITextModel | null): Pro
     // The buffer moved while the worker was answering, so these positions
     // describe text that no longer exists. Drop them; the edit scheduled a
     // fresh pass of its own.
-    if (model.isDisposed() || model.getVersionId() !== versionAtStart) return;
+    if (model.isDisposed() || model.getVersionId() !== versionAtStart) {
+      return;
+    }
 
     monaco.editor.setModelMarkers(model, FOOTGUN_OWNER, markers);
   } catch {
@@ -622,9 +735,15 @@ const updateFootgunMarkers = async (model: monaco.editor.ITextModel | null): Pro
 // native parser SyntaxError (e.g. `private sprite!: Sprite` reads as two
 // adjacent identifiers), so callers must treat `null` as "not ready" and keep
 // the last successfully-compiled preview rather than swallow it into a crash.
-const getExecutionCode = async (editor: monaco.editor.IStandaloneCodeEditor, language: 'javascript' | 'typescript'): Promise<string | null> => {
+const getExecutionCode = async (
+  editor: monaco.editor.IStandaloneCodeEditor,
+  language: 'javascript' | 'typescript',
+): Promise<string | null> => {
   const model = editor.getModel();
-  if (language !== 'typescript' || !model) return null;
+
+  if (language !== 'typescript' || !model) {
+    return null;
+  }
 
   type TsWorkerClient = {
     getEmitOutput(uri: string): Promise<{ outputFiles: Array<{ name: string; text: string }> }>;
@@ -639,20 +758,30 @@ const getExecutionCode = async (editor: monaco.editor.IStandaloneCodeEditor, lan
       const worker = await workerFactory(model.uri);
       const output = await worker.getEmitOutput(model.uri.toString());
       const jsFile = output.outputFiles.find(file => file.name.endsWith('.js'));
-      if (jsFile?.text) return jsFile.text;
+
+      if (jsFile?.text) {
+        return jsFile.text;
+      }
     } catch {
       // Fall through to the retry below - the TS worker may still be warming up.
     }
-    if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 300));
+
+    if (attempt === 0) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
   }
 
   return null;
 };
 
 const configureMonacoOnce = (): Promise<void> => {
-  if (monacoConfiguredPromise) return monacoConfiguredPromise;
+  if (monacoConfiguredPromise) {
+    return monacoConfiguredPromise;
+  }
+
   configureLanguageDefaults();
   monacoConfiguredPromise = Promise.resolve();
+
   return monacoConfiguredPromise;
 };
 
@@ -663,10 +792,16 @@ const ensureTypingsForVersion = async (
   afterApply: () => void,
 ): Promise<void> => {
   await configureMonacoOnce();
-  if (!versionId) return;
+
+  if (!versionId) {
+    return;
+  }
 
   const libs = await getTypingsForVersion(versionId);
-  if (selectedVersionRef.current !== versionId) return;
+
+  if (selectedVersionRef.current !== versionId) {
+    return;
+  }
 
   const tsApi = (monaco.languages as unknown as { typescript: MonacoTypeScriptApi }).typescript;
   tsApi.javascriptDefaults.setExtraLibs(libs);
@@ -677,10 +812,12 @@ const ensureTypingsForVersion = async (
 
 const getTypingsForVersion = (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {
   let pending = typingsCache.get(versionId);
+
   if (!pending) {
     pending = loadTypingsForVersion(versionId);
     typingsCache.set(versionId, pending);
   }
+
   return pending;
 };
 
@@ -701,23 +838,28 @@ const EXTENSION_PACKAGES: ReadonlyArray<{ baseUrl: string; packageName: string }
 ];
 
 const loadTypingsForVersion = async (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {
-  const [shared, exojs, extensions] = await Promise.all([loadSharedTypings(), loadVersionedExoJsTypings(versionId), loadExtensionTypings()]);
+  const [shared, exojs, extensions] = await Promise.all([
+    loadSharedTypings(),
+    loadVersionedExoJsTypings(versionId),
+    loadExtensionTypings(),
+  ]);
+
   return [...shared, ...exojs, ...extensions];
 };
 
 const loadExtensionTypings = async (): Promise<ReadonlyArray<ExtraLib>> => {
   const perPackage = await Promise.all(EXTENSION_PACKAGES.map(pkg => loadPackageTypingsFromBase(pkg.baseUrl, pkg.packageName)));
+
   return perPackage.flat();
 };
 
-const loadSharedTypings = async (): Promise<ReadonlyArray<ExtraLib>> => {
-  return Promise.all(
+const loadSharedTypings = async (): Promise<ReadonlyArray<ExtraLib>> =>
+  Promise.all(
     SHARED_LIB_FILES.map(async file => ({
       content: await fetchTextFile(buildPublicUrl(file.path)),
       filePath: file.virtualPath,
     })),
   );
-};
 
 const loadVersionedExoJsTypings = async (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {
   if (versionId === CURRENT_VERSION_ID) {
@@ -725,8 +867,13 @@ const loadVersionedExoJsTypings = async (versionId: string): Promise<ReadonlyArr
   }
 
   const fromVersioned = await loadPackageTypingsFromBase(`vendor/exojs/${versionId}/`, '@codexo/exojs');
-  if (fromVersioned.length > 0) return fromVersioned;
+
+  if (fromVersioned.length > 0) {
+    return fromVersioned;
+  }
+
   console.warn(`[EditorCode] Versioned typings missing for @codexo/exojs@${versionId}; falling back to flat vendor path.`);
+
   return loadPackageTypingsFromBase('vendor/exojs/', '@codexo/exojs');
 };
 
@@ -735,15 +882,19 @@ const loadPackageTypingsFromBase = async (baseUrl: string, packageName: string):
 
   try {
     const registryResponse = await fetch(buildPublicUrl(`${baseUrl}monaco-registry.json`), { cache: 'no-cache' });
+
     if (registryResponse.ok) {
       const registry = (await registryResponse.json()) as Record<string, unknown>;
+
       if (typeof registry.packageJson === 'string') {
         libs.push({
           content: registry.packageJson,
           filePath: `file:///node_modules/${packageName}/package.json`,
         });
       }
+
       const shims = registry.subpathShims;
+
       if (Array.isArray(shims)) {
         for (const shim of shims as Record<string, unknown>[]) {
           if (typeof shim.virtualPath === 'string' && typeof shim.content === 'string') {
@@ -757,11 +908,13 @@ const loadPackageTypingsFromBase = async (baseUrl: string, packageName: string):
   }
 
   const manifest = await fetchTypingsManifest(`${baseUrl}esm-typings.json`);
+
   if (manifest && manifest.length > 0) {
     const treeLibs = await Promise.all(
       manifest.map(async relativePath => {
         try {
           const content = await fetchTextFile(buildPublicUrl(`${baseUrl}esm/${relativePath}`));
+
           return {
             content,
             filePath: `file:///node_modules/${packageName}/dist/esm/${relativePath}`,
@@ -771,9 +924,13 @@ const loadPackageTypingsFromBase = async (baseUrl: string, packageName: string):
         }
       }),
     );
+
     for (const lib of treeLibs) {
-      if (lib) libs.push(lib);
+      if (lib) {
+        libs.push(lib);
+      }
     }
+
     return libs;
   }
 
@@ -801,10 +958,20 @@ const loadPackageTypingsFromBase = async (baseUrl: string, packageName: string):
 const fetchTypingsManifest = async (relativePath: string): Promise<ReadonlyArray<string> | null> => {
   try {
     const response = await fetch(buildPublicUrl(relativePath), { cache: 'no-cache' });
-    if (!response.ok) return null;
+
+    if (!response.ok) {
+      return null;
+    }
+
     const data = (await response.json()) as unknown;
-    if (!Array.isArray(data)) return null;
-    return data.filter((entry): entry is string => typeof entry === 'string' && entry.endsWith('.d.ts') && !entry.includes('..') && !entry.startsWith('/'));
+
+    if (!Array.isArray(data)) {
+      return null;
+    }
+
+    return data.filter(
+      (entry): entry is string => typeof entry === 'string' && entry.endsWith('.d.ts') && !entry.includes('..') && !entry.startsWith('/'),
+    );
   } catch {
     return null;
   }
@@ -865,13 +1032,19 @@ const configureLanguageDefaults = (): void => {
 
 const registerAssetCompletionProvider = async (): Promise<void> => {
   let manifest: AssetManifest;
+
   try {
     const response = await fetch(buildPublicUrl('assets/assets.json'), { cache: 'no-cache' });
-    if (!response.ok) return;
+
+    if (!response.ok) {
+      return;
+    }
+
     manifest = (await response.json()) as AssetManifest;
   } catch {
     return;
   }
+
   monaco.languages.registerCompletionItemProvider('javascript', {
     triggerCharacters: ["'", '"'],
     provideCompletionItems: (model, position) => provideAssetCompletions(model, position, manifest),
@@ -884,6 +1057,7 @@ const registerAssetCompletionProvider = async (): Promise<void> => {
 
 const resolveAssetPaths = (tokenName: string, manifest: AssetManifest): string[] => {
   let category: string | null = null;
+
   switch (tokenName) {
     case 'Texture':
     case 'HTMLImageElement':
@@ -906,7 +1080,11 @@ const resolveAssetPaths = (tokenName: string, manifest: AssetManifest): string[]
       category = 'video';
       break;
   }
-  if (!category) return [];
+
+  if (!category) {
+    return [];
+  }
+
   return (manifest[category] ?? []).map(file => `${category}/${file}`);
 };
 
@@ -922,20 +1100,34 @@ const provideAssetCompletions = (
 
   for (let index = column - 1; index >= 0; index -= 1) {
     const character = lineContent[index];
+
     if (character === '"' || character === "'") {
       quoteChar = character;
       quoteStart = index;
       break;
     }
-    if (character === '{' || character === '}' || character === ';') break;
+
+    if (character === '{' || character === '}' || character === ';') {
+      break;
+    }
   }
-  if (quoteStart === -1) return null;
+
+  if (quoteStart === -1) {
+    return null;
+  }
 
   let cursor = quoteStart - 1;
-  while (cursor >= 0 && (lineContent[cursor] === ' ' || lineContent[cursor] === '\t')) cursor -= 1;
-  if (cursor < 0 || lineContent[cursor] !== ':') return null;
+
+  while (cursor >= 0 && (lineContent[cursor] === ' ' || lineContent[cursor] === '\t')) {
+    cursor -= 1;
+  }
+
+  if (cursor < 0 || lineContent[cursor] !== ':') {
+    return null;
+  }
 
   let quoteEnd = lineContent.length;
+
   for (let index = column; index < lineContent.length; index += 1) {
     if (lineContent[index] === quoteChar) {
       quoteEnd = index;
@@ -954,11 +1146,20 @@ const provideAssetCompletions = (
   const loaderLoadExpression = /loader\.load\(\s*([A-Z][A-Za-z]*)\s*,/g;
   let lastMatch: RegExpExecArray | null = null;
   let match: RegExpExecArray | null;
-  while ((match = loaderLoadExpression.exec(textBefore)) !== null) lastMatch = match;
-  if (!lastMatch) return null;
+
+  while ((match = loaderLoadExpression.exec(textBefore)) !== null) {
+    lastMatch = match;
+  }
+
+  if (!lastMatch) {
+    return null;
+  }
 
   const paths = resolveAssetPaths(lastMatch[1], manifest);
-  if (paths.length === 0) return null;
+
+  if (paths.length === 0) {
+    return null;
+  }
 
   const range: monaco.IRange = {
     startLineNumber: position.lineNumber,
@@ -980,6 +1181,10 @@ const provideAssetCompletions = (
 
 const fetchTextFile = async (url: string): Promise<string> => {
   const response = await fetch(url, { cache: 'no-cache' });
-  if (!response.ok) throw new Error(`Failed to fetch editor support file at ${url}.`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch editor support file at ${url}.`);
+  }
+
   return response.text();
 };

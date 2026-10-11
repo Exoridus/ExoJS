@@ -74,6 +74,7 @@ export abstract class WorkletEffect extends AudioEffect {
     if (!this._inputGain) {
       throw new Error(`${this.constructor.name}: input node accessed before audio context is ready.`);
     }
+
     return this._inputGain;
   }
 
@@ -81,6 +82,7 @@ export abstract class WorkletEffect extends AudioEffect {
     if (!this._outputGain) {
       throw new Error(`${this.constructor.name}: output node accessed before audio context is ready.`);
     }
+
     return this._outputGain;
   }
 
@@ -91,6 +93,7 @@ export abstract class WorkletEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._dryGain && this._wetGain) {
       const ctx = this._wetGain.context;
       this._dryGain.gain.setTargetAtTime(1 - this._wet, ctx.currentTime, 0.01);
@@ -101,10 +104,17 @@ export abstract class WorkletEffect extends AudioEffect {
   /** Disconnects all nodes, cancels any pending worklet load, and releases resources. */
   public override destroy(): void {
     this._teardown();
-    for (const cancel of this._pendingAuxSetups.splice(0)) cancel();
-    for (const { output, input } of this._auxInputs.splice(0)) {
-      if (this._workletNode) output.disconnect(this._workletNode, 0, input);
+
+    for (const cancel of this._pendingAuxSetups.splice(0)) {
+      cancel();
     }
+
+    for (const { output, input } of this._auxInputs.splice(0)) {
+      if (this._workletNode) {
+        output.disconnect(this._workletNode, 0, input);
+      }
+    }
+
     // Disconnecting alone leaves the processor rendering every quantum until
     // the AudioContext closes; the message lets it return false and be released.
     this._workletNode?.port.postMessage({ type: 'destroy' });
@@ -140,13 +150,18 @@ export abstract class WorkletEffect extends AudioEffect {
     const connect = (): void => {
       const output = source.getOutputNode();
       const node = this._workletNode;
-      if (!output || !node) return;
+
+      if (!output || !node) {
+        return;
+      }
+
       output.connect(node, 0, input);
       this._auxInputs.push({ output, input });
     };
 
     if (source.getOutputNode()) {
       connect();
+
       return;
     }
 
@@ -154,15 +169,20 @@ export abstract class WorkletEffect extends AudioEffect {
     // onceSetup() returns its canceller; nothing is left to cancel then.
     let ran = false;
     let cancel: (() => void) | null = null;
+
     const pending = (): void => {
       ran = true;
+
       if (cancel !== null) {
         this._pendingAuxSetups.splice(this._pendingAuxSetups.indexOf(cancel), 1);
         cancel = null;
       }
+
       connect();
     };
+
     const dispose = source.onceSetup(pending);
+
     if (!ran) {
       cancel = dispose;
       this._pendingAuxSetups.push(dispose);
@@ -176,8 +196,12 @@ export abstract class WorkletEffect extends AudioEffect {
    * Part of the effect SDK contract for extension audio effects.
    */
   protected _setAudioParam(name: string, value: number): void {
-    if (!this._workletNode) return;
+    if (!this._workletNode) {
+      return;
+    }
+
     const audioParam = this._workletNode.parameters.get(name);
+
     if (audioParam) {
       audioParam.setTargetAtTime(value, this._workletNode.context.currentTime, 0.01);
     }
@@ -218,12 +242,15 @@ export abstract class WorkletEffect extends AudioEffect {
     this._wetGain = wetGain;
 
     const ready = registerAudioWorkletProcessor(audioContext, this._workletName, this._workletSource).then(() => {
-      if (!this._inputGain || !this._dryGain || !this._wetGain) return; // destroyed during load
+      if (!this._inputGain || !this._dryGain || !this._wetGain) {
+        return;
+      } // destroyed during load
 
       // Read _dryLatencySeconds here, not in _setup(), because the addModule
       // Promise always resolves asynchronously - by this point the subclass
       // constructor has fully run and any post-super() fields are valid.
       const dryLatency = this._dryLatencySeconds;
+
       if (dryLatency > 0) {
         const dryDelay = audioContext.createDelay(Math.max(1, dryLatency * 2));
         dryDelay.delayTime.setValueAtTime(dryLatency, audioContext.currentTime);
@@ -260,6 +287,7 @@ export abstract class WorkletEffect extends AudioEffect {
         once: `workleteffect-load-failed:${this._workletName}`,
         ...(error instanceof Error && { error }),
       });
+
       throw error;
     });
   }

@@ -8,6 +8,7 @@ import { materializeAssetTypes } from '#extensions/materialize';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -40,8 +41,11 @@ const mockFetch404 = (): void => {
 const captureWarnings = (): { messages: string[]; stop: () => void } => {
   const messages: string[] = [];
   const remove = logger.addSink(entry => {
-    if (entry.severity >= LogSeverity.Warning) messages.push(entry.message);
+    if (entry.severity >= LogSeverity.Warning) {
+      messages.push(entry.message);
+    }
   });
+
   return { messages, stop: remove };
 };
 

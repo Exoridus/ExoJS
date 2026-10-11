@@ -29,13 +29,15 @@ const createMockBackend = (root: RenderTarget) => {
     clearColor.copy(color);
   });
   const clear = vi.fn((color?: Color) => {
-    if (color) clearColor.copy(color);
+    if (color) {
+      clearColor.copy(color);
+    }
   });
-  const flush = vi.fn(() => undefined);
-  const pushScissorRect = vi.fn((_bounds: Rectangle) => undefined);
-  const popScissorRect = vi.fn(() => undefined);
-  const pushStencilClip = vi.fn((_shape: Geometry, _transform: Matrix) => undefined);
-  const popStencilClip = vi.fn(() => undefined);
+  const flush = vi.fn(() => {});
+  const pushScissorRect = vi.fn((_bounds: Rectangle) => {});
+  const popScissorRect = vi.fn(() => {});
+  const pushStencilClip = vi.fn((_shape: Geometry, _transform: Matrix) => {});
+  const popStencilClip = vi.fn(() => {});
 
   const backend: WebGl2PassBackend = {
     clearColor,
@@ -56,7 +58,19 @@ const createMockBackend = (root: RenderTarget) => {
     popStencilClip,
   };
 
-  return { backend, setRenderTarget, setView, clear, clearColor, setClearColor, flush, pushScissorRect, popScissorRect, pushStencilClip, popStencilClip };
+  return {
+    backend,
+    setRenderTarget,
+    setView,
+    clear,
+    clearColor,
+    setClearColor,
+    flush,
+    pushScissorRect,
+    popScissorRect,
+    pushStencilClip,
+    popStencilClip,
+  };
 };
 
 const descriptor = (

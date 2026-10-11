@@ -26,7 +26,8 @@ export interface UseExoApplicationResult {
 }
 
 /** Stable string key for the colour so the sync effect can depend on its value. */
-const colorKey = (color: Color | undefined): string | undefined => (color === undefined ? undefined : `${color.r},${color.g},${color.b},${color.a}`);
+const colorKey = (color: Color | undefined): string | undefined =>
+  color === undefined ? undefined : `${color.r},${color.g},${color.b},${color.a}`;
 
 /**
  * Creates and owns an ExoJS {@link Application}, binding it to a `<canvas>` you
@@ -94,6 +95,7 @@ export const useExoApplication = (
   // ── Lifecycle: create on mount / recreate on backend change ───────────────
   useEffect(() => {
     const canvas = canvasRef.current;
+
     if (!canvas) {
       return;
     }

@@ -32,14 +32,14 @@ const buildWorld = (tiles, layer) =>
  * which is what makes the caret blink at a readable rate rather than as fast
  * as the loop can run.
  */
-function* blinkCaret(caret) {
+const blinkCaret = function* (caret) {
   while (true) {
     for (let frame = 0; frame < 30; frame++) {
       yield;
     }
     caret.visible = !caret.visible;
   }
-}
+};
 class CoroutineLoadingScene extends Scene {
   world;
   bar;

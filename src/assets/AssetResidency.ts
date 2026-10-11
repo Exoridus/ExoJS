@@ -219,7 +219,10 @@ export class AssetResidency {
   private readonly _requestLog: AssetRequestLog;
 
   // ── Seamless deferred handles ──────────────────────────────────────────────
-  private readonly _deferred = new Map<ResourceKey, { readonly asset: CanonicalAsset; readonly handles: WeakHandleSet; readonly options: unknown }>();
+  private readonly _deferred = new Map<
+    ResourceKey,
+    { readonly asset: CanonicalAsset; readonly handles: WeakHandleSet; readonly options: unknown }
+  >();
   private readonly _deferredFinalization = new FinalizationRegistry<ResourceKey>((key: ResourceKey): void => {
     const entry = this._deferred.get(key);
 
@@ -230,7 +233,10 @@ export class AssetResidency {
   });
 
   // Value-asset refs
-  private readonly _refs = new Map<ResourceKey, { readonly asset: CanonicalAsset; readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
+  private readonly _refs = new Map<
+    ResourceKey,
+    { readonly asset: CanonicalAsset; readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }
+  >();
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
   private readonly _claims = new Map<ResourceKey, ClaimEntry>();
@@ -258,7 +264,13 @@ export class AssetResidency {
   private readonly _backgroundResolvers = new Set<() => void>();
 
   /** @internal */
-  public constructor(typeRegistry: AssetTypeRegistry, decoder: AssetDecoder, signals: AssetResidencySignals, concurrency: number, hooks: AssetResidencyHooks) {
+  public constructor(
+    typeRegistry: AssetTypeRegistry,
+    decoder: AssetDecoder,
+    signals: AssetResidencySignals,
+    concurrency: number,
+    hooks: AssetResidencyHooks,
+  ) {
     this._typeRegistry = typeRegistry;
     this._requestLog = new AssetRequestLog(typeRegistry);
     this._decoder = decoder;
@@ -279,11 +291,25 @@ export class AssetResidency {
     const backgroundKeys = new Set(this._backgroundQueue.map(entry => entry.asset.key));
     const assets = new Map<ResourceKey, CanonicalAsset>();
 
-    for (const [key, entry] of this._resources) assets.set(key, entry.asset);
-    for (const [key, entry] of this._claims) assets.set(key, entry.asset);
-    for (const [key, entry] of this._deferred) assets.set(key, entry.asset);
-    for (const [key, entry] of this._refs) assets.set(key, entry.asset);
-    for (const entry of this._backgroundQueue) assets.set(entry.asset.key, entry.asset);
+    for (const [key, entry] of this._resources) {
+      assets.set(key, entry.asset);
+    }
+
+    for (const [key, entry] of this._claims) {
+      assets.set(key, entry.asset);
+    }
+
+    for (const [key, entry] of this._deferred) {
+      assets.set(key, entry.asset);
+    }
+
+    for (const [key, entry] of this._refs) {
+      assets.set(key, entry.asset);
+    }
+
+    for (const entry of this._backgroundQueue) {
+      assets.set(entry.asset.key, entry.asset);
+    }
 
     const rows: AssetInspection[] = [];
 
@@ -315,7 +341,9 @@ export class AssetResidency {
           aliases: this._requestLog.aliases(key, asset.source),
           state,
           claims: scopes.length,
-          owners: Object.freeze(scopes.map(scope => Object.freeze({ id: scope.id, ...(scope.name !== undefined && { name: scope.name }), kind: scope.kind }))),
+          owners: Object.freeze(
+            scopes.map(scope => Object.freeze({ id: scope.id, ...(scope.name !== undefined && { name: scope.name }), kind: scope.kind })),
+          ),
           inFlight,
           // Derived from `state`, not from raw queue membership: a producer that
           // stores a payload without draining the background queue first must
@@ -328,10 +356,17 @@ export class AssetResidency {
     // A plain codepoint comparison, not `localeCompare`: the sort order is part
     // of a diagnostic snapshot's contract and must not vary by ICU locale/runtime.
     rows.sort((left, right) => {
-      if (left.canonicalKey < right.canonicalKey) return -1;
-      if (left.canonicalKey > right.canonicalKey) return 1;
+      if (left.canonicalKey < right.canonicalKey) {
+        return -1;
+      }
+
+      if (left.canonicalKey > right.canonicalKey) {
+        return 1;
+      }
+
       return 0;
     });
+
     return Object.freeze(rows);
   }
 
@@ -389,8 +424,14 @@ export class AssetResidency {
         return rightBytes - leftBytes;
       }
 
-      if (leftName < rightName) return -1;
-      if (leftName > rightName) return 1;
+      if (leftName < rightName) {
+        return -1;
+      }
+
+      if (leftName > rightName) {
+        return 1;
+      }
+
       return 0;
     };
 
@@ -690,18 +731,16 @@ export class AssetResidency {
       // The reclaim's fresh entry is protected from this stale `.finally` by the
       // self-entry identity guard in `_trackInFlight`.
       this._inFlight.delete(key);
-    }
-    // A value payload may legitimately BE `null`/`undefined` (a JSON `null`, a
-    // nullish payload from a `bindAsset`-bound custom type), so this asks the
-    // resource map where the seamless branch above can read the value itself -
-    // for a seamless type the stored resource is always the handle object.
-    else if (adapter === undefined && this._resources.has(key)) {
+    } else if (adapter === undefined && this._resources.has(key)) {
+      // A value payload may legitimately BE `null`/`undefined` (a JSON `null`, a
+      // nullish payload from a `bindAsset`-bound custom type), so this asks the
+      // resource map where the seamless branch above can read the value itself -
+      // for a seamless type the stored resource is always the handle object.
       this._evictValueKey(asset, stored);
-    }
-    // Nothing resident: whatever fetch is running for this key (if any) has no
-    // claimer left waiting on it. Cancel it, and mark the key evicted so a later
-    // claim re-drives the fetch into the handles this abort leaves behind.
-    else if (this._abortInFlight(key)) {
+    } else if (this._abortInFlight(key)) {
+      // Nothing resident: whatever fetch is running for this key (if any) has no
+      // claimer left waiting on it. Cancel it, and mark the key evicted so a later
+      // claim re-drives the fetch into the handles this abort leaves behind.
       this._evicted.add(key);
       this._releaseDependencies(key);
     }
@@ -810,7 +849,10 @@ export class AssetResidency {
     // is a retry request and must be re-armed before the shared fetch restarts.
     const leafState = (handle as { _loadState?: { value: string; begin(): void } })._loadState;
     const retryingFailedLeaf = leafState?.value === 'failed';
-    if (leafState?.value === 'idle' || retryingFailedLeaf) leafState.begin();
+
+    if (leafState?.value === 'idle' || retryingFailedLeaf) {
+      leafState.begin();
+    }
 
     const asset = this._hooks.canonicalize(ctor, meta.src, meta.opts);
     const key = asset.key;
@@ -822,7 +864,9 @@ export class AssetResidency {
       // ref that was 'ready' before a LATER failure (`_onTrackedFailure` fails
       // every ref of a key regardless of its prior state) carries a stale value
       // behind the `'loading'` gate until this fuller reset runs.
-      if (retryingFailedLeaf) handle._begin();
+      if (retryingFailedLeaf) {
+        handle._begin();
+      }
 
       const existingRef = this._refs.get(key);
       const stored = this._resources.get(key)?.value;
@@ -878,9 +922,17 @@ export class AssetResidency {
       // ref would turn an unrelated adopt into a silent re-parse of the set.
       if (existingRef !== undefined && (retryingFailedLeaf || (stored === undefined && this._hasFailedRef(existingRef)))) {
         if (stored === undefined) {
-          for (const ref of existingRef.refs) if (ref.state === 'failed') ref._begin();
-          if (background) this._enqueueBackgroundFetch(asset, existingRef.options);
-          else this._startFetch(asset, existingRef.options);
+          for (const ref of existingRef.refs) {
+            if (ref.state === 'failed') {
+              ref._begin();
+            }
+          }
+
+          if (background) {
+            this._enqueueBackgroundFetch(asset, existingRef.options);
+          } else {
+            this._startFetch(asset, existingRef.options);
+          }
         } else {
           // The payload is already resident, so there is nothing to refetch:
           // re-filling IS the retry here. The resource map and `_refs`
@@ -891,8 +943,14 @@ export class AssetResidency {
           // 'loading' with no fetch in flight, forever. Mirrors
           // _storeResource's fill loop: an already-'ready' ref is left untouched.
           for (const ref of existingRef.refs) {
-            if (ref.state === 'ready') continue;
-            if (ref.state === 'failed') ref._begin();
+            if (ref.state === 'ready') {
+              continue;
+            }
+
+            if (ref.state === 'failed') {
+              ref._begin();
+            }
+
             ref._fill(stored);
           }
         }
@@ -973,12 +1031,23 @@ export class AssetResidency {
     // `fill()` is a plain in-place transplant with no per-handle `parse()` that
     // could reject a payload the fetch delivered, so handle state and the
     // resource map cannot diverge the way a ref's can.
-    if (stored === undefined && deferredEntry !== undefined && adapter !== undefined && (retryingFailedLeaf || this._hasFailedHandle(deferredEntry, adapter))) {
+    if (
+      stored === undefined &&
+      deferredEntry !== undefined &&
+      adapter !== undefined &&
+      (retryingFailedLeaf || this._hasFailedHandle(deferredEntry, adapter))
+    ) {
       for (const candidate of deferredEntry.handles) {
-        if (adapter.stateOf(candidate) === 'failed') adapter.begin(candidate);
+        if (adapter.stateOf(candidate) === 'failed') {
+          adapter.begin(candidate);
+        }
       }
-      if (background) this._enqueueBackgroundFetch(asset, deferredEntry.options);
-      else this._startFetch(asset, deferredEntry.options);
+
+      if (background) {
+        this._enqueueBackgroundFetch(asset, deferredEntry.options);
+      } else {
+        this._startFetch(asset, deferredEntry.options);
+      }
     }
 
     this._claimFor(asset, claimer, participations);
@@ -1557,7 +1626,12 @@ export class AssetResidency {
     // set. A resource that already came from a deferred handle is a member
     // already; a plain `load()` donor (no prior get()) is added here. Held
     // weakly, so a fully-released source does not pin its evicted payload.
-    if (typeof resource === 'object' && resource !== null && this._typeRegistry.hasSeamlessAdapter(asset.type) && !this._deferred.has(key)) {
+    if (
+      typeof resource === 'object' &&
+      resource !== null &&
+      this._typeRegistry.hasSeamlessAdapter(asset.type) &&
+      !this._deferred.has(key)
+    ) {
       this._createDeferredEntry(asset, resource);
     }
 
@@ -1590,9 +1664,17 @@ export class AssetResidency {
    * @internal
    */
   public _enqueueBackgroundFetch(asset: CanonicalAsset, options: unknown): void {
-    if (this._resources.has(asset.key)) return;
-    if (this._inFlight.has(asset.key)) return;
-    if (this._isQueuedInBackground(asset.key)) return;
+    if (this._resources.has(asset.key)) {
+      return;
+    }
+
+    if (this._inFlight.has(asset.key)) {
+      return;
+    }
+
+    if (this._isQueuedInBackground(asset.key)) {
+      return;
+    }
 
     if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
       this._backgroundLoaded = 0;
@@ -1607,6 +1689,7 @@ export class AssetResidency {
   private _drainBackground(): void {
     while (this._backgroundActive < this._concurrency && this._backgroundQueue.length > 0) {
       const entry = this._backgroundQueue.shift();
+
       if (!entry) {
         continue;
       }
@@ -1624,10 +1707,15 @@ export class AssetResidency {
   private _boostFromQueue(key: ResourceKey): void {
     const index = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
 
-    if (index === -1) return;
+    if (index === -1) {
+      return;
+    }
 
     const [entry] = this._backgroundQueue.splice(index, 1);
-    if (entry === undefined) return;
+
+    if (entry === undefined) {
+      return;
+    }
 
     this._startBackgroundEntry(entry);
   }
@@ -1749,11 +1837,15 @@ export class AssetResidency {
       const assets = new Map<ResourceKey, CanonicalAsset>();
 
       for (const [key, entry] of this._resources) {
-        if (entry.asset.type === type) assets.set(key, entry.asset);
+        if (entry.asset.type === type) {
+          assets.set(key, entry.asset);
+        }
       }
 
       for (const [key, entry] of this._claims) {
-        if (entry.asset.type === type) assets.set(key, entry.asset);
+        if (entry.asset.type === type) {
+          assets.set(key, entry.asset);
+        }
       }
 
       for (const asset of assets.values()) {
@@ -1778,7 +1870,10 @@ export class AssetResidency {
         continue;
       }
 
-      for (const handle of entry.handles) this._handleKeys.delete(handle);
+      for (const handle of entry.handles) {
+        this._handleKeys.delete(handle);
+      }
+
       this._deferred.delete(key);
       this._inFlight.delete(key);
     }
@@ -1789,7 +1884,10 @@ export class AssetResidency {
         continue;
       }
 
-      for (const ref of entry.refs) this._handleKeys.delete(ref);
+      for (const ref of entry.refs) {
+        this._handleKeys.delete(ref);
+      }
+
       this._refs.delete(key);
       this._inFlight.delete(key);
     }
@@ -1828,14 +1926,22 @@ export class AssetResidency {
     this._requestLog.delete(key);
 
     const deferred = this._deferred.get(key);
+
     if (deferred !== undefined) {
-      for (const handle of deferred.handles) this._handleKeys.delete(handle);
+      for (const handle of deferred.handles) {
+        this._handleKeys.delete(handle);
+      }
+
       this._deferred.delete(key);
     }
 
     const refEntry = this._refs.get(key);
+
     if (refEntry !== undefined) {
-      for (const ref of refEntry.refs) this._handleKeys.delete(ref);
+      for (const ref of refEntry.refs) {
+        this._handleKeys.delete(ref);
+      }
+
       this._refs.delete(key);
     }
   }
@@ -1984,6 +2090,7 @@ const sameOptions = (a: unknown, b: unknown, depth = 0): boolean => {
   const keys = Object.keys(a);
 
   return (
-    keys.length === Object.keys(b).length && keys.every(key => sameOptions((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], depth + 1))
+    keys.length === Object.keys(b).length &&
+    keys.every(key => sameOptions((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], depth + 1))
   );
 };

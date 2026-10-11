@@ -43,7 +43,12 @@ class GamepadSpaceshipScene extends Scene {
   private velocity = new Vector(0, 0);
   private readonly actions = new ActionMap({
     move: new VectorAction([
-      { up: [Keyboard.W, Keyboard.Up], down: [Keyboard.S, Keyboard.Down], left: [Keyboard.A, Keyboard.Left], right: [Keyboard.D, Keyboard.Right] },
+      {
+        up: [Keyboard.W, Keyboard.Up],
+        down: [Keyboard.S, Keyboard.Down],
+        left: [Keyboard.A, Keyboard.Left],
+        right: [Keyboard.D, Keyboard.Right],
+      },
       { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
     ]),
     fire: new ButtonAction([Keyboard.Space, GamepadButton.RightTrigger]),
@@ -217,11 +222,13 @@ class GamepadSpaceshipScene extends Scene {
     this.fx.clear();
 
     this.fx.fillColor = new Color(120, 130, 150);
+
     for (const asteroid of this.asteroids) {
       this.fx.drawCircle(asteroid.x, asteroid.y, asteroid.radius);
     }
 
     this.fx.fillColor = new Color(120, 230, 255);
+
     for (const bullet of this.bullets) {
       this.fx.drawCircle(bullet.x, bullet.y, 4);
     }

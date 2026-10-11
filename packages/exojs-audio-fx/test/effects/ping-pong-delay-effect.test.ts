@@ -120,7 +120,10 @@ describe('PingPongDelayEffect', () => {
       let pannerIdx = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainIdx++] as unknown as GainNode);
       const delaySpy = vi.spyOn(ctx, 'createDelay').mockImplementation(() => (delayIdx++ === 0 ? delayL : delayR) as unknown as DelayNode);
-      const pannerSpy = vi.spyOn(ctx, 'createStereoPanner').mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
+      const pannerSpy = vi
+        .spyOn(ctx, 'createStereoPanner')
+        .mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
+
       return {
         inputGain,
         outputGain,
@@ -336,8 +339,8 @@ describe('PingPongDelayEffect', () => {
 
     it('accepts valid delayTime values', () => {
       const effect = new PingPongDelayEffect();
-      effect.delayTime = 1.0;
-      expect(effect.delayTime).toBe(1.0);
+      effect.delayTime = 1;
+      expect(effect.delayTime).toBe(1);
       effect.destroy();
     });
 
@@ -353,7 +356,9 @@ describe('PingPongDelayEffect', () => {
       let pannerIdx = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainIdx++] as unknown as GainNode);
       const delaySpy = vi.spyOn(ctx, 'createDelay').mockImplementation(() => (delayIdx++ === 0 ? delayL : delayR) as unknown as DelayNode);
-      const pannerSpy = vi.spyOn(ctx, 'createStereoPanner').mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
+      const pannerSpy = vi
+        .spyOn(ctx, 'createStereoPanner')
+        .mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
 
       const effect = new PingPongDelayEffect();
       effect.delayTime = 0.5;
@@ -411,7 +416,9 @@ describe('PingPongDelayEffect', () => {
       let pannerIdx = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainIdx++] as unknown as GainNode);
       const delaySpy = vi.spyOn(ctx, 'createDelay').mockImplementation(() => (delayIdx++ === 0 ? delayL : delayR) as unknown as DelayNode);
-      const pannerSpy = vi.spyOn(ctx, 'createStereoPanner').mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
+      const pannerSpy = vi
+        .spyOn(ctx, 'createStereoPanner')
+        .mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
 
       const effect = new PingPongDelayEffect();
       effect.feedback = 0.7;
@@ -462,7 +469,9 @@ describe('PingPongDelayEffect', () => {
       let pannerIdx = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainIdx++] as unknown as GainNode);
       const delaySpy = vi.spyOn(ctx, 'createDelay').mockImplementation(() => (delayIdx++ === 0 ? delayL : delayR) as unknown as DelayNode);
-      const pannerSpy = vi.spyOn(ctx, 'createStereoPanner').mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
+      const pannerSpy = vi
+        .spyOn(ctx, 'createStereoPanner')
+        .mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
 
       const effect = new PingPongDelayEffect();
       effect.wet = 0.6;
@@ -497,7 +506,9 @@ describe('PingPongDelayEffect', () => {
       let pannerIdx = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainIdx++] as unknown as GainNode);
       const delaySpy = vi.spyOn(ctx, 'createDelay').mockImplementation(() => (delayIdx++ === 0 ? delayL : delayR) as unknown as DelayNode);
-      const pannerSpy = vi.spyOn(ctx, 'createStereoPanner').mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
+      const pannerSpy = vi
+        .spyOn(ctx, 'createStereoPanner')
+        .mockImplementation(() => (pannerIdx++ === 0 ? pannerL : pannerR) as unknown as StereoPannerNode);
 
       const effect = new PingPongDelayEffect();
       effect.destroy();
@@ -505,6 +516,7 @@ describe('PingPongDelayEffect', () => {
       for (const gain of gains) {
         expect(gain.disconnect).toHaveBeenCalled();
       }
+
       expect(delayL.disconnect).toHaveBeenCalled();
       expect(delayR.disconnect).toHaveBeenCalled();
       expect(pannerL.disconnect).toHaveBeenCalled();

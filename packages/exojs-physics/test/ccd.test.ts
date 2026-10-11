@@ -30,16 +30,20 @@ describe('continuous collision (bullet mode)', () => {
   it('a fast bullet does not tunnel through a thin static wall', () => {
     // Without CCD the body tunnels straight through (the documented limit).
     const plain = fireAtWall(false);
+
     for (let frame = 0; frame < 30; frame++) {
       plain.world.step(FRAME);
     }
+
     expect(plain.ball.x).toBeGreaterThan(220); // passed clean through the wall
 
     // With isBullet the swept test stops it at the wall.
     const ccd = fireAtWall(true);
+
     for (let frame = 0; frame < 30; frame++) {
       ccd.world.step(FRAME);
     }
+
     expect(ccd.ball.x).toBeLessThan(200); // never crossed the wall plane at x = 200
     expect(Number.isFinite(ccd.ball.x)).toBe(true);
   });
@@ -63,15 +67,21 @@ describe('continuous collision (bullet mode)', () => {
 
   it('a fast bullet stays finite and contained in a closed static box', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+
     const wall = (x: number, y: number, w: number, h: number): void => {
       world.add(new PhysicsBody({ type: 'static', position: { x, y }, colliders: [{ shape: new BoxShape(w, h) }] }));
     };
+
     wall(0, -110, 240, 20);
     wall(0, 110, 240, 20);
     wall(-110, 0, 20, 240);
     wall(110, 0, 20, 240);
 
-    const ball = new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(6), restitution: 0.5 }] });
+    const ball = new PhysicsBody({
+      type: 'dynamic',
+      position: { x: 0, y: 0 },
+      colliders: [{ shape: new CircleShape(6), restitution: 0.5 }],
+    });
     ball.isBullet = true;
     world.add(ball);
     ball.linearVelocityX = 5000;
@@ -94,7 +104,9 @@ describe('continuous collision (bullet mode)', () => {
     const make = (bullet: boolean): { world: PhysicsWorld; ball: PhysicsBody } => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
       // Heavy thin dynamic target at x = 200 (barely shoved within the short run).
-      world.add(new PhysicsBody({ type: 'dynamic', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(8, 160), density: 50 }] }));
+      world.add(
+        new PhysicsBody({ type: 'dynamic', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(8, 160), density: 50 }] }),
+      );
 
       const ball = new PhysicsBody({ type: 'dynamic', position: { x: 55, y: 0 }, colliders: [{ shape: new CircleShape(6) }] });
       ball.isBullet = bullet;
@@ -106,16 +118,20 @@ describe('continuous collision (bullet mode)', () => {
 
     // A non-bullet skips clean through the thin target (discrete detection misses it).
     const plain = make(false);
+
     for (let frame = 0; frame < 6; frame++) {
       plain.world.step(FRAME);
     }
+
     expect(plain.ball.x).toBeGreaterThan(210); // tunnelled straight past the dynamic target
 
     // The bullet is swept against the dynamic target too and stops just short of it.
     const ccd = make(true);
+
     for (let frame = 0; frame < 6; frame++) {
       ccd.world.step(FRAME);
     }
+
     expect(ccd.ball.x).toBeLessThan(196); // clamped on the near side of the target's left face
     expect(Number.isFinite(ccd.ball.x)).toBe(true);
   });
@@ -207,15 +223,19 @@ describe('continuous collision (swept shape, not just the centre)', () => {
     // Discrete detection misses it entirely - and with the old centre-point
     // sweep a bullet tunnelled too (the regression this suite pins).
     const plain = make(false);
+
     for (let frame = 0; frame < 3; frame++) {
       plain.world.step(FRAME);
     }
+
     expect(plain.box.x).toBeGreaterThan(210); // tunnelled clean through
 
     const ccd = make(true);
+
     for (let frame = 0; frame < 10; frame++) {
       ccd.world.step(FRAME);
     }
+
     // Leading face stops at the wall face x = 198 → centre ≈ 188.
     expect(ccd.box.x).toBeLessThan(190);
     expect(ccd.box.x).toBeGreaterThan(170);
@@ -238,9 +258,11 @@ describe('continuous collision (swept shape, not just the centre)', () => {
     };
 
     const plain = make(false);
+
     for (let frame = 0; frame < 3; frame++) {
       plain.world.step(FRAME);
     }
+
     expect(plain.ball.x).toBeGreaterThan(210); // tunnelled clean through
 
     // The impact frame clamps the ball at the corner: |centre − (198, 50)| = 30
@@ -270,9 +292,11 @@ describe('continuous collision (swept shape, not just the centre)', () => {
     };
 
     const plain = make(false);
+
     for (let frame = 0; frame < 3; frame++) {
       plain.world.step(FRAME);
     }
+
     expect(plain.box.x).toBeGreaterThan(210); // tunnelled clean through
 
     const ccd = make(true);
@@ -299,9 +323,11 @@ describe('continuous collision (swept shape, not just the centre)', () => {
     };
 
     const plain = make(false);
+
     for (let frame = 0; frame < 3; frame++) {
       plain.world.step(FRAME);
     }
+
     expect(plain.ball.x).toBeGreaterThan(210); // tunnelled clean through
 
     const ccd = make(true);
@@ -398,9 +424,11 @@ describe('continuous collision (swept shape, not just the centre)', () => {
 
     // Sanity: the same world does run narrow-phase sweeps once the bullet is fast.
     ball.linearVelocityX = 6000;
+
     for (let frame = 0; frame < 5; frame++) {
       world.step(FRAME);
     }
+
     expect(world._ccdSweepTests).toBeGreaterThan(0);
   });
 
@@ -417,7 +445,9 @@ describe('continuous collision (swept shape, not just the centre)', () => {
       world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 400) }] }));
 
       for (let i = 0; i < distantColliderCount; i++) {
-        world.add(new PhysicsBody({ type: 'static', position: { x: 10_000 + i * 100, y: 10_000 }, colliders: [{ shape: new BoxShape(40, 40) }] }));
+        world.add(
+          new PhysicsBody({ type: 'static', position: { x: 10_000 + i * 100, y: 10_000 }, colliders: [{ shape: new BoxShape(40, 40) }] }),
+        );
       }
 
       const ball = new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(6) }] });

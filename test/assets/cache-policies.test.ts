@@ -199,7 +199,11 @@ describe('a custom policy', () => {
     // expressible in a handful of lines against the context alone. If it ever
     // needs an asset type, a factory or a store handle, the seam has leaked.
     class MyCacheFirstPolicy implements CachePolicy {
-      public async resolve<T>(context: { read(): Promise<{ hit: boolean; value?: T }>; fetch(): Promise<T>; write(value: T): Promise<void> }): Promise<T> {
+      public async resolve<T>(context: {
+        read(): Promise<{ hit: boolean; value?: T }>;
+        fetch(): Promise<T>;
+        write(value: T): Promise<void>;
+      }): Promise<T> {
         const cached = await context.read();
 
         if (cached.hit) {

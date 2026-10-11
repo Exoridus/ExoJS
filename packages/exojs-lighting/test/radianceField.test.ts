@@ -69,7 +69,9 @@ const transportTerms = (binding: TransportBinding): Record<string, readonly numb
 const expectWalkTerms = (walker: Walker | null, binding: TransportBinding): void => {
   expect(walker).not.toBeNull();
 
-  const written = Object.fromEntries(Object.keys(transportTerms(binding)).map(name => [name, [walker!.uniforms[name]!.x, walker!.uniforms[name]!.y]]));
+  const written = Object.fromEntries(
+    Object.keys(transportTerms(binding)).map(name => [name, [walker!.uniforms[name]!.x, walker!.uniforms[name]!.y]]),
+  );
 
   expect(written).toEqual(transportTerms(binding));
   expect(walker!.uniforms['uCellSize']!.value).toBe(binding.cellSize);

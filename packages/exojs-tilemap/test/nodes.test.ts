@@ -13,8 +13,8 @@ import { packTile, TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-const fakeTexture = (width = 512, height = 512): Texture => {
-  return {
+const fakeTexture = (width = 512, height = 512): Texture =>
+  ({
     width,
     height,
     flipY: false,
@@ -22,18 +22,16 @@ const fakeTexture = (width = 512, height = 512): Texture => {
     label: 'test',
     destroy: vi.fn(),
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeTileset = (name = 'tiles'): TileSet => {
-  return new TileSet({
+const makeTileset = (name = 'tiles'): TileSet =>
+  new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
     tileWidth: 32,
     tileHeight: 32,
     tileCount: 16,
   });
-};
 
 interface LayerOpts {
   readonly id?: number;
@@ -60,6 +58,7 @@ const makeLayer = (tileset: TileSet, opts: LayerOpts = {}): TileLayer => {
     ...(opts.offsetX === undefined ? {} : { offsetX: opts.offsetX }),
     ...(opts.offsetY === undefined ? {} : { offsetY: opts.offsetY }),
   });
+
   return layer;
 };
 
@@ -69,22 +68,23 @@ const fillLayer = (layer: TileLayer, tileset: TileSet): TileLayer => {
   if (layer.width === undefined || layer.height === undefined) {
     throw new Error('fillLayer needs a finite layer');
   }
+
   for (let ty = 0; ty < layer.height; ty++) {
     for (let tx = 0; tx < layer.width; tx++) {
       layer.setTileAt(tx, ty, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     }
   }
+
   return layer;
 };
 
-const makeImageLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer => {
-  return new ImageLayer({
+const makeImageLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer =>
+  new ImageLayer({
     id: opts.id ?? 100,
     image: opts.image ?? 'bg.png',
     texture: opts.texture === undefined ? fakeTexture() : opts.texture,
     ...opts,
   });
-};
 
 // ═══════════════════════════════════════════════════════════════════════
 // TileLayerNode
@@ -281,6 +281,7 @@ describe('TileLayerNode', () => {
     const node = new TileLayerNode(layer);
 
     expect(node.chunkNodes.length).toBeGreaterThan(0);
+
     for (const chunk of node.chunkNodes) {
       expect(chunk.tint.a).toBeCloseTo(0.5, 6);
     }
@@ -330,6 +331,7 @@ describe('TileLayerNode', () => {
     const node = new TileLayerNode(layer);
 
     expect(node.chunkNodes.length).toBeGreaterThan(0);
+
     for (const chunk of node.chunkNodes) {
       expect(chunk.tint.r).toBe(0x33);
       expect(chunk.tint.g).toBe(0x66);
@@ -462,6 +464,7 @@ describe('TileMapNode', () => {
       tilesets: [tileset],
       layers: [background, foreground],
     });
+
     return { map, tileset };
   };
 
@@ -565,7 +568,10 @@ describe('TileMapNode interleaved image layers', () => {
       tileWidth: 32,
       tileHeight: 32,
       tilesets: [tileset],
-      layers: [fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset), fillLayer(makeLayer(tileset, { id: 2, name: 'roofs' }), tileset)],
+      layers: [
+        fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset),
+        fillLayer(makeLayer(tileset, { id: 2, name: 'roofs' }), tileset),
+      ],
       imageLayers: [makeImageLayer({ id: 10, name: 'bg' }), makeImageLayer({ id: 11, name: 'fg' })],
       documentOrder: [10, 1, 11, 2],
     });

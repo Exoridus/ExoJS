@@ -5,7 +5,15 @@
  * plus the wrapping runs the line breaker consumes.
  */
 
-import { graphemeCount, graphemes, graphemeStarts, hasIntlSegmenter, isTrivialText, textRuns, wordSegments } from '#rendering/text/segmentation';
+import {
+  graphemeCount,
+  graphemes,
+  graphemeStarts,
+  hasIntlSegmenter,
+  isTrivialText,
+  textRuns,
+  wordSegments,
+} from '#rendering/text/segmentation';
 
 const COMBINING = 'é'; // e + combining acute
 const SKIN_TONE = '\u{1F44D}\u{1F3FD}'; // thumbs up + medium skin tone

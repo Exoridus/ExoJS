@@ -92,11 +92,15 @@ class GpuPcmStreamScene extends Scene {
       label: 'Start',
       onClick: () => {
         const stream = this.stream;
-        if (!stream || stream.state !== 'ready') return;
+        if (!stream || stream.state !== 'ready') {
+          return;
+        }
         void getAudioContext()
           .resume()
           .then(() => {
-            if (this.stream !== stream || stream.state !== 'ready') return;
+            if (this.stream !== stream || stream.state !== 'ready') {
+              return;
+            }
             this.active = true;
             this.starting = true;
             this.hud.setStatus('Prebuffering GPU samples...');
@@ -114,7 +118,9 @@ class GpuPcmStreamScene extends Scene {
     this.panel.addButton({
       label: 'Drain',
       onClick: () => {
-        if (this.active) this.draining = true;
+        if (this.active) {
+          this.draining = true;
+        }
       },
     });
     this.panel.addButton({ label: 'New stream', onClick: () => this.createStream() });
@@ -158,10 +164,14 @@ class GpuPcmStreamScene extends Scene {
       stream.onError.add(error => this.fail(error));
       void stream.ready
         .then(() => {
-          if (this.stream === stream) this.hud.setStatus('Ready. Press Start to unlock audio and prebuffer.');
+          if (this.stream === stream) {
+            this.hud.setStatus('Ready. Press Start to unlock audio and prebuffer.');
+          }
         })
         .catch(error => {
-          if (this.stream === stream) this.fail(error);
+          if (this.stream === stream) {
+            this.fail(error);
+          }
         });
     } catch (error) {
       this.fail(error);
@@ -175,20 +185,31 @@ class GpuPcmStreamScene extends Scene {
     const stream = this.stream;
     const reader = this.reader;
     const filter = this.filter;
-    if (!this.active || !stream || !reader || !this.target || !filter) return;
-    if (stream.state !== 'ready' && stream.state !== 'running') return;
+    if (!this.active || !stream || !reader || !this.target || !filter) {
+      return;
+    }
+    if (stream.state !== 'ready' && stream.state !== 'running') {
+      return;
+    }
     const targetFrames = Math.min(capacityFrames, Math.ceil((stream.sampleRate * 0.1) / blockFrames) * blockFrames);
     while (this.pending.length > 0) {
       const first = this.pending[0];
-      if (first.read.failed) throw new Error('GPU readback failed; create a new stream.');
-      if (!first.read.ready || stream.bufferedFrames + blockFrames > capacityFrames) break;
+      if (first.read.failed) {
+        throw new Error('GPU readback failed; create a new stream.');
+      }
+      if (!first.read.ready || stream.bufferedFrames + blockFrames > capacityFrames) {
+        break;
+      }
       const data = first.read.data.data;
       for (let frame = 0; frame < blockFrames; frame++) {
         const offset = frame * 4;
         this.left[frame] = this.format === TextureFormat.Rgba8 ? ((data[offset] * 256 + data[offset + 1]) / 65535) * 2 - 1 : data[offset];
-        this.right[frame] = this.format === TextureFormat.Rgba8 ? ((data[offset + 2] * 256 + data[offset + 3]) / 65535) * 2 - 1 : data[offset + 1];
+        this.right[frame] =
+          this.format === TextureFormat.Rgba8 ? ((data[offset + 2] * 256 + data[offset + 3]) / 65535) * 2 - 1 : data[offset + 1];
       }
-      if (!stream.enqueuePlanar(this.channels)) break;
+      if (!stream.enqueuePlanar(this.channels)) {
+        break;
+      }
       this.readbackMs = performance.now() - first.submittedAt;
       // enqueuePlanar copies synchronously, so the slot can be reused now.
       first.read.release();
@@ -206,13 +227,17 @@ class GpuPcmStreamScene extends Scene {
       }
       return;
     }
-    if (!this.producing) return;
+    if (!this.producing) {
+      return;
+    }
     // Reserve queue space for every pending read before rendering another block.
     while (reader.inFlight < readbackSlots && stream.bufferedFrames + this.pending.length * blockFrames + blockFrames <= targetFrames) {
       filter.uniforms.sampleOffset.set(this.generatedFrames);
       filter.apply(context.backend, this.input, this.target);
       const read = reader.request();
-      if (!read) break;
+      if (!read) {
+        break;
+      }
       this.pending.push({ read, submittedAt: performance.now() });
       this.generatedFrames += blockFrames;
     }

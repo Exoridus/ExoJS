@@ -56,9 +56,11 @@ const run = (command: string, args: string[], cwd: string): { code: number; outp
       shell: process.platform === 'win32',
       env: { ...process.env, FORCE_COLOR: '0' },
     });
+
     return { code: 0, output };
   } catch (error) {
     const e = error as { status?: number; stdout?: string; stderr?: string; message?: string };
+
     return { code: e.status ?? 1, output: `${e.stdout ?? ''}${e.stderr ?? ''}${e.message ?? ''}` };
   }
 };
@@ -243,6 +245,7 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
       ok: installOk,
       detail: installOk ? undefined : install.output.trim().split('\n').slice(-3).join(' '),
     });
+
     if (!installOk) {
       return { ok: false, consumerDir, checks };
     }
@@ -294,18 +297,22 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
 
   for (const dir of dirs) {
     const r = run('pnpm', ['pack', '--pack-destination', staging, '--config.ignore-scripts=true'], dir);
+
     if (r.code !== 0) {
       process.stderr.write(`pack failed for ${dir}:\n${r.output}\n`);
       process.exit(1);
     }
   }
+
   const tarballs = smokePackages.map(p => join(staging, `${p.name.replace('@', '').replace('/', '-')}-${version}.tgz`));
 
   process.stdout.write('\n=== verify:external-consumers ===\n');
   const result = verifyExternalConsumers(tarballs);
+
   for (const check of result.checks) {
     process.stdout.write(`  ${check.ok ? '✓' : '✗'} ${check.name}${check.detail ? ` — ${check.detail}` : ''}\n`);
   }
+
   rmSync(staging, { recursive: true, force: true });
   process.stdout.write(`\n${result.ok ? 'external consumers: all pass' : 'external consumers: FAILED'}\n`);
   process.exit(result.ok ? 0 : 1);

@@ -13,16 +13,21 @@ import { runCommand } from '../../scripts/lib/run-command.ts';
 // calls, they would re-initialize, commit to and add worktrees to the repository
 // running the hook instead of the temporary fixture repositories.
 for (const name of Object.keys(process.env)) {
-  if (name.startsWith('GIT_')) delete process.env[name];
+  if (name.startsWith('GIT_')) {
+    delete process.env[name];
+  }
 }
 
 const fixture = resolve(import.meta.dirname, 'fixtures/validation-process.ts');
 const temporary: string[] = [];
+
 const directory = (): string => {
   const path = mkdtempSync(join(tmpdir(), 'exojs-validation-'));
   temporary.push(path);
+
   return path;
 };
+
 const run = (mode: string, cwd: string, extra: Partial<Parameters<typeof runCommand>[0]> = {}) =>
   runCommand({
     label: 'supervisor-test',
@@ -50,38 +55,59 @@ const capture = async <T>(block: () => Promise<T>): Promise<{ result: T; stdout:
   let stdout = '';
   let stderr = '';
   let announced = false;
+
   const patch = (stream: NodeJS.WriteStream, sink: (text: string) => void): (() => void) => {
     const original = stream.write;
     stream.write = ((chunk: string | Uint8Array, ...rest: unknown[]): boolean => {
       const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString();
-      if (ANNOUNCEMENT.test(text)) announced = true;
-      else if (!announced || !REPORT.test(text)) return (original as (...args: unknown[]) => boolean).call(stream, chunk, ...rest);
+
+      if (ANNOUNCEMENT.test(text)) {
+        announced = true;
+      } else if (!announced || !REPORT.test(text)) {
+        return (original as (...args: unknown[]) => boolean).call(stream, chunk, ...rest);
+      }
+
       sink(text);
+
       return true;
     }) as typeof stream.write;
+
     return () => {
       stream.write = original;
     };
   };
+
   const restore = [patch(process.stdout, text => (stdout += text)), patch(process.stderr, text => (stderr += text))];
+
   try {
     const result = await block();
+
     return { result, stdout, stderr };
   } finally {
-    for (const undo of restore) undo();
+    for (const undo of restore) {
+      undo();
+    }
   }
 };
 
 const isRunning = (pid: number): boolean => {
   try {
     process.kill(pid, 0);
-    if (process.platform === 'linux' && readFileSync(`/proc/${pid}/stat`, 'utf8').includes(') Z ')) return false;
+
+    if (process.platform === 'linux' && readFileSync(`/proc/${pid}/stat`, 'utf8').includes(') Z ')) {
+      return false;
+    }
+
     return true;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ESRCH' || (error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH' || (error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return false;
+    }
+
     throw error;
   }
 };
+
 const waitForFile = async (path: string): Promise<number> => {
   for (let i = 0; i < 100; i++) {
     try {
@@ -90,6 +116,7 @@ const waitForFile = async (path: string): Promise<number> => {
       await delay(20);
     }
   }
+
   throw new Error(`Fixture did not write ${path}`);
 };
 
@@ -160,7 +187,11 @@ for (const mode of ['sleep', 'stubborn', 'tree', 'detached-tree']) {
     assert.equal(stderr.match(/FAIL supervisor-test \(timeout,/g)?.length, 1);
     assert.ok(result.durationMs < (process.platform === 'win32' ? 12_000 : 1600), `duration=${result.durationMs}`);
     const pid = await waitForFile(pidFile);
-    for (let i = 0; i < 50 && isRunning(pid); i++) await delay(20);
+
+    for (let i = 0; i < 50 && isRunning(pid); i++) {
+      await delay(20);
+    }
+
     assert.equal(isRunning(pid), false, `owned child ${pid} survived`);
   });
 }
@@ -179,10 +210,16 @@ void test('stops a running root even when the recorded spawn window misses the k
     assert.equal(grandchildless, child.pid);
     const problem = await stopProcessTree(child, 100, { earliest: now - 60_000, latest: now - 30_000 });
     assert.equal(problem, undefined);
-    for (let i = 0; i < 100 && isRunning(child.pid!); i++) await delay(20);
+
+    for (let i = 0; i < 100 && isRunning(child.pid!); i++) {
+      await delay(20);
+    }
+
     assert.equal(isRunning(child.pid!), false, `root ${child.pid} survived`);
   } finally {
-    if (child.exitCode === null) child.kill('SIGKILL');
+    if (child.exitCode === null) {
+      child.kill('SIGKILL');
+    }
   }
 });
 
@@ -197,6 +234,7 @@ void test('times out orphan without leaving its child running', async t => {
     }),
   );
   let pid = -1;
+
   for (let i = 0; i < 100; i++) {
     try {
       pid = Number(readFileSync(pidFile, 'utf8'));
@@ -205,20 +243,29 @@ void test('times out orphan without leaving its child running', async t => {
       await delay(20);
     }
   }
+
   // Not every host lets a descendant outlive the process that created it. Where the
   // descendant ends with its parent, no orphan can reach the deadline and the
   // ownership path has nothing to prove.
-  if (pid < 0) return t.skip('the host ended the descendant with its parent; no orphan exists here');
+  if (pid < 0) {
+    return t.skip('the host ended the descendant with its parent; no orphan exists here');
+  }
+
   assert.equal(result.status, 124);
   assert.equal(result.timedOut, true);
   assert.match(stderr, /STOP supervisor-test: timeout/);
   assert.match(stderr, /FAIL supervisor-test \(timeout,/);
-  for (let i = 0; i < 50 && isRunning(pid); i++) await delay(20);
+
+  for (let i = 0; i < 50 && isRunning(pid); i++) {
+    await delay(20);
+  }
+
   assert.equal(isRunning(pid), false, `owned child ${pid} survived`);
 });
 
 void test('timeout does not kill an unrelated process', async () => {
   const unrelated = spawn(process.execPath, [...process.execArgv, fixture, 'sleep'], { stdio: 'ignore' });
+
   try {
     const { result, stderr } = await capture(() => run('sleep', directory(), { timeoutMs: 200, killGraceMs: 80 }));
     assert.equal(result.status, 124);
@@ -310,7 +357,9 @@ void test('child events after the run settled never write past the end of its lo
 });
 
 test.after(() => {
-  for (const path of temporary) rmSync(path, { recursive: true, force: true });
+  for (const path of temporary) {
+    rmSync(path, { recursive: true, force: true });
+  }
 });
 
 void test('the shared lane budget is finite and preserves the longer bench timeout', async () => {
@@ -368,23 +417,38 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     const { fork } = await import('node:child_process');
     const cwd = directory();
     const pidFile = join(cwd, 'pid');
-    const supervisor = fork(resolve(import.meta.dirname, 'fixtures/validation-supervisor.ts'), ['stubborn', pidFile], { cwd, silent: true });
+    const supervisor = fork(resolve(import.meta.dirname, 'fixtures/validation-supervisor.ts'), ['stubborn', pidFile], {
+      cwd,
+      silent: true,
+    });
     const output: Buffer[] = [];
     supervisor.stdout!.on('data', (chunk: Buffer) => output.push(chunk));
     supervisor.stderr!.resume();
     const finished = new Promise<number | null>(resolveExit => supervisor.once('exit', resolveExit));
+
     try {
       const pid = await waitForFile(pidFile);
+
       // Node.kill is forceful on Windows; IPC exercises the same console-signal handler without killing the supervisor first.
-      if (process.platform === 'win32') supervisor.send(signal);
-      else supervisor.kill(signal);
+      if (process.platform === 'win32') {
+        supervisor.send(signal);
+      } else {
+        supervisor.kill(signal);
+      }
+
       assert.equal(await finished, signal === 'SIGINT' ? 130 : 143);
       const record = JSON.parse(Buffer.concat(output).toString().trim()) as { status: number; aborted: boolean };
       assert.equal(record.aborted, true);
-      for (let i = 0; i < 50 && isRunning(pid); i++) await delay(20);
+
+      for (let i = 0; i < 50 && isRunning(pid); i++) {
+        await delay(20);
+      }
+
       assert.equal(isRunning(pid), false, `owned child ${pid} survived`);
     } finally {
-      if (supervisor.exitCode === null) supervisor.kill('SIGKILL');
+      if (supervisor.exitCode === null) {
+        supervisor.kill('SIGKILL');
+      }
     }
   });
 }
@@ -397,6 +461,7 @@ const prepareCli = async (status: number): Promise<{ cwd: string; env: NodeJS.Pr
   const bin = join(cwd, 'bin');
   mkdirSync(bin);
   const executable = resolve(import.meta.dirname, 'fixtures/validation-pnpm.ts');
+
   if (process.platform === 'win32') {
     writeFileSync(join(bin, 'pnpm.cmd'), `@"${process.execPath}" ${process.execArgv.join(' ')} "${executable}" %*\r\n`);
   } else {
@@ -404,8 +469,10 @@ const prepareCli = async (status: number): Promise<{ cwd: string; env: NodeJS.Pr
     writeFileSync(shim, `#!/bin/sh\nexec "${process.execPath}" ${process.execArgv.join(' ')} "${executable}" "$@"\n`);
     chmodSync(shim, 0o755);
   }
+
   writeFileSync(join(cwd, 'pnpm-behaviour.json'), JSON.stringify({ status }));
   const { delimiter } = await import('node:path');
+
   return { cwd, env: { ...process.env, PATH: `${bin}${delimiter}${process.env['PATH'] ?? process.env['Path'] ?? ''}` } };
 };
 
@@ -470,11 +537,15 @@ void test('CLI is fail-fast and records not-completed instead of running the nex
 void test('dry-run typo fails before spawning a lane or claiming success', async () => {
   const { spawnSync } = await import('node:child_process');
   const cwd = directory();
-  const result = spawnSync(process.execPath, [...process.execArgv, resolve(import.meta.dirname, '../../scripts/lanes.ts'), '--only=webgup'], {
-    cwd,
-    encoding: 'utf8',
-    timeout: 8000,
-  });
+  const result = spawnSync(
+    process.execPath,
+    [...process.execArgv, resolve(import.meta.dirname, '../../scripts/lanes.ts'), '--only=webgup'],
+    {
+      cwd,
+      encoding: 'utf8',
+      timeout: 8000,
+    },
+  );
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Unknown local lane/);
   assert.throws(() => readFileSync(join(cwd, 'pnpm-calls.jsonl')));
@@ -487,11 +558,14 @@ void test('linked worktrees contend for the same repository validation lock', as
   const worktree = join(directory(), 'linked');
   assert.equal(spawnSync('git', ['init', '-q', cwd]).status, 0);
   assert.equal(
-    spawnSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--allow-empty', '-qm', 'fixture'], { cwd }).status,
+    spawnSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--allow-empty', '-qm', 'fixture'], {
+      cwd,
+    }).status,
     0,
   );
   assert.equal(spawnSync('git', ['worktree', 'add', '--detach', worktree], { cwd }).status, 0);
   const first = acquireValidationLock(cwd);
+
   try {
     assert.throws(() => acquireValidationLock(worktree), /Validation already owns/);
   } finally {
@@ -516,7 +590,9 @@ void test('all existing stage selections, coverage mode and JUnit names remain a
 });
 
 void test('a synchronous spawn error is reported without leaking the log stream', async () => {
-  const { result, stderr } = await capture(() => runCommand({ label: 'invalid-spawn', command: '', args: ['--test'], cwd: directory(), output: 'silent' }));
+  const { result, stderr } = await capture(() =>
+    runCommand({ label: 'invalid-spawn', command: '', args: ['--test'], cwd: directory(), output: 'silent' }),
+  );
   assert.equal(result.status, 1);
   assert.match(stderr, /^Failed to start invalid-spawn: /);
   assert.doesNotMatch(stderr, /FAIL invalid-spawn/, 'a command that never spawned is not a supervised failure');
@@ -525,11 +601,13 @@ void test('a synchronous spawn error is reported without leaking the log stream'
 
 void test('successful commands do not leave signal listeners behind', async () => {
   const before = ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal));
+
   for (let i = 0; i < 5; i++) {
     const { result, stdout, stderr } = await capture(() => run('streams', directory()));
     assert.equal(result.status, 0);
     assert.equal(stdout + stderr, '');
   }
+
   assert.deepEqual(
     ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal)),
     before,

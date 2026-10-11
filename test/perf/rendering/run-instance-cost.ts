@@ -108,6 +108,7 @@ if (type === undefined) {
 
     if (run.status !== 0) {
       process.stderr.write(run.stderr ?? '');
+
       throw new Error(`instance-cost cell for '${name}' exited with ${String(run.status)}`);
     }
 

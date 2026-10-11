@@ -73,7 +73,8 @@ const buildScene = (value: string, direction: 'ltr' | 'rtl'): Container => {
   return root;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const setupWebGpu = async (): Promise<WebGpuBackend> => {
   const backend = new WebGpuBackend(makeApp(makeCanvas()));
@@ -116,7 +117,9 @@ const readWebGpu = (backend: WebGpuBackend): Uint8ClampedArray => {
 
   const rctx = readback.getContext('2d');
 
-  if (!rctx) throw new Error('2D context required for readback.');
+  if (!rctx) {
+    throw new Error('2D context required for readback.');
+  }
 
   rctx.drawImage(backend.context.canvas as HTMLCanvasElement, 0, 0);
 
@@ -159,7 +162,8 @@ const readWebGl2 = (backend: WebGl2Backend): Uint8Array => {
   return out;
 };
 
-const luma = (frame: ArrayLike<number>, index: number): number => 0.299 * frame[index]! + 0.587 * frame[index + 1]! + 0.114 * frame[index + 2]!;
+const luma = (frame: ArrayLike<number>, index: number): number =>
+  0.299 * frame[index]! + 0.587 * frame[index + 1]! + 0.114 * frame[index + 2]!;
 
 /** Coverage mask: 1 where luma > 128 (ink), else 0. */
 const inkMask = (frame: ArrayLike<number>): Uint8Array => {
@@ -200,7 +204,9 @@ describe('Cross-backend parity: browser-shaped text renders identically on WebGL
         gl.destroy();
       });
 
-      if (!(await renderWebGpu(ctx, gpu, gpuScene))) return;
+      if (!(await renderWebGpu(ctx, gpu, gpuScene))) {
+        return;
+      }
 
       renderWebGl2(gl, glScene);
 
@@ -216,7 +222,10 @@ describe('Cross-backend parity: browser-shaped text renders identically on WebGL
       for (let p = 0; p < gpuMask.length; p++) {
         gpuInk += gpuMask[p]!;
         glInk += glMask[p]!;
-        if (gpuMask[p] === glMask[p]) agree++;
+
+        if (gpuMask[p] === glMask[p]) {
+          agree++;
+        }
       }
 
       // Both actually drew the line rather than an empty frame - the failure a
@@ -251,18 +260,24 @@ describe('Cross-backend parity: browser-shaped text renders identically on WebGL
       gpu.destroy();
     });
 
-    if (!(await renderWebGpu(ctx, gpu, ltrScene))) return;
+    if (!(await renderWebGpu(ctx, gpu, ltrScene))) {
+      return;
+    }
 
     const ltrMask = inkMask(readWebGpu(gpu));
 
-    if (!(await renderWebGpu(ctx, gpu, rtlScene))) return;
+    if (!(await renderWebGpu(ctx, gpu, rtlScene))) {
+      return;
+    }
 
     const rtlMask = inkMask(readWebGpu(gpu));
 
     let differ = 0;
 
     for (let p = 0; p < ltrMask.length; p++) {
-      if (ltrMask[p] !== rtlMask[p]) differ++;
+      if (ltrMask[p] !== rtlMask[p]) {
+        differ++;
+      }
     }
 
     // Reordering a mixed line has to be visible. If the base direction never

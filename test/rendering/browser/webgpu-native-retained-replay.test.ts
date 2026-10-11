@@ -24,7 +24,11 @@ const size = 64;
 
 const createScene = async (mixed = false) => {
   const backend = await createWebGpuTestBackend(size);
-  if (mixed) wireTilemapRenderers(backend);
+
+  if (mixed) {
+    wireTilemapRenderers(backend);
+  }
+
   const context = new RenderingContext(backend);
   const target = new RenderTexture(size, size);
   const source = document.createElement('canvas');
@@ -36,13 +40,16 @@ const createScene = async (mixed = false) => {
   const texture = new Texture(source);
   const maps: TileMap[] = [];
   const tileset = new TileSet({ name: 'red', texture: new TextureRegion(texture), tileWidth: 6, tileHeight: 6, tileCount: 1 });
+
   const createTile = (index: number): TileMapNode => {
     const layer = new TileLayer({ id: index, name: 'red', width: 1, height: 1, tileWidth: 6, tileHeight: 6, tilesets: [tileset] });
     layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     const map = new TileMap({ name: 'red', width: 1, height: 1, tileWidth: 6, tileHeight: 6, tilesets: [tileset], layers: [layer] });
     maps.push(map);
+
     return new TileMapNode(map);
   };
+
   const siblingTexture = Texture.fromColor(new Color(0, 0, 255), 2);
   const root = new Container();
   const group = new RetainedContainer();
@@ -51,6 +58,7 @@ const createScene = async (mixed = false) => {
   const before = new Sprite(siblingTexture);
   before.setPosition(62, 0);
   root.addChild(before, group);
+
   for (let index = 0; index < 64; index++) {
     // Retained Text supports one flush per group; a second would poison capture.
     const sprite =
@@ -62,9 +70,14 @@ const createScene = async (mixed = false) => {
             ? new NineSliceSprite(texture, { slices: 1, width: 6, height: 6 })
             : new Sprite(texture);
     sprite.setPosition((index % 8) * 8, Math.floor(index / 8) * 8);
-    if (!(sprite instanceof TileMapNode)) sprite.blendMode = index % 2 === 0 ? BlendModes.Normal : BlendModes.Additive;
+
+    if (!(sprite instanceof TileMapNode)) {
+      sprite.blendMode = index % 2 === 0 ? BlendModes.Normal : BlendModes.Additive;
+    }
+
     group.addChild(sprite);
   }
+
   const after = new Sprite(siblingTexture);
   after.setPosition(62, 62);
   root.addChild(after);
@@ -72,13 +85,16 @@ const createScene = async (mixed = false) => {
   const builds = vi.spyOn(backend.device, 'createRenderBundleEncoder');
   const executions = vi.spyOn(GPURenderPassEncoder.prototype, 'executeBundles');
   backend.device.pushErrorScope('validation');
+
   const render = (): void => {
     backend.resetStats();
     backend.clear(Color.black);
     root.render(backend);
     backend.flush();
   };
+
   const pixels = async (): Promise<Uint8ClampedArray> => (await context.readPixels(target)).data;
+
   const destroy = async (): Promise<void> => {
     try {
       expect((await backend.device.popErrorScope())?.message ?? null).toBeNull();
@@ -86,17 +102,23 @@ const createScene = async (mixed = false) => {
       builds.mockRestore();
       executions.mockRestore();
       root.destroy();
-      for (const map of maps) map.destroy();
+
+      for (const map of maps) {
+        map.destroy();
+      }
+
       texture.destroy();
       siblingTexture.destroy();
       target.destroy();
       backend.destroy();
     }
   };
+
   return { backend, target, source, sourceContext, texture, root, group, builds, executions, render, pixels, destroy };
 };
 
-const pixel = (data: Uint8ClampedArray, x: number, y: number): number[] => Array.from(data.slice((y * size + x) * 4, (y * size + x) * 4 + 4));
+const pixel = (data: Uint8ClampedArray, x: number, y: number): number[] =>
+  Array.from(data.slice((y * size + x) * 4, (y * size + x) * 4 + 4));
 
 const promote = async (scene: Awaited<ReturnType<typeof createScene>>): Promise<Uint8ClampedArray> => {
   scene.render();
@@ -106,10 +128,12 @@ const promote = async (scene: Awaited<ReturnType<typeof createScene>>): Promise<
   expect(pixel(baseline, 63, 0)).toEqual([0, 0, 255, 255]);
   expect(pixel(baseline, 63, 63)).toEqual([0, 0, 255, 255]);
   expect(scene.builds).not.toHaveBeenCalled();
+
   for (let frame = 0; frame < 30; frame++) {
     scene.render();
     expect(scene.builds).not.toHaveBeenCalled();
   }
+
   scene.render();
   expect(scene.builds).toHaveBeenCalledTimes(32);
   expect(scene.executions).toHaveBeenCalledTimes(32);
@@ -117,12 +141,14 @@ const promote = async (scene: Awaited<ReturnType<typeof createScene>>): Promise<
   scene.render();
   expect(scene.builds).toHaveBeenCalledTimes(64);
   expect(await scene.pixels()).toEqual(baseline);
+
   return baseline;
 };
 
 describe('WebGPU native retained replay', () => {
   test('promotes in bounded steps and preserves pixels through camera and texture updates', async () => {
     const scene = await createScene();
+
     try {
       const baseline = await promote(scene);
       scene.executions.mockClear();
@@ -161,11 +187,13 @@ describe('WebGPU native retained replay', () => {
       expect(scene.executions).not.toHaveBeenCalled();
       expect(scene.builds).toHaveBeenCalledTimes(64);
       const resized = await scene.pixels();
+
       for (let frame = 0; frame < 35; frame++) {
         const previousBuilds = scene.builds.mock.calls.length;
         scene.render();
         expect(scene.builds.mock.calls.length - previousBuilds).toBeLessThanOrEqual(32);
       }
+
       expect(scene.builds).toHaveBeenCalledTimes(128);
       expect(await scene.pixels()).toEqual(resized);
     } finally {
@@ -188,8 +216,12 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
       }),
       uniforms: { color: [1, 0, 0, 1] },
     });
+
     try {
-      for (const child of scene.group.children) (child as Sprite).material = material;
+      for (const child of scene.group.children) {
+        (child as Sprite).material = material;
+      }
+
       await promote(scene);
       material.setUniform('color', [0, 1, 0, 1]);
       scene.executions.mockClear();
@@ -205,6 +237,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
   test('promotes interleaved sprite, scalable-geometry, text, and tilemap batches', async () => {
     const scene = await createScene(true);
+
     try {
       const baseline = await promote(scene);
       scene.executions.mockClear();
@@ -220,13 +253,18 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     const scene = await createScene();
     const floatTarget = new RenderTexture(size, size, { format: TextureFormat.Rgba16F });
     const display = new Sprite(floatTarget);
+
     try {
       const baseline = await promote(scene);
       scene.backend.setRenderTarget(floatTarget);
       scene.executions.mockClear();
       scene.render();
       expect(scene.executions).not.toHaveBeenCalled();
-      for (let frame = 0; frame < 32; frame++) scene.render();
+
+      for (let frame = 0; frame < 32; frame++) {
+        scene.render();
+      }
+
       expect(scene.builds).toHaveBeenCalledTimes(128);
       expect(scene.builds).toHaveBeenLastCalledWith({ colorFormats: ['rgba16float'] });
       const context = new RenderingContext(scene.backend);
@@ -264,13 +302,26 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
 }`,
       }),
     });
+
     try {
-      for (const child of scene.group.children) (child as Sprite).material = material;
-      for (const child of scene.root.children) if (child instanceof Sprite) child.material = material;
+      for (const child of scene.group.children) {
+        (child as Sprite).material = material;
+      }
+
+      for (const child of scene.root.children) {
+        if (child instanceof Sprite) {
+          child.material = material;
+        }
+      }
+
       const baseline = await promote(scene);
       scene.executions.mockClear();
       scene.backend.setRenderTarget(target);
-      for (let frame = 0; frame < 36; frame++) scene.render();
+
+      for (let frame = 0; frame < 36; frame++) {
+        scene.render();
+      }
+
       expect(scene.builds).toHaveBeenCalledTimes(64);
       expect(scene.executions).not.toHaveBeenCalled();
       const context = new RenderingContext(scene.backend);
@@ -294,6 +345,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
       vertexData: new Float32Array([0, 0, size, 0, 0, size]),
       stride: 8,
     });
+
     try {
       const baseline = await promote(scene);
       scene.root.clipShape = shape;

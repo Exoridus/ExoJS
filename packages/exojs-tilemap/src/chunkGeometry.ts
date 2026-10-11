@@ -47,7 +47,8 @@ export interface ChunkPage {
 }
 
 /** Pack a {@link TileTransform} into a 3-bit orientation code. @internal */
-export const orientCode = (transform: TileTransform): number => (transform.flipX ? 1 : 0) | (transform.flipY ? 2 : 0) | (transform.diagonal ? 4 : 0);
+export const orientCode = (transform: TileTransform): number =>
+  (transform.flipX ? 1 : 0) | (transform.flipY ? 2 : 0) | (transform.diagonal ? 4 : 0);
 
 // Test/perf-only instrumentation: counts CPU chunk-geometry rebuilds. A rebuild
 // happens once per {@link buildChunkPages} call - i.e. when a chunk node sees a
@@ -68,17 +69,28 @@ const drawableTileset = (tilesets: readonly TileSet[], tilesetIndex: number, loc
   const tileset = tilesets[tilesetIndex];
 
   // getTileRect throws for an invalid id; malformed cells must remain empty.
-  if (tileset === undefined || localTileId >= tileset.tileCount) return undefined;
+  if (tileset === undefined || localTileId >= tileset.tileCount) {
+    return undefined;
+  }
+
   const texture = tileset.texture.texture;
-  if (texture.width <= 0 || texture.height <= 0) return undefined;
+
+  if (texture.width <= 0 || texture.height <= 0) {
+    return undefined;
+  }
+
   return tileset;
 };
 
 const pageQuads = (tileset: TileSet, isometric: boolean, buckets: Map<TileSet, TileQuad[]>, ordered: ChunkPage[]): TileQuad[] => {
   let bucket: TileQuad[] | undefined;
+
   if (isometric) {
     const previous = ordered[ordered.length - 1];
-    if (previous?.tileset === tileset) bucket = previous.quads as TileQuad[];
+
+    if (previous?.tileset === tileset) {
+      bucket = previous.quads as TileQuad[];
+    }
   } else {
     bucket = buckets.get(tileset);
   }
@@ -86,19 +98,26 @@ const pageQuads = (tileset: TileSet, isometric: boolean, buckets: Map<TileSet, T
   if (bucket === undefined) {
     bucket = [];
     buckets.set(tileset, bucket);
-    if (isometric) ordered.push({ tileset, texture: tileset.texture.texture, quads: bucket });
+
+    if (isometric) {
+      ordered.push({ tileset, texture: tileset.texture.texture, quads: bucket });
+    }
   }
+
   return bucket;
 };
 
 const tilesetPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<TileSet, TileQuad[]>): ChunkPage[] => {
   const pages: ChunkPage[] = [];
+
   for (const tileset of tilesets) {
     const quads = buckets.get(tileset);
+
     if (quads !== undefined && quads.length > 0) {
       pages.push({ tileset, texture: tileset.texture.texture, quads });
     }
   }
+
   return pages;
 };
 
@@ -146,10 +165,17 @@ export const buildChunkPages = (
   const height = chunk.height;
 
   for (let row = 0; row < (isometric ? width + height - 1 : height); row++) {
-    if (diagonal !== undefined && row !== diagonal) continue;
+    if (diagonal !== undefined && row !== diagonal) {
+      continue;
+    }
+
     for (let lx = 0; lx < width; lx++) {
       const ly = isometric ? row - lx : row;
-      if (ly < 0 || ly >= height) continue;
+
+      if (ly < 0 || ly >= height) {
+        continue;
+      }
+
       const packed = chunk.getRawAt(lx, ly);
 
       if (packed === 0) {
@@ -163,6 +189,7 @@ export const buildChunkPages = (
       }
 
       const tileset = drawableTileset(tilesets, decoded.tilesetIndex, decoded.localTileId);
+
       if (tileset === undefined) {
         continue;
       }

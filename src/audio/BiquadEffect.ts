@@ -43,12 +43,18 @@ export class BiquadEffect extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._node) throw new Error('BiquadEffect not yet initialized.');
+    if (!this._node) {
+      throw new Error('BiquadEffect not yet initialized.');
+    }
+
     return this._node;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._node) throw new Error('BiquadEffect not yet initialized.');
+    if (!this._node) {
+      throw new Error('BiquadEffect not yet initialized.');
+    }
+
     return this._node;
   }
 
@@ -59,7 +65,10 @@ export class BiquadEffect extends AudioEffect {
 
   public set type(value: BiquadFilterType) {
     this._type = value;
-    if (this._node) this._node.type = value;
+
+    if (this._node) {
+      this._node.type = value;
+    }
   }
 
   /** Center / cutoff frequency in Hz. */
@@ -69,7 +78,10 @@ export class BiquadEffect extends AudioEffect {
 
   public set frequency(value: number) {
     this._frequency = value;
-    if (this._node) this._node.frequency.setTargetAtTime(value, this._node.context.currentTime, 0.01);
+
+    if (this._node) {
+      this._node.frequency.setTargetAtTime(value, this._node.context.currentTime, 0.01);
+    }
   }
 
   /** Quality factor (resonance / bandwidth). */
@@ -79,7 +91,10 @@ export class BiquadEffect extends AudioEffect {
 
   public set resonance(value: number) {
     this._resonance = value;
-    if (this._node) this._node.Q.setTargetAtTime(value, this._node.context.currentTime, 0.01);
+
+    if (this._node) {
+      this._node.Q.setTargetAtTime(value, this._node.context.currentTime, 0.01);
+    }
   }
 
   /** Gain in dB - applies to `peaking`, `lowshelf`, and `highshelf` types. */
@@ -89,7 +104,10 @@ export class BiquadEffect extends AudioEffect {
 
   public set gain(value: number) {
     this._gain = value;
-    if (this._node) this._node.gain.setTargetAtTime(value, this._node.context.currentTime, 0.01);
+
+    if (this._node) {
+      this._node.gain.setTargetAtTime(value, this._node.context.currentTime, 0.01);
+    }
   }
 
   /** Fine frequency offset in cents. */
@@ -99,7 +117,10 @@ export class BiquadEffect extends AudioEffect {
 
   public set detune(value: number) {
     this._detune = value;
-    if (this._node) this._node.detune.setTargetAtTime(value, this._node.context.currentTime, 0.01);
+
+    if (this._node) {
+      this._node.detune.setTargetAtTime(value, this._node.context.currentTime, 0.01);
+    }
   }
 
   public override destroy(): void {

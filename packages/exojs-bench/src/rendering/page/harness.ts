@@ -377,6 +377,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
             exceeded = true;
             abortNote = `a single timed frame took ${lastMs.toFixed(1)}ms (> ${HARD_FRAME_BUDGET_MS}ms hard cap, ${HARD_FRAME_BUDGET_MS / FRAME_BUDGET_MS}x the ${FRAME_BUDGET_MS}ms budget); cell aborted after ${frame} frame(s) — median/p95 below rest on ${frame} sample(s)`;
             resolve();
+
             return;
           }
 
@@ -386,11 +387,13 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
             exceeded = true;
             abortNote = `the trailing ${ABORT_WINDOW}-frame median exceeded ${FRAME_BUDGET_MS}ms; cell aborted after ${frame} frame(s) — median/p95 below rest on ${frame} sample(s), not a single-frame artifact`;
             resolve();
+
             return;
           }
 
           if (frame >= spec.timedFrames) {
             resolve();
+
             return;
           }
 
@@ -554,7 +557,10 @@ const resolveAdapter = async (engine: string, config: string): Promise<EngineAda
     // `cull-margin-*` arms are calibration arms and carry their ratio in the
     // config label itself, so the label is passed through rather than folded to
     // one of the two named arms (see `ExoJsAdapterConfig`).
-    adapter = createExoJsAdapter(undefined, config === 'retained' || config.startsWith('cull-margin-') ? (config as 'retained') : 'current');
+    adapter = createExoJsAdapter(
+      undefined,
+      config === 'retained' || config.startsWith('cull-margin-') ? (config as 'retained') : 'current',
+    );
   } else if (engine === 'pixi') {
     const { createPixiAdapter } = await import('../adapters/pixi');
 

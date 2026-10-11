@@ -166,11 +166,10 @@ const normalizeUrl = (url: string): string => {
 
     if (last !== undefined && last !== '..') {
       segments.pop();
-    }
-    // A `..` that would escape the root is dropped, mirroring how a browser
-    // resolves it. Only a relative source with nothing above it keeps the
-    // segment, so `../sibling.png` still addresses the sibling directory.
-    else if (!rooted && prefix === '') {
+    } else if (!rooted && prefix === '') {
+      // A `..` that would escape the root is dropped, mirroring how a browser
+      // resolves it. Only a relative source with nothing above it keeps the
+      // segment, so `../sibling.png` still addresses the sibling directory.
       segments.push('..');
     }
   }
@@ -208,7 +207,8 @@ export const canonicalizeSource = (basePath: string, source: string): AssetLocat
  * follows it or not, or a source that spells out `<source>|<discriminator>`
  * would compose the same key as that pair.
  */
-const escapeField = (value: string): string => (value.includes('%') || value.includes('|') ? value.replaceAll('%', '%25').replaceAll('|', '%7C') : value);
+const escapeField = (value: string): string =>
+  value.includes('%') || value.includes('|') ? value.replaceAll('%', '%25').replaceAll('|', '%7C') : value;
 
 /** Compose the {@link ResourceKey} for a type identity, the source it is built from, and an optional resource discriminator. */
 export const resourceKey = (typeId: string, source: SourceKey, discriminator?: string): ResourceKey =>

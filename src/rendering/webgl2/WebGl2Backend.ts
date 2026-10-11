@@ -98,9 +98,13 @@ import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 // Used only in dev builds when renderingOptions.debug = true (see __DEV__ gates below).
 const glEnumToString = (gl: WebGL2RenderingContext, value: number): string => {
   const ctor = gl.constructor as unknown as Record<string, unknown>;
+
   for (const key of Object.getOwnPropertyNames(ctor)) {
-    if (ctor[key] === value) return key;
+    if (ctor[key] === value) {
+      return key;
+    }
   }
+
   return `0x${value.toString(16).padStart(4, '0').toUpperCase()}`;
 };
 
@@ -117,24 +121,34 @@ const makeWebGl2DebugContext = (gl: WebGL2RenderingContext): WebGL2RenderingCont
       // `Reflect.get` is typed `any`; contain it as `unknown` so the non-function
       // branch returns a safe value and the function branch narrows via `typeof`.
       const value: unknown = Reflect.get(target, prop, receiver);
-      if (typeof value !== 'function') return value;
+
+      if (typeof value !== 'function') {
+        return value;
+      }
+
       const name = String(prop);
+
       return (...args: unknown[]) => {
         if (__DEV__) {
           console.log(`gl.${name}(${glArgsToString(target, args)})`);
+
           for (const arg of args) {
             if (arg === undefined) {
               console.error(`undefined passed to gl.${name}(${glArgsToString(target, args)})`);
             }
           }
         }
+
         const result = Reflect.apply(value as (...a: unknown[]) => unknown, target, args);
+
         if (name !== 'getError') {
           const err = target.getError();
+
           if (err !== target.NO_ERROR) {
             throw new Error(`${glEnumToString(target, err)} was caused by call to: ${name}`);
           }
         }
+
         return result;
       };
     },
@@ -345,7 +359,10 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _rootRenderTarget: RenderTarget;
   private readonly _onContextLostHandler: (event: Event) => void;
   private readonly _onContextRestoredHandler: () => void;
-  private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<Texture | RenderTexture, ManagedTextureState>();
+  private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<
+    Texture | RenderTexture,
+    ManagedTextureState
+  >();
   private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
   /**
    * Bind state for depth attachments sampled as textures. Separate from
@@ -853,7 +870,12 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** @internal */
-  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+  public _rekeyPersistentSlots(
+    bundle: PersistentSlotBundle,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
     const store = bundle as WebGl2PersistentSlotStore;
     const owner = store.owner;
 
@@ -871,7 +893,12 @@ export class WebGl2Backend implements RenderBackend {
    * store was already serving, so re-resolving it would put the acquisition walk
    * back on a path that runs on every structural frame.
    */
-  private _ownerServesArrivals(source: RenderRootSource, owner: PersistentSlotCapableRenderer, carried: Int32Array, previousHandleCount: number): boolean {
+  private _ownerServesArrivals(
+    source: RenderRootSource,
+    owner: PersistentSlotCapableRenderer,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
     for (const scope of source.scopes) {
       const drawables = scope.items.drawables;
       const count = scope.items.count;
@@ -1082,7 +1109,13 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number, instances: InstanceDataView | null = null): this {
+  public drawInstanced(
+    mesh: Mesh,
+    transforms: readonly Matrix[],
+    tints: readonly Color[],
+    count: number,
+    instances: InstanceDataView | null = null,
+  ): this {
     if (count <= 0 || mesh.vertexCount === 0) {
       return this;
     }
@@ -1280,7 +1313,11 @@ export class WebGl2Backend implements RenderBackend {
     blendMode: BlendModes,
   ): this {
     if (this._multiAttachmentTarget) {
-      assertSingleAttachmentCompose('Alpha-mask compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
+      assertSingleAttachmentCompose(
+        'Alpha-mask compositing',
+        (this._renderTarget as MultiRenderTarget).attachments.length,
+        RenderBackendType.WebGl2,
+      );
     }
 
     if (width <= 0 || height <= 0) {
@@ -1304,7 +1341,11 @@ export class WebGl2Backend implements RenderBackend {
 
   public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
     if (this._multiAttachmentTarget) {
-      assertSingleAttachmentCompose('Backdrop-blend compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
+      assertSingleAttachmentCompose(
+        'Backdrop-blend compositing',
+        (this._renderTarget as MultiRenderTarget).attachments.length,
+        RenderBackendType.WebGl2,
+      );
     }
 
     if (width <= 0 || height <= 0) {
@@ -1360,7 +1401,12 @@ export class WebGl2Backend implements RenderBackend {
       case TextureFormat.Rgba8Srgb:
         return colorFormatCapabilities(true, true, true, this._sampleCountsFor(format, true));
       case TextureFormat.Rgba16F:
-        return colorFormatCapabilities(this._floatRenderable, true, this._floatRenderable, this._sampleCountsFor(format, this._floatRenderable));
+        return colorFormatCapabilities(
+          this._floatRenderable,
+          true,
+          this._floatRenderable,
+          this._sampleCountsFor(format, this._floatRenderable),
+        );
       case TextureFormat.Rgba32F:
         return colorFormatCapabilities(
           this._floatRenderable,
@@ -1401,7 +1447,9 @@ export class WebGl2Backend implements RenderBackend {
       return singleSampleCount;
     }
 
-    const counts = normalizeSampleCounts(gl.getInternalformatParameter(gl.RENDERBUFFER, webgl2DataTextureFormat(format).internalFormat, gl.SAMPLES));
+    const counts = normalizeSampleCounts(
+      gl.getInternalformatParameter(gl.RENDERBUFFER, webgl2DataTextureFormat(format).internalFormat, gl.SAMPLES),
+    );
 
     this._sampleCountsByFormat.set(format, counts);
 
@@ -1457,10 +1505,31 @@ export class WebGl2Backend implements RenderBackend {
     return this.supportsColorFormat(format);
   }
 
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType?: 'uint8'): Promise<Uint8ClampedArray>;
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType?: 'uint8',
+  ): Promise<Uint8ClampedArray>;
   public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: 'float32'): Promise<Float32Array>;
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType = 'uint8'): Promise<PixelArray> {
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType: PixelDataType,
+  ): Promise<PixelArray>;
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType: PixelDataType = 'uint8',
+  ): Promise<PixelArray> {
     this.flush();
 
     const gl = this._context;
@@ -1477,7 +1546,15 @@ export class WebGl2Backend implements RenderBackend {
     return Promise.resolve(flipRowsInPlace(rows, width, height));
   }
 
-  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType?: 'uint8',
+  ): PixelReadback;
   public createPixelReadback(
     source: RenderTexture,
     x: number,
@@ -1577,6 +1654,7 @@ export class WebGl2Backend implements RenderBackend {
     if (this._renderTarget.view !== view) {
       this._flushActiveRenderer();
     }
+
     this._renderTarget.setView(view);
     this._bindRenderTarget(this._renderTarget);
 
@@ -1649,8 +1727,13 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     // Compressed bytes cannot be normalized at upload; their DFD association governs the sample instead.
-    if (texture.compressed !== null) return texture.colorSpace !== 'none';
-    if (!texture.premultiplyAlpha) return false;
+    if (texture.compressed !== null) {
+      return texture.colorSpace !== 'none';
+    }
+
+    if (!texture.premultiplyAlpha) {
+      return false;
+    }
 
     return !this._needsColorNormalization(texture) && texture.source === null;
   }
@@ -1767,7 +1850,11 @@ export class WebGl2Backend implements RenderBackend {
     // both textures upload from the one dirty-range consumption below.
     const tintTexture = this._tintTexture;
 
-    if (tintTexture?.height !== layout.tintHeight || tintTexture.width !== layout.tintWidth || tintTexture.buffer !== this._transformBuffer.tintData) {
+    if (
+      tintTexture?.height !== layout.tintHeight ||
+      tintTexture.width !== layout.tintWidth ||
+      tintTexture.buffer !== this._transformBuffer.tintData
+    ) {
       tintTexture?.destroy();
 
       this._tintTexture = new DataTexture({
@@ -2601,6 +2688,7 @@ export class WebGl2Backend implements RenderBackend {
     // Nodes, not instances: a batch whose renderer expands one node into many
     // instances records its own node count (see RetainedBatchInstruction).
     this._stats.submittedNodes += batch.nodeCount ?? batch.instanceCount;
+
     if (payload.replayer.replayRetainedBatch(payload) !== false) {
       this._stats.batches++;
       this._stats.drawCalls += batch.drawCalls;
@@ -2691,6 +2779,7 @@ export class WebGl2Backend implements RenderBackend {
     this._attachmentBlendActive = false;
     this._boundHandles.length = 0;
     this._boundFramebuffer = null;
+
     if (this._readbackFramebuffer !== null) {
       this._context.deleteFramebuffer(this._readbackFramebuffer);
       this._readbackFramebuffer = null;
@@ -2702,7 +2791,10 @@ export class WebGl2Backend implements RenderBackend {
     this._sampleCountsByFormat.clear();
   }
 
-  private _createContext(options: RenderingApplicationOptions['webglAttributes'], alphaMode: CanvasAlphaMode): WebGL2RenderingContext | null {
+  private _createContext(
+    options: RenderingApplicationOptions['webglAttributes'],
+    alphaMode: CanvasAlphaMode,
+  ): WebGL2RenderingContext | null {
     try {
       // Force a stencil buffer on the default framebuffer so geometric stencil
       // clipping (RenderNode.clip with a Geometry clipShape) works on the root
@@ -3590,7 +3682,10 @@ export class WebGl2Backend implements RenderBackend {
     state.multisampleHeight = height;
     state.multisampleSamples = samples;
     state.multisampleDirty = true;
-    state.multisampleAccountedBytes = this._accountant.reallocate(state.multisampleAccountedBytes, width * height * samples * descriptor.bytesPerPixel);
+    state.multisampleAccountedBytes = this._accountant.reallocate(
+      state.multisampleAccountedBytes,
+      width * height * samples * descriptor.bytesPerPixel,
+    );
   }
 
   private _syncDepthStencilAttachment(target: RenderTarget, state: ManagedRenderTargetState): void {
@@ -3666,7 +3761,10 @@ export class WebGl2Backend implements RenderBackend {
     state.stencilWidth = width;
     state.stencilHeight = height;
     state.stencilSamples = samples;
-    state.stencilAccountedBytes = this._accountant.reallocate(state.stencilAccountedBytes, width * height * DEPTH_STENCIL8_BYTES_PER_PIXEL * samples);
+    state.stencilAccountedBytes = this._accountant.reallocate(
+      state.stencilAccountedBytes,
+      width * height * DEPTH_STENCIL8_BYTES_PER_PIXEL * samples,
+    );
   }
 
   private _getStencilState(target: RenderTarget): StencilTargetState {
@@ -3714,7 +3812,11 @@ export class WebGl2Backend implements RenderBackend {
    * contiguous, so `_syncTexture` hands GL an offset into the texture buffer
    * itself.
    */
-  private _acquirePartialUploadScratch(state: ManagedTextureState, source: Float32Array | Uint8Array, length: number): Float32Array | Uint8Array {
+  private _acquirePartialUploadScratch(
+    state: ManagedTextureState,
+    source: Float32Array | Uint8Array,
+    length: number,
+  ): Float32Array | Uint8Array {
     const isFloat = source instanceof Float32Array;
     let scratch = state.partialUploadScratch;
 
@@ -3885,7 +3987,17 @@ export class WebGl2Backend implements RenderBackend {
       const bytesPerPixel = dataTextureBytesPerPixel(format);
 
       if (needsAlloc || region === null || region.full) {
-        gl.texImage2D(gl.TEXTURE_2D, 0, formatInfo.internalFormat, texture.width, texture.height, 0, formatInfo.format, formatInfo.type, texture.buffer);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          formatInfo.internalFormat,
+          texture.width,
+          texture.height,
+          0,
+          formatInfo.format,
+          formatInfo.type,
+          texture.buffer,
+        );
         this._bookTextureStorage(state, texture, bytesPerPixel);
         this._accountant.recordTextureUpload(texture.width * texture.height * bytesPerPixel);
       } else {
@@ -3943,7 +4055,18 @@ export class WebGl2Backend implements RenderBackend {
             }
           }
 
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView, 0);
+          gl.texSubImage2D(
+            gl.TEXTURE_2D,
+            0,
+            region.x,
+            region.y,
+            region.width,
+            region.height,
+            formatInfo.format,
+            formatInfo.type,
+            subView,
+            0,
+          );
         }
 
         this._accountant.recordTextureUpload(region.width * region.height * bytesPerPixel);
@@ -3966,13 +4089,16 @@ export class WebGl2Backend implements RenderBackend {
       const internalFormat = this._managedColorInternalFormat(texture);
       const needsNormalization = this._needsColorNormalization(texture);
       const allocateChain = needsNormalization && levels.length > 1 && levels.some(({ data }) => !isFullyOpaqueLevel(data));
+
       if (allocateChain) {
         // A non-base mip cannot be a framebuffer attachment until its texture is mip-complete.
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, levels.length - 1);
+
         for (const [level, { width, height }] of levels.entries()) {
           gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         }
       }
+
       let uploadedBytes = 0;
 
       for (const [level, { data, width, height }] of levels.entries()) {
@@ -3980,7 +4106,10 @@ export class WebGl2Backend implements RenderBackend {
           // Allocated uninitialized and filled by the pass, so the write path
           // stays identical to the plain upload below: same destination, same
           // storage format, same accounting.
-          if (!allocateChain) gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          if (!allocateChain) {
+            gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          }
+
           this._getTextureNormalizer().normalizePixels({ destination: state.handle, level, width, height, internalFormat }, data);
         } else if (allocateChain) {
           gl.texSubImage2D(gl.TEXTURE_2D, level, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
@@ -4143,7 +4272,11 @@ export class WebGl2Backend implements RenderBackend {
    * keeps describing what GL holds - a render target the pass restored onto a
    * unit has to stay releasable from it.
    */
-  public restoreAfterColorNormalization(unitZeroBinding: WebGLTexture | null, activeUnit: number, activeBinding: WebGLTexture | null): void {
+  public restoreAfterColorNormalization(
+    unitZeroBinding: WebGLTexture | null,
+    activeUnit: number,
+    activeBinding: WebGLTexture | null,
+  ): void {
     this._boundHandles[0] = unitZeroBinding;
     this._boundHandles[activeUnit] = activeBinding;
     this._bindRenderTarget(this._renderTarget);
@@ -4242,7 +4375,12 @@ const RGBA8_BYTES_PER_PIXEL = 4;
 // one 32-bit texel, for both the sampleable-texture and renderbuffer forms of
 // a target's depth/stencil attachment.
 const DEPTH_STENCIL8_BYTES_PER_PIXEL = 4;
-const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blendable: boolean, sampleCounts: readonly number[]): ColorFormatCapabilities => ({
+const colorFormatCapabilities = (
+  renderable: boolean,
+  filterable: boolean,
+  blendable: boolean,
+  sampleCounts: readonly number[],
+): ColorFormatCapabilities => ({
   renderable,
   filterable,
   blendable,
@@ -4341,9 +4479,27 @@ let formatTable: WebGl2DataTextureFormatTable | null = null;
 const buildWebgl2DataTextureFormatTable = (gl: typeof WebGL2RenderingContext): WebGl2DataTextureFormatTable => ({
   [TextureFormat.R8]: Object.freeze({ internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1, bytesPerPixel: 1 }),
   [TextureFormat.R32F]: Object.freeze({ internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1, bytesPerPixel: 4 }),
-  [TextureFormat.Rgba8]: Object.freeze({ internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 }),
-  [TextureFormat.Rgba8Srgb]: Object.freeze({ internalFormat: gl.SRGB8_ALPHA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 }),
-  [TextureFormat.Rgba16F]: Object.freeze({ internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT, channels: 4, bytesPerPixel: 8 }),
+  [TextureFormat.Rgba8]: Object.freeze({
+    internalFormat: gl.RGBA8,
+    format: gl.RGBA,
+    type: gl.UNSIGNED_BYTE,
+    channels: 4,
+    bytesPerPixel: 4,
+  }),
+  [TextureFormat.Rgba8Srgb]: Object.freeze({
+    internalFormat: gl.SRGB8_ALPHA8,
+    format: gl.RGBA,
+    type: gl.UNSIGNED_BYTE,
+    channels: 4,
+    bytesPerPixel: 4,
+  }),
+  [TextureFormat.Rgba16F]: Object.freeze({
+    internalFormat: gl.RGBA16F,
+    format: gl.RGBA,
+    type: gl.HALF_FLOAT,
+    channels: 4,
+    bytesPerPixel: 8,
+  }),
   [TextureFormat.Rgba32F]: Object.freeze({ internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4, bytesPerPixel: 16 }),
 });
 

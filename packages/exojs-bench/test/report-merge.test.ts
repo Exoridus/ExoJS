@@ -99,14 +99,14 @@ const readJson = <T>(dir: string): T => JSON.parse(readFileSync(join(dir, 'resul
 
 describe('mergeCellResults', () => {
   const a = cell({ archetype: 'lifecycle-churn', nodeCount: 5000, cpuMsMedian: 2.8 });
-  const b = cell({ archetype: 'static-heavy', nodeCount: 5000, cpuMsMedian: 1.0 });
+  const b = cell({ archetype: 'static-heavy', nodeCount: 5000, cpuMsMedian: 1 });
 
   test('keeps every existing cell the incoming run did not measure', () => {
     const merged = mergeCellResults([a, b], [cell({ archetype: 'lifecycle-churn', nodeCount: 5000, cpuMsMedian: 2.4 })]);
 
     expect(merged.map(result => [result.spec.archetype, result.cpuMsMedian])).toEqual([
       ['lifecycle-churn', 2.4],
-      ['static-heavy', 1.0],
+      ['static-heavy', 1],
     ]);
   });
 
@@ -130,7 +130,7 @@ describe('mergeCellResults', () => {
   });
 
   test('a differing spec field is a different cell, not an overwrite', () => {
-    const webgpu = cell({ archetype: 'lifecycle-churn', nodeCount: 5000, cpuMsMedian: 3.0, backend: 'webgpu' });
+    const webgpu = cell({ archetype: 'lifecycle-churn', nodeCount: 5000, cpuMsMedian: 3, backend: 'webgpu' });
 
     expect(mergeCellResults([a], [webgpu])).toEqual([a, webgpu]);
   });
@@ -139,7 +139,15 @@ describe('mergeCellResults', () => {
     const reordered = {
       ...a,
       cpuMsMedian: 2.4,
-      spec: { nodeCount: 5000, archetype: 'lifecycle-churn', backend: 'webgl2', config: 'current', engine: 'exojs', warmupFrames: 10, timedFrames: 60 },
+      spec: {
+        nodeCount: 5000,
+        archetype: 'lifecycle-churn',
+        backend: 'webgl2',
+        config: 'current',
+        engine: 'exojs',
+        warmupFrames: 10,
+        timedFrames: 60,
+      },
     } as CellResult;
     const merged = mergeCellResults([a], [reordered]);
 
@@ -199,8 +207,8 @@ describe('writeReport merges into an existing results.json', () => {
       results: [
         cell({ archetype: 'lifecycle-churn', nodeCount: 5000, cpuMsMedian: 2.8 }),
         cell({ archetype: 'lifecycle-churn', nodeCount: 5000, cpuMsMedian: 3.2, backend: 'webgpu' }),
-        cell({ archetype: 'static-heavy', nodeCount: 5000, cpuMsMedian: 1.0 }),
-        cell({ archetype: 'static-heavy', nodeCount: 5000, cpuMsMedian: 4.0, engine: 'pixi' }),
+        cell({ archetype: 'static-heavy', nodeCount: 5000, cpuMsMedian: 1 }),
+        cell({ archetype: 'static-heavy', nodeCount: 5000, cpuMsMedian: 4, engine: 'pixi' }),
       ],
     };
     writeReport(first, dir);
@@ -222,11 +230,13 @@ describe('writeReport merges into an existing results.json', () => {
       ['webgpu', 't1'],
     ]);
     expect(merged.libraries).toEqual(first.libraries);
-    expect(merged.results.map(result => [result.spec.engine, result.spec.backend, result.spec.archetype, result.cpuMsMedian, result.status])).toEqual([
+    expect(
+      merged.results.map(result => [result.spec.engine, result.spec.backend, result.spec.archetype, result.cpuMsMedian, result.status]),
+    ).toEqual([
       ['exojs', 'webgl2', 'lifecycle-churn', 2.4, 'ok'],
       ['exojs', 'webgpu', 'lifecycle-churn', 3.2, 'ok'],
-      ['exojs', 'webgl2', 'static-heavy', 1.0, 'ok'],
-      ['pixi', 'webgl2', 'static-heavy', 4.0, 'ok'],
+      ['exojs', 'webgl2', 'static-heavy', 1, 'ok'],
+      ['pixi', 'webgl2', 'static-heavy', 4, 'ok'],
     ]);
 
     const csv = readFileSync(join(dir, 'results.csv'), 'utf8');
@@ -264,14 +274,14 @@ describe('writePhysicsReport merges into an existing results.json', () => {
     const first: PhysicsReportData = {
       provenance: physicsStamp('150.0'),
       libraries: [],
-      results: [physicsCell('box-stack', 3000, 4.0), physicsCell('joints', 1000, 9.0)],
+      results: [physicsCell('box-stack', 3000, 4), physicsCell('joints', 1000, 9)],
     };
     writePhysicsReport(first, dir);
 
     const rerun: PhysicsReportData = {
       provenance: physicsStamp('151.0'),
       libraries: [],
-      results: [physicsCell('joints', 1000, 7.0), physicsCell('box-stack', 3000, 99, 'exceeded')],
+      results: [physicsCell('joints', 1000, 7), physicsCell('box-stack', 3000, 99, 'exceeded')],
     };
     writePhysicsReport(rerun, dir);
 
@@ -279,8 +289,8 @@ describe('writePhysicsReport merges into an existing results.json', () => {
 
     expect(merged.provenance.browserVersion).toBe('151.0');
     expect(merged.results.map(result => [result.spec.archetype, result.stepMsMedian])).toEqual([
-      ['box-stack', 4.0],
-      ['joints', 7.0],
+      ['box-stack', 4],
+      ['joints', 7],
     ]);
   });
 });

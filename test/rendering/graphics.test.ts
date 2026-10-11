@@ -347,14 +347,14 @@ describe('Graphics', () => {
   describe('child-type guard', () => {
     test('addChild rejects a non-Mesh child', () => {
       const graphics = new Graphics();
-      const nonMesh = { destroy: () => undefined } as unknown as RenderNode;
+      const nonMesh = { destroy: () => {} } as unknown as RenderNode;
 
       expect(() => graphics.addChild(nonMesh)).toThrow('Graphics can only contain Mesh children.');
     });
 
     test('addChildAt rejects a non-Mesh child', () => {
       const graphics = new Graphics();
-      const nonMesh = { destroy: () => undefined } as unknown as RenderNode;
+      const nonMesh = { destroy: () => {} } as unknown as RenderNode;
 
       expect(() => graphics.addChildAt(nonMesh, 0)).toThrow('Graphics can only contain Mesh children.');
     });

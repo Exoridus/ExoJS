@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createExecRunner, writeCommandLog } from '../../scripts/release/command-runner.ts';
 
 const temporary: string[] = [];
+
 const scratch = (): string => {
   const path = mkdtempSync(join(tmpdir(), 'exojs-command-runner-'));
 
@@ -16,7 +17,9 @@ const scratch = (): string => {
 };
 
 afterEach(() => {
-  for (const path of temporary.splice(0)) rmSync(path, { recursive: true, force: true });
+  for (const path of temporary.splice(0)) {
+    rmSync(path, { recursive: true, force: true });
+  }
 });
 
 describe('command logs', () => {
@@ -35,7 +38,11 @@ describe('command logs', () => {
 
   it('records the command, its exit code and both streams', () => {
     const directory = scratch();
-    const path = writeCommandLog(directory, { command: 'git', args: ['status'], cwd: '/repo' }, { code: 7, stdout: 'to stdout', stderr: 'to stderr' })!;
+    const path = writeCommandLog(
+      directory,
+      { command: 'git', args: ['status'], cwd: '/repo' },
+      { code: 7, stdout: 'to stdout', stderr: 'to stderr' },
+    )!;
     const text = readFileSync(path, 'utf8');
 
     expect(text).toContain('$ git status');
@@ -57,6 +64,7 @@ describe('command logs', () => {
     const directory = scratch();
     const runner = createExecRunner({ logDirectory: directory });
     const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
     try {
       const failed = runner.run({ command: 'node', args: ['-e', 'process.exit(3)'] });
       const passed = runner.run({ command: 'node', args: ['--version'] });
@@ -91,7 +99,10 @@ describe('command logs', () => {
   });
 
   it.each(['npm', 'pnpm'])('runs the %s Windows shim through its Node entry point', command => {
-    if (process.platform !== 'win32') return;
+    if (process.platform !== 'win32') {
+      return;
+    }
+
     const result = createExecRunner().run({ command, args: ['--version'] });
     expect(result.code).toBe(0);
     expect(result.stdout).toMatch(/\d+\.\d+\.\d+/);

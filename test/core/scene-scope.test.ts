@@ -355,9 +355,11 @@ describe('SceneScope', () => {
 
       vi.spyOn(scope.inputs, 'suspend').mockImplementation(() => events.push('inputs.suspend'));
       vi.spyOn(scope.interaction, 'suspend').mockImplementation(() => events.push('interaction.suspend'));
+
       scene.unload = async (): Promise<void> => {
         events.push('scene.unload');
       };
+
       vi.spyOn(scope.systems, 'destroy').mockImplementation(() => events.push('systems.destroy'));
       vi.spyOn(scope.tweens, 'destroy').mockImplementation(() => events.push('tweens.destroy'));
       vi.spyOn(scope.audio, 'destroy').mockImplementation(() => events.push('audio.destroy'));
@@ -366,9 +368,11 @@ describe('SceneScope', () => {
       vi.mocked(app.interaction.detachRoot).mockImplementation(() => {
         events.push('interaction.detachRoot');
       });
+
       scene.destroy = (): void => {
         events.push('scene.destroy');
       };
+
       vi.mocked(app.loader._releaseScope).mockImplementation(() => {
         events.push('loader._releaseScope');
       });
@@ -394,7 +398,7 @@ describe('SceneScope', () => {
     test('is idempotent — unload() and destroy() run at most once per activation', async () => {
       const app = createAppStub();
       const scene = new Scene();
-      const unload = vi.fn(async () => undefined);
+      const unload = vi.fn(async () => {});
       const scope = await activate(app, scene);
 
       scene.unload = unload;

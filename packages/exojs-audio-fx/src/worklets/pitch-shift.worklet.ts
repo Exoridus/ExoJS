@@ -67,9 +67,11 @@ class PitchShiftProcessor extends DisposableProcessor {
     // Periodic Hann: w(p) + w(p + n/2) === 1, i.e. constant-overlap-add at
     // 50% overlap, so two adjacent grains reconstruct unity amplitude.
     const w = new Float32Array(n);
+
     for (let i = 0; i < n; i++) {
       w[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / n));
     }
+
     return w;
   }
 
@@ -85,20 +87,31 @@ class PitchShiftProcessor extends DisposableProcessor {
     const seek = this._seek;
     let bestD = 0;
     let bestC = -Infinity;
+
     for (let d = -seek; d <= seek; d++) {
       const base = nominal + d;
-      if (base < 0 || base + ov > this._inCount) continue;
+
+      if (base < 0 || base + ov > this._inCount) {
+        continue;
+      }
+
       let c = 0;
+
       for (let ch = 0; ch < this._channels; ch++) {
         const ib = this._inBufs[ch]!;
         const ob = this._outBufs[ch]!;
-        for (let k = 0; k < ov; k++) c += ob[(sp + k) % oL]! * ib[(base + k) % iL]!;
+
+        for (let k = 0; k < ov; k++) {
+          c += ob[(sp + k) % oL]! * ib[(base + k) % iL]!;
+        }
       }
+
       if (c > bestC) {
         bestC = c;
         bestD = d;
       }
     }
+
     return bestD;
   }
 
@@ -106,6 +119,7 @@ class PitchShiftProcessor extends DisposableProcessor {
   private _canGenerate(): boolean {
     const nominal = Math.round(this._aPos);
     const oldest = this._inCount - this._inLen;
+
     return nominal >= 0 && nominal + this._frameLen + this._seek <= this._inCount && nominal - this._seek >= oldest;
   }
 
@@ -120,33 +134,52 @@ class PitchShiftProcessor extends DisposableProcessor {
     const d = this._first ? 0 : this._correlate(nominal);
     this._first = false;
     const base = nominal + d;
+
     for (let ch = 0; ch < this._channels; ch++) {
       const ib = this._inBufs[ch]!;
       const ob = this._outBufs[ch]!;
+
       // Zero the newly exposed tail, then overlap-add the windowed grain.
-      for (let j = H; j < F; j++) ob[(this._synthPos + j) % oL] = 0;
-      for (let j = 0; j < F; j++) ob[(this._synthPos + j) % oL]! += ib[(base + j) % iL]! * win[j]!;
+      for (let j = H; j < F; j++) {
+        ob[(this._synthPos + j) % oL] = 0;
+      }
+
+      for (let j = 0; j < F; j++) {
+        ob[(this._synthPos + j) % oL]! += ib[(base + j) % iL]! * win[j]!;
+      }
     }
+
     this._synthPos += H;
     this._aPos += H / pitch; // analysis hop = synthesis hop / stretch
   }
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
-    if (this._destroyed) return false;
+    if (this._destroyed) {
+      return false;
+    }
+
     const input = inputs[0];
     const output = outputs[0];
-    if (!input || !output) return true;
-    const channels = Math.min(input.length, output.length);
-    if (channels === 0) {
-      this._activeChannels = 0;
+
+    if (!input || !output) {
       return true;
     }
+
+    const channels = Math.min(input.length, output.length);
+
+    if (channels === 0) {
+      this._activeChannels = 0;
+
+      return true;
+    }
+
     // Grown on a channel-count increase only, never per block; a late channel
     // starts from silent history.
     while (this._inBufs.length < channels) {
       this._inBufs.push(new Float32Array(this._inLen));
       this._outBufs.push(new Float32Array(this._outLen));
     }
+
     // A channel that reappears after the input narrowed (stereo, then mono,
     // then stereo again) starts silent: replaying the history it had in its
     // previous activation would leak stale audio onto that side.
@@ -154,6 +187,7 @@ class PitchShiftProcessor extends DisposableProcessor {
       this._inBufs[ch]!.fill(0);
       this._outBufs[ch]!.fill(0);
     }
+
     this._activeChannels = channels;
     this._channels = channels;
 
@@ -163,11 +197,16 @@ class PitchShiftProcessor extends DisposableProcessor {
 
     for (let i = 0; i < length; i++) {
       const slot = this._inCount % this._inLen;
-      for (let ch = 0; ch < channels; ch++) this._inBufs[ch]![slot] = input[ch]![i]!;
+
+      for (let ch = 0; ch < channels; ch++) {
+        this._inBufs[ch]![slot] = input[ch]![i]!;
+      }
+
       this._inCount++;
 
       // Pull-generate stretched samples until the read pointer has a margin.
       let guard = 0;
+
       while (this._synthPos < this._readPos + 2 && this._canGenerate() && guard++ < 64) {
         this._generate(pitch);
       }
@@ -178,16 +217,21 @@ class PitchShiftProcessor extends DisposableProcessor {
         const frac = p - i0;
         const ia = ((i0 % oL) + oL) % oL;
         const ib = (((i0 + 1) % oL) + oL) % oL;
+
         for (let ch = 0; ch < channels; ch++) {
           const ob = this._outBufs[ch]!;
           const a = ob[ia]!;
           output[ch]![i] = a + (ob[ib]! - a) * frac;
         }
+
         this._readPos += pitch;
       } else {
-        for (let ch = 0; ch < channels; ch++) output[ch]![i] = 0;
+        for (let ch = 0; ch < channels; ch++) {
+          output[ch]![i] = 0;
+        }
       }
     }
+
     return true;
   }
 }

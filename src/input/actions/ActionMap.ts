@@ -478,13 +478,16 @@ class ActionMapBase<T extends ActionRecord> {
       if (this._wasAvailable) {
         this._reset();
       }
+
       this._wasAvailable = false;
+
       return;
     }
 
     if (!this._wasAvailable) {
       const owner = this._owner;
       this._wasAvailable = true;
+
       if (owner !== null) {
         this._ownership.arm(owner._currentBatchSequence?.() ?? 0, owner._snapshotActionChannels?.() ?? null);
       }

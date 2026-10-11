@@ -141,6 +141,7 @@ describe('WebGL2 tilemap — tile orientation', () => {
       [read(1, 0), read(1, 1)],
     ];
     node.destroy();
+
     return result;
   };
 
@@ -162,13 +163,20 @@ describe('WebGL2 tilemap — tile orientation', () => {
               for (const cy of [0, 1]) {
                 let su = cx;
                 let sv = cy;
+
                 if (diagonal) {
                   const t = su;
                   su = sv;
                   sv = t;
                 }
-                if (flipX) su = 1 - su;
-                if (flipY) sv = 1 - sv;
+
+                if (flipX) {
+                  su = 1 - su;
+                }
+
+                if (flipY) {
+                  sv = 1 - sv;
+                }
 
                 expectPixelNear(measured[cx][cy], identity[su][sv]);
               }
@@ -191,10 +199,22 @@ describe('WebGL2 tilemap — chunk boundary', () => {
     const texture = createSolidTexture('#ff0000');
     const tileset = makeTileset(texture);
     // chunkWidth 2 → cells (0,1) and (2,3) live in different chunks.
-    const layer = new TileLayer({ id: 1, name: 'l', width: 4, height: 1, tileWidth: 16, tileHeight: 16, chunkWidth: 2, chunkHeight: 2, tilesets: [tileset] });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 4,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      chunkWidth: 2,
+      chunkHeight: 2,
+      tilesets: [tileset],
+    });
+
     for (let tx = 0; tx < 4; tx++) {
       layer.setTileAt(tx, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     }
+
     const map = new TileMap({ name: 'm', width: 4, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
 
@@ -222,10 +242,22 @@ describe('WebGL2 tilemap — chunk culling', () => {
     const texture = createSolidTexture('#ff0000');
     const tileset = makeTileset(texture);
     // 8 tiles wide, chunkWidth 2 → 4 chunks at screen x 0,32,64,96.
-    const layer = new TileLayer({ id: 1, name: 'l', width: 8, height: 1, tileWidth: 16, tileHeight: 16, chunkWidth: 2, chunkHeight: 2, tilesets: [tileset] });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 8,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      chunkWidth: 2,
+      chunkHeight: 2,
+      tilesets: [tileset],
+    });
+
     for (let tx = 0; tx < 8; tx++) {
       layer.setTileAt(tx, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     }
+
     const map = new TileMap({ name: 'm', width: 8, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
 
@@ -259,7 +291,16 @@ describe('WebGL2 tilemap — layer opacity', () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ffffff');
     const tileset = makeTileset(texture);
-    const layer = new TileLayer({ id: 1, name: 'l', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], opacity: 0.5 });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 1,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      opacity: 0.5,
+    });
     layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     const map = new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
@@ -285,7 +326,16 @@ describe('WebGL2 tilemap — layer opacity', () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ff0000');
     const tileset = makeTileset(texture);
-    const layer = new TileLayer({ id: 1, name: 'l', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], visible: false });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 1,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      visible: false,
+    });
     layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     const map = new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
@@ -375,8 +425,10 @@ describe('webgl2 isometric tilemap', () => {
     const texture = createSolidTexture('rgba(255, 0, 0, 0.5)');
     const map = isometricOverlapMap(texture, texture);
     const node = new TileMapNode(map);
+
     try {
       node.y = 16;
+
       for (let frame = 0; frame < 3; frame++) {
         render(backend, node);
         expectPixelNear(readWebGl2Pixel(backend, 30, 33), [239, 0, 0, 255]);
@@ -396,6 +448,7 @@ describe('webgl2 isometric tilemap', () => {
     const blue = createSolidTexture('#0000ff');
     const map = isometricOverlapMap(red, blue);
     const node = new TileMapNode(map);
+
     try {
       node.y = 16;
       render(backend, node);

@@ -7,6 +7,7 @@ import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
 
 const lanesFor = (file: string) => {
   const options = parseLocalLaneOptions(['--tests-only']);
+
   return selectLocalLanes(effectiveLanes(selectAreas([file])), options, [file]);
 };
 
@@ -43,6 +44,7 @@ describe('local validation policy', () => {
       expect(policy.browser).toEqual([]);
       expect(policy.smoke).toBe(false);
     }
+
     const rendering = selectLocalPolicy(['src/rendering/Renderer.ts']);
     expect(rendering.browser).toEqual(['webgl', 'webgpu']);
     expect(rendering.unitProjects).toContain('rendering-perf');

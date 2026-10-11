@@ -171,7 +171,8 @@ export abstract class TextEditWidget extends Widget {
     const local = this._localPoint.set(x, y).transformInverse(this.getGlobalTransform());
     const offset = this._offsetAtLocal(local.x, local.y);
     const now = performance.now();
-    const isDoublePress = now - this._lastPressTime < DOUBLE_CLICK_MS && Math.abs(x - this._lastPressX) < 4 && Math.abs(y - this._lastPressY) < 4;
+    const isDoublePress =
+      now - this._lastPressTime < DOUBLE_CLICK_MS && Math.abs(x - this._lastPressX) < 4 && Math.abs(y - this._lastPressY) < 4;
 
     this._lastPressTime = now;
     this._lastPressX = x;
@@ -282,33 +283,43 @@ export abstract class TextEditWidget extends Widget {
     switch (channel) {
       case Keyboard.Left:
         this.model.moveCaret('backward', word ? 'word' : 'character', extend);
+
         return true;
       case Keyboard.Right:
         this.model.moveCaret('forward', word ? 'word' : 'character', extend);
+
         return true;
       case Keyboard.Up:
         this._moveByLines(-1, extend);
+
         return true;
       case Keyboard.Down:
         this._moveByLines(1, extend);
+
         return true;
       case Keyboard.PageUp:
         this._moveByLines(-this._visibleLineCount(), extend);
+
         return true;
       case Keyboard.PageDown:
         this._moveByLines(this._visibleLineCount(), extend);
+
         return true;
       case Keyboard.Home:
         this.model.moveCaret('backward', 'line', extend);
+
         return true;
       case Keyboard.End:
         this.model.moveCaret('forward', 'line', extend);
+
         return true;
       case Keyboard.Backspace:
         this._deleteContent('backward', word, line);
+
         return true;
       case Keyboard.Delete:
         this._deleteContent('forward', word, line);
+
         return true;
       default:
         return this._applyShortcut(channel);
@@ -492,7 +503,9 @@ export abstract class TextEditWidget extends Widget {
   }
 
   protected set _softWrap(value: boolean) {
-    if (this._wrap === value) return;
+    if (this._wrap === value) {
+      return;
+    }
 
     this._wrap = value;
     this._applyWrapWidth();
@@ -509,10 +522,13 @@ export abstract class TextEditWidget extends Widget {
     const insets = this.contentInsets;
     const width = this._wrap && this.model.multiline ? Math.max(1, this._uiWidth - insets.left - insets.right) : -1;
 
-    if (width === this._appliedWrapWidth) return;
+    if (width === this._appliedWrapWidth) {
+      return;
+    }
 
     this._appliedWrapWidth = width;
-    this._textNode.layout = width < 0 ? { whiteSpace: 'pre', shaping: 'simple' } : { whiteSpace: 'pre', shaping: 'simple', maxWidth: width };
+    this._textNode.layout =
+      width < 0 ? { whiteSpace: 'pre', shaping: 'simple' } : { whiteSpace: 'pre', shaping: 'simple', maxWidth: width };
   }
 
   protected override _onThemeChanged(): void {
@@ -679,6 +695,7 @@ export abstract class TextEditWidget extends Widget {
         if (intent.text === '\n') {
           this._hostLineBreaks++;
         }
+
         break;
       case 'deleteContent':
         this.model.deleteContent(intent.direction, intent.granularity);
@@ -998,7 +1015,9 @@ export abstract class TextEditWidget extends Widget {
     const limit = Math.max(0, this._layout().advance.height - Math.max(0, viewport));
     const next = Math.max(0, Math.min(value, limit));
 
-    if (this._scrollY === next) return;
+    if (this._scrollY === next) {
+      return;
+    }
 
     this._scrollY = next;
     this._applyScrollPosition();

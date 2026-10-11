@@ -14,14 +14,26 @@ describe('recorded music reference contracts', () => {
   });
 
   it('scores only explicitly reviewed beat references', () => {
-    const result = evaluate({ status: 'reviewed', kind: 'beats', beatTimesSec: [1, 1.5, 2], reviewedBy: 'test oracle', notes: 'Analytical fixture.' });
+    const result = evaluate({
+      status: 'reviewed',
+      kind: 'beats',
+      beatTimesSec: [1, 1.5, 2],
+      reviewedBy: 'test oracle',
+      notes: 'Analytical fixture.',
+    });
     expect(result.quality?.all.precision).toBe(1);
     expect(result.quality?.all.recall).toBeCloseTo(1 / 3);
     expect(result.quality?.all.postingLatencyMs?.medianLower).toBeCloseTo(100);
   });
 
   it('distinguishes reviewed no-pulse audio from missing annotations', () => {
-    const result = evaluate({ status: 'reviewed', kind: 'no-pulse', beatTimesSec: [], reviewedBy: 'test oracle', notes: 'No perceptible pulse.' });
+    const result = evaluate({
+      status: 'reviewed',
+      kind: 'no-pulse',
+      beatTimesSec: [],
+      reviewedBy: 'test oracle',
+      notes: 'No perceptible pulse.',
+    });
     expect(result.quality?.all.falsePositiveCount).toBe(1);
     expect(result.quality?.all.falsePositivesPerMinute).toBe(20);
     expect(result.quality?.tempo.accuracy).toBeNull();
@@ -37,7 +49,13 @@ describe('recorded music reference contracts', () => {
     { kind: 'no-pulse', beatTimesSec: [1] },
   ] as const)('rejects invalid reviewed references: %j', reference => {
     expect(() =>
-      evaluate({ status: 'reviewed', reviewedBy: 'test oracle', notes: 'Invalid reference.', ...reference, beatTimesSec: [...reference.beatTimesSec] }),
+      evaluate({
+        status: 'reviewed',
+        reviewedBy: 'test oracle',
+        notes: 'Invalid reference.',
+        ...reference,
+        beatTimesSec: [...reference.beatTimesSec],
+      }),
     ).toThrow();
   });
 
@@ -63,6 +81,7 @@ const wav = (): Buffer => {
   bytes.writeInt16LE(-32768, 44);
   bytes.writeInt16LE(0, 46);
   bytes.writeInt16LE(32767, 48);
+
   return bytes;
 };
 
@@ -79,6 +98,7 @@ describe('canonical recorded PCM decoding', () => {
 
   it('rejects truncation and incompatible channel/encoding headers', () => {
     expect(() => decodeRecordedPcm(wav().subarray(0, 49))).toThrow();
+
     for (const offset of [20, 22, 32, 34]) {
       const bytes = wav();
       bytes.writeUInt16LE(3, offset);

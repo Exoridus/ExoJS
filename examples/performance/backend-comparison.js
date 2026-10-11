@@ -87,7 +87,10 @@ class BatchingScene extends Scene {
     const time = this.app.activeSeconds;
     for (let i = 0; i < spriteCount; i++) {
       const sprite = this.sprites[i];
-      sprite.setPosition(((i * 97) % this.app.width) + Math.sin(time + i * 0.13) * 12, ((i * 193) % this.app.height) + Math.cos(time + i * 0.17) * 12);
+      sprite.setPosition(
+        ((i * 97) % this.app.width) + Math.sin(time + i * 0.13) * 12,
+        ((i * 193) % this.app.height) + Math.cos(time + i * 0.17) * 12,
+      );
       sprite.rotation = time * ((i % 2 === 0 ? 1 : -1) * 25);
     }
   }

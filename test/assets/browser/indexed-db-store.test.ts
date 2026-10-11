@@ -208,7 +208,7 @@ describe('IndexedDbStore in a real browser', () => {
       layout: SingleEntryLayout.version<string>(1),
       network: unrestrictedNetwork,
       fetch: fetchRepresentation,
-      report: () => undefined,
+      report: () => {},
     };
 
     await expect(cache.resolve(acquisition)).resolves.toBe('{"name":"level-1"}');

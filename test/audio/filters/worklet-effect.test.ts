@@ -13,6 +13,7 @@ class TestWorkletEffect extends WorkletEffect {
   protected get _workletName(): string {
     return 'test-worklet';
   }
+
   protected get _workletSource(): string {
     return '/* test */';
   }
@@ -76,7 +77,11 @@ describe('WorkletEffect', () => {
       node.connect = vi.fn();
       node.disconnect = vi.fn();
       callCount++;
-      if (callCount === 1) capturedInputGain = node;
+
+      if (callCount === 1) {
+        capturedInputGain = node;
+      }
+
       return node as unknown as GainNode;
     });
 
@@ -103,11 +108,13 @@ describe('WorkletEffect', () => {
       node.connect = vi.fn();
       node.disconnect = vi.fn();
       nodes.push(node);
+
       return node as unknown as GainNode;
     });
 
     const filter = new TestWorkletEffect();
     filter.destroy();
+
     for (const node of nodes) {
       expect(node.disconnect).toHaveBeenCalled();
     }
@@ -141,6 +148,7 @@ describe('WorkletEffect', () => {
           this._connectAuxInput(bus as never, 1);
         }
       }
+
       return new AuxWorkletEffect();
     };
 
@@ -165,6 +173,7 @@ describe('WorkletEffect', () => {
         getOutputNode: () => (ready ? output : null),
         onceSetup: vi.fn((callback: () => void) => {
           finishSetup = callback;
+
           return vi.fn();
         }),
       };
@@ -291,8 +300,15 @@ describe('WorkletEffect', () => {
       const node = originalCreateGain();
       vi.spyOn(node.gain, 'setValueAtTime');
       callCount++;
-      if (callCount === 3) dryGainNode = node;
-      if (callCount === 4) wetGainNode = node;
+
+      if (callCount === 3) {
+        dryGainNode = node;
+      }
+
+      if (callCount === 4) {
+        wetGainNode = node;
+      }
+
       return node;
     });
 
@@ -336,8 +352,15 @@ describe('WorkletEffect', () => {
       const node = originalCreateGain();
       vi.spyOn(node.gain, 'setTargetAtTime');
       callCount++;
-      if (callCount === 3) dryGainNode = node;
-      if (callCount === 4) wetGainNode = node;
+
+      if (callCount === 3) {
+        dryGainNode = node;
+      }
+
+      if (callCount === 4) {
+        wetGainNode = node;
+      }
+
       return node;
     });
 

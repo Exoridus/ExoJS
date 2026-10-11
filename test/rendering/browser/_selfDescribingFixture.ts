@@ -12,7 +12,10 @@ export const MAX_FIXTURE_SIZE = 256;
  * pixel therefore reports which texel produced it, which turns a pixel
  * comparison into a statement about UV mapping rather than about colour.
  */
-export const buildCoordinateTexture = (size: number, regionOf: (x: number, y: number) => number = () => 0): DataTexture<TextureFormat.Rgba8> => {
+export const buildCoordinateTexture = (
+  size: number,
+  regionOf: (x: number, y: number) => number = () => 0,
+): DataTexture<TextureFormat.Rgba8> => {
   if (!Number.isInteger(size) || size <= 0 || size > MAX_FIXTURE_SIZE) {
     throw new Error(`Fixture size must be an integer in 1..${MAX_FIXTURE_SIZE} (got ${size}).`);
   }

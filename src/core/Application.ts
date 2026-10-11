@@ -459,7 +459,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // Established before any subsystem, because input, interaction and the
       // frame loop all read the host through it.
       this._ownsPlatform = appSettings.platform === undefined;
-      this.platform = appSettings.platform ?? (this.element === null ? new OffscreenPlatform(this.canvas) : new BrowserPlatform(this.element));
+      this.platform =
+        appSettings.platform ?? (this.element === null ? new OffscreenPlatform(this.canvas) : new BrowserPlatform(this.element));
 
       // Reads the host through the same adapter as everything else, so a
       // platform that reports no network makes the whole application agree.
@@ -665,6 +666,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._setState(ApplicationState.Destroyed);
 
     const failures: unknown[] = [];
+
     const attempt = (step: () => void): void => {
       try {
         step();
@@ -757,9 +759,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * report `Stopped` and `start()` would reinitialize a destroyed backend.
    */
   private _setState(next: ApplicationState): void {
-    const terminal = this._state === ApplicationState.Destroyed || (this._state === ApplicationState.Destroying && next !== ApplicationState.Destroyed);
+    const terminal =
+      this._state === ApplicationState.Destroyed || (this._state === ApplicationState.Destroying && next !== ApplicationState.Destroyed);
 
-    if (!terminal) this._state = next;
+    if (!terminal) {
+      this._state = next;
+    }
   }
 
   public get startupSeconds(): Seconds {
@@ -928,7 +933,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public get capabilities(): Capabilities {
     if (this._capabilities === null) {
-      throw new Error('Application.capabilities is unavailable before start() resolves. Use `await Capabilities.ready` for pre-start checks.');
+      throw new Error(
+        'Application.capabilities is unavailable before start() resolves. Use `await Capabilities.ready` for pre-start checks.',
+      );
     }
 
     return this._capabilities;
@@ -1181,10 +1188,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // it and wrote its own state; promoting over that would advertise
       // `Running` for a loop that no longer schedules frames, and every later
       // `start()`/`stop()` would early-return on the lie.
-      if (this._scheduler.active) this._setState(ApplicationState.Running);
+      if (this._scheduler.active) {
+        this._setState(ApplicationState.Running);
+      }
     } catch (error) {
       this._stopFrameLoop();
       this._setState(ApplicationState.Stopped);
+
       throw error;
     }
 
@@ -1297,7 +1307,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._frameStart = frameStart;
         this._inFrame = true;
 
-        if (__DEV__) Perf.mark(frameStartMark);
+        if (__DEV__) {
+          Perf.mark(frameStartMark);
+        }
 
         // The index counts in frames, and this is where one begins. Advancing it
         // per render instead would rotate the window several times in a frame
@@ -1325,9 +1337,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         this._scheduler.captureAlpha();
 
-        if (__DEV__) Perf.mark(systemsStartMark);
+        if (__DEV__) {
+          Perf.mark(systemsStartMark);
+        }
+
         this.systems._update(frameDelta);
-        if (__DEV__) Perf.measure(systemsMeasure, systemsStartMark);
+
+        if (__DEV__) {
+          Perf.measure(systemsMeasure, systemsStartMark);
+        }
 
         this.scenes.update(frameDelta);
         this.scenes._updateTransition(frameDelta);
@@ -1427,7 +1445,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this;
     }
 
-    if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
+    if (this._state === ApplicationState.Running) {
+      this._setState(ApplicationState.Halting);
+    }
 
     // One reason object for the one abort: `_stopFrameLoop()` performs it (it
     // has to - halting the loop strands a frame-driven session regardless of
@@ -1439,7 +1459,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._stopFrameLoop(reason);
 
     void this.scenes._stopAndClearActiveScene(reason).catch((error: unknown) => {
-      logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
+      logger.error('Application.stop() failed to unload the active scene.', {
+        source: 'Application',
+        ...(error instanceof Error && { error }),
+      });
       this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
     });
 
@@ -1763,7 +1786,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._releaseDom();
 
     if (this._scheduler.active) {
-      if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
+      if (this._state === ApplicationState.Running) {
+        this._setState(ApplicationState.Halting);
+      }
 
       this._stopFrameLoop();
     }
@@ -1813,7 +1838,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     try {
       await this._disposeScenesWithinGrace();
     } catch (error) {
-      logger.error('Application.destroy() failed to fully dispose SceneDirector.', { source: 'Application', ...(error instanceof Error && { error }) });
+      logger.error('Application.destroy() failed to fully dispose SceneDirector.', {
+        source: 'Application',
+        ...(error instanceof Error && { error }),
+      });
     }
 
     // Extensions installed last, so they are undone first - while the loader,

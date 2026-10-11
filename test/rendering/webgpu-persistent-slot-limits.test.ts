@@ -37,8 +37,8 @@ const DEFAULT_ORDER_CEILING = DEFAULT_MAX_STORAGE_BUFFER_BINDING_SIZE / ORDER_BY
 const createMockDevice = (limits?: Partial<GPUSupportedLimits>): GPUDevice =>
   ({
     limits,
-    createBuffer: () => ({ destroy: () => undefined }) as unknown as GPUBuffer,
-    queue: { writeBuffer: () => undefined },
+    createBuffer: () => ({ destroy: () => {} }) as unknown as GPUBuffer,
+    queue: { writeBuffer: () => {} },
   }) as unknown as GPUDevice;
 
 /**

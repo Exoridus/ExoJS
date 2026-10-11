@@ -58,7 +58,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
 // On the software (SwiftShader) adapter the WebGPU device can drop mid-test;
 // treat that as an unavailable-adapter skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /** Render one node through the real flush path inside a validation error scope. */
 const renderText = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, node: Text): Promise<boolean> => {

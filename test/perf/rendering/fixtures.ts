@@ -85,7 +85,17 @@ export interface SpriteScene {
 }
 
 export const buildSpriteScene = (config: SpriteSceneConfig): SpriteScene => {
-  const { count, textures, assign = 'cycle', blendModes, blendRunLength = 1, size = 64, viewW = 1280, viewH = 720, offscreenFraction = 0 } = config;
+  const {
+    count,
+    textures,
+    assign = 'cycle',
+    blendModes,
+    blendRunLength = 1,
+    size = 64,
+    viewW = 1280,
+    viewH = 720,
+    offscreenFraction = 0,
+  } = config;
   const root = new Container();
   const sprites: Sprite[] = [];
   const offscreenCount = Math.floor(count * offscreenFraction);

@@ -54,6 +54,7 @@ export class SvgFactory implements AssetFactory<string, HTMLImageElement, SvgAss
 
     return new Promise((resolve, reject) => {
       const image = new Image();
+
       const settle = (finish: () => void): void => {
         this._objectUrls.revoke(objectUrl);
         finish();
@@ -63,7 +64,13 @@ export class SvgFactory implements AssetFactory<string, HTMLImageElement, SvgAss
       image.addEventListener(
         'error',
         () =>
-          settle(() => reject(new Error('Failed to decode SVG source - the markup may be malformed, or (if loaded as the wrong asset type) not SVG at all.'))),
+          settle(() =>
+            reject(
+              new Error(
+                'Failed to decode SVG source - the markup may be malformed, or (if loaded as the wrong asset type) not SVG at all.',
+              ),
+            ),
+          ),
         { once: true },
       );
       image.addEventListener('abort', () => settle(() => reject(new Error('Image loading was canceled.'))), { once: true });

@@ -10,7 +10,7 @@ import {
   SceneAvailability,
   type Seconds,
   Sprite,
-  Tween,
+  type Tween,
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
@@ -75,11 +75,13 @@ class GameScene extends Scene {
   private togglePause(): void {
     const pausing = !this.paused;
     this.blurTween?.stop();
+
     if (pausing) {
       this.app.scenes.pause();
     } else {
       this.app.scenes.resume();
     }
+
     this.pausePanel.visible = pausing;
     this.pauseLabel.visible = pausing;
     this.hud.setStatus(pausing ? 'Paused' : 'Running');

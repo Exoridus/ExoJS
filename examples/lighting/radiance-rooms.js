@@ -1,5 +1,15 @@
 // Auto-generated from radiance-rooms.ts - edit the .ts source, not this file.
-import { Application, Color, Container, FixedResolutionCanvasSizing, RepeatingSprite, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  RepeatingSprite,
+  ScaleModes,
+  Scene,
+  Sprite,
+  Texture,
+} from '@codexo/exojs';
 import { AlphaOccluder, LightmapLighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Two rooms, one doorway, one lamp - and a switch between the renderer that

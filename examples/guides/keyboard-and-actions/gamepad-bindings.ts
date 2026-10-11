@@ -29,6 +29,7 @@ class PadScene extends Scene {
     for (const binding of this._padBindings) {
       binding.unbind();
     }
+
     this._padBindings.length = 0;
   }
   // #endregion guide:pad-binding-lifetime

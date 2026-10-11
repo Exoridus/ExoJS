@@ -1,7 +1,7 @@
 import {
   Application,
   Asset,
-  AudioStream,
+  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
@@ -83,7 +83,10 @@ class VinylRecordScene extends Scene {
     this.disc.drawCircle(cx, cy, 32);
     this.disc.lineWidth = 2;
     this.disc.lineColor = new Color(80, 80, 84);
-    for (let r = 45; r <= 140; r += 14) this.disc.drawArc(cx, cy, r, 0, Math.PI * 2);
+
+    for (let r = 45; r <= 140; r += 14) {
+      this.disc.drawArc(cx, cy, r, 0, Math.PI * 2);
+    }
 
     // A groove marker so the rotation is visible even on a smooth disc.
     const markerAngle = (this.angle * Math.PI) / 180;
@@ -93,6 +96,7 @@ class VinylRecordScene extends Scene {
     context.render(this.disc);
 
     this.bars.clear();
+
     for (let i = 0; i < 36; i++) {
       const a = (i / 36) * Math.PI * 2 + (this.angle * Math.PI) / 180;
       const bin = (i * 6) % spectrum.length;
@@ -105,6 +109,7 @@ class VinylRecordScene extends Scene {
       this.bars.lineColor = new Color(120, 200, 255);
       this.bars.drawLine(x0, y0, x1, y1);
     }
+
     context.render(this.bars);
 
     if (app.audio.locked) {

@@ -83,11 +83,17 @@ const createSolidTexture = (color: string, size = 8): Texture => {
   return new Texture(source);
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a frame through the real plan path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).
-const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode, encoded = false): Promise<boolean> => {
+const renderScene = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  root: RenderNode,
+  encoded = false,
+): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
@@ -96,7 +102,9 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 
   try {
     if (encoded) {
-      if (!(await renderWebGpuEncoded(ctx, backend, root))) return false;
+      if (!(await renderWebGpuEncoded(ctx, backend, root))) {
+        return false;
+      }
     } else {
       backend.resetStats();
       backend.clear(Color.black);
@@ -141,7 +149,12 @@ const countSubmits = (backend: WebGpuBackend, body: () => void): number => {
   return count;
 };
 
-const hexToRgba = (hex: string): RgbaTuple => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255];
+const hexToRgba = (hex: string): RgbaTuple => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16),
+  255,
+];
 
 interface FragmentCarrier {
   _fragment: RetainedGroupFragment;
@@ -154,11 +167,13 @@ const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group a
 // resolveSpriteBatchTextureSlots) so one retained group records TWO batches
 // (multi-batch replay coverage) whatever slot count the device was granted.
 const channelLevels = ['00', '55', 'aa', 'ff'] as const;
+
 const paletteColor = (index: number): string => {
   const combo = index + 1; // +1 skips black (the clear colour)
 
   return `#${channelLevels[combo % 4]!}${channelLevels[Math.floor(combo / 4) % 4]!}${channelLevels[Math.floor(combo / 16) % 4]!}`;
 };
+
 const palette36 = Array.from({ length: 36 }, (_, i) => paletteColor(i));
 
 describe('WebGPU renderer matrix: retained instruction replay cells', () => {

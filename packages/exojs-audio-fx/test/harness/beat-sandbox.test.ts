@@ -16,25 +16,21 @@ import { type BeatMessage, runDetector, type StateMessage, type WorkletMessage }
 const FIXTURE = clicktrack(120, 15);
 const TOTAL_SAMPLES = FIXTURE.samples.length;
 
-const beatMessages = (msgs: WorkletMessage[]): BeatMessage[] => {
-  return msgs.filter((m): m is BeatMessage => m.type === 'beat');
-};
+const beatMessages = (msgs: WorkletMessage[]): BeatMessage[] => msgs.filter((m): m is BeatMessage => m.type === 'beat');
 
-const stateMessages = (msgs: WorkletMessage[]): StateMessage[] => {
-  return msgs.filter((m): m is StateMessage => m.type === 'state');
-};
+const stateMessages = (msgs: WorkletMessage[]): StateMessage[] => msgs.filter((m): m is StateMessage => m.type === 'state');
 
 /** Serialize a message log to a stable string for equality comparison. */
-const serializeLog = (msgs: WorkletMessage[]): string => {
-  return JSON.stringify(
+const serializeLog = (msgs: WorkletMessage[]): string =>
+  JSON.stringify(
     msgs.map(m => {
       // Exclude _audioTimeSec from determinism comparison (it's an annotation
       // that depends on block size; actual message content must be identical).
       const { _audioTimeSec: _ignored, ...rest } = m as WorkletMessage & { _audioTimeSec: number };
+
       return rest;
     }),
   );
-};
 
 // ── 1. Determinism ─────────────────────────────────────────────────────────────
 
@@ -96,6 +92,7 @@ describe('BeatDetector sandbox — basic detection (120 BPM)', { timeout: 60_000
 
   it('beat messages have valid audioTime values (> 0, < fixture duration)', () => {
     const durationSec = FIXTURE.samples.length / SAMPLE_RATE;
+
     for (const b of beatMessages(messages)) {
       expect(b.audioTime).toBeGreaterThan(0);
       expect(b.audioTime).toBeLessThan(durationSec + 1); // allow small overshoot

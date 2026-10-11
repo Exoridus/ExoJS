@@ -1,7 +1,14 @@
 import { logger } from '#core/Logger';
 
 import { AssetImpl } from './Asset';
-import type { AnyAssetConfig, AssetDefinitions, CatalogEntry, InferCatalogLeaf, OptionsForKind, ValidatedCatalog } from './AssetDefinitions';
+import type {
+  AnyAssetConfig,
+  AssetDefinitions,
+  CatalogEntry,
+  InferCatalogLeaf,
+  OptionsForKind,
+  ValidatedCatalog,
+} from './AssetDefinitions';
 import { createLeaf } from './catalogLeaf';
 import { builtinLeaf, builtinTypeForPath } from './coreAssetTypes';
 
@@ -78,7 +85,12 @@ type IsIdentical<X, Y> = (<G>() => G extends X ? 1 : 2) extends <G>() => G exten
  * than declaration shape, rejects those.
  */
 type ConflictingKeys<Ms extends readonly unknown[]> = {
-  [K in SharedKeys<Ms>]: IsIdentical<Extract<Ms[number], Record<K, unknown>>[K], MergeDefinitions<Ms>[K & keyof MergeDefinitions<Ms>]> extends true ? never : K;
+  [K in SharedKeys<Ms>]: IsIdentical<
+    Extract<Ms[number], Record<K, unknown>>[K],
+    MergeDefinitions<Ms>[K & keyof MergeDefinitions<Ms>]
+  > extends true
+    ? never
+    : K;
 }[SharedKeys<Ms>];
 
 /**
@@ -109,7 +121,9 @@ type ComposeResult<Cs extends readonly AnyAssets[]> = [ConflictingKeys<Definitio
 type ExtendDefinition<M, E> = { [K in keyof M | keyof E]: K extends keyof E ? E[K] : K extends keyof M ? M[K] : never };
 
 /** The derived catalog type produced by {@link AssetsFacade.extend}. */
-type ExtendResult<M extends Record<string, CatalogEntry>, E extends Record<string, CatalogEntry>> = Assets<AsDefinition<ExtendDefinition<M, E>>>;
+type ExtendResult<M extends Record<string, CatalogEntry>, E extends Record<string, CatalogEntry>> = Assets<
+  AsDefinition<ExtendDefinition<M, E>>
+>;
 
 // ---------------------------------------------------------------------------
 // Provenance
@@ -509,7 +523,10 @@ type AssetsFacade = AssetsConstructorFn & {
    * });
    * ```
    */
-  extend<M extends Record<string, CatalogEntry>, const E extends Record<string, CatalogEntry>>(base: Assets<M>, entries: E): ExtendResult<M, E>;
+  extend<M extends Record<string, CatalogEntry>, const E extends Record<string, CatalogEntry>>(
+    base: Assets<M>,
+    entries: E,
+  ): ExtendResult<M, E>;
 };
 
 (AssetsImpl as unknown as { from: unknown }).from = function from<const M extends Record<string, CatalogEntry>>(

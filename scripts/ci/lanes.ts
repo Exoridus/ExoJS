@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 
-import { effectiveLanes, selectAreas, type EffectiveLanes, type LaneAreas } from './select-lanes.ts';
+import { type EffectiveLanes, effectiveLanes, type LaneAreas, selectAreas } from './select-lanes.ts';
 
 /**
  * The lane table - the single description of what CI and the pre-push hook run.
@@ -123,11 +123,11 @@ export const LANES: readonly Lane[] = [
     id: 'unit',
     stage: 'test',
     when: 'unit',
-    run: supervisorTests + 'pnpm test && pnpm test:alloc && pnpm test:physics-perf',
+    run: `${supervisorTests}pnpm test && pnpm test:alloc && pnpm test:physics-perf`,
     // The WGSL tests validate through Naga when it is on PATH and skip
     // otherwise; CI installs it and refuses the skip.
-    ciRun: supervisorTests + `EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
-    coverageRun: supervisorTests + `EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
+    ciRun: `${supervisorTests}EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
+    coverageRun: `${supervisorTests}EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
     naga: true,
     junit: true,
   },
@@ -420,15 +420,23 @@ export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan 
 
 const parseChangedFiles = (raw: string | undefined): string[] => {
   const text = (raw ?? '').trim();
-  if (text === '') return [];
+
+  if (text === '') {
+    return [];
+  }
+
   if (text.startsWith('[')) {
     try {
       const parsed: unknown = JSON.parse(text);
-      if (Array.isArray(parsed)) return parsed.map(String);
+
+      if (Array.isArray(parsed)) {
+        return parsed.map(String);
+      }
     } catch {
       // Not JSON after all - fall through to the newline form.
     }
   }
+
   return text
     .split(/\r?\n/)
     .map(line => line.trim())

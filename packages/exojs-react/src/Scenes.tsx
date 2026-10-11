@@ -1,5 +1,16 @@
 import { ApplicationState, type Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
-import { Children, createContext, isValidElement, type ReactElement, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Children,
+  createContext,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { useExoApp } from './useExoApp';
 
@@ -27,6 +38,7 @@ ActiveSceneContext.displayName = 'ExoActiveScene';
  */
 export function useActiveScene(): ExoScene | null;
 export function useActiveScene<T extends ExoScene>(SceneClass: abstract new (...args: never[]) => T): T | null;
+
 export function useActiveScene<T extends ExoScene>(SceneClass?: abstract new (...args: never[]) => T): ExoScene | null {
   const scene = useContext(ActiveSceneContext);
 
@@ -52,9 +64,7 @@ export interface SceneProps {
  * {@link Scenes} reads its props and renders its {@link SceneProps.children} only
  * while the scene is active.
  */
-export function Scene(_props: SceneProps): ReactElement | null {
-  return null;
-}
+export const Scene = (_props: SceneProps): ReactElement | null => null;
 
 /** Props for the {@link Scenes} switch. */
 export interface ScenesProps {
@@ -101,7 +111,7 @@ export interface ScenesProps {
  * </ExoCanvas>
  * ```
  */
-export function Scenes({ active, transition, children }: ScenesProps): ReactElement {
+export const Scenes = ({ active, transition, children }: ScenesProps): ReactElement => {
   const app = useExoApp();
   const [instance, setInstance] = useState<ExoScene | null>(null);
   // Bumped on every effect run so an async activation can tell whether a newer
@@ -117,6 +127,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
         map.set(props.name, props);
       }
     });
+
     return map;
   }, [children]);
 
@@ -134,6 +145,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
       // with no matching <Scene>), not a supported "show nothing" path.
       console.warn(`<Scenes>: no <Scene name="${active}"> declaration found; the previously active scene (if any) keeps running.`);
       setInstance(null);
+
       return;
     }
 
@@ -193,4 +205,4 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
   }, [app, active]);
 
   return <ActiveSceneContext.Provider value={instance}>{instance !== null && entry?.children}</ActiveSceneContext.Provider>;
-}
+};

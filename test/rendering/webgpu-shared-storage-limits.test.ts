@@ -56,9 +56,9 @@ const createMockDevice = (limits: Partial<GPUSupportedLimits> | undefined = defa
     createBuffer: (descriptor: GPUBufferDescriptor) => {
       sizes.push(descriptor.size);
 
-      return { destroy: () => undefined } as unknown as GPUBuffer;
+      return { destroy: () => {} } as unknown as GPUBuffer;
     },
-    queue: { writeBuffer: () => undefined },
+    queue: { writeBuffer: () => {} },
   } as unknown as GPUDevice;
 
   return { device, sizes };
@@ -87,7 +87,8 @@ const withGpuBufferUsage = (body: () => void): void => {
   }
 };
 
-const createBundle = (): WebGpuRetainedGroupBundle => new WebGpuRetainedGroupBundle(new GpuResourceAccountant(createRenderStats()), () => undefined);
+const createBundle = (): WebGpuRetainedGroupBundle =>
+  new WebGpuRetainedGroupBundle(new GpuResourceAccountant(createRenderStats()), () => {});
 
 /** Assert `body` fails with this fix's contract and name the store it blames. */
 const expectRefusal = (body: () => void, store: string): RenderError => {
@@ -133,7 +134,10 @@ describe('WebGpuTransformStorage device limits', () => {
       // `maxBufferSize`) and cannot be bound as storage.
       const over = createMockDevice();
 
-      const error = expectRefusal(() => new WebGpuTransformStorage().reserve(over.device, DEFAULT_ROW_CEILING + 1), 'shared transform storage');
+      const error = expectRefusal(
+        () => new WebGpuTransformStorage().reserve(over.device, DEFAULT_ROW_CEILING + 1),
+        'shared transform storage',
+      );
 
       // Diagnosis must carry the numbers a reader needs to act, not just the fact.
       expect(error.message).toContain(String(DEFAULT_ROW_CEILING * 2));
@@ -173,9 +177,9 @@ describe('WebGpuTransformStorage device limits', () => {
         maxStorageBufferBindingSize: DEFAULT_MAX_STORAGE_BUFFER_BINDING_SIZE,
       } as Partial<GPUSupportedLimits>);
 
-      expect(expectRefusal(() => new WebGpuTransformStorage().reserve(overBuffer.device, bufferCeiling + 1), 'shared transform storage').detail).toContain(
-        'maxBufferSize',
-      );
+      expect(
+        expectRefusal(() => new WebGpuTransformStorage().reserve(overBuffer.device, bufferCeiling + 1), 'shared transform storage').detail,
+      ).toContain('maxBufferSize');
 
       // A device with a smaller binding limit: the binding size decides, at the
       // same row count but for the other reason.
@@ -192,9 +196,9 @@ describe('WebGpuTransformStorage device limits', () => {
         maxStorageBufferBindingSize: 2 ** 26,
       } as Partial<GPUSupportedLimits>);
 
-      expect(expectRefusal(() => new WebGpuTransformStorage().reserve(overBinding.device, bufferCeiling + 1), 'shared transform storage').detail).toContain(
-        'maxStorageBufferBindingSize',
-      );
+      expect(
+        expectRefusal(() => new WebGpuTransformStorage().reserve(overBinding.device, bufferCeiling + 1), 'shared transform storage').detail,
+      ).toContain('maxStorageBufferBindingSize');
     });
   });
 
@@ -268,7 +272,13 @@ describe('WebGpuRetainedGroupBundle device limits', () => {
 
       const over = createMockDevice();
       const error = expectRefusal(
-        () => createBundle().ensureCapacity(over.device, instanceBytes, (DEFAULT_ROW_CEILING + 1) * TRANSFORM_BYTES_PER_ROW, TINT_BYTES_PER_ROW),
+        () =>
+          createBundle().ensureCapacity(
+            over.device,
+            instanceBytes,
+            (DEFAULT_ROW_CEILING + 1) * TRANSFORM_BYTES_PER_ROW,
+            TINT_BYTES_PER_ROW,
+          ),
         'retained group transform storage',
       );
 
@@ -296,7 +306,8 @@ describe('WebGpuRetainedGroupBundle device limits', () => {
       const over = createMockDevice();
 
       expectRefusal(
-        () => createBundle().ensureCapacity(over.device, instanceBytes, TRANSFORM_BYTES_PER_ROW, (tintCeilingRows + 1) * TINT_BYTES_PER_ROW),
+        () =>
+          createBundle().ensureCapacity(over.device, instanceBytes, TRANSFORM_BYTES_PER_ROW, (tintCeilingRows + 1) * TINT_BYTES_PER_ROW),
         'retained group tint storage',
       );
       expect(over.sizes).toEqual([]);
@@ -324,7 +335,8 @@ describe('WebGpuRetainedGroupBundle device limits', () => {
         const refused = createMockDevice(limits);
 
         expectRefusal(
-          () => createBundle().ensureCapacity(refused.device, instanceBytes, (ceilingRows + 1) * TRANSFORM_BYTES_PER_ROW, TINT_BYTES_PER_ROW),
+          () =>
+            createBundle().ensureCapacity(refused.device, instanceBytes, (ceilingRows + 1) * TRANSFORM_BYTES_PER_ROW, TINT_BYTES_PER_ROW),
           'retained group transform storage',
         );
         expect(refused.sizes).toEqual([]);

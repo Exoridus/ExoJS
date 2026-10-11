@@ -6,6 +6,4 @@ const ASSET_BASE = `${SITE_BASE}assets/`;
 
 export const assets = resolveAssetCatalog(rawAssets as unknown as Record<string, unknown>, ASSET_BASE);
 
-export const assetUrl = (path: string): string => {
-  return `${ASSET_BASE}${path.startsWith('/') ? path.slice(1) : path}`;
-};
+export const assetUrl = (path: string): string => `${ASSET_BASE}${path.startsWith('/') ? path.slice(1) : path}`;

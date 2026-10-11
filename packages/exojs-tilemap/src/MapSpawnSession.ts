@@ -74,13 +74,18 @@ export class MapSpawnSession<Result extends Destroyable> implements Destroyable 
    * the order that never observes a half-destroyed owner.
    */
   public destroy(): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
 
     this._destroyed = true;
 
     for (let i = this.objects.length - 1; i >= 0; i--) {
       const object = this.objects[i];
-      if (object === undefined) continue;
+
+      if (object === undefined) {
+        continue;
+      }
 
       // One object's failure must not strand the rest: the session is single
       // use, so anything skipped here is never destroyed at all.

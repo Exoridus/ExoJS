@@ -69,7 +69,9 @@ export interface RepeatPlan {
  */
 const validateInputs = (sourceLength: number, destinationLength: number): void => {
   if (!Number.isFinite(sourceLength) || !Number.isFinite(destinationLength)) {
-    throw new Error(`RepeatPlanner: sourceLength and destinationLength must be finite numbers (got ${sourceLength}, ${destinationLength}).`);
+    throw new Error(
+      `RepeatPlanner: sourceLength and destinationLength must be finite numbers (got ${sourceLength}, ${destinationLength}).`,
+    );
   }
 
   if (sourceLength <= 0) {
@@ -228,18 +230,21 @@ export const planRepeat = (sourceLength: number, destinationLength: number, mode
       if (fit === 'round') {
         return buildRoundPlan(destinationLength, sourceLength, false);
       }
+
       return buildClipPlan(destinationLength, sourceLength, false);
 
     case 'mirror-repeat':
       if (fit === 'round') {
         return buildRoundPlan(destinationLength, sourceLength, true);
       }
+
       return buildClipPlan(destinationLength, sourceLength, true);
 
     default: {
       // Exhaustiveness check: if a new RepeatMode is added, the line below
       // will fail to compile (mode will not be assignable to never).
       mode satisfies never;
+
       throw new Error(`RepeatPlanner: unknown RepeatMode.`);
     }
   }

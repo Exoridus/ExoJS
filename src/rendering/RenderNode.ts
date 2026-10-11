@@ -950,7 +950,13 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _renderPlanCanReuseTextureCache(left: number, top: number, width: number, height: number, resolution: number): boolean {
-    if (!this._cacheAsTexture || this._cacheDirty || this._cacheTexture === null || this._cacheBounds === null || this._cacheBakedResolution !== resolution) {
+    if (
+      !this._cacheAsTexture ||
+      this._cacheDirty ||
+      this._cacheTexture === null ||
+      this._cacheBounds === null ||
+      this._cacheBakedResolution !== resolution
+    ) {
       return false;
     }
 
@@ -973,7 +979,14 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /** @internal */
-  public _renderPlanStoreCacheTexture(texture: RenderTexture, left: number, top: number, width: number, height: number, resolution: number): void {
+  public _renderPlanStoreCacheTexture(
+    texture: RenderTexture,
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+    resolution: number,
+  ): void {
     this._cacheTexture = texture;
     (this._cacheBounds ??= new Rectangle()).set(left, top, width, height);
     this._cacheBakedResolution = resolution;
@@ -1028,6 +1041,7 @@ export abstract class RenderNode extends SceneNode {
     super.destroy();
 
     this._destroyCacheTexture();
+
     // Releases the captured entry records (and their drawable references) plus
     // the recorded GPU bundle this node owned as a render root, and balances the
     // representation's seam registration exactly once.
@@ -1036,6 +1050,7 @@ export abstract class RenderNode extends SceneNode {
       this._retainedRoot = null;
       this._dirtyIndex().releaseConsumer();
     }
+
     this._cacheBounds?.destroy();
     this._cacheBounds = null;
     this._cacheSprite?.destroy();
@@ -1109,7 +1124,15 @@ export abstract class RenderNode extends SceneNode {
     }
   }
 
-  private _drawTexture(backend: RenderBackend, texture: RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): void {
+  private _drawTexture(
+    backend: RenderBackend,
+    texture: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    blendMode: BlendModes,
+  ): void {
     const sprite = this._getCacheSprite();
 
     sprite.setTexture(texture).setBlendMode(blendMode).setTint(Color.white).setPosition(x, y).setRotation(0).setScale(1, 1);

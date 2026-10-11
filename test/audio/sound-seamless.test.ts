@@ -5,9 +5,7 @@ import { Sound } from '#audio/Sound';
 import { LoadState } from '#core/LoadState';
 import { logger, LogSeverity } from '#core/Logger';
 
-const bufferStub = (duration = 2): AudioBuffer => {
-  return { duration } as AudioBuffer;
-};
+const bufferStub = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
 
 describe('Sound seamless surface', () => {
   test('a directly constructed Sound is ready with its buffer', () => {
@@ -66,8 +64,11 @@ describe('Sound.play before load', () => {
   test('playing a loading sound returns NoopVoice and warns "not yet loaded"', () => {
     const warnings: string[] = [];
     const removeSink = logger.addSink(e => {
-      if (e.severity === LogSeverity.Warning) warnings.push(e.message);
+      if (e.severity === LogSeverity.Warning) {
+        warnings.push(e.message);
+      }
     });
+
     try {
       const system = new AudioSystem();
       const sound = new Sound(null);
@@ -83,8 +84,11 @@ describe('Sound.play before load', () => {
   test('playing a failed sound returns NoopVoice, warns "failed", and does not re-fetch', () => {
     const warnings: string[] = [];
     const removeSink = logger.addSink(e => {
-      if (e.severity === LogSeverity.Warning) warnings.push(e.message);
+      if (e.severity === LogSeverity.Warning) {
+        warnings.push(e.message);
+      }
     });
+
     try {
       const system = new AudioSystem();
       const sound = new Sound(null);

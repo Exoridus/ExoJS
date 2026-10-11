@@ -23,7 +23,9 @@ const rampOnColumn = (frame: Uint8ClampedArray, column: number): number => {
   for (let y = 0; y < size; y++) {
     const value = frame[(y * size + column) * 4]!;
 
-    if (value > 12 && value < 243) count++;
+    if (value > 12 && value < 243) {
+      count++;
+    }
   }
 
   return count;
@@ -32,7 +34,11 @@ const rampOnColumn = (frame: Uint8ClampedArray, column: number): number => {
 const litOnColumn = (frame: Uint8ClampedArray, column: number): number => {
   let count = 0;
 
-  for (let y = 0; y < size; y++) if (frame[(y * size + column) * 4]! > 12) count++;
+  for (let y = 0; y < size; y++) {
+    if (frame[(y * size + column) * 4]! > 12) {
+      count++;
+    }
+  }
 
   return count;
 };
@@ -61,7 +67,12 @@ describe('SDF edge width under an anisotropic node scale', () => {
    * measures alignment as much as edge width, since an edge that lands on a
    * device-pixel boundary needs no partially-lit pixel at all.
    */
-  const measure = async (ctx: { skip: (reason: string) => void }, label: string, scaleX: number, scaleY: number): Promise<Sample | null> => {
+  const measure = async (
+    ctx: { skip: (reason: string) => void },
+    label: string,
+    scaleX: number,
+    scaleY: number,
+  ): Promise<Sample | null> => {
     const phases = [0, 0.25, 0.5, 0.75];
     let barRamp = 0;
     let barLit = 0;
@@ -73,7 +84,9 @@ describe('SDF edge width under an anisotropic node scale', () => {
       node.setPosition(originX + phase, originY + phase);
       node.setScale(scaleX, scaleY);
 
-      if (!(await renderWebGpuOnce(ctx, backend, node))) return null;
+      if (!(await renderWebGpuOnce(ctx, backend, node))) {
+        return null;
+      }
 
       const frame = readWebGpuFrame(backend, size);
       // A column between the two stems meets only the crossbar's horizontal
@@ -96,16 +109,18 @@ describe('SDF edge width under an anisotropic node scale', () => {
     const isotropic = await measure(ctx, '4x4', 4, 4);
     const anisotropic = await measure(ctx, '1x4', 1, 4);
 
-    if (isotropic === null || anisotropic === null) return;
+    if (isotropic === null || anisotropic === null) {
+      return;
+    }
 
     expect(isotropic.barLit, 'the column must cross the crossbar').toBeGreaterThan(2);
     expect(anisotropic.barLit, 'the column must cross the crossbar').toBeGreaterThan(2);
 
     // Both cells put the same vertical density on screen and differ only in the
     // horizontal one, so the crossbar's ramp may not move between them.
-    expect(anisotropic.barRamp, `bar ramp must not follow the horizontal scale: ${isotropic.barRamp} vs ${anisotropic.barRamp}`).toBeCloseTo(
-      isotropic.barRamp,
-      0,
-    );
+    expect(
+      anisotropic.barRamp,
+      `bar ramp must not follow the horizontal scale: ${isotropic.barRamp} vs ${anisotropic.barRamp}`,
+    ).toBeCloseTo(isotropic.barRamp, 0);
   });
 });

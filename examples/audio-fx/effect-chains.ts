@@ -20,7 +20,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 interface Chain {
   name: string;
   note: string;
-  stages: { name: string; create(): AudioEffect }[];
+  stages: Array<{ name: string; create(): AudioEffect }>;
 }
 
 const CHAINS: Chain[] = [
@@ -85,7 +85,9 @@ class EffectChainsScene extends Scene {
     const audio = this.app.audio;
     this.analyser = new AudioAnalyser({ source: audio.master, fftSize: 2048, smoothingTimeConstant: 0.75 });
     this.title = new Text('', { fillColor: Color.white, fontSize: 30, align: 'center' }).setAnchor(0.5).setPosition(640, 170);
-    this.stageLabels = Array.from({ length: 3 }, () => new Text('', { fillColor: Color.white, fontSize: 22, align: 'center' }).setAnchor(0.5));
+    this.stageLabels = Array.from({ length: 3 }, () =>
+      new Text('', { fillColor: Color.white, fontSize: 22, align: 'center' }).setAnchor(0.5),
+    );
     this.hud = mountControls({
       title: 'Audio Effect Rack',
       status: 'Choose a chain and compare it with dry output.',
@@ -117,6 +119,7 @@ class EffectChainsScene extends Scene {
     if (index === this.selected) {
       return;
     }
+
     this.selected = index;
     this.rebuild();
   }
@@ -124,31 +127,38 @@ class EffectChainsScene extends Scene {
   private rebuild(): void {
     const master = this.app.audio.master;
     const generation = ++this.generation;
+
     for (const effect of this.active) {
       master.removeEffect(effect);
       effect.destroy();
     }
+
     this.active = [];
     const chain = CHAINS[this.selected]!;
     this.title.text = `${chain.name}: ${chain.stages.map(stage => stage.name).join(' -> ')}`;
     const slotWidth = 820 / chain.stages.length;
     this.stageLabels.forEach((label, index) => {
       label.visible = index < chain.stages.length;
+
       if (label.visible) {
         label.text = chain.stages[index]!.name;
         label.setPosition(225 + (index + 0.5) * slotWidth - 6, 305);
       }
     });
     this.hud.setHint(chain.note);
+
     if (this.bypass) {
       this.hud.setStatus(`${chain.name} bypassed; dry signal.`);
+
       return;
     }
+
     for (const stage of chain.stages) {
       const effect = stage.create();
       master.addEffect(effect);
       this.active.push(effect);
     }
+
     this.hud.setStatus(`${chain.name}: preparing ${this.active.length} effects...`);
     void Promise.all(this.active.map(effect => effect.ready)).then(
       () => {
@@ -173,12 +183,15 @@ class EffectChainsScene extends Scene {
       this.rack.fillColor = this.bypass ? new Color(46, 49, 55) : new Color(53, 93, 121);
       this.rack.drawRoundedRectangle(225 + index * width, 260, width - 12, 90, 12);
     });
+
     for (let index = 0; index < this.spectrum.length; index++) {
       this.rack.fillColor = new Color(85 + index * 8, 180, 230 - index * 5);
       this.rack.drawRectangle(120 + index * 65, 600 - this.spectrum[index]! * 0.7, 48, this.spectrum[index]! * 0.7);
     }
+
     context.render(this.rack);
     context.render(this.title);
+
     for (const label of this.stageLabels) {
       if (label.visible) {
         context.render(label);
@@ -189,19 +202,23 @@ class EffectChainsScene extends Scene {
   override destroy(): void {
     ++this.generation;
     this.musicVoice?.stop();
+
     for (const effect of this.active) {
       this.app.audio.master.removeEffect(effect);
       effect.destroy();
     }
+
     this.active = [];
     this.analyser?.destroy();
     this.panel?.dispose();
     this.hud?.dispose();
     this.rack.destroy();
     this.title?.destroy();
+
     for (const label of this.stageLabels) {
       label.destroy();
     }
+
     super.destroy();
   }
 }

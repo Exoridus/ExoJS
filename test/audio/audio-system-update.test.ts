@@ -35,6 +35,7 @@ const setupPannerSpy = () => {
         positionZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
       }) as unknown as PannerNode,
   );
+
   return { restore: () => spy.mockRestore() };
 };
 

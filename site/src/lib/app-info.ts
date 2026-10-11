@@ -35,14 +35,24 @@ const parsePackageJson = (raw: string): RawPackageJson => {
 };
 
 const resolveAuthor = (value: RawPackageJson['author']): string => {
-  if (!value) return '';
-  if (typeof value === 'string') return value;
+  if (!value) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
   return typeof value.name === 'string' ? value.name : '';
 };
 
 const resolveRepositoryUrl = (value: RawPackageJson['repository']): string => {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
+
   const raw = typeof value === 'string' ? value : (value.url ?? '');
+
   return raw.replace(/^git\+/, '').replace(/\.git$/, '');
 };
 

@@ -75,13 +75,17 @@ class IntentScene extends Scene {
       this.move.x = -1;
     });
     this.inputs.onStop(Keyboard.A, () => {
-      if (this.move.x === -1) this.move.x = 0;
+      if (this.move.x === -1) {
+        this.move.x = 0;
+      }
     });
     this.inputs.onActive(Keyboard.D, () => {
       this.move.x = 1;
     });
     this.inputs.onStop(Keyboard.D, () => {
-      if (this.move.x === 1) this.move.x = 0;
+      if (this.move.x === 1) {
+        this.move.x = 0;
+      }
     });
 
     this.inputs.onTrigger(Keyboard.Space, () => {
@@ -125,6 +129,7 @@ class IntentScene extends Scene {
     if (this.actions.jump && this.player.onGround) {
       this.player.velocity.y = -400;
     }
+
     this.actions.jump = 0;
 
     this.player.move(this.move.x * 260 * delta, this.move.y * 260 * delta);

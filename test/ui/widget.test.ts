@@ -239,6 +239,7 @@ describe('Widget.effectiveEnabled cascade (ME-56)', () => {
     const received: boolean[] = [];
 
     parent.addChild(child);
+
     (child as unknown as { _onEnabledChanged: (e: boolean) => void })._onEnabledChanged = (e: boolean): void => {
       received.push(e);
     };

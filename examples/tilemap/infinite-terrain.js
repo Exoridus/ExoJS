@@ -1,6 +1,25 @@
 // Auto-generated from infinite-terrain.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
-import { ChunkStreamer, createSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
+import {
+  Application,
+  Asset,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  Scene,
+  Spritesheet,
+  TextureRegion,
+  View,
+} from '@codexo/exojs';
+import {
+  ChunkStreamer,
+  createSampledChunkSource,
+  TILE_TRANSFORM_IDENTITY,
+  TileLayer,
+  TileMap,
+  tilemapExtension,
+  TileSet,
+} from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // An infinite, procedurally generated world: the TileLayer has NO width/height
 // (unbounded), and a ChunkStreamer keeps only the chunks near the camera
@@ -11,14 +30,14 @@ const FEATURE_SIZE = 28;
 const MOVE_SPEED = 420;
 // Deterministic integer-lattice hash → [0, 1). Any change here changes every
 // world; the worker copy in the worker example must stay byte-identical.
-function hash2D(seed, x, y) {
+const hash2D = (seed, x, y) => {
   let h = (seed ^ Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1)) | 0;
   h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
   h ^= h >>> 16;
   return (h >>> 0) / 4294967296;
-}
-function valueNoise(seed, x, y) {
+};
+const valueNoise = (seed, x, y) => {
   const x0 = Math.floor(x);
   const y0 = Math.floor(y);
   const fx = x - x0;
@@ -32,9 +51,9 @@ function valueNoise(seed, x, y) {
   const nx0 = n00 + (n10 - n00) * sx;
   const nx1 = n01 + (n11 - n01) * sx;
   return nx0 + (nx1 - nx0) * sy;
-}
+};
 // 4 octaves, persistence 0.5, lacunarity 2 → result in ~[0, 0.94).
-function fbm(seed, x, y) {
+const fbm = (seed, x, y) => {
   let value = 0;
   let amplitude = 0.5;
   let frequency = 1;
@@ -44,7 +63,7 @@ function fbm(seed, x, y) {
     frequency *= 2;
   }
   return value;
-}
+};
 // Biome mapping (elevation-style bands; localTileId values are solid
 // full-square terrain-center tiles read off mapPack_tilesheet.png - 17
 // columns, index = row * 17 + column).
@@ -54,14 +73,24 @@ const TILE_SAND = 18; // beige center     (row 1, col 1)
 const TILE_GRASS = 23; // green center     (row 1, col 6)
 const TILE_ROCK = 28; // gray center      (row 1, col 11)
 const TILE_SNOW = 86; // white center     (row 5, col 1)
-function biomeTileId(value) {
-  if (value < 0.34) return TILE_DEEP_WATER;
-  if (value < 0.42) return TILE_WATER;
-  if (value < 0.5) return TILE_SAND;
-  if (value < 0.68) return TILE_GRASS;
-  if (value < 0.8) return TILE_ROCK;
+const biomeTileId = value => {
+  if (value < 0.34) {
+    return TILE_DEEP_WATER;
+  }
+  if (value < 0.42) {
+    return TILE_WATER;
+  }
+  if (value < 0.5) {
+    return TILE_SAND;
+  }
+  if (value < 0.68) {
+    return TILE_GRASS;
+  }
+  if (value < 0.8) {
+    return TILE_ROCK;
+  }
   return TILE_SNOW;
-}
+};
 class InfiniteTerrainScene extends Scene {
   camera;
   explorer;
@@ -88,7 +117,13 @@ class InfiniteTerrainScene extends Scene {
     // No width/height: the layer (and map) are unbounded - chunks exist
     // only where something writes them.
     this.terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
-    const map = new TileMap({ name: 'infinite-world', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.terrain] });
+    const map = new TileMap({
+      name: 'infinite-world',
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [this.tileset],
+      layers: [this.terrain],
+    });
     this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
     const characters = new Spritesheet(
       await this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)),
@@ -125,19 +160,27 @@ class InfiniteTerrainScene extends Scene {
   setupInput() {
     this.inputs.onActive(Keyboard.A, () => (this.moveX = -1));
     this.inputs.onStop(Keyboard.A, () => {
-      if (this.moveX < 0) this.moveX = 0;
+      if (this.moveX < 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.D, () => (this.moveX = 1));
     this.inputs.onStop(Keyboard.D, () => {
-      if (this.moveX > 0) this.moveX = 0;
+      if (this.moveX > 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.W, () => (this.moveY = -1));
     this.inputs.onStop(Keyboard.W, () => {
-      if (this.moveY < 0) this.moveY = 0;
+      if (this.moveY < 0) {
+        this.moveY = 0;
+      }
     });
     this.inputs.onActive(Keyboard.S, () => (this.moveY = 1));
     this.inputs.onStop(Keyboard.S, () => {
-      if (this.moveY > 0) this.moveY = 0;
+      if (this.moveY > 0) {
+        this.moveY = 0;
+      }
     });
   }
   setupHud() {

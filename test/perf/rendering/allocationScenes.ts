@@ -77,7 +77,10 @@ export interface AllocationArchetype {
 const makeTranslucentSrgbTexture = (size: number): Texture => {
   const data = new Uint8Array(size * size * 4).fill(128);
 
-  return Texture.fromPixels({ colorSpace: 'srgb', alphaMode: 'straight', levels: [{ data, width: size, height: size }] }, { generateMipMap: false });
+  return Texture.fromPixels(
+    { colorSpace: 'srgb', alphaMode: 'straight', levels: [{ data, width: size, height: size }] },
+    { generateMipMap: false },
+  );
 };
 
 /** Warm-up frame count at which the light scenes' window series measurably flattens. */
@@ -175,7 +178,14 @@ export const ALLOCATION_ARCHETYPES: readonly AllocationArchetype[] = [
     id: 'nested/1000 d4',
     rationale: 'Many Group scopes, all clean: per-scope plan playback in the retained steady state.',
     build: () => {
-      const { root } = buildNestedScene({ count: 1000, perContainer: 8, depth: 4, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h });
+      const { root } = buildNestedScene({
+        count: 1000,
+        perContainer: 8,
+        depth: 4,
+        textures: makeTextures(1),
+        viewW: VIEW.w,
+        viewH: VIEW.h,
+      });
 
       return { root, teardown: () => root.destroy() };
     },
@@ -188,14 +198,22 @@ export const ALLOCATION_ARCHETYPES: readonly AllocationArchetype[] = [
       'cannot see it at all, because nothing there is ever dirty.',
     warmup: SETTLED_WARMUP,
     build: () => {
-      const { root, sprites } = buildNestedScene({ count: 1000, perContainer: 8, depth: 16, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h });
+      const { root, sprites } = buildNestedScene({
+        count: 1000,
+        perContainer: 8,
+        depth: 16,
+        textures: makeTextures(1),
+        viewW: VIEW.w,
+        viewH: VIEW.h,
+      });
 
       return { root, beforeFrame: nudgeEveryNth(sprites, 100), teardown: () => root.destroy() };
     },
   },
   {
     id: 'mesh/1000',
-    rationale: 'Per-drawable mesh draws — the mesh renderer syncs a second per-instance DataTexture (tint) alongside transform every frame.',
+    rationale:
+      'Per-drawable mesh draws — the mesh renderer syncs a second per-instance DataTexture (tint) alongside transform every frame.',
     build: () => {
       const { root } = buildMeshScene({ count: 1000, textures: makeTextures(1), viewW: VIEW.w, viewH: VIEW.h });
 
@@ -213,7 +231,8 @@ export const ALLOCATION_ARCHETYPES: readonly AllocationArchetype[] = [
   },
   {
     id: 'blend/1000 plateau64',
-    rationale: 'Four fixed-function blend modes in runs of 64 — a realistic ~16 flush boundaries per frame. Measures batch-record allocation per BATCH.',
+    rationale:
+      'Four fixed-function blend modes in runs of 64 — a realistic ~16 flush boundaries per frame. Measures batch-record allocation per BATCH.',
     warmup: SETTLED_WARMUP,
     build: () => {
       const { root } = buildSpriteScene({
@@ -256,7 +275,10 @@ export const ALLOCATION_ARCHETYPES: readonly AllocationArchetype[] = [
       const textures = Array.from({ length: 4 }, () => makeTranslucentSrgbTexture(16));
       const { root, sprites } = buildSpriteScene({ count: 1000, textures, viewW: VIEW.w, viewH: VIEW.h });
       const nudge = nudgeEveryNth(sprites, 1);
-      const palette = Array.from({ length: 16 }, (_unused, index) => new Color(index * 16, 255 - index * 16, (index * 47) % 256, 0.25 + (index % 4) * 0.25));
+      const palette = Array.from(
+        { length: 16 },
+        (_unused, index) => new Color(index * 16, 255 - index * 16, (index * 47) % 256, 0.25 + (index % 4) * 0.25),
+      );
       let frame = 0;
 
       return {

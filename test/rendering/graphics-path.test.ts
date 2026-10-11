@@ -191,7 +191,9 @@ describe('GraphicsPath', () => {
     });
 
     test('roundedRect with a zero radius is a plain rect', () => {
-      expect(new GraphicsPath().roundedRect(1, 2, 8, 6, 0).contours()[0]!.points).toEqual(new GraphicsPath().rect(1, 2, 8, 6).contours()[0]!.points);
+      expect(new GraphicsPath().roundedRect(1, 2, 8, 6, 0).contours()[0]!.points).toEqual(
+        new GraphicsPath().rect(1, 2, 8, 6).contours()[0]!.points,
+      );
     });
   });
 

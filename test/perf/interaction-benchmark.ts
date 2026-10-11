@@ -42,6 +42,7 @@ const makeInteractiveDrawable = (x: number, y: number, size = 32): Drawable => {
   d.setLocalBounds(0, 0, size, size);
   d.setPosition(x, y);
   d.interactive = true;
+
   return d;
 };
 

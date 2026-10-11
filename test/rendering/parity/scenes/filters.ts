@@ -109,7 +109,9 @@ export const filterScenes: readonly Scene[] = [
       // Rows are [r, g, b, a, offset].
       // Graded in the linear domain the numeric fill and the raw canvas share,
       // so the bias lands on the stored bytes rather than on their sRGB decode.
-      root.filters = [new ColorMatrixFilter([1, 0, 0, 0, RED_BIAS, 0, 1, 0, 0, GREEN_BIAS, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0], { colorSpace: 'linear-srgb' })];
+      root.filters = [
+        new ColorMatrixFilter([1, 0, 0, 0, RED_BIAS, 0, 1, 0, 0, GREEN_BIAS, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0], { colorSpace: 'linear-srgb' }),
+      ];
 
       return root;
     },

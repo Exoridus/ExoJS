@@ -89,7 +89,7 @@ class BossIntroCinematicScene extends Scene {
     this.sequenceTweens.push(
       this.tweens
         .create(this.view.center)
-        .to({ x: width * 0.55, y: height / 2 }, 2.0)
+        .to({ x: width * 0.55, y: height / 2 }, 2)
         .start(),
     );
     // The boss looms larger as the camera arrives.
@@ -98,7 +98,7 @@ class BossIntroCinematicScene extends Scene {
     this.sequenceTweens.push(
       this.tweens
         .create(this.titleState)
-        .to({ count: titleText.length }, 1.0)
+        .to({ count: titleText.length }, 1)
         .delay(1.6)
         .onStart(() => {
           this.view.shake(18, Time.seconds(0.52), { frequency: 24, decay: true });
@@ -109,7 +109,7 @@ class BossIntroCinematicScene extends Scene {
         .start(),
     );
     // Music swells up under the reveal.
-    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start());
+    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2).start());
   };
   draw(context) {
     const app = this.app;

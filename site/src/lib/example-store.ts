@@ -21,10 +21,12 @@ const _loadListeners = new Set<(versionId: string) => void>();
 
 const getOrCreateEntry = (versionId: string): VersionEntry => {
   let entry = _entries.get(versionId);
+
   if (!entry) {
     entry = { response: null, error: null };
     _entries.set(versionId, entry);
   }
+
   return entry;
 };
 
@@ -32,33 +34,34 @@ const buildSourceUrl = (versionId: string, filePath: string): string => {
   if (isCurrentVersion(versionId)) {
     return buildExampleUrl(filePath, { 'no-cache': Date.now() });
   }
+
   // Remote release sources are immutable - let the browser/CDN cache normally.
   return buildGithubRawExampleUrl(versionId, filePath);
 };
 
 export const hasExamplesFor = (versionId: string): boolean => {
   const response = _entries.get(versionId)?.response;
+
   return response !== undefined && response !== null;
 };
 
-export const getLoadErrorFor = (versionId: string): string | null => {
-  return _entries.get(versionId)?.error ?? null;
-};
+export const getLoadErrorFor = (versionId: string): string | null => _entries.get(versionId)?.error ?? null;
 
 export const onExamplesLoaded = (callback: (versionId: string) => void): (() => void) => {
   _loadListeners.add(callback);
+
   return () => _loadListeners.delete(callback);
 };
 
-const getCleanName = (text: string): string => {
-  return text
+const getCleanName = (text: string): string =>
+  text
     .split('-')
     .map((part: string) => ([...part].some(char => char !== char.toUpperCase()) ? part[0].toUpperCase() + part.substring(1) : part))
     .join(' ');
-};
 
 export const getNestedExamples = (versionId: string): ExamplesMap => {
   const response = _entries.get(versionId)?.response;
+
   if (!response) {
     return new Map();
   }
@@ -68,6 +71,7 @@ export const getNestedExamples = (versionId: string): ExamplesMap => {
       .sort(([a], [b]) => {
         const orderA = PLAYGROUND_CATEGORY_BY_SLUG.get(a)?.order ?? Number.MAX_SAFE_INTEGER;
         const orderB = PLAYGROUND_CATEGORY_BY_SLUG.get(b)?.order ?? Number.MAX_SAFE_INTEGER;
+
         return orderA - orderB || a.localeCompare(b);
       })
       .map(([directory, definitions]) => [
@@ -80,12 +84,11 @@ export const getNestedExamples = (versionId: string): ExamplesMap => {
   );
 };
 
-export const getExamplesList = (versionId: string): Array<Example> => {
-  return Array.from(getNestedExamples(versionId).values()).flat();
-};
+export const getExamplesList = (versionId: string): Array<Example> => Array.from(getNestedExamples(versionId).values()).flat();
 
 export const getExampleByPath = (versionId: string, path: string): Example | null => {
   const resolvedPath = isCurrentVersion(versionId) ? resolveExampleAlias(path) : path;
+
   return getExamplesList(versionId).find(example => example.path === resolvedPath) ?? null;
 };
 
@@ -128,9 +131,11 @@ export const loadExamples = async (versionId: string): Promise<void> => {
     if (data !== null) {
       entry.response = data;
       entry.error = null;
+
       for (const listener of _loadListeners) {
         listener(versionId);
       }
+
       return;
     }
 
@@ -142,9 +147,11 @@ export const loadExamples = async (versionId: string): Promise<void> => {
       if (fallbackData !== null) {
         entry.response = fallbackData;
         entry.error = null;
+
         for (const listener of _loadListeners) {
           listener(versionId);
         }
+
         return;
       }
 

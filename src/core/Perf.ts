@@ -11,7 +11,9 @@ const hasPerf = typeof performance !== 'undefined';
  * No-op when the User Timing API is unavailable.
  */
 const mark = (name: string): void => {
-  if (hasPerf && typeof performance.mark === 'function') performance.mark(name);
+  if (hasPerf && typeof performance.mark === 'function') {
+    performance.mark(name);
+  }
 };
 
 /**
@@ -22,7 +24,10 @@ const mark = (name: string): void => {
  *   unavailable or either mark was never emitted.
  */
 const measure = (name: string, startMark: string, endMark?: string): PerformanceMeasure | undefined => {
-  if (!hasPerf || typeof performance.measure !== 'function') return undefined;
+  if (!hasPerf || typeof performance.measure !== 'function') {
+    return undefined;
+  }
+
   try {
     return performance.measure(name, startMark, endMark);
   } catch {
@@ -35,7 +40,9 @@ const measure = (name: string, startMark: string, endMark?: string): Performance
  * No-op when the User Timing API is unavailable.
  */
 const clearMarks = (name?: string): void => {
-  if (hasPerf && typeof performance.clearMarks === 'function') performance.clearMarks(name);
+  if (hasPerf && typeof performance.clearMarks === 'function') {
+    performance.clearMarks(name);
+  }
 };
 
 /**
@@ -43,7 +50,9 @@ const clearMarks = (name?: string): void => {
  * No-op when the User Timing API is unavailable.
  */
 const clearMeasures = (name?: string): void => {
-  if (hasPerf && typeof performance.clearMeasures === 'function') performance.clearMeasures(name);
+  if (hasPerf && typeof performance.clearMeasures === 'function') {
+    performance.clearMeasures(name);
+  }
 };
 
 /**

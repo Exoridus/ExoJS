@@ -4,7 +4,18 @@ import { Pathfinder } from '../src/Pathfinder';
 import { GridSpace } from '../src/spaces/GridSpace';
 import { createRandom, gridFrom, parseCosts, referenceCost, walkCost } from './helpers';
 
-const MAZE = ['..........', '.####.###.', '.#....#...', '.#.####.##', '.#......#.', '.#####.##.', '.....#....', '####.#.###', '.....#....', '.#########'];
+const MAZE = [
+  '..........',
+  '.####.###.',
+  '.#....#...',
+  '.#.####.##',
+  '.#......#.',
+  '.#####.##.',
+  '.....#....',
+  '####.#.###',
+  '.....#....',
+  '.#########',
+];
 
 describe('Pathfinder.findPath', () => {
   it('returns a cost-optimal path, checked against an independent Dijkstra', () => {

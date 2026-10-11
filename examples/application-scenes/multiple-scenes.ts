@@ -1,8 +1,10 @@
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Text } from '@codexo/exojs';
 
 const history: string[] = [];
+
 const record = (event: string): void => {
   history.push(event);
+
   if (history.length > 8) {
     history.shift();
   }
@@ -15,6 +17,7 @@ const makeBackground = (width: number, height: number, color: Color): Graphics =
   const background = new Graphics();
   background.fillColor = color;
   background.drawRectangle(0, 0, width, height);
+
   return background;
 };
 

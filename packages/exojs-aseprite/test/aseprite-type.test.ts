@@ -13,9 +13,7 @@ import { AsepriteFormatError, asepriteType } from '../src/asepriteType';
 const PKG_DIR = basename(process.cwd()) === 'exojs-aseprite' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-aseprite');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
-const loadFixture = (name: string): unknown => {
-  return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
-};
+const loadFixture = (name: string): unknown => JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
 
 // ── Context factory ────────────────────────────────────────────────────────────
 
@@ -77,7 +75,9 @@ describe('asepriteType descriptor', () => {
   it('stores the text that arrived, so a cache hit re-parses exactly what was downloaded', async () => {
     const response = { text: async () => '{"frames":[],"meta":{"image":"x.png"}}' } as unknown as Response;
 
-    await expect(asepriteType.codec!.fromResponse(response, { locator: 'doc.json' })).resolves.toBe('{"frames":[],"meta":{"image":"x.png"}}');
+    await expect(asepriteType.codec!.fromResponse(response, { locator: 'doc.json' })).resolves.toBe(
+      '{"frames":[],"meta":{"image":"x.png"}}',
+    );
   });
 });
 
@@ -168,11 +168,13 @@ describe('asepriteType - AsepriteFormatError on malformed input', () => {
 
   it('attaches the source URL and typed name to the thrown error', async () => {
     let caught: unknown;
+
     try {
       await loadRaw(null);
     } catch (error) {
       caught = error;
     }
+
     expect(caught).toBeInstanceOf(AsepriteFormatError);
     expect((caught as AsepriteFormatError).name).toBe('AsepriteFormatError');
     expect((caught as AsepriteFormatError).source).toBe('doc.json');

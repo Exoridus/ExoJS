@@ -38,7 +38,9 @@ const createWhiteTexture = (): Texture => {
 
   const context = source.getContext('2d');
 
-  if (!context) throw new Error('2D context is required to create test textures.');
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, 16, 16);
@@ -53,7 +55,10 @@ const litSpanOnRow = (frame: Uint8Array, row: number, threshold: number = lit): 
 
   for (let x = 0; x < size; x++) {
     if (frame[(row * size + x) * 4]! > threshold) {
-      if (first === -1) first = x;
+      if (first === -1) {
+        first = x;
+      }
+
       last = x;
     }
   }
@@ -68,7 +73,10 @@ const litSpanOnColumn = (frame: Uint8Array, column: number): readonly [number, n
 
   for (let y = 0; y < size; y++) {
     if (frame[(y * size + column) * 4]! > lit) {
-      if (first === -1) first = y;
+      if (first === -1) {
+        first = y;
+      }
+
       last = y;
     }
   }
@@ -80,7 +88,9 @@ const litSpanOnColumn = (frame: Uint8Array, column: number): readonly [number, n
 const rowOf = (frame: Uint8Array, y: number): number[] => {
   const values: number[] = [];
 
-  for (let x = 0; x < size; x++) values.push(frame[(y * size + x) * 4]!);
+  for (let x = 0; x < size; x++) {
+    values.push(frame[(y * size + x) * 4]!);
+  }
 
   return values;
 };
@@ -111,9 +121,17 @@ const render = async (options: SceneOptions): Promise<Scene> => {
   sprite.setPosition(contentLeft + (options.offset ?? 0), contentLeft + (options.offset ?? 0));
   root.addChild(sprite);
 
-  if (filters.length > 0) root.filters = filters;
-  if (options.clip === true) root.clip = true;
-  if (options.cacheAsTexture === true) root.cacheAsTexture = true;
+  if (filters.length > 0) {
+    root.filters = filters;
+  }
+
+  if (options.clip === true) {
+    root.clip = true;
+  }
+
+  if (options.cacheAsTexture === true) {
+    root.cacheAsTexture = true;
+  }
 
   renderWebGl2Once(backend, root, Color.black);
 
@@ -123,7 +141,11 @@ const render = async (options: SceneOptions): Promise<Scene> => {
     frame,
     dispose: (): void => {
       root.destroy();
-      for (const filter of filters) filter.destroy();
+
+      for (const filter of filters) {
+        filter.destroy();
+      }
+
       texture.destroy();
       backend.destroy();
     },
@@ -150,7 +172,9 @@ const recordedTargetSizes = async (options: SceneOptions): Promise<Array<[number
   sprite.setPosition(contentLeft, contentLeft);
   root.addChild(sprite);
 
-  if (filters.length > 0) root.filters = filters;
+  if (filters.length > 0) {
+    root.filters = filters;
+  }
 
   owner['acquireRenderTexture'] = (width: number, height: number): RenderTexture => {
     sizes.push([width, height]);
@@ -163,7 +187,11 @@ const recordedTargetSizes = async (options: SceneOptions): Promise<Array<[number
   } finally {
     delete owner['acquireRenderTexture'];
     root.destroy();
-    for (const filter of filters) filter.destroy();
+
+    for (const filter of filters) {
+      filter.destroy();
+    }
+
     texture.destroy();
     backend.destroy();
   }
@@ -310,7 +338,9 @@ describe('an explicit clip stays intentionally restrictive', () => {
       // clip the tail escapes; with it the result is confined to the node's own
       // bounds.
       expect(unclippedSpan[0]).toBeLessThan(contentLeft);
-      expect(clippedSpan[0], `unclipped ${unclippedSpan.join('..')} vs clipped ${clippedSpan.join('..')}`).toBeGreaterThanOrEqual(contentLeft);
+      expect(clippedSpan[0], `unclipped ${unclippedSpan.join('..')} vs clipped ${clippedSpan.join('..')}`).toBeGreaterThanOrEqual(
+        contentLeft,
+      );
       expect(clippedSpan[1], `unclipped ${unclippedSpan.join('..')} vs clipped ${clippedSpan.join('..')}`).toBeLessThan(contentRight);
     } finally {
       unclipped.dispose();

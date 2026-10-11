@@ -98,7 +98,9 @@ export class ChainShape extends Shape {
     const minimum = closed ? 3 : 2;
 
     if (count < minimum) {
-      throw new RangeError(`ChainShape: ${closed ? 'a closed chain' : 'a chain'} needs at least ${minimum} distinct vertices, received ${count}.`);
+      throw new RangeError(
+        `ChainShape: ${closed ? 'a closed chain' : 'a chain'} needs at least ${minimum} distinct vertices, received ${count}.`,
+      );
     }
 
     let boundingRadius = 0;

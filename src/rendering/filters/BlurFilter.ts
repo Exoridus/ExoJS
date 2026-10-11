@@ -269,4 +269,5 @@ export class BlurFilter extends Filter {
 }
 
 /** `0` for "derive from the strength", otherwise a tap cap inside the shader's table. */
-const clampTapLimit = (quality: number | undefined): number => (quality === undefined ? 0 : Math.min(MAX_TAPS_PER_SIDE, Math.max(1, Math.floor(quality))));
+const clampTapLimit = (quality: number | undefined): number =>
+  quality === undefined ? 0 : Math.min(MAX_TAPS_PER_SIDE, Math.max(1, Math.floor(quality)));

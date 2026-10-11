@@ -109,7 +109,11 @@ export const FEATURED_SYMBOLS = ['application', 'scene', 'sprite', 'texture'] as
 
 export const compactDescription = (value: string, maxLength = 140): string => {
   const normalized = value.replace(/\s+/g, ' ').trim();
-  if (normalized.length <= maxLength) return normalized;
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
   return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
 };
 

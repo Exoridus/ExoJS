@@ -73,10 +73,12 @@ const partialSort = (arr: Float32Array, n: number): void => {
   for (let i = 1; i < n; i++) {
     const v = arr[i]!;
     let j = i - 1;
+
     while (j >= 0 && arr[j]! > v) {
       arr[j + 1] = arr[j]!;
       j--;
     }
+
     arr[j + 1] = v;
   }
 };
@@ -296,9 +298,11 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._fastWindowHops = Math.min(fluxWindowLen, Math.ceil((this._fastTempoWindowSec * this._sampleRate) / this._hopSize));
     const LAG_K = 3;
     this._prevMelFrames = [];
+
     for (let i = 0; i < LAG_K; i++) {
       this._prevMelFrames.push(new Float32Array(this._melBands));
     }
+
     this._prevMelFrameIdx = 0;
 
     // Lag range in hops for BPM range
@@ -401,9 +405,15 @@ class BeatDetectorProcessor extends DisposableProcessor {
   }
 
   public override process(inputs: Float32Array[][], _outputs: Float32Array[][], _parameters: Record<string, Float32Array>): boolean {
-    if (this._destroyed) return false;
+    if (this._destroyed) {
+      return false;
+    }
+
     const input = inputs[0];
-    if (!input || input.length === 0) return true;
+
+    if (!input || input.length === 0) {
+      return true;
+    }
 
     const left = input[0] ?? new Float32Array(0);
     const right = input[1] ?? left;
@@ -444,6 +454,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const rb = this._ringBuffer;
     const wp = this._ringWritePos;
     const n = this._fftSize;
+
     for (let i = 0; i < n; i++) {
       this._real[i] = rb[(wp + i) & (n - 1)]!;
     }
@@ -453,15 +464,18 @@ class BeatDetectorProcessor extends DisposableProcessor {
 
     // Magnitude spectrum
     const bins = n >> 1;
+
     for (let i = 0; i < bins; i++) {
       this._mag[i] = Math.sqrt(this._real[i]! * this._real[i]! + this._imag[i]! * this._imag[i]!);
     }
 
     // RMS (from time domain, using ring buffer)
     let rmsAccum = 0;
+
     for (let i = 0; i < n; i++) {
       rmsAccum += rb[(wp + i) & (n - 1)]! * rb[(wp + i) & (n - 1)]!;
     }
+
     this._rms = Math.sqrt(rmsAccum / n);
 
     // Mel bands
@@ -470,27 +484,41 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // Spectral flux (SuperFlux-lite, lag k=3)
     const K = this._prevMelFrames.length;
     let flux = 0;
+
     for (let b = 0; b < this._melBands; b++) {
       let localMax = -Infinity;
+
       for (let k = 0; k < K; k++) {
         const prevVal = this._prevMelFrames[k]![b]!;
-        if (prevVal > localMax) localMax = prevVal;
+
+        if (prevVal > localMax) {
+          localMax = prevVal;
+        }
       }
+
       const diff = this._melOut[b]! - localMax;
-      if (diff > 0) flux += diff;
+
+      if (diff > 0) {
+        flux += diff;
+      }
     }
 
     // Store current mel frame in circular buffer
     const prevFrame = this._prevMelFrames[this._prevMelFrameIdx]!;
+
     for (let b = 0; b < this._melBands; b++) {
       prevFrame[b] = this._melOut[b]!;
     }
+
     this._prevMelFrameIdx = (this._prevMelFrameIdx + 1) % K;
 
     // Add flux to sliding window
     this._fluxWindow[this._fluxWritePos] = flux;
     this._fluxWritePos = (this._fluxWritePos + 1) % this._fluxWindow.length;
-    if (this._fluxCount < this._fluxWindow.length) this._fluxCount++;
+
+    if (this._fluxCount < this._fluxWindow.length) {
+      this._fluxCount++;
+    }
 
     // Adaptive onset normalization + peak-picking. Runs every hop (independent
     // of the ACF/tempo path, which still consumes the raw _fluxWindow above).
@@ -508,6 +536,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // on exactly the evidence the original detector used for its first lock. That makes every
     // LOCKED beat identical to the original output (same tempo, same grid phase).
     const firstFullWindow = !this._authLocked && this._fluxCount >= this._maxLag + 1;
+
     if (dueForAcf || firstFullWindow) {
       this._hopsSinceACF = 0;
       this._computeACFAndCandidates();
@@ -523,6 +552,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
 
     // State snapshot
     this._hopsSinceState++;
+
     if (this._hopsSinceState >= this._stateInterval) {
       this._hopsSinceState = 0;
       this._sendStateMessage();
@@ -549,6 +579,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // Linearise the most-recent n hops of the flux ring (oldest first) into a scratch array
     // so the ACF operates on the same layout src/dsp/tempogram.computeAcf expects.
     const lin = this._linFlux;
+
     for (let t = 0; t < n; t++) {
       lin[t] = buf[(((wp - 1 - (n - 1 - t)) % len) + len) % len]!;
     }
@@ -560,25 +591,32 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // Raw positive peaks (interior + endpoints) - mirrors findTempoPeaks.
     const peaks: TempoCandidateResult[] = [];
     const lastIdx = numLags - 1;
+
     if (numLags > 1 && acf[0]! > acf[1]! && acf[0]! > 0) {
       peaks.push({ bpm: (60 * this._sampleRate) / (minLag * this._hopSize), score: acf[0]!, lag: minLag });
     }
+
     for (let i = 1; i < lastIdx; i++) {
       if (acf[i]! > acf[i - 1]! && acf[i]! > acf[i + 1]! && acf[i]! > 0) {
         const lagI = minLag + i + parabolicPeakOffset(acf[i - 1]!, acf[i]!, acf[i + 1]!);
         peaks.push({ bpm: (60 * this._sampleRate) / (lagI * this._hopSize), score: acf[i]!, lag: lagI });
       }
     }
+
     if (numLags > 1 && acf[lastIdx]! > acf[lastIdx - 1]! && acf[lastIdx]! > 0) {
       const lagL = minLag + lastIdx;
       peaks.push({ bpm: (60 * this._sampleRate) / (lagL * this._hopSize), score: acf[lastIdx]!, lag: lagL });
     }
+
     peaks.sort((a, b) => b.score - a.score);
 
     // Filter to BPM range (with edge tolerance) - mirrors computeTempoCandidates filter.
     const inRange: TempoCandidateResult[] = [];
+
     for (let pf = 0; pf < peaks.length; pf++) {
-      if (peaks[pf]!.bpm >= loBpm && peaks[pf]!.bpm <= hiBpm) inRange.push(peaks[pf]!);
+      if (peaks[pf]!.bpm >= loBpm && peaks[pf]!.bpm <= hiBpm) {
+        inRange.push(peaks[pf]!);
+      }
     }
 
     // Comb (own sub-multiples) − super-harmonic penalty, × tempo prior.
@@ -588,6 +626,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // on 8ths over a 180 kick), not a competing fundamental, so it must not demote f.
     const superHi = hiBpm;
     const scored: TempoCandidateResult[] = [];
+
     for (let q = 0; q < inRange.length; q++) {
       const lag = inRange[q]!.lag;
       const aF = acfAtLag(acf, minLag, lag);
@@ -599,10 +638,15 @@ class BeatDetectorProcessor extends DisposableProcessor {
       const penDbl = inRange[q]!.bpm * 2 <= superHi ? combPenaltyDouble * aDouble : 0;
       const penTrip = inRange[q]!.bpm * 3 <= superHi ? combPenaltyTriple * aTriple : 0;
       let comb = support - penDbl - penTrip;
-      if (comb < 0) comb = 0;
+
+      if (comb < 0) {
+        comb = 0;
+      }
+
       const w = tempoPrior(inRange[q]!.bpm, defaultPriorMu, defaultPriorSigma);
       scored.push({ bpm: inRange[q]!.bpm, score: comb * w, lag });
     }
+
     scored.sort((a, b) => b.score - a.score);
 
     return scored.slice(0, 3);
@@ -616,7 +660,10 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const fast = this._scoreSpan(this._fastWindowHops);
 
     this._candidates = stable;
-    if (this._candidates.length === 0) return;
+
+    if (this._candidates.length === 0) {
+      return;
+    }
 
     const top = this._candidates[0]!;
 
@@ -630,10 +677,12 @@ class BeatDetectorProcessor extends DisposableProcessor {
       // first lock, so the locked grid + hysteresis (and every locked beat) are unchanged.
       this._bestBpm = top.bpm;
       this._bestScore = top.score;
+
       if (this._fluxCount >= this._maxLag + 1) {
         this._authLocked = true;
         this._firstLockSample = this._sampleCount;
         this._beatsSinceAuthLock = 0;
+
         // Re-anchor the beat phase + period to the full-window evidence, SILENTLY (no
         // re-emit → no duplicate beat next to the last provisional one). A provisional beat
         // may have anchored the grid on an early under-resolved tempo or, on syncopated
@@ -644,6 +693,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
         if (this._lastBeatSample >= 0) {
           const reIbi = (60 / this._bestBpm) * this._sampleRate;
           const reAnchor = this._bootstrapOnset(PLL_BOOTSTRAP_MAX_AGE_IBI * reIbi);
+
           if (reAnchor >= 0) {
             this._lastBeatSample = reAnchor;
             this._ibiSamples = reIbi;
@@ -654,17 +704,23 @@ class BeatDetectorProcessor extends DisposableProcessor {
       // --- Stable-window hysteresis: holds the grid against noise + octave artefacts. ---
       // Fresh score of the currently-tracked tempo from this frame.
       let currentScore = 0;
+
       for (let c = 0; c < this._candidates.length; c++) {
-        if (Math.abs(this._candidates[c]!.bpm / this._bestBpm - 1) < 0.03 && this._candidates[c]!.score > currentScore)
+        if (Math.abs(this._candidates[c]!.bpm / this._bestBpm - 1) < 0.03 && this._candidates[c]!.score > currentScore) {
           currentScore = this._candidates[c]!.score;
+        }
       }
-      if (currentScore <= 0) currentScore = this._bestScore * 0.9;
+
+      if (currentScore <= 0) {
+        currentScore = this._bestScore * 0.9;
+      }
 
       const inGrace = this._firstLockSample >= 0 && this._sampleCount - this._firstLockSample < 2 * this._sampleRate;
       // Metrically-related = the same beat counted at another level; switching across one
       // needs the strong margin so a subdivision artefact cannot steal the lock.
       const isOctave = isOctaveRelated(top.bpm, this._bestBpm);
       let margin: number;
+
       if (inGrace) {
         margin = 1;
       } else if (isOctave) {
@@ -672,12 +728,14 @@ class BeatDetectorProcessor extends DisposableProcessor {
       } else {
         margin = 1.15;
       }
+
       const diff = Math.abs(top.bpm - this._bestBpm) / this._bestBpm;
 
       if (diff > 0.03 && top.score > currentScore * margin) {
         const oldBpm = this._bestBpm;
         this._bestBpm = top.bpm;
         this._bestScore = top.score;
+
         // Only fire tempoChange if > 5% different
         if (Math.abs(this._bestBpm - oldBpm) / oldBpm > 0.05) {
           this.port.postMessage({ type: 'tempoChange', newTempo: this._bestBpm, oldTempo: oldBpm });
@@ -703,8 +761,10 @@ class BeatDetectorProcessor extends DisposableProcessor {
     if (fast.length === 0) {
       this._driftHops = 0;
       this._driftBpm = 0;
+
       return;
     }
+
     const fastTop = fast[0]!;
     const r = fastTop.bpm / this._bestBpm;
     const diff = r > 1 ? r - 1 : 1 - r;
@@ -715,6 +775,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     if (octave || diff <= DRIFT_MIN_FRAC || diff > DRIFT_MAX_FRAC) {
       this._driftHops = 0;
       this._driftBpm = 0;
+
       return;
     }
 
@@ -724,6 +785,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     } else {
       this._driftHops = 1;
     }
+
     this._driftBpm = fastTop.bpm;
 
     if (this._driftHops >= DRIFT_CONFIRM_HOPS) {
@@ -731,6 +793,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
       this._bestBpm = fastTop.bpm;
       this._bestScore = fastTop.score;
       this._driftHops = 0; // restart the streak; the next step must re-confirm
+
       if (Math.abs(this._bestBpm - oldBpm) / oldBpm > 0.05) {
         this.port.postMessage({ type: 'tempoChange', newTempo: this._bestBpm, oldTempo: oldBpm });
       }
@@ -741,10 +804,13 @@ class BeatDetectorProcessor extends DisposableProcessor {
   // refractory tracks the beat (a fraction of the IBI); before lock it is a fixed floor.
   private _onsetRefractorySamples(): number {
     const minR = ONSET_MIN_REFRACTORY_SEC * this._sampleRate;
+
     if (this._bestBpm > 0) {
       const r = ONSET_REFRACTORY_IBI_FRAC * ((60 / this._bestBpm) * this._sampleRate);
+
       return r > minR ? r : minR;
     }
+
     return minR;
   }
 
@@ -756,25 +822,38 @@ class BeatDetectorProcessor extends DisposableProcessor {
   private _detectOnset(flux: number): void {
     // Decaying running flux maximum - the reference level for the noise floor.
     this._fluxPeak *= ONSET_PEAK_DECAY;
-    if (flux > this._fluxPeak) this._fluxPeak = flux;
+
+    if (flux > this._fluxPeak) {
+      this._fluxPeak = flux;
+    }
 
     // Push raw flux into the normalization ring.
     const W = this._onsetWin.length;
     this._onsetWin[this._onsetWinPos] = flux;
     this._onsetWinPos = (this._onsetWinPos + 1) % W;
-    if (this._onsetWinCount < W) this._onsetWinCount++;
+
+    if (this._onsetWinCount < W) {
+      this._onsetWinCount++;
+    }
+
     const count = this._onsetWinCount;
 
     // Robust baseline: median of the window, then MAD = median(|x − median|).
     const s = this._onsetSort;
-    for (let i = 0; i < count; i++) s[i] = this._onsetWin[i]!;
+
+    for (let i = 0; i < count; i++) {
+      s[i] = this._onsetWin[i]!;
+    }
+
     partialSort(s, count);
     const median = s[count >> 1]!;
     const d = this._onsetDev;
+
     for (let j = 0; j < count; j++) {
       const dv = this._onsetWin[j]! - median;
       d[j] = Math.abs(dv);
     }
+
     partialSort(d, count);
     const mad = d[count >> 1]!;
 
@@ -784,9 +863,17 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const floorScale = ONSET_NOISE_FLOOR_FRAC * this._fluxPeak;
     const madScaled = ONSET_MAD_SCALE * mad;
     let denom = madScaled > floorScale ? madScaled : floorScale;
-    if (denom < 1e-9) denom = 1e-9;
+
+    if (denom < 1e-9) {
+      denom = 1e-9;
+    }
+
     let norm = (flux - median) / denom;
-    if (norm < 0) norm = 0;
+
+    if (norm < 0) {
+      norm = 0;
+    }
+
     this._onsetStrength = norm;
 
     // Rising-edge onset detection on the normalised novelty: fire on the UPWARD crossing
@@ -798,20 +885,29 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const crossedUp = this._onsetHopCount >= 1 && this._onsetPrev1 <= ONSET_THRESHOLD && norm > ONSET_THRESHOLD;
     const aboveFloor = flux > noiseFloor && flux > ONSET_ABS_FLOOR;
     const pastRefractory = this._lastOnsetSample < 0 || this._sampleCount - this._lastOnsetSample >= refractory;
+
     if (crossedUp && aboveFloor && pastRefractory) {
       // Sub-hop onset position: linear-interpolate the threshold crossing between the
       // previous hop and this one (stored for the PLL; the onset detector's own grid snap uses the integer
       // hop so the shipped beat-offset numbers are preserved).
       const span = norm - this._onsetPrev1;
       let frac = span > 1e-9 ? (ONSET_THRESHOLD - this._onsetPrev1) / span : 0;
-      if (frac < 0) frac = 0;
-      else if (frac > 1) frac = 1;
+
+      if (frac < 0) {
+        frac = 0;
+      } else if (frac > 1) {
+        frac = 1;
+      }
+
       const onsetSample = this._sampleCount - this._hopSize + frac * this._hopSize;
       this._lastOnsetSample = onsetSample;
       this._onsetRingSamples[this._onsetRingPos] = onsetSample;
       this._onsetRingStrengths[this._onsetRingPos] = norm;
       this._onsetRingPos = (this._onsetRingPos + 1) % this._onsetRingSamples.length;
-      if (this._onsetRingCount < this._onsetRingSamples.length) this._onsetRingCount++;
+
+      if (this._onsetRingCount < this._onsetRingSamples.length) {
+        this._onsetRingCount++;
+      }
     }
 
     // Shift history for the next hop.
@@ -828,16 +924,26 @@ class BeatDetectorProcessor extends DisposableProcessor {
     let best = -1;
     let bestDist = windowSamples + 1;
     const cnt = this._onsetRingCount;
+
     for (let i = 0; i < cnt; i++) {
       const s = this._onsetRingSamples[i]!;
-      if (s < 0) continue;
+
+      if (s < 0) {
+        continue;
+      }
+
       let d = s - targetSample;
-      if (d < 0) d = -d;
+
+      if (d < 0) {
+        d = -d;
+      }
+
       if (d <= windowSamples && d < bestDist) {
         bestDist = d;
         best = s;
       }
     }
+
     return best;
   }
 
@@ -849,15 +955,22 @@ class BeatDetectorProcessor extends DisposableProcessor {
     let best = -1;
     let bestStrength = -1;
     const cnt = this._onsetRingCount;
+
     for (let i = 0; i < cnt; i++) {
       const s = this._onsetRingSamples[i]!;
-      if (s < 0 || this._sampleCount - s > maxAgeSamples) continue;
+
+      if (s < 0 || this._sampleCount - s > maxAgeSamples) {
+        continue;
+      }
+
       const st = this._onsetRingStrengths[i]!;
+
       if (st > bestStrength || (st === bestStrength && s > best)) {
         bestStrength = st;
         best = s;
       }
     }
+
     return best;
   }
 
@@ -887,14 +1000,23 @@ class BeatDetectorProcessor extends DisposableProcessor {
     if (this._authLocked) {
       this._beatsSinceAuthLock++;
     }
-    if (!this._locked && this._authLocked && this._beatsSinceAuthLock >= LOCK_PROMOTE_BEATS && this._confidence >= LOCK_PROMOTE_CONFIDENCE) {
+
+    if (
+      !this._locked &&
+      this._authLocked &&
+      this._beatsSinceAuthLock >= LOCK_PROMOTE_BEATS &&
+      this._confidence >= LOCK_PROMOTE_CONFIDENCE
+    ) {
       this._locked = true;
     }
+
     const status = this._locked ? 'locked' : 'provisional';
 
     // Provisional gating: when emitProvisionalBeats is false, suppress the message until the
     // beat is locked (grid bookkeeping above already ran). Locked beats always post.
-    if (!this._emitProvisionalBeats && !this._locked) return;
+    if (!this._emitProvisionalBeats && !this._locked) {
+      return;
+    }
 
     const isDownbeat = this._barPosition === 1;
     this.port.postMessage({
@@ -932,10 +1054,15 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // on-grid beat is not lost to warm-up. If no onset has arrived yet, wait.
     if (this._lastBeatSample < 0) {
       const anchor = this._bootstrapOnset(PLL_BOOTSTRAP_MAX_AGE_IBI * acfIbi);
-      if (anchor < 0) return;
+
+      if (anchor < 0) {
+        return;
+      }
+
       this._ibiSamples = acfIbi;
       this._lastBeatSample = anchor;
       this._emitBeat(anchor, flux);
+
       return;
     }
 
@@ -943,33 +1070,50 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // tempoGain, but a large gap (octave re-lock / tempoChange) re-seeds it so the loop
     // never chases a stale interval. Tempo SELECTION is unchanged - this only refines the
     // local period the phase tracker runs on.
-    if (this._ibiSamples <= 0) this._ibiSamples = acfIbi;
+    if (this._ibiSamples <= 0) {
+      this._ibiSamples = acfIbi;
+    }
+
     if (Math.abs(this._ibiSamples - acfIbi) > PLL_RESYNC_FRAC * acfIbi) {
       this._ibiSamples = acfIbi;
     }
+
     const ibi = this._ibiSamples;
 
     const predicted = this._lastBeatSample + ibi;
     const acceptWin = PLL_ACCEPT_FRAC * ibi;
 
     // Still early in the beat cycle - wait until we approach the prediction.
-    if (this._sampleCount < predicted - acceptWin) return;
+    if (this._sampleCount < predicted - acceptWin) {
+      return;
+    }
 
     const onset = this._nearestOnset(predicted, acceptWin);
 
     let beatSample: number;
+
     if (onset >= 0) {
       // Bounded phase + period correction toward the matched onset.
       const error = onset - predicted;
       this._observePhase(1 - Math.min(1, Math.abs(error) / acceptWin));
       const maxPhase = PLL_MAX_PHASE_FRAC * ibi;
       let phaseCorr = error * PLL_PHASE_GAIN;
-      if (phaseCorr > maxPhase) phaseCorr = maxPhase;
-      else if (phaseCorr < -maxPhase) phaseCorr = -maxPhase;
+
+      if (phaseCorr > maxPhase) {
+        phaseCorr = maxPhase;
+      } else if (phaseCorr < -maxPhase) {
+        phaseCorr = -maxPhase;
+      }
+
       const maxTempo = PLL_MAX_TEMPO_FRAC * ibi;
       let ibiCorr = error * PLL_TEMPO_GAIN;
-      if (ibiCorr > maxTempo) ibiCorr = maxTempo;
-      else if (ibiCorr < -maxTempo) ibiCorr = -maxTempo;
+
+      if (ibiCorr > maxTempo) {
+        ibiCorr = maxTempo;
+      } else if (ibiCorr < -maxTempo) {
+        ibiCorr = -maxTempo;
+      }
+
       beatSample = predicted + phaseCorr;
       this._ibiSamples = ibi + ibiCorr;
     } else if (this._sampleCount >= predicted + PLL_FREERUN_FRAC * ibi) {
@@ -988,7 +1132,10 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // advancing but STOP emitting - this is what holds the breakDrop false-positive rate
     // down. Onset-rich material never trips it.
     const coasting = this._lastOnsetSample >= 0 && this._sampleCount - this._lastOnsetSample > ONSET_BEAT_COAST_IBI * ibi;
-    if (coasting) return;
+
+    if (coasting) {
+      return;
+    }
 
     this._emitBeat(beatSample, flux);
   }
@@ -1008,10 +1155,13 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const wp = this._fluxWritePos;
     const len = this._fluxWindow.length;
     let totalFlux = 0;
+
     for (let i = 0; i < count; i++) {
       totalFlux += this._fluxWindow[(wp - 1 - i + len) % len]!;
     }
+
     const mean = count > 0 ? totalFlux / count : 1;
+
     return Math.max(0.5, Math.min(1.5, mean > 0 ? flux / mean : 1));
   }
 
@@ -1026,12 +1176,16 @@ class BeatDetectorProcessor extends DisposableProcessor {
     s4[2] = p4[1]!;
     s4[3] = p4[2]!;
     let sum4 = 0;
+
     for (let i = 0; i < 4; i++) {
       p4[i] = s4[i]! * (likelihood + (i === 0 ? 0.3 : 0));
       sum4 += p4[i]!;
     }
+
     if (sum4 > 0) {
-      for (let i = 0; i < 4; i++) p4[i]! /= sum4;
+      for (let i = 0; i < 4; i++) {
+        p4[i]! /= sum4;
+      }
     }
 
     // --- 3/4 posterior ---
@@ -1041,23 +1195,35 @@ class BeatDetectorProcessor extends DisposableProcessor {
     s3[1] = p3[0]!;
     s3[2] = p3[1]!;
     let sum3 = 0;
+
     for (let i = 0; i < 3; i++) {
       p3[i] = s3[i]! * (likelihood + (i === 0 ? 0.3 : 0));
       sum3 += p3[i]!;
     }
+
     if (sum3 > 0) {
-      for (let i = 0; i < 3; i++) p3[i]! /= sum3;
+      for (let i = 0; i < 3; i++) {
+        p3[i]! /= sum3;
+      }
     }
 
     // --- Update TS confidences (EMA) ---
     let max4 = 0;
+
     for (let i = 0; i < 4; i++) {
-      if (p4[i]! > max4) max4 = p4[i]!;
+      if (p4[i]! > max4) {
+        max4 = p4[i]!;
+      }
     }
+
     let max3 = 0;
+
     for (let i = 0; i < 3; i++) {
-      if (p3[i]! > max3) max3 = p3[i]!;
+      if (p3[i]! > max3) {
+        max3 = p3[i]!;
+      }
     }
+
     const alpha = 0.1;
     this._ts4Confidence = (1 - alpha) * this._ts4Confidence + alpha * max4;
     this._ts3Confidence = (1 - alpha) * this._ts3Confidence + alpha * max3;
@@ -1071,12 +1237,14 @@ class BeatDetectorProcessor extends DisposableProcessor {
 
       if (this._activeTs === '4/4' && threeFavored) {
         this._sustainCounter++;
+
         if (this._sustainCounter >= minSustainBeats) {
           this._activeTs = '3/4';
           this._sustainCounter = 0;
         }
       } else if (this._activeTs === '3/4' && fourFavored) {
         this._sustainCounter++;
+
         if (this._sustainCounter >= minSustainBeats + 4) {
           // 16 beats for 4/4
           this._activeTs = '4/4';
@@ -1094,21 +1262,28 @@ class BeatDetectorProcessor extends DisposableProcessor {
     if (this._beatsSinceStart >= barLen) {
       let maxP = -1;
       let maxI = 0;
+
       for (let i = 0; i < barLen; i++) {
         if (posterior[i]! > maxP) {
           maxP = posterior[i]!;
           maxI = i;
         }
       }
+
       const newPos = maxI + 1; // 1-indexed
+
       if (newPos === 1 && this._barPosition !== 1) {
         this._barNumber++;
       }
+
       this._barPosition = newPos;
     } else {
       // Just advance sequentially
       this._barPosition = (this._barPosition % barLen) + 1;
-      if (this._barPosition === 1) this._barNumber++;
+
+      if (this._barPosition === 1) {
+        this._barNumber++;
+      }
     }
   }
 
@@ -1116,6 +1291,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     if (this._candidates.length === 0) {
       this._confidence = 0;
       this._phaseConfidence = 0;
+
       return;
     }
 
@@ -1127,13 +1303,19 @@ class BeatDetectorProcessor extends DisposableProcessor {
 
     // Phase consistency from IBI variance
     let ibiMean = 0;
-    for (let i = 0; i < 4; i++) ibiMean += this._ibiHistory[i]!;
+
+    for (let i = 0; i < 4; i++) {
+      ibiMean += this._ibiHistory[i]!;
+    }
+
     ibiMean /= 4;
     let ibiVar = 0;
+
     for (let i = 0; i < 4; i++) {
       const d = this._ibiHistory[i]! - ibiMean;
       ibiVar += d * d;
     }
+
     ibiVar /= 4;
     const phaseConsistency = ibiMean > 0 ? Math.max(0, 1 - ibiVar / (ibiMean * ibiMean)) : 0;
 
@@ -1141,9 +1323,13 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const activePosterior = this._activeTs === '3/4' ? this._posterior3 : this._posterior4;
     const activeLen = this._activeTs === '3/4' ? 3 : 4;
     let maxP = 0;
+
     for (let i = 0; i < activeLen; i++) {
-      if (activePosterior[i]! > maxP) maxP = activePosterior[i]!;
+      if (activePosterior[i]! > maxP) {
+        maxP = activePosterior[i]!;
+      }
     }
+
     const barConsistency = maxP;
 
     const c = Math.sqrt(Math.max(0, peakContrast / 2)) * Math.sqrt(Math.max(0, phaseConsistency)) * (0.5 + 0.5 * barConsistency);
@@ -1155,6 +1341,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const beatInterval = 60 / this._bestBpm;
     const barPos = this._barPosition;
     const barLen = this._activeTs === '3/4' ? 3 : 4;
+
     for (let i = 0; i < 8; i++) {
       const t = lastBeatTime + (i + 1) * beatInterval;
       const bp = ((barPos - 1 + i) % barLen) + 1;
@@ -1165,6 +1352,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
         beatInBar: bp,
       });
     }
+
     this._lookahead = lookahead;
   }
 
@@ -1172,10 +1360,21 @@ class BeatDetectorProcessor extends DisposableProcessor {
     let low = 0;
     let mid = 0;
     let high = 0;
-    for (let b = 0; b < this._lowBandEnd; b++) low += this._melOut[b]!;
-    for (let b = this._lowBandEnd; b < this._midBandEnd; b++) mid += this._melOut[b]!;
-    for (let b = this._midBandEnd; b < this._melBands; b++) high += this._melOut[b]!;
+
+    for (let b = 0; b < this._lowBandEnd; b++) {
+      low += this._melOut[b]!;
+    }
+
+    for (let b = this._lowBandEnd; b < this._midBandEnd; b++) {
+      mid += this._melOut[b]!;
+    }
+
+    for (let b = this._midBandEnd; b < this._melBands; b++) {
+      high += this._melOut[b]!;
+    }
+
     const denom = this._lowBandEnd || 1;
+
     return {
       low: low / denom,
       mid: mid / Math.max(1, this._midBandEnd - this._lowBandEnd),
@@ -1202,6 +1401,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const nextBeatTime = lastBeatTime + beatInterval;
 
     let nextDownbeatTime = nextBeatTime;
+
     for (let i = 0; i < this._lookahead.length; i++) {
       if (this._lookahead[i]!.isDownbeat) {
         nextDownbeatTime = this._lookahead[i]!.audioTime;

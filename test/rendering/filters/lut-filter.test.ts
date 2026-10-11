@@ -47,8 +47,8 @@ interface FakeImageData {
   readonly data: Uint8ClampedArray;
 }
 
-const makeFullContext2d = (): CanvasRenderingContext2D => {
-  return {
+const makeFullContext2d = (): CanvasRenderingContext2D =>
+  ({
     fillStyle: '',
     fillRect: vi.fn(),
     drawImage: vi.fn(),
@@ -59,8 +59,7 @@ const makeFullContext2d = (): CanvasRenderingContext2D => {
       data: new Uint8ClampedArray(width * height * 4),
     })),
     putImageData: vi.fn(),
-  } as unknown as CanvasRenderingContext2D;
-};
+  }) as unknown as CanvasRenderingContext2D;
 
 let getContextSpy: MockInstance;
 
@@ -115,10 +114,22 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     getExtension: vi.fn(() => null),
     getShaderParameter: vi.fn(() => true),
     getProgramParameter: vi.fn((_prog: unknown, pname: number) => {
-      if (pname === 35714) return true; // LINK_STATUS
-      if (pname === 35721) return 2; // ACTIVE_ATTRIBUTES
-      if (pname === 35718) return 0; // ACTIVE_UNIFORMS
-      if (pname === 35382) return 0; // ACTIVE_UNIFORM_BLOCKS
+      if (pname === 35714) {
+        return true;
+      } // LINK_STATUS
+
+      if (pname === 35721) {
+        return 2;
+      } // ACTIVE_ATTRIBUTES
+
+      if (pname === 35718) {
+        return 0;
+      } // ACTIVE_UNIFORMS
+
+      if (pname === 35382) {
+        return 0;
+      } // ACTIVE_UNIFORM_BLOCKS
+
       return true;
     }),
     getActiveAttrib: vi.fn(
@@ -170,6 +181,7 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -180,10 +192,12 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
       currentTarget = target ?? root;
+
       return this;
     },
     pushScissorRect() {
@@ -223,6 +237,7 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     bindVertexArrayObject: vi.fn(),
     execute: vi.fn(function (this: unknown, pass: { execute(b: unknown): void }) {
       pass.execute(this);
+
       return this;
     }),
   } as unknown as RenderBackend & WebGl2Backend;
@@ -254,8 +269,13 @@ const makeWebGpuEnv = (): { device: GPUDevice; restore(): void } => {
   return {
     device,
     restore(): void {
-      if (previousBufferUsage) Object.defineProperty(globalThis, 'GPUBufferUsage', previousBufferUsage);
-      if (previousShaderStage) Object.defineProperty(globalThis, 'GPUShaderStage', previousShaderStage);
+      if (previousBufferUsage) {
+        Object.defineProperty(globalThis, 'GPUBufferUsage', previousBufferUsage);
+      }
+
+      if (previousShaderStage) {
+        Object.defineProperty(globalThis, 'GPUShaderStage', previousShaderStage);
+      }
     },
   };
 };
@@ -281,6 +301,7 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -291,10 +312,12 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
       currentTarget = target ?? root;
+
       return this;
     },
     pushScissorRect() {
@@ -337,6 +360,7 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     },
     execute(pass: { execute(b: unknown): void }) {
       pass.execute(this);
+
       return this;
     },
     flush() {
@@ -361,7 +385,9 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     submit: vi.fn(),
   } as unknown as RenderBackend & WebGpuBackend;
 
-  (backend as unknown as { passCoordinator: WebGpuPassCoordinator }).passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
+  (backend as unknown as { passCoordinator: WebGpuPassCoordinator }).passCoordinator = new WebGpuPassCoordinator(
+    backend as unknown as WebGpuPassBackend,
+  );
 
   return backend;
 };
@@ -502,19 +528,15 @@ describe('LutFilter construction and options', () => {
 });
 
 /** The backend-neutral shader filter LutFilter delegates to. */
-const shaderFilterOf = (filter: LutFilter): ShaderFilter => {
-  return (filter as unknown as { _shaderFilter: ShaderFilter })._shaderFilter;
-};
+const shaderFilterOf = (filter: LutFilter): ShaderFilter => (filter as unknown as { _shaderFilter: ShaderFilter })._shaderFilter;
 
 /** The declared uniform accessors, which differ per mode. */
-const uniformsOf = (filter: LutFilter): Record<string, { readonly value: number } | undefined> => {
-  return shaderFilterOf(filter).uniforms as unknown as Record<string, { readonly value: number } | undefined>;
-};
+const uniformsOf = (filter: LutFilter): Record<string, { readonly value: number } | undefined> =>
+  shaderFilterOf(filter).uniforms as unknown as Record<string, { readonly value: number } | undefined>;
 
 /** The textures the filter's passes bind, read live on every draw. */
-const boundTexturesOf = (filter: LutFilter): Readonly<Record<string, Texture>> => {
-  return (shaderFilterOf(filter) as unknown as { _bindings: { textures: Record<string, Texture> } })._bindings.textures;
-};
+const boundTexturesOf = (filter: LutFilter): Readonly<Record<string, Texture>> =>
+  (shaderFilterOf(filter) as unknown as { _bindings: { textures: Record<string, Texture> } })._bindings.textures;
 
 describe('LutFilter.setLut', () => {
   test('replaces the LUT texture', () => {

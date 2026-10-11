@@ -27,7 +27,30 @@ declare const gamepadButtonChannelBrand: unique symbol;
  * from the {@link GamepadButton} namespace (`GamepadButton.South`, ...).
  */
 export type GamepadButtonChannel = (
-  512 | 513 | 514 | 515 | 516 | 517 | 518 | 519 | 520 | 521 | 522 | 523 | 524 | 525 | 526 | 527 | 528 | 529 | 530 | 531 | 532 | 533 | 534 | 535
+  | 512
+  | 513
+  | 514
+  | 515
+  | 516
+  | 517
+  | 518
+  | 519
+  | 520
+  | 521
+  | 522
+  | 523
+  | 524
+  | 525
+  | 526
+  | 527
+  | 528
+  | 529
+  | 530
+  | 531
+  | 532
+  | 533
+  | 534
+  | 535
 ) & { readonly [gamepadButtonChannelBrand]: void };
 
 /** Construction options for a {@link GamepadButton}. */

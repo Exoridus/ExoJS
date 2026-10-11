@@ -113,7 +113,9 @@ test('HDR light energy survives a nested filter into the final composite, unclip
   // Scales the light term down by 10x - a filter with no effect (identity)
   // could not tell an unclipped HDR value apart from one pre-clipped to 1.0
   // before it ran, since both would already be at or under display white.
-  const scaleDown = new ColorMatrixFilter([0.1, 0, 0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0, 1, 0], { colorSpace: 'linear-srgb' });
+  const scaleDown = new ColorMatrixFilter([0.1, 0, 0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0, 1, 0], {
+    colorSpace: 'linear-srgb',
+  });
   const lighting = new LightmapLighting(host.app, { ambient: Color.black, post: [scaleDown], lightResolution: 1 });
   const center = canvasSize / 2;
 

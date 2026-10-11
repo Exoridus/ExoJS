@@ -7,7 +7,8 @@ import type { Drawable } from './Drawable';
 import { RenderBackendType } from './RenderBackendType';
 import { RenderError } from './RenderError';
 
-const remedy = 'Give the drawable a material whose fragment shader declares one output per attachment, or render it into a single-attachment RenderTexture.';
+const remedy =
+  'Give the drawable a material whose fragment shader declares one output per attachment, or render it into a single-attachment RenderTexture.';
 
 /**
  * Note the one case the reflection cannot decide, in dev builds only.
@@ -100,7 +101,12 @@ export const assertDrawsAllAttachments = (drawable: Drawable, attachmentCount: n
  * all resolve to the same value are an ordinary draw and pass.
  * @internal
  */
-export const assertPerAttachmentBlendSupported = (drawable: Drawable, attachmentCount: number, supported: boolean, backendType: RenderBackendType): void => {
+export const assertPerAttachmentBlendSupported = (
+  drawable: Drawable,
+  attachmentCount: number,
+  supported: boolean,
+  backendType: RenderBackendType,
+): void => {
   if (supported) {
     return;
   }

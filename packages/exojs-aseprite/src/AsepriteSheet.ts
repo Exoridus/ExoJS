@@ -1,6 +1,13 @@
 import { AnimatedSprite, type AnimatedSpriteClipDefinition, Spritesheet, type Texture, Time } from '@codexo/exojs';
 
-import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteLayer, type AsepriteSlice, isAsepriteArrayData } from './AsepriteData';
+import {
+  type AsepriteData,
+  type AsepriteFrameData,
+  type AsepriteFrameTag,
+  type AsepriteLayer,
+  type AsepriteSlice,
+  isAsepriteArrayData,
+} from './AsepriteData';
 
 /**
  * Normalises an {@link AsepriteData} document into an ordered array of
@@ -39,22 +46,40 @@ const expandFrameIndices = (tag: AsepriteFrameTag): number[] => {
 
   switch (tag.direction) {
     case 'reverse':
-      for (let i = to; i >= from; i--) indices.push(i);
+      for (let i = to; i >= from; i--) {
+        indices.push(i);
+      }
+
       break;
 
     case 'pingpong':
-      for (let i = from; i <= to; i++) indices.push(i);
-      for (let i = to - 1; i > from; i--) indices.push(i);
+      for (let i = from; i <= to; i++) {
+        indices.push(i);
+      }
+
+      for (let i = to - 1; i > from; i--) {
+        indices.push(i);
+      }
+
       break;
 
     case 'pingpong_reverse':
-      for (let i = to; i >= from; i--) indices.push(i);
-      for (let i = from + 1; i < to; i++) indices.push(i);
+      for (let i = to; i >= from; i--) {
+        indices.push(i);
+      }
+
+      for (let i = from + 1; i < to; i++) {
+        indices.push(i);
+      }
+
       break;
 
     case 'forward':
     default:
-      for (let i = from; i <= to; i++) indices.push(i);
+      for (let i = from; i <= to; i++) {
+        indices.push(i);
+      }
+
       break;
   }
 
@@ -245,7 +270,9 @@ export class AsepriteSheet {
       // degenerate case `avgFps` guards against) falls back to the average -
       // computed as `1 / fps` directly, not `(1000 / fps) / 1000`, so it is
       // bit-for-bit the reciprocal of the fps this clip actually carries.
-      const frameDurations = taggedFrames.map(({ frameData }) => Time.seconds(frameData.duration > 0 ? frameData.duration / 1000 : 1 / fps));
+      const frameDurations = taggedFrames.map(({ frameData }) =>
+        Time.seconds(frameData.duration > 0 ? frameData.duration / 1000 : 1 / fps),
+      );
 
       // Per-frame trim offset (Aseprite "spriteSourceSize"), so frames trimmed
       // by different amounts stay anchored to the same point in the untrimmed

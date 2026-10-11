@@ -22,8 +22,14 @@ const verticalInkExtent = (result: { data: Uint8ClampedArray; width: number; hei
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (data[y * width + x] >= 128) {
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
+        if (y < minY) {
+          minY = y;
+        }
+
+        if (y > maxY) {
+          maxY = y;
+        }
+
         break;
       }
     }

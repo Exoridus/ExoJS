@@ -10,6 +10,7 @@ const EXAMPLES_DIR = join(ROOT, 'examples');
 const walk = (dir: string, extension: string): string[] =>
   readdirSync(dir).flatMap(entry => {
     const full = join(dir, entry);
+
     return statSync(full).isDirectory() ? walk(full, extension) : full.endsWith(extension) ? [full] : [];
   });
 
@@ -19,14 +20,18 @@ const where = (file: string, source: string, index: number): string =>
 const violations = (files: string[], pattern: RegExp): string[] =>
   files.flatMap(file => {
     const source = readFileSync(file, 'utf8');
+
     return [...source.matchAll(pattern)].map(match => where(file, source, match.index ?? 0));
   });
 
 const guideCodeViolations = (pattern: RegExp): string[] =>
   guideFiles.flatMap(file => {
     const source = readFileSync(file, 'utf8');
+
     return [...source.matchAll(/```(?:ts|tsx)[^\n]*\n([\s\S]*?)```/g)].flatMap(fence =>
-      [...(fence[1] ?? '').matchAll(pattern)].map(match => where(file, source, (fence.index ?? 0) + fence[0].indexOf(fence[1] ?? '') + (match.index ?? 0))),
+      [...(fence[1] ?? '').matchAll(pattern)].map(match =>
+        where(file, source, (fence.index ?? 0) + fence[0].indexOf(fence[1] ?? '') + (match.index ?? 0)),
+      ),
     );
   });
 
@@ -47,7 +52,8 @@ describe('guide and example runtime contracts', () => {
   });
 
   it('uses logical application dimensions for scene layout', () => {
-    const backingStoreLayout = /(?:\{[^}\n]*\b(?:width|height)\b[^}\n]*\}\s*=\s*(?:this\.)?app\.canvas|(?:this\.)?app\.canvas\.(?:width|height))/g;
+    const backingStoreLayout =
+      /(?:\{[^}\n]*\b(?:width|height)\b[^}\n]*\}\s*=\s*(?:this\.)?app\.canvas|(?:this\.)?app\.canvas\.(?:width|height))/g;
     expect([...violations(exampleFiles, backingStoreLayout), ...guideCodeViolations(backingStoreLayout)]).toEqual([]);
   });
 

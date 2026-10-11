@@ -1,12 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import type {
+  Comment,
+  CommentDisplayPart,
+  DeclarationReflection,
+  ParameterReflection,
+  ProjectReflection,
+  SignatureReflection,
+  SomeType,
+} from 'typedoc';
 import { Application, ReflectionKind } from 'typedoc';
-import type { Comment, CommentDisplayPart, DeclarationReflection, ParameterReflection, ProjectReflection, SignatureReflection, SomeType } from 'typedoc';
 
 import type { ApiSubsystem } from '../src/lib/api-reference';
+import type { ApiCounts, ApiMember, ApiSection, ApiSymbolData, ApiToken } from '../src/lib/api-schema';
 import { apiSymbolSchema } from '../src/lib/api-schema';
-import type { ApiCounts, ApiMember, ApiSection, ApiToken, ApiSymbolData } from '../src/lib/api-schema';
 import { sortUnionMembers } from './sort-union-members';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -147,13 +156,28 @@ const isFunction = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Fun
 const isVariable = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Variable) > 0;
 
 const toApiKind = (kind: ReflectionKind): ApiKind => {
-  if (isClass(kind)) return 'class';
-  if (isInterface(kind)) return 'interface';
-  if (isEnum(kind)) return 'enum';
-  if (isFunction(kind)) return 'function';
+  if (isClass(kind)) {
+    return 'class';
+  }
+
+  if (isInterface(kind)) {
+    return 'interface';
+  }
+
+  if (isEnum(kind)) {
+    return 'enum';
+  }
+
+  if (isFunction(kind)) {
+    return 'function';
+  }
+
   // An object-literal `const` (MathUtils, Collision, ...) documents like a
   // namespace: a bag of function/value members.
-  if (isVariable(kind)) return 'namespace';
+  if (isVariable(kind)) {
+    return 'namespace';
+  }
+
   return 'type';
 };
 
@@ -168,11 +192,19 @@ const normalizePath = (value: string): string => value.replaceAll('\\', '/');
 
 const guessSubsystem = (sourcePath: string): Subsystem => {
   const normalized = normalizePath(sourcePath);
-  if (normalized.includes('/src/debug/') || normalized.includes('src/debug/')) return 'debug';
+
+  if (normalized.includes('/src/debug/') || normalized.includes('src/debug/')) {
+    return 'debug';
+  }
 
   for (const subsystem of SUBSYSTEMS) {
-    if (subsystem === 'debug' || subsystem === 'core') continue;
-    if (normalized.includes(`/src/${subsystem}/`) || normalized.includes(`src/${subsystem}/`)) return subsystem;
+    if (subsystem === 'debug' || subsystem === 'core') {
+      continue;
+    }
+
+    if (normalized.includes(`/src/${subsystem}/`) || normalized.includes(`src/${subsystem}/`)) {
+      return subsystem;
+    }
   }
 
   return 'core';
@@ -183,6 +215,7 @@ const renderComment = (comment: Comment | undefined): string => {
     .map((part: CommentDisplayPart) => part.text)
     .join('')
     .trim();
+
   return summary;
 };
 
@@ -213,9 +246,13 @@ const tokensToText = (tokens: ApiToken[]): string => tokens.map(token => token.t
 const joinTokenGroups = (groups: ApiToken[][], separator: string): ApiToken[] => {
   const out: ApiToken[] = [];
   groups.forEach((group, index) => {
-    if (index > 0) out.push(punct(separator));
+    if (index > 0) {
+      out.push(punct(separator));
+    }
+
     out.push(...group);
   });
+
   return out;
 };
 
@@ -226,20 +263,29 @@ const joinTokenGroups = (groups: ApiToken[][], separator: string): ApiToken[] =>
  * documented ones into cross-links. Intrinsics/literals are keywords.
  */
 const tokenizeType = (type: SomeType | undefined): ApiToken[] => {
-  if (!type) return [keyword('unknown')];
+  if (!type) {
+    return [keyword('unknown')];
+  }
+
   switch (type.type) {
     case 'intrinsic':
       return [keyword(type.name)];
     case 'reference': {
       const tokens: ApiToken[] = [typeToken(type.name)];
+
       if (type.typeArguments?.length) {
         tokens.push(punct('<'), ...joinTokenGroups(type.typeArguments.map(tokenizeType), ', '), punct('>'));
       }
+
       return tokens;
     }
     case 'union': {
-      if (!type.types?.length) return [keyword('unknown')];
+      if (!type.types?.length) {
+        return [keyword('unknown')];
+      }
+
       const members = sortUnionMembers(type.types.map(tokenizeType), tokensToText);
+
       return joinTokenGroups(members, ' | ');
     }
     case 'intersection':
@@ -257,28 +303,47 @@ const tokenizeType = (type: SomeType | undefined): ApiToken[] => {
       // (EasingFunction, callbacks) and object-shaped type aliases.
       const declaration = type.declaration;
       const signature = declaration?.signatures?.[0];
+
       if (signature) {
         const tokens: ApiToken[] = [punct('(')];
         (signature.parameters ?? []).forEach((parameter: ParameterReflection, index: number) => {
-          if (index > 0) tokens.push(punct(', '));
+          if (index > 0) {
+            tokens.push(punct(', '));
+          }
+
           tokens.push({ text: parameter.name, kind: 'param' });
-          if (parameter.flags?.isOptional) tokens.push(punct('?'));
+
+          if (parameter.flags?.isOptional) {
+            tokens.push(punct('?'));
+          }
+
           tokens.push(punct(': '), ...tokenizeType(parameter.type));
         });
         tokens.push(punct(') => '), ...tokenizeType(signature.type));
+
         return tokens;
       }
+
       if (declaration?.children?.length) {
         const tokens: ApiToken[] = [punct('{ ')];
         declaration.children.forEach((child: DeclarationReflection, index: number) => {
-          if (index > 0) tokens.push(punct('; '));
+          if (index > 0) {
+            tokens.push(punct('; '));
+          }
+
           tokens.push({ text: child.name, kind: 'name' });
-          if (child.flags?.isOptional) tokens.push(punct('?'));
+
+          if (child.flags?.isOptional) {
+            tokens.push(punct('?'));
+          }
+
           tokens.push(punct(': '), ...tokenizeType(child.type ?? child.getSignature?.type));
         });
         tokens.push(punct(' }'));
+
         return tokens;
       }
+
       return [keyword('object')];
     }
     case 'query':
@@ -325,15 +390,27 @@ const extractParams = (signature: SignatureReflection): ExtractedParam[] =>
 /** Tokenized `name(params): Return` for a constructor/method signature. */
 const tokenizeSignature = (name: string, signature: SignatureReflection, optional = false): ApiToken[] => {
   const tokens: ApiToken[] = [name === 'new' ? keyword('new') : { text: name, kind: 'name' }];
-  if (optional) tokens.push(punct('?'));
+
+  if (optional) {
+    tokens.push(punct('?'));
+  }
+
   tokens.push(punct('('));
   (signature.parameters ?? []).forEach((parameter: ParameterReflection, index: number) => {
-    if (index > 0) tokens.push(punct(', '));
+    if (index > 0) {
+      tokens.push(punct(', '));
+    }
+
     tokens.push({ text: parameter.name, kind: 'param' });
-    if (parameter.flags?.isOptional) tokens.push(punct('?'));
+
+    if (parameter.flags?.isOptional) {
+      tokens.push(punct('?'));
+    }
+
     tokens.push(punct(': '), ...tokenizeType(parameter.type));
   });
   tokens.push(punct(')'), punct(': '), ...tokenizeType(signature.type));
+
   return tokens;
 };
 
@@ -355,7 +432,8 @@ const resolvePropertyComment = (member: DeclarationReflection): Comment | undefi
  * Empty for every other shape, which is what separates a namespace-like const
  * from a plain one.
  */
-const objectLiteralMembers = (type: SomeType | undefined): DeclarationReflection[] => (type?.type === 'reflection' ? (type.declaration.children ?? []) : []);
+const objectLiteralMembers = (type: SomeType | undefined): DeclarationReflection[] =>
+  type?.type === 'reflection' ? (type.declaration.children ?? []) : [];
 
 /**
  * A member's JSDoc summary as a single-line description for the row cell.
@@ -365,13 +443,23 @@ const objectLiteralMembers = (type: SomeType | undefined): DeclarationReflection
  */
 const toMemberDescription = (comment: Comment | undefined): string => {
   const raw = renderComment(comment);
-  if (!raw) return '';
+
+  if (!raw) {
+    return '';
+  }
+
   return toSingleLine(raw).replaceAll('`', '');
 };
 
 /** A constructor/method member: structured params + a concrete return type. */
-const buildCallableMember = (name: string, signature: SignatureReflection, fallbackComment: Comment | undefined, optional = false): ApiMember => {
+const buildCallableMember = (
+  name: string,
+  signature: SignatureReflection,
+  fallbackComment: Comment | undefined,
+  optional = false,
+): ApiMember => {
   const tokens = tokenizeSignature(name, signature, optional);
+
   return {
     name,
     signature: tokensToText(tokens),
@@ -385,6 +473,7 @@ const buildCallableMember = (name: string, signature: SignatureReflection, fallb
 /** A property/event member: no params, no return type. Takes the raw type node. */
 const buildValueMember = (name: string, typeNode: SomeType | undefined, comment: Comment | undefined, optional = false): ApiMember => {
   const tokens = tokenizeValue(name, typeNode, optional);
+
   return {
     name,
     signature: tokensToText(tokens),
@@ -418,7 +507,8 @@ const renderClassMembers = (reflection: DeclarationReflection): ReflectionBody =
   // Include both Property (1024) and Accessor (262144 - getter/setter) kinds so
   // TypeScript getters like currentScene, scenes, angle, length appear in docs.
   const properties = children.filter(
-    (child: DeclarationReflection) => !child.name.startsWith('_') && ((child.kind & ReflectionKind.Property) > 0 || (child.kind & 262144) > 0),
+    (child: DeclarationReflection) =>
+      !child.name.startsWith('_') && ((child.kind & ReflectionKind.Property) > 0 || (child.kind & 262144) > 0),
   );
   const events = properties.filter(
     (property: DeclarationReflection) => property.name.startsWith('on') && renderType(resolvePropertyType(property)).startsWith('Signal<'),
@@ -441,10 +531,22 @@ const renderClassMembers = (reflection: DeclarationReflection): ReflectionBody =
   );
 
   const sections: ApiSection[] = [];
-  if (constructorMembers.length > 0) sections.push(toMemberSection('Constructors', constructorMembers));
-  if (methodMembers.length > 0) sections.push(toMemberSection('Methods', methodMembers));
-  if (propertyMembers.length > 0) sections.push(toMemberSection('Properties', propertyMembers));
-  if (eventMembers.length > 0) sections.push(toMemberSection('Events', eventMembers));
+
+  if (constructorMembers.length > 0) {
+    sections.push(toMemberSection('Constructors', constructorMembers));
+  }
+
+  if (methodMembers.length > 0) {
+    sections.push(toMemberSection('Methods', methodMembers));
+  }
+
+  if (propertyMembers.length > 0) {
+    sections.push(toMemberSection('Properties', propertyMembers));
+  }
+
+  if (eventMembers.length > 0) {
+    sections.push(toMemberSection('Events', eventMembers));
+  }
 
   const counts: ApiCounts = {
     constructors: constructorMembers.length,
@@ -477,8 +579,15 @@ const buildObjectSections = (declarationMembers: readonly DeclarationReflection[
     buildValueMember(value.name, value.type ?? value.getSignature?.type, value.comment, Boolean(value.flags?.isOptional)),
   );
   const sections: ApiSection[] = [];
-  if (methodMembers.length > 0) sections.push(toMemberSection('Methods', methodMembers));
-  if (valueMembers.length > 0) sections.push(toMemberSection('Properties', valueMembers));
+
+  if (methodMembers.length > 0) {
+    sections.push(toMemberSection('Methods', methodMembers));
+  }
+
+  if (valueMembers.length > 0) {
+    sections.push(toMemberSection('Properties', valueMembers));
+  }
+
   return {
     sections,
     counts: { constructors: 0, methods: methodMembers.length, properties: valueMembers.length, events: 0 },
@@ -498,6 +607,7 @@ const renderReflectionBody = (reflection: DeclarationReflection): ReflectionBody
       returnType: null,
       description: '',
     }));
+
     return {
       sections: members.length > 0 ? [toMemberSection('Members', members)] : [],
       counts: EMPTY_COUNTS,
@@ -528,6 +638,7 @@ const renderReflectionBody = (reflection: DeclarationReflection): ReflectionBody
       returnType: null,
       description: '',
     };
+
     return {
       sections: [
         {
@@ -550,8 +661,15 @@ const renderReflectionBody = (reflection: DeclarationReflection): ReflectionBody
 const entryPointTitle = (reflection: DeclarationReflection): string => {
   const sourcePath = normalizePath(reflection.sources?.[0]?.fileName ?? '');
   const subsystem = guessSubsystem(sourcePath);
-  if (subsystem === 'debug') return '@codexo/exojs/debug';
-  if (subsystem === 'extensions') return '@codexo/exojs/extensions';
+
+  if (subsystem === 'debug') {
+    return '@codexo/exojs/debug';
+  }
+
+  if (subsystem === 'extensions') {
+    return '@codexo/exojs/extensions';
+  }
+
   return '@codexo/exojs';
 };
 
@@ -570,7 +688,7 @@ const publishOutput = (): void => {
   fs.renameSync(outputDir, finalOutputDir);
 };
 
-const MODIFIER_TAGS: `@${string}`[] = [
+const MODIFIER_TAGS: Array<`@${string}`> = [
   '@stable',
   '@advanced',
   '@override',
@@ -601,14 +719,18 @@ interface EmitOptions {
 const emitReflection = (reflection: DeclarationReflection, usedSlugs: Set<string>, options: EmitOptions): boolean => {
   // Documentable kinds plus object-literal variables (namespaces like
   // MathUtils), which build() routes here explicitly.
-  if (!isDocumentableKind(reflection.kind) && !isVariable(reflection.kind)) return false;
+  if (!isDocumentableKind(reflection.kind) && !isVariable(reflection.kind)) {
+    return false;
+  }
 
   const source = reflection.sources?.[0];
   const sourcePath = source?.fileName ? normalizePath(source.fileName) : undefined;
 
   // Extension packages re-export core types; only document the package's own
   // symbols so core pages are never duplicated under a package surface.
-  if (options.sourceMarker && !(sourcePath ?? '').includes(options.sourceMarker)) return false;
+  if (options.sourceMarker && !(sourcePath ?? '').includes(options.sourceMarker)) {
+    return false;
+  }
 
   const subsystem = options.subsystemOverride ?? guessSubsystem(sourcePath ?? '');
   const importPath = options.importPathOverride ?? entryPointTitle(reflection);
@@ -619,7 +741,9 @@ const emitReflection = (reflection: DeclarationReflection, usedSlugs: Set<string
 
   // Core sources live under <repo>/src; package sources under <repo>/packages/<pkg>/src.
   // Prefer the package-relative form so extension source links resolve correctly.
-  const sourceRelative = sourcePath ? (sourcePath.match(/(?:^|\/)(packages\/[^/]+\/src\/.*)$/)?.[1] ?? sourcePath.match(/(?:^|\/)(src\/.*)$/)?.[1]) : undefined;
+  const sourceRelative = sourcePath
+    ? (sourcePath.match(/(?:^|\/)(packages\/[^/]+\/src\/.*)$/)?.[1] ?? sourcePath.match(/(?:^|\/)(src\/.*)$/)?.[1])
+    : undefined;
   // No `#L<line>` anchor: a line number shifts whenever unrelated code is
   // inserted above the symbol, which flips `docs:api:check` on a pure line
   // shift with zero content change. Link to the file itself instead.
@@ -645,6 +769,7 @@ const emitReflection = (reflection: DeclarationReflection, usedSlugs: Set<string
     ...memberSections,
     ...(constantsSection ? [constantsSection] : []),
   ];
+
   if (sourceUrl && sourceRelative) {
     sections.push({
       id: 'source',
@@ -683,18 +808,22 @@ const finalizeAndWrite = (data: ApiSymbolData, usedSlugs: Set<string>): boolean 
   const baseSlug = slugify(data.symbol);
   let slug = baseSlug;
   let suffix = 2;
+
   while (usedSlugs.has(slug)) {
     slug = `${baseSlug}-${suffix}`;
     suffix += 1;
   }
+
   usedSlugs.add(slug);
 
   const result = apiSymbolSchema.safeParse(data);
+
   if (!result.success) {
     throw new Error(`Generated API data for "${data.symbol}" is invalid:\n${result.error.toString()}`);
   }
 
   fs.writeFileSync(path.resolve(outputDir, `${slug}.json`), `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+
   return true;
 };
 
@@ -706,15 +835,19 @@ const finalizeAndWrite = (data: ApiSymbolData, usedSlugs: Set<string>): boolean 
  */
 const collectSymbols = (project: ProjectReflection): DeclarationReflection[] => {
   const out: DeclarationReflection[] = [];
+
   for (const child of project.children ?? []) {
     if (isDocumentableKind(child.kind)) {
       out.push(child);
     } else if (Array.isArray(child.children)) {
       for (const sub of child.children) {
-        if (isDocumentableKind(sub.kind)) out.push(sub);
+        if (isDocumentableKind(sub.kind)) {
+          out.push(sub);
+        }
       }
     }
   }
+
   return out;
 };
 
@@ -729,15 +862,19 @@ const isNamespace = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Na
  */
 const collectNamespaces = (project: ProjectReflection): DeclarationReflection[] => {
   const out: DeclarationReflection[] = [];
+
   for (const child of project.children ?? []) {
     if (isNamespace(child.kind)) {
       out.push(child);
     } else if (Array.isArray(child.children) && (child.kind & ReflectionKind.Module) > 0) {
       for (const sub of child.children) {
-        if (isNamespace(sub.kind)) out.push(sub);
+        if (isNamespace(sub.kind)) {
+          out.push(sub);
+        }
       }
     }
   }
+
   return out;
 };
 
@@ -749,22 +886,30 @@ const buildConstantsSection = (namespaceReflection: DeclarationReflection): ApiS
   const members: ApiMember[] = (namespaceReflection.children ?? [])
     .filter((child: DeclarationReflection) => !child.name.startsWith('_'))
     .map((child: DeclarationReflection) => buildValueMember(child.name, child.type ?? child.getSignature?.type, child.comment));
-  if (members.length === 0) return null;
+
+  if (members.length === 0) {
+    return null;
+  }
+
   return { id: 'constants', title: 'Constants', members, paragraphs: [], importLine: null, sourceLink: null };
 };
 
 /** Collect top-level free function + variable reflections (flattened). */
 const collectExtras = (project: ProjectReflection): DeclarationReflection[] => {
   const out: DeclarationReflection[] = [];
+
   for (const child of project.children ?? []) {
     if (isFunction(child.kind) || isVariable(child.kind)) {
       out.push(child);
     } else if (Array.isArray(child.children) && (child.kind & ReflectionKind.Module) > 0) {
       for (const sub of child.children) {
-        if (isFunction(sub.kind) || isVariable(sub.kind)) out.push(sub);
+        if (isFunction(sub.kind) || isVariable(sub.kind)) {
+          out.push(sub);
+        }
       }
     }
   }
+
   return out;
 };
 
@@ -781,10 +926,14 @@ const emitFunctionsPage = (
   pageSymbol: string,
   usedSlugs: Set<string>,
 ): boolean => {
-  if (functions.length === 0 && simpleVars.length === 0) return false;
+  if (functions.length === 0 && simpleVars.length === 0) {
+    return false;
+  }
 
   const functionMembers = functions
-    .flatMap((fn: DeclarationReflection) => (fn.signatures ?? []).map((signature: SignatureReflection) => buildCallableMember(fn.name, signature, fn.comment)))
+    .flatMap((fn: DeclarationReflection) =>
+      (fn.signatures ?? []).map((signature: SignatureReflection) => buildCallableMember(fn.name, signature, fn.comment)),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
   const constMembers = simpleVars
     .map((v: DeclarationReflection) => buildValueMember(v.name, v.type ?? v.getSignature?.type, v.comment))
@@ -802,8 +951,14 @@ const emitFunctionsPage = (
       sourceLink: null,
     },
   ];
-  if (functionMembers.length > 0) sections.push(toMemberSection('Functions', functionMembers));
-  if (constMembers.length > 0) sections.push(toMemberSection('Constants', constMembers));
+
+  if (functionMembers.length > 0) {
+    sections.push(toMemberSection('Functions', functionMembers));
+  }
+
+  if (constMembers.length > 0) {
+    sections.push(toMemberSection('Constants', constMembers));
+  }
 
   const data: ApiSymbolData = {
     title: pageSymbol === 'Functions' ? 'Functions & Constants' : pageSymbol,
@@ -817,6 +972,7 @@ const emitFunctionsPage = (
     counts: { constructors: 0, methods: functionMembers.length, properties: constMembers.length, events: 0 },
     sections,
   };
+
   return finalizeAndWrite(data, usedSlugs);
 };
 
@@ -835,9 +991,11 @@ const convertEntryPoints = async (entryPoints: readonly string[], tsconfig: stri
   });
 
   const project = await app.convert();
+
   if (!project) {
     throw new Error(`TypeDoc conversion failed for ${entryPoints.join(', ')}.`);
   }
+
   return project;
 };
 
@@ -847,12 +1005,17 @@ const build = async (): Promise<void> => {
 
   // 1. Core (+ debug and extensions subpaths).
   const coreProject = await convertEntryPoints(['src/index.ts', 'src/debug/index.ts', 'src/extensions/index.ts'], 'tsconfig.json');
-  const coreNamespaces = new Map<string, DeclarationReflection>(collectNamespaces(coreProject).map((ns: DeclarationReflection) => [ns.name, ns]));
+  const coreNamespaces = new Map<string, DeclarationReflection>(
+    collectNamespaces(coreProject).map((ns: DeclarationReflection) => [ns.name, ns]),
+  );
   let coreCount = 0;
   const coreDocumentable = collectSymbols(coreProject);
   const coreNames = new Set<string>(coreDocumentable.map((r: DeclarationReflection) => r.name));
+
   for (const reflection of coreDocumentable) {
-    if (emitReflection(reflection, usedSlugs, { mergeNamespace: coreNamespaces.get(reflection.name) })) coreCount += 1;
+    if (emitReflection(reflection, usedSlugs, { mergeNamespace: coreNamespaces.get(reflection.name) })) {
+      coreCount += 1;
+    }
   }
 
   // Free functions, object-literal namespaces (MathUtils, ...) and simple
@@ -862,23 +1025,31 @@ const build = async (): Promise<void> => {
   const coreObjectVars = coreExtras.filter((e: DeclarationReflection) => isVariable(e.kind) && objectLiteralMembers(e.type).length > 0);
   const coreSimpleVars = coreExtras.filter((e: DeclarationReflection) => isVariable(e.kind) && objectLiteralMembers(e.type).length === 0);
   const coreFunctions = coreExtras.filter((e: DeclarationReflection) => isFunction(e.kind));
+
   for (const objectVar of coreObjectVars) {
-    if (emitReflection(objectVar, usedSlugs, {})) coreCount += 1;
+    if (emitReflection(objectVar, usedSlugs, {})) {
+      coreCount += 1;
+    }
   }
-  if (emitFunctionsPage(coreFunctions, coreSimpleVars, '@codexo/exojs', 'core', 'Functions', usedSlugs)) coreCount += 1;
+
+  if (emitFunctionsPage(coreFunctions, coreSimpleVars, '@codexo/exojs', 'core', 'Functions', usedSlugs)) {
+    coreCount += 1;
+  }
 
   if (coreCount === 0) {
     throw new Error('TypeDoc conversion produced no exportable core symbols.');
   }
 
   // 2. Official extension packages - each as its own discoverable surface.
-  const packageCounts: { importPath: string; count: number }[] = [];
+  const packageCounts: Array<{ importPath: string; count: number }> = [];
+
   for (const pkg of EXTENSION_PACKAGES) {
     const project = await convertEntryPoints([pkg.entryPoint], pkg.tsconfig);
     const namespaces = new Map<string, DeclarationReflection>(collectNamespaces(project).map((ns: DeclarationReflection) => [ns.name, ns]));
     let count = 0;
     const documentable = collectSymbols(project);
     const names = new Set<string>(documentable.map((r: DeclarationReflection) => r.name));
+
     for (const reflection of documentable) {
       if (
         emitReflection(reflection, usedSlugs, {
@@ -900,15 +1071,23 @@ const build = async (): Promise<void> => {
     const objectVars = ownExtras.filter((e: DeclarationReflection) => isVariable(e.kind) && objectLiteralMembers(e.type).length > 0);
     const simpleVars = ownExtras.filter((e: DeclarationReflection) => isVariable(e.kind) && objectLiteralMembers(e.type).length === 0);
     const functions = ownExtras.filter((e: DeclarationReflection) => isFunction(e.kind));
+
     for (const objectVar of objectVars) {
-      if (emitReflection(objectVar, usedSlugs, { importPathOverride: pkg.importPath, subsystemOverride: pkg.subsystem })) count += 1;
+      if (emitReflection(objectVar, usedSlugs, { importPathOverride: pkg.importPath, subsystemOverride: pkg.subsystem })) {
+        count += 1;
+      }
     }
+
     const pageSymbol = `${pkg.subsystem[0].toUpperCase()}${pkg.subsystem.slice(1)} Functions`;
-    if (emitFunctionsPage(functions, simpleVars, pkg.importPath, pkg.subsystem, pageSymbol, usedSlugs)) count += 1;
+
+    if (emitFunctionsPage(functions, simpleVars, pkg.importPath, pkg.subsystem, pageSymbol, usedSlugs)) {
+      count += 1;
+    }
 
     if (count === 0) {
       throw new Error(`TypeDoc conversion produced no own symbols for ${pkg.importPath}.`);
     }
+
     packageCounts.push({ importPath: pkg.importPath, count });
   }
 

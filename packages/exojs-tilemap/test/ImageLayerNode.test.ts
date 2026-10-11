@@ -6,8 +6,8 @@ import { ImageLayerNode } from '../src/ImageLayerNode';
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-const fakeTexture = (width = 64, height = 64): Texture => {
-  return {
+const fakeTexture = (width = 64, height = 64): Texture =>
+  ({
     width,
     height,
     flipY: false,
@@ -15,17 +15,15 @@ const fakeTexture = (width = 64, height = 64): Texture => {
     label: 'test',
     destroy: vi.fn(),
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer => {
-  return new ImageLayer({
+const makeLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer =>
+  new ImageLayer({
     id: opts.id ?? 1,
     image: opts.image ?? 'bg.png',
     texture: opts.texture === undefined ? fakeTexture() : opts.texture,
     ...opts,
   });
-};
 
 /**
  * A minimal stand-in for `RenderPlanBuilder`, mirroring exactly what
@@ -67,9 +65,7 @@ const collect = (node: ImageLayerNode, builder: unknown): void => {
   (node as unknown as { _collectContent(b: unknown): void })._collectContent(builder);
 };
 
-const spriteOf = (node: ImageLayerNode): RepeatingSprite => {
-  return node.children[0] as RepeatingSprite;
-};
+const spriteOf = (node: ImageLayerNode): RepeatingSprite => node.children[0] as RepeatingSprite;
 
 // ═══════════════════════════════════════════════════════════════════════
 // ImageLayerNode - construction
