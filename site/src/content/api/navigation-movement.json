@@ -1,0 +1,192 @@
+{
+  "title": "NavigationMovement",
+  "description": "What a NavigationAgentComponent needs from whatever moves its actor: the agent decides where to go next, the movement decides how the motion happens - through a physics world, by writing a node position, or anything else. While navigating, the agent calls move once in every fixed step it runs in, and stop once when it stops steering: on arrival, when the destination turns out unreachable, on NavigationAgentComponent.stop and when the agent is disabled. A step in which the agent calls neither means the agent has nothing to ask for. Directions are in the navigation space's coordinates, the same space the agent's position is read in. A movement working in another space - a projected display, say - converts at its own boundary. `KinematicMovementComponent` from `@codexo/exojs-physics` satisfies this contract as it is.",
+  "symbol": "NavigationMovement",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a NavigationAgentComponent needs from whatever moves its actor: the agent decides where to go next, the movement decides how the motion happens - through a physics world, by writing a node position, or anything else.",
+        "While navigating, the agent calls move once in every fixed step it runs in, and stop once when it stops steering: on arrival, when the destination turns out unreachable, on NavigationAgentComponent.stop and when the agent is disabled. A step in which the agent calls neither means the agent has nothing to ask for.",
+        "Directions are in the navigation space's coordinates, the same space the agent's position is read in. A movement working in another space - a projected display, say - converts at its own boundary.",
+        "`KinematicMovementComponent` from `@codexo/exojs-physics` satisfies this contract as it is."
+      ],
+      "importLine": "import { NavigationMovement } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "move",
+          "signature": "move(direction: Readonly<PointLike>, step: Seconds): void",
+          "signatureTokens": [
+            {
+              "text": "move",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "direction",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "step",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "direction",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            },
+            {
+              "name": "step",
+              "type": "Seconds",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Requests motion for the fixed step step that is being processed: direction has a length of at most 1, which scales maxSpeed. Called from the agent's fixed update, so the motion can still be applied within the same step."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(): void",
+          "signatureTokens": [
+            {
+              "text": "stop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Ends the motion: the actor should come to rest."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "maxSpeed",
+          "signature": "maxSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "maxSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance per second that a direction of length 1 covers. The agent reads it every step to slow down onto its destination instead of overshooting it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/navigation/NavigationMovement.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationMovement.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/navigation/NavigationMovement.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationMovement.ts"
+}

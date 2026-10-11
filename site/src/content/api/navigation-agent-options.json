@@ -1,0 +1,241 @@
+{
+  "title": "NavigationAgentOptions",
+  "description": "Construction options for NavigationAgentComponent.",
+  "symbol": "NavigationAgentOptions",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for NavigationAgentComponent."
+      ],
+      "importLine": "import { NavigationAgentOptions } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "arrivalDistance",
+          "signature": "arrivalDistance?: number",
+          "signatureTokens": [
+            {
+              "text": "arrivalDistance",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance from the destination, in navigation units, at which the agent counts as arrived. Raise it when the actor cannot reach the destination point itself - a body stopped by the target's own collider, a destination closer to a wall than the actor's radius. Defaults to 0: the agent steers onto the destination exactly."
+        },
+        {
+          "name": "movement",
+          "signature": "movement: NavigationMovement",
+          "signatureTokens": [
+            {
+              "text": "movement",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationMovement",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Carries out the motion the agent asks for."
+        },
+        {
+          "name": "pathfinder",
+          "signature": "pathfinder?: Pathfinder",
+          "signatureTokens": [
+            {
+              "text": "pathfinder",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pathfinder",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Runs the searches. Defaults to one pathfinder shared by every agent that does not name its own: searches never interleave, so sharing only saves the per-pathfinder buffers."
+        },
+        {
+          "name": "position",
+          "signature": "position?: Readonly<PointLike>",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The agent's live position in navigation space, read every fixed step - a physics body, a vector the game keeps up to date, or an object with x/y getters that convert from another space. Defaults to the node's own x/y, which only matches navigation space for a node whose parent applies no transform and whose position is not a projection."
+        },
+        {
+          "name": "repathInterval",
+          "signature": "repathInterval?: Seconds",
+          "signatureTokens": [
+            {
+              "text": "repathInterval",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shortest time between two searches the agent starts on its own - for a followed target changing node, a space revision, the end of a partial route or missing progress. It also sets how long the agent watches for progress before it decides it is stuck. A new command searches at once. Defaults to a quarter second."
+        },
+        {
+          "name": "search",
+          "signature": "search?: FindPathOptions",
+          "signatureTokens": [
+            {
+              "text": "search",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FindPathOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Search options for every route the agent plans."
+        },
+        {
+          "name": "space",
+          "signature": "space: NavigationSpace<Payload>",
+          "signatureTokens": [
+            {
+              "text": "space",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationSpace",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The space routes are searched in. Any NavigationSpace works."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts"
+}
