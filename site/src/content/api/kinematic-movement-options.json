@@ -1,0 +1,71 @@
+{
+  "title": "KinematicMovementOptions",
+  "description": "Construction options for KinematicMovementComponent.",
+  "symbol": "KinematicMovementOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for KinematicMovementComponent."
+      ],
+      "importLine": "import { KinematicMovementOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "maxSpeed",
+          "signature": "maxSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "maxSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Speed in world units per second that a direction of length 1 moves at."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/KinematicMovementComponent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/KinematicMovementComponent.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/KinematicMovementComponent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/KinematicMovementComponent.ts"
+}

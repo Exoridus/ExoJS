@@ -60,6 +60,40 @@ physics.body.applyImpulse(0, -300);
 
 Component-managed bodies do not support joints yet. `world.remove(body)` takes any body out of the simulation without destroying it; `world.add(body)` puts it back.
 
+## Collision-aware movement
+
+`KinematicMovementComponent` moves a kinematic body in a requested direction without passing through colliders: the motion stops at the first obstacle and slides along it. Issue a command every fixed step, from gameplay input or a navigation agent; a step without one leaves the body at rest.
+
+```ts
+import { BehaviorComponent, Container, Scene, SystemOrder } from '@codexo/exojs';
+import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
+
+class Drift extends BehaviorComponent {
+  public constructor(private readonly movement: KinematicMovementComponent) {
+    super();
+  }
+
+  public override fixedUpdate(): void {
+    this.movement.move({ x: 1, y: 0.25 });
+  }
+}
+
+export class RoomScene extends Scene {
+  override init(): void {
+    const world = new PhysicsWorld();
+    const hero = new Container();
+    const physics = hero.addComponent(new PhysicsBodyComponent(world, { type: 'kinematic', colliders: [{ shape: new CircleShape(16) }] }));
+    const movement = hero.addComponent(new KinematicMovementComponent(physics, { maxSpeed: 240 }));
+
+    this.systems.add(world, { order: SystemOrder.Physics });
+    hero.addComponent(new Drift(movement));
+    this.addChild(hero);
+  }
+}
+```
+
+The movement resolves each command with `world.shapeCast`, an exact translation-only sweep that is also public: it returns the first collider a shape meets along a displacement, its distance and surface normal, and reports a starting overlap explicitly instead of as a hit.
+
 ## Important boundaries
 
 Choose one stepping clock. A world registered in `scene.systems` is stepped by the host; do not also call `step()`. An independently hosted world can use `step(frameDeltaSeconds)` and its own accumulator.
@@ -72,7 +106,7 @@ For tilemap collision, use [`@codexo/exojs-tilemap-physics`](https://github.com/
 
 ## Documentation
 
-[Physics guide](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/) · [Joints and contact behavior](https://exoridus.github.io/ExoJS/en/guide/physics/joints-and-dynamics/) · [PhysicsWorld API](https://exoridus.github.io/ExoJS/en/api/physics-world/) · [Drag and Throw playground](https://exoridus.github.io/ExoJS/en/playground/?example=physics/sprite-follows-body)
+[Physics guide](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/) · [Joints and contact behavior](https://exoridus.github.io/ExoJS/en/guide/physics/joints-and-dynamics/) · [PhysicsWorld API](https://exoridus.github.io/ExoJS/en/api/physics-world/) · [Drag and Throw playground](https://exoridus.github.io/ExoJS/en/playground/?example=physics/sprite-follows-body) · [Kinematic Movement playground](https://exoridus.github.io/ExoJS/en/playground/?example=physics/kinematic-movement)
 
 ## License
 

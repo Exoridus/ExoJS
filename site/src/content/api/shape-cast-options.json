@@ -1,0 +1,230 @@
+{
+  "title": "ShapeCastOptions",
+  "description": "Options for PhysicsWorld.shapeCast.",
+  "symbol": "ShapeCastOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for PhysicsWorld.shapeCast."
+      ],
+      "importLine": "import { ShapeCastOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "angle",
+          "signature": "angle?: number",
+          "signatureTokens": [
+            {
+              "text": "angle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rotation of the cast shape in radians. It stays fixed for the whole motion. Default 0."
+        },
+        {
+          "name": "exclude",
+          "signature": "exclude?: readonly Collider | PhysicsBody[]",
+          "signatureTokens": [
+            {
+              "text": "exclude",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bodies and colliders the cast passes through - typically the body whose shape is being cast. A body excludes every collider it holds."
+        },
+        {
+          "name": "filter",
+          "signature": "filter?: Partial<{ category: number; group: number; mask: number }>",
+          "signatureTokens": [
+            {
+              "text": "filter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which colliders the cast can hit, matched like a collider's own filter. Omitting it hits everything."
+        },
+        {
+          "name": "includeSensors",
+          "signature": "includeSensors?: boolean",
+          "signatureTokens": [
+            {
+              "text": "includeSensors",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Let sensor colliders stop the cast. Default false: sensors never block motion."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/query/QueryEngine.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/query/QueryEngine.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/query/QueryEngine.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/query/QueryEngine.ts"
+}

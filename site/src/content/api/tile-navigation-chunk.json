@@ -1,0 +1,71 @@
+{
+  "title": "TileNavigationChunk",
+  "description": "The part of a tile chunk TileNavigationSpace reads: whether it changed.",
+  "symbol": "TileNavigationChunk",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The part of a tile chunk TileNavigationSpace reads: whether it changed."
+      ],
+      "importLine": "import { TileNavigationChunk } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Increments whenever a cell of the chunk changes."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts"
+}

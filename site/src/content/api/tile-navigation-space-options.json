@@ -1,0 +1,181 @@
+{
+  "title": "TileNavigationSpaceOptions",
+  "description": "Construction options for TileNavigationSpace.",
+  "symbol": "TileNavigationSpaceOptions",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for TileNavigationSpace."
+      ],
+      "importLine": "import { TileNavigationSpaceOptions } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cost",
+          "signature": "cost: (tile: Tile | null, x: number, y: number) => number",
+          "signatureTokens": [
+            {
+              "text": "cost",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tile",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tile",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The traversal policy: the cost of entering a cell holding tile, null for an empty or unloaded cell. 0 - or anything not finite and positive - blocks the cell, 1 is ordinary ground and larger values are terrain routes avoid when a cheaper way exists. Called for every cell at construction and for the cells of every chunk that changed afterwards, so it must depend on nothing but its arguments and data that changes with the source's revision."
+        },
+        {
+          "name": "diagonals",
+          "signature": "diagonals?: DiagonalPolicy",
+          "signatureTokens": [
+            {
+              "text": "diagonals",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DiagonalPolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Defaults to 'no-corner-cutting'; see DiagonalPolicy."
+        },
+        {
+          "name": "window",
+          "signature": "window?: TileNavigationWindow",
+          "signatureTokens": [
+            {
+              "text": "window",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileNavigationWindow",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The cells to navigate. Required for an unbounded source, which has no extent to default to; for a bounded one it defaults to the whole source and must lie inside it. Everything outside the window is blocked."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts"
+}
