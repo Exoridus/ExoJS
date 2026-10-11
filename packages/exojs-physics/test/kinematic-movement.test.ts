@@ -154,6 +154,34 @@ describe('KinematicMovementComponent', () => {
     expect(body.linearVelocityX).toBeCloseTo(0, 6);
   });
 
+  it('does not pass through a wall it starts flush against', async () => {
+    const { app, errors } = createAppStub();
+    const director = new SceneDirector(app, { world: WorldScene, other: OtherScene });
+
+    await director.change(WorldScene);
+
+    const scene = director.currentScene as WorldScene;
+    const node = new Container();
+    const physics = node.addComponent(
+      new PhysicsBodyComponent(scene.world, { type: 'kinematic', position: { x: 90, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }),
+    );
+    const movement = node.addComponent(new KinematicMovementComponent(physics, { maxSpeed: 2400 }));
+
+    colliderAt(scene.world, new BoxShape(4, 400), { x: 102, y: 0 });
+    scene.addChild(node);
+    node.addComponent(new Steer(movement));
+
+    for (let i = 0; i < 10; i++) {
+      director._beginFrame();
+      director.fixedUpdate(STEP);
+      director._endFrame();
+      expect(physics.body.x).toBeLessThanOrEqual(90);
+    }
+
+    expect(movement.blocked).toBe(true);
+    expect(errors).toEqual([]);
+  });
+
   it('slides along a wall it is pushed into at an angle', async () => {
     const { world, node, movement, body, frame } = await setup({ x: 89, y: 0 });
 

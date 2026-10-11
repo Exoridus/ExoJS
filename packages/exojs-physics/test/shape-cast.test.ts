@@ -135,6 +135,21 @@ describe('PhysicsWorld.shapeCast', () => {
     expect(world.shapeCast(shape, from, { x: 0, y: 50 })).toBeNull();
   });
 
+  it.each(movers)('blocks a %s that starts exactly touching the obstacle', (_name, shape, halfWidth) => {
+    const world = new PhysicsWorld();
+    const wall = wallAt100(world);
+    const from = { x: 100 - halfWidth, y: 0 };
+    const into = world.shapeCast(shape(), from, { x: 50, y: 0 });
+
+    expect(into!.collider).toBe(wall);
+    expect(into!.initialOverlap).toBe(true);
+    expect(into!.fraction).toBe(0);
+    expect(into!.penetration).toBeCloseTo(0, 6);
+    expect(into!.normal.x).toBeCloseTo(-1, 6);
+    expect(world.shapeCast(shape(), from, { x: 0, y: 50 })).toBeNull();
+    expect(world.shapeCast(shape(), from, { x: -50, y: 0 })).toBeNull();
+  });
+
   it('treats a zero displacement as an overlap test', () => {
     const world = new PhysicsWorld();
     const wall = wallAt100(world);

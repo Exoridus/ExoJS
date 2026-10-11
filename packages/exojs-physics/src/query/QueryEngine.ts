@@ -66,10 +66,10 @@ export interface ShapeCastHit {
   /** Unit surface normal at the contact, pointing from the obstacle back toward the cast shape. */
   normal: { x: number; y: number };
   /**
-   * `true` when the shape already overlapped the collider at its start
+   * `true` when the shape already overlapped or touched the collider at its start
    * position. `fraction` and `distance` are then `0`, `normal` is the direction
    * that separates the shape from the collider, and {@link penetration} says
-   * how deep the overlap is.
+   * how deep the overlap is (`0` for a touch).
    */
   initialOverlap: boolean;
   /** Overlap depth at the start position; `0` unless {@link initialOverlap}. */
@@ -109,6 +109,13 @@ export const createCastState = (): CastState => ({
 
 const noCastOptions: ShapeCastOptions = Object.freeze({});
 
+/**
+ * How far along the motion a cast looks for a contact its start pose only
+ * touches. Far below any tolerance the solver uses, far above the rounding of
+ * world coordinates.
+ */
+const touchProbe = 1e-6;
+
 const createCastProxy = (): CastProxy => ({
   shape: null as unknown as SolverShape,
   worldCenter: { x: 0, y: 0 },
@@ -141,6 +148,7 @@ export class QueryEngine {
   private readonly _castEnd: CastProxy = createCastProxy();
   private readonly _castBounds: AabbLike = createAabb();
   private readonly _castShifted: CastProxy = createCastProxy();
+  private readonly _castNudged: CastProxy = createCastProxy();
   private readonly _castShiftedBounds: AabbLike = createAabb();
   private readonly _castCandidates: Collider[] = [];
   private readonly _castSweep: SweepHit = { t: 0, normalX: 0, normalY: 0 };
@@ -524,10 +532,13 @@ export class QueryEngine {
     const moving = dx !== 0 || dy !== 0;
     const end = this._castEnd;
     const sweep = this._castSweep;
-    const manifold = this._castManifold;
+
+    const length = Math.hypot(dx, dy);
+    const nudged = this._castNudged;
 
     if (moving) {
       translateProxy(start, dx, dy, end);
+      translateProxy(start, (dx / length) * touchProbe, (dy / length) * touchProbe, nudged);
     }
 
     state.target = null;
@@ -546,17 +557,7 @@ export class QueryEngine {
         continue;
       }
 
-      if (aabbOverlap(bounds, candidate.aabb) && collide(start, candidate, manifold)) {
-        // The manifold normal points from the cast shape into the target, so
-        // its negation is the direction that leads out of the overlap.
-        const normalX = -manifold.normalX;
-        const normalY = -manifold.normalY;
-
-        if (moving && dx * normalX + dy * normalY >= 0) {
-          continue;
-        }
-
-        recordOverlap(state, target, manifold, normalX, normalY);
+      if (aabbOverlap(bounds, candidate.aabb) && this._startContact(start, nudged, candidate, target, moving, dx, dy, state)) {
         continue;
       }
 
@@ -569,6 +570,47 @@ export class QueryEngine {
     }
 
     return state.target !== null;
+  }
+
+  /**
+   * Decides a candidate the cast starts out overlapping or touching: records
+   * it when the motion does not lead out of it and returns `true`, so the
+   * sweep skips it either way. Returns `false` for a candidate the start pose
+   * is clear of.
+   */
+  private _startContact(
+    start: CollisionProxy,
+    nudged: CollisionProxy,
+    candidate: Collider,
+    target: Collider,
+    moving: boolean,
+    dx: number,
+    dy: number,
+    state: CastState,
+  ): boolean {
+    const manifold = this._castManifold;
+    let penetration = 0;
+
+    if (collide(start, candidate, manifold)) {
+      penetration = deepestPenetration(manifold);
+    } else if (!moving || !collide(nudged, candidate, manifold)) {
+      // Exactly touching is neither an overlap to the narrow phase nor an
+      // entry to the sweep, so a shape resting flush against a wall would pass
+      // through it. A contact that appears a hair further along the motion is
+      // that touch.
+      return false;
+    }
+
+    // The manifold normal points from the cast shape into the target, so its
+    // negation is the direction that leads out of the contact.
+    const normalX = -manifold.normalX;
+    const normalY = -manifold.normalY;
+
+    if (!moving || dx * normalX + dy * normalY < 0) {
+      recordOverlap(state, target, penetration, normalX, normalY);
+    }
+
+    return true;
   }
 }
 
@@ -1082,11 +1124,14 @@ const castIgnores = (
   (filter !== null && !shouldCollide(filter, target.filter)) ||
   (exclude !== null && (exclude.includes(target) || exclude.includes(target.body)));
 
-/** Keeps the deepest starting overlap a cast has met so far. */
-const recordOverlap = (state: CastState, target: Collider, manifold: Manifold, normalX: number, normalY: number): void => {
+const deepestPenetration = (manifold: Manifold): number => {
   const first = manifold.points[0].penetration;
-  const penetration = manifold.pointCount > 1 ? Math.max(first, manifold.points[1].penetration) : first;
 
+  return manifold.pointCount > 1 ? Math.max(first, manifold.points[1].penetration) : first;
+};
+
+/** Keeps the deepest starting overlap a cast has met so far. */
+const recordOverlap = (state: CastState, target: Collider, penetration: number, normalX: number, normalY: number): void => {
   if (state.initialOverlap && penetration <= state.penetration) {
     return;
   }

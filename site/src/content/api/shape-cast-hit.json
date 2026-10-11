@@ -131,7 +131,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true when the shape already overlapped the collider at its start position. fraction and distance are then 0, normal is the direction that separates the shape from the collider, and penetration says how deep the overlap is."
+          "description": "true when the shape already overlapped or touched the collider at its start position. fraction and distance are then 0, normal is the direction that separates the shape from the collider, and penetration says how deep the overlap is (0 for a touch)."
         },
         {
           "name": "normal",

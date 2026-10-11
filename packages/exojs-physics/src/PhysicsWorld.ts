@@ -1112,7 +1112,7 @@ export class PhysicsWorld implements BodyOwner {
    * placement. Sensors block only with {@link ShapeCastOptions.includeSensors}.
    * Chains stay one-sided: a shape crossing a chain from its back face passes.
    *
-   * A collider the shape already overlaps at `position` is reported with
+   * A collider the shape already overlaps or touches at `position` is reported with
    * {@link ShapeCastHit.initialOverlap} set and fraction `0` - but only when the
    * displacement does not lead out of it, so a shape resting against a wall
    * can still cast along it or away from it. With a zero displacement the cast
