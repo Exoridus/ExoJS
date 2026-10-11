@@ -221,8 +221,8 @@ export class TileChunkNode extends Drawable {
 
     for (const tileset of this._tilesets) {
       left = Math.min(left, baseLeft + tileset.offsetX);
-      top = Math.min(top, baseTop + this._tileHeight - tileset.tileHeight + tileset.offsetY);
-      right = Math.max(right, baseRight + tileset.tileWidth - this._tileWidth + tileset.offsetX);
+      top = Math.min(top, baseTop + projection._cellHeight - tileset.tileHeight + tileset.offsetY);
+      right = Math.max(right, baseRight + tileset.tileWidth - projection._cellWidth + tileset.offsetX);
       bottom = Math.max(bottom, baseBottom + tileset.offsetY);
     }
 

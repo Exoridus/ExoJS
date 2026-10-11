@@ -145,4 +145,45 @@ describe('staggered and hexagonal rendering', () => {
 
     expect(() => buildTileCollisionGeometry(layer)).toThrow(/hexagonal.*rectangular logical cells/);
   });
+
+  for (const [name, options] of [
+    ['staggered y odd', { orientation: 'staggered', tileWidth: 65, tileHeight: 33 }],
+    ['staggered y even', { orientation: 'staggered', tileWidth: 65, tileHeight: 33, staggerIndex: 'even' }],
+    ['staggered x odd', { orientation: 'staggered', tileWidth: 65, tileHeight: 33, staggerAxis: 'x' }],
+    ['staggered x even', { orientation: 'staggered', tileWidth: 65, tileHeight: 33, staggerAxis: 'x', staggerIndex: 'even' }],
+    ['hexagonal y', { orientation: 'hexagonal', tileWidth: 29, tileHeight: 33, hexSideLength: 16 }],
+    ['hexagonal x', { orientation: 'hexagonal', tileWidth: 33, tileHeight: 29, hexSideLength: 16, staggerAxis: 'x' }],
+  ] as const) {
+    it(`${name}: sits odd-sized artwork on the even cell Tiled draws, inside the node bounds`, () => {
+      const art = tileset('art', options.tileWidth, options.tileHeight);
+      const layer = layerWith(options, [art]);
+      const projection = layer.projection;
+
+      for (let ty = -1; ty < 3; ty++) {
+        for (let tx = -1; tx < 3; tx++) {
+          layer.setTileAt(tx, ty, { tileset: art, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+        }
+      }
+
+      const node = new TileLayerNode(layer);
+
+      for (const chunk of node.chunkNodes) {
+        const bounds = chunk.getLocalBounds();
+
+        for (const quad of chunk.pages.flatMap(page => page.quads)) {
+          // Tiled rounds the cell to even pixels and bottom-aligns artwork on that cell.
+          const cell = projection.pixelToTile(quad.x0 + (options.tileWidth & ~1) / 2, quad.y1 - (options.tileHeight & ~1) / 2);
+          const corner = projection.tileToPixel(cell.tx, cell.ty);
+
+          expect([quad.x0, quad.y1]).toEqual([corner.x, corner.y + (options.tileHeight & ~1)]);
+          expect(bounds.left).toBeLessThanOrEqual(quad.x0);
+          expect(bounds.top).toBeLessThanOrEqual(quad.y0);
+          expect(bounds.right).toBeGreaterThanOrEqual(quad.x1);
+          expect(bounds.bottom).toBeGreaterThanOrEqual(quad.y1);
+        }
+      }
+
+      node.destroy();
+    });
+  }
 });

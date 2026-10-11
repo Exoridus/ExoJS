@@ -143,6 +143,21 @@ export class TileProjection {
   }
 
   /**
+   * Width of the box a cell's artwork is aligned in. Staggered and hexagonal
+   * grids round it down to even pixels as Tiled does; other grids use
+   * {@link tileWidth}.
+   * @internal
+   */
+  public get _cellWidth(): number {
+    return this._stagger === null ? this.tileWidth : this.tileWidth & ~1;
+  }
+
+  /** Height counterpart of {@link _cellWidth}. @internal */
+  public get _cellHeight(): number {
+    return this._stagger === null ? this.tileHeight : this.tileHeight & ~1;
+  }
+
+  /**
    * Draw-order band of a cell on a staggered or hexagonal grid: cells draw
    * band by band, so artwork overhanging a neighbour stacks as in Tiled. Rows
    * are bands when rows are staggered; when columns are, each row splits into

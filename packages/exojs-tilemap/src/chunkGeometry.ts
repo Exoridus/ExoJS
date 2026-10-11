@@ -248,6 +248,8 @@ export const buildChunkPages = (
   const staggered = projection?.staggered === true;
   const ordered = isometric || staggered || hasImageCollection(tilesets);
   const cells = cellOrder(chunk.width, chunk.height, projection, band, firstTileX, firstTileY);
+  // Artwork bottom-aligns on the cell box, which staggered and hexagonal grids round to even pixels.
+  const cellHeight = projection?._cellHeight ?? tileHeight;
 
   for (let i = 0; i < cells.length; i += 2) {
     const lx = cells[i]!;
@@ -295,7 +297,7 @@ export const buildChunkPages = (
     }
 
     const x0 = cellX + tileset.offsetX;
-    const y0 = cellY + tileHeight - rect.height + tileset.offsetY;
+    const y0 = cellY + cellHeight - rect.height + tileset.offsetY;
     const x1 = x0 + rect.width;
     const y1 = y0 + rect.height;
 
