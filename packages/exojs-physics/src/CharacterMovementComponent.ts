@@ -6,12 +6,9 @@ import {
   createSlideResult,
   isCastable,
   type KinematicMovementComponent,
-  type MovementDriver,
-  type SlideConstraint,
   type SlideResult,
 } from './KinematicMovementComponent';
 import type { PhysicsBody } from './PhysicsBody';
-import type { ContactVisitor } from './query/QueryEngine';
 
 /** Construction options for {@link CharacterMovementComponent}. */
 export interface CharacterMovementOptions {
@@ -44,6 +41,11 @@ const supportProbe = 0.2;
 /** Shortest motion worth casting; anything below is rounding. */
 const negligible = 1e-6;
 
+// The component also acts as the movement driver, slide constraint and contact
+// visitor. Those roles are internal interfaces, so the class does not name them:
+// an `implements` clause would leak them into the published declarations. They
+// are still checked structurally where the component is handed to the movement
+// and the query engine.
 /**
  * Moves a character over surfaces: walking along the ground, falling under
  * gravity, launching into the air, climbing walkable slopes and small steps,
@@ -99,7 +101,7 @@ const negligible = 1e-6;
  * }
  * ```
  */
-export class CharacterMovementComponent extends Component implements MovementDriver, SlideConstraint, ContactVisitor {
+export class CharacterMovementComponent extends Component {
   /** The movement this component drives. */
   public readonly movement: KinematicMovementComponent;
 
