@@ -24,9 +24,11 @@ import type { PointLike, Seconds } from '@codexo/exojs';
  * class NodeMovement implements NavigationMovement {
  *   public constructor(private readonly node: SceneNode, public readonly maxSpeed: number) {}
  *
- *   public move(direction: Readonly<PointLike>, step: Seconds): void {
- *     this.node.x += direction.x * this.maxSpeed * step;
- *     this.node.y += direction.y * this.maxSpeed * step;
+ *   public move(direction: Readonly<PointLike>, distance: number, step: Seconds): void {
+ *     const travel = Math.min(this.maxSpeed * step, distance);
+ *
+ *     this.node.x += direction.x * travel;
+ *     this.node.y += direction.y * travel;
  *   }
  *
  *   public stop(): void {}
@@ -36,16 +38,21 @@ import type { PointLike, Seconds } from '@codexo/exojs';
 export interface NavigationMovement {
   /**
    * Distance per second that a direction of length `1` covers. An agent reads
-   * it every step to slow down onto its destination instead of overshooting it.
+   * it to tell how far one step reaches, which decides when it turns toward
+   * the next waypoint and how much progress to expect.
    */
   readonly maxSpeed: number;
   /**
-   * Requests motion for the fixed step `step` that is being processed:
-   * `direction` has a length of at most `1`, which scales {@link maxSpeed}.
-   * Called from an agent's fixed update, so the motion can still be applied
-   * within the same step.
+   * Requests motion for the fixed step `step` that is being processed, along
+   * `direction` - a unit vector from an agent - and over no more than
+   * `distance` in total until the next request. An agent passes the distance
+   * to its destination on the last stretch and `Infinity` before it, so a
+   * movement that keeps applying a request for longer than one step - such as
+   * a physics world stepped several times per call - still stops on the
+   * destination. Called from an agent's fixed update, so the motion can still
+   * be applied within the same step.
    */
-  move(direction: Readonly<PointLike>, step: Seconds): void;
+  move(direction: Readonly<PointLike>, distance: number, step: Seconds): void;
   /** Ends the motion: the actor should come to rest. */
   stop(): void;
 }

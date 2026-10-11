@@ -1,4 +1,4 @@
-import type { PointLike, Vector } from '@codexo/exojs';
+import { logger, type PointLike, type Vector } from '@codexo/exojs';
 
 import { type DiagonalPolicy, GridSpace } from '../spaces/GridSpace';
 import type { NavigationSpace, PrunedExpansion } from '../types';
@@ -109,8 +109,12 @@ export interface TileNavigationSpaceOptions<Tile> {
  * rejected, since the grid's distance metric would misprice them.
  *
  * The space holds no listener on its source and owns nothing but its cost
- * grid, so dropping it is all the cleanup it needs. Reading it after its
- * source was destroyed throws.
+ * grid, so dropping it is all the cleanup it needs. When its source is
+ * destroyed, the next synchronisation turns the space {@link invalidated}:
+ * every cell becomes blocked and the revision advances once, so routes in
+ * flight go stale and agents navigating it settle on `unreachable` and stop
+ * their movement. A warning is logged once; the space never reads the source
+ * again.
  *
  * @example
  * ```ts
@@ -139,6 +143,7 @@ export class TileNavigationSpace<Tile = unknown> implements NavigationSpace {
   private readonly _chunks: Array<TileNavigationChunk | null>;
   private readonly _chunkRevisions: Float64Array;
   private _sourceRevision: number;
+  private _invalidated = false;
 
   /**
    * @throws Error when the source's orientation or tile shape cannot be
@@ -233,17 +238,30 @@ export class TileNavigationSpace<Tile = unknown> implements NavigationSpace {
   }
 
   /**
+   * `true` once the source was found destroyed. An invalidated space blocks
+   * every cell and no longer synchronises; replace it with a space over a
+   * live source.
+   */
+  public get invalidated(): boolean {
+    return this._invalidated;
+  }
+
+  /**
    * Brings the costs up to date with the source and returns whether any
    * cell's cost changed. Called implicitly by {@link revision} and
    * {@link nodeCapacity}.
-   *
-   * @throws Error when the source was destroyed.
    */
   public sync(): boolean {
     const source = this.source;
 
+    if (this._invalidated) {
+      return false;
+    }
+
     if (source.destroyed === true) {
-      throw new Error('TileNavigationSpace: the source was destroyed; drop the navigation space with it.');
+      this._invalidate();
+
+      return true;
     }
 
     if (source.revision === this._sourceRevision) {
@@ -330,6 +348,25 @@ export class TileNavigationSpace<Tile = unknown> implements NavigationSpace {
 
   public pruning(agentSize: number): PrunedExpansion | null {
     return this._grid.pruning(agentSize);
+  }
+
+  private _invalidate(): void {
+    const grid = this._grid;
+
+    this._invalidated = true;
+
+    for (let y = grid.originY; y < grid.originY + grid.height; y++) {
+      for (let x = grid.originX; x < grid.originX + grid.width; x++) {
+        grid.setCost(x, y, 0);
+      }
+    }
+
+    logger.warn(
+      'TileNavigationSpace: the source was destroyed, so every cell is now blocked. Replace the navigation space with one over a live source.',
+      {
+        source: 'TileNavigationSpace',
+      },
+    );
   }
 
   private _chunkAt(index: number): TileNavigationChunk | null {

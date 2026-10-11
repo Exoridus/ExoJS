@@ -79,9 +79,11 @@ class NodeMovement implements NavigationMovement {
     public readonly maxSpeed: number,
   ) {}
 
-  public move(direction: Readonly<PointLike>, step: Seconds): void {
-    this.node.x += direction.x * this.maxSpeed * step;
-    this.node.y += direction.y * this.maxSpeed * step;
+  public move(direction: Readonly<PointLike>, distance: number, step: Seconds): void {
+    const travel = Math.min(this.maxSpeed * step, distance);
+
+    this.node.x += direction.x * travel;
+    this.node.y += direction.y * travel;
   }
 
   public stop(): void {

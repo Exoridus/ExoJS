@@ -1,4 +1,15 @@
-import { type Application, Container, Scene, SceneDirector, Signal, SystemOrder, type Texture, TextureRegion, Time } from '@codexo/exojs';
+import {
+  type Application,
+  Container,
+  logger,
+  Scene,
+  SceneDirector,
+  Signal,
+  SystemOrder,
+  type Texture,
+  TextureRegion,
+  Time,
+} from '@codexo/exojs';
 import { BoxShape, CircleShape, KinematicMovementComponent, PhysicsBody, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
 import { type ResolvedTile, TILE_TRANSFORM_IDENTITY, TileLayer, TileSet } from '@codexo/exojs-tilemap';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
@@ -104,7 +115,7 @@ const setup = async () => {
     throw new Error(`condition not met within ${limit} frames (status ${agent.status})`);
   };
 
-  return { scene, layer, navigation, node, physics, movement, agent, frame, runUntil };
+  return { director, scene, layer, navigation, node, physics, movement, agent, frame, runUntil };
 };
 
 describe('navigation over a tilemap with physics-backed movement', () => {
@@ -122,6 +133,56 @@ describe('navigation over a tilemap with physics-backed movement', () => {
     expect(physics.body.y).toBeCloseTo(2.5 * TILE, 6);
     expect(node.x).toBe(physics.body.x);
     expect(physics.body.linearVelocityX).toBe(0);
+  });
+
+  it('stops on its destination when the world is stepped manually several steps at a time', async () => {
+    const { director, scene, physics, agent } = await setup();
+    const destination = { x: 8.5 * TILE, y: 2.5 * TILE };
+
+    // Take the world out of the scene's systems and step it once per frame
+    // for two fixed steps, the catch-up a slow frame causes.
+    scene.systems.remove(scene.world);
+    agent.moveTo(destination);
+
+    let farthest = 0;
+
+    for (let frame = 0; frame < 600 && agent.status !== 'arrived'; frame++) {
+      director._beginFrame();
+      director.fixedUpdate(STEP);
+      director.fixedUpdate(STEP);
+      director._endFrame();
+      scene.world.step(2 / 60 + 1e-9);
+      farthest = Math.max(farthest, physics.body.x);
+    }
+
+    expect(agent.status).toBe('arrived');
+    expect(farthest).toBeLessThanOrEqual(destination.x + 1e-6);
+    expect(physics.body.x).toBeCloseTo(destination.x, 6);
+    expect(physics.body.y).toBeCloseTo(destination.y, 6);
+  });
+
+  it('stops its agents without errors when the tile layer is destroyed', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const { layer, navigation, physics, agent, frame } = await setup();
+
+    agent.moveTo({ x: 8.5 * TILE, y: 2.5 * TILE });
+
+    for (let i = 0; i < 10; i++) {
+      frame();
+    }
+
+    layer.destroy();
+
+    for (let i = 0; i < 30; i++) {
+      frame();
+    }
+
+    expect(navigation.invalidated).toBe(true);
+    expect(agent.status).toBe('unreachable');
+    expect(physics.body.linearVelocityX).toBe(0);
+    expect(physics.body.linearVelocityY).toBe(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
   });
 
   it('follows a moving body and replans when a tile closes the route', async () => {

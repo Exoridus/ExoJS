@@ -449,18 +449,19 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
       this._setStatus('navigating');
     }
 
-    const magnitude = final && stepDistance > distance ? distance / stepDistance : 1;
-
-    this._trackProgress(x, y, stepDistance * magnitude);
+    this._trackProgress(x, y, final ? Math.min(stepDistance, distance) : stepDistance);
 
     // A status listener or the progress check may just have ended navigation.
     if (!this._hasGoal || this._status !== 'navigating') {
       return;
     }
 
-    this._direction.set(((aim.x - x) / distance) * magnitude, ((aim.y - y) / distance) * magnitude);
+    this._direction.set((aim.x - x) / distance, (aim.y - y) / distance);
     this._steering = true;
-    this.movement.move(this._direction, step);
+    // The distance to the final point bounds the command rather than a slowed
+    // direction: a movement that applies one command to several steps would
+    // otherwise cover the shortened step several times and overshoot.
+    this.movement.move(this._direction, final ? distance : Infinity, step);
   }
 
   /**

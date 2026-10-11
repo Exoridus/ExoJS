@@ -1,6 +1,6 @@
-import { type Texture, TextureRegion, Vector } from '@codexo/exojs';
+import { logger, type Texture, TextureRegion, Vector } from '@codexo/exojs';
 import { packTile, type ResolvedTile, TILE_TRANSFORM_IDENTITY, TileLayer, TileProjection, TileSet } from '@codexo/exojs-tilemap';
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { Pathfinder } from '../src/Pathfinder';
 import { type TileNavigationChunk, type TileNavigationSource, TileNavigationSpace } from '../src/tilemap/TileNavigationSpace';
@@ -266,17 +266,30 @@ describe('TileNavigationSpace', () => {
     expect(() => new TileNavigationSpace(staggered, { cost: () => 1 })).toThrow(/'staggered' grids are not supported/);
   });
 
-  it('holds no listener on its source and refuses to read a destroyed one', () => {
+  it('turns invalidated once its source is destroyed, blocking every cell and warning once', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const layer = layerOf(ARENA);
     const navigation = new TileNavigationSpace(layer, { cost });
+    const revision = navigation.revision;
 
     expect(navigation.source).toBe(layer);
+    expect(navigation.invalidated).toBe(false);
 
     layer.destroy();
 
-    expect(() => navigation.sync()).toThrow(/source was destroyed/);
-    expect(() => navigation.revision).toThrow(/source was destroyed/);
+    expect(navigation.sync()).toBe(true);
+    expect(navigation.invalidated).toBe(true);
+    expect(navigation.revision).toBeGreaterThan(revision);
+    expect(navigation.isWalkable(0, 0)).toBe(false);
+    expect(new Pathfinder().findPathBetween(navigation, 8, 8, 120, 8).status).toBe('unreachable');
+
+    for (let i = 0; i < 5; i++) {
+      expect(navigation.sync()).toBe(false);
+    }
+
+    expect(warn).toHaveBeenCalledTimes(1);
     expect(() => new TileNavigationSpace(layer, { cost })).toThrow(/destroyed/);
+    warn.mockRestore();
   });
 
   it('accepts chunk sources whose chunks are structural too', () => {

@@ -1,16 +1,16 @@
 {
   "title": "TileNavigationSpace",
-  "description": "A NavigationSpace over tile data that keeps itself in step with the data's edits: a cost callback turns each tile into a traversal cost, and the space resamples exactly the chunks whose revision moved. Synchronisation is pull-based and runs whenever revision or nodeCapacity is read - which a Pathfinder does before every search and a NavigationAgentComponent every fixed step - or when sync is called. An unchanged source costs a single revision compare; a changed one costs one revision compare per chunk in the window plus the cells of the chunks that changed. A source without chunks falls back to resampling the whole window whenever its revision changes. The space's own revision only advances when a cell's cost actually changed, so an edit that keeps every cell's cost leaves routes valid. Routes, positions and agent coordinates are logical: for an isometric map that is the unprojected grid of `tileHeight`-sized squares, not the screen diamonds, matching the tilemap's physics colliders. Orthogonal maps need square tiles; non-square orthogonal tiles and other orientations are rejected, since the grid's distance metric would misprice them. The space holds no listener on its source and owns nothing but its cost grid, so dropping it is all the cleanup it needs. Reading it after its source was destroyed throws.",
+  "description": "A NavigationSpace over tile data that keeps itself in step with the data's edits: a cost callback turns each tile into a traversal cost, and the space resamples exactly the chunks whose revision moved. Synchronisation is pull-based and runs whenever revision or nodeCapacity is read - which a Pathfinder does before every search and a NavigationAgentComponent every fixed step - or when sync is called. An unchanged source costs a single revision compare; a changed one costs one revision compare per chunk in the window plus the cells of the chunks that changed. A source without chunks falls back to resampling the whole window whenever its revision changes. The space's own revision only advances when a cell's cost actually changed, so an edit that keeps every cell's cost leaves routes valid. Routes, positions and agent coordinates are logical: for an isometric map that is the unprojected grid of `tileHeight`-sized squares, not the screen diamonds, matching the tilemap's physics colliders. Orthogonal maps need square tiles; non-square orthogonal tiles and other orientations are rejected, since the grid's distance metric would misprice them. The space holds no listener on its source and owns nothing but its cost grid, so dropping it is all the cleanup it needs. When its source is destroyed, the next synchronisation turns the space invalidated: every cell becomes blocked and the revision advances once, so routes in flight go stale and agents navigating it settle on `unreachable` and stop their movement. A warning is logged once; the space never reads the source again.",
   "symbol": "TileNavigationSpace",
   "kind": "class",
   "subsystem": "pathfinding",
   "importPath": "@codexo/exojs-pathfinding",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
     "methods": 13,
-    "properties": 9,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -22,7 +22,7 @@
         "A NavigationSpace over tile data that keeps itself in step with the data's edits: a cost callback turns each tile into a traversal cost, and the space resamples exactly the chunks whose revision moved.",
         "Synchronisation is pull-based and runs whenever revision or nodeCapacity is read - which a Pathfinder does before every search and a NavigationAgentComponent every fixed step - or when sync is called. An unchanged source costs a single revision compare; a changed one costs one revision compare per chunk in the window plus the cells of the chunks that changed. A source without chunks falls back to resampling the whole window whenever its revision changes. The space's own revision only advances when a cell's cost actually changed, so an edit that keeps every cell's cost leaves routes valid.",
         "Routes, positions and agent coordinates are logical: for an isometric map that is the unprojected grid of `tileHeight`-sized squares, not the screen diamonds, matching the tilemap's physics colliders. Orthogonal maps need square tiles; non-square orthogonal tiles and other orientations are rejected, since the grid's distance metric would misprice them.",
-        "The space holds no listener on its source and owns nothing but its cost grid, so dropping it is all the cleanup it needs. Reading it after its source was destroyed throws."
+        "The space holds no listener on its source and owns nothing but its cost grid, so dropping it is all the cleanup it needs. When its source is destroyed, the next synchronisation turns the space invalidated: every cell becomes blocked and the revision advances once, so routes in flight go stale and agents navigating it settle on `unreachable` and stop their movement. A warning is logged once; the space never reads the source again."
       ],
       "importLine": "import { TileNavigationSpace } from '@codexo/exojs-pathfinding'",
       "sourceLink": null
@@ -1075,6 +1075,27 @@
           "params": [],
           "returnType": null,
           "description": "Window height in cells."
+        },
+        {
+          "name": "invalidated",
+          "signature": "invalidated: boolean",
+          "signatureTokens": [
+            {
+              "text": "invalidated",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once the source was found destroyed. An invalidated space blocks every cell and no longer synchronises; replace it with a space over a live source."
         },
         {
           "name": "maxDegree",

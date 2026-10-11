@@ -48,6 +48,8 @@ The movement is translation only and makes no platformer decisions: no stepping 
 
 Synchronisation is pull-based. Reading the space's `revision` — which every search and every agent does — compares the layer's revision first and returns at once when nothing changed. When something did, only the chunks whose own revision moved are resampled, chunk loads and evictions included, and the space's revision advances only if a cell's cost actually changed. An unbounded, streamed layer needs an explicit `window` of cells to navigate; nothing outside it is allocated or walkable.
 
+If the layer is destroyed, the space becomes `invalidated`: every cell turns blocked, one warning is logged, and agents navigating it come to rest as `unreachable`.
+
 Navigation cost and physical collision are separate decisions on purpose. Water can be walkable but expensive, a sensor need not block a route, and a door can close for one actor and not another. Build colliders with `TileColliderStreamer` from `@codexo/exojs-tilemap-physics` and navigation with `TileNavigationSpace`, from the same layer, with the rules each needs.
 
 <Callout type="warning" title="Logical coordinates">
@@ -73,7 +75,7 @@ The agent reads its own position, its target and its destination in navigation c
 
 ## Your own movement, your own space
 
-Nothing about the agent requires physics or a tile map. Anything with `maxSpeed`, `move` and `stop` is a movement, and any [`NavigationSpace`](/ExoJS/en/api/navigation-space/) is a space:
+Nothing about the agent requires physics or a tile map. Anything with `maxSpeed`, `move` and `stop` is a movement, and any [`NavigationSpace`](/ExoJS/en/api/navigation-space/) is a space. `move` receives a unit direction and the distance still to cover; honouring that cap is what stops an actor on its destination even when one request ends up driving several steps, as a manually stepped physics world does:
 
 <SourceSnippet
   source="examples/guides/pathfinding/navigation-agents.ts"
