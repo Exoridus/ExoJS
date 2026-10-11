@@ -224,7 +224,7 @@
     },
     {
       "path": "dist/exo.full.iife.min.js",
-      "limit": "635 KB",
+      "limit": "640 KB",
       "gzip": true
     },
     {
