@@ -32,7 +32,7 @@ A kinematic body ignores contacts — it goes wherever its velocity takes it, th
 A command lasts exactly one world step. Stop issuing it and the body stops; there is no velocity to clear when the controlling code is disabled. `blocked` and `contactNormal` report what stopped the last step.
 
 <Callout type="info" title="What it deliberately does not do">
-The movement is translation only and makes no platformer decisions: no stepping over ledges, no slope limits, no grounded state, no jump buffering. Dynamic bodies in the way block it rather than being pushed. Those policies belong to a character controller built on top of it.
+The movement is translation only and makes no platformer decisions: no stepping over ledges, no slope limits, no grounded state, no gravity. Dynamic bodies in the way block it rather than being pushed. Surface movement is [`CharacterMovementComponent`](/ExoJS/en/guide/physics/character-movement/), which composes over this movement and, while enabled, is the only thing that commands it — an agent cannot steer the same movement then.
 </Callout>
 
 ## Navigating a tile map
