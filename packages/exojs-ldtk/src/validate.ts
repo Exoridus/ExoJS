@@ -221,6 +221,22 @@ const validateTilesetDef = (raw: unknown, source: string, path: string): void =>
   expectNonNegativeInteger(def.pxHei, source, joinPath(path, 'pxHei'));
   optionalNonNegativeInteger(def, 'spacing', source, path);
   optionalNonNegativeInteger(def, 'padding', source, path);
+
+  if (def.customData !== undefined) {
+    eachEntry(def.customData, source, joinPath(path, 'customData'), (item, itemPath) => {
+      const entry = expectObject(item, source, itemPath);
+      expectNonNegativeInteger(entry.tileId, source, joinPath(itemPath, 'tileId'));
+      expectString(entry.data, source, joinPath(itemPath, 'data'));
+    });
+  }
+
+  if (def.enumTags !== undefined) {
+    eachEntry(def.enumTags, source, joinPath(path, 'enumTags'), (item, itemPath) => {
+      const entry = expectObject(item, source, itemPath);
+      expectString(entry.enumValueId, source, joinPath(itemPath, 'enumValueId'));
+      eachEntry(entry.tileIds, source, joinPath(itemPath, 'tileIds'), (id, idPath) => expectNonNegativeInteger(id, source, idPath));
+    });
+  }
 };
 
 const validateIntGridValueDef = (raw: unknown, source: string, path: string): void => {
@@ -398,6 +414,10 @@ const validateEntityInstance = (raw: unknown, source: string, path: string): voi
   expectString(entity.iid, source, joinPath(path, 'iid'));
   expectInteger(entity.defUid, source, joinPath(path, 'defUid'));
   validateFieldInstances(entity.fieldInstances, source, joinPath(path, 'fieldInstances'));
+
+  if (entity.__tags !== undefined) {
+    eachEntry(entity.__tags, source, joinPath(path, '__tags'), (item, itemPath) => expectString(item, source, itemPath));
+  }
 };
 
 const validateLayerInstance = (raw: unknown, source: string, path: string): void => {
@@ -449,6 +469,8 @@ const validateLevel = (raw: unknown, source: string, path: string): void => {
   expectNumber(level.pxWid, source, joinPath(path, 'pxWid'));
   expectNumber(level.pxHei, source, joinPath(path, 'pxHei'));
   nullableString(level, 'externalRelPath', source, path);
+  nullableString(level, 'bgColor', source, path);
+  nullableString(level, '__bgColor', source, path);
 
   // Same explicit-null rule as the fields above: an isolated level can arrive
   // with a null here rather than an empty array.
