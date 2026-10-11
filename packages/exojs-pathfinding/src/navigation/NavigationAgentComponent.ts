@@ -20,7 +20,9 @@ import type { NavigationMovement } from './NavigationMovement';
  *   even after a fresh search.
  *
  * `unreachable` and `blocked` are retried on their own when the space's
- * revision changes or a followed target moves to another node.
+ * revision changes or a followed target moves to another node; `blocked` is
+ * also retried after four repath intervals, since what stopped the actor - such
+ * as another actor - may have moved on without any revision changing.
  */
 export type NavigationStatus = 'idle' | 'navigating' | 'arrived' | 'unreachable' | 'blocked';
 
@@ -63,6 +65,9 @@ export interface NavigationAgentOptions<Payload = unknown> {
    */
   readonly repathInterval?: Seconds | undefined;
 }
+
+/** Repath intervals a `blocked` agent waits before it tries a fresh route on its own. */
+const blockedRetryIntervals = 4;
 
 /** Fraction of the commanded travel below which a window counts as no progress. */
 const minProgress = 0.1;
@@ -300,13 +305,21 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
 
   private _setGoal(x: number, y: number): void {
     const node = this._nodeAt(x, y);
-    const resumable = (this._status === 'navigating' || this._status === 'arrived') && node === this._plannedGoalNode;
+    const status = this._status;
+    // A goal in the node the current route ends in needs no new search: the
+    // route still leads there and steering reads the exact point. The same
+    // holds for a goal already found unreachable or blocked in an unchanged
+    // space - calling moveTo every frame must not search every frame.
+    const resumable =
+      this._path !== null &&
+      node === this._plannedGoalNode &&
+      (status === 'navigating' ||
+        status === 'arrived' ||
+        ((status === 'unreachable' || status === 'blocked') && this.space.revision === this._plannedRevision));
 
     this._destination.set(x, y);
     this._hasGoal = true;
     this._pendingSince = -1;
-    // A goal inside the node the route already ends in needs no new search:
-    // the route still leads there, and steering reads the exact point.
     this._replanRequested = !resumable;
 
     if (resumable && this._status === 'arrived') {
@@ -326,6 +339,12 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
       return true;
     }
 
+    if (this._status === 'blocked') {
+      // What blocked the actor may have been another actor that has since
+      // moved on, which no revision reports.
+      return this._clock - this._lastPlanTime >= blockedRetryIntervals * this._repathInterval;
+    }
+
     if (this._status !== 'navigating') {
       return false;
     }
@@ -343,7 +362,8 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
   private _plan(x: number, y: number): void {
     const goalX = this._destination.x;
     const goalY = this._destination.y;
-    const stalled = this._stalled && !this._replanRequested;
+    const commanded = this._replanRequested;
+    const stalled = this._stalled && !commanded;
     const result = this.pathfinder.findPathBetween(this.space, x, y, goalX, goalY, this._search);
     const nodes = result.nodes;
 
@@ -355,7 +375,14 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
     this._lastPlanTime = this._clock;
     this._pendingSince = -1;
     this._replanRequested = false;
-    this._resetProgress(x, y);
+
+    // Progress is measured on the actor, not on a route, so a replan the component
+    // starts itself keeps the running window; otherwise a space whose revision
+    // keeps changing would hide an actor that never moves.
+    if (commanded || stalled || this._status !== 'navigating') {
+      this._resetProgress(x, y);
+    }
+
     // A route planned because the last one made no progress gets one window to
     // do better; failing that, the status turns `blocked` instead of
     // searching again and again from the same spot.
@@ -399,17 +426,21 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
 
     const final = this._waypoint >= last;
 
-    if (final && distance <= this._arrivalDistance + arrivalEpsilon) {
-      this._reachEnd();
+    // A followed target that left the node the route ends in is no longer at
+    // the route's end: neither arriving there nor walking on to it is right.
+    // The replan it triggered arrives within the repath interval.
+    if (final && this._reachesGoal && this._goalMoved()) {
+      this._halt();
+      this._setStatus('navigating');
 
       return;
     }
 
-    // A followed target that left the node the route ends in is no longer at
-    // the route's end; walking on to that end would lead away from it. The
-    // replan it triggered arrives within the repath interval.
-    if (final && this._reachesGoal && this._goalMoved()) {
-      this._halt();
+    // Only the destination itself is reached within `arrivalDistance`; the end
+    // of a partial or snapped route has to be stood on, or the next search
+    // would start from the same node and end at the same place.
+    if (final && distance <= (this._reachesGoal ? this._arrivalDistance : 0) + arrivalEpsilon) {
+      this._reachEnd();
 
       return;
     }
@@ -420,8 +451,14 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
 
     const magnitude = final && stepDistance > distance ? distance / stepDistance : 1;
 
-    this._direction.set(((aim.x - x) / distance) * magnitude, ((aim.y - y) / distance) * magnitude);
     this._trackProgress(x, y, stepDistance * magnitude);
+
+    // A status listener or the progress check may just have ended navigation.
+    if (!this._hasGoal || this._status !== 'navigating') {
+      return;
+    }
+
+    this._direction.set(((aim.x - x) / distance) * magnitude, ((aim.y - y) / distance) * magnitude);
     this._steering = true;
     this.movement.move(this._direction, step);
   }

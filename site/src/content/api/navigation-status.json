@@ -1,6 +1,6 @@
 {
   "title": "NavigationStatus",
-  "description": "Where a NavigationAgentComponent stands. - `idle` - no destination; the state before the first command and after NavigationAgentComponent.stop. - `navigating` - following a route, including a partial one that a search budget cut short. - `arrived` - within `arrivalDistance` of the destination. A followed target that moves away puts it back to `navigating`. - `unreachable` - no route leads to the destination, the search budget is too small to get past its own node, or it has reached the closest point a `snapToNearest` search could offer. - `blocked` - a route exists, but the movement made no progress along it even after a fresh search. `unreachable` and `blocked` are retried on their own when the space's revision changes or a followed target moves to another node.",
+  "description": "Where a NavigationAgentComponent stands. - `idle` - no destination; the state before the first command and after NavigationAgentComponent.stop. - `navigating` - following a route, including a partial one that a search budget cut short. - `arrived` - within `arrivalDistance` of the destination. A followed target that moves away puts it back to `navigating`. - `unreachable` - no route leads to the destination, the search budget is too small to get past its own node, or it has reached the closest point a `snapToNearest` search could offer. - `blocked` - a route exists, but the movement made no progress along it even after a fresh search. `unreachable` and `blocked` are retried on their own when the space's revision changes or a followed target moves to another node; `blocked` is also retried after four repath intervals, since what stopped the actor - such as another actor - may have moved on without any revision changing.",
   "symbol": "NavigationStatus",
   "kind": "type",
   "subsystem": "pathfinding",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Where a NavigationAgentComponent stands.",
         "- `idle` - no destination; the state before the first command and after NavigationAgentComponent.stop. - `navigating` - following a route, including a partial one that a search budget cut short. - `arrived` - within `arrivalDistance` of the destination. A followed target that moves away puts it back to `navigating`. - `unreachable` - no route leads to the destination, the search budget is too small to get past its own node, or it has reached the closest point a `snapToNearest` search could offer. - `blocked` - a route exists, but the movement made no progress along it even after a fresh search.",
-        "`unreachable` and `blocked` are retried on their own when the space's revision changes or a followed target moves to another node."
+        "`unreachable` and `blocked` are retried on their own when the space's revision changes or a followed target moves to another node; `blocked` is also retried after four repath intervals, since what stopped the actor - such as another actor - may have moved on without any revision changing."
       ],
       "importLine": "import { NavigationStatus } from '@codexo/exojs-pathfinding'",
       "sourceLink": null

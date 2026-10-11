@@ -15,6 +15,7 @@ const CELL = 10;
 /** Moves its node directly, the simplest movement there is. */
 class NodeMovement implements NavigationMovement {
   public moves = 0;
+  public readonly calls: Array<'move' | 'stop'> = [];
   public stops = 0;
   public steps: Seconds[] = [];
   public frozen = false;
@@ -27,6 +28,7 @@ class NodeMovement implements NavigationMovement {
   public move(direction: Readonly<PointLike>, step: Seconds): void {
     expect(Math.hypot(direction.x, direction.y)).toBeLessThanOrEqual(1 + 1e-9);
     this.moves++;
+    this.calls.push('move');
     this.steps.push(step);
 
     if (!this.frozen) {
@@ -37,6 +39,7 @@ class NodeMovement implements NavigationMovement {
 
   public stop(): void {
     this.stops++;
+    this.calls.push('stop');
   }
 }
 
@@ -324,15 +327,85 @@ describe('NavigationAgentComponent', () => {
     expect(frames).toBeLessThanOrEqual(60);
     expect(movement.stops).toBe(1);
 
+    // Turning blocked ends with the stop, not with one more move.
+    expect(movement.calls.at(-1)).toBe('stop');
+
     const moves = movement.moves;
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 30; i++) {
       frame();
     }
 
     expect(agent.status).toBe('blocked');
     expect(movement.moves).toBe(moves);
     expect(searches).toHaveBeenCalledTimes(2);
+
+    // Whatever blocked the actor may move on, so it is tried again later.
+    movement.frozen = false;
+    runUntil(() => agent.status === 'arrived', 600);
+    expect(searches.mock.calls.length).toBeGreaterThan(2);
+  });
+
+  it('notices a stuck actor even while the space keeps changing', async () => {
+    const space = GridSpace.from(10, 3, () => 1, { cellSize: CELL });
+    const { movement, agent, frame } = await setup({ space }, center(0, 1));
+
+    movement.frozen = true;
+    agent.moveTo(center(9, 1));
+
+    for (let i = 0; i < 240 && agent.status !== 'blocked'; i++) {
+      if (i % 5 === 0) {
+        space.setCost(9, 0, space.costAt(9, 0) === 1 ? 2 : 1);
+      }
+
+      frame();
+    }
+
+    expect(agent.status).toBe('blocked');
+  });
+
+  it('does not search again for an unchanged unreachable destination', async () => {
+    const space = GridSpace.from(10, 10, x => (x === 5 ? 0 : 1), { cellSize: CELL });
+    const pathfinder = new Pathfinder();
+    const searches = searchesOf(pathfinder);
+    const { agent, frame } = await setup({ space, pathfinder });
+
+    for (let i = 0; i < 30; i++) {
+      agent.moveTo(center(8, 1));
+      frame();
+    }
+
+    expect(agent.status).toBe('unreachable');
+    expect(searches).toHaveBeenCalledTimes(1);
+  });
+
+  it('walks onto the end of a partial route even with a large arrival distance', async () => {
+    const space = GridSpace.from(40, 1, () => 1, { cellSize: CELL });
+    const { node, agent, runUntil } = await setup(
+      { space, arrivalDistance: 25, search: { maxExpandedNodes: 2, pruning: false } },
+      center(0, 0),
+      240,
+    );
+
+    agent.moveTo(center(39, 0));
+    runUntil(() => agent.status === 'arrived', 3000);
+
+    expect(node.x).toBeGreaterThan(395 - 25 - 1e-6);
+  });
+
+  it('does not stay arrived at an old route end once the followed target left its node', async () => {
+    const space = GridSpace.from(20, 1, () => 1, { cellSize: CELL });
+    const target = new Vector(55, 5);
+    const { agent, statuses, runUntil, frame } = await setup({ space, arrivalDistance: 12 }, center(0, 0), 120);
+
+    agent.follow(target);
+    runUntil(() => agent.status === 'arrived');
+    target.set(185, 5);
+    frame();
+
+    expect(agent.status).toBe('navigating');
+    runUntil(() => agent.status === 'arrived');
+    expect(statuses).toEqual(['navigating', 'arrived', 'navigating', 'arrived']);
   });
 
   it('stops the movement while disabled and resumes with a fresh route', async () => {
