@@ -460,8 +460,7 @@ export class KinematicMovementComponent extends Component {
     body.linearVelocityY = offsetY / fixedDelta;
   }
 
-  /** @internal - halts the body without touching a pending command. */
-  public _halt(): void {
+  private _halt(): void {
     const body = this.physics.body;
 
     this._blocked = false;

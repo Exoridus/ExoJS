@@ -341,6 +341,9 @@ export class CharacterMovementComponent extends Component implements MovementDri
       );
     }
 
+    // A command issued to the movement before the takeover is not the
+    // character's and must not run once the movement is handed back.
+    movement.stop();
     movement._driver = this;
     this._reset();
   }
@@ -351,7 +354,7 @@ export class CharacterMovementComponent extends Component implements MovementDri
     }
 
     this._reset();
-    this.movement._halt();
+    this.movement.stop();
   }
 
   /** @internal */

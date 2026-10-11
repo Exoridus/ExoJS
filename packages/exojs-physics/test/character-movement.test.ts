@@ -124,6 +124,35 @@ describe('CharacterMovementComponent', () => {
       expect(movement.body.x).toBeCloseTo(4, 9);
     });
 
+    it('drops a pending movement command when it takes over the movement and when it hands it back', async () => {
+      const { spawn, floor, frame } = await setup();
+
+      floor();
+
+      const { movement, character, body } = spawn();
+
+      frame();
+
+      const x = body.x;
+
+      // A direct command issued while the movement is free, then a takeover and
+      // a release within the same world advance: the command predates the
+      // character and must not run once the movement is free again.
+      character.enabled = false;
+      movement.move({ x: 1, y: 0 });
+      character.enabled = true;
+      character.enabled = false;
+      frame();
+
+      expect(body.x).toBe(x);
+      expect(body.linearVelocityX).toBe(0);
+
+      // A command issued after the release still runs.
+      movement.move({ x: 1, y: 0 });
+      frame();
+      expect(body.x).toBeCloseTo(x + 4, 9);
+    });
+
     it('refuses a second character for one movement', async () => {
       const { errors, scene, spawn, floor } = await setup();
 
@@ -977,7 +1006,7 @@ describe('CharacterMovementComponent', () => {
       expect(character.velocity.y).toBeCloseTo(before + 1600 * DT, 6);
     });
 
-    it('survives destruction during a step and its world being destroyed', async () => {
+    it('steps on after its node is destroyed and releases cleanly when its world is destroyed', async () => {
       const { world, spawn, floor, frame } = await setup();
 
       floor();
