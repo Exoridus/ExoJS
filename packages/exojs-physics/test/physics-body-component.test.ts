@@ -138,15 +138,26 @@ describe('PhysicsBodyComponent', () => {
     from.addChild(node);
     physics.body.linearVelocityY = -75;
 
+    const body = physics.body;
+    const colliders = [...body.colliders];
+    const add = vi.spyOn(scene.world, 'add');
+    const remove = vi.spyOn(scene.world, 'remove');
+    const bind = vi.spyOn(scene.world, 'bind');
+
     to.addChild(node);
 
     expect(node.parent).toBe(to);
     expect(physics.active).toBe(true);
-    expect(physics.body.attached).toBe(true);
-    expect(physics.body.linearVelocityY).toBe(-75);
+    expect(physics.body).toBe(body);
+    expect([...body.colliders]).toEqual(colliders);
+    expect(body.attached).toBe(true);
+    expect(body.linearVelocityY).toBe(-75);
+    expect(add).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+    expect(bind).not.toHaveBeenCalled();
 
     scene.world.step(DT);
-    expect(node.y).toBe(physics.body.y);
+    expect(node.y).toBe(body.y);
   });
 
   it('leaves the world while its scene is retained and returns on restore', async () => {

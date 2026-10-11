@@ -710,7 +710,7 @@ describe('Mutation during dispatch (CMP-04)', () => {
     expect(scope.scene.query(Ticker).size).toBe(2);
   });
 
-  test('reparenting within the scene during dispatch keeps the behaviour, ticking once per frame', async () => {
+  test('reparenting within the scene during dispatch keeps the behaviour running in the same pass', async () => {
     const { scope, log, tickers } = await setup(2);
     const holder = new Container();
 
@@ -725,7 +725,7 @@ describe('Mutation during dispatch (CMP-04)', () => {
     frame(scope);
     frame(scope);
 
-    expect(updates(log)).toEqual(['t0:update', 't0:update', 't1:update']);
+    expect(updates(log)).toEqual(['t0:update', 't1:update', 't0:update', 't1:update']);
     expect(scope.scene.query(Ticker).size).toBe(2);
   });
 
@@ -828,6 +828,228 @@ describe('Mutation during dispatch (CMP-04)', () => {
     scope.scene.addChild(holding(new Toggler()));
 
     expect(log).toEqual(['other:attach', 'other:enable', 'toggler:enable:start', 'toggler:enable:end', 'other:disable']);
+  });
+});
+
+describe('Same-runtime reparent (RUNTIME-01)', () => {
+  const stampOf = (component: Component): number => component._joinStamp;
+
+  test('moving a node between parents of one scene neither disables nor re-publishes its components', async () => {
+    const log: string[] = [];
+    const scope = await activeScope();
+    const from = new Container();
+    const to = new Container();
+    const node = new Container();
+    const recorder = node.addComponent(new Recorder(log));
+
+    scope.scene.root.addChild(from, to);
+    from.addChild(node);
+
+    const stamp = stampOf(recorder);
+
+    log.length = 0;
+    to.addChild(node);
+
+    expect(node.parent).toBe(to);
+    expect(log).toEqual([]);
+    expect(recorder.active).toBe(true);
+    expect(stampOf(recorder)).toBe(stamp);
+    expect(runtimeOf(scope).stamp).toBe(stamp);
+    expect(scope.scene.query(Recorder).size).toBe(1);
+  });
+
+  test('a moved subtree keeps every component in it, whatever depth carries it', async () => {
+    const log: string[] = [];
+    const scope = await activeScope();
+    const target = new Container();
+    const branch = new Container();
+    const leaf = new Container();
+
+    scope.scene.root.addChild(target, branch);
+    branch.addChild(leaf);
+    leaf.addComponent(new Recorder(log, 'leaf'));
+    branch.addComponent(new Recorder(log, 'branch'));
+
+    log.length = 0;
+    target.addChild(branch);
+
+    expect(log).toEqual([]);
+    expect(scope.scene.query(Recorder).size).toBe(2);
+
+    scope.scene.removeChild(target);
+    expect(scope.scene.query(Recorder).size).toBe(0);
+    expect(log).toHaveLength(2);
+  });
+
+  test('component counts follow the move on both sides', async () => {
+    const scope = await activeScope();
+    const from = new Container();
+    const to = new Container();
+    const node = new Container();
+
+    node.addComponent(new Tag());
+    scope.scene.root.addChild(from, to);
+    from.addChild(node);
+
+    expect(from._componentNodes).toBe(1);
+    expect(to._componentNodes).toBe(0);
+
+    to.addChild(node);
+
+    expect(from._componentNodes).toBe(0);
+    expect(to._componentNodes).toBe(1);
+    expect(scope.scene.root._componentNodes).toBe(1);
+  });
+
+  test('a behaviour keeps its place in the dispatch order across a move', async () => {
+    const log: string[] = [];
+    const scope = await activeScope();
+    const target = new Container();
+    const first = holding(new Ticker(log, 't0'));
+    const second = holding(new Ticker(log, 't1'));
+
+    scope.scene.root.addChild(target, first, second);
+    target.addChild(first);
+    frame(scope);
+
+    expect(log.filter(entry => entry.endsWith(':update'))).toEqual(['t0:update', 't1:update']);
+  });
+
+  test('an iteration in progress still visits a node reparented during it', async () => {
+    const scope = await activeScope();
+    const target = new Container();
+    const nodes = [new Container(), new Container()];
+
+    nodes.forEach(node => node.addComponent(new Tag()));
+    scope.scene.root.addChild(target, ...nodes);
+
+    const visited: SceneNode[] = [];
+
+    for (const [node] of scope.scene.query(Tag)) {
+      visited.push(node);
+
+      if (node === nodes[0]) {
+        target.addChild(nodes[1]!);
+      }
+    }
+
+    expect(visited).toEqual(nodes);
+  });
+
+  test('moving between the root and the UI layer keeps membership and activation', async () => {
+    const log: string[] = [];
+    const scope = await activeScope();
+    const node = new Container();
+    const recorder = node.addComponent(new Recorder(log));
+
+    scope.scene.root.addChild(node);
+
+    const stamp = stampOf(recorder);
+
+    log.length = 0;
+    scope.scene.ui.addChild(node);
+
+    expect(log).toEqual([]);
+    expect(recorder.active).toBe(true);
+    expect(stampOf(recorder)).toBe(stamp);
+    expect(scope.scene.query(Recorder).size).toBe(1);
+  });
+
+  test('moving into another application is still a leave followed by a join', async () => {
+    const log: string[] = [];
+    const first = await activeScope(new Scene(), createAppStub());
+    const second = await activeScope(new Scene(), createAppStub());
+    const node = new Container();
+
+    node.addComponent(new Recorder(log));
+    first.scene.addChild(node);
+    log.length = 0;
+
+    second.scene.addChild(node);
+
+    expect(log).toEqual(['rec:disable', 'rec:enable']);
+  });
+
+  describe('across runtimes while the source frame is open', () => {
+    const setup = async (): Promise<{
+      first: SceneScope<void>;
+      second: SceneScope<void>;
+      log: string[];
+      driver: Ticker;
+      mover: Ticker;
+    }> => {
+      const log: string[] = [];
+      const first = await activeScope(new Scene(), createAppStub());
+      const second = await activeScope(new Scene(), createAppStub());
+      const driver = new Ticker(log, 'driver');
+      const mover = new Ticker(log, 'mover');
+
+      first.scene.root.addChild(holding(driver), holding(mover));
+
+      return { first, second, log, driver, mover };
+    };
+
+    const updates = (log: string[]): string[] => log.filter(entry => entry.endsWith(':update'));
+
+    test('the behaviour runs in its new scene only, from its next frame', async () => {
+      const { first, second, log, driver, mover } = await setup();
+
+      driver.onUpdate = () => {
+        if (mover.node.parent !== second.scene.root) {
+          second.scene.addChild(mover.node as unknown as Container);
+        }
+      };
+
+      frame(first);
+      expect(updates(log)).toEqual(['driver:update']);
+
+      log.length = 0;
+      frame(first);
+      expect(updates(log)).toEqual(['driver:update']);
+
+      log.length = 0;
+      frame(second);
+      expect(updates(log)).toEqual(['mover:update']);
+      expect(mover.scene).toBe(second.scene);
+    });
+
+    test('leaving and coming back inside one pass runs the behaviour once per frame', async () => {
+      const { first, second, log, driver, mover } = await setup();
+      let moved = false;
+
+      driver.onUpdate = () => {
+        if (!moved) {
+          moved = true;
+          second.scene.addChild(mover.node as unknown as Container);
+          first.scene.addChild(mover.node as unknown as Container);
+        }
+      };
+
+      frame(first);
+      log.length = 0;
+      frame(first);
+
+      expect(updates(log)).toEqual(['driver:update', 'mover:update']);
+    });
+
+    test('the behaviour joins the new scene while it is mid-frame too', async () => {
+      const { first, second, log, driver, mover } = await setup();
+
+      driver.onUpdate = () => {
+        if (mover.node.parent !== second.scene.root) {
+          second._beginFrame();
+          second.scene.addChild(mover.node as unknown as Container);
+          second._endFrame();
+        }
+      };
+
+      frame(first);
+      log.length = 0;
+      frame(first);
+      frame(second);
+
+      expect(updates(log)).toEqual(['driver:update', 'mover:update']);
+    });
   });
 });
 
