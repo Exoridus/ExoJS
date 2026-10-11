@@ -172,7 +172,16 @@ const isUnresolved = (record: ContactRecord, dt: number): boolean => {
  * @internal
  */
 export interface StepController {
+  /**
+   * `true` while the controller reads other bodies' velocities for the step
+   * about to run (a character carried by a moving platform). Such controllers
+   * resolve after every other controller, so a platform moved by a controller
+   * of its own has its velocity for the step set before it is read.
+   */
+  readonly _followsOthers: boolean;
   _beforeStep(fixedDelta: number): void;
+  /** Runs once the step has moved every body and re-synced collider geometry. */
+  _afterStep(): void;
 }
 
 /** Construction options for a {@link PhysicsWorld}. */
@@ -923,13 +932,7 @@ export class PhysicsWorld implements BodyOwner {
     // Controllers cast against the geometry the previous step left behind and
     // only set velocities, so one index sync serves all of them and the step
     // below integrates exactly the motion they resolved.
-    if (this._stepControllers.length > 0) {
-      this._query._syncIndex();
-
-      for (const controller of this._stepControllers) {
-        controller._beforeStep(this.timeStepper.fixedDelta);
-      }
-    }
+    const followers = this._stepControllers.length > 0 && this._runControllersBeforeStep();
 
     // Detection runs once per fixed step (collider geometry is already current
     // from the previous frame's finalize / attach / setTransform). TGS-Soft
@@ -1010,6 +1013,49 @@ export class PhysicsWorld implements BodyOwner {
 
     if (hasBullets) {
       this._advanceBullets();
+    }
+
+    if (followers) {
+      this._runControllersAfterStep();
+    }
+  }
+
+  /**
+   * Resolves every controller's motion for the step about to run, the ones
+   * that follow other bodies last. Returns whether any of them follows.
+   */
+  private _runControllersBeforeStep(): boolean {
+    const fixedDelta = this.timeStepper.fixedDelta;
+    let followers = false;
+
+    this._query._syncIndex();
+
+    for (const controller of this._stepControllers) {
+      if (controller._followsOthers) {
+        followers = true;
+      } else {
+        controller._beforeStep(fixedDelta);
+      }
+    }
+
+    if (followers) {
+      for (const controller of this._stepControllers) {
+        if (controller._followsOthers) {
+          controller._beforeStep(fixedDelta);
+        }
+      }
+    }
+
+    return followers;
+  }
+
+  private _runControllersAfterStep(): void {
+    this._query._syncIndex();
+
+    for (const controller of this._stepControllers) {
+      if (controller._followsOthers) {
+        controller._afterStep();
+      }
     }
   }
 

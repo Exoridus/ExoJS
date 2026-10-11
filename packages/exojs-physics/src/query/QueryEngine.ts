@@ -97,6 +97,14 @@ export interface CastState {
   penetration: number;
 }
 
+/**
+ * Receives the contacts {@link QueryEngine._visitContacts} finds.
+ * @internal
+ */
+export interface ContactVisitor {
+  _visitContact(target: Collider, normalX: number, normalY: number, penetration: number): void;
+}
+
 /** @internal */
 export const createCastState = (): CastState => ({
   target: null,
@@ -470,7 +478,8 @@ export class QueryEngine {
   /**
    * @internal - {@link _castProxy} for one of a body's own colliders, displaced
    * by `(offsetX, offsetY)` from where it currently sits and filtered by its own
-   * collision filter. Sensors never block it.
+   * collision filter. Sensors never block it, and neither does anything in
+   * `exclude`.
    */
   public _castCollider(
     collider: Collider,
@@ -480,6 +489,7 @@ export class QueryEngine {
     dy: number,
     excludeBody: PhysicsBody,
     state: CastState,
+    exclude: ReadonlyArray<PhysicsBody | Collider> | null = null,
   ): boolean {
     const aabb = collider.aabb;
     const bounds = this._castShiftedBounds;
@@ -496,7 +506,48 @@ export class QueryEngine {
       start = this._castShifted;
     }
 
-    return this._castProxy(start, bounds, dx, dy, collider.filter, false, excludeBody, null, state);
+    return this._castProxy(start, bounds, dx, dy, collider.filter, false, excludeBody, exclude, state);
+  }
+
+  /**
+   * @internal - reports every collider that one of a body's own colliders,
+   * displaced by `(offsetX, offsetY)`, overlaps or touches, under the same
+   * rules as {@link _castCollider}. The normal passed to the visitor points
+   * from the touched collider back towards the displaced one. Does not sync
+   * the spatial index.
+   */
+  public _visitContacts(collider: Collider, offsetX: number, offsetY: number, excludeBody: PhysicsBody, visitor: ContactVisitor): void {
+    const aabb = collider.aabb;
+    const bounds = this._castShiftedBounds;
+
+    bounds.minX = aabb.minX + offsetX;
+    bounds.minY = aabb.minY + offsetY;
+    bounds.maxX = aabb.maxX + offsetX;
+    bounds.maxY = aabb.maxY + offsetY;
+
+    let start: CollisionProxy = collider;
+
+    if (offsetX !== 0 || offsetY !== 0) {
+      translateProxy(collider, offsetX, offsetY, this._castShifted);
+      start = this._castShifted;
+    }
+
+    const manifold = this._castManifold;
+    const candidates = this._spatialIndex === undefined ? this._colliders : this._spatialIndex.queryAabb(bounds, this._castCandidates);
+
+    for (const candidate of candidates) {
+      const target = authoredCollider(candidate);
+
+      if (
+        !aabbOverlap(bounds, candidate.aabb) ||
+        castIgnores(target, collider.filter, false, excludeBody, null) ||
+        !collide(start, candidate, manifold)
+      ) {
+        continue;
+      }
+
+      visitor._visitContact(target, -manifold.normalX, -manifold.normalY, deepestPenetration(manifold));
+    }
   }
 
   /**

@@ -4,6 +4,7 @@
 // extension. The tree-shakeable debug overlay lives at `@codexo/exojs-physics/debug`.
 
 export { PhysicsBinding } from './binding/PhysicsBinding';
+export { CharacterMovementComponent, type CharacterMovementOptions } from './CharacterMovementComponent';
 export type { ColliderOptions } from './Collider';
 export { Collider } from './Collider';
 export type { ContactModifier, ContactModifierContext } from './ContactModifier';
