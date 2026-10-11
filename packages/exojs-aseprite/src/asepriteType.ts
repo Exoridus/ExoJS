@@ -93,7 +93,91 @@ const validateAsepriteData = (raw: unknown, source: string): AsepriteData => {
     throw new AsepriteFormatError(source, '"frames" must be an array or an object');
   }
 
+  validateFrameTags(meta.frameTags, source);
+  validateSlices(meta.slices, source);
+
   return doc as unknown as AsepriteData;
+};
+
+const DIRECTIONS: readonly string[] = ['forward', 'reverse', 'pingpong', 'pingpong_reverse'];
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+const isRect = (value: unknown): boolean =>
+  isRecord(value) && [value.x, value.y, value.w, value.h].every(component => typeof component === 'number' && Number.isFinite(component));
+
+const isFrameIndex = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0;
+
+/** A malformed tag would otherwise become a clip with no frames or a `NaN` repeat count. */
+const validateFrameTags = (tags: unknown, source: string): void => {
+  if (tags === undefined) {
+    return;
+  }
+
+  if (!Array.isArray(tags)) {
+    throw new AsepriteFormatError(source, '"meta.frameTags" must be an array');
+  }
+
+  for (const [index, tag] of tags.entries()) {
+    const where = `"meta.frameTags[${index}]"`;
+
+    if (!isRecord(tag) || typeof tag.name !== 'string') {
+      throw new AsepriteFormatError(source, `${where} must be an object with a string "name"`);
+    }
+
+    if (!isFrameIndex(tag.from) || !isFrameIndex(tag.to) || tag.from > tag.to) {
+      throw new AsepriteFormatError(source, `${where} ("${tag.name}") needs frame indices with from <= to`);
+    }
+
+    if (typeof tag.direction !== 'string' || !DIRECTIONS.includes(tag.direction)) {
+      throw new AsepriteFormatError(source, `${where} ("${tag.name}") has an unknown direction ${JSON.stringify(tag.direction)}`);
+    }
+
+    const repeat = tag.repeat;
+    const wholeRepeat = typeof repeat === 'string' ? /^\d+$/.test(repeat) : isFrameIndex(repeat);
+
+    if (repeat !== undefined && !wholeRepeat) {
+      throw new AsepriteFormatError(
+        source,
+        `${where} ("${tag.name}") has a repeat count that is not a whole number: ${JSON.stringify(tag.repeat)}`,
+      );
+    }
+  }
+};
+
+const validateSlices = (slices: unknown, source: string): void => {
+  if (slices === undefined) {
+    return;
+  }
+
+  if (!Array.isArray(slices)) {
+    throw new AsepriteFormatError(source, '"meta.slices" must be an array');
+  }
+
+  for (const [index, slice] of slices.entries()) {
+    const where = `"meta.slices[${index}]"`;
+
+    if (!isRecord(slice) || typeof slice.name !== 'string' || !Array.isArray(slice.keys)) {
+      throw new AsepriteFormatError(source, `${where} must be an object with a string "name" and a "keys" array`);
+    }
+
+    for (const key of slice.keys as unknown[]) {
+      const pivot = isRecord(key) ? key.pivot : undefined;
+      const valid =
+        isRecord(key) &&
+        isFrameIndex(key.frame) &&
+        isRect(key.bounds) &&
+        (key.center === undefined || isRect(key.center)) &&
+        (pivot === undefined || (isRecord(pivot) && typeof pivot.x === 'number' && typeof pivot.y === 'number'));
+
+      if (!valid) {
+        throw new AsepriteFormatError(
+          source,
+          `${where} ("${slice.name}") has a key without a frame index and bounds, or with a malformed centre or pivot`,
+        );
+      }
+    }
+  }
 };
 
 /**
