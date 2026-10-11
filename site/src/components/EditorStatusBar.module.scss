@@ -51,7 +51,7 @@
   line-height: 1;
 }
 
-@media (max-width: 640px) {
+@media (width <= 640px) {
   .root {
     padding: 0.28rem 0.5rem;
   }

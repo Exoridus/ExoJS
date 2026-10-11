@@ -42,7 +42,7 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 900px) {
+@media (width <= 900px) {
   .theme-toggle button {
     width: 44px;
     height: 44px;

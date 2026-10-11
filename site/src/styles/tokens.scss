@@ -38,8 +38,8 @@
   --radius-panel: var(--r-4);
   --radius-inline: var(--r-1);
 
-  --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 12px 40px -12px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 0 rgb(0 0 0 / 0.04), 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 12px 40px -12px rgb(0 0 0 / 0.6), 0 2px 8px -2px rgb(0 0 0 / 0.3);
   --shadow-card: var(--shadow-md);
 
   --color-accent: oklch(85% 0.17 142);

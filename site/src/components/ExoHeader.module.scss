@@ -170,7 +170,7 @@
   font-size: 0.92rem;
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .root {
     position: sticky;
     top: 0;
