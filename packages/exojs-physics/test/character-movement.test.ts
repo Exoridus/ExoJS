@@ -941,6 +941,8 @@ describe('CharacterMovementComponent', () => {
       run(frame, 5);
       expect(body.y).toBe(y);
 
+      // A launch issued while disabled is not kept for later.
+      character.launch({ x: 0, y: -500 });
       character.enabled = true;
       frame();
       expect(character.velocity.y).toBeCloseTo(1600 * DT, 6);

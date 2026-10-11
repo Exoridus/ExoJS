@@ -342,7 +342,7 @@ export class CharacterMovementComponent extends Component implements MovementDri
     }
 
     movement._driver = this;
-    this._probed = false;
+    this._reset();
   }
 
   protected override onDisable(): void {

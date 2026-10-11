@@ -99,6 +99,7 @@ Coyote time is the same pattern: remember the last fixed step on which `grounded
 ## Limits
 
 - The character translates; it never rotates, even on a rotating platform.
+- A character standing on another character may be carried with that character's velocity from the previous step: both resolve in the same phase, in the order they were enabled.
 - It does not push dynamic bodies, and dynamic bodies do not push it — they block its casts like any collider.
 - A platform that moves into a character from the side, or squeezes it against a ceiling, is not resolved: kinematic bodies do not push each other.
 - Rounded shapes ride over steps lower than `radius × (1 − cos(maxSlopeAngle))` even with `maxStepHeight` at `0`, as a ball would roll over them.
