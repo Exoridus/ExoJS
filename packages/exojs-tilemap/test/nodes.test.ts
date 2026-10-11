@@ -506,7 +506,7 @@ describe('TileMapNode', () => {
     expect(node.children).toHaveLength(0);
     expect(map.destroyed).toBe(false);
     expect(map.layers[0].destroyed).toBe(false);
-    expect(tileset.texture.texture.destroy).not.toHaveBeenCalled();
+    expect(tileset.texture!.texture.destroy).not.toHaveBeenCalled();
   });
 
   it('does not own the map lifetime — the map survives node disposal', () => {

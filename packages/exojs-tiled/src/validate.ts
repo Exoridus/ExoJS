@@ -586,6 +586,10 @@ export const validateTiledTileData = (raw: unknown, source: string, path: string
     image: optionalString(obj, 'image', source, path),
     imagewidth: optionalNonNegativeInteger(obj, 'imagewidth', source, path),
     imageheight: optionalNonNegativeInteger(obj, 'imageheight', source, path),
+    x: optionalNonNegativeInteger(obj, 'x', source, path),
+    y: optionalNonNegativeInteger(obj, 'y', source, path),
+    width: optionalNonNegativeInteger(obj, 'width', source, path),
+    height: optionalNonNegativeInteger(obj, 'height', source, path),
   };
 };
 

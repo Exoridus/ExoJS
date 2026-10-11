@@ -79,6 +79,14 @@ export interface TiledTileData {
   readonly image?: string | undefined;
   readonly imagewidth?: number | undefined;
   readonly imageheight?: number | undefined;
+  /** Left edge of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to 0. */
+  readonly x?: number | undefined;
+  /** Top edge of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to 0. */
+  readonly y?: number | undefined;
+  /** Width of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to the image width. */
+  readonly width?: number | undefined;
+  /** Height of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to the image height. */
+  readonly height?: number | undefined;
 }
 
 // ── Wangsets (terrains / auto-tile definitions) ───────────────────────────────

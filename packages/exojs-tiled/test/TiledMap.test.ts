@@ -528,34 +528,6 @@ describe('TiledMap.toTileMap — map-level property conversion', () => {
 });
 
 describe('TiledMap.toTileMap — error cases', () => {
-  it('throws TiledFormatError for a collection-of-images tileset', () => {
-    const collectionTs = new TiledTileset({ name: 'col', tilewidth: 16, tileheight: 16, tilecount: 2, columns: 0 }, 1, {
-      tileTextures: new Map([
-        [0, makeTexture(16, 16)],
-        [1, makeTexture(16, 16)],
-      ]),
-    });
-    const data = validateTiledMapData(
-      {
-        type: 'map',
-        version: '1.10',
-        orientation: 'orthogonal',
-        renderorder: 'right-down',
-        width: 1,
-        height: 1,
-        tilewidth: 16,
-        tileheight: 16,
-        infinite: false,
-        layers: [{ id: 1, name: 'L', type: 'tilelayer', visible: true, x: 0, y: 0, width: 1, height: 1, opacity: 1, data: [0] }],
-        tilesets: [{ firstgid: 1, name: 'col', tilewidth: 16, tileheight: 16, tilecount: 2, columns: 0 }],
-      },
-      'col.tmj',
-    );
-    const map = new TiledMap('col.tmj', data, [collectionTs]);
-    expect(() => map.toTileMap()).toThrow(TiledFormatError);
-    expect(() => map.toTileMap()).toThrow(/collection-of-images/);
-  });
-
   it('throws TiledFormatError for a tileset that carries no image at all', () => {
     // Silently skipping such a tileset made every cell and tile object that
     // referenced it vanish from the runtime map with no diagnostic at all.

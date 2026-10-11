@@ -130,8 +130,8 @@ export class TiledMap {
    * Convert this parsed Tiled source model into a format-independent runtime
    * {@link TileMap} from `@codexo/exojs-tilemap`.
    *
-   * Orthogonal and isometric maps with atlas tilesets are supported. An unsupported
-   * map, a collection-of-images tileset, or a tileset with no image at all
+   * Orthogonal and isometric maps with atlas and collection-of-images tilesets
+   * are supported. An unsupported map, or a tileset with no image at all,
    * throws {@link TiledFormatError} rather than silently producing wrong
    * (misplaced) or empty geometry. Tile
    * layers become renderable `TileLayer`s, object groups become data-only
@@ -171,11 +171,10 @@ export class TiledMap {
       originX: this.orientation === 'isometric' ? (this.height * this.tileWidth) / 2 : 0,
     });
 
-    // Build runtime tilesets. Every tileset must resolve to an atlas texture:
-    // a collection-of-images tileset is not supported yet, and a tileset with
-    // no image at all is unusable. Both throw TiledFormatError rather than
-    // dropping the tileset - a skipped tileset makes every cell and tile object
-    // that references it disappear from the runtime map without a diagnostic.
+    // Build runtime tilesets: an atlas texture, or one texture per tile for a
+    // collection of images. A tileset with neither is unusable and throws
+    // TiledFormatError rather than being dropped - a skipped tileset makes every
+    // cell and tile object that references it disappear without a diagnostic.
     const runtimeTilesets: TileSet[] = [];
     // indexToRuntime[i] = runtime TileSet for tilesets[i], or null for a hole in
     // the (caller-supplied) tilesets array.
@@ -189,15 +188,15 @@ export class TiledMap {
         continue;
       }
 
-      if (!tiledTs.texture) {
-        if (tiledTs.tileTextures.size > 0) {
-          throw new TiledFormatError(
-            this.source,
-            `tilesets/${tiledTs.name}`,
-            `tileset "${tiledTs.name}" is a collection-of-images tileset; ` + `toTileMap() requires atlas tilesets in this release`,
-          );
-        }
+      if (!tiledTs.texture && tiledTs.tileTextures.size > 0) {
+        const rts = buildCollectionTileSet(tiledTs, this.source);
 
+        runtimeTilesets.push(rts);
+        indexToRuntime.push(rts);
+        continue;
+      }
+
+      if (!tiledTs.texture) {
         throw new TiledFormatError(
           this.source,
           `tilesets/${tiledTs.name}`,
@@ -221,15 +220,8 @@ export class TiledMap {
         offsetX: tiledTs.tileOffset.x,
         offsetY: tiledTs.tileOffset.y,
       });
-      // Carry per-tile metadata (properties + animation frames) into the runtime
-      // tileset. Without this, Tiled tile animations and per-tile properties are
-      // lost at conversion. Out-of-range entries are skipped defensively.
-      const defs = buildTileDefinitions(tiledTs.tiles, tiledTs.tileCount);
 
-      if (defs.length > 0) {
-        rts.setDefinitions(defs);
-      }
-
+      applyTileDefinitions(rts, tiledTs);
       runtimeTilesets.push(rts);
       indexToRuntime.push(rts);
     }
@@ -838,6 +830,67 @@ const parseTiledColor = (value: string | undefined): number | null => {
  * frames referencing out-of-range local ids, are skipped so the runtime tileset
  * never receives malformed definitions.
  */
+/**
+ * Runtime tileset for a collection-of-images tileset: each tile samples its own
+ * texture, cut to the tile's sub-rectangle when one is set (Tiled 1.9+). Ids
+ * without a tile - removed in the editor - stay empty.
+ */
+const buildCollectionTileSet = (tiledTs: TiledTileset, source: string): TileSet => {
+  const tileImages: Array<TextureRegion | null> = Array.from({ length: tiledTs.idCount }, () => null);
+  let tileWidth = tiledTs.tileWidth;
+  let tileHeight = tiledTs.tileHeight;
+
+  for (const tile of tiledTs.tiles) {
+    const texture = tiledTs.tileTextures.get(tile.id);
+
+    if (texture === undefined) {
+      continue;
+    }
+
+    const x = tile.x ?? 0;
+    const y = tile.y ?? 0;
+    const width = tile.width ?? tile.imagewidth ?? texture.width;
+    const height = tile.height ?? tile.imageheight ?? texture.height;
+
+    if (width <= 0 || height <= 0 || x + width > texture.width || y + height > texture.height) {
+      throw new TiledFormatError(
+        source,
+        `tilesets/${tiledTs.name}/tiles/${tile.id}`,
+        `tile ${tile.id} cuts ${width}x${height} at (${x}, ${y}) from an image measuring ${texture.width}x${texture.height}`,
+      );
+    }
+
+    tileImages[tile.id] = new TextureRegion(texture, { x, y, width, height });
+    tileWidth = Math.max(tileWidth, width);
+    tileHeight = Math.max(tileHeight, height);
+  }
+
+  const rts = new TileSet({
+    name: tiledTs.name,
+    tileImages,
+    tileWidth,
+    tileHeight,
+    class: tiledTs.class,
+    offsetX: tiledTs.tileOffset.x,
+    offsetY: tiledTs.tileOffset.y,
+  });
+
+  applyTileDefinitions(rts, tiledTs);
+
+  return rts;
+};
+
+const applyTileDefinitions = (rts: TileSet, tiledTs: TiledTileset): void => {
+  // Carry per-tile metadata (properties + animation frames) into the runtime
+  // tileset. Without this, Tiled tile animations and per-tile properties are
+  // lost at conversion. Out-of-range entries are skipped defensively.
+  const defs = buildTileDefinitions(tiledTs.tiles, rts.tileCount);
+
+  if (defs.length > 0) {
+    rts.setDefinitions(defs);
+  }
+};
+
 const buildTileDefinitions = (tiles: readonly TiledTileData[], tileCount: number): TileDefinition[] => {
   const defs: TileDefinition[] = [];
 

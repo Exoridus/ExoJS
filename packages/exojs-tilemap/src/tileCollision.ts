@@ -267,12 +267,12 @@ const mapLocalPoint = (px: number, py: number, boxWidth: number, boxHeight: numb
  * every tile, and a tile taller than the layer's cell is bottom-aligned within
  * it, so collision geometry lands exactly where the tile is drawn.
  */
-const tileAnchor = (layer: TileLayer, tileset: TileSet, tx: number, ty: number): ObjectPoint => {
+const tileAnchor = (layer: TileLayer, tileset: TileSet, imageHeight: number, tx: number, ty: number): ObjectPoint => {
   const point = layer.tileToPixel(tx, ty);
 
   return {
     x: point.x + tileset.offsetX - (layer.projection.orientation === 'isometric' ? layer.tileWidth / 2 : 0),
-    y: point.y + layer.tileHeight - tileset.tileHeight + tileset.offsetY,
+    y: point.y + layer.tileHeight - imageHeight + tileset.offsetY,
   };
 };
 
@@ -296,17 +296,18 @@ const placeShape = (
   object: TileMapObject,
   layer: TileLayer,
   tileset: TileSet,
+  localTileId: number,
   transform: TileTransform,
   tx: number,
   ty: number,
 ): PlacedShape | null => {
-  if (object.kind === ObjectKind.Tile || object.kind === ObjectKind.Text) {
+  if (object.kind === ObjectKind.Tile || object.kind === ObjectKind.Text || tileset.getTileTexture(localTileId) === null) {
     return null;
   }
 
-  const anchor = tileAnchor(layer, tileset, tx, ty);
-  const boxWidth = tileset.tileWidth;
-  const boxHeight = tileset.tileHeight;
+  // An image-collection tile has its own size; the set's size is only the largest one.
+  const { width: boxWidth, height: boxHeight } = tileset.getTileRect(localTileId);
+  const anchor = tileAnchor(layer, tileset, boxHeight, tx, ty);
   const mirrored = isMirrored(transform);
   const sourceCos = cosDegrees(object.rotation);
   const sourceSin = sinDegrees(object.rotation);
@@ -672,7 +673,7 @@ export const buildTileCollisionGeometry = (layer: TileLayer, options: TileCollis
         continue;
       }
 
-      const visual = placeShape(object, layer, tile.tileset, tile.transform, tx, ty);
+      const visual = placeShape(object, layer, tile.tileset, tile.localTileId, tile.transform, tx, ty);
       const placed = visual === null ? null : logicalShape(visual, object, layer);
 
       if (placed === null) {

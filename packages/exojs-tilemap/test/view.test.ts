@@ -434,7 +434,7 @@ describe('TileMapView ownership & destruction', () => {
     expect(map.destroyed).toBe(false);
     expect(map.getTileLayer('ground')).toBeDefined();
     expect(map.layers[0].destroyed).toBe(false);
-    expect(tileset.texture.texture.destroy).not.toHaveBeenCalled();
+    expect(tileset.texture!.texture.destroy).not.toHaveBeenCalled();
   });
 
   it('view.destroy() is idempotent', () => {
@@ -488,7 +488,7 @@ describe('TileMapView ownership & destruction', () => {
     // The map, its layers, and textures survive.
     expect(map.destroyed).toBe(false);
     expect(map.getTileLayerById(2)!.destroyed).toBe(false);
-    expect(tileset.texture.texture.destroy).not.toHaveBeenCalled();
+    expect(tileset.texture!.texture.destroy).not.toHaveBeenCalled();
   });
 
   it('destroying the application actor container leaves the tile bands intact', () => {

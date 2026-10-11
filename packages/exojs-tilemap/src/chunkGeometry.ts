@@ -1,4 +1,4 @@
-import type { Texture } from '@codexo/exojs';
+import type { Texture, TextureRegion } from '@codexo/exojs';
 
 import type { ReadonlyTileChunk } from './TileChunk';
 import type { TileProjection } from './TileProjection';
@@ -33,14 +33,15 @@ export interface TileQuad {
 }
 
 /**
- * Geometry sharing one tileset texture. Orthogonal chunks group tiles by
- * tileset; isometric chunks keep consecutive runs to preserve painter order.
+ * Geometry sharing one texture. Orthogonal chunks of atlas tiles group tiles
+ * by texture; isometric chunks, and chunks holding image-collection tiles,
+ * keep consecutive runs to preserve draw order.
  * @internal
  */
 export interface ChunkPage {
-  /** The tileset all quads in this page draw from. */
+  /** The tileset the first quad of this page draws from. */
   readonly tileset: TileSet;
-  /** The underlying GPU texture (the tileset's atlas), bound once per page. */
+  /** The underlying GPU texture (an atlas or one collection image), bound once per page. */
   readonly texture: Texture;
   /** The tile quads in deterministic projection-specific draw order. */
   readonly quads: readonly TileQuad[];
@@ -65,61 +66,83 @@ export const resetTileGeometryRebuildCount = (): void => {
   tileGeometryRebuildCount = 0;
 };
 
-const drawableTileset = (tilesets: readonly TileSet[], tilesetIndex: number, localTileId: number): TileSet | undefined => {
-  const tileset = tilesets[tilesetIndex];
+interface DrawableCell {
+  readonly decoded: NonNullable<ReturnType<typeof unpackTile>>;
+  readonly tileset: TileSet;
+  readonly region: TextureRegion;
+}
 
+/** The tile a packed cell draws, or `null` when the cell must stay empty. */
+const drawableCell = (packed: number, tilesets: readonly TileSet[]): DrawableCell | null => {
+  const decoded = packed === 0 ? null : unpackTile(packed);
+
+  if (decoded === null) {
+    return null;
+  }
+
+  const tileset = tilesets[decoded.tilesetIndex];
   // getTileRect throws for an invalid id; malformed cells must remain empty.
-  if (tileset === undefined || localTileId >= tileset.tileCount) {
-    return undefined;
+  const region = tileset?.getTileTexture(decoded.localTileId) ?? null;
+
+  if (tileset === undefined || region === null || region.texture.width <= 0 || region.texture.height <= 0) {
+    return null;
   }
 
-  const texture = tileset.texture.texture;
-
-  if (texture.width <= 0 || texture.height <= 0) {
-    return undefined;
-  }
-
-  return tileset;
+  return { decoded, tileset, region };
 };
 
-const pageQuads = (tileset: TileSet, isometric: boolean, buckets: Map<TileSet, TileQuad[]>, ordered: ChunkPage[]): TileQuad[] => {
-  let bucket: TileQuad[] | undefined;
+const pageQuads = (
+  tileset: TileSet,
+  texture: Texture,
+  ordered: boolean,
+  buckets: Map<Texture, ChunkPage>,
+  runs: ChunkPage[],
+): TileQuad[] => {
+  if (ordered) {
+    const previous = runs[runs.length - 1];
 
-  if (isometric) {
-    const previous = ordered[ordered.length - 1];
-
-    if (previous?.tileset === tileset) {
-      bucket = previous.quads as TileQuad[];
+    if (previous?.texture === texture) {
+      return previous.quads as TileQuad[];
     }
-  } else {
-    bucket = buckets.get(tileset);
+
+    const page: ChunkPage = { tileset, texture, quads: [] };
+
+    runs.push(page);
+
+    return page.quads as TileQuad[];
   }
 
-  if (bucket === undefined) {
-    bucket = [];
-    buckets.set(tileset, bucket);
+  let page = buckets.get(texture);
 
-    if (isometric) {
-      ordered.push({ tileset, texture: tileset.texture.texture, quads: bucket });
-    }
+  if (page === undefined) {
+    page = { tileset, texture, quads: [] };
+    buckets.set(texture, page);
   }
 
-  return bucket;
+  return page.quads as TileQuad[];
 };
 
-const tilesetPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<TileSet, TileQuad[]>): ChunkPage[] => {
+/** Atlas pages in the layer's tileset order, so overlapping tiles keep a stable stacking. */
+const atlasPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<Texture, ChunkPage>): ChunkPage[] => {
   const pages: ChunkPage[] = [];
 
   for (const tileset of tilesets) {
-    const quads = buckets.get(tileset);
+    const page = tileset.texture === null ? undefined : buckets.get(tileset.texture.texture);
 
-    if (quads !== undefined && quads.length > 0) {
-      pages.push({ tileset, texture: tileset.texture.texture, quads });
+    if (page !== undefined && page.quads.length > 0 && !pages.includes(page)) {
+      pages.push(page);
     }
   }
 
   return pages;
 };
+
+/**
+ * Collection images differ in size and usually overhang their cells, so they
+ * must be drawn in cell order like Tiled does; bucketing them by texture would
+ * restack every overlap.
+ */
+const hasImageCollection = (tilesets: readonly TileSet[]): boolean => tilesets.some(tileset => tileset.tileImages !== null);
 
 /**
  * Build per-tileset page geometry for a single chunk.
@@ -158,9 +181,10 @@ export const buildChunkPages = (
     return [];
   }
 
-  const buckets = new Map<TileSet, TileQuad[]>();
-  const ordered: ChunkPage[] = [];
+  const buckets = new Map<Texture, ChunkPage>();
+  const runs: ChunkPage[] = [];
   const isometric = projection?.orientation === 'isometric';
+  const ordered = isometric || hasImageCollection(tilesets);
   const width = chunk.width;
   const height = chunk.height;
 
@@ -176,25 +200,13 @@ export const buildChunkPages = (
         continue;
       }
 
-      const packed = chunk.getRawAt(lx, ly);
+      const cell = drawableCell(chunk.getRawAt(lx, ly), tilesets);
 
-      if (packed === 0) {
+      if (cell === null) {
         continue;
       }
 
-      const decoded = unpackTile(packed);
-
-      if (decoded === null) {
-        continue;
-      }
-
-      const tileset = drawableTileset(tilesets, decoded.tilesetIndex, decoded.localTileId);
-
-      if (tileset === undefined) {
-        continue;
-      }
-
-      const region = tileset.texture;
+      const { decoded, tileset, region } = cell;
       const texture = region.texture;
       const textureWidth = texture.width;
       const textureHeight = texture.height;
@@ -222,10 +234,10 @@ export const buildChunkPages = (
       const x1 = x0 + rect.width;
       const y1 = y0 + rect.height;
 
-      const bucket = pageQuads(tileset, isometric, buckets, ordered);
+      const bucket = pageQuads(tileset, texture, ordered, buckets, runs);
       bucket.push({ x0, y0, x1, y1, u0, v0, u1, v1, orient: orientCode(decoded.transform) });
     }
   }
 
-  return isometric ? ordered : tilesetPages(tilesets, buckets);
+  return ordered ? runs : atlasPages(tilesets, buckets);
 };
