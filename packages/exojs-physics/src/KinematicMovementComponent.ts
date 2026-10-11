@@ -84,6 +84,7 @@ export class KinematicMovementComponent extends Component implements StepControl
   private _directionX = 0;
   private _directionY = 0;
   private _commandEpoch = -1;
+  private _budget = 0;
   private _blocked = false;
   private readonly _contactNormal = new Vector();
   private readonly _cast: CastState = createCastState();
@@ -143,15 +144,21 @@ export class KinematicMovementComponent extends Component implements StepControl
   }
 
   /**
-   * Moves the body along `direction` during the world's next fixed step, at
+   * Moves the body along `direction` during the world's next advance, at
    * {@link maxSpeed} times the direction's length. A direction longer than `1`
    * is shortened to `1`, so analog input below full deflection moves slower
    * and a raw difference vector moves at full speed. The last call before the
-   * step wins.
+   * world advances wins.
    *
-   * @throws RangeError for a non-finite direction.
+   * `distance` caps how far the command travels in total. A
+   * `PhysicsWorld.step` call that runs several fixed steps applies the same
+   * command to each of them, so a command meant to end on a point - the last
+   * stretch to a destination - passes the distance to it and stops there
+   * instead of overshooting by the extra steps. Defaults to no cap.
+   *
+   * @throws RangeError for a non-finite direction or a negative or NaN distance.
    */
-  public move(direction: Readonly<PointLike>): void {
+  public move(direction: Readonly<PointLike>, distance = Infinity): void {
     const x = direction.x;
     const y = direction.y;
 
@@ -159,11 +166,16 @@ export class KinematicMovementComponent extends Component implements StepControl
       throw new RangeError(`KinematicMovementComponent.move: direction must be finite, received (${x}, ${y}).`);
     }
 
+    if (!(distance >= 0)) {
+      throw new RangeError(`KinematicMovementComponent.move: distance must be non-negative, received ${distance}.`);
+    }
+
     const length = Math.hypot(x, y);
     const scale = length > 1 ? 1 / length : 1;
 
     this._directionX = x * scale;
     this._directionY = y * scale;
+    this._budget = distance;
     this._commandEpoch = this.physics.world._stepEpoch;
   }
 
@@ -216,7 +228,8 @@ export class KinematicMovementComponent extends Component implements StepControl
     if (
       this._commandEpoch !== this.physics.world._stepEpoch ||
       (this._directionX === 0 && this._directionY === 0) ||
-      this._maxSpeed === 0
+      this._maxSpeed === 0 ||
+      this._budget <= 0
     ) {
       body.linearVelocityX = 0;
       body.linearVelocityY = 0;
@@ -226,9 +239,12 @@ export class KinematicMovementComponent extends Component implements StepControl
       return;
     }
 
-    const distance = this._maxSpeed * fixedDelta;
+    const length = Math.hypot(this._directionX, this._directionY);
+    const distance = Math.min(this._maxSpeed * fixedDelta * length, this._budget);
+    const scale = distance / length;
 
-    this._resolve(body, this._directionX * distance, this._directionY * distance, fixedDelta);
+    this._budget -= distance;
+    this._resolve(body, this._directionX * scale, this._directionY * scale, fixedDelta);
   }
 
   private _resolve(body: PhysicsBody, desiredX: number, desiredY: number, fixedDelta: number): void {

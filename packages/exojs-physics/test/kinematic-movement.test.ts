@@ -136,6 +136,24 @@ describe('KinematicMovementComponent', () => {
     expect(physics.body.x).toBeCloseTo(3, 9);
   });
 
+  it('caps a command at its distance across a multi-step world.step call', () => {
+    const world = new PhysicsWorld();
+    const physics = new Container().addComponent(
+      new PhysicsBodyComponent(world, { type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(10) }] }),
+    );
+    const movement = new KinematicMovementComponent(physics, { maxSpeed: 60 });
+
+    world.add(physics.body);
+    world._addStepController(movement);
+    movement.move({ x: 1, y: 0 }, 2.5);
+    world.step(5 / 60 + 1e-9);
+
+    expect(physics.body.x).toBeCloseTo(2.5, 9);
+    expect(physics.body.linearVelocityX).toBe(0);
+    expect(() => movement.move({ x: 1, y: 0 }, -1)).toThrow(RangeError);
+    expect(() => movement.move({ x: 1, y: 0 }, Number.NaN)).toThrow(RangeError);
+  });
+
   it('stops at a wall without entering it and reports the contact', async () => {
     const { world, node, movement, body, frame } = await setup();
 

@@ -140,7 +140,7 @@
         },
         {
           "name": "move",
-          "signature": "move(direction: Readonly<PointLike>): void",
+          "signature": "move(direction: Readonly<PointLike>, distance: number): void",
           "signatureTokens": [
             {
               "text": "move",
@@ -175,6 +175,22 @@
               "kind": "punctuation"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "distance",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -192,10 +208,15 @@
               "name": "direction",
               "type": "Readonly<PointLike>",
               "optional": false
+            },
+            {
+              "name": "distance",
+              "type": "number",
+              "optional": false
             }
           ],
           "returnType": "void",
-          "description": "Moves the body along direction during the world's next fixed step, at maxSpeed times the direction's length. A direction longer than 1 is shortened to 1, so analog input below full deflection moves slower and a raw difference vector moves at full speed. The last call before the step wins."
+          "description": "Moves the body along direction during the world's next advance, at maxSpeed times the direction's length. A direction longer than 1 is shortened to 1, so analog input below full deflection moves slower and a raw difference vector moves at full speed. The last call before the world advances wins. distance caps how far the command travels in total. A PhysicsWorld.step call that runs several fixed steps applies the same command to each of them, so a command meant to end on a point - the last stretch to a destination - passes the distance to it and stops there instead of overshooting by the extra steps. Defaults to no cap."
         },
         {
           "name": "onAttach",
