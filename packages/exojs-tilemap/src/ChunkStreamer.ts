@@ -220,6 +220,23 @@ export class ChunkStreamer {
       layerBottom += bottom;
     }
 
+    if (layer.projection.staggered) {
+      // Shifted rows and taller artwork reach past the cell the view corner
+      // picks; one cell of slack plus the tallest overhang covers both.
+      let overhangX = layer.tileWidth;
+      let overhangY = layer.tileHeight;
+
+      for (const tileset of layer.tilesets) {
+        overhangX = Math.max(overhangX, tileset.tileWidth + Math.abs(tileset.offsetX));
+        overhangY = Math.max(overhangY, tileset.tileHeight + Math.abs(tileset.offsetY));
+      }
+
+      layerLeft -= overhangX;
+      layerTop -= layer.tileHeight;
+      layerRight += overhangX;
+      layerBottom += overhangY;
+    }
+
     const topLeftTile = layer.pixelToTile(layerLeft, layerTop);
     const bottomRightTile = layer.pixelToTile(layerRight, layerBottom);
 

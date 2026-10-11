@@ -190,7 +190,7 @@ export class TileLayerNode extends Container {
     // is what narrows them to numbers - `bounded` is a plain boolean getter.
     const { pixelHeight, pixelWidth } = this._layer;
 
-    if (this._layer.projection.orientation === 'isometric') {
+    if (this._layer.projection.orientation !== 'orthogonal') {
       bounds.set(0, 0, 0, 0);
       aggregateChildLocalBounds(this._chunkNodes, bounds);
     } else if (pixelWidth !== undefined && pixelHeight !== undefined) {
@@ -288,11 +288,18 @@ export class TileLayerNode extends Container {
    * per-node setting only needs to be added in one place.
    */
   private _addChunkNodes(chunk: ReadonlyTileChunk): void {
-    const iso = this._layer.projection.orientation === 'isometric';
-    const count = iso ? chunk.width + chunk.height - 1 : 1;
+    const projection = this._layer.projection;
+    const banded = projection.orientation !== 'orthogonal';
+    let count = 1;
+
+    if (projection.staggered) {
+      count = projection.staggerAxis === 'x' ? chunk.height * 2 : chunk.height;
+    } else if (banded) {
+      count = chunk.width + chunk.height - 1;
+    }
 
     for (let i = 0; i < count; i++) {
-      const node = this._createChunkNode(chunk, iso ? i : undefined);
+      const node = this._createChunkNode(chunk, banded ? i : undefined);
       this._chunkNodes.push(node);
       this.addChild(node);
       this._applyTint(node);
@@ -300,7 +307,7 @@ export class TileLayerNode extends Container {
   }
 
   private _sortChunks(): void {
-    if (this._layer.projection.orientation !== 'isometric') {
+    if (this._layer.projection.orientation === 'orthogonal') {
       return;
     }
 

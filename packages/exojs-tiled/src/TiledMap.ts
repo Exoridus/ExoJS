@@ -24,7 +24,13 @@ import type {
   TiledRenderOrder,
   TiledTileData,
 } from './data';
-import { maskTiledGid, TILED_FLIPPED_DIAGONALLY_FLAG, TILED_FLIPPED_HORIZONTALLY_FLAG, TILED_FLIPPED_VERTICALLY_FLAG } from './gid';
+import {
+  maskTiledGid,
+  TILED_FLIPPED_DIAGONALLY_FLAG,
+  TILED_FLIPPED_HORIZONTALLY_FLAG,
+  TILED_FLIPPED_VERTICALLY_FLAG,
+  TILED_ROTATED_HEXAGONAL_120_FLAG,
+} from './gid';
 import { getTiledObjectAnchorOffset, resolveTiledObjectAlignment } from './objectAlignment';
 import { createTiledLayer, TiledGroupLayer, TiledImageLayer, type TiledLayer, TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 import type { TiledObject } from './TiledObject';
@@ -63,6 +69,12 @@ export class TiledMap {
   /** Tile grid cell height in pixels. */
   public readonly tileHeight: number;
   public readonly infinite: boolean;
+  /** Staggered and hexagonal maps: the shifted axis. Tiled's default `'y'` when the file leaves it out. */
+  public readonly staggerAxis: 'x' | 'y';
+  /** Staggered and hexagonal maps: which rows or columns are shifted. Tiled's default `'odd'` when the file leaves it out. */
+  public readonly staggerIndex: 'odd' | 'even';
+  /** Hexagonal maps: length of the straight sides along the stagger axis; `0` otherwise. */
+  public readonly hexSideLength: number;
   public readonly backgroundColor?: string | undefined;
   public readonly layers: readonly TiledLayer[];
   /** Tilesets used by this map, sorted by {@link TiledTileset.firstGid} ascending. */
@@ -88,6 +100,9 @@ export class TiledMap {
     this.tileWidth = data.tilewidth;
     this.tileHeight = data.tileheight;
     this.infinite = data.infinite;
+    this.staggerAxis = data.staggeraxis ?? 'y';
+    this.staggerIndex = data.staggerindex ?? 'odd';
+    this.hexSideLength = data.orientation === 'hexagonal' ? (data.hexsidelength ?? 0) : 0;
     this.backgroundColor = data.backgroundcolor;
     this.properties = data.properties ?? [];
     this._imageTextures = imageTextures;
@@ -130,11 +145,11 @@ export class TiledMap {
    * Convert this parsed Tiled source model into a format-independent runtime
    * {@link TileMap} from `@codexo/exojs-tilemap`.
    *
-   * Orthogonal and isometric maps with atlas and collection-of-images tilesets
-   * are supported. An unsupported map, or a tileset with no image at all,
-   * throws {@link TiledFormatError} rather than silently producing wrong
-   * (misplaced) or empty geometry. Tile
-   * layers become renderable `TileLayer`s, object groups become data-only
+   * Orthogonal, isometric, staggered and hexagonal maps with atlas and
+   * collection-of-images tilesets are supported. A tileset with no image at
+   * all, or a hexagonal tile rotated by 60 or 120 degrees, throws
+   * {@link TiledFormatError} rather than silently producing wrong (misplaced)
+   * or empty geometry. Tile layers become renderable `TileLayer`s, object groups become data-only
    * `ObjectLayer`s, and image layers become data-only `ImageLayer`s; group
    * layer children are flattened in document order.
    *
@@ -156,12 +171,8 @@ export class TiledMap {
   public toTileMap(): TileMap {
     this._chunkSources.clear();
 
-    if (this.orientation !== 'orthogonal' && this.orientation !== 'isometric') {
-      throw new TiledFormatError(
-        this.source,
-        'orientation',
-        `toTileMap() supports orthogonal and isometric maps, got "${this.orientation}"`,
-      );
+    if (this.orientation === 'hexagonal') {
+      rejectHexagonalRotations(this.layers, this.source);
     }
 
     walkLayers(this.layers, 'layers', (layer, layerPath) => {
@@ -181,6 +192,9 @@ export class TiledMap {
       tileWidth: this.tileWidth,
       tileHeight: this.tileHeight,
       originX: this.orientation === 'isometric' ? (this.height * this.tileWidth) / 2 : 0,
+      staggerAxis: this.staggerAxis,
+      staggerIndex: this.staggerIndex,
+      hexSideLength: this.hexSideLength,
     });
 
     // Build runtime tilesets: an atlas texture, or one texture per tile for a
@@ -375,6 +389,41 @@ const findTilesetIndexForGid = (baseGid: number, tiledTilesets: readonly TiledTi
   }
 
   return -1;
+};
+
+const HEXAGONAL_ROTATION_FLAGS = TILED_FLIPPED_DIAGONALLY_FLAG | TILED_ROTATED_HEXAGONAL_120_FLAG;
+
+const findHexagonalRotation = (gids: readonly number[] | undefined): number | undefined =>
+  gids?.find(gid => ((gid >>> 0) & HEXAGONAL_ROTATION_FLAGS) !== 0);
+
+/**
+ * On a hexagonal map the diagonal flag means a 60 degree turn and a fourth
+ * flag a 120 degree one. Tiles turn only in quarter steps at runtime, so such
+ * a tile would draw at the wrong angle; the map is rejected instead, before
+ * any chunk streams in.
+ */
+const rejectHexagonalRotations = (layers: readonly TiledLayer[], source: string): void => {
+  walkLayers(layers, 'layers', (layer, layerPath) => {
+    let rotated: number | undefined;
+
+    if (layer instanceof TiledTileLayer) {
+      rotated = findHexagonalRotation(layer.data);
+
+      for (const chunk of layer.chunks ?? []) {
+        rotated ??= findHexagonalRotation(chunk.data);
+      }
+    } else if (layer instanceof TiledObjectLayer) {
+      rotated = findHexagonalRotation(layer.objects.flatMap(object => (object.gid === undefined ? [] : [object.gid])));
+    }
+
+    if (rotated !== undefined) {
+      throw new TiledFormatError(
+        source,
+        layerPath,
+        `tile gid ${maskTiledGid(rotated)} is rotated by 60 or 120 degrees, which hexagonal maps do not support at runtime; flip it instead`,
+      );
+    }
+  });
 };
 
 /**

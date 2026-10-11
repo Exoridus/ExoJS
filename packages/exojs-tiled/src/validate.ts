@@ -164,6 +164,21 @@ const optionalInteger = (obj: Record<string, unknown>, key: string, source: stri
   return value === undefined ? undefined : expectInteger(value, source, joinPath(path, key));
 };
 
+const optionalChoice = <T extends string>(
+  obj: Record<string, unknown>,
+  key: string,
+  choices: readonly T[],
+  source: string,
+): T | undefined => {
+  const value = optionalString(obj, key, source, '');
+
+  if (value !== undefined && !choices.includes(value as T)) {
+    throw new TiledFormatError(source, key, `unknown ${key} "${value}" (expected one of ${choices.join(', ')})`);
+  }
+
+  return value as T | undefined;
+};
+
 const optionalNonNegativeInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined => {
   const value = obj[key];
 
@@ -838,6 +853,9 @@ export const validateTiledMapData = (raw: unknown, source: string): TiledMapData
     tilewidth: expectPositiveInteger(obj.tilewidth, source, 'tilewidth'),
     tileheight: expectPositiveInteger(obj.tileheight, source, 'tileheight'),
     infinite,
+    staggeraxis: optionalChoice(obj, 'staggeraxis', ['x', 'y'] as const, source),
+    staggerindex: optionalChoice(obj, 'staggerindex', ['odd', 'even'] as const, source),
+    hexsidelength: optionalNonNegativeInteger(obj, 'hexsidelength', source, ''),
     compressionlevel: optionalInteger(obj, 'compressionlevel', source, ''),
     nextlayerid: optionalNonNegativeInteger(obj, 'nextlayerid', source, ''),
     nextobjectid: optionalNonNegativeInteger(obj, 'nextobjectid', source, ''),

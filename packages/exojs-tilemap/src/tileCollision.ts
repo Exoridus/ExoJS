@@ -643,6 +643,12 @@ const mergeCells = (cells: ReadonlyMap<string, string>, region: TileRegion, laye
  * @advanced
  */
 export const buildTileCollisionGeometry = (layer: TileLayer, options: TileCollisionOptions = {}): TileCollisionGeometry => {
+  if (layer.projection.staggered) {
+    throw new Error(
+      `buildTileCollisionGeometry: layer "${layer.name}" is ${layer.projection.orientation}. Tile collision works on rectangular logical cells, which staggered and hexagonal grids do not have; build colliders for these cells yourself.`,
+    );
+  }
+
   const cellSource = options.cells;
   const region = resolveRegion(layer, options);
 

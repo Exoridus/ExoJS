@@ -5,12 +5,12 @@
 // TiledLayer, TiledObject, ...) live alongside this module and are built
 // from these shapes by `validate.ts` / `loadTiledMap.ts`.
 //
-// Field coverage targets the orthogonal-map feature set described in the
-// v0.13 Tiled phase-2 spec (tile/object/image/group layers, embedded and
-// external tilesets, custom properties, tile animations). Hex/isometric-only
-// fields (grid, hexsidelength, staggeraxis/-index, transformations, parallax
-// origin) are intentionally not modelled. Wangsets (terrain/auto-tile
-// definitions) are modelled via {@link TiledWangSetData}.
+// Field coverage targets what the runtime conversion uses: tile/object/image/
+// group layers, embedded and external tilesets, custom properties, tile
+// animations, and the stagger/hexagon layout of staggered and hexagonal maps.
+// Editor-only fields (tileset grid, transformations, parallax origin) are not
+// modelled. Wangsets (terrain/auto-tile definitions) are modelled via
+// {@link TiledWangSetData}.
 
 /** A 2D point as written by Tiled (used for tile offsets and object shapes). */
 export interface TiledPointData {
@@ -362,6 +362,12 @@ export interface TiledMapData {
   /** Tile grid cell height in pixels. */
   readonly tileheight: number;
   readonly infinite: boolean;
+  /** Staggered and hexagonal maps: the axis whose every other row or column is shifted. */
+  readonly staggeraxis?: 'x' | 'y' | undefined;
+  /** Staggered and hexagonal maps: whether the odd or the even rows or columns are shifted. */
+  readonly staggerindex?: 'odd' | 'even' | undefined;
+  /** Hexagonal maps: length in pixels of the straight sides along the stagger axis. */
+  readonly hexsidelength?: number | undefined;
   readonly compressionlevel?: number | undefined;
   readonly nextlayerid?: number | undefined;
   readonly nextobjectid?: number | undefined;
