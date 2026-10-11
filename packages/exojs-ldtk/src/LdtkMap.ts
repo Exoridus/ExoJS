@@ -53,6 +53,7 @@ export class LdtkMap {
    */
   public get worlds(): readonly MapWorld[] {
     this._worlds ??= ldtkToMapWorld(this.data);
+
     return this._worlds;
   }
 
@@ -84,7 +85,11 @@ export class LdtkMap {
    */
   public getLevelByName(identifier: string): TileMap | undefined {
     const index = getLdtkLevelEntries(this.data).findIndex(entry => entry.level.identifier === identifier);
-    if (index === -1) return undefined;
+
+    if (index === -1) {
+      return undefined;
+    }
+
     return this.levels[index];
   }
 

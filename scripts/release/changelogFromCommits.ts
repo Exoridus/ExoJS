@@ -39,7 +39,9 @@ const SUBJECT_PATTERN = /^(?<type>[a-z]+)(?:\((?<scope>[^)]*)\))?(?<bang>!)?:\s*
 const SILENT_TYPES = new Set(['ci', 'build', 'test', 'chore', 'style']);
 
 const headingFor = (type: string, breaking: boolean): ChangelogHeading | null => {
-  if (breaking) return 'Changed';
+  if (breaking) {
+    return 'Changed';
+  }
 
   switch (type) {
     case 'feat':
@@ -74,16 +76,22 @@ const stripTrailers = (body: string): string =>
 export const classifyCommit = (commit: ReleaseCommit): ChangelogEntry | null => {
   const match = SUBJECT_PATTERN.exec(commit.subject);
 
-  if (match?.groups === undefined) return null;
+  if (match?.groups === undefined) {
+    return null;
+  }
 
   const { type, bang, subject, pr } = match.groups;
   const breaking = bang === '!' || /^BREAKING CHANGE:/mu.test(commit.body);
 
-  if (SILENT_TYPES.has(type!) && !breaking) return null;
+  if (SILENT_TYPES.has(type!) && !breaking) {
+    return null;
+  }
 
   const heading = headingFor(type!, breaking);
 
-  if (heading === null) return null;
+  if (heading === null) {
+    return null;
+  }
 
   return {
     heading,
@@ -98,7 +106,9 @@ export const classifyCommit = (commit: ReleaseCommit): ChangelogEntry | null => 
 export const mentionedPullRequests = (section: string): Set<number> => {
   const found = new Set<number>();
 
-  for (const match of section.matchAll(/(?:\(#|\/pull\/)(\d+)\)?/gu)) found.add(Number(match[1]));
+  for (const match of section.matchAll(/(?:\(#|\/pull\/)(\d+)\)?/gu)) {
+    found.add(Number(match[1]));
+  }
 
   return found;
 };
@@ -133,7 +143,9 @@ export const renderUnreleasedEntries = (entries: readonly ChangelogEntry[], exis
   for (const heading of HEADING_ORDER) {
     const group = fresh.filter(entry => entry.heading === heading).sort((a, b) => Number(b.breaking) - Number(a.breaking));
 
-    if (group.length === 0) continue;
+    if (group.length === 0) {
+      continue;
+    }
 
     blocks.push(`### ${heading}\n\n${group.map(entry => renderEntry(entry, repoUrl)).join('\n')}`);
   }
@@ -147,11 +159,15 @@ export const renderUnreleasedEntries = (entries: readonly ChangelogEntry[], exis
  * nothing to insert.
  */
 export const prependToUnreleased = (changelog: string, unreleasedHeading: string, rendered: string): string => {
-  if (rendered.length === 0) return changelog;
+  if (rendered.length === 0) {
+    return changelog;
+  }
 
   const start = changelog.indexOf(unreleasedHeading);
 
-  if (start === -1) throw new Error(`CHANGELOG.md has no "${unreleasedHeading}" section to fill.`);
+  if (start === -1) {
+    throw new Error(`CHANGELOG.md has no "${unreleasedHeading}" section to fill.`);
+  }
 
   const insertAt = start + unreleasedHeading.length;
 
@@ -162,7 +178,9 @@ export const prependToUnreleased = (changelog: string, unreleasedHeading: string
 export const unreleasedSectionOf = (changelog: string, unreleasedHeading: string): string => {
   const start = changelog.indexOf(unreleasedHeading);
 
-  if (start === -1) return '';
+  if (start === -1) {
+    return '';
+  }
 
   const rest = changelog.slice(start + unreleasedHeading.length);
   const next = rest.search(/^## /mu);

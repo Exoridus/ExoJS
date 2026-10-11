@@ -63,6 +63,7 @@ export class LoadState<Owner> {
       this._resolve = null;
       this._reject = null;
     }
+
     this._value = 'loading';
     this._error = null;
   }

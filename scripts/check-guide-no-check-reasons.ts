@@ -37,15 +37,15 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
+import { parseFences } from './guide-fences.ts';
 import {
+  type BaselineDiff,
   diffPartialBaseline,
   isBaselineClean,
   mergePartialBaseline,
   readPartialBaseline,
   writePartialBaseline,
-  type BaselineDiff,
 } from './guide-partial-baseline.ts';
-import { parseFences } from './guide-fences.ts';
 
 const REPO_ROOT = join(import.meta.dirname, '..');
 const GUIDE_DIR = join(REPO_ROOT, 'site', 'src', 'content', 'guide');
@@ -154,7 +154,9 @@ const scanGuide = (): NoCheckBlock[] => {
     const rel = relative(GUIDE_DIR, file).replaceAll('\\', '/');
 
     for (const { lang, meta } of parseFences(content)) {
-      if (!CHECKED_LANGS.has(lang) || !meta.includes('no-check')) continue;
+      if (!CHECKED_LANGS.has(lang) || !meta.includes('no-check')) {
+        continue;
+      }
 
       const reason = (NO_CHECK_REASON_RE.exec(meta)?.[1] ?? '').trim();
 
@@ -168,7 +170,9 @@ const scanGuide = (): NoCheckBlock[] => {
 const formatRows = (deltas: BaselineDiff['regressions']): string => {
   const width = deltas.reduce((max, d) => Math.max(max, d.file.length), 0);
 
-  return deltas.map(d => `    ${d.file.padEnd(width)}  ${d.baseline} -> ${d.actual}  (${d.actual > d.baseline ? '+' : ''}${d.actual - d.baseline})`).join('\n');
+  return deltas
+    .map(d => `    ${d.file.padEnd(width)}  ${d.baseline} -> ${d.actual}  (${d.actual > d.baseline ? '+' : ''}${d.actual - d.baseline})`)
+    .join('\n');
 };
 
 const formatFailure = (diff: BaselineDiff): string => {
@@ -243,12 +247,16 @@ const withoutReason = blocks.length - withReason;
 const withoutReasonByFile = new Map<string, number>();
 
 for (const block of blocks) {
-  if (block.hasReason) continue;
+  if (block.hasReason) {
+    continue;
+  }
 
   withoutReasonByFile.set(block.file, (withoutReasonByFile.get(block.file) ?? 0) + 1);
 }
 
-console.log(`typecheck:guides:no-check: ${blocks.length} no-check block(s) total — ${withReason} with a recorded reason, ${withoutReason} without.`);
+console.log(
+  `typecheck:guides:no-check: ${blocks.length} no-check block(s) total — ${withReason} with a recorded reason, ${withoutReason} without.`,
+);
 
 const baseline = readPartialBaseline(BASELINE_PATH, BASELINE_NOTE);
 

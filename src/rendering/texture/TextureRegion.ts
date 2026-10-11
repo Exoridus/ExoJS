@@ -88,11 +88,15 @@ const validateExtrusion = (
   const { left, top, right, bottom } = extrusion;
 
   if (!isFinite(left) || !isFinite(top) || !isFinite(right) || !isFinite(bottom)) {
-    throw new Error(`TextureRegion extrusion values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
+    throw new Error(
+      `TextureRegion extrusion values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`,
+    );
   }
 
   if (left < 0 || top < 0 || right < 0 || bottom < 0) {
-    throw new Error(`TextureRegion extrusion values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
+    throw new Error(
+      `TextureRegion extrusion values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`,
+    );
   }
 
   if (left > x || top > y || right > textureWidth - (x + width) || bottom > textureHeight - (y + height)) {
@@ -107,7 +111,9 @@ const validateOptions = (options: TextureRegionOptions, textureWidth: number, te
   const { x, y, width, height } = options;
 
   if (!isFinite(x) || !isFinite(y) || !isFinite(width) || !isFinite(height)) {
-    throw new Error(`TextureRegion coordinates and dimensions must be finite numbers (got x=${x}, y=${y}, width=${width}, height=${height}).`);
+    throw new Error(
+      `TextureRegion coordinates and dimensions must be finite numbers (got x=${x}, y=${y}, width=${width}, height=${height}).`,
+    );
   }
 
   if (width <= 0 || height <= 0) {

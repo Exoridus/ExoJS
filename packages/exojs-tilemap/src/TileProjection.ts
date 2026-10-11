@@ -33,6 +33,7 @@ export class TileProjection {
     this.tileHeight = options.tileHeight;
     this.originX = options.originX ?? 0;
     this.originY = options.originY ?? 0;
+
     if (!Number.isFinite(this.originX) || !Number.isFinite(this.originY)) {
       throw new Error('TileProjection origin must be finite.');
     }
@@ -57,6 +58,7 @@ export class TileProjection {
   /** Picks the half-open cell containing a display point; negative cells are valid. */
   public pixelToTile(x: number, y: number): { tx: number; ty: number } {
     const logical = this.pixelToLogical(x, y);
+
     return { tx: Math.floor(logical.x / this.logicalTileWidth), ty: Math.floor(logical.y / this.logicalTileHeight) };
   }
 
@@ -69,6 +71,7 @@ export class TileProjection {
   public pixelToLogical(x: number, y: number): { x: number; y: number } {
     const dx = x - this.originX;
     const dy = y - this.originY;
+
     return this.orientation === 'isometric'
       ? { x: dy + (dx * this.tileHeight) / this.tileWidth, y: dy - (dx * this.tileHeight) / this.tileWidth }
       : { x: dx, y: dy };
@@ -77,9 +80,11 @@ export class TileProjection {
   /** Display AABB of a cell region, excluding artwork overhang and layer offsets. */
   public getBounds(tx: number, ty: number, width: number, height: number): { x: number; y: number; width: number; height: number } {
     const top = this.tileToPixel(tx, ty);
+
     if (this.orientation === 'orthogonal') {
       return { ...top, width: width * this.tileWidth, height: height * this.tileHeight };
     }
+
     return {
       x: top.x - (height * this.tileWidth) / 2,
       y: top.y,
@@ -95,7 +100,9 @@ export class TileProjection {
         ? projectObject(object, 1, 0, 0, 1, this.originX, this.originY)
         : { ...object, x: object.x + this.originX, y: object.y + this.originY };
     }
+
     const ratio = this.tileWidth / (2 * this.tileHeight);
+
     return projectObject(object, ratio, 0.5, -ratio, 0.5, this.originX, this.originY);
   }
 
@@ -106,7 +113,9 @@ export class TileProjection {
         ? projectObject(object, 1, 0, 0, 1, -this.originX, -this.originY)
         : { ...object, x: object.x - this.originX, y: object.y - this.originY };
     }
+
     const ratio = this.tileHeight / this.tileWidth;
+
     return projectObject(object, ratio, -ratio, 1, 1, -this.originY - this.originX * ratio, -this.originY + this.originX * ratio);
   }
 }

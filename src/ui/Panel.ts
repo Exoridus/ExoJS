@@ -150,10 +150,21 @@ export class Panel extends Widget {
 const fillPatchFrom = (options: PanelOptions): UIFillPatch | null => {
   const patch: { -readonly [Key in keyof UIFillPatch]: UIFillPatch[Key] } = {};
 
-  if (options.color !== undefined) patch.color = options.color.clone();
-  if (options.borderColor !== undefined) patch.borderColor = options.borderColor.clone();
-  if (options.borderWidth !== undefined) patch.borderWidth = options.borderWidth;
-  if (options.cornerRadius !== undefined) patch.cornerRadius = options.cornerRadius;
+  if (options.color !== undefined) {
+    patch.color = options.color.clone();
+  }
+
+  if (options.borderColor !== undefined) {
+    patch.borderColor = options.borderColor.clone();
+  }
+
+  if (options.borderWidth !== undefined) {
+    patch.borderWidth = options.borderWidth;
+  }
+
+  if (options.cornerRadius !== undefined) {
+    patch.cornerRadius = options.cornerRadius;
+  }
 
   return Object.keys(patch).length > 0 ? patch : null;
 };

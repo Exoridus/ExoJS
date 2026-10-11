@@ -4,7 +4,14 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { PUBLISH_ORDER, type ReleaseManifest, renderChecksums, serializeManifest, sha256File, verifyManifestArtifacts } from '../../scripts/release/manifest';
+import {
+  PUBLISH_ORDER,
+  type ReleaseManifest,
+  renderChecksums,
+  serializeManifest,
+  sha256File,
+  verifyManifestArtifacts,
+} from '../../scripts/release/manifest';
 
 let dir: string;
 let manifest: ReleaseManifest;
@@ -16,6 +23,7 @@ beforeEach(() => {
     const file = `${name.replace('@', '').replace('/', '-')}-0.13.0.tgz`;
     writeFileSync(join(dir, file), `content-${name}-${i}`);
     const { sha256, bytes } = sha256File(join(dir, file));
+
     return { name, version: '0.13.0', file, sha256, bytes };
   });
   manifest = {
@@ -77,10 +85,13 @@ describe('renderChecksums', () => {
     const lines = body.trimEnd().split('\n');
     expect(lines).toHaveLength(PUBLISH_ORDER.length);
     expect(body).not.toContain('full.zip');
+
     // Every published tarball is named after its npm package with the `@codexo/`
     // scope flattened to a `codexo-` prefix. `create-exo-app` carries no scope, so its
     // archive is the bare package name.
-    for (const line of lines) expect(line).toMatch(/^[a-f0-9]{64} {2}(?:codexo-)?[a-z]/);
+    for (const line of lines) {
+      expect(line).toMatch(/^[a-f0-9]{64} {2}(?:codexo-)?[a-z]/);
+    }
   });
 
   it('applies a path prefix so checksums resolve from the tree root', () => {

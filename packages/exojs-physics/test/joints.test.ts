@@ -86,7 +86,9 @@ describe('joints', () => {
     const run = (): string => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
       const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
-      const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 60, y: 120 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+      const bob = world.add(
+        new PhysicsBody({ type: 'dynamic', position: { x: 60, y: 120 }, colliders: [{ shape: new BoxShape(16, 16) }] }),
+      );
 
       world.addJoint(new DistanceJoint({ bodyA: anchor, bodyB: bob, length: 100 }));
 
@@ -217,7 +219,9 @@ describe('joints', () => {
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(40, 40) }] }));
 
-    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: wheel, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 5, maxMotorTorque: 1e8 }));
+    world.addJoint(
+      new RevoluteJoint({ bodyA: anchor, bodyB: wheel, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 5, maxMotorTorque: 1e8 }),
+    );
 
     advance(world, 1);
 
@@ -231,7 +235,9 @@ describe('joints', () => {
     const bar = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, colliders: [{ shape: new BoxShape(100, 10) }] }));
     const limit = Math.PI / 4;
 
-    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: bar, anchor: { x: 0, y: 0 }, enableLimit: true, lowerAngle: -limit, upperAngle: limit }));
+    world.addJoint(
+      new RevoluteJoint({ bodyA: anchor, bodyB: bar, anchor: { x: 0, y: 0 }, enableLimit: true, lowerAngle: -limit, upperAngle: limit }),
+    );
 
     advance(world, 3);
 
@@ -307,7 +313,9 @@ describe('joints', () => {
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
 
     // Suspension axis vertical (0,1): the wheel may travel along it (sprung) + spin, but not slide sideways.
-    world.addJoint(new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, hertz: 5, dampingRatio: 1 }));
+    world.addJoint(
+      new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, hertz: 5, dampingRatio: 1 }),
+    );
 
     wheel.angularVelocity = 10; // give it spin
     wheel.applyImpulse(5000, 0); // shove it sideways (perpendicular to the axis)
@@ -337,7 +345,9 @@ describe('joints', () => {
 
   it('maxForce caps how hard a mouse joint can pull', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
-    const heavy = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20), density: 100 }] }));
+    const heavy = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20), density: 100 }] }),
+    );
 
     // A tiny force against a far target: it creeps but cannot snap across.
     const joint = world.addJoint(new MouseJoint({ body: heavy, target: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1, maxForce: 50 }));
@@ -355,7 +365,15 @@ describe('joints', () => {
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
 
     world.addJoint(
-      new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, enableMotor: true, motorSpeed: 5, maxMotorTorque: 1e8 }),
+      new WheelJoint({
+        bodyA: chassis,
+        bodyB: wheel,
+        anchor: { x: 0, y: 30 },
+        axis: { x: 0, y: 1 },
+        enableMotor: true,
+        motorSpeed: 5,
+        maxMotorTorque: 1e8,
+      }),
     );
 
     advance(world, 1);
@@ -369,7 +387,9 @@ describe('joints', () => {
     // Suspension axis vertical (0,1) = gravity: an unloaded soft spring sags then settles.
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
 
-    world.addJoint(new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, hertz: 1, dampingRatio: 1 }));
+    world.addJoint(
+      new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, hertz: 1, dampingRatio: 1 }),
+    );
 
     advance(world, 3);
 
@@ -474,7 +494,9 @@ describe('joints', () => {
     const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
 
     expect(() => new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 0, y: 0 } })).toThrow(RangeError);
-    expect(() => new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: Number.NaN, y: 0 } })).toThrow(RangeError);
+    expect(() => new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: Number.NaN, y: 0 } })).toThrow(
+      RangeError,
+    );
   });
 
   it('a prismatic joint with a fixed-rotation slider keeps the perpendicular lock solvable (k22 fallback)', () => {
@@ -483,7 +505,9 @@ describe('joints', () => {
     // Both bodies are rotation-locked (static anchor + fixedRotation slider): iA+iB=0,
     // which would make the perpendicular+angular block matrix singular without the
     // `_k22 = 1` fallback.
-    const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const slider = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(20, 20) }] }),
+    );
 
     world.addJoint(new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 } }));
 
@@ -512,9 +536,13 @@ describe('joints', () => {
   it('an angular motor on a fixed-rotation body does nothing (zero angular effective mass)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
-    const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(16, 16) }] }));
+    const bob = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(16, 16) }] }),
+    );
 
-    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: bob, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 10, maxMotorTorque: 1e8 }));
+    world.addJoint(
+      new RevoluteJoint({ bodyA: anchor, bodyB: bob, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 10, maxMotorTorque: 1e8 }),
+    );
 
     advance(world, 1);
 
@@ -526,7 +554,9 @@ describe('joints', () => {
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const bar = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, colliders: [{ shape: new BoxShape(100, 10) }] }));
 
-    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: bar, anchor: { x: 0, y: 0 }, enableLimit: true, lowerAngle: -0.2, upperAngle: 0.2 }));
+    world.addJoint(
+      new RevoluteJoint({ bodyA: anchor, bodyB: bar, anchor: { x: 0, y: 0 }, enableLimit: true, lowerAngle: -0.2, upperAngle: 0.2 }),
+    );
 
     bar.angularVelocity = -50; // slam it hard into the lower limit, forcing a real overshoot
 
@@ -556,7 +586,9 @@ describe('joints', () => {
   it('a weld joint between fixed-rotation bodies still locks position (zero angular effective mass)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
-    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const box = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(20, 20) }] }),
+    );
 
     world.addJoint(new WeldJoint({ bodyA: anchor, bodyB: box }));
 
@@ -573,18 +605,28 @@ describe('joints', () => {
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
 
-    expect(() => new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1 })).toThrow(
-      RangeError,
-    );
+    expect(
+      () => new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1 }),
+    ).toThrow(RangeError);
   });
 
   it('a wheel motor on a fixed-rotation wheel does nothing (zero angular effective mass)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
-    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, fixedRotation: true, colliders: [{ shape: new CircleShape(10) }] }));
+    const wheel = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, fixedRotation: true, colliders: [{ shape: new CircleShape(10) }] }),
+    );
 
     world.addJoint(
-      new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, enableMotor: true, motorSpeed: 20, maxMotorTorque: 1e8 }),
+      new WheelJoint({
+        bodyA: chassis,
+        bodyB: wheel,
+        anchor: { x: 0, y: 30 },
+        axis: { x: 0, y: 1 },
+        enableMotor: true,
+        motorSpeed: 20,
+        maxMotorTorque: 1e8,
+      }),
     );
 
     advance(world, 1);
@@ -725,7 +767,9 @@ describe('connected-body collision', () => {
     let previous = anchor;
 
     for (let index = 1; index <= 8; index++) {
-      const link = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: index * 16 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+      const link = world.add(
+        new PhysicsBody({ type: 'dynamic', position: { x: 0, y: index * 16 }, colliders: [{ shape: new BoxShape(16, 16) }] }),
+      );
 
       world.addJoint(new RevoluteJoint({ bodyA: previous, bodyB: link, anchor: { x: 0, y: index * 16 - 8 }, collideConnected: false }));
       previous = link;
@@ -869,9 +913,13 @@ describe('joint lifecycle', () => {
     // still, which is what a revolute anchor to a static wall would do.
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
     const wall = boxBody(world, 400, 0, 'static');
-    const bullet = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new BoxShape(8, 8) }] }));
+    const bullet = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new BoxShape(8, 8) }] }),
+    );
 
-    world.addJoint(new PrismaticJoint({ bodyA: wall, bodyB: bullet, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 }, collideConnected: false }));
+    world.addJoint(
+      new PrismaticJoint({ bodyA: wall, bodyB: bullet, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 }, collideConnected: false }),
+    );
     // 1000 px in one step at 60 Hz, so a clamp at the wall is unmistakable.
     bullet.linearVelocityX = 60_000;
 
@@ -884,7 +932,9 @@ describe('joint lifecycle', () => {
     // The counterpart, so the test above cannot pass by CCD being off entirely.
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
     const wall = boxBody(world, 400, 0, 'static');
-    const bullet = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new BoxShape(8, 8) }] }));
+    const bullet = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new BoxShape(8, 8) }] }),
+    );
 
     bullet.linearVelocityX = 60_000;
 

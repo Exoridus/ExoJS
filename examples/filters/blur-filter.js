@@ -26,7 +26,10 @@ class BlurAndShadowScene extends Scene {
       new Text('Original', { fillColor: Color.white, fontSize: 25 }).setAnchor(0.5).setPosition(width * 0.3, height * 0.78),
       new Text('Blur', { fillColor: Color.white, fontSize: 25 }).setAnchor(0.5).setPosition(width * 0.7, height * 0.78),
     ];
-    this.hud = mountControls({ title: 'Blur and Drop Shadow', hint: 'Compare the original sprite with a blurred sprite or an offset shadow.' });
+    this.hud = mountControls({
+      title: 'Blur and Drop Shadow',
+      hint: 'Compare the original sprite with a blurred sprite or an offset shadow.',
+    });
     const panel = mountControlPanel({ title: 'Filter' });
     panel.addButton({
       label: 'Blur',

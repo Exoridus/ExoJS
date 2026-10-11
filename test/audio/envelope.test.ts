@@ -26,6 +26,7 @@ const makeMockAudioParam = (): Mocked<AudioParam> =>
 const makeLegacyAudioParam = (): Mocked<AudioParam> => {
   const param = makeMockAudioParam() as unknown as Record<string, unknown>;
   delete param.cancelAndHoldAtTime;
+
   return param as unknown as Mocked<AudioParam>;
 };
 
@@ -76,7 +77,7 @@ describe('Envelope', () => {
   test('trigger() calls cancelScheduledValues, setValueAtTime(0), then linearRamps', () => {
     const env = new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.1), sustainLevel: 0.7 });
     const param = makeMockAudioParam();
-    const atTime = 1.0;
+    const atTime = 1;
 
     env.trigger(param, atTime);
 
@@ -85,7 +86,7 @@ describe('Envelope', () => {
 
     expect(param.cancelScheduledValues).toHaveBeenCalledWith(atTime);
     expect(param.setValueAtTime).toHaveBeenCalledWith(0, atTime);
-    expect(param.linearRampToValueAtTime).toHaveBeenCalledWith(1.0, attackEnd);
+    expect(param.linearRampToValueAtTime).toHaveBeenCalledWith(1, attackEnd);
     expect(param.linearRampToValueAtTime).toHaveBeenCalledWith(0.7, decayEnd);
   });
 
@@ -96,14 +97,17 @@ describe('Envelope', () => {
 
     param.cancelScheduledValues.mockImplementation(() => {
       callOrder.push('cancel');
+
       return param;
     });
     param.setValueAtTime.mockImplementation(() => {
       callOrder.push('setValue');
+
       return param;
     });
     param.linearRampToValueAtTime.mockImplementation(() => {
       callOrder.push('ramp');
+
       return param;
     });
 
@@ -115,7 +119,7 @@ describe('Envelope', () => {
   test('releaseAt() holds the running value via cancelAndHoldAtTime, then ramps to 0', () => {
     const env = new Envelope({ release: Time.seconds(0.3) });
     const param = makeMockAudioParam();
-    const atTime = 2.0;
+    const atTime = 2;
 
     env.releaseAt(param, atTime);
 

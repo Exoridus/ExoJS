@@ -163,7 +163,8 @@ const signedArea = (vertices: ArrayLike<number>): number => {
  * Returns true if the triangle (a, b, c) has a counter-clockwise (CCW) winding.
  * Uses the cross product of (b-a) × (c-a); positive = CCW.
  */
-const isCcwTriangle = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean => (bx - ax) * (cy - ay) - (by - ay) * (cx - ax) > 0;
+const isCcwTriangle = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean =>
+  (bx - ax) * (cy - ay) - (by - ay) * (cx - ax) > 0;
 
 /**
  * Returns true if point (px, py) lies strictly inside triangle (a, b, c).
@@ -237,6 +238,7 @@ const isEar = (
         return false;
       }
     }
+
     node = next[node]!;
   }
 

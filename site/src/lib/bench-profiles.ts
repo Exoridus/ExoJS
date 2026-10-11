@@ -360,15 +360,21 @@ const byVersionDescending = (a: string, b: string): number => {
     const l = Number.parseInt(left[index] ?? '0', 10);
     const r = Number.parseInt(right[index] ?? '0', 10);
 
-    if (Number.isNaN(l) || Number.isNaN(r)) return b.localeCompare(a);
-    if (l !== r) return r - l;
+    if (Number.isNaN(l) || Number.isNaN(r)) {
+      return b.localeCompare(a);
+    }
+
+    if (l !== r) {
+      return r - l;
+    }
   }
 
   return 0;
 };
 
 /** How many of the two measured domains a profile carries. */
-const domainCount = (document: BenchProfileDocument): number => (document.rendering === undefined ? 0 : 1) + (document.physics === undefined ? 0 : 1);
+const domainCount = (document: BenchProfileDocument): number =>
+  (document.rendering === undefined ? 0 : 1) + (document.physics === undefined ? 0 : 1);
 
 /**
  * Newest engine version first, then widest coverage, then newest measurement.
@@ -468,12 +474,25 @@ const OS_LABELS: Readonly<Record<string, string>> = { windows: 'Windows', macos:
  * enumerated in advance; anything the rules do not recognise is title-cased
  * rather than dropped.
  */
-const DEVICE_WORDS: Readonly<Record<string, string>> = { rtx: 'RTX', gtx: 'GTX', rx: 'RX', ti: 'Ti', amd: 'AMD', apple: 'Apple', intel: 'Intel', arc: 'Arc' };
+const DEVICE_WORDS: Readonly<Record<string, string>> = {
+  rtx: 'RTX',
+  gtx: 'GTX',
+  rx: 'RX',
+  ti: 'Ti',
+  amd: 'AMD',
+  apple: 'Apple',
+  intel: 'Intel',
+  arc: 'Arc',
+};
 
 const deviceName = (slug: string): string =>
   slug
     .split('-')
-    .map(word => DEVICE_WORDS[word] ?? (/^[a-z]\d/.test(word) || /^\d/.test(word) ? word.toUpperCase() : `${word.charAt(0).toUpperCase()}${word.slice(1)}`))
+    .map(
+      word =>
+        DEVICE_WORDS[word] ??
+        (/^[a-z]\d/.test(word) || /^\d/.test(word) ? word.toUpperCase() : `${word.charAt(0).toUpperCase()}${word.slice(1)}`),
+    )
     .join(' ');
 
 /**
@@ -484,7 +503,8 @@ const deviceName = (slug: string): string =>
  * operating system, its version and the engine version is a filename rather
  * than a name. Everything it leaves out stays on the profile itself.
  */
-export const machineName = (profile: BenchProfile): string => `${deviceName(profile.gpu)} · ${BROWSER_LABELS[profile.browser] ?? deviceName(profile.browser)}`;
+export const machineName = (profile: BenchProfile): string =>
+  `${deviceName(profile.gpu)} · ${BROWSER_LABELS[profile.browser] ?? deviceName(profile.browser)}`;
 
 /**
  * Just the hardware, for a place that already names the browser.
@@ -606,7 +626,8 @@ const ARCHETYPE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'particles-lifecycle': 'A steady particle effect: ageing, movement, fading and respawning.',
   'interaction-picking': 'A block of point queries against a field of interactive rectangles. Stresses the hit-test index.',
   'fx-blur': 'A separable two-pass Gaussian over a fixed area. Stresses the target passes a filter runs.',
-  'ui-layout-update': 'Nested boxes of fixed-size widgets re-solved after a tenth of them resize. Stresses the layout engine, and nothing is drawn.',
+  'ui-layout-update':
+    'Nested boxes of fixed-size widgets re-solved after a tenth of them resize. Stresses the layout engine, and nothing is drawn.',
 };
 
 /**
@@ -733,7 +754,9 @@ const significant = (value: number): string => {
  * unrounded figure stays in the row's detail.
  */
 export const formatFactor = (factor: number | null): string => {
-  if (factor === null || !Number.isFinite(factor)) return '-';
+  if (factor === null || !Number.isFinite(factor)) {
+    return '-';
+  }
 
   const rounded = factor >= 10 ? factor.toFixed(0) : factor.toFixed(1).replace(/\.0$/, '');
 
@@ -748,7 +771,9 @@ export const formatFactor = (factor: number | null): string => {
  * that took a measurable fraction of a microsecond must not be handed it.
  */
 export const formatMs = (ms: number | null): string => {
-  if (ms === null || !Number.isFinite(ms)) return '-';
+  if (ms === null || !Number.isFinite(ms)) {
+    return '-';
+  }
 
   const printed = significant(ms);
 
@@ -789,10 +814,12 @@ export const hasSpread = (spread: ProfileSpread): boolean =>
   spread.minMs !== null && spread.maxMs !== null && Number.isFinite(spread.minMs) && Number.isFinite(spread.maxMs);
 
 /** The observed range behind a pooled median, or an empty string when no run produced one. */
-export const formatRange = (spread: ProfileSpread): string => (hasSpread(spread) ? `${formatMs(spread.minMs)}-${formatMs(spread.maxMs)}` : '');
+export const formatRange = (spread: ProfileSpread): string =>
+  hasSpread(spread) ? `${formatMs(spread.minMs)}-${formatMs(spread.maxMs)}` : '';
 
 /** True when the runs behind a value moved by at least {@link WIDE_SPREAD_RATIO}. */
-export const isWideSpread = (spread: ProfileSpread): boolean => spread.ratio !== null && Number.isFinite(spread.ratio) && spread.ratio >= WIDE_SPREAD_RATIO;
+export const isWideSpread = (spread: ProfileSpread): boolean =>
+  spread.ratio !== null && Number.isFinite(spread.ratio) && spread.ratio >= WIDE_SPREAD_RATIO;
 
 /**
  * The word each ladder rung is printed with.
@@ -836,8 +863,13 @@ export type RungSide = 'exojs' | 'neither' | 'competitor';
  * with the same printed range, which is the whole reason to show them.
  */
 export const rungSide = (rung: string): RungSide => {
-  if (rung.startsWith('exojs-leads')) return 'exojs';
-  if (rung.startsWith('competitor-leads')) return 'competitor';
+  if (rung.startsWith('exojs-leads')) {
+    return 'exojs';
+  }
+
+  if (rung.startsWith('competitor-leads')) {
+    return 'competitor';
+  }
 
   return 'neither';
 };
@@ -894,13 +926,16 @@ const renderingCells = (document: BenchProfileDocument): readonly FlatCell[] =>
 
 /** Every physics cell of the published table. */
 const physicsCells = (document: BenchProfileDocument): readonly FlatCell[] =>
-  (document.physics?.section.rows ?? []).flatMap(row => row.cells.map(cell => ({ backend: null, archetype: row.archetype, count: row.count, cell })));
+  (document.physics?.section.rows ?? []).flatMap(row =>
+    row.cells.map(cell => ({ backend: null, archetype: row.archetype, count: row.count, cell })),
+  );
 
 /** Distinct arm names in a set of cells, alphabetically. */
 const armsIn = (cells: readonly FlatCell[]): readonly string[] => [...new Set(cells.map(entry => entry.cell.competitor))].sort();
 
 /** An English list: `a`, `a and b`, `a, b and c`. */
-const listOf = (items: readonly string[]): string => (items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}`);
+const listOf = (items: readonly string[]): string =>
+  items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}`;
 
 /**
  * How one comparison reads once the pooled runs are taken into account.
@@ -911,7 +946,8 @@ const listOf = (items: readonly string[]): string => (items.length < 2 ? (items[
  * absence of one: the runs reached different rungs, so the pair carries numbers
  * and no conclusion. `absent` is an arm that produced no comparable cell at all.
  */
-export type CellOutcome = 'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'timer-limited' | 'timer-unknown' | 'absent';
+export type CellOutcome =
+  'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'timer-limited' | 'timer-unknown' | 'absent';
 
 /** Outcomes in reading order: the widest lead first, the widest loss last, then the three that carry no verdict. */
 export const OUTCOME_ORDER: readonly CellOutcome[] = [
@@ -1013,11 +1049,25 @@ export type TimerCheck = 'resolved' | 'limited' | 'unknown';
  * `timer-unknown` is a check that could not be made.
  */
 export const outcomeOf = (cell: ProfileCell | null): CellOutcome => {
-  if (cell === null) return 'absent';
-  if (cell.timer !== 'resolved') return cell.timer === 'limited' ? 'timer-limited' : 'timer-unknown';
-  if (!cell.aggregate.stable) return 'unstable';
-  if (cell.verdict.side === 'neither') return 'level';
-  if (cell.verdict.side === 'exojs') return cell.verdict.structural ? 'clear-lead' : 'lead';
+  if (cell === null) {
+    return 'absent';
+  }
+
+  if (cell.timer !== 'resolved') {
+    return cell.timer === 'limited' ? 'timer-limited' : 'timer-unknown';
+  }
+
+  if (!cell.aggregate.stable) {
+    return 'unstable';
+  }
+
+  if (cell.verdict.side === 'neither') {
+    return 'level';
+  }
+
+  if (cell.verdict.side === 'exojs') {
+    return cell.verdict.structural ? 'clear-lead' : 'lead';
+  }
 
   return cell.verdict.structural ? 'clear-loss' : 'loss';
 };
@@ -1033,7 +1083,8 @@ export const outcomeOf = (cell: ProfileCell | null): CellOutcome => {
  * into the strongest-looking result on the card - a bar of almost no length
  * beside arms that took milliseconds.
  */
-export const isQuantitative = (outcome: CellOutcome): boolean => outcome !== 'timer-limited' && outcome !== 'timer-unknown' && outcome !== 'absent';
+export const isQuantitative = (outcome: CellOutcome): boolean =>
+  outcome !== 'timer-limited' && outcome !== 'timer-unknown' && outcome !== 'absent';
 
 /**
  * One arm's figure as the page may print it, or `null` where the cell published
@@ -1050,7 +1101,9 @@ export const isQuantitative = (outcome: CellOutcome): boolean => outcome !== 'ti
 export const publishedMs = (cell: ProfileCell, ms: number | null): number | null => {
   const measured = measuredMs(cell, ms);
 
-  if (measured === null) return null;
+  if (measured === null) {
+    return null;
+  }
 
   return outcomeOf(cell) === 'timer-limited' && Number.parseFloat(significant(measured)) === 0 ? null : measured;
 };
@@ -1076,8 +1129,13 @@ export interface RatioBand {
 export const ratioBand = (cell: ProfileCell): RatioBand | null => {
   const { reference, competitor } = cell.aggregate;
 
-  if (reference.minMs === null || reference.maxMs === null || competitor.minMs === null || competitor.maxMs === null) return null;
-  if (competitor.minMs <= 0 || competitor.maxMs <= 0) return null;
+  if (reference.minMs === null || reference.maxMs === null || competitor.minMs === null || competitor.maxMs === null) {
+    return null;
+  }
+
+  if (competitor.minMs <= 0 || competitor.maxMs <= 0) {
+    return null;
+  }
 
   return { low: reference.minMs / competitor.maxMs, high: reference.maxMs / competitor.minMs };
 };
@@ -1098,7 +1156,9 @@ export const formatBand = (band: RatioBand): string => `${formatFactor(band.low)
 export const pooledFactor = (cell: ProfileCell): number | null => {
   const { referenceMs, competitorMs } = cell;
 
-  if (referenceMs === null || competitorMs === null || referenceMs <= 0 || competitorMs <= 0) return null;
+  if (referenceMs === null || competitorMs === null || referenceMs <= 0 || competitorMs <= 0) {
+    return null;
+  }
 
   const ratio = referenceMs / competitorMs;
 
@@ -1109,7 +1169,8 @@ export const pooledFactor = (cell: ProfileCell): number | null => {
 export const formatApproximate = (factor: number): string => `~${formatFactor(factor)}`;
 
 /** How far the pooled runs moved, as the single factor the profile stores. */
-export const formatSpread = (spread: ProfileSpread): string => (spread.ratio === null || !Number.isFinite(spread.ratio) ? '' : formatFactor(spread.ratio));
+export const formatSpread = (spread: ProfileSpread): string =>
+  spread.ratio === null || !Number.isFinite(spread.ratio) ? '' : formatFactor(spread.ratio);
 
 /**
  * What a measured comparison came out as, once the ladder's five settled rungs
@@ -1161,7 +1222,14 @@ export interface ComparisonTally {
   readonly total: number;
 }
 
-const tally = (key: string, group: string, label: string, arm: string, meta: string, cells: readonly (ProfileCell | null)[]): ComparisonTally => {
+const tally = (
+  key: string,
+  group: string,
+  label: string,
+  arm: string,
+  meta: string,
+  cells: readonly (ProfileCell | null)[],
+): ComparisonTally => {
   const counts = Object.fromEntries(OUTCOME_ORDER.map(outcome => [outcome, 0])) as Record<CellOutcome, number>;
   const summary = Object.fromEntries(SUMMARY_ORDER.map(state => [state, 0])) as Record<SummaryState, number>;
 
@@ -1237,8 +1305,13 @@ export const profileScope = (document: BenchProfileDocument, domain?: BenchDomai
   const physics = domain === 'rendering' ? [] : physicsCells(document);
   const parts: string[] = [];
 
-  if (rendering.length > 0) parts.push(`${String(rendering.length)} rendering comparisons against ${listOf(armsIn(rendering).map(armLabel))}`);
-  if (physics.length > 0) parts.push(`${String(physics.length)} physics comparisons against ${listOf(armsIn(physics).map(armLabel))}`);
+  if (rendering.length > 0) {
+    parts.push(`${String(rendering.length)} rendering comparisons against ${listOf(armsIn(rendering).map(armLabel))}`);
+  }
+
+  if (physics.length > 0) {
+    parts.push(`${String(physics.length)} physics comparisons against ${listOf(armsIn(physics).map(armLabel))}`);
+  }
 
   return parts.join(' · ');
 };

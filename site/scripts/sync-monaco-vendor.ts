@@ -15,6 +15,7 @@ const resolveSourceDir = (): string => {
 
   try {
     const packageJsonPath = requireFromSite.resolve('monaco-editor/package.json');
+
     return path.resolve(path.dirname(packageJsonPath), 'min', 'vs');
   } catch {
     // Fall through to explicit path candidates.
@@ -41,6 +42,7 @@ const syncMonacoVendor = (): void => {
   if (!fs.existsSync(sourceDir)) {
     if (fs.existsSync(targetDir)) {
       console.log(`[vendor:sync] Monaco source missing at ${sourceDir}. Keeping existing ${targetDir}.`);
+
       return;
     }
 

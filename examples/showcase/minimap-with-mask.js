@@ -75,8 +75,12 @@ class MinimapWithMaskScene extends Scene {
     this.world.clear();
     this.world.lineWidth = 2;
     this.world.lineColor = new Color(60, 70, 90);
-    for (let x = marginX; x <= right; x += 80) this.world.drawLine(x, marginY, x, bottom);
-    for (let y = marginY; y <= bottom; y += 80) this.world.drawLine(marginX, y, right, y);
+    for (let x = marginX; x <= right; x += 80) {
+      this.world.drawLine(x, marginY, x, bottom);
+    }
+    for (let y = marginY; y <= bottom; y += 80) {
+      this.world.drawLine(marginX, y, right, y);
+    }
     this.world.render(backend);
     this.player.clear();
     this.player.fillColor = new Color(255, 170, 110);

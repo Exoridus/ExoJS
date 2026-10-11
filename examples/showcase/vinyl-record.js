@@ -62,7 +62,9 @@ class VinylRecordScene extends Scene {
     this.disc.drawCircle(cx, cy, 32);
     this.disc.lineWidth = 2;
     this.disc.lineColor = new Color(80, 80, 84);
-    for (let r = 45; r <= 140; r += 14) this.disc.drawArc(cx, cy, r, 0, Math.PI * 2);
+    for (let r = 45; r <= 140; r += 14) {
+      this.disc.drawArc(cx, cy, r, 0, Math.PI * 2);
+    }
     // A groove marker so the rotation is visible even on a smooth disc.
     const markerAngle = (this.angle * Math.PI) / 180;
     this.disc.lineWidth = 4;

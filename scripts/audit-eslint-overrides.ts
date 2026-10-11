@@ -49,19 +49,25 @@ const OFF_VALUES = new Set(['off', 0]);
 const collectRelaxations = (): Relaxation[] => {
   const found: Relaxation[] = [];
 
-  (config as readonly { files?: unknown; rules?: Record<string, unknown> }[]).forEach((block, index) => {
+  (config as ReadonlyArray<{ files?: unknown; rules?: Record<string, unknown> }>).forEach((block, index) => {
     const { files, rules } = block;
 
-    if (files === undefined || rules === undefined) return;
+    if (files === undefined || rules === undefined) {
+      return;
+    }
 
     const patterns = (Array.isArray(files) ? files : [files]).flat().filter((entry): entry is string => typeof entry === 'string');
 
-    if (patterns.length === 0) return;
+    if (patterns.length === 0) {
+      return;
+    }
 
     for (const [rule, setting] of Object.entries(rules)) {
       const severity = Array.isArray(setting) ? setting[0] : setting;
 
-      if (OFF_VALUES.has(severity as string | number)) found.push({ block: index, files: patterns, rule });
+      if (OFF_VALUES.has(severity as string | number)) {
+        found.push({ block: index, files: patterns, rule });
+      }
     }
   });
 
@@ -91,12 +97,16 @@ const countViolations = async (relaxation: Relaxation): Promise<number | string>
     // something it has nothing to do with.
     return results.reduce((total, result) => total + result.messages.filter(message => message.ruleId === relaxation.rule).length, 0);
   } catch (error) {
-    if (!(error instanceof Error)) return 'not measured';
+    if (!(error instanceof Error)) {
+      return 'not measured';
+    }
 
     // A type-aware rule needs a parser project covering the linted file. Where
     // none does, the relaxation is theoretical: the rule could not have fired
     // on those files even with the block removed.
-    if (error.message.includes('requires type information')) return 'no type-aware project covers these files';
+    if (error.message.includes('requires type information')) {
+      return 'no type-aware project covers these files';
+    }
 
     return error.message.split('\n')[0];
   }
@@ -108,7 +118,7 @@ const main = async (): Promise<void> => {
 
   console.log(`Measuring ${relaxations.length} rule relaxation(s)${filter === undefined ? '' : ` matching '${filter}'`}...\n`);
 
-  const rows: { relaxation: Relaxation; count: number | string }[] = [];
+  const rows: Array<{ relaxation: Relaxation; count: number | string }> = [];
 
   for (const relaxation of relaxations) {
     rows.push({ count: await countViolations(relaxation), relaxation });
@@ -120,7 +130,9 @@ const main = async (): Promise<void> => {
   const skipped = rows.filter(row => typeof row.count === 'string');
 
   const report = (label: string, entries: typeof rows): void => {
-    if (entries.length === 0) return;
+    if (entries.length === 0) {
+      return;
+    }
 
     console.log(`${label} (${entries.length}):`);
 

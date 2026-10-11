@@ -21,11 +21,12 @@ describe('PitchShift worklet — real Web Audio', () => {
       inputFreq: INPUT,
       durationSeconds: 2,
     });
-    return dominantFreq(tail(out, 1.0));
+
+    return dominantFreq(tail(out, 1));
   };
 
   it('pitch=1.0 keeps the input frequency', async () => {
-    const f = await shiftedFreq(1.0);
+    const f = await shiftedFreq(1);
     expect(f).toBeGreaterThan(INPUT * 0.97);
     expect(f).toBeLessThan(INPUT * 1.03);
   });
@@ -43,7 +44,7 @@ describe('PitchShift worklet — real Web Audio', () => {
   });
 
   it('pitch=2.0 shifts up one octave', async () => {
-    const f = await shiftedFreq(2.0);
+    const f = await shiftedFreq(2);
     expect(f).toBeGreaterThan(880 * 0.97);
     expect(f).toBeLessThan(880 * 1.03);
   });
@@ -56,7 +57,10 @@ describe('PitchShift worklet — real Web Audio', () => {
 
     // Known input sine so we control phase exactly.
     const input = new Float32Array(n);
-    for (let i = 0; i < n; i++) input[i] = 0.5 * Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
+
+    for (let i = 0; i < n; i++) {
+      input[i] = 0.5 * Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
+    }
 
     // Pure wet from the worklet at pitch=1.0 (output is the input delayed by the
     // SOLA latency). After cleanup the worklet has no `wet` param; passing extra
@@ -65,26 +69,31 @@ describe('PitchShift worklet — real Web Audio', () => {
       source: pitchShiftWorkletSource,
       processorName: 'exojs-pitch-shift',
       processorOptions: { grainSize: grain },
-      params: { pitch: 1.0 },
+      params: { pitch: 1 },
       inputBuffer: input,
       durationSeconds: seconds,
     });
 
     const L = grain + (grain >> 2); // the effect's dry-latency in samples
+
     const combine = (delaySamples: number): Float32Array => {
       const out = new Float32Array(n);
+
       for (let i = 0; i < n; i++) {
         const dry = i - delaySamples >= 0 ? input[i - delaySamples] : 0;
         out[i] = 0.5 * dry + 0.5 * wet[i];
       }
+
       return out;
     };
 
     // Sweep a window around L to find the empirical best delay (tunes the constant).
-    const candidates: { delay: number; level: number }[] = [];
+    const candidates: Array<{ delay: number; level: number }> = [];
+
     for (let d = Math.max(0, L - 256); d <= L + 256; d += 32) {
       candidates.push({ delay: d, level: rms(tail(combine(d), 0.5)) });
     }
+
     const best = candidates.reduce((a, b) => (b.level > a.level ? b : a));
     // The empirical best delay must land within ±64 samples of the tuned constant.
     expect(best.delay).toBeGreaterThanOrEqual(L - 64);

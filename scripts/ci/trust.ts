@@ -28,19 +28,31 @@ const fail: (message: string) => never = message => {
 
 const capture = (command: string, commandArgs: readonly string[]): string | null => {
   const result = spawnSync(command, commandArgs, { encoding: 'utf8' });
+
   return result.status === 0 ? result.stdout.trim() : null;
 };
 
-if (!tag) fail('usage: node scripts/ci/trust.ts <tag> [--main <ref>]');
+if (!tag) {
+  fail('usage: node scripts/ci/trust.ts <tag> [--main <ref>]');
+}
 
 const sha = capture('git', ['rev-parse', `${tag}^{commit}`]);
-if (!sha) fail(`Tag '${tag}' does not exist locally.`);
+
+if (!sha) {
+  fail(`Tag '${tag}' does not exist locally.`);
+}
 
 const version = `v${(JSON.parse(readFileSync('package.json', 'utf8')) as { version: string }).version}`;
-if (tag !== version) fail(`Tag '${tag}' does not match package.json version '${version}'.`);
+
+if (tag !== version) {
+  fail(`Tag '${tag}' does not match package.json version '${version}'.`);
+}
 
 const onMain = spawnSync('git', ['merge-base', '--is-ancestor', sha, mainRef], { stdio: 'ignore' });
-if (onMain.status !== 0) fail(`${tag} (${sha}) is not on ${mainRef}. Releases are cut from main only.`);
+
+if (onMain.status !== 0) {
+  fail(`${tag} (${sha}) is not on ${mainRef}. Releases are cut from main only.`);
+}
 
 const repository = process.env['GITHUB_REPOSITORY'] ?? '{owner}/{repo}';
 const greenVerdicts = capture('gh', [
@@ -49,7 +61,13 @@ const greenVerdicts = capture('gh', [
   '--jq',
   '[.check_runs[] | select(.conclusion == "success")] | length',
 ]);
-if (greenVerdicts === null) fail("Could not read the tag commit's check runs - is `gh` installed and authenticated?");
-if (greenVerdicts === '0') fail(`No successful 'verdict' check run on ${sha}. Let CI finish on main before tagging.`);
+
+if (greenVerdicts === null) {
+  fail("Could not read the tag commit's check runs - is `gh` installed and authenticated?");
+}
+
+if (greenVerdicts === '0') {
+  fail(`No successful 'verdict' check run on ${sha}. Let CI finish on main before tagging.`);
+}
 
 process.stdout.write(`${tag} = ${sha}, on ${mainRef}, verdict green.\n`);

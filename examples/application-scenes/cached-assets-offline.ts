@@ -90,12 +90,15 @@ class CachedAssetsScene extends Scene {
     if (this.busy) {
       return;
     }
+
     this.busy = true;
     this.result.text = `${action} in progress...`;
+
     try {
       await task();
       this.warmState.text = action === 'Warm' ? 'Generic prompts: warmed in IndexedDB' : 'Generic prompts: cache cleared';
-      this.result.text = action === 'Warm' ? 'Source stored without making an asset resident.' : 'Cache cleared. Retry while offline to see a miss.';
+      this.result.text =
+        action === 'Warm' ? 'Source stored without making an asset resident.' : 'Cache cleared. Retry while offline to see a miss.';
     } catch (error) {
       this.result.text = `${action} failed: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
@@ -108,9 +111,11 @@ class CachedAssetsScene extends Scene {
     if (this.busy) {
       return;
     }
+
     this.busy = true;
     this.result.text = `Loading ${name}...`;
     const scope = this.loader.createScope({ name: `request:${name}` });
+
     try {
       await scope.load(asset);
       this.result.text = `${name}: loaded under ${this.app.connectivity.mode} policy.`;

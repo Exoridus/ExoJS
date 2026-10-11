@@ -10,17 +10,17 @@ import { RendererRegistry } from '#rendering/RendererRegistry';
 
 class TestDrawable extends Drawable {}
 
-const createMinimalRenderer = (): Renderer<RenderBackend> => {
-  return {
+const createMinimalRenderer = (): Renderer<RenderBackend> =>
+  ({
     connect: vi.fn(),
     disconnect: vi.fn(),
     render: vi.fn(),
     flush: vi.fn(),
-  } as unknown as Renderer<RenderBackend>;
-};
+  }) as unknown as Renderer<RenderBackend>;
 
 const createStubBackend = (): RenderBackend => {
   const registry = new RendererRegistry<RenderBackend>();
+
   return {
     backendType: RenderBackendType.WebGl2,
     rendererRegistry: registry,
@@ -60,9 +60,11 @@ describe('hot-path spy tests', () => {
 
     // Spy AFTER warm-up
     const getProto = vi.spyOn(Object, 'getPrototypeOf');
+
     for (let i = 0; i < 10; i++) {
       backend.rendererRegistry.resolve(drawable);
     }
+
     expect(getProto).not.toHaveBeenCalled();
     getProto.mockRestore();
   });
@@ -70,12 +72,15 @@ describe('hot-path spy tests', () => {
   it('an empty selection reuses the frozen empty-snapshot singleton', async () => {
     const { buildSnapshot } = await import('#extensions/snapshot');
     const snapshots: object[] = [];
+
     for (let i = 0; i < 5; i++) {
       snapshots.push(buildSnapshot([]));
     }
+
     // buildSnapshot([]) must not allocate per call - every app that
     // selects nothing shares one frozen instance.
     const first = snapshots[0];
+
     for (const snap of snapshots.slice(1)) {
       expect(snap).toBe(first);
     }

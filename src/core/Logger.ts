@@ -103,7 +103,10 @@ export class Logger {
 
     return () => {
       const idx = this._sinks.indexOf(sink);
-      if (idx !== -1) this._sinks.splice(idx, 1);
+
+      if (idx !== -1) {
+        this._sinks.splice(idx, 1);
+      }
     };
   }
 
@@ -128,8 +131,11 @@ export const createConsoleSink = (): LogSink => entry => {
   const prefix = entry.source !== undefined ? `%c[ExoJS][${entry.source}]` : '%c[ExoJS]';
   let method: 'log' | 'warn' | 'error' = 'log';
 
-  if (entry.severity >= LogSeverity.Error) method = 'error';
-  else if (entry.severity >= LogSeverity.Warning) method = 'warn';
+  if (entry.severity >= LogSeverity.Error) {
+    method = 'error';
+  } else if (entry.severity >= LogSeverity.Warning) {
+    method = 'warn';
+  }
 
   if (entry.error) {
     console[method](prefix, consolePrefixStyle, entry.message, entry.error);

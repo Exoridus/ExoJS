@@ -63,9 +63,11 @@ export class GranularEffect extends WorkletEffect {
   protected get _workletName(): string {
     return 'exojs-granular';
   }
+
   protected get _workletSource(): string {
     return granularWorkletSource;
   }
+
   protected override get _workletOptions(): AudioWorkletNodeOptions {
     return {
       numberOfInputs: 1,
@@ -86,6 +88,7 @@ export class GranularEffect extends WorkletEffect {
   public get grainSize(): number {
     return this._grainSize;
   }
+
   public set grainSize(value: number) {
     this._grainSize = Math.max(0.005, Math.min(0.5, value));
     this._setAudioParam('grainSize', this._grainSize);
@@ -95,6 +98,7 @@ export class GranularEffect extends WorkletEffect {
   public get density(): number {
     return this._density;
   }
+
   public set density(value: number) {
     this._density = Math.max(1, Math.min(500, value));
     this._setAudioParam('density', this._density);
@@ -104,6 +108,7 @@ export class GranularEffect extends WorkletEffect {
   public get spread(): number {
     return this._spread;
   }
+
   public set spread(value: number) {
     this._spread = Math.max(0, Math.min(1, value));
     this._setAudioParam('spread', this._spread);
@@ -113,6 +118,7 @@ export class GranularEffect extends WorkletEffect {
   public get pitchMin(): number {
     return this._pitchMin;
   }
+
   public set pitchMin(value: number) {
     this._pitchMin = Math.max(0.25, Math.min(4, value));
     this._setAudioParam('pitchMin', this._pitchMin);
@@ -122,6 +128,7 @@ export class GranularEffect extends WorkletEffect {
   public get pitchMax(): number {
     return this._pitchMax;
   }
+
   public set pitchMax(value: number) {
     this._pitchMax = Math.max(0.25, Math.min(4, value));
     this._setAudioParam('pitchMax', this._pitchMax);

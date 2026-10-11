@@ -111,6 +111,7 @@ describe('Sound', () => {
     system.play(sound);
 
     expect(factory.sources.length).toBe(3);
+
     for (const src of factory.sources) {
       expect(src.stop).not.toHaveBeenCalled();
     }

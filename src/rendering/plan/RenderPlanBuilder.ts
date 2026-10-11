@@ -181,7 +181,8 @@ export class RenderPlanBuilder {
   private _checkedOut = false;
 
   public static acquire(): RenderPlanBuilder {
-    const builder = RenderPlanBuilder._availableCount > 0 ? RenderPlanBuilder._available[--RenderPlanBuilder._availableCount]! : new RenderPlanBuilder();
+    const builder =
+      RenderPlanBuilder._availableCount > 0 ? RenderPlanBuilder._available[--RenderPlanBuilder._availableCount]! : new RenderPlanBuilder();
 
     builder._checkedOut = true;
 
@@ -687,7 +688,14 @@ export class RenderPlanBuilder {
     }
 
     if (node._isTransformGroupBoundary) {
-      scope.others.push({ kind: RenderEntryKind.Barrier, seq, zIndex, node, reason: LiveEntryReason.Boundary, itemMark: scope.items.count });
+      scope.others.push({
+        kind: RenderEntryKind.Barrier,
+        seq,
+        zIndex,
+        node,
+        reason: LiveEntryReason.Boundary,
+        itemMark: scope.items.count,
+      });
 
       return;
     }
@@ -794,7 +802,14 @@ export class RenderPlanBuilder {
    * items, and a nested producer that read the view has already collapsed
    * itself, so this only ever fires for the OUTERMOST reader of a chain.
    */
-  private _resolveViewAttribution(node: RenderNode, scope: SourceScope, mark: number, otherMark: number, seq: number, zIndex: number): void {
+  private _resolveViewAttribution(
+    node: RenderNode,
+    scope: SourceScope,
+    mark: number,
+    otherMark: number,
+    seq: number,
+    zIndex: number,
+  ): void {
     if (!this._sourceViewReaders.has(node)) {
       return;
     }
@@ -838,7 +853,13 @@ export class RenderPlanBuilder {
    * the outcome.
    * @internal
    */
-  public _rederiveSourceScope(node: RenderNode, previous: SourceScope, cursor: number, epoch: number, targets: SourceDeltaTargets): SourceScope | null {
+  public _rederiveSourceScope(
+    node: RenderNode,
+    previous: SourceScope,
+    cursor: number,
+    epoch: number,
+    targets: SourceDeltaTargets,
+  ): SourceScope | null {
     this._rederivation.begin(cursor, epoch, targets);
 
     const scope = this._walkSourceScope(node, previous);
@@ -1184,7 +1205,14 @@ export class RenderPlanBuilder {
     // this frame ends up capturing.
     representation.noteRebuildKeys(contentRevision, structureRevision, ancestryStamp, transformRevision);
 
-    const selection = this._resolveSourceSelection(node, representation, contentRevision, structureRevision, ancestryStamp, transformRevision);
+    const selection = this._resolveSourceSelection(
+      node,
+      representation,
+      contentRevision,
+      structureRevision,
+      ancestryStamp,
+      transformRevision,
+    );
 
     if (representation.shouldSuppressCapture(contentRevision, structureRevision, transformRevision, view)) {
       // No capture this frame, but the cheap path is still the cheap path: the
@@ -1962,7 +1990,10 @@ export class RenderPlanBuilder {
       scope.firstPipelineKey = material.pipelineKey;
       scope.firstBindKey = material.bindKey;
       scope.firstOwnMaterial = material.ownMaterial;
-    } else if (!scope.hasMixedPipeline && materialKeyForcesFlush(scope.firstPipelineKey, scope.firstBindKey, scope.firstOwnMaterial, material)) {
+    } else if (
+      !scope.hasMixedPipeline &&
+      materialKeyForcesFlush(scope.firstPipelineKey, scope.firstBindKey, scope.firstOwnMaterial, material)
+    ) {
       scope.hasMixedPipeline = true;
     }
   }

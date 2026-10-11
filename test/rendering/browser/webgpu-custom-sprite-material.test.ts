@@ -189,7 +189,9 @@ describe('custom SpriteMaterial WebGPU browser', () => {
 
       throw error;
     } finally {
-      if (!texture.destroyed) cleanup();
+      if (!texture.destroyed) {
+        cleanup();
+      }
     }
   });
 
@@ -253,7 +255,9 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       const writesBeforeMutation = writeBuffer.mock.calls.length;
       await render(backend, group);
       expect(replay).toHaveBeenCalledTimes(1);
-      const materialWrites = writeBuffer.mock.calls.slice(writesBeforeMutation).filter(([buffer]) => buffer.label === 'sprite:material-user-uniform-buffer');
+      const materialWrites = writeBuffer.mock.calls
+        .slice(writesBeforeMutation)
+        .filter(([buffer]) => buffer.label === 'sprite:material-user-uniform-buffer');
 
       expect(materialWrites).toHaveLength(1);
       expect(backend.stats.drawCalls).toBe(1);
@@ -281,7 +285,9 @@ describe('custom SpriteMaterial WebGPU browser', () => {
 
       throw error;
     } finally {
-      if (!texture.destroyed) cleanup();
+      if (!texture.destroyed) {
+        cleanup();
+      }
     }
   });
 
@@ -404,7 +410,9 @@ describe('custom SpriteMaterial WebGPU browser', () => {
 
       throw error;
     } finally {
-      if (!defaultTexture.destroyed) cleanup();
+      if (!defaultTexture.destroyed) {
+        cleanup();
+      }
     }
   });
 
@@ -486,7 +494,12 @@ describe('custom SpriteMaterial WebGPU browser', () => {
 
     const device = getBackendDevice(backend);
 
-    const textures = [createSolidTexture(200, 0, 0), createSolidTexture(0, 200, 0), createSolidTexture(0, 0, 200), createSolidTexture(200, 200, 0)];
+    const textures = [
+      createSolidTexture(200, 0, 0),
+      createSolidTexture(0, 200, 0),
+      createSolidTexture(0, 0, 200),
+      createSolidTexture(200, 200, 0),
+    ];
     const material = createMaterial();
     const root = new Container();
 

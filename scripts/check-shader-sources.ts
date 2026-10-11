@@ -76,13 +76,17 @@ const collectFiles = async (repoRoot: string, root: string, keep: (name: string)
     // removes it again. A directory that no longer exists holds no files to
     // check, so skipping it is the correct answer, not a reason to abort.
     const entries = await readdir(directory, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
-      if (error.code === 'ENOENT') return [];
+      if (error.code === 'ENOENT') {
+        return [];
+      }
 
       throw error;
     });
 
     for (const entry of entries) {
-      if (entry.name.startsWith('.') || SKIPPED_DIRECTORIES.has(entry.name) || isTransientDirectory(entry.name)) continue;
+      if (entry.name.startsWith('.') || SKIPPED_DIRECTORIES.has(entry.name) || isTransientDirectory(entry.name)) {
+        continue;
+      }
 
       const path = join(directory, entry.name);
 
@@ -112,8 +116,13 @@ const hasControlCharacter = (line: string): boolean => {
   for (let index = 0; index < line.length; index++) {
     const code = line.charCodeAt(index);
 
-    if (code === 0x09) continue;
-    if (code < 0x20 || code === 0x7f) return true;
+    if (code === 0x09) {
+      continue;
+    }
+
+    if (code < 0x20 || code === 0x7f) {
+      return true;
+    }
   }
 
   return false;
@@ -209,7 +218,12 @@ const checkLanguage = (file: string, text: string): Problem[] => {
   // list of paths that would fall behind.
   const composedWithTransportChunk = text.includes('traceSegment(');
 
-  if (/\bvoid\s+main\s*\(/.test(text) && !composedWithInstanceContract && !composedWithTransportChunk && firstLine.trim() !== GLSL_VERSION_DIRECTIVE) {
+  if (
+    /\bvoid\s+main\s*\(/.test(text) &&
+    !composedWithInstanceContract &&
+    !composedWithTransportChunk &&
+    firstLine.trim() !== GLSL_VERSION_DIRECTIVE
+  ) {
     problems.push({ file, line: 1, message: `declares main() but line 1 is not '${GLSL_VERSION_DIRECTIVE}'` });
   }
 
@@ -226,7 +240,9 @@ const checkSubstitutions = (file: string, text: string): Problem[] => {
   const valid = new Set(text.match(VALID_PLACEHOLDER) ?? []);
 
   for (const candidate of text.match(ANY_PLACEHOLDER) ?? []) {
-    if (valid.has(candidate)) continue;
+    if (valid.has(candidate)) {
+      continue;
+    }
 
     problems.push({ file, line: null, message: `'${candidate}' does not match the {{NAME}} form fillShaderSource substitutes` });
   }
@@ -268,7 +284,8 @@ export interface ShaderScan {
 }
 
 /** One problem rendered the way the gate reports it. */
-export const formatShaderProblem = (problem: Problem): string => `${problem.file}${problem.line === null ? '' : `:${problem.line}`}  ${problem.message}`;
+export const formatShaderProblem = (problem: Problem): string =>
+  `${problem.file}${problem.line === null ? '' : `:${problem.line}`}  ${problem.message}`;
 
 /**
  * Check every tracked shader against the hygiene rules. An empty `problems`
@@ -316,7 +333,7 @@ const main = async (): Promise<void> => {
   const { files, problems } = await scanShaderSources();
 
   if (problems.length > 0) {
-    console.error(`\x1b[31m${problems.length} shader source problem(s):\x1b[0m`);
+    console.error(`\x1B[31m${problems.length} shader source problem(s):\x1B[0m`);
 
     for (const problem of problems) {
       console.error(`  ${formatShaderProblem(problem)}`);
@@ -325,7 +342,7 @@ const main = async (): Promise<void> => {
     process.exit(1);
   }
 
-  console.log(`\x1b[32m${files} shader file(s) checked, no problems.\x1b[0m`);
+  console.log(`\x1B[32m${files} shader file(s) checked, no problems.\x1B[0m`);
 };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

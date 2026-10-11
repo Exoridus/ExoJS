@@ -30,7 +30,10 @@ const containerSerializer: NodeSerializer<Container> = {
     if (Array.isArray(children)) {
       for (const child of children) {
         const childNode = asSerializedNode(child);
-        if (childNode !== null) node.addChild(ctx.readNode(childNode) as RenderNode);
+
+        if (childNode !== null) {
+          node.addChild(ctx.readNode(childNode) as RenderNode);
+        }
       }
     }
 
@@ -50,10 +53,13 @@ const spriteSerializer: NodeSerializer<Sprite> = {
     }
 
     if (node.material !== null) {
-      logger.warn('Sprite.material is not serialized (custom materials are deferred); the deserialized sprite falls back to the default material.', {
-        source: 'serialize',
-        once: 'serialize:sprite-material',
-      });
+      logger.warn(
+        'Sprite.material is not serialized (custom materials are deferred); the deserialized sprite falls back to the default material.',
+        {
+          source: 'serialize',
+          once: 'serialize:sprite-material',
+        },
+      );
     }
 
     const texture = node.texture;
@@ -90,10 +96,21 @@ const textSerializer: NodeSerializer<Text> = {
     const out: Record<string, unknown> = { text: node.text };
     const style = serializeStyle(node.style);
 
-    if (style !== undefined) out.style = style;
-    if (Object.keys(node.layout).length > 0) out.layout = { ...node.layout };
-    if (node.colorGlyphs) out.colorGlyphs = true;
-    if (node.sdfRadius !== SDF_RADIUS) out.sdfRadius = node.sdfRadius;
+    if (style !== undefined) {
+      out.style = style;
+    }
+
+    if (Object.keys(node.layout).length > 0) {
+      out.layout = { ...node.layout };
+    }
+
+    if (node.colorGlyphs) {
+      out.colorGlyphs = true;
+    }
+
+    if (node.sdfRadius !== SDF_RADIUS) {
+      out.sdfRadius = node.sdfRadius;
+    }
 
     return out;
   },

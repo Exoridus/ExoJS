@@ -28,24 +28,38 @@ class BitCrusherProcessor extends DisposableProcessor {
   private _activeChannels = 0;
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
-    if (this._destroyed) return false;
+    if (this._destroyed) {
+      return false;
+    }
+
     const input = inputs[0];
     const output = outputs[0];
-    if (!input || !output) return true;
-    const channels = Math.min(input.length, output.length);
-    if (channels === 0) {
-      this._activeChannels = 0;
+
+    if (!input || !output) {
       return true;
     }
+
+    const channels = Math.min(input.length, output.length);
+
+    if (channels === 0) {
+      this._activeChannels = 0;
+
+      return true;
+    }
+
     if (this._held.length < channels) {
       const held = new Float32Array(channels);
       held.set(this._held);
       this._held = held;
     }
+
     // A channel that reappears after the input narrowed (stereo, then mono,
     // then stereo again) starts silent: replaying the history it had in its
     // previous activation would leak stale audio onto that side.
-    for (let ch = this._activeChannels; ch < channels; ch++) this._held[ch] = 0;
+    for (let ch = this._activeChannels; ch < channels; ch++) {
+      this._held[ch] = 0;
+    }
+
     this._activeChannels = channels;
 
     const bitsParam = parameters['bits']?.[0] ?? 8;
@@ -60,14 +74,21 @@ class BitCrusherProcessor extends DisposableProcessor {
       // Advance the sample-and-hold phase accumulator.
       this._phase += normFreq;
       const latch = this._phase >= 1;
-      if (latch) this._phase -= 1;
+
+      if (latch) {
+        this._phase -= 1;
+      }
 
       for (let ch = 0; ch < channels; ch++) {
         // Latch a fresh, quantized sample on wrap; emit the held sample - pure wet, no dry mixing here.
-        if (latch) this._held[ch] = step * Math.round(input[ch]![i]! / step);
+        if (latch) {
+          this._held[ch] = step * Math.round(input[ch]![i]! / step);
+        }
+
         output[ch]![i] = this._held[ch]!;
       }
     }
+
     return true;
   }
 }

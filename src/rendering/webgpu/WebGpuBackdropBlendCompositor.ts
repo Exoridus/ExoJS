@@ -195,7 +195,15 @@ export class WebGpuBackdropBlendCompositor {
    * blended source over the untouched backdrop with normal premultiplied
    * source-over.
    */
-  public compose(manager: WebGpuBackend, source: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): void {
+  public compose(
+    manager: WebGpuBackend,
+    source: Texture | RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    blendMode: BlendModes,
+  ): void {
     if (this._device === null) {
       throw new Error('WebGpuBackdropBlendCompositor: not connected.');
     }
@@ -245,7 +253,12 @@ export class WebGpuBackdropBlendCompositor {
   }
 
   private _ensureBackdrop(device: GPUDevice, width: number, height: number, format: GPUTextureFormat): GPUTextureView {
-    if (this._backdropTexture === null || this._backdropWidth !== width || this._backdropHeight !== height || this._backdropFormat !== format) {
+    if (
+      this._backdropTexture === null ||
+      this._backdropWidth !== width ||
+      this._backdropHeight !== height ||
+      this._backdropFormat !== format
+    ) {
       this._backdropTexture?.destroy();
       this._backdropTexture = device.createTexture({
         label: 'backdrop-blend:texture',

@@ -46,7 +46,9 @@ const declarationRoots = (): DeclarationRoot[] => {
 
   if (existsSync(packagesDir)) {
     for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
+      if (!entry.isDirectory()) {
+        continue;
+      }
 
       roots.push({ dist: join(packagesDir, entry.name, 'dist'), src: join(packagesDir, entry.name, 'src') });
     }
@@ -57,7 +59,9 @@ const declarationRoots = (): DeclarationRoot[] => {
 
 /** Newest mtime under `dir`, or 0 when it does not exist. */
 const newestMtime = (dir: string): number => {
-  if (!existsSync(dir)) return 0;
+  if (!existsSync(dir)) {
+    return 0;
+  }
 
   let newest = 0;
 
@@ -114,7 +118,9 @@ const declarationTrees = roots.map(root => ({ ...root, files: declarationFiles(r
 // the artifact download carries over from the upload and are meaningless here.
 const stale = process.env.CI
   ? []
-  : declarationTrees.filter(root => newestMtime(root.dist) < newestMtime(root.src)).map(root => relative(REPO_ROOT, root.dist).replaceAll('\\', '/'));
+  : declarationTrees
+      .filter(root => newestMtime(root.dist) < newestMtime(root.src))
+      .map(root => relative(REPO_ROOT, root.dist).replaceAll('\\', '/'));
 
 if (stale.length > 0) {
   console.error(
@@ -140,7 +146,9 @@ for (const { files } of declarationTrees) {
     const lines = readFileSync(file, 'utf8').split(/\r?\n/);
 
     lines.forEach((text, index) => {
-      if (!IMPORT_LINE.test(text) || !UNRESOLVABLE_SPECIFIER.test(text)) return;
+      if (!IMPORT_LINE.test(text) || !UNRESOLVABLE_SPECIFIER.test(text)) {
+        return;
+      }
 
       violations.push({ file: relative(REPO_ROOT, file).replaceAll('\\', '/'), line: index + 1, text: text.trim() });
     });

@@ -317,6 +317,7 @@ export const validateSceneRegistry = (
 
   for (const [key, registration] of Object.entries(scenes)) {
     let ctor: AnySceneConstructor | undefined;
+
     if (typeof registration === 'function') {
       ctor = registration;
     } else if (isSceneRegistrationDescriptor(registration)) {

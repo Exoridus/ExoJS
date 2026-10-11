@@ -9,15 +9,14 @@ const createAttributes = (): readonly GeometryAttribute[] => [
 
 const createVertexData = (): Float32Array => new Float32Array([-10, -20, 0, 0, 30, -20, 1, 0, 30, 50, 1, 1, -10, 50, 0, 1]);
 
-const createGeometry = (options: Partial<GeometryOptions> = {}): Geometry => {
-  return new Geometry({
+const createGeometry = (options: Partial<GeometryOptions> = {}): Geometry =>
+  new Geometry({
     attributes: createAttributes(),
     vertexData: createVertexData(),
     stride: 16,
     indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
     ...options,
   });
-};
 
 describe('Geometry', () => {
   test('defaults usage to static', () => {

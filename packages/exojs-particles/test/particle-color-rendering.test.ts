@@ -130,7 +130,9 @@ describe('particle colour rendering - shared gradient lookup parity', () => {
     for (const gradient of gradients) {
       const data = lookup.get(gradient);
 
-      for (const t of [0, 0.1, 0.25, 0.41, 0.5, 0.73, 0.9, 1]) expectLookupParity(data, t);
+      for (const t of [0, 0.1, 0.25, 0.41, 0.5, 0.73, 0.9, 1]) {
+        expectLookupParity(data, t);
+      }
     }
   });
 

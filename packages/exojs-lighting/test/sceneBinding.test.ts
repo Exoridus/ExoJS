@@ -68,7 +68,7 @@ class FakeScene implements LightingScene {
 
 type Build = (host: LightingHost, scene: LightingScene | undefined) => Lighting;
 
-const renderers: readonly (readonly [string, Build, number])[] = [
+const renderers: ReadonlyArray<readonly [string, Build, number]> = [
   ['lightmap', (host, scene) => new LightmapLighting(host, { ...(scene && { scene }) }), 6],
   ['radiance', (host, scene) => new RadianceLighting(host, { ...(scene && { scene }) }), 8],
   ['lightmap with post', (host, scene) => new LightmapLighting(host, { post: [new ColorMatrixFilter()], ...(scene && { scene }) }), 7],

@@ -107,7 +107,8 @@ const createMutableTexture = (color: string, size = 8): MutableTexture => {
   };
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /** Render `body` inside a validation error scope; returns false on a device-loss skip. */
 const renderGuarded = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, body: () => void): Promise<boolean> => {
@@ -166,12 +167,14 @@ const countSubmits = (backend: WebGpuBackend, body: () => void): number => {
 // scene using the full palette always breaks into >= 2 draw calls regardless
 // of the slot count the device was granted (16 base / 32 ceiling).
 const channelLevels = ['00', '55', 'aa', 'ff'] as const;
+
 const paletteColor = (index: number): string => {
   // +1 skips black (the clear colour).
   const combo = index + 1;
 
   return `#${channelLevels[combo % 4]!}${channelLevels[Math.floor(combo / 4) % 4]!}${channelLevels[Math.floor(combo / 16) % 4]!}`;
 };
+
 const palette36 = Array.from({ length: 36 }, (_, i) => paletteColor(i));
 
 // `Mesh.colors` takes one packed-RGBA8 u32 per vertex. Building it through a
@@ -188,7 +191,12 @@ const packRgbaPerVertex = (rgba: RgbaTuple, vertexCount: number): Uint32Array =>
 };
 
 // Parse a `#rrggbb` string to an opaque RGBA tuple (canvas alphaMode 'opaque').
-const hexToRgba = (hex: string): RgbaTuple => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255];
+const hexToRgba = (hex: string): RgbaTuple => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16),
+  255,
+];
 
 // A non-overlapping grid of solid sprites, one distinct texture each, so a probe
 // at a cell centre validates that a given batch drew its OWN instance bytes (a
@@ -286,6 +294,7 @@ describe('WebGPU single-submit frame', () => {
       }
 
       const readPixel = readWebGpuPixels(backend, canvasSize);
+
       const probeCell = (index: number): void => {
         expectPixelNear(readPixel((index % 6) * 10 + 5, Math.floor(index / 6) * 10 + 5), hexToRgba(palette36[index]!));
       };
@@ -508,7 +517,20 @@ describe('WebGPU single-submit frame', () => {
 
       meshes.push(
         new Mesh({
-          vertices: new Float32Array([x, meshRow, x + cell, meshRow, x + cell, meshRow + cell, x, meshRow, x + cell, meshRow + cell, x, meshRow + cell]),
+          vertices: new Float32Array([
+            x,
+            meshRow,
+            x + cell,
+            meshRow,
+            x + cell,
+            meshRow + cell,
+            x,
+            meshRow,
+            x + cell,
+            meshRow + cell,
+            x,
+            meshRow + cell,
+          ]),
           uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),
           colors: packRgbaPerVertex(meshColors[i]!, 6),
         }),
@@ -533,6 +555,7 @@ describe('WebGPU single-submit frame', () => {
 
       trailingSprite.render(backend);
     };
+
     const renderAlternating = (): void => {
       backend.resetStats();
       backend.clear(Color.black);
@@ -705,6 +728,7 @@ describe('WebGPU single-submit frame', () => {
       planOne.render(backend); // 36 distinct textures (> max slot tier) → batch break → pass open
       planTwo.render(backend); // reserve() grows the storage while that pass is open
     };
+
     const renderFrame = (planTwoCount: number): void => {
       const planTwo = buildPlanTwo(planTwoCount);
 

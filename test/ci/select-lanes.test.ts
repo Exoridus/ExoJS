@@ -10,6 +10,7 @@ import { CHECKED_README_PATHS, effectiveLanes, selectAreas } from '../../scripts
 /** Areas + concrete lanes for a set of changed files. */
 const decide = (...files: readonly string[]) => {
   const areas = selectAreas(files);
+
   return { areas, lanes: effectiveLanes(areas) };
 };
 
@@ -82,8 +83,18 @@ describe('CI lane selection — engine/site areas', () => {
   });
 
   it('package LICENSE / CHANGELOG changes are docs/site, NOT engine', () => {
-    expect(selectAreas(['packages/exojs-tiled/LICENSE'])).toMatchObject({ engine: false, site: true, audioFx: false, tilemapWorker: false });
-    expect(selectAreas(['packages/exojs-particles/CHANGELOG.md'])).toMatchObject({ engine: false, site: true, audioFx: false, tilemapWorker: false });
+    expect(selectAreas(['packages/exojs-tiled/LICENSE'])).toMatchObject({
+      engine: false,
+      site: true,
+      audioFx: false,
+      tilemapWorker: false,
+    });
+    expect(selectAreas(['packages/exojs-particles/CHANGELOG.md'])).toMatchObject({
+      engine: false,
+      site: true,
+      audioFx: false,
+      tilemapWorker: false,
+    });
   });
 
   it('the ROOT changelog gates the engine lane (release version-coherence tests read it)', () => {
@@ -436,17 +447,18 @@ describe('CI lane selection - prose outside the documentation folders', () => {
     expect(decide('packages/create-exo-app/templates/top-down/src/main.ts').lanes.createExoAppVerify).toBe(true);
   });
 
-  it.each(['packages/exojs-particles/src/ParticleSystem.ts', 'packages/exojs-particles/src/gpu/ParticleGlState.ts', 'packages/exojs-particles/package.json'])(
-    'a particles-only change runs the structural gate: %s',
-    file => {
-      // The `particles-*` archetypes measure the particle package's renderers, so
-      // a change confined to it alters the counters `gate:bench:structural` guards.
-      // Without this, the WebGL2 particle simulation's move to transform feedback
-      // took `particles-lifecycle` from 1/0/1 to 6/12/10 and the gate could not
-      // have noticed.
-      expect(decide(file).lanes.benchStructural).toBe(true);
-    },
-  );
+  it.each([
+    'packages/exojs-particles/src/ParticleSystem.ts',
+    'packages/exojs-particles/src/gpu/ParticleGlState.ts',
+    'packages/exojs-particles/package.json',
+  ])('a particles-only change runs the structural gate: %s', file => {
+    // The `particles-*` archetypes measure the particle package's renderers, so
+    // a change confined to it alters the counters `gate:bench:structural` guards.
+    // Without this, the WebGL2 particle simulation's move to transform feedback
+    // took `particles-lifecycle` from 1/0/1 to 6/12/10 and the gate could not
+    // have noticed.
+    expect(decide(file).lanes.benchStructural).toBe(true);
+  });
 
   it('prose in the particle package is still prose', () => {
     // The gate follows the code that decides the counters, and the rule that
@@ -541,6 +553,7 @@ describe('CI lane selection — site data gates the unit lane', () => {
         browserWebgl2: false,
       });
     }
+
     expect(decide('packages/exojs-tilemap/README.md').lanes.unit).toBe(false);
   });
 

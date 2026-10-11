@@ -18,6 +18,7 @@ class GameScene extends Scene {
     // ... game logic ...
 
     console.log(`Passes this frame: ${this.inspector.totalPasses}`);
+
     for (const entry of this.inspector.entries) {
       const filterNames = entry.filters.map((f: Filter) => f.constructor.name).join(', ');
       console.log(

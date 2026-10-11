@@ -19,13 +19,19 @@ const CACHE_LIMIT = 512;
 const makeMeasureCtx = (): Ctx2D => {
   if (typeof OffscreenCanvas !== 'undefined') {
     const ctx = new OffscreenCanvas(1, 1).getContext('2d');
-    if (!ctx) throw new Error('ShapedTextMetrics: could not obtain OffscreenCanvas 2D context.');
+
+    if (!ctx) {
+      throw new Error('ShapedTextMetrics: could not obtain OffscreenCanvas 2D context.');
+    }
 
     return ctx;
   }
 
   const ctx = document.createElement('canvas').getContext('2d');
-  if (!ctx) throw new Error('ShapedTextMetrics: could not obtain canvas 2D context.');
+
+  if (!ctx) {
+    throw new Error('ShapedTextMetrics: could not obtain canvas 2D context.');
+  }
 
   return ctx;
 };
@@ -79,7 +85,9 @@ export class ShapedTextMetrics implements LineShaper {
     const key = `${fontSize}:${line}`;
     const cached = this._widths.get(key);
 
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) {
+      return cached;
+    }
 
     const ctx = (this._ctx ??= makeMeasureCtx());
 
@@ -87,7 +95,9 @@ export class ShapedTextMetrics implements LineShaper {
 
     const width = ctx.measureText(line).width;
 
-    if (this._widths.size >= CACHE_LIMIT) this._widths.clear();
+    if (this._widths.size >= CACHE_LIMIT) {
+      this._widths.clear();
+    }
 
     this._widths.set(key, width);
 
@@ -98,7 +108,9 @@ export class ShapedTextMetrics implements LineShaper {
     const key = `${fontSize}:${line}`;
     const cached = this._infos.get(key);
 
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) {
+      return cached;
+    }
 
     const info: GlyphInfo = {
       x: 0,
@@ -114,7 +126,9 @@ export class ShapedTextMetrics implements LineShaper {
       uvBottom: 0,
     };
 
-    if (this._infos.size >= CACHE_LIMIT) this._infos.clear();
+    if (this._infos.size >= CACHE_LIMIT) {
+      this._infos.clear();
+    }
 
     this._infos.set(key, info);
 

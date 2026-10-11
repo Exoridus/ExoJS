@@ -1,4 +1,12 @@
-import { CallbackRenderPass, createFilterShader, type PassContext, RenderTexture, ScaleModes, ShaderFilter, TextureFormat } from '@codexo/exojs';
+import {
+  CallbackRenderPass,
+  createFilterShader,
+  type PassContext,
+  RenderTexture,
+  ScaleModes,
+  ShaderFilter,
+  TextureFormat,
+} from '@codexo/exojs';
 
 import maskBlocksFragment from './shaders/mask-blocks.frag';
 import maskBlocksWgsl from './shaders/mask-blocks.wgsl';

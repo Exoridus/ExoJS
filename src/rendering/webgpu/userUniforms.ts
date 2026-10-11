@@ -325,14 +325,17 @@ export const packUserUniforms = (
       data[base] = c0;
       changed = true;
     }
+
     if (data[base + 1] !== c1) {
       data[base + 1] = c1;
       changed = true;
     }
+
     if (data[base + 2] !== c2) {
       data[base + 2] = c2;
       changed = true;
     }
+
     if (data[base + 3] !== c3) {
       data[base + 3] = c3;
       changed = true;

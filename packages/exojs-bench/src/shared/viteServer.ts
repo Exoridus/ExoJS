@@ -47,7 +47,10 @@ const SOURCE_PACKAGE_ALIASES: ReadonlyArray<{ find: string; replacement: string 
  * The benchmark package itself is deliberately absent: its adapters use `#*` to
  * reach engine modules.
  */
-const EXTENSION_SOURCE_ROOTS: readonly string[] = [resolve(REPO_ROOT, 'packages/exojs-particles'), resolve(REPO_ROOT, 'packages/exojs-tilemap')];
+const EXTENSION_SOURCE_ROOTS: readonly string[] = [
+  resolve(REPO_ROOT, 'packages/exojs-particles'),
+  resolve(REPO_ROOT, 'packages/exojs-tilemap'),
+];
 
 /**
  * Resolve `#...` specifiers to the ENGINE source - but only for importers
@@ -286,7 +289,10 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // condition below, so the engine graph is measured exactly as it ships.
     // `.vert`/`.frag`/`.wgsl` specifiers carry their extension and are handled by
     // `realShaderPlugin`'s transform.
-    resolve: { alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` }], conditions: srcConditions },
+    resolve: {
+      alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` }],
+      conditions: srcConditions,
+    },
     ssr: { resolve: { conditions: srcConditions } },
     // `noDiscovery` keeps the automatic dep scanner OFF - it runs esbuild over
     // the whole import graph, which would choke on the engine's `.vert`/`.frag`
@@ -301,7 +307,12 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // source still resolves to local `.ts` files via the `#*` alias and is never
     // pre-bundled.
     optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(libraryArms) },
-    define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline'), ...extraDefine },
+    define: {
+      __DEV__: String(ENGINE_DEV_BUILD),
+      __VERSION__: JSON.stringify(version),
+      __REVISION__: JSON.stringify('baseline'),
+      ...extraDefine,
+    },
     plugins: [engineHashImports(), realShaderPlugin, devGlobalsPlugin(version), ...extraPlugins],
   });
 

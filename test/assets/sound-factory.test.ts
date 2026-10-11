@@ -132,11 +132,15 @@ describe('SoundFactory - sprite sidecar', () => {
   });
 
   test('a sidecar that is not an object mapping names to clips is a decode failure', async () => {
-    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', [1, 2, 3]))).rejects.toBeInstanceOf(AssetDecodeError);
-    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: 3 }))).rejects.toThrow(/is not a clip object/);
-    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: { start: 0, end: 'x' } }))).rejects.toThrow(
-      /finite "start" and "end" times/,
+    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', [1, 2, 3]))).rejects.toBeInstanceOf(
+      AssetDecodeError,
     );
+    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: 3 }))).rejects.toThrow(
+      /is not a clip object/,
+    );
+    await expect(
+      new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: { start: 0, end: 'x' } })),
+    ).rejects.toThrow(/finite "start" and "end" times/);
   });
 
   test('a clip only the buffer duration can reject is reported against the sidecar, not the caller', async () => {
@@ -147,7 +151,10 @@ describe('SoundFactory - sprite sidecar', () => {
   });
 
   test('an inline sprite map still reaches the Sound unchanged', async () => {
-    const sound = await new SoundFactory().create(new ArrayBuffer(8), factoryContext<SoundAssetOptions>({ sprites: { hit: { start: 0, end: 1 } } }));
+    const sound = await new SoundFactory().create(
+      new ArrayBuffer(8),
+      factoryContext<SoundAssetOptions>({ sprites: { hit: { start: 0, end: 1 } } }),
+    );
 
     expect(sound.hasSprite('hit')).toBe(true);
   });

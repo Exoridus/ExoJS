@@ -7,7 +7,9 @@ class HalfHeightCanvasSizing extends CanvasSizing {
   override attach(context: CanvasSizingContext): void {
     const host = context.host;
 
-    if (host === null) return;
+    if (host === null) {
+      return;
+    }
 
     const commit = (): void => {
       const width = host.clientWidth;

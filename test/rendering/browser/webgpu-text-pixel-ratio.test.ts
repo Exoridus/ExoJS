@@ -41,12 +41,16 @@ describe('a node inherits the surface it is drawn by', () => {
     const three = await createWebGpuTestBackend(size, 3);
     const node = new Text('Inherit', { fontSize: 16 });
 
-    if (!(await renderWebGpuOnce(ctx, one, node))) return;
+    if (!(await renderWebGpuOnce(ctx, one, node))) {
+      return;
+    }
 
     expect(node.rasterPixelRatio).toBe(1);
     expect(node.atlas?.pixelRatio).toBe(1);
 
-    if (!(await renderWebGpuOnce(ctx, three, node))) return;
+    if (!(await renderWebGpuOnce(ctx, three, node))) {
+      return;
+    }
 
     expect(node.rasterPixelRatio).toBe(3);
     expect(node.atlas?.pixelRatio).toBe(3);
@@ -61,11 +65,15 @@ describe('a node inherits the surface it is drawn by', () => {
     const three = await createWebGpuTestBackend(size, 3);
     const node = new Text('Pinned', { fontSize: 16, pixelRatio: 2 });
 
-    if (!(await renderWebGpuOnce(ctx, one, node))) return;
+    if (!(await renderWebGpuOnce(ctx, one, node))) {
+      return;
+    }
 
     expect(node.atlas?.pixelRatio).toBe(2);
 
-    if (!(await renderWebGpuOnce(ctx, three, node))) return;
+    if (!(await renderWebGpuOnce(ctx, three, node))) {
+      return;
+    }
 
     expect(node.atlas?.pixelRatio).toBe(2);
 
@@ -80,7 +88,9 @@ describe('style lengths stated in logical pixels', () => {
   const rightmostInk = (frame: Uint8ClampedArray): number | null => {
     for (let x = size - 1; x >= 0; x--) {
       for (let y = 0; y < size; y++) {
-        if (frame[(y * size + x) * 4]! > 40) return x;
+        if (frame[(y * size + x) * 4]! > 40) {
+          return x;
+        }
       }
     }
 
@@ -100,7 +110,9 @@ describe('style lengths stated in logical pixels', () => {
 
       plain.position.set(30, 20);
 
-      if (!(await renderWebGpuOnce(ctx, backend, plain))) return null;
+      if (!(await renderWebGpuOnce(ctx, backend, plain))) {
+        return null;
+      }
 
       const glyphEdge = rightmostInk(readWebGpuFrame(backend, size));
 
@@ -117,7 +129,9 @@ describe('style lengths stated in logical pixels', () => {
 
       shadowed.position.set(30, 20);
 
-      if (!(await renderWebGpuOnce(ctx, backend, shadowed))) return null;
+      if (!(await renderWebGpuOnce(ctx, backend, shadowed))) {
+        return null;
+      }
 
       const shadowEdge = rightmostInk(readWebGpuFrame(backend, size));
 
@@ -133,7 +147,9 @@ describe('style lengths stated in logical pixels', () => {
     const atOne = await measure(1);
     const atThree = await measure(3);
 
-    if (atOne === null || atThree === null) return;
+    if (atOne === null || atThree === null) {
+      return;
+    }
 
     expect(Math.abs(atOne - shadowOffsetX)).toBeLessThanOrEqual(1);
     expect(Math.abs(atThree - shadowOffsetX)).toBeLessThanOrEqual(1);
@@ -152,7 +168,9 @@ describe('the SDF atlas is sampled as a continuous field', () => {
     node.setPosition(20, 10);
     node.setScale(4);
 
-    if (!(await renderWebGpuOnce(ctx, backend, node))) return;
+    if (!(await renderWebGpuOnce(ctx, backend, node))) {
+      return;
+    }
 
     const frame = readWebGpuFrame(backend, size);
     const seen = new Set<number>();

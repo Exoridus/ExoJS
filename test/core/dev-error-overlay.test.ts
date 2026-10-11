@@ -13,9 +13,7 @@ const overlayFor = (canvas: HTMLCanvasElement): HTMLElement | null => {
   return host.querySelector('[data-exojs-error-overlay]');
 };
 
-const overlayCount = (): number => {
-  return document.querySelectorAll('[data-exojs-error-overlay]').length;
-};
+const overlayCount = (): number => document.querySelectorAll('[data-exojs-error-overlay]').length;
 
 describe('devErrorOverlay (contract 9)', () => {
   let host: HTMLDivElement;

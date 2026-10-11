@@ -1,4 +1,15 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite, Video } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Sprite,
+  type Video,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // Every video in the asset catalog, switchable at runtime with the number
@@ -60,6 +71,7 @@ class VideoDrawableScene extends Scene {
 
     app.input.onKeyDown.add(channel => {
       const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three].indexOf(channel);
+
       if (idx !== -1) {
         void this.switchVideo(idx);
       }
@@ -83,9 +95,11 @@ class VideoDrawableScene extends Scene {
     if (idx === this.videoIdx || this.switching) {
       return;
     }
+
     const entry = VIDEOS[idx];
     this.switching = true;
     this.hud.setStatus(`Loading — ${entry.label}…`);
+
     try {
       const loaded = await this.loader.load(Asset.type('video', entry.url));
       this.loadedVideos.add(entry.name);
@@ -109,7 +123,10 @@ class VideoDrawableScene extends Scene {
     const { width, height } = app;
 
     // Drift the composited sprite across the video so the overlay is obvious.
-    this.overlay.setPosition(width / 2 + Math.sin(this.elapsed) * (width * 0.3), height / 2 + Math.cos(this.elapsed * 0.7) * (height * 0.25));
+    this.overlay.setPosition(
+      width / 2 + Math.sin(this.elapsed) * (width * 0.3),
+      height / 2 + Math.cos(this.elapsed * 0.7) * (height * 0.25),
+    );
     this.overlay.rotate(delta * 60);
   }
 

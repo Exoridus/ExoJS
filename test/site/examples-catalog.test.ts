@@ -24,6 +24,7 @@ describe('examples catalog integrity', () => {
     const sourceChapters = new Set(CHAPTERS.map(chapter => chapter.slug));
     const mismatched = entries.filter(entry => {
       const [chapter, file] = entry.path.split('/');
+
       return !sourceChapters.has(chapter) || file !== `${entry.slug}.js`;
     });
     expect(mismatched.map(entry => entry.path)).toEqual([]);

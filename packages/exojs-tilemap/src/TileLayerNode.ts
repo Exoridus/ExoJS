@@ -71,13 +71,24 @@ export class TileLayerNode extends Container {
   private readonly _onStructuralChange = (event: ChunkStructuralEvent): void => {
     for (let i = this._chunkNodes.length - 1; i >= 0; i--) {
       const node = this._chunkNodes[i];
-      if (!node) continue;
-      if (node.chunkX !== event.cx || node.chunkY !== event.cy) continue;
+
+      if (!node) {
+        continue;
+      }
+
+      if (node.chunkX !== event.cx || node.chunkY !== event.cy) {
+        continue;
+      }
+
       this._chunkNodes.splice(i, 1);
       this.removeChild(node);
       node.destroy();
     }
-    if (event.chunk !== null && !event.chunk.empty) this._addChunkNodes(event.chunk);
+
+    if (event.chunk !== null && !event.chunk.empty) {
+      this._addChunkNodes(event.chunk);
+    }
+
     this._sortChunks();
   };
 
@@ -279,6 +290,7 @@ export class TileLayerNode extends Container {
   private _addChunkNodes(chunk: ReadonlyTileChunk): void {
     const iso = this._layer.projection.orientation === 'isometric';
     const count = iso ? chunk.width + chunk.height - 1 : 1;
+
     for (let i = 0; i < count; i++) {
       const node = this._createChunkNode(chunk, iso ? i : undefined);
       this._chunkNodes.push(node);
@@ -288,14 +300,29 @@ export class TileLayerNode extends Container {
   }
 
   private _sortChunks(): void {
-    if (this._layer.projection.orientation !== 'isometric') return;
+    if (this._layer.projection.orientation !== 'isometric') {
+      return;
+    }
+
     this._chunkNodes.sort((a, b) => a.depth - b.depth || a.firstColumn - b.firstColumn);
-    for (const [index, node] of this._chunkNodes.entries()) this.setChildIndex(node, index);
+
+    for (const [index, node] of this._chunkNodes.entries()) {
+      this.setChildIndex(node, index);
+    }
   }
 
   private _createChunkNode(chunk: ReadonlyTileChunk, diagonal?: number): TileChunkNode {
     const layer = this._layer;
-    const node = new TileChunkNode(chunk, layer.tilesets, layer.tileWidth, layer.tileHeight, layer.chunkWidth, layer.chunkHeight, layer.projection, diagonal);
+    const node = new TileChunkNode(
+      chunk,
+      layer.tilesets,
+      layer.tileWidth,
+      layer.tileHeight,
+      layer.chunkWidth,
+      layer.chunkHeight,
+      layer.projection,
+      diagonal,
+    );
 
     node.cullable = this._cullChunks;
     // Unconditional: a chunk built after the layer was set to `None` has to

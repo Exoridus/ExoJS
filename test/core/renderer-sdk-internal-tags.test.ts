@@ -29,6 +29,7 @@ const reExports = (): Array<[string[], string]> =>
             ?.trim() ?? '',
       )
       .filter(name => name.length > 0 && !name.startsWith('type '));
+
     return [names, resolve(root, 'src', `${match[2]}.ts`)];
   });
 

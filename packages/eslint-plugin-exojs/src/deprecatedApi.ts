@@ -12,7 +12,8 @@
 // not resolve every way a caller might reach the symbol.
 import { readFileSync } from 'node:fs';
 
-const DOC_COMMENT_BEFORE_EXPORT = /\/\*\*([\s\S]*?)\*\/\s*export\s+(?:abstract\s+)?(?:const|class|function|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
+const DOC_COMMENT_BEFORE_EXPORT =
+  /\/\*\*([\s\S]*?)\*\/\s*export\s+(?:abstract\s+)?(?:const|class|function|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
 
 /** Strips the leading `*`/`* ` from one JSDoc body line. */
 const stripDocGutter = (line: string): string => line.replace(/^\s*\*\s?/, '').trim();
@@ -27,14 +28,18 @@ const extractDeprecatedTagText = (docBody: string): string | undefined => {
   const lines = docBody.split('\n').map(stripDocGutter);
   const tagLineIndex = lines.findIndex(line => line.startsWith('@deprecated'));
 
-  if (tagLineIndex === -1) return undefined;
+  if (tagLineIndex === -1) {
+    return undefined;
+  }
 
   const collected = [lines[tagLineIndex]!.replace(/^@deprecated\s*/, '')];
 
   for (let index = tagLineIndex + 1; index < lines.length; index++) {
     const line = lines[index]!;
 
-    if (line.startsWith('@')) break;
+    if (line.startsWith('@')) {
+      break;
+    }
 
     collected.push(line);
   }

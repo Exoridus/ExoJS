@@ -64,8 +64,10 @@ const setupSourceFactory = (): SourceFactory => {
   const spy = vi.spyOn(ctx, 'createBufferSource').mockImplementation(() => {
     const mock = createSourceMock();
     sources.push(mock);
+
     return mock as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 
@@ -76,11 +78,13 @@ const setupSourceFactory = (): SourceFactory => {
 const mockCurrentTime = (initial = 0): { setTime: (t: number) => void; restore: () => void } => {
   const ctx = getAudioContext() as AudioContext;
   let _currentTime = initial;
-  const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ctx), 'currentTime') ?? Object.getOwnPropertyDescriptor(ctx, 'currentTime');
+  const descriptor =
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ctx), 'currentTime') ?? Object.getOwnPropertyDescriptor(ctx, 'currentTime');
   Object.defineProperty(ctx, 'currentTime', {
     get: () => _currentTime,
     configurable: true,
   });
+
   return {
     setTime: (t: number) => {
       _currentTime = t;
@@ -197,6 +201,7 @@ describe('Sound — multi-instance play() (pooled default)', () => {
     system.play(sound);
 
     expect(factory.sources.length).toBe(3);
+
     for (const src of factory.sources) {
       expect(src.stop).not.toHaveBeenCalled();
     }

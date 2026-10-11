@@ -123,9 +123,12 @@ export class MapWorld {
       }
 
       byId.set(level.id, level);
+
       // Names are not unique by contract; first in document order wins so the
       // lookup stays deterministic instead of depending on iteration order.
-      if (!byName.has(level.name)) byName.set(level.name, level);
+      if (!byName.has(level.name)) {
+        byName.set(level.name, level);
+      }
     }
 
     this._byId = byId;
@@ -137,10 +140,13 @@ export class MapWorld {
    * Computed once and cached - a `MapWorld` is immutable.
    */
   public get bounds(): MapBounds {
-    if (this._bounds !== undefined) return this._bounds;
+    if (this._bounds !== undefined) {
+      return this._bounds;
+    }
 
     if (this.levels.length === 0) {
       this._bounds = EMPTY_BOUNDS;
+
       return this._bounds;
     }
 
@@ -151,13 +157,26 @@ export class MapWorld {
 
     for (const level of this.levels) {
       const b = level.bounds;
-      if (b.x < minX) minX = b.x;
-      if (b.y < minY) minY = b.y;
-      if (b.x + b.width > maxX) maxX = b.x + b.width;
-      if (b.y + b.height > maxY) maxY = b.y + b.height;
+
+      if (b.x < minX) {
+        minX = b.x;
+      }
+
+      if (b.y < minY) {
+        minY = b.y;
+      }
+
+      if (b.x + b.width > maxX) {
+        maxX = b.x + b.width;
+      }
+
+      if (b.y + b.height > maxY) {
+        maxY = b.y + b.height;
+      }
     }
 
     this._bounds = Object.freeze({ x: minX, y: minY, width: maxX - minX, height: maxY - minY });
+
     return this._bounds;
   }
 
@@ -184,13 +203,19 @@ export class MapWorld {
    */
   public getNeighbours(id: string): readonly MapLevel[] {
     const level = this._byId.get(id);
-    if (level === undefined) return [];
+
+    if (level === undefined) {
+      return [];
+    }
 
     const out: MapLevel[] = [];
 
     for (const neighbour of level.neighbours) {
       const resolved = this._byId.get(neighbour.id);
-      if (resolved !== undefined) out.push(resolved);
+
+      if (resolved !== undefined) {
+        out.push(resolved);
+      }
     }
 
     return out;
@@ -209,6 +234,7 @@ export class MapWorld {
 
     for (const level of this.levels) {
       const b = level.bounds;
+
       if (b.x < bounds.x + bounds.width && bounds.x < b.x + b.width && b.y < bounds.y + bounds.height && bounds.y < b.y + b.height) {
         out.push(level);
       }

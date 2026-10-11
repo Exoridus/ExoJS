@@ -105,7 +105,9 @@ export class ChunkStreamer {
    * {@link destroy}ed.
    */
   public update(): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
 
     const core = this._computeCoreRange();
 
@@ -116,6 +118,7 @@ export class ChunkStreamer {
     let minCy = core.minCy - this._loadRadius;
     let maxCx = core.maxCx + this._loadRadius;
     let maxCy = core.maxCy + this._loadRadius;
+
     if (range !== null) {
       minCx = Math.max(minCx, range.minCx);
       minCy = Math.max(minCy, range.minCy);
@@ -124,25 +127,33 @@ export class ChunkStreamer {
     }
 
     const toLoad: Array<{ cx: number; cy: number }> = [];
+
     for (let cy = minCy; cy <= maxCy; cy++) {
       for (let cx = minCx; cx <= maxCx; cx++) {
         const key = chunkKey(cx, cy);
-        if (this._resident.has(key) || this._inFlight.has(key)) continue;
+
+        if (this._resident.has(key) || this._inFlight.has(key)) {
+          continue;
+        }
+
         toLoad.push({ cx, cy });
       }
     }
 
     if (!this._primed) {
       this._primed = true;
+
       for (const { cx, cy } of toLoad) {
         this._request(cx, cy);
       }
+
       return;
     }
 
     toLoad.sort((a, b) => this._rangeDistance(a.cx, a.cy, core) - this._rangeDistance(b.cx, b.cy, core));
 
     const budget = Math.min(this._maxChunkLoadsPerFrame, toLoad.length);
+
     for (const { cx, cy } of toLoad.slice(0, budget)) {
       this._request(cx, cy);
     }
@@ -160,12 +171,16 @@ export class ChunkStreamer {
    * whoever created it.
    */
   public destroy(): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
+
     this._destroyed = true;
 
     for (const { cx, cy } of this._resident.values()) {
       this._layer._evictChunk(cx, cy);
     }
+
     this._resident.clear();
     this._inFlight.clear();
   }
@@ -185,22 +200,26 @@ export class ChunkStreamer {
     let layerTop = layer.offsetY + (bounds.top - shiftY - layer.offsetY) / scale;
     let layerRight = layer.offsetX + (bounds.right - shiftX - layer.offsetX) / scale;
     let layerBottom = layer.offsetY + (bounds.bottom - shiftY - layer.offsetY) / scale;
+
     if (layer.projection.orientation === 'isometric') {
       let left = 0;
       let top = 0;
       let right = 0;
       let bottom = 0;
+
       for (const tileset of layer.tilesets) {
         left = Math.max(left, tileset.tileWidth - layer.tileWidth / 2 + tileset.offsetX);
         top = Math.max(top, layer.tileHeight + tileset.offsetY);
         right = Math.max(right, layer.tileWidth / 2 - tileset.offsetX);
         bottom = Math.max(bottom, tileset.tileHeight - layer.tileHeight - tileset.offsetY);
       }
+
       layerLeft -= left;
       layerTop -= top;
       layerRight += right;
       layerBottom += bottom;
     }
+
     const topLeftTile = layer.pixelToTile(layerLeft, layerTop);
     const bottomRightTile = layer.pixelToTile(layerRight, layerBottom);
 
@@ -224,6 +243,7 @@ export class ChunkStreamer {
   private _rangeDistance(cx: number, cy: number, range: ChunkRange): number {
     const dx = Math.max(range.minCx - cx, 0, cx - range.maxCx);
     const dy = Math.max(range.minCy - cy, 0, cy - range.maxCy);
+
     return Math.max(dx, dy);
   }
 
@@ -242,6 +262,7 @@ export class ChunkStreamer {
     this._inFlight.set(key, token);
 
     let result: ChunkPayload | null | Promise<ChunkPayload | null>;
+
     try {
       result = this._source.getChunk(cx, cy);
     } catch (error) {
@@ -267,6 +288,7 @@ export class ChunkStreamer {
           });
         },
       );
+
       return;
     }
 
@@ -282,11 +304,19 @@ export class ChunkStreamer {
    * edit-persistence to protect, so discarding is never destructive.
    */
   private _onResolved(key: string, cx: number, cy: number, token: number, payload: ChunkPayload | null): void {
-    if (this._destroyed) return;
-    if (this._inFlight.get(key) !== token) return;
+    if (this._destroyed) {
+      return;
+    }
+
+    if (this._inFlight.get(key) !== token) {
+      return;
+    }
+
     this._inFlight.delete(key);
 
-    if (payload === null) return;
+    if (payload === null) {
+      return;
+    }
 
     this._layer._adoptChunk(cx, cy, payload);
     this._resident.set(key, { cx, cy });

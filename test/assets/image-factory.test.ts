@@ -25,7 +25,11 @@ class CapturingImage extends RealImage {
 
 const lastImage = (): HTMLImageElement => {
   const image = capturedImages.at(-1);
-  if (!image) throw new Error('No Image instance was created by the factory under test.');
+
+  if (!image) {
+    throw new Error('No Image instance was created by the factory under test.');
+  }
+
   return image;
 };
 
@@ -104,6 +108,7 @@ describe('ImageFactory', () => {
         'createImageBitmap',
         vi.fn(async (blob: Blob) => {
           seenBlob = blob;
+
           return { width: 1, height: 1 };
         }),
       );
@@ -120,6 +125,7 @@ describe('ImageFactory', () => {
         'createImageBitmap',
         vi.fn(async (blob: Blob) => {
           seenBlob = blob;
+
           return { width: 1, height: 1 };
         }),
       );

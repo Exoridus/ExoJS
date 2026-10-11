@@ -604,7 +604,9 @@ export class CoroutineSystem implements Destroyable {
         stepped++;
         coroutine._step(this._sliceBudget);
 
-        if (__DEV__) this._reportPathologicalStep(coroutine, hostTimeSource.now() - beforeMs, sliceMs);
+        if (__DEV__) {
+          this._reportPathologicalStep(coroutine, hostTimeSource.now() - beforeMs, sliceMs);
+        }
       }
 
       position = end;

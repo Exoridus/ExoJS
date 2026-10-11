@@ -55,7 +55,8 @@ export type LdtkFieldEnumType = `LocalEnum.${string}` | `ExternEnum.${string}`;
  * Whether a raw LDtk `__type` names an enum. Applies to an `Array<T>` element
  * type as well - LDtk spells a list of enum values `Array<LocalEnum.Name>`.
  */
-export const isLdtkFieldEnumType = (typeName: string): typeName is LdtkFieldEnumType => typeName.startsWith('LocalEnum.') || typeName.startsWith('ExternEnum.');
+export const isLdtkFieldEnumType = (typeName: string): typeName is LdtkFieldEnumType =>
+  typeName.startsWith('LocalEnum.') || typeName.startsWith('ExternEnum.');
 
 /**
  * Raw `__value` shape for a `Point`-typed field. Structurally identical to

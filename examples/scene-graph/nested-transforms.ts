@@ -1,4 +1,14 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, Text } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Text,
+} from '@codexo/exojs';
 
 class NestedTransformsScene extends Scene {
   private sun!: Graphics;

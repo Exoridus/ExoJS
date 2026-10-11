@@ -40,7 +40,15 @@ export { cacheApiBlockStore, DEFAULT_BLOCK_CACHE_NAME } from './container/contai
 export type { ContainerReaderOptions } from './container/ContainerReader';
 export { ContainerReader } from './container/ContainerReader';
 export { coreAssetTypes } from './coreAssetTypes';
-export type { AssetIdentity, InferLoadedMap, Loadable, LoadContainerOptions, LoaderOptions, LoadManifestOptions, LoadOptions } from './Loader';
+export type {
+  AssetIdentity,
+  InferLoadedMap,
+  Loadable,
+  LoadContainerOptions,
+  LoaderOptions,
+  LoadManifestOptions,
+  LoadOptions,
+} from './Loader';
 export { LoadPriority } from './Loader';
 export { Loader } from './Loader';
 export type { LoaderScopeKind, LoaderScopeOptions } from './LoaderScope';

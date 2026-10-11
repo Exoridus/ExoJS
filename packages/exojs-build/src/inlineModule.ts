@@ -131,7 +131,9 @@ export const createInlineModulePlugin = (options: InlineModulePluginOptions): In
     // ignores unknown plugin properties, so it is harmless there.
     enforce: 'pre',
     resolveId(source: string, importer?: string): string | null {
-      if (!source.endsWith(query)) return null;
+      if (!source.endsWith(query)) {
+        return null;
+      }
 
       const entry = source.slice(0, -query.length);
       // An importer id may carry a query of its own; only its path is a
@@ -144,7 +146,9 @@ export const createInlineModulePlugin = (options: InlineModulePluginOptions): In
       return `${resolved}${query}`;
     },
     load(this: PluginLoadContext, id: string): string | null {
-      if (!id.endsWith(query)) return null;
+      if (!id.endsWith(query)) {
+        return null;
+      }
 
       const entryPoint = id.slice(0, -query.length);
       const { code, inputs } = bundleInlineModule({ entryPoint, ...bundleOptions });

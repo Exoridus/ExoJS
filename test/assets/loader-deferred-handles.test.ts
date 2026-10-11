@@ -11,6 +11,7 @@ const createCoreLoader = (): Loader => {
   const loader = new Loader();
   const owner = loader.createScope({ name: 'owner' });
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -29,18 +30,17 @@ const mockFetchImage = (): void => {
 };
 
 /** Typed introspection over the private deferred registry. */
-const deferredHandles = (loader: Loader, key: string): WeakHandleSet | undefined => {
-  return (loader as unknown as { _residency: { _deferred: Map<string, { handles: WeakHandleSet }> } })._residency._deferred.get(key)?.handles;
-};
-const deferredHas = (loader: Loader, key: string): boolean => {
-  return (loader as unknown as { _residency: { _deferred: Map<string, unknown> } })._residency._deferred.has(key);
-};
-const evictedHas = (loader: Loader, key: string): boolean => {
-  return (loader as unknown as { _residency: { _evicted: Set<string> } })._residency._evicted.has(key);
-};
-const keyOf = (loader: Loader, source: string): string => {
-  return (loader as unknown as { _canonicalize(t: unknown, s: string): { key: string } })._canonicalize(Texture, source).key;
-};
+const deferredHandles = (loader: Loader, key: string): WeakHandleSet | undefined =>
+  (loader as unknown as { _residency: { _deferred: Map<string, { handles: WeakHandleSet }> } })._residency._deferred.get(key)?.handles;
+
+const deferredHas = (loader: Loader, key: string): boolean =>
+  (loader as unknown as { _residency: { _deferred: Map<string, unknown> } })._residency._deferred.has(key);
+
+const evictedHas = (loader: Loader, key: string): boolean =>
+  (loader as unknown as { _residency: { _evicted: Set<string> } })._residency._evicted.has(key);
+
+const keyOf = (loader: Loader, source: string): string =>
+  (loader as unknown as { _canonicalize(t: unknown, s: string): { key: string } })._canonicalize(Texture, source).key;
 
 /**
  * Real major GC + macrotask hops so reclaimed WeakRefs settle. `--expose-gc` comes
@@ -50,7 +50,9 @@ const keyOf = (loader: Loader, source: string): string => {
 const forceGc = async (): Promise<void> => {
   const gc = (globalThis as { gc?: () => void }).gc;
 
-  if (!gc) throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
+  if (!gc) {
+    throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
+  }
 
   for (let i = 0; i < 10; i++) {
     gc();

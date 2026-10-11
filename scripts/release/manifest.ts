@@ -49,6 +49,7 @@ export interface ReleaseManifest {
 export const sha256File = (absolutePath: string): { sha256: string; bytes: number } => {
   const buffer = readFileSync(absolutePath);
   const sha256 = createHash('sha256').update(buffer).digest('hex');
+
   return { sha256, bytes: statSync(absolutePath).size };
 };
 
@@ -75,12 +76,14 @@ export const verifyManifestArtifacts = (manifest: ReleaseManifest, resolve: (rel
   for (const record of manifest.packages) {
     const absolutePath = resolve(record.file);
     let actual: { sha256: string; bytes: number };
+
     try {
       actual = sha256File(absolutePath);
     } catch {
       issues.push({ file: record.file, reason: 'missing' });
       continue;
     }
+
     if (actual.bytes !== record.bytes) {
       issues.push({
         file: record.file,
@@ -90,6 +93,7 @@ export const verifyManifestArtifacts = (manifest: ReleaseManifest, resolve: (rel
       });
       continue;
     }
+
     if (actual.sha256 !== record.sha256) {
       issues.push({ file: record.file, reason: 'hash-mismatch', expected: record.sha256, actual: actual.sha256 });
     }

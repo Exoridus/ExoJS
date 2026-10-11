@@ -103,7 +103,7 @@ describe('utils/audio-context', () => {
 
     const { onAudioContextReady } = await import('#audio/audioContext');
 
-    onAudioContextReady.once(() => undefined);
+    onAudioContextReady.once(() => {});
 
     // A suspended live AudioContext must not be spawned before a user gesture -
     // subscribing only wires up the interaction listeners (AU2).
@@ -145,7 +145,7 @@ describe('utils/audio-context', () => {
 
     const { onAudioContextReady } = await import('#audio/audioContext');
 
-    onAudioContextReady.once(() => undefined);
+    onAudioContextReady.once(() => {});
 
     const registeredEvents = addEventListenerSpy.mock.calls.map(call => call[0]);
 

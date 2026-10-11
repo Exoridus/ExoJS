@@ -61,7 +61,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDevice(backend);
@@ -71,7 +72,9 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
   let validationError: GPUError | null;
 
   try {
-    if (!(await renderWebGpuEncoded(ctx, backend, root))) return false;
+    if (!(await renderWebGpuEncoded(ctx, backend, root))) {
+      return false;
+    }
 
     validationError = await device.popErrorScope();
   } catch (error) {

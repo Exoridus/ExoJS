@@ -41,6 +41,7 @@ const makeTexture = (): Texture => {
   ctx.beginPath();
   ctx.arc(24, 24, 17, 0, Math.PI * 2);
   ctx.fill();
+
   return new Texture(canvas);
 };
 
@@ -54,6 +55,7 @@ class BatchingScene extends Scene {
     this.layer = new Container();
     this.addChild(this.layer);
     this.textures = Array.from({ length: 4 }, () => makeTexture());
+
     for (let i = 0; i < MAX_SPRITES; i++) {
       const sprite = new Sprite(this.textures[i % textureCount])
         .setAnchor(0.5)
@@ -85,8 +87,10 @@ class BatchingScene extends Scene {
     this.inputs.onTrigger(Keyboard.B, () => {
       if (!webGpuAvailable) {
         this.hud.setStatus('WebGPU adapter unavailable; using WebGL2');
+
         return;
       }
+
       void boot(backendType === 'webgpu' ? 'webgl2' : 'webgpu').catch(showStartupError);
     });
   }
@@ -105,9 +109,13 @@ class BatchingScene extends Scene {
 
   override update(_delta: Seconds): void {
     const time = this.app.activeSeconds;
+
     for (let i = 0; i < spriteCount; i++) {
       const sprite = this.sprites[i];
-      sprite.setPosition(((i * 97) % this.app.width) + Math.sin(time + i * 0.13) * 12, ((i * 193) % this.app.height) + Math.cos(time + i * 0.17) * 12);
+      sprite.setPosition(
+        ((i * 97) % this.app.width) + Math.sin(time + i * 0.13) * 12,
+        ((i * 193) % this.app.height) + Math.cos(time + i * 0.17) * 12,
+      );
       sprite.rotation = time * ((i % 2 === 0 ? 1 : -1) * 25);
     }
   }
@@ -127,16 +135,20 @@ const boot = async (type: 'webgl2' | 'webgpu'): Promise<void> => {
   if (booting) {
     return;
   }
+
   booting = true;
+
   try {
     overlay?.destroy();
     overlay = null;
+
     if (app) {
       const previous = app;
       app = null;
       await previous.destroy();
       previous.element?.remove();
     }
+
     backendType = type;
     app = new Application({
       scenes: { BatchingScene },

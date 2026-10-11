@@ -27,7 +27,9 @@ export class InvalidSceneRegistrationError extends Error {
   public readonly key: string;
 
   public constructor(key: string) {
-    super(`ApplicationOptions.scenes["${key}"] must be a Scene subclass constructor, or a { scene, transition? } descriptor whose scene is one.`);
+    super(
+      `ApplicationOptions.scenes["${key}"] must be a Scene subclass constructor, or a { scene, transition? } descriptor whose scene is one.`,
+    );
     this.name = 'InvalidSceneRegistrationError';
     this.key = key;
   }

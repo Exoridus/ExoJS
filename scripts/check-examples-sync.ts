@@ -10,8 +10,8 @@ const repoRoot = path.resolve(__dirname, '..');
 const examplesDir = path.resolve(repoRoot, 'examples');
 const tmpDir = path.resolve(repoRoot, '.workspace', 'tmp-examples-check');
 
-const green = (s: string): string => `\x1b[32m${s}\x1b[0m`;
-const red = (s: string): string => `\x1b[31m${s}\x1b[0m`;
+const green = (s: string): string => `\x1B[32m${s}\x1B[0m`;
+const red = (s: string): string => `\x1B[31m${s}\x1B[0m`;
 
 // The generator always emits LF; a Windows checkout may have normalized the
 // committed files to CRLF (core.autocrlf). Compare content, not bytes, so a
@@ -25,9 +25,11 @@ const toDisplayPath = (relPath: string): string => `examples/${relPath.split(pat
 // with no `.ts` source and must not be flagged as stale.
 const isGeneratedJs = (filePath: string): boolean => {
   const fd = fs.openSync(filePath, 'r');
+
   try {
     const prefix = Buffer.alloc('// Auto-generated from '.length);
     fs.readSync(fd, prefix, 0, prefix.length, 0);
+
     return prefix.toString('utf8') === '// Auto-generated from ';
   } finally {
     fs.closeSync(fd);
@@ -65,6 +67,7 @@ const main = async (): Promise<void> => {
     }
 
     const committed = fs.readFileSync(committedPath, 'utf8');
+
     if (normalizeNewlines(committed) !== normalizeNewlines(generated)) {
       diffs.push(`  ~ ${toDisplayPath(relJs)}`);
     }
@@ -73,10 +76,18 @@ const main = async (): Promise<void> => {
   // Catch the reverse case too: a committed generated .js whose .ts source
   // was removed (or renamed) but the stale output was left behind.
   const allJsFiles = findFiles(examplesDir, name => name.endsWith('.js'));
+
   for (const jsFile of allJsFiles) {
     const relJs = path.relative(examplesDir, jsFile);
-    if (expectedJsRelPaths.has(relJs)) continue;
-    if (!isGeneratedJs(jsFile)) continue;
+
+    if (expectedJsRelPaths.has(relJs)) {
+      continue;
+    }
+
+    if (!isGeneratedJs(jsFile)) {
+      continue;
+    }
+
     diffs.push(`  - ${toDisplayPath(relJs)} (stale — no matching .ts source)`);
   }
 
@@ -86,8 +97,14 @@ const main = async (): Promise<void> => {
 
   if (diffs.length > 0) {
     console.log(red(`Example .js files are out of sync with their .ts sources — ${diffs.length} file(s) differ:`));
-    for (const d of diffs) console.log(d);
-    console.log(red('\nRun `pnpm --filter @codexo/exojs-examples examples:sync` to regenerate, then commit the changed examples/**/*.js files.'));
+
+    for (const d of diffs) {
+      console.log(d);
+    }
+
+    console.log(
+      red('\nRun `pnpm --filter @codexo/exojs-examples examples:sync` to regenerate, then commit the changed examples/**/*.js files.'),
+    );
     process.exit(1);
   }
 

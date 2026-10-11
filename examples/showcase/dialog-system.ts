@@ -1,4 +1,13 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sound, Text } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  type Sound,
+  Text,
+} from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 interface DialogLine {
@@ -54,9 +63,11 @@ class DialogSystemScene extends Scene {
     // with the canvas pointer for "advance" taps. They stay hidden until the
     // final line finishes typing.
     this.panel = mountControlPanel({ title: 'Your reply', corner: 'bottom-left' });
+
     for (const choice of choices) {
       this.panel.addButton({ label: choice, onClick: () => this.choose(choice) });
     }
+
     this.setChoicesVisible(false);
 
     app.input.onPointerTap.add(() => this.advance());
@@ -71,12 +82,14 @@ class DialogSystemScene extends Scene {
       // First click reveals the rest of the current line instantly.
       this.chars = lines[this.lineIndex].text.length;
       this.done = true;
+
       return;
     }
 
     if (this.lineIndex < lines.length - 1) {
       this.lineIndex++;
       this.startLine();
+
       return;
     }
 
@@ -111,21 +124,26 @@ class DialogSystemScene extends Scene {
 
   override update(delta: Seconds): void {
     const app = this.app;
+
     if (!this.done && !this.awaitingChoice) {
       this.timer += delta;
+
       while (this.timer > 0.035 && this.chars < lines[this.lineIndex].text.length) {
         this.timer -= 0.035;
         this.chars++;
         app.audio.play(this.beep, { playbackRate: 1.9, volume: 0.14 });
       }
+
       this.done = this.chars >= lines[this.lineIndex].text.length;
     }
+
     this.box.text = lines[this.lineIndex].text.slice(0, this.chars);
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.namePlate);
     context.render(this.box);
+
     if (this.choicePrompt.visible) {
       context.render(this.choicePrompt);
     }

@@ -41,7 +41,8 @@ export const isRenderSurface = (value: unknown): value is RenderSurface =>
  *
  * @internal
  */
-export const clampAutoPixelRatio = (ratio: number | undefined): number => (typeof ratio === 'number' && ratio > 0 ? Math.min(ratio, maxAutoPixelRatio) : 1);
+export const clampAutoPixelRatio = (ratio: number | undefined): number =>
+  typeof ratio === 'number' && ratio > 0 ? Math.min(ratio, maxAutoPixelRatio) : 1;
 
 /**
  * The auto device-pixel ratio for the realm the application starts in.
@@ -61,7 +62,11 @@ export const resolveAutoPixelRatio = (): number => clampAutoPixelRatio((globalTh
  *
  * @internal
  */
-export const watchAutoPixelRatio = (platform: PlatformAdapter, current: number, onChange: (ratio: number) => void): PlatformSubscription | null =>
+export const watchAutoPixelRatio = (
+  platform: PlatformAdapter,
+  current: number,
+  onChange: (ratio: number) => void,
+): PlatformSubscription | null =>
   platform.onPixelRatioChange?.(hostRatio => {
     const ratio = clampAutoPixelRatio(hostRatio);
 

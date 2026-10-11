@@ -75,13 +75,29 @@ class TilemapNavigationScene extends Scene {
       tileCount: 204,
       columns: 17,
     });
-    this.layer = new TileLayer({ id: 1, name: 'ground', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset] });
+    this.layer = new TileLayer({
+      id: 1,
+      name: 'ground',
+      width: COLUMNS,
+      height: ROWS,
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [tileset],
+    });
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLUMNS; x++) {
         this.layer.setTileAt(x, y, { tileset, localTileId: tileAt(x, y), transform: TILE_TRANSFORM_IDENTITY });
       }
     }
-    const map = new TileMap({ name: 'arena', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset], layers: [this.layer] });
+    const map = new TileMap({
+      name: 'arena',
+      width: COLUMNS,
+      height: ROWS,
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [tileset],
+      layers: [this.layer],
+    });
     this.mapView = map.createView({ bands: { ground: ['ground'] } });
     this.worldRoot = new Container();
     this.worldRoot.addChild(this.mapView.band('ground'));
@@ -192,10 +208,17 @@ class TilemapNavigationScene extends Scene {
     this.replan();
   };
   replan() {
-    this.result = this.pathfinder.findPathBetween(this.grid, this.agent.x, this.agent.y, (this.goal.x + 0.5) * TILE, (this.goal.y + 0.5) * TILE, {
-      smooth: true,
-      snapToNearest: true,
-    });
+    this.result = this.pathfinder.findPathBetween(
+      this.grid,
+      this.agent.x,
+      this.agent.y,
+      (this.goal.x + 0.5) * TILE,
+      (this.goal.y + 0.5) * TILE,
+      {
+        smooth: true,
+        snapToNearest: true,
+      },
+    );
     this.waypoint = 0;
     const { status, cost, expandedNodes } = this.result;
     this.hud.setStatus(

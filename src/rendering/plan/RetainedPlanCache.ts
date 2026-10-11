@@ -3,7 +3,13 @@ import { createEmptyMaterialKey } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
 import { type DrawCommand } from './renderCommand';
-import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawables, type RetainedDrawData, RetainedRecordPool } from './RetainedRecordPool';
+import {
+  copyRetainedDrawData,
+  type MutableRetainedDrawData,
+  releasePooledDrawables,
+  type RetainedDrawData,
+  RetainedRecordPool,
+} from './RetainedRecordPool';
 
 /**
  * @internal
@@ -97,7 +103,13 @@ export class RetainedPlanCache {
    * place - the plain-container skip has no per-slot patch path and simply
    * re-collects, exactly as it did when transform still content-dirtied.
    */
-  public isClean(contentRevision: number, structureRevision: number, transformRevision: number, viewUpdateId: number, backend: RenderBackend): boolean {
+  public isClean(
+    contentRevision: number,
+    structureRevision: number,
+    transformRevision: number,
+    viewUpdateId: number,
+    backend: RenderBackend,
+  ): boolean {
     return (
       this._hasCapture &&
       this._contentRevision === contentRevision &&
@@ -132,7 +144,13 @@ export class RetainedPlanCache {
   }
 
   /** @internal - key the capture; only after this does {@link isClean} consider it. */
-  public _commitCapture(contentRevision: number, structureRevision: number, transformRevision: number, viewUpdateId: number, backend: RenderBackend): void {
+  public _commitCapture(
+    contentRevision: number,
+    structureRevision: number,
+    transformRevision: number,
+    viewUpdateId: number,
+    backend: RenderBackend,
+  ): void {
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;
     this._transformRevision = transformRevision;

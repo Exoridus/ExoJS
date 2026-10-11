@@ -16,7 +16,11 @@ const dataDecodeOptions: ImageBitmapOptions = Object.freeze({ colorSpaceConversi
  * for the lifetime of the document.
  * @internal
  */
-export const decodeImageBlob = (blob: Blob, objectUrls: ObjectUrlPool, mode: ImageDecodeMode = 'color'): Promise<ImageBitmap | HTMLImageElement> => {
+export const decodeImageBlob = (
+  blob: Blob,
+  objectUrls: ObjectUrlPool,
+  mode: ImageDecodeMode = 'color',
+): Promise<ImageBitmap | HTMLImageElement> => {
   if (typeof createImageBitmap === 'function') {
     return createImageBitmap(blob, mode === 'color' ? colorDecodeOptions : dataDecodeOptions);
   }
@@ -33,6 +37,7 @@ export const decodeImageBlob = (blob: Blob, objectUrls: ObjectUrlPool, mode: Ima
 
   return new Promise((resolve, reject) => {
     const image = new Image();
+
     const settle = (finish: () => void): void => {
       objectUrls.revoke(objectUrl);
       finish();

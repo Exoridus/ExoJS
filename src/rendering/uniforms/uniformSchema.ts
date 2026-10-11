@@ -8,7 +8,12 @@ import { UniformBlockData } from './UniformBlockData';
 import type { UniformBlockRecord, UniformFields, UniformStructInput } from './uniformDeclarations';
 import { UniformBlock, validateUniformFields } from './uniformDeclarations';
 import type { UniformBlockLayout, UniformSchemaLayout } from './uniformLayout';
-import { computeUniformBlockLayout, explicitUniformBlockTypeName, implicitUniformBlockInstance, implicitUniformBlockTypeName } from './uniformLayout';
+import {
+  computeUniformBlockLayout,
+  explicitUniformBlockTypeName,
+  implicitUniformBlockInstance,
+  implicitUniformBlockTypeName,
+} from './uniformLayout';
 
 /**
  * A uniform declaration on a {@link Shader}.
@@ -17,7 +22,10 @@ import { computeUniformBlockLayout, explicitUniformBlockTypeName, implicitUnifor
  * `uniformBlocks` declares one or more named blocks explicitly. The two are
  * alternatives and cannot both be given.
  */
-export interface UniformSchemaOptions<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> {
+export interface UniformSchemaOptions<
+  F extends UniformFields | undefined = undefined,
+  B extends UniformBlockRecord | undefined = undefined,
+> {
   /**
    * Fields of a single block the shader reads through the instance name
    * `uniforms`. Declaring it switches materials and filters built on this
@@ -48,7 +56,10 @@ export type UniformBlockInitialValues<B extends UniformBlockRecord> = {
  * Build the layout for a declaration, or `null` when there is none.
  * @internal
  */
-export const buildUniformSchemaLayout = (uniforms: UniformFields | undefined, uniformBlocks: UniformBlockRecord | undefined): UniformSchemaLayout | null => {
+export const buildUniformSchemaLayout = (
+  uniforms: UniformFields | undefined,
+  uniformBlocks: UniformBlockRecord | undefined,
+): UniformSchemaLayout | null => {
   if (uniforms !== undefined && uniformBlocks !== undefined) {
     throw new Error('Shader accepts either `uniforms` or `uniformBlocks`, not both.');
   }
@@ -58,7 +69,9 @@ export const buildUniformSchemaLayout = (uniforms: UniformFields | undefined, un
 
     return {
       implicit: true,
-      blocks: [computeUniformBlockLayout(uniforms, implicitUniformBlockInstance, implicitUniformBlockInstance, implicitUniformBlockTypeName)],
+      blocks: [
+        computeUniformBlockLayout(uniforms, implicitUniformBlockInstance, implicitUniformBlockInstance, implicitUniformBlockTypeName),
+      ],
     };
   }
 

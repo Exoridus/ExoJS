@@ -58,6 +58,7 @@ export class BitCrusherEffect extends WorkletEffect {
   protected get _workletName(): string {
     return 'exojs-bit-crusher';
   }
+
   protected get _workletSource(): string {
     return bitCrusherWorkletSource;
   }
@@ -74,6 +75,7 @@ export class BitCrusherEffect extends WorkletEffect {
   public get bits(): number {
     return this._bits;
   }
+
   public set bits(value: number) {
     this._bits = Math.round(Math.max(1, Math.min(16, value)));
     this._setAudioParam('bits', this._bits);
@@ -87,6 +89,7 @@ export class BitCrusherEffect extends WorkletEffect {
   public get frequencyReduction(): number {
     return this._frequencyReduction;
   }
+
   public set frequencyReduction(value: number) {
     this._frequencyReduction = Math.max(0, Math.min(1, value));
     this._setAudioParam('normFreq', this._frequencyReduction);

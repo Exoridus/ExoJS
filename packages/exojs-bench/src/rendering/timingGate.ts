@@ -123,7 +123,8 @@ export interface TimingOutcome {
 }
 
 /** Stable identity string for a cell. */
-export const timingCellId = (cell: TimingCellKey): string => `${cell.engine}/${cell.config}/${cell.backend}/${cell.archetype}/${cell.nodeCount}`;
+export const timingCellId = (cell: TimingCellKey): string =>
+  `${cell.engine}/${cell.config}/${cell.backend}/${cell.archetype}/${cell.nodeCount}`;
 
 /** The cell key of a measured result. */
 const keyOf = (result: CellResult): TimingCellKey => ({
@@ -204,7 +205,9 @@ export const formatTimingOutcome = (outcome: TimingOutcome): string => {
   const lines: string[] = [];
 
   if (!outcome.baselineConfirmedIdle) {
-    lines.push('NOTE the baseline was not recorded on a confirmed-idle machine, so it is a reference point rather than a release reference.');
+    lines.push(
+      'NOTE the baseline was not recorded on a confirmed-idle machine, so it is a reference point rather than a release reference.',
+    );
   }
 
   for (const comparison of outcome.comparisons) {

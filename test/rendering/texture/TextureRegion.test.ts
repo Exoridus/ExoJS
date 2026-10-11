@@ -5,9 +5,16 @@ import { TextureRegion, type TextureRegionInsets } from '#rendering/texture/Text
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeTexture = (w = 128, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
+const makeTexture = (w = 128, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => {} }) as unknown as Texture;
 
-const makeRegion = (texture: Texture, x = 0, y = 0, width?: number, height?: number, extrusion?: number | TextureRegionInsets): TextureRegion =>
+const makeRegion = (
+  texture: Texture,
+  x = 0,
+  y = 0,
+  width?: number,
+  height?: number,
+  extrusion?: number | TextureRegionInsets,
+): TextureRegion =>
   new TextureRegion(texture, {
     x,
     y,
@@ -326,7 +333,9 @@ describe('TextureRegion — validation', () => {
   test('throws when right extrusion exceeds remaining texture space', () => {
     const tex = makeTexture(256, 128);
     // Region x=200, w=50, right edge at 250, so right extrusion max is 6
-    expect(() => new TextureRegion(tex, { x: 200, y: 10, width: 50, height: 32, extrusion: { left: 0, top: 0, right: 10, bottom: 0 } })).toThrow();
+    expect(
+      () => new TextureRegion(tex, { x: 200, y: 10, width: 50, height: 32, extrusion: { left: 0, top: 0, right: 10, bottom: 0 } }),
+    ).toThrow();
   });
 
   test('throws on non-finite extrusion values', () => {

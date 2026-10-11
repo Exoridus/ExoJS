@@ -161,7 +161,9 @@ export class AssetTypeRegistry {
   }
 
   /** Create every factory of a validated set, destroying the ones already created, newest first, if one throws. */
-  private _prepare(pending: readonly PendingAssetType[]): Array<{ readonly installed: InstalledAssetType; readonly extensions: readonly string[] }> {
+  private _prepare(
+    pending: readonly PendingAssetType[],
+  ): Array<{ readonly installed: InstalledAssetType; readonly extensions: readonly string[] }> {
     const prepared: Array<{ readonly installed: InstalledAssetType; readonly extensions: readonly string[] }> = [];
 
     try {
@@ -343,4 +345,5 @@ export class AssetTypeRegistry {
 }
 
 /** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
-const request = (source: string, options: unknown): AssetRequest<unknown> => (options === undefined || options === null ? { source } : { source, options });
+const request = (source: string, options: unknown): AssetRequest<unknown> =>
+  options === undefined || options === null ? { source } : { source, options };

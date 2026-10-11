@@ -72,7 +72,7 @@ beforeEach(() => {
 afterEach(() => {
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
-    value: () => ({ fillStyle: '', fillRect: () => undefined, drawImage: () => undefined }),
+    value: () => ({ fillStyle: '', fillRect: () => {}, drawImage: () => {} }),
   });
 });
 
@@ -95,14 +95,18 @@ describe('GlyphAtlasPool identity', () => {
   test('returns the same atlas for a repeated request', () => {
     const pool = new GlyphAtlasPool();
 
-    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 2)).toBe(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 2));
+    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 2)).toBe(
+      pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 2),
+    );
   });
 
   test('defaults to ratio 1', () => {
     const pool = new GlyphAtlasPool();
 
     expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }).pixelRatio).toBe(1);
-    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' })).toBe(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 1));
+    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' })).toBe(
+      pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 1),
+    );
   });
 
   // The whole reason layout survives a ratio change: the numbers a line break
@@ -121,7 +125,9 @@ describe('GlyphAtlasPool identity', () => {
   test('separates metrics per font variant', () => {
     const pool = new GlyphAtlasPool();
 
-    expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(pool.getMetrics({ family: 'Roboto', fontStyle: 'italic', fontWeight: '400' }));
+    expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(
+      pool.getMetrics({ family: 'Roboto', fontStyle: 'italic', fontWeight: '400' }),
+    );
     expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(pool.getMetrics({ family: 'Roboto', fontWeight: '700' }));
     expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(pool.getMetrics({ family: 'Inter', fontWeight: '400' }));
   });
@@ -132,8 +138,12 @@ describe('GlyphAtlasPool identity', () => {
     // The key is a string built from the object, so a field left out has to
     // resolve to `'normal'` BEFORE it is concatenated - otherwise the two
     // spellings below would hold two atlases of the same font.
-    expect(pool.getAtlas({ family: 'Roboto' })).toBe(pool.getAtlas({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }));
-    expect(pool.getMetrics({ family: 'Roboto' })).toBe(pool.getMetrics({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }));
+    expect(pool.getAtlas({ family: 'Roboto' })).toBe(
+      pool.getAtlas({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }),
+    );
+    expect(pool.getMetrics({ family: 'Roboto' })).toBe(
+      pool.getMetrics({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }),
+    );
     expect(pool.getShapedMetrics({ family: 'Roboto' })).toBe(
       pool.getShapedMetrics({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }),
     );
@@ -144,7 +154,9 @@ describe('GlyphAtlasPool identity', () => {
 
     // A small-cap 'a' is a different raster and a different advance from an
     // ordinary one, so sharing either cache would hand back the wrong glyph.
-    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' })).not.toBe(pool.getAtlas({ family: 'Roboto', fontWeight: '400', fontVariant: 'small-caps' }));
+    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' })).not.toBe(
+      pool.getAtlas({ family: 'Roboto', fontWeight: '400', fontVariant: 'small-caps' }),
+    );
     expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(
       pool.getMetrics({ family: 'Roboto', fontWeight: '400', fontVariant: 'small-caps' }),
     );

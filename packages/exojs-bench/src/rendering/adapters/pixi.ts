@@ -30,9 +30,23 @@ import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../
 import { BLUR_KERNEL_SIGMAS, BLUR_TAPS_PER_SIDE } from '../archetypes';
 import { pixiCulledCovers } from '../coverage';
 import type { ArchetypeSpec, Backend, EngineAdapter, LayoutDigestReport } from '../EngineAdapter';
-import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_PREROLL_STEPS, PARTICLE_STEP, particleSeedAt } from '../particles';
+import {
+  isParticleLifecycle,
+  isParticles,
+  PARTICLE_ALPHA,
+  PARTICLE_LIFETIME,
+  PARTICLE_PREROLL_STEPS,
+  PARTICLE_STEP,
+  particleSeedAt,
+} from '../particles';
 import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
-import { createBlurSourceCanvas, createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import {
+  createBlurSourceCanvas,
+  createDistinctTextureCanvas,
+  createParticleCanvas,
+  createTileAtlasCanvas,
+  TEXT_FONT_SIZE,
+} from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import {
   isTilemap,
@@ -247,7 +261,12 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
    * filtered source sprite, which is what a Pixi app writes: Pixi has no
    * pipeline object to declare a multipass with.
    */
-  let bloom: { readonly capture: RenderTexture; readonly blurred: RenderTexture; readonly source: Sprite; readonly overlay: Sprite } | null = null;
+  let bloom: {
+    readonly capture: RenderTexture;
+    readonly blurred: RenderTexture;
+    readonly source: Sprite;
+    readonly overlay: Sprite;
+  } | null = null;
 
   /** Drop the bloom stack so a rebuild (or teardown) leaks no GPU resources. */
   const releaseBloom = (): void => {
@@ -429,7 +448,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     const bottom = top + VIEWPORT_HEIGHT / TILE_SIZE;
 
     for (const chunk of tileChunks) {
-      chunk.tilemap.visible = chunk.originX < right && chunk.originX + chunk.width > left && chunk.originY < bottom && chunk.originY + chunk.height > top;
+      chunk.tilemap.visible =
+        chunk.originX < right && chunk.originX + chunk.width > left && chunk.originY < bottom && chunk.originY + chunk.height > top;
     }
   };
 
@@ -802,7 +822,12 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         for (const leaf of row.children) {
           const box = leaf.layout!.computedLayout;
 
-          rects.push({ x: columnBox.left + rowBox.left + box.left, y: columnBox.top + rowBox.top + box.top, width: box.width, height: box.height });
+          rects.push({
+            x: columnBox.left + rowBox.left + box.left,
+            y: columnBox.top + rowBox.top + box.top,
+            width: box.width,
+            height: box.height,
+          });
         }
       }
     }
@@ -988,7 +1013,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       textUpdating = isTextUpdating(spec);
 
       /** Resting grid position of leaf `index`, from the shared layout helpers. */
-      const leafPosition = (index: number): { x: number; y: number } => (overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN));
+      const leafPosition = (index: number): { x: number; y: number } =>
+        overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN);
 
       /**
        * Build (but do not parent) the leaf at global index `index`. Extracted for

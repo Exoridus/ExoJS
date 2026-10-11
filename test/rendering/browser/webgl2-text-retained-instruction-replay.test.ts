@@ -177,7 +177,9 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     const scene = buildScene();
 
     try {
-      for (let f = 0; f < 3; f++) render(backend, scene.root);
+      for (let f = 0; f < 3; f++) {
+        render(backend, scene.root);
+      }
 
       const before = readWebGl2Pixel(backend, 20, 24);
 
@@ -210,7 +212,9 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     const scene = buildScene();
 
     try {
-      for (let f = 0; f < 3; f++) render(backend, scene.root);
+      for (let f = 0; f < 3; f++) {
+        render(backend, scene.root);
+      }
 
       const before = readWebGl2Pixel(backend, 20, 24);
 
@@ -242,7 +246,9 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     const scene = buildScene();
 
     try {
-      for (let f = 0; f < 3; f++) render(backend, scene.root);
+      for (let f = 0; f < 3; f++) {
+        render(backend, scene.root);
+      }
 
       const before = readWebGl2Pixel(backend, 20, 24);
 
@@ -287,7 +293,9 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     const scene = buildScene();
 
     try {
-      for (let f = 0; f < 3; f++) render(backend, scene.root);
+      for (let f = 0; f < 3; f++) {
+        render(backend, scene.root);
+      }
 
       expect(fragmentOf(scene.group).instructions?.hasRecording).toBe(true);
 
@@ -295,7 +303,9 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
 
       render(backend, scene.root); // content-dirty frame
 
-      for (let f = 0; f < 3; f++) render(backend, scene.root);
+      for (let f = 0; f < 3; f++) {
+        render(backend, scene.root);
+      }
 
       expect(fragmentOf(scene.group).instructions?.hasRecording).toBe(true);
       expect(totalInk(readCanvas(backend))).toBeGreaterThan(0);
@@ -342,7 +352,9 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     const original = WebGl2TextRenderer.prototype._patchOwnTransformRow;
 
     try {
-      for (let f = 0; f < 3; f++) render(backend, scene.root);
+      for (let f = 0; f < 3; f++) {
+        render(backend, scene.root);
+      }
 
       const preMove = readCanvas(backend);
 
@@ -396,7 +408,10 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       // Restore + re-record: the group recovers to visible ink.
       WebGl2TextRenderer.prototype.configureRetainedVao = original;
       scene.text.text = 'MW '; // content change forces a fresh capture/record
-      for (let f = 0; f < 3; f++) render(backend, scene.root);
+
+      for (let f = 0; f < 3; f++) {
+        render(backend, scene.root);
+      }
 
       expect(totalInk(readCanvas(backend))).toBeGreaterThan(0);
     } finally {

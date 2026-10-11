@@ -108,13 +108,22 @@ describe('the device-specific button slot at index 17', () => {
   });
 
   test('the three devices disagree about slot 17, so no baseline value can be right', () => {
-    const channels = new Set([slot17(createXboxGamepadMapping()), slot17(createSwitchProGamepadMapping()), slot17(createPlayStationGamepadMapping())]);
+    const channels = new Set([
+      slot17(createXboxGamepadMapping()),
+      slot17(createSwitchProGamepadMapping()),
+      slot17(createPlayStationGamepadMapping()),
+    ]);
 
     expect(channels.size).toBe(3);
   });
 
   test('no built-in standard-layout mapping claims an index above 17', () => {
-    const mappings = [createXboxGamepadMapping(), createSwitchProGamepadMapping(), createPlayStationGamepadMapping(), createSteamControllerGamepadMapping()];
+    const mappings = [
+      createXboxGamepadMapping(),
+      createSwitchProGamepadMapping(),
+      createPlayStationGamepadMapping(),
+      createSteamControllerGamepadMapping(),
+    ];
 
     for (const mapping of mappings) {
       expect(mapping.buttons.filter(button => button.index > 17)).toEqual([]);

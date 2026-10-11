@@ -18,7 +18,11 @@ let capturedVideoElements: HTMLVideoElement[];
 
 const lastVideo = (): HTMLVideoElement => {
   const el = capturedVideoElements.at(-1);
-  if (!el) throw new Error('No <video> element was created by the factory under test.');
+
+  if (!el) {
+    throw new Error('No <video> element was created by the factory under test.');
+  }
+
   return el;
 };
 
@@ -34,7 +38,11 @@ describe('VideoFactory', () => {
     revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL');
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions): HTMLElement => {
       const el = originalCreateElement(tagName, options);
-      if (tagName === 'video') capturedVideoElements.push(el as HTMLVideoElement);
+
+      if (tagName === 'video') {
+        capturedVideoElements.push(el as HTMLVideoElement);
+      }
+
       return el;
     }) as typeof document.createElement);
   });

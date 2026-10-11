@@ -222,7 +222,8 @@ export const createSwitchProGamepadMapping = (): GamepadMapping =>
  * The right trackpad is surfaced as the right stick and the left trackpad as
  * the left stick. Gyro and haptic-only inputs are not represented.
  */
-export const createSteamControllerGamepadMapping = (): GamepadMapping => createStandardGamepadMapping({ family: GamepadMappingFamily.SteamController });
+export const createSteamControllerGamepadMapping = (): GamepadMapping =>
+  createStandardGamepadMapping({ family: GamepadMappingFamily.SteamController });
 
 /**
  * Generic arcade-stick controllers.

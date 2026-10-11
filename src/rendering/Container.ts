@@ -67,15 +67,23 @@ export class Container extends RenderNode {
 
   /** Cached renderer-compatible child order. @internal */
   public _childrenInPaintOrder(): readonly RenderNode[] {
-    if (this._paintChildrenView !== null) return this._paintChildrenView;
+    if (this._paintChildrenView !== null) {
+      return this._paintChildrenView;
+    }
+
     const children = this.children;
     const first = children[0];
-    if (first === undefined) return (this._paintChildrenView = children);
+
+    if (first === undefined) {
+      return (this._paintChildrenView = children);
+    }
+
     for (let i = 1; i < children.length; i++) {
       if (children[i]!.zIndex !== first.zIndex) {
         return (this._paintChildrenView = Object.freeze([...children].sort((a, b) => a.zIndex - b.zIndex)));
       }
     }
+
     return (this._paintChildrenView = children);
   }
 
@@ -338,10 +346,13 @@ export class Container extends RenderNode {
 
       this._childIndexView = map;
     }
+
     const index = this._childIndexView.get(child);
+
     if (index === undefined) {
       throw new Error('Drawable is not a child of the container.');
     }
+
     return index;
   }
 
@@ -575,7 +586,9 @@ export class Container extends RenderNode {
     // unlinks the node, and the removal stamps this container structure-dirty,
     // so a destroyed direct child always fails the key check above rather than
     // being replayed from a stale slot.
-    if (this._retainedPlan?.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)) {
+    if (
+      this._retainedPlan?.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)
+    ) {
       this._replayRetainedChildren(builder);
 
       return;

@@ -1,11 +1,21 @@
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, LutFilter, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  LutFilter,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  type Texture,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const LUT_SIZE = 17;
 
 type TransformFn = (r: number, g: number, b: number) => [number, number, number];
 
-function buildLut3D(transform: TransformFn): HTMLCanvasElement {
+const buildLut3D = (transform: TransformFn): HTMLCanvasElement => {
   const width = LUT_SIZE * LUT_SIZE;
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -13,6 +23,7 @@ function buildLut3D(transform: TransformFn): HTMLCanvasElement {
   const ctx = canvas.getContext('2d')!;
   const image = ctx.createImageData(width, LUT_SIZE);
   const max = LUT_SIZE - 1;
+
   for (let bIdx = 0; bIdx < LUT_SIZE; bIdx++) {
     for (let g = 0; g < LUT_SIZE; g++) {
       for (let r = 0; r < LUT_SIZE; r++) {
@@ -26,9 +37,11 @@ function buildLut3D(transform: TransformFn): HTMLCanvasElement {
       }
     }
   }
+
   ctx.putImageData(image, 0, 0);
+
   return canvas;
-}
+};
 
 // The five named graded looks from the catalog, followed by an explicit pass-
 // through baseline so a viewer can compare each grade against the ungraded
@@ -39,7 +52,8 @@ const LOOKS = [
     name: 'Sepia',
     transform: (r: number, g: number, b: number): [number, number, number] => {
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      return [Math.min(1, lum * 1.2), Math.min(1, lum * 1.0), Math.min(1, lum * 0.6)];
+
+      return [Math.min(1, lum * 1.2), Math.min(1, lum * 1), Math.min(1, lum * 0.6)];
     },
   },
   {
@@ -54,12 +68,17 @@ const LOOKS = [
     name: 'Bleach Bypass',
     transform: (r: number, g: number, b: number): [number, number, number] => {
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
       return [Math.min(1, r * 0.6 + lum * 0.6), Math.min(1, g * 0.6 + lum * 0.6), Math.min(1, b * 0.6 + lum * 0.6)];
     },
   },
   {
     name: 'Protanopia (red-blind)',
-    transform: (r: number, g: number, b: number): [number, number, number] => [0.567 * r + 0.433 * g, 0.558 * r + 0.442 * g, 0.242 * g + 0.758 * b],
+    transform: (r: number, g: number, b: number): [number, number, number] => [
+      0.567 * r + 0.433 * g,
+      0.558 * r + 0.442 * g,
+      0.242 * g + 0.758 * b,
+    ],
   },
   { name: 'Identity (off)', transform: (r: number, g: number, b: number): [number, number, number] => [r, g, b] },
 ];

@@ -13,6 +13,7 @@ const makeTexture = (width = 16, height = 16): Texture => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
+
   return new Texture(canvas);
 };
 

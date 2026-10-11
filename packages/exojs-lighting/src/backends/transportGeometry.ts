@@ -369,7 +369,14 @@ export class TransportGeometry {
     }
   }
 
-  private _forEachCellOnSegment(ax: number, ay: number, bx: number, by: number, id: number, visit: (cell: number, id: number) => void): void {
+  private _forEachCellOnSegment(
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    id: number,
+    visit: (cell: number, id: number) => void,
+  ): void {
     if (!this._clipSegmentToGrid(ax, ay, bx, by)) {
       return;
     }
@@ -404,7 +411,14 @@ export class TransportGeometry {
     this._walkSegmentCells(startX, startY, deltaX, deltaY, id, visit);
   }
 
-  private _walkSegmentCells(startX: number, startY: number, deltaX: number, deltaY: number, id: number, visit: (cell: number, id: number) => void): void {
+  private _walkSegmentCells(
+    startX: number,
+    startY: number,
+    deltaX: number,
+    deltaY: number,
+    id: number,
+    visit: (cell: number, id: number) => void,
+  ): void {
     const stepX = deltaX > 0 ? 1 : -1;
     const stepY = deltaY > 0 ? 1 : -1;
     const startLineX = gridLine(startX);
@@ -571,7 +585,14 @@ export class TransportGeometry {
    * merely reaches outside keeps the part that does exist, so a wall running
    * off the edge of the field still blocks inside it.
    */
-  private _forEachCellIn(minX: number, minY: number, maxX: number, maxY: number, id: number, visit: (cell: number, id: number) => void): void {
+  private _forEachCellIn(
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+    id: number,
+    visit: (cell: number, id: number) => void,
+  ): void {
     // `ceil - 1` rather than `floor` on the low edge: the two agree except
     // where the edge lands exactly on a cell boundary, and there the box
     // touches the cell on the other side of it too. A wall along a tile edge

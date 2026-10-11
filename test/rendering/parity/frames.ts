@@ -16,7 +16,9 @@ export const maxChannelDelta = (a: ArrayLike<number>, b: ArrayLike<number>): num
   for (let i = 0; i < a.length; i++) {
     const delta = Math.abs(a[i]! - b[i]!);
 
-    if (delta > worst) worst = delta;
+    if (delta > worst) {
+      worst = delta;
+    }
   }
 
   return worst;
@@ -60,7 +62,9 @@ export const drawnPixelCount = (frame: ArrayLike<number>): number => {
   let drawn = 0;
 
   for (let i = 0; i < frame.length; i += 4) {
-    if (frame[i] !== 0 || frame[i + 1] !== 0 || frame[i + 2] !== 0) drawn++;
+    if (frame[i] !== 0 || frame[i + 1] !== 0 || frame[i + 2] !== 0) {
+      drawn++;
+    }
   }
 
   return drawn;

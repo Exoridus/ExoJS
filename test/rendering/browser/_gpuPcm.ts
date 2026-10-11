@@ -14,7 +14,11 @@ export const verifyGpuPcm = async (context: RenderingContext, format: ColorTextu
   // Read the catalog's shader bodies so the browser proof cannot silently test a different generator.
   const glsl = /glsl:\s*\{\s*fragment:\s*`([^`]+)`/.exec(exampleSource)?.[1];
   const wgsl = /wgsl:\s*`([^`]+)`/.exec(exampleSource)?.[1];
-  if (!glsl || !wgsl) throw new Error('GPU PCM example shader sources were not found.');
+
+  if (!glsl || !wgsl) {
+    throw new Error('GPU PCM example shader sources were not found.');
+  }
+
   const filter = ShaderFilter.from(
     createFilterShader({
       glsl: { fragment: glsl },
@@ -32,44 +36,57 @@ export const verifyGpuPcm = async (context: RenderingContext, format: ColorTextu
   filter.uniforms.sampleRate.set(sampleRate);
   filter.uniforms.packed.set(format === TextureFormat.Rgba8 ? 1 : 0);
   const submittedAt = performance.now();
+
   try {
     for (let pair = 0; pair < blocks; pair += 2) {
       const pending = [pair, pair + 1].map(block => {
         filter.uniforms.sampleOffset.set(block * frames);
         filter.apply(context.backend, input, target);
+
         return reader.request()!;
       });
       expect(reader.inFlight).toBe(2);
       expect(reader.request()).toBeNull();
       await driveUntilSettled(context.backend, pending[1]!);
+
       for (let slot = 0; slot < pending.length; slot++) {
         const read = pending[slot]!;
         expect(read.failed).toBe(false);
         const data = read.data!.data;
         expect(data).toBeInstanceOf(format === TextureFormat.Rgba8 ? Uint8ClampedArray : Float32Array);
+
         for (let frame = 0; frame < frames; frame++) {
           const index = (pair + slot) * frames + frame;
-          pcm[0]![index] = format === TextureFormat.Rgba8 ? ((data[frame * 4]! * 256 + data[frame * 4 + 1]!) / 65535) * 2 - 1 : data[frame * 4]!;
-          pcm[1]![index] = format === TextureFormat.Rgba8 ? ((data[frame * 4 + 2]! * 256 + data[frame * 4 + 3]!) / 65535) * 2 - 1 : data[frame * 4 + 1]!;
+          pcm[0]![index] =
+            format === TextureFormat.Rgba8 ? ((data[frame * 4]! * 256 + data[frame * 4 + 1]!) / 65535) * 2 - 1 : data[frame * 4]!;
+          pcm[1]![index] =
+            format === TextureFormat.Rgba8 ? ((data[frame * 4 + 2]! * 256 + data[frame * 4 + 3]!) / 65535) * 2 - 1 : data[frame * 4 + 1]!;
         }
+
         read.release();
       }
+
       expect(reader.inFlight).toBe(0);
     }
+
     const readbackMs = performance.now() - submittedAt;
     const rendered = await renderOffline(pcm, sampleRate, frames);
     const tolerance = format === TextureFormat.Rgba16F ? 0.0001 : 0.00004;
+
     for (let channel = 0; channel < 2; channel++) {
       const actual = rendered.getChannelData(channel);
       const frequency = channel === 0 ? 220 : 330;
       let maxError = 0;
+
       for (let index = 0; index < frames * blocks; index++) {
         maxError = Math.max(maxError, Math.abs(actual[index + 174]! - Math.sin((2 * Math.PI * frequency * index) / sampleRate) * 0.12));
       }
+
       expect(maxError, `${format} channel ${channel}: includes every block boundary`).toBeLessThan(tolerance);
       expect(actual.subarray(0, 174).every(value => value === 0)).toBe(true);
       expect(actual.subarray(174 + frames * blocks).every(value => value === 0)).toBe(true);
     }
+
     console.info(
       `GPU PCM ${format}: ${frames * blocks} stereo frames, 2 readback slots, ${readbackMs.toFixed(1)} ms generation/readback, sample start 174/48000 s`,
     );
@@ -85,11 +102,13 @@ const renderOffline = async (pcm: Float32Array[], sampleRate: number, blockFrame
   const frames = pcm[0]!.length;
   const context = new OfflineAudioContext(2, frames + 512, sampleRate);
   const url = URL.createObjectURL(new Blob([pcmFenceWorkletSource, '\n', pcmStreamWorkletSource], { type: 'application/javascript' }));
+
   try {
     await context.audioWorklet.addModule(url);
   } finally {
     URL.revokeObjectURL(url);
   }
+
   const node = new AudioWorkletNode(context, 'exojs-pcm-stream', {
     numberOfInputs: 0,
     numberOfOutputs: 1,
@@ -108,11 +127,21 @@ const renderOffline = async (pcm: Float32Array[], sampleRate: number, blockFrame
   const failed = new Promise<never>((_resolve, reject) => {
     node.onprocessorerror = () => reject(new Error('GPU PCM AudioWorklet failed'));
   });
+
   node.port.onmessage = event => {
-    if (event.data.type === 'test-fence') resolveFence();
-    if (event.data.type === 'ended') resolveEnded(event.data);
-    if (event.data.type === 'status') node.port.postMessage({ type: 'ack' });
+    if (event.data.type === 'test-fence') {
+      resolveFence();
+    }
+
+    if (event.data.type === 'ended') {
+      resolveEnded(event.data);
+    }
+
+    if (event.data.type === 'status') {
+      node.port.postMessage({ type: 'ack' });
+    }
   };
+
   try {
     for (let offset = 0; offset < frames; offset += blockFrames) {
       const data = new Float32Array(blockFrames * 2);
@@ -120,12 +149,20 @@ const renderOffline = async (pcm: Float32Array[], sampleRate: number, blockFrame
       data.set(pcm[1]!.subarray(offset, offset + blockFrames), blockFrames);
       node.port.postMessage({ type: 'write', data }, [data.buffer]);
     }
+
     node.port.postMessage({ type: 'start', time: 173.25 / sampleRate });
     node.port.postMessage({ type: 'close' });
     node.port.postMessage({ type: 'test-fence' });
     await Promise.race([fence, failed]);
     const rendered = await Promise.race([context.startRendering(), failed]);
-    expect(await Promise.race([ended, failed])).toEqual({ type: 'ended', releasedFrames: frames, playedFrames: frames, underrunFrames: 0, underruns: 0 });
+    expect(await Promise.race([ended, failed])).toEqual({
+      type: 'ended',
+      releasedFrames: frames,
+      playedFrames: frames,
+      underrunFrames: 0,
+      underruns: 0,
+    });
+
     return rendered;
   } finally {
     node.disconnect();

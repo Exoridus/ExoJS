@@ -45,9 +45,11 @@ export const validateSizeInput = (width: number, height: number): void => {
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
     throw new Error(`RepeatingSprite: width and height must be finite numbers (got ${width}, ${height}).`);
   }
+
   if (width < 0) {
     throw new Error(`RepeatingSprite: width must be non-negative (got ${width}).`);
   }
+
   if (height < 0) {
     throw new Error(`RepeatingSprite: height must be non-negative (got ${height}).`);
   }
@@ -88,9 +90,11 @@ export const computeShaderTiling = (srcLen: number, destLen: number, mode: Repea
   if (mode === 'stretch' || srcLen <= 0 || destLen <= 0) {
     return 1;
   }
+
   if (fit === 'round') {
     return Math.max(1, Math.round(destLen / srcLen));
   }
+
   return destLen / srcLen;
 };
 
@@ -178,7 +182,13 @@ export const buildRepeatingSpriteQuads = (
  * discouraged by design.
  * @internal
  */
-const buildAxisSegmentsWithOffset = (srcLen: number, destLen: number, mode: RepeatMode, fit: RepeatFit, offset: number): RepeatSegment[] => {
+const buildAxisSegmentsWithOffset = (
+  srcLen: number,
+  destLen: number,
+  mode: RepeatMode,
+  fit: RepeatFit,
+  offset: number,
+): RepeatSegment[] => {
   if (destLen === 0 || srcLen <= 0) {
     return [];
   }

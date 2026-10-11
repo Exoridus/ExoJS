@@ -113,6 +113,7 @@ export class AudioGenerator implements Playable {
   /** Set {@link AudioGenerator.frequency} from a MIDI note number (69 = A4 = 440 Hz). */
   public setNote(midiNote: number): this {
     this.frequency = AudioGenerator.midiToFrequency(midiNote);
+
     return this;
   }
 
@@ -134,6 +135,7 @@ export class AudioGenerator implements Playable {
 
     if (!isAudioContextReady()) {
       system._warnPlaybackWhileLocked('generator');
+
       return new NoopVoice(bus);
     }
 
@@ -142,6 +144,7 @@ export class AudioGenerator implements Playable {
     if (this._activeVoices.length >= this._poolSize) {
       const victimIndex = this._pickEvictionVictim();
       const victim = this._activeVoices[victimIndex];
+
       if (victim) {
         this._activeVoices.splice(victimIndex, 1);
         victim.voice.stop();
@@ -171,6 +174,7 @@ export class AudioGenerator implements Playable {
     const pooled: PooledGeneratorVoice = { voice, startedAt: audioContext.currentTime };
     voice.onEnd.add((): void => {
       const index = this._activeVoices.indexOf(pooled);
+
       if (index !== -1) {
         this._activeVoices.splice(index, 1);
       }
@@ -196,9 +200,11 @@ export class AudioGenerator implements Playable {
   public stopAll(): this {
     const voices = [...this._activeVoices];
     this._activeVoices.length = 0;
+
     for (const pooled of voices) {
       pooled.voice.stop();
     }
+
     return this;
   }
 
@@ -238,22 +244,27 @@ export class AudioGenerator implements Playable {
       // Oscillators are open-ended, so "closest to end" degenerates to oldest.
       let oldest = -1;
       let oldestTime = Infinity;
+
       for (let i = 0; i < this._activeVoices.length; i++) {
         const pooled = this._activeVoices[i];
+
         if (pooled === undefined || (!includePaused && pooled.voice.paused)) {
           continue;
         }
+
         if (pooled.startedAt < oldestTime) {
           oldestTime = pooled.startedAt;
           oldest = i;
         }
       }
+
       return oldest;
     }
 
     // FirstInFirstOut and LowestPriority (shared priority) → oldest.
     for (let i = 0; i < this._activeVoices.length; i++) {
       const pooled = this._activeVoices[i];
+
       if (pooled !== undefined && (includePaused || !pooled.voice.paused)) {
         return i;
       }

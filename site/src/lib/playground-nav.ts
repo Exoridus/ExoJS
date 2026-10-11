@@ -15,12 +15,11 @@ export interface PlaygroundNavCategory {
 }
 
 // Title-cases an unknown category slug as a last resort.
-const humanizeSlug = (slug: string): string => {
-  return slug
+const humanizeSlug = (slug: string): string =>
+  slug
     .split(/[-/]/)
     .map(word => (word ? word[0].toUpperCase() + word.slice(1) : word))
     .join(' ');
-};
 
 /**
  * Reduces an example path or route to its canonical slug form so two
@@ -31,11 +30,14 @@ const humanizeSlug = (slug: string): string => {
  *   normalizeExamplePath('/particles/bonfire.js?x=1#frag') === 'particles/bonfire'
  */
 export const normalizeExamplePath = (value: string | null | undefined): string => {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
 
   let path = value.trim();
 
   const queryOrHash = path.search(/[?#]/);
+
   if (queryOrHash !== -1) {
     path = path.slice(0, queryOrHash);
   }
@@ -50,7 +52,10 @@ export const normalizeExamplePath = (value: string | null | undefined): string =
  * `input/keyboard` and `input/keyboard-extra` never both match.
  */
 export const isExampleRouteActive = (candidatePath: string, activePath: string | null | undefined): boolean => {
-  if (!activePath) return false;
+  if (!activePath) {
+    return false;
+  }
+
   return normalizeExamplePath(candidatePath) === normalizeExamplePath(activePath);
 };
 
@@ -66,6 +71,7 @@ export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array
 
   for (const example of examples) {
     const existing = bySection.get(example.section);
+
     if (existing) {
       existing.push(example);
     } else {
@@ -74,6 +80,7 @@ export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array
   }
 
   const categories: Array<PlaygroundNavCategory> = [];
+
   for (const [slug, sectionExamples] of bySection) {
     const meta = PLAYGROUND_CATEGORY_BY_SLUG.get(slug);
     categories.push({
@@ -85,5 +92,6 @@ export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array
   }
 
   categories.sort((a, b) => a.order - b.order || a.slug.localeCompare(b.slug));
+
   return categories;
 };

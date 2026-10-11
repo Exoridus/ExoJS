@@ -108,8 +108,11 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const pass = {
     executeBundles: (bundles: ReadonlyArray<{ instanceCounts: readonly number[] }>): void => {
       nativeReplayCount += bundles.length;
+
       for (const bundle of bundles) {
-        for (const instanceCount of bundle.instanceCounts) draws.push({ instanceCount });
+        for (const instanceCount of bundle.instanceCounts) {
+          draws.push({ instanceCount });
+        }
       }
     },
     setPipeline: (): void => {},
@@ -130,7 +133,13 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     finish: () => ({ label: 'command-buffer' }) as unknown as GPUCommandBuffer,
   };
   const queue = {
-    writeBuffer: (buffer: LabeledBuffer, bufferOffset: number, data: ArrayBuffer | ArrayBufferView, dataOffset?: number, size?: number): void => {
+    writeBuffer: (
+      buffer: LabeledBuffer,
+      bufferOffset: number,
+      data: ArrayBuffer | ArrayBufferView,
+      dataOffset?: number,
+      size?: number,
+    ): void => {
       writes.push({ label: buffer.label, bufferOffset, bytes: captureWriteBytes(data, dataOffset, size) });
     },
     submit: (): void => {
@@ -143,6 +152,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     createRenderBundleEncoder: (): object => {
       nativeBuildCount++;
       const instanceCounts: number[] = [];
+
       return {
         setPipeline: (): void => {},
         setBindGroup: (): void => {},
@@ -338,19 +348,26 @@ const buildGroupScene = (texture: Texture, groupCount: number): { root: Containe
 describe('WebGPU retained record/replay: fallback ladder + submit collapse', () => {
   test('native promotion waits for stability, limits build work, and resets after recording replacement', async () => {
     const environment = createMockWebGpuEnvironment();
+
     try {
       const backend = await createBackend(environment);
       const texture = createCanvasTexture();
       const group = new RetainedContainer();
       group.preserveDrawOrder = true;
+
       for (let i = 0; i < 64; i++) {
         const sprite = new Sprite(texture);
         sprite.blendMode = i % 2 === 0 ? BlendModes.Normal : BlendModes.Multiply;
         group.addChild(sprite);
       }
+
       renderFrame(backend, group);
       renderFrame(backend, group);
-      for (let i = 0; i < 30; i++) renderFrame(backend, group);
+
+      for (let i = 0; i < 30; i++) {
+        renderFrame(backend, group);
+      }
+
       expect(environment.nativeBuildCount()).toBe(0);
       renderFrame(backend, group);
       expect(environment.nativeBuildCount()).toBe(32);
@@ -365,7 +382,11 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       const invalidatedBefore = environment.nativeReplayCount();
       renderFrame(backend, group);
       expect(environment.nativeReplayCount()).toBe(invalidatedBefore);
-      for (let i = 0; i < 30; i++) renderFrame(backend, group);
+
+      for (let i = 0; i < 30; i++) {
+        renderFrame(backend, group);
+      }
+
       expect(environment.nativeBuildCount()).toBe(64);
       group.destroy();
       texture.destroy();
@@ -419,7 +440,10 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       const set = fragmentOf(groups[0]!).instructions!;
       const batch = set.instructions.find(instruction => instruction.kind === RetainedInstructionKind.Batch)!;
 
-      if (batch.kind !== RetainedInstructionKind.Batch) throw new Error('Expected a recorded batch');
+      if (batch.kind !== RetainedInstructionKind.Batch) {
+        throw new Error('Expected a recorded batch');
+      }
+
       set.ownedBundle!.destroy!();
       backend.resetStats();
       const before = environment.draws().length;
@@ -621,7 +645,11 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
 
       // Two 32-byte instances (8 words each); the last word of each is the
       // (rebased) node index - tint is read from its own shared buffer.
-      const words = new Uint32Array(instanceWrites[0]!.bytes.buffer, instanceWrites[0]!.bytes.byteOffset, instanceWrites[0]!.bytes.byteLength / 4);
+      const words = new Uint32Array(
+        instanceWrites[0]!.bytes.buffer,
+        instanceWrites[0]!.bytes.byteOffset,
+        instanceWrites[0]!.bytes.byteLength / 4,
+      );
 
       expect(words).toHaveLength(16);
       expect(words[7]).toBe(0);
@@ -951,7 +979,13 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
       },
       createBindGroup: () => ({}) as GPUBindGroup,
       queue: {
-        writeBuffer: (buffer: LabeledBuffer, bufferOffset: number, data: ArrayBuffer | ArrayBufferView, dataOffset?: number, size?: number): void => {
+        writeBuffer: (
+          buffer: LabeledBuffer,
+          bufferOffset: number,
+          data: ArrayBuffer | ArrayBufferView,
+          dataOffset?: number,
+          size?: number,
+        ): void => {
           writes.push({ label: buffer.label, bufferOffset, bytes: captureWriteBytes(data, dataOffset, size) });
         },
       },
@@ -973,11 +1007,13 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
 
     let spriteGroup = bundle.getBindGroup(device, spriteLayout, true);
     let geometryGroup = bundle.getBindGroup(device, geometryLayout, false);
+
     const checkReuse = (): void => {
       expect(bundle.getBindGroup(device, spriteLayout, true)).toBe(spriteGroup);
       expect(bundle.getBindGroup(device, spriteLayout, true)).toBe(spriteGroup);
       expect(bundle.getBindGroup(device, geometryLayout, false)).toBe(geometryGroup);
     };
+
     checkReuse();
 
     for (const [instanceBytes, transformBytes, tintBytes] of [

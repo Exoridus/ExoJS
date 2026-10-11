@@ -134,7 +134,12 @@ export class TilemapOccluder<Tile> implements OccluderSource {
           const x2 = segments[index + 2]!;
           const y2 = segments[index + 3]!;
 
-          out.addSegment(map.a * x1 + map.b * y1 + map.x, map.c * x1 + map.d * y1 + map.y, map.a * x2 + map.b * y2 + map.x, map.c * x2 + map.d * y2 + map.y);
+          out.addSegment(
+            map.a * x1 + map.b * y1 + map.x,
+            map.c * x1 + map.d * y1 + map.y,
+            map.a * x2 + map.b * y2 + map.x,
+            map.c * x2 + map.d * y2 + map.y,
+          );
         }
       }
     }

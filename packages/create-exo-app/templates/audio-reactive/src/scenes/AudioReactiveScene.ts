@@ -28,7 +28,10 @@ export class AudioReactiveScene extends Scene {
     this.addChild(this._bars);
 
     const onTap = (): void => {
-      if (this._started) return;
+      if (this._started) {
+        return;
+      }
+
       this._started = true;
       this._prompt.visible = false;
 

@@ -138,8 +138,8 @@ describe('Connectivity teardown', () => {
   test('clears its signals', () => {
     const connectivity = new Connectivity(hintSource().source);
 
-    connectivity.onStateChange.add(() => undefined);
-    connectivity.onModeChange.add(() => undefined);
+    connectivity.onStateChange.add(() => {});
+    connectivity.onModeChange.add(() => {});
 
     connectivity.destroy();
 

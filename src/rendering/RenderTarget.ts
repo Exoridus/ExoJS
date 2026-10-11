@@ -194,7 +194,12 @@ export class RenderTarget {
   public getViewport(view: View = this._view): Rectangle {
     const { x, y, width, height } = view.viewport;
 
-    return this._viewport.set(Math.round(x * this.width), Math.round(y * this.height), Math.round(width * this.width), Math.round(height * this.height));
+    return this._viewport.set(
+      Math.round(x * this.width),
+      Math.round(y * this.height),
+      Math.round(width * this.width),
+      Math.round(height * this.height),
+    );
   }
 
   public updateViewport(): this {
@@ -205,7 +210,10 @@ export class RenderTarget {
 
   public mapPixelToCoords(point: Vector, view: View = this._view): Vector {
     const viewport = this.getViewport(view);
-    const normalized = new Vector(-1 + (2 * (point.x - viewport.left)) / viewport.width, 1 - (2 * (point.y - viewport.top)) / viewport.height);
+    const normalized = new Vector(
+      -1 + (2 * (point.x - viewport.left)) / viewport.width,
+      1 - (2 * (point.y - viewport.top)) / viewport.height,
+    );
 
     return normalized.transform(view.getInverseTransform());
   }
@@ -229,7 +237,10 @@ export class RenderTarget {
 
     point.transform(view.getTransform());
 
-    return point.set((((point.x + 1) / 2) * viewport.width + viewport.left) | 0, (((-point.y + 1) / 2) * viewport.height + viewport.top) | 0);
+    return point.set(
+      (((point.x + 1) / 2) * viewport.width + viewport.left) | 0,
+      (((-point.y + 1) / 2) * viewport.height + viewport.top) | 0,
+    );
   }
 
   public destroy(): void {

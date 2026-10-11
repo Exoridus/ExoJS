@@ -131,17 +131,21 @@ export const computeAcfInto = (flux: Float32Array, n: number, minLag: number, ma
 
   // Window mean - subtracted before correlation to remove the DC pedestal.
   let mean = 0;
+
   for (let t = 0; t < n; t++) {
     mean += flux[t]!;
   }
+
   mean = n > 0 ? mean / n : 0;
 
   // Zero-lag energy (variance) of the centred signal - the normaliser.
   let zeroLag = 0;
+
   for (let t = 0; t < n; t++) {
     const c = flux[t]! - mean;
     zeroLag += c * c;
   }
+
   zeroLag = n > 0 ? zeroLag / n : 1;
   const norm = zeroLag > 0 ? zeroLag : 1;
 
@@ -149,9 +153,11 @@ export const computeAcfInto = (flux: Float32Array, n: number, minLag: number, ma
   for (let lagIndex = 0; lagIndex < lagCount; lagIndex++) {
     const lag = minLag + lagIndex;
     let sum = 0;
+
     for (let t = lag; t < n; t++) {
       sum += (flux[t]! - mean) * (flux[t - lag]! - mean);
     }
+
     out[lagIndex] = n > 0 ? sum / n / norm : 0;
   }
 };
@@ -164,11 +170,16 @@ export const computeAcfInto = (flux: Float32Array, n: number, minLag: number, ma
 export const acfAtLag = (acf: Float32Array, minLag: number, lag: number): number => {
   const maxIndex = acf.length - 1;
   const f = lag - minLag;
-  if (f < 0 || f > maxIndex) return 0;
+
+  if (f < 0 || f > maxIndex) {
+    return 0;
+  }
+
   const i0 = Math.floor(f);
   const i1 = i0 < maxIndex ? i0 + 1 : maxIndex;
   const frac = f - i0;
   const v = acf[i0]! * (1 - frac) + acf[i1]! * frac;
+
   return v > 0 ? v : 0;
 };
 
@@ -184,10 +195,19 @@ export const acfAtLag = (acf: Float32Array, minLag: number, lag: number): number
  */
 export const parabolicPeakOffset = (yPrev: number, yMid: number, yNext: number): number => {
   const denom = yPrev - 2 * yMid + yNext;
-  if (denom >= 0) return 0;
+
+  if (denom >= 0) {
+    return 0;
+  }
+
   let d = (0.5 * (yPrev - yNext)) / denom;
-  if (d < -0.5) d = -0.5;
-  else if (d > 0.5) d = 0.5;
+
+  if (d < -0.5) {
+    d = -0.5;
+  } else if (d > 0.5) {
+    d = 0.5;
+  }
+
   return d;
 };
 
@@ -206,7 +226,13 @@ export const parabolicPeakOffset = (yPrev: number, yMid: number, yNext: number):
  * @param sampleRate Audio sample rate in Hz.
  * @param topK       Number of peaks to return (default 3).
  */
-export const findTempoPeaks = (acf: Float32Array, minLag: number, hopSize: number, sampleRate: number, topK = 3): TempoCandidateResult[] => {
+export const findTempoPeaks = (
+  acf: Float32Array,
+  minLag: number,
+  hopSize: number,
+  sampleRate: number,
+  topK = 3,
+): TempoCandidateResult[] => {
   const peaks: TempoCandidateResult[] = [];
   const last = acf.length - 1;
 
@@ -231,12 +257,14 @@ export const findTempoPeaks = (acf: Float32Array, minLag: number, hopSize: numbe
   }
 
   peaks.sort((a, b) => b.score - a.score);
+
   return peaks.slice(0, topK);
 };
 
 /** Soft log-Gaussian tempo prior: 1 at `mu`, decaying symmetrically in log-BPM. */
 export const tempoPrior = (bpm: number, mu = defaultPriorMu, sigma = defaultPriorSigma): number => {
   const z = Math.log(bpm / mu) / sigma;
+
   return Math.exp(-0.5 * z * z);
 };
 
@@ -283,12 +311,16 @@ export const scoreTempoHypotheses = (
     const penaltyDouble = p.bpm * 2 <= superHarmonicMaxBpm ? combPenaltyDouble * aDouble : 0;
     const penaltyTriple = p.bpm * 3 <= superHarmonicMaxBpm ? combPenaltyTriple * aTriple : 0;
     let comb = support - penaltyDouble - penaltyTriple;
-    if (comb < 0) comb = 0;
+
+    if (comb < 0) {
+      comb = 0;
+    }
 
     return { bpm: p.bpm, score: comb * tempoPrior(p.bpm, mu, sigma), lag: p.lag };
   });
 
   scored.sort((a, b) => b.score - a.score);
+
   return scored;
 };
 
@@ -322,6 +354,7 @@ export const computeTempoCandidates = (
   const hiBpm = maxBpm * (1 + candidateEdgeTolerance);
   const inRange = peaks.filter(p => p.bpm >= loBpm && p.bpm <= hiBpm);
   const scored = scoreTempoHypotheses(inRange, acf, acfMinLag, options);
+
   return scored.slice(0, topK);
 };
 
@@ -333,8 +366,12 @@ export const computeTempoCandidates = (
  * a genuine tempo change.
  */
 export const isOctaveRelated = (bpm: number, reference: number): boolean => {
-  if (reference <= 0) return false;
+  if (reference <= 0) {
+    return false;
+  }
+
   const r = bpm / reference;
+
   return (
     Math.abs(r - 0.5) < 0.05 ||
     Math.abs(r - 2) < 0.1 ||

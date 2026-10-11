@@ -5,25 +5,22 @@ import { PLAYGROUND_CATEGORIES } from '../../site/src/lib/playground-categories'
 import { buildPlaygroundNavModel, isExampleRouteActive, normalizeExamplePath } from '../../site/src/lib/playground-nav';
 import type { Example } from '../../site/src/lib/types';
 
-const ex = (section: string, slug: string, extra: Partial<Example> = {}): Example => {
-  return {
-    section,
-    slug,
-    path: `${section}/${slug}.js`,
-    title: slug,
-    description: '',
-    backend: 'core',
-    ...extra,
-  };
-};
+const ex = (section: string, slug: string, extra: Partial<Example> = {}): Example => ({
+  section,
+  slug,
+  path: `${section}/${slug}.js`,
+  title: slug,
+  description: '',
+  backend: 'core',
+  ...extra,
+});
 
 // A flat list synthesised from the real catalog, exactly how the live store
 // hands examples to the nav (each entry once, carrying its `section`).
-const catalogExamples = (): Example[] => {
-  return Object.entries(EXAMPLES_CATALOG).flatMap(([section, entries]) =>
+const catalogExamples = (): Example[] =>
+  Object.entries(EXAMPLES_CATALOG).flatMap(([section, entries]) =>
     entries.map(entry => ex(section, entry.slug, { path: entry.path, title: entry.title })),
   );
-};
 
 describe('normalizeExamplePath', () => {
   it('strips a .js suffix', () => {

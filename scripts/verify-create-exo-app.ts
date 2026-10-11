@@ -3,12 +3,12 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { verifyRealConsumers } from './create-exo-app-consumers.ts';
 import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
 
 // The package's public entry, by path: 'create-exo-app' is not a root
 // dependency, and this script is a root script.
 import { TEMPLATES as SCAFFOLDER_TEMPLATES } from '../packages/create-exo-app/src/scaffold.js';
+import { verifyRealConsumers } from './create-exo-app-consumers.ts';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const rootDir = join(__dirname, '..');
@@ -27,7 +27,11 @@ const LOCKSTEP_PLACEHOLDER = 'lockstep';
 const engineRange = (): string => {
   const own = JSON.parse(readFileSync(join(rootDir, 'packages', 'create-exo-app', 'package.json'), 'utf-8')) as { version: string };
   const match = /^(\d+)\.(\d+)\./.exec(own.version);
-  if (!match) throw new Error(`create-exo-app has an unparseable version "${own.version}".`);
+
+  if (!match) {
+    throw new Error(`create-exo-app has an unparseable version "${own.version}".`);
+  }
+
   return `${match[1]}.${match[2]}.x`;
 };
 
@@ -126,20 +130,26 @@ check(existsSync(cliSrc), 'src/index.ts found', 'src/index.ts missing');
 
 // 2. All templates present
 console.log('\n2. Template directories');
+
 for (const t of TEMPLATES) {
   check(existsSync(join(templatesDir, t)), `templates/${t}/ exists`, `templates/${t}/ missing`);
 }
 
 // 3. Scaffold each template
 console.log('\n3. Scaffold each template (non-TTY, --force)');
+
 for (const t of TEMPLATES) {
   const destDir = join(tmpRoot, t);
+
   if (existsSync(destDir)) {
     rmSync(destDir, { recursive: true, force: true });
   }
 
   try {
-    execSync(`node --import tsx/esm "${cliSrc}" "${destDir}" --template ${t} --force`, { stdio: 'pipe', env: { ...process.env, FORCE_COLOR: '0' } });
+    execSync(`node --import tsx/esm "${cliSrc}" "${destDir}" --template ${t} --force`, {
+      stdio: 'pipe',
+      env: { ...process.env, FORCE_COLOR: '0' },
+    });
     ok(`scaffold ${t} → .workspace/tmp/create-exo-app/${t}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -149,8 +159,10 @@ for (const t of TEMPLATES) {
 
 // 4. Expected files present
 console.log('\n4. Expected files in scaffolded projects');
+
 for (const t of TEMPLATES) {
   const destDir = join(tmpRoot, t);
+
   for (const file of EXPECTED_FILES[t]) {
     check(existsSync(join(destDir, file)), `${t}/${file}`, `${t}/${file} missing`);
   }
@@ -158,13 +170,16 @@ for (const t of TEMPLATES) {
 
 // 5. Valid package.json
 console.log('\n5. Valid package.json in scaffolded projects');
+
 for (const t of TEMPLATES) {
   const pkgPath = join(tmpRoot, t, 'package.json');
+
   try {
     const raw = readFileSync(pkgPath, 'utf-8');
     const pkg = JSON.parse(raw) as { name?: unknown };
     const validName = typeof pkg.name === 'string' && pkg.name === t;
     ok(`${t}/package.json is valid JSON, name="${String(pkg.name)}"`);
+
     if (!validName) {
       fail(`${t}/package.json name should be "${t}", got "${String(pkg.name)}"`);
     }
@@ -175,8 +190,10 @@ for (const t of TEMPLATES) {
 
 // 6. No forbidden API patterns in template source files
 console.log('\n6. No forbidden API patterns in template sources');
+
 for (const t of TEMPLATES) {
   const srcDir = join(templatesDir, t, 'src');
+
   for (const { pattern, label } of FORBIDDEN_PATTERNS) {
     try {
       const result = execSync(
@@ -197,6 +214,7 @@ for (const t of TEMPLATES) {
         "`,
         { encoding: 'utf-8', stdio: 'pipe' },
       ).trim();
+
       if (result) {
         fail(`${t}: found "${label}" in ${result}`);
       } else {
@@ -212,6 +230,7 @@ for (const t of TEMPLATES) {
 //    scaffolder's own release line
 console.log('\n7. Template @codexo dependencies');
 const seenCoreRanges = new Set<string>();
+
 for (const t of TEMPLATES) {
   // The template source, before scaffolding. A version here would be a second
   // place the engine release is written down, and the one that goes stale: the
@@ -220,7 +239,10 @@ for (const t of TEMPLATES) {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
   };
-  for (const [name, range] of Object.entries({ ...sourcePkg.dependencies, ...sourcePkg.devDependencies }).filter(([dep]) => dep.startsWith('@codexo/'))) {
+
+  for (const [name, range] of Object.entries({ ...sourcePkg.dependencies, ...sourcePkg.devDependencies }).filter(([dep]) =>
+    dep.startsWith('@codexo/'),
+  )) {
     check(
       range === LOCKSTEP_PLACEHOLDER,
       `templates/${t}: ${name} holds the "${LOCKSTEP_PLACEHOLDER}" placeholder`,
@@ -231,6 +253,7 @@ for (const t of TEMPLATES) {
 
 for (const t of TEMPLATES) {
   const pkgPath = join(tmpRoot, t, 'package.json');
+
   try {
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { dependencies?: Record<string, string> };
     const coreRange = pkg.dependencies?.['@codexo/exojs'];
@@ -263,6 +286,7 @@ for (const t of TEMPLATES) {
     fail(`${t}: could not read scaffolded package.json dependency`);
   }
 }
+
 check(
   seenCoreRanges.size === 1,
   `all templates agree on one core range (${[...seenCoreRanges].join(', ')})`,
@@ -279,8 +303,10 @@ check(
 // a templates-only change, which routes to this script's lane and not to that
 // one.
 console.log('\n8. Template sources type-check against the workspace engine');
+
 {
   const result = runTypeScriptCompiler(['--noEmit', '-p', 'tsconfig.templates.json'], { cwd: rootDir, stdio: 'pipe' });
+
   if (result.status === 0) {
     ok('tsc --noEmit -p tsconfig.templates.json');
   } else {
@@ -304,6 +330,7 @@ console.log('\n8. Template sources type-check against the workspace engine');
 // Requires the built `dist` trees. The lane that runs this script gets them as a
 // build artifact; locally, `pnpm build` and `pnpm build:packages` first.
 console.log('\n9. Generated projects install and build against the packed engine');
+
 {
   const outcomes = verifyRealConsumers({
     repoRoot: rootDir,
@@ -326,6 +353,7 @@ console.log('\n9. Generated projects install and build against the packed engine
 
 // Summary
 console.log(`\n=== Result: ${passed} passed, ${failed} failed ===\n`);
+
 if (failed > 0) {
   process.exit(1);
 }

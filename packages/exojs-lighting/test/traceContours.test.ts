@@ -4,7 +4,7 @@ import { outlinesFromAlphaField } from '../src/occluders/alphaTrace';
 import { simplifyLoop, traceContours } from '../src/occluders/traceContours';
 
 /** A field where `cells` lists the occupied `(x, y)` pairs. */
-const grid = (cells: readonly (readonly [number, number])[]) => {
+const grid = (cells: ReadonlyArray<readonly [number, number]>) => {
   const occupied = new Set(cells.map(([x, y]) => `${x},${y}`));
 
   return (x: number, y: number): boolean => occupied.has(`${x},${y}`);
@@ -64,7 +64,7 @@ describe('traceContours', () => {
   });
 
   test('a hole is an outline of its own, wound against the one around it', () => {
-    const ring: [number, number][] = [];
+    const ring: Array<[number, number]> = [];
 
     for (let y = 0; y < 3; y++) {
       for (let x = 0; x < 3; x++) {

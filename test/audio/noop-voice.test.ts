@@ -76,7 +76,7 @@ describe('NoopVoice', () => {
   test('addEffect() / removeEffect() are no-ops returning `this` for chaining', () => {
     const bus = new AudioBus('noop-bus-7');
     const voice = new NoopVoice(bus);
-    const fx = { inputNode: {}, outputNode: {}, ready: Promise.resolve(), destroy: () => undefined } as unknown as AudioEffect;
+    const fx = { inputNode: {}, outputNode: {}, ready: Promise.resolve(), destroy: () => {} } as unknown as AudioEffect;
 
     expect(voice.addEffect(fx)).toBe(voice);
     expect(voice.removeEffect(fx)).toBe(voice);
@@ -114,6 +114,7 @@ describe('NoopVoice — real trigger paths', () => {
     vi.resetModules();
     vi.doMock('#audio/audioContext', async importOriginal => {
       const actual = await importOriginal<typeof import('#audio/audioContext')>();
+
       return { ...actual, isAudioContextReady: () => false };
     });
 

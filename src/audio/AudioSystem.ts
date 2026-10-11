@@ -395,6 +395,7 @@ export class AudioSystem {
   public play(source: Playable, options?: PlayOptions): Voice;
   public play(source: Playable, options?: PlayOptions): Voice {
     this._assertLive('play');
+
     return source.createVoice(this, options ?? {});
   }
 
@@ -432,12 +433,14 @@ export class AudioSystem {
   public preFrame(_delta: Seconds): void {
     this._syncLockState();
     this.listener._tick();
+
     // Tick spatial voices and prune ended ones.
     for (const voice of this._spatial) {
       if (voice.ended) {
         this._spatial.delete(voice);
         continue;
       }
+
       voice._tickSpatial();
     }
 
@@ -530,7 +533,9 @@ export class AudioSystem {
     if (this._registered.has(bus.name)) {
       throw new Error(`Audio bus "${bus.name}" is already registered.`);
     }
+
     this._registered.set(bus.name, bus);
+
     return this;
   }
 
@@ -546,22 +551,28 @@ export class AudioSystem {
     if (bus === this.master || bus === this.music || bus === this.sound) {
       throw new Error(`Cannot unregister built-in bus "${bus.name}".`);
     }
+
     const existing = this._registered.get(bus.name);
+
     if (existing !== bus) {
       // Either not registered, or different instance with same name.
       return this;
     }
+
     this._registered.delete(bus.name);
     bus.destroy();
+
     return this;
   }
 
   /** Look up a bus by name. Throws if the name is not registered. */
   public getBus(name: string): AudioBus {
     const bus = this._registered.get(name);
+
     if (!bus) {
       throw new Error(`Audio bus "${name}" is not registered.`);
     }
+
     return bus;
   }
 
@@ -609,6 +620,7 @@ export class AudioSystem {
     // each entry before stopping it keeps the loop making progress.
     for (const voice of this._voices) {
       this._voices.delete(voice);
+
       try {
         voice.stop();
       } catch (error) {
@@ -626,10 +638,12 @@ export class AudioSystem {
     this.zones.clear();
     this.listener.destroy();
     this._spatial.clear();
+
     for (const bus of this._registered.values()) {
       // Note: destroying built-ins too - AudioSystem is destroyed only when app shuts down.
       bus.destroy();
     }
+
     this._registered.clear();
 
     for (const error of failures) {

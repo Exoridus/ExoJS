@@ -3,7 +3,13 @@ import type { PlaybackOptions } from '#core/types';
 import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import { Video } from '#rendering/video/Video';
 
-import { attachMediaSource, detachMediaElement, type MediaAssetOptions, type MediaAssetSource, type MediaLoadMessages } from './mediaSource';
+import {
+  attachMediaSource,
+  detachMediaElement,
+  type MediaAssetOptions,
+  type MediaAssetSource,
+  type MediaLoadMessages,
+} from './mediaSource';
 import { ObjectUrlPool } from './ObjectUrlPool';
 
 const MESSAGES: MediaLoadMessages = {

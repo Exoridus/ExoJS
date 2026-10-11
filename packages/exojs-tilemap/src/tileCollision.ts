@@ -11,7 +11,11 @@ import type { TileTransform } from './types';
  * @advanced
  */
 export type TileCollisionShapeKind =
-  typeof ObjectKind.Rectangle | typeof ObjectKind.Ellipse | typeof ObjectKind.Polygon | typeof ObjectKind.Polyline | typeof ObjectKind.Point;
+  | typeof ObjectKind.Rectangle
+  | typeof ObjectKind.Ellipse
+  | typeof ObjectKind.Polygon
+  | typeof ObjectKind.Polyline
+  | typeof ObjectKind.Point;
 
 /**
  * A half-open tile-coordinate rectangle covering
@@ -171,9 +175,17 @@ const normaliseDegrees = (degrees: number): number => {
 const cosDegrees = (degrees: number): number => {
   const angle = normaliseDegrees(degrees);
 
-  if (angle === 0) return 1;
-  if (angle === 90 || angle === 270) return 0;
-  if (angle === 180) return -1;
+  if (angle === 0) {
+    return 1;
+  }
+
+  if (angle === 90 || angle === 270) {
+    return 0;
+  }
+
+  if (angle === 180) {
+    return -1;
+  }
 
   return Math.cos(angle * DEGREES_TO_RADIANS);
 };
@@ -182,9 +194,17 @@ const cosDegrees = (degrees: number): number => {
 const sinDegrees = (degrees: number): number => {
   const angle = normaliseDegrees(degrees);
 
-  if (angle === 0 || angle === 180) return 0;
-  if (angle === 90) return 1;
-  if (angle === 270) return -1;
+  if (angle === 0 || angle === 180) {
+    return 0;
+  }
+
+  if (angle === 90) {
+    return 1;
+  }
+
+  if (angle === 270) {
+    return -1;
+  }
 
   return Math.sin(angle * DEGREES_TO_RADIANS);
 };
@@ -230,8 +250,13 @@ const mapLocalPoint = (px: number, py: number, boxWidth: number, boxHeight: numb
     height = boxWidth;
   }
 
-  if (transform.flipX) x = width - x;
-  if (transform.flipY) y = height - y;
+  if (transform.flipX) {
+    x = width - x;
+  }
+
+  if (transform.flipY) {
+    y = height - y;
+  }
 
   return { x, y };
 };
@@ -244,6 +269,7 @@ const mapLocalPoint = (px: number, py: number, boxWidth: number, boxHeight: numb
  */
 const tileAnchor = (layer: TileLayer, tileset: TileSet, tx: number, ty: number): ObjectPoint => {
   const point = layer.tileToPixel(tx, ty);
+
   return {
     x: point.x + tileset.offsetX - (layer.projection.orientation === 'isometric' ? layer.tileWidth / 2 : 0),
     y: point.y + layer.tileHeight - tileset.tileHeight + tileset.offsetY,
@@ -266,7 +292,14 @@ interface PlacedShape {
  * tile's flip/rotation transform, the tileset draw offset and the layer offset.
  * Returns `null` for kinds that carry no collision geometry.
  */
-const placeShape = (object: TileMapObject, layer: TileLayer, tileset: TileSet, transform: TileTransform, tx: number, ty: number): PlacedShape | null => {
+const placeShape = (
+  object: TileMapObject,
+  layer: TileLayer,
+  tileset: TileSet,
+  transform: TileTransform,
+  tx: number,
+  ty: number,
+): PlacedShape | null => {
   if (object.kind === ObjectKind.Tile || object.kind === ObjectKind.Text) {
     return null;
   }
@@ -370,10 +403,18 @@ const placeShape = (object: TileMapObject, layer: TileLayer, tileset: TileSet, t
 /** Undo display geometry before merging cells or handing shapes to simulation. */
 const logicalShape = (shape: PlacedShape, object: TileMapObject, layer: TileLayer): PlacedShape => {
   const p = layer.projection;
-  if (p.orientation === 'orthogonal' && p.originX === 0 && p.originY === 0) return shape;
+
+  if (p.orientation === 'orthogonal' && p.originX === 0 && p.originY === 0) {
+    return shape;
+  }
+
   const geometry = { ...object, ...shape };
   const mapped = p.unprojectObject(geometry as TileMapObject);
-  if (mapped.kind === 'tile' || mapped.kind === 'text') return shape;
+
+  if (mapped.kind === 'tile' || mapped.kind === 'text') {
+    return shape;
+  }
+
   if (mapped.kind === 'polygon' && mapped.points.length === 4) {
     const xs = mapped.points.map(point => point.x);
     const ys = mapped.points.map(point => point.y);
@@ -382,10 +423,15 @@ const logicalShape = (shape: PlacedShape, object: TileMapObject, layer: TileLaye
     const right = Math.max(...xs);
     const bottom = Math.max(...ys);
     const corners = new Set(mapped.points.map(point => `${point.x},${point.y}`));
-    if (corners.size === 4 && mapped.points.every(point => (point.x === left || point.x === right) && (point.y === top || point.y === bottom))) {
+
+    if (
+      corners.size === 4 &&
+      mapped.points.every(point => (point.x === left || point.x === right) && (point.y === top || point.y === bottom))
+    ) {
       return { kind: 'rectangle', x: mapped.x + left, y: mapped.y + top, width: right - left, height: bottom - top, rotation: 0 };
     }
   }
+
   return mapped;
 };
 
@@ -432,7 +478,9 @@ const cellSourceRegion = (layer: TileLayer): TileRegion | null => {
  * whatever is currently resident. `null` when there is nothing to walk.
  */
 const resolveRegion = (layer: TileLayer, options: TileCollisionOptions): TileRegion | null => {
-  if (options.region !== undefined) return options.region;
+  if (options.region !== undefined) {
+    return options.region;
+  }
 
   const fromCells = options.cells !== undefined ? cellSourceRegion(layer) : null;
 
@@ -448,7 +496,9 @@ const claimSourceCells = (cells: Map<string, string>, region: TileRegion, source
     for (let tx = region.x; tx < endTx; tx++) {
       const type = source(tx, ty);
 
-      if (type !== null) cells.set(cellKey(tx, ty), type);
+      if (type !== null) {
+        cells.set(cellKey(tx, ty), type);
+      }
     }
   }
 };
@@ -603,7 +653,9 @@ export const buildTileCollisionGeometry = (layer: TileLayer, options: TileCollis
   const cells = new Map<string, string>();
   const shapes: TileCollisionShape[] = [];
 
-  if (cellSource !== undefined) claimSourceCells(cells, region, cellSource);
+  if (cellSource !== undefined) {
+    claimSourceCells(cells, region, cellSource);
+  }
 
   for (const { tx, ty, tile } of layer.tilesInRect(region.x, region.y, region.width, region.height)) {
     const definition = tile.tileset.getTileDefinition(tile.localTileId);

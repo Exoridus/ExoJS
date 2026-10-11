@@ -56,7 +56,9 @@ export const validateSlices = (slices: NineSliceInsets, regionWidth: number, reg
   const { left, top, right, bottom } = slices;
 
   if (!isFiniteNumber(left) || !isFiniteNumber(top) || !isFiniteNumber(right) || !isFiniteNumber(bottom)) {
-    throw new Error(`NineSliceSprite: slice values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
+    throw new Error(
+      `NineSliceSprite: slice values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`,
+    );
   }
 
   if (left < 0 || top < 0 || right < 0 || bottom < 0) {
@@ -80,11 +82,15 @@ export const validateBorder = (border: NineSliceInsets): void => {
   const { left, top, right, bottom } = border;
 
   if (!isFiniteNumber(left) || !isFiniteNumber(top) || !isFiniteNumber(right) || !isFiniteNumber(bottom)) {
-    throw new Error(`NineSliceSprite: border values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
+    throw new Error(
+      `NineSliceSprite: border values must be finite numbers (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`,
+    );
   }
 
   if (left < 0 || top < 0 || right < 0 || bottom < 0) {
-    throw new Error(`NineSliceSprite: border values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
+    throw new Error(
+      `NineSliceSprite: border values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`,
+    );
   }
 };
 
@@ -132,30 +138,37 @@ export const normalizeModes = (modes: NineSliceModes | undefined): Readonly<Nine
     validateModeField(modes.edges, 'modes.edges');
     normalized.edges = modes.edges;
   }
+
   if (modes.center !== undefined) {
     validateModeField(modes.center, 'modes.center');
     normalized.center = modes.center;
   }
+
   if (modes.top !== undefined) {
     validateModeField(modes.top, 'modes.top');
     normalized.top = modes.top;
   }
+
   if (modes.right !== undefined) {
     validateModeField(modes.right, 'modes.right');
     normalized.right = modes.right;
   }
+
   if (modes.bottom !== undefined) {
     validateModeField(modes.bottom, 'modes.bottom');
     normalized.bottom = modes.bottom;
   }
+
   if (modes.left !== undefined) {
     validateModeField(modes.left, 'modes.left');
     normalized.left = modes.left;
   }
+
   if (modes.edgeFit !== undefined) {
     validateFitField(modes.edgeFit, 'modes.edgeFit');
     normalized.edgeFit = modes.edgeFit;
   }
+
   if (modes.centerFit !== undefined) {
     validateFitField(modes.centerFit, 'modes.centerFit');
     normalized.centerFit = modes.centerFit;
@@ -272,8 +285,14 @@ const computeSliceUvGrid = (region: TextureRegion, slices: NineSliceInsets): UvG
 };
 
 const clampUv = (value: number, min: number, max: number): number => {
-  if (!isFiniteNumber(value) || value < min) return min;
-  if (value > max) return max;
+  if (!isFiniteNumber(value) || value < min) {
+    return min;
+  }
+
+  if (value > max) {
+    return max;
+  }
+
   return value;
 };
 
@@ -295,14 +314,20 @@ const compressBorders = (border: NineSliceInsets, width: number, height: number)
   let bb = border.bottom;
 
   if (bl + br > width && bl + br > 0) {
-    logger.warn('horizontal borders exceed destination width; proportionally compressing.', { source: 'NineSliceSprite', once: 'nine-slice:h-compress' });
+    logger.warn('horizontal borders exceed destination width; proportionally compressing.', {
+      source: 'NineSliceSprite',
+      once: 'nine-slice:h-compress',
+    });
     const k = width / (bl + br);
     bl *= k;
     br *= k;
   }
 
   if (bt + bb > height && bt + bb > 0) {
-    logger.warn('vertical borders exceed destination height; proportionally compressing.', { source: 'NineSliceSprite', once: 'nine-slice:v-compress' });
+    logger.warn('vertical borders exceed destination height; proportionally compressing.', {
+      source: 'NineSliceSprite',
+      once: 'nine-slice:v-compress',
+    });
     const k = height / (bt + bb);
     bt *= k;
     bb *= k;
@@ -380,12 +405,15 @@ export const buildNineSliceQuads = (
   if (bl > 0 && bt > 0) {
     quads.push({ x0: dx0, y0: dy0, x1: dx1, y1: dy1, u0: col0.u0, v0: row0.u0, u1: col0.u1, v1: row0.u1 });
   }
+
   if (br > 0 && bt > 0) {
     quads.push({ x0: dx2, y0: dy0, x1: dx3, y1: dy1, u0: col2.u0, v0: row0.u0, u1: col2.u1, v1: row0.u1 });
   }
+
   if (bl > 0 && bb > 0) {
     quads.push({ x0: dx0, y0: dy2, x1: dx1, y1: dy3, u0: col0.u0, v0: row2.u0, u1: col0.u1, v1: row2.u1 });
   }
+
   if (br > 0 && bb > 0) {
     quads.push({ x0: dx2, y0: dy2, x1: dx3, y1: dy3, u0: col2.u0, v0: row2.u0, u1: col2.u1, v1: row2.u1 });
   }
@@ -398,6 +426,7 @@ export const buildNineSliceQuads = (
   // Top edge
   if (centerW > 0 && bt > 0 && srcEdgeW > 0 && topNativeW > 0) {
     const plan = planRepeat(topNativeW, centerW, topMode, edgeFit);
+
     for (const seg of plan.segments) {
       const qx0 = dx1 + seg.destinationStart;
       const qx1 = dx1 + seg.destinationStart + seg.destinationLength;
@@ -410,6 +439,7 @@ export const buildNineSliceQuads = (
   // Bottom edge
   if (centerW > 0 && bb > 0 && srcEdgeW > 0 && bottomNativeW > 0) {
     const plan = planRepeat(bottomNativeW, centerW, bottomMode, edgeFit);
+
     for (const seg of plan.segments) {
       const qx0 = dx1 + seg.destinationStart;
       const qx1 = dx1 + seg.destinationStart + seg.destinationLength;
@@ -422,6 +452,7 @@ export const buildNineSliceQuads = (
   // Left edge
   if (bl > 0 && centerH > 0 && srcEdgeH > 0 && leftNativeH > 0) {
     const plan = planRepeat(leftNativeH, centerH, leftMode, edgeFit);
+
     for (const seg of plan.segments) {
       const qy0 = dy1 + seg.destinationStart;
       const qy1 = dy1 + seg.destinationStart + seg.destinationLength;
@@ -434,6 +465,7 @@ export const buildNineSliceQuads = (
   // Right edge
   if (br > 0 && centerH > 0 && srcEdgeH > 0 && rightNativeH > 0) {
     const plan = planRepeat(rightNativeH, centerH, rightMode, edgeFit);
+
     for (const seg of plan.segments) {
       const qy0 = dy1 + seg.destinationStart;
       const qy1 = dy1 + seg.destinationStart + seg.destinationLength;

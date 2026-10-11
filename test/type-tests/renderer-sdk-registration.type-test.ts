@@ -32,12 +32,15 @@ class SpriteLikeGl2Renderer extends AbstractWebGl2Renderer<SpriteLikeDrawable> {
   protected onConnect(_backend: WebGl2Backend): void {
     // noop
   }
+
   protected onDisconnect(): void {
     // noop
   }
+
   public render(_drawable: SpriteLikeDrawable): void {
     // noop
   }
+
   public flush(): void {
     // noop
   }
@@ -47,12 +50,15 @@ class MeshLikeGl2Renderer extends AbstractWebGl2Renderer<MeshLikeDrawable> {
   protected onConnect(_backend: WebGl2Backend): void {
     // noop
   }
+
   protected onDisconnect(): void {
     // noop
   }
+
   public render(_drawable: MeshLikeDrawable): void {
     // noop
   }
+
   public flush(): void {
     // noop
   }
@@ -62,12 +68,15 @@ class SpriteLikeGpuRenderer extends AbstractWebGpuRenderer<SpriteLikeDrawable> {
   protected onConnect(): void {
     // noop
   }
+
   protected onDisconnect(): void {
     // noop
   }
+
   public render(_drawable: SpriteLikeDrawable): void {
     // noop
   }
+
   public flush(): void {
     // noop
   }

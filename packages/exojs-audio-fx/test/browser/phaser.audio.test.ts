@@ -61,6 +61,7 @@ const renderPhaser = async (opts: PhaserRenderOptions): Promise<Float32Array> =>
   feedbackGain.gain.value = feedback;
 
   const allpassFilters: BiquadFilterNode[] = [];
+
   for (let i = 0; i < stages; i++) {
     const f = ctx.createBiquadFilter();
     f.type = 'allpass';
@@ -77,9 +78,11 @@ const renderPhaser = async (opts: PhaserRenderOptions): Promise<Float32Array> =>
   dryGain.connect(outputGain);
 
   inputGain.connect(allpassFilters[0]!);
+
   for (let i = 0; i < allpassFilters.length - 1; i++) {
     allpassFilters[i]!.connect(allpassFilters[i + 1]!);
   }
+
   const last = allpassFilters[allpassFilters.length - 1]!;
   last.connect(wetGain);
   wetGain.connect(outputGain);
@@ -87,6 +90,7 @@ const renderPhaser = async (opts: PhaserRenderOptions): Promise<Float32Array> =>
 
   // Feedback path
   last.connect(feedbackGain);
+
   if (withDelay) {
     // DelayNode breaks the zero-latency cycle - required for spec-compliant browsers.
     const feedbackDelay = ctx.createDelay(1);
@@ -100,6 +104,7 @@ const renderPhaser = async (opts: PhaserRenderOptions): Promise<Float32Array> =>
 
   osc.start(0);
   const rendered = await ctx.startRendering();
+
   return rendered.getChannelData(0).slice();
 };
 

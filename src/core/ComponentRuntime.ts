@@ -32,7 +32,8 @@ type HookTask = () => void;
 // `instanceof` alone narrows to `BehaviorComponent<any>`; the host type is irrelevant to dispatch.
 const isBehavior = (component: Component): component is BehaviorComponent => component instanceof BehaviorComponent;
 
-const overrides = (component: BehaviorComponent, hook: 'update' | 'fixedUpdate'): boolean => component[hook] !== BehaviorComponent.prototype[hook];
+const overrides = (component: BehaviorComponent, hook: 'update' | 'fixedUpdate'): boolean =>
+  component[hook] !== BehaviorComponent.prototype[hook];
 
 /**
  * Component membership, activation and frame dispatch for one scene

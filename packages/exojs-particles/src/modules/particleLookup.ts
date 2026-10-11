@@ -9,9 +9,13 @@ export class ParticleCurveLookup {
 
   public get(source: Curve): Float32Array<ArrayBuffer> {
     if (source !== this._source) {
-      for (let i = 0; i < lookupSize; i++) this._data[i] = source.evaluate(i / (lookupSize - 1));
+      for (let i = 0; i < lookupSize; i++) {
+        this._data[i] = source.evaluate(i / (lookupSize - 1));
+      }
+
       this._source = source;
     }
+
     return this._data;
   }
 }
@@ -43,8 +47,10 @@ export class ParticleColorLookup {
         this._data[i * 4 + 2] = (color >>> 16) & 255;
         this._data[i * 4 + 3] = color >>> 24;
       }
+
       this._source = source;
     }
+
     return this._data;
   }
 }
@@ -54,6 +60,7 @@ export const sampleCurveLookup = (data: Float32Array, t: number): number => {
   const lo = Math.floor(x);
   const a = data[lo] ?? 0;
   const b = data[Math.min(lo + 1, lookupSize - 1)] ?? 0;
+
   return a + (b - a) * (x - lo);
 };
 
@@ -63,16 +70,25 @@ export const sampleColorLookup = (data: Uint8Array, t: number): number => {
   const hi = Math.min(lo + 1, lookupSize - 1);
   const ratio = x - lo;
   let result = 0;
+
   for (let channel = 0; channel < 4; channel++) {
     const a = data[lo * 4 + channel] ?? 0;
     const b = data[hi * 4 + channel] ?? 0;
     result |= Math.round(a + (b - a) * ratio) << (channel * 8);
   }
+
   return result >>> 0;
 };
 
-export const uploadParticleLookup = (device: GPUDevice, texture: GPUTexture | undefined, data: Float32Array<ArrayBuffer> | Uint8Array<ArrayBuffer>): void => {
-  if (texture === undefined) return;
+export const uploadParticleLookup = (
+  device: GPUDevice,
+  texture: GPUTexture | undefined,
+  data: Float32Array<ArrayBuffer> | Uint8Array<ArrayBuffer>,
+): void => {
+  if (texture === undefined) {
+    return;
+  }
+
   device.queue.writeTexture(
     { texture },
     data.buffer,

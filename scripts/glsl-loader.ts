@@ -25,10 +25,9 @@
  * (no enums, no parameter properties) - there is no compiler here.
  */
 import { readFile } from 'node:fs/promises';
+import type { LoadHook, ResolveHook } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-
-import type { LoadHook, ResolveHook } from 'node:module';
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 

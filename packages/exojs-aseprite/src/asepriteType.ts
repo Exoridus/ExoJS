@@ -117,7 +117,9 @@ export class AsepriteAssetType extends AssetType<AsepriteData, AsepriteSheet, un
   public createFactory(): AssetFactory<AsepriteData, AsepriteSheet> {
     return {
       async create(source, context) {
-        const texture: Texture = await context.dependencies.load(Asset.type('texture', resolveAsepriteUrl(source.meta.image, context.source)));
+        const texture: Texture = await context.dependencies.load(
+          Asset.type('texture', resolveAsepriteUrl(source.meta.image, context.source)),
+        );
 
         return AsepriteSheet.parse(source, texture);
       },

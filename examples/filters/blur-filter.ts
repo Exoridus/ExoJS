@@ -1,4 +1,14 @@
-import { Application, BlurFilter, Color, DropShadowFilter, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
+import {
+  Application,
+  BlurFilter,
+  Color,
+  DropShadowFilter,
+  FixedResolutionCanvasSizing,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  Text,
+} from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const SHIP = assets.demo.textures.shipA;
@@ -29,7 +39,10 @@ class BlurAndShadowScene extends Scene {
       new Text('Blur', { fillColor: Color.white, fontSize: 25 }).setAnchor(0.5).setPosition(width * 0.7, height * 0.78),
     ];
 
-    this.hud = mountControls({ title: 'Blur and Drop Shadow', hint: 'Compare the original sprite with a blurred sprite or an offset shadow.' });
+    this.hud = mountControls({
+      title: 'Blur and Drop Shadow',
+      hint: 'Compare the original sprite with a blurred sprite or an offset shadow.',
+    });
     const panel = mountControlPanel({ title: 'Filter' });
     panel.addButton({
       label: 'Blur',
@@ -92,6 +105,7 @@ class BlurAndShadowScene extends Scene {
   override draw(context: RenderingContext): void {
     context.render(this.reference);
     context.render(this.filtered);
+
     for (const label of this.labels) {
       context.render(label);
     }

@@ -108,7 +108,12 @@ export const reflectShaderSources = (vertexSource: string, fragmentSource: strin
       }
 
       seenUniforms.add(match[2]);
-      uniforms.push({ name: match[2], type: glslTypeToShaderPrimitive[match[1]] ?? ShaderPrimitives.Float, size: 1, location: uniforms.length });
+      uniforms.push({
+        name: match[2],
+        type: glslTypeToShaderPrimitive[match[1]] ?? ShaderPrimitives.Float,
+        size: 1,
+        location: uniforms.length,
+      });
     }
   }
 
@@ -303,7 +308,8 @@ const uploadedBytes = (data: unknown, _srcOffset: number | undefined, length: nu
   length === undefined ? byteLengthOf(data) : length * elementBytesOf(data);
 
 /** Bytes per typed-array element, for sizing an upload expressed as an element offset. */
-const elementBytesOf = (data: unknown): number => (ArrayBuffer.isView(data) ? ((data as { BYTES_PER_ELEMENT?: number }).BYTES_PER_ELEMENT ?? 1) : 1);
+const elementBytesOf = (data: unknown): number =>
+  ArrayBuffer.isView(data) ? ((data as { BYTES_PER_ELEMENT?: number }).BYTES_PER_ELEMENT ?? 1) : 1;
 
 /**
  * Channel count behind a GL pixel-format constant. Read off the same global
@@ -321,6 +327,7 @@ const channelsOfFormat = (format: unknown): number => {
 // be internally consistent (the fake both produces and consumes them); they are
 // never compared to real WebGL2 enums.
 const constantCache = new Map<string, number>();
+
 const constantFor = (name: string): number => {
   let value = constantCache.get(name);
 
@@ -501,7 +508,8 @@ export const createFakeWebGl2Context = (
       }
     },
     getActiveAttrib: (program: FakeProgram, index: number): ReflectedVar | null => program.reflection?.attributes[index] ?? null,
-    getAttribLocation: (program: FakeProgram, name: string): number => program.reflection?.attributes.find(a => a.name === name)?.location ?? -1,
+    getAttribLocation: (program: FakeProgram, name: string): number =>
+      program.reflection?.attributes.find(a => a.name === name)?.location ?? -1,
     getActiveUniform: (program: FakeProgram, index: number): ReflectedVar | null => program.reflection?.uniforms[index] ?? null,
     getActiveUniforms: (_program: FakeProgram, indices: ArrayLike<number>): number[] => Array.from({ length: indices.length }, () => -1),
     getUniformLocation: (_program: FakeProgram, name: string): object => ({ __fake: 'uniformLocation', name }),
@@ -585,13 +593,19 @@ export const createFakeWebGl2Context = (
       viewportRect[3] = height;
     },
     enable: (cap: number): void => {
-      if (cap === C.BLEND) blendEnabled = true;
+      if (cap === C.BLEND) {
+        blendEnabled = true;
+      }
     },
     disable: (cap: number): void => {
-      if (cap === C.BLEND) blendEnabled = false;
+      if (cap === C.BLEND) {
+        blendEnabled = false;
+      }
     },
     bindBuffer: (target: number, buffer: object | null): void => {
-      if (target === C.ARRAY_BUFFER) arrayBufferBinding = buffer;
+      if (target === C.ARRAY_BUFFER) {
+        arrayBufferBinding = buffer;
+      }
     },
 
     // ── recorded draw / state ───────────────────────────────────────────
@@ -636,10 +650,30 @@ export const createFakeWebGl2Context = (
     // harness garbage lands in the very allocation profile these scenes exist to
     // measure - attributed to the engine function that called into the fake,
     // because V8 inlines the arrow. See `captureUploadArgs`.
-    texImage2D: (a0: unknown, a1: unknown, a2: unknown, a3: unknown, a4: unknown, a5: unknown, a6: unknown, a7: unknown, a8: unknown, a9: unknown): void =>
-      recordTextureUpload(captureUploadArgs(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9), true),
-    texSubImage2D: (a0: unknown, a1: unknown, a2: unknown, a3: unknown, a4: unknown, a5: unknown, a6: unknown, a7: unknown, a8: unknown, a9: unknown): void =>
-      recordTextureUpload(captureUploadArgs(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9), false),
+    texImage2D: (
+      a0: unknown,
+      a1: unknown,
+      a2: unknown,
+      a3: unknown,
+      a4: unknown,
+      a5: unknown,
+      a6: unknown,
+      a7: unknown,
+      a8: unknown,
+      a9: unknown,
+    ): void => recordTextureUpload(captureUploadArgs(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9), true),
+    texSubImage2D: (
+      a0: unknown,
+      a1: unknown,
+      a2: unknown,
+      a3: unknown,
+      a4: unknown,
+      a5: unknown,
+      a6: unknown,
+      a7: unknown,
+      a8: unknown,
+      a9: unknown,
+    ): void => recordTextureUpload(captureUploadArgs(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9), false),
     bindTexture: (_target: number, texture: object | null): void => {
       boundByUnit.set(activeUnit, texture);
 
@@ -694,7 +728,18 @@ export const createFakeWebGl2Context = (
    * reproduces what a rest parameter's `length` reported. Non-reentrant by
    * construction - a GL upload call cannot nest inside another one.
    */
-  const uploadArgs: unknown[] = [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
+  const uploadArgs: unknown[] = [
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+  ];
   let uploadArgCount = 0;
 
   const captureUploadArgs = (
@@ -753,7 +798,10 @@ export const createFakeWebGl2Context = (
 
     if (isAllocation && texture !== null) {
       const isTransformStore =
-        args[2] === C.RGBA32F && width % transformTexelsPerRow === 0 && isPowerOfTwo(width / transformTexelsPerRow) && width / transformTexelsPerRow >= 2;
+        args[2] === C.RGBA32F &&
+        width % transformTexelsPerRow === 0 &&
+        isPowerOfTwo(width / transformTexelsPerRow) &&
+        width / transformTexelsPerRow >= 2;
 
       if (isTransformStore) {
         transformStores.add(texture);

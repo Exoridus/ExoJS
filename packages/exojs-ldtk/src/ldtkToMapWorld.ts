@@ -21,7 +21,10 @@ const SIDE_BY_DIR: Readonly<Record<string, MapLevelSide>> = Object.freeze({
 
 const convertNeighbours = (level: LdtkLevel): readonly MapLevelNeighbour[] => {
   const raw = level.__neighbours;
-  if (raw === undefined || raw === null || raw.length === 0) return [];
+
+  if (raw === undefined || raw === null || raw.length === 0) {
+    return [];
+  }
 
   return raw.map(neighbour => ({
     id: neighbour.levelIid,

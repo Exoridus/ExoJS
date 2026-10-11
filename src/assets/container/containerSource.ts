@@ -160,7 +160,9 @@ export const openContainerSource = async (url: string, init?: RequestInit): Prom
     byteLength,
     ranged: true,
     read: async (offset, length) => {
-      if (length === 0) return new Uint8Array(new ArrayBuffer(0));
+      if (length === 0) {
+        return new Uint8Array(new ArrayBuffer(0));
+      }
 
       const response = await fetch(url, { ...init, headers: withRange(init, `bytes=${offset}-${offset + length - 1}`) });
 

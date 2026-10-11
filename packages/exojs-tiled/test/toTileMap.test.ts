@@ -12,9 +12,7 @@ const TEXTURE_SIZES: Record<string, { w: number; h: number }> = {
   'tiles-b.png': { w: 80, h: 20 },
 };
 
-const makeContext = (fixtures: Record<string, unknown>) => {
-  return makeTiledContext(fixtures, TEXTURE_SIZES);
-};
+const makeContext = (fixtures: Record<string, unknown>) => makeTiledContext(fixtures, TEXTURE_SIZES);
 
 const richFixtures = {
   'orthogonal-rich.tmj': loadFixture('orthogonal-rich.tmj'),
@@ -23,7 +21,7 @@ const richFixtures = {
 
 // Expected flip transforms for the 8 Ground cells, in row-major order. The
 // fixture encodes all 8 (flipX, flipY, diagonal) combinations on base gid 1.
-const EXPECTED_FLIPS: readonly { flipX: boolean; flipY: boolean; diagonal: boolean }[] = [
+const EXPECTED_FLIPS: ReadonlyArray<{ flipX: boolean; flipY: boolean; diagonal: boolean }> = [
   { flipX: false, flipY: false, diagonal: false },
   { flipX: true, flipY: false, diagonal: false },
   { flipX: false, flipY: true, diagonal: false },
@@ -225,28 +223,30 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
 describe('runtime binding vs source.toTileMap() equivalence', () => {
   const { loadSource, loadRuntime } = makeContext(richFixtures);
 
-  const sampleLayers = (map: TileMap): unknown => {
-    return map.layers.map(layer => ({
+  const sampleLayers = (map: TileMap): unknown =>
+    map.layers.map(layer => ({
       name: layer.name,
       width: layer.width,
       height: layer.height,
       tiles: sampleTiles(layer),
     }));
-  };
 
   const sampleTiles = (layer: TileLayer): unknown[] => {
     const out: unknown[] = [];
+
     // Finite layers always carry both dimensions; an infinite layer would make
     // the sweep below meaningless, so fail loudly instead of sampling nothing.
     if (layer.width === undefined || layer.height === undefined) {
       throw new Error('toTileMap.test: sampleTiles needs a finite layer');
     }
+
     for (let y = 0; y < layer.height; y++) {
       for (let x = 0; x < layer.width; x++) {
         const t = layer.getTileAt(x, y);
         out.push(t === null ? null : { ts: t.tileset.name, id: t.localTileId, ...t.transform });
       }
     }
+
     return out;
   };
 
@@ -326,8 +326,8 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     tilecount: 8,
   };
 
-  const makeInfiniteMapContext = (chunks: readonly { x: number; y: number; width: number; height: number; data: number[] }[]) => {
-    return makeContext({
+  const makeInfiniteMapContext = (chunks: ReadonlyArray<{ x: number; y: number; width: number; height: number; data: number[] }>) =>
+    makeContext({
       'inf.tmj': {
         type: 'map',
         version: '1.10',
@@ -354,7 +354,6 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
         tilesets: [baseTileset],
       },
     });
-  };
 
   it('getChunkSource returns undefined before toTileMap() has run', async () => {
     const { loadSource } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
@@ -554,6 +553,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
 
     const chest = layer?.getObjectByName('chest');
     expect(chest?.kind).toBe('tile');
+
     if (chest?.kind === 'tile') {
       expect(chest.tile.tileset).toBeDefined();
       expect(chest.tile.localTileId).toBeGreaterThanOrEqual(0);
@@ -694,6 +694,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
 
     const sign = layer?.getObjectByName('sign');
     expect(sign?.kind).toBe('text');
+
     if (sign?.kind === 'text') {
       expect(sign.text.text).toBe('Hello');
       expect(sign.text.color).toBe(0xff0000);
@@ -984,7 +985,9 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
   });
 
   it('group and child offsets add', async () => {
-    const runtime = await convert([groupLayer(1, 'Shifted', [tileLayer(2, 'Ground', { offsetx: 3, offsety: -4 })], { offsetx: 10, offsety: 20 })]);
+    const runtime = await convert([
+      groupLayer(1, 'Shifted', [tileLayer(2, 'Ground', { offsetx: 3, offsety: -4 })], { offsetx: 10, offsety: 20 }),
+    ]);
 
     const layer = runtime.getTileLayer('Ground')!;
 
@@ -993,7 +996,9 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
   });
 
   it('group and child parallax factors multiply', async () => {
-    const runtime = await convert([groupLayer(1, 'Far', [tileLayer(2, 'Ground', { parallaxx: 0.5, parallaxy: 0.25 })], { parallaxx: 0.5, parallaxy: 2 })]);
+    const runtime = await convert([
+      groupLayer(1, 'Far', [tileLayer(2, 'Ground', { parallaxx: 0.5, parallaxy: 0.25 })], { parallaxx: 0.5, parallaxy: 2 }),
+    ]);
 
     const layer = runtime.getTileLayer('Ground')!;
 
@@ -1036,13 +1041,18 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
 
   it('image layers inside a group inherit the group style too', async () => {
     const runtime = await convert([
-      groupLayer(1, 'Wrapper', [{ id: 2, name: 'Background', type: 'imagelayer', visible: true, opacity: 0.5, x: 0, y: 0, image: 'bg.png', offsetx: 4 }], {
-        visible: false,
-        opacity: 0.5,
-        offsetx: 6,
-        parallaxx: 0.5,
-        tintcolor: '#808080',
-      }),
+      groupLayer(
+        1,
+        'Wrapper',
+        [{ id: 2, name: 'Background', type: 'imagelayer', visible: true, opacity: 0.5, x: 0, y: 0, image: 'bg.png', offsetx: 4 }],
+        {
+          visible: false,
+          opacity: 0.5,
+          offsetx: 6,
+          parallaxx: 0.5,
+          tintcolor: '#808080',
+        },
+      ),
     ]);
 
     const layer = runtime.imageLayers[0]!;

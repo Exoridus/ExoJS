@@ -84,7 +84,9 @@ class DisplacementFilterScene extends Scene {
     });
   }
   update(delta) {
-    if (!this.scrolling) return;
+    if (!this.scrolling) {
+      return;
+    }
     this.ripple.offsetU += delta * 0.08;
     this.ripple.offsetV += delta * 0.13;
     this.refresh();

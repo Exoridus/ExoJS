@@ -97,7 +97,9 @@ class DisplacementFilterScene extends Scene {
   }
 
   override update(delta: Seconds): void {
-    if (!this.scrolling) return;
+    if (!this.scrolling) {
+      return;
+    }
 
     this.ripple.offsetU += delta * 0.08;
     this.ripple.offsetV += delta * 0.13;

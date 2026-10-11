@@ -14,7 +14,12 @@ import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLive
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import { dataTextureBytesPerPixel, estimateCompressedTextureBytes, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import {
+  dataTextureBytesPerPixel,
+  estimateCompressedTextureBytes,
+  estimateTextureBytes,
+  GpuResourceAccountant,
+} from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { assertBatchSingleAttachment, assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
@@ -43,7 +48,12 @@ import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
-import { compressedBlockLayout, compressedBlocksAcross, compressedBlocksDown, type CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
+import {
+  compressedBlockLayout,
+  compressedBlocksAcross,
+  compressedBlocksDown,
+  type CompressedTextureFormat,
+} from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { DepthTexture } from '#rendering/texture/DepthTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -236,7 +246,10 @@ export class WebGpuBackend implements RenderBackend {
   private _recoveryAttempt = 0;
   private _maxRecoveryAttempts = 5;
   private _recoveryBackoffMs = 100;
-  private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<Texture | RenderTexture, ManagedWebGpuTextureState>();
+  private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<
+    Texture | RenderTexture,
+    ManagedWebGpuTextureState
+  >();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
   /**
@@ -619,6 +632,7 @@ export class WebGpuBackend implements RenderBackend {
     if (!this._initializePromise) {
       this._initializePromise = this._initialize().catch((error: unknown) => {
         this._initializePromise = null;
+
         throw error;
       });
     }
@@ -819,7 +833,12 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /** @internal */
-  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+  public _rekeyPersistentSlots(
+    bundle: PersistentSlotBundle,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
     const store = bundle as WebGpuPersistentSlotStore;
     const owner = store.owner;
 
@@ -931,6 +950,7 @@ export class WebGpuBackend implements RenderBackend {
 
       if (unbalanced > 0) {
         this._passCoordinatorInstance.resetStencil();
+
         throw new Error(`Unbalanced stencil clip stack at end of frame (${unbalanced} unpopped clip(s)).`);
       }
     }
@@ -939,6 +959,7 @@ export class WebGpuBackend implements RenderBackend {
   public draw(drawable: Drawable): this {
     if (this._deviceLost || this._device === null) {
       this._activeDrawCommand = null;
+
       return this;
     }
 
@@ -965,9 +986,16 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
-  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number, instances: InstanceDataView | null = null): this {
+  public drawInstanced(
+    mesh: Mesh,
+    transforms: readonly Matrix[],
+    tints: readonly Color[],
+    count: number,
+    instances: InstanceDataView | null = null,
+  ): this {
     if (count <= 0 || mesh.vertexCount === 0 || this._deviceLost || this._device === null) {
       this._activeDrawCommand = null;
+
       return this;
     }
 
@@ -1099,7 +1127,11 @@ export class WebGpuBackend implements RenderBackend {
     blendMode: BlendModes,
   ): this {
     if (this._multiAttachmentTarget) {
-      assertSingleAttachmentCompose('Alpha-mask compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
+      assertSingleAttachmentCompose(
+        'Alpha-mask compositing',
+        (this._renderTarget as MultiRenderTarget).attachments.length,
+        RenderBackendType.WebGpu,
+      );
     }
 
     if (width <= 0 || height <= 0) {
@@ -1129,7 +1161,11 @@ export class WebGpuBackend implements RenderBackend {
 
   public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
     if (this._multiAttachmentTarget) {
-      assertSingleAttachmentCompose('Backdrop-blend compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
+      assertSingleAttachmentCompose(
+        'Backdrop-blend compositing',
+        (this._renderTarget as MultiRenderTarget).attachments.length,
+        RenderBackendType.WebGpu,
+      );
     }
 
     if (width <= 0 || height <= 0) {
@@ -1242,7 +1278,11 @@ export class WebGpuBackend implements RenderBackend {
       case TextureFormat.Rgba16F:
         return colorFormatCapabilities(true, true, true);
       case TextureFormat.Rgba32F:
-        return colorFormatCapabilities(true, this._deviceFeatureEnabled('float32-filterable'), this._deviceFeatureEnabled('float32-blendable'));
+        return colorFormatCapabilities(
+          true,
+          this._deviceFeatureEnabled('float32-filterable'),
+          this._deviceFeatureEnabled('float32-blendable'),
+        );
     }
   }
 
@@ -1267,10 +1307,31 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType?: 'uint8'): Promise<Uint8ClampedArray>;
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType?: 'uint8',
+  ): Promise<Uint8ClampedArray>;
   public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: 'float32'): Promise<Float32Array>;
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
-  public async readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType = 'uint8'): Promise<PixelArray> {
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType: PixelDataType,
+  ): Promise<PixelArray>;
+  public async readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType: PixelDataType = 'uint8',
+  ): Promise<PixelArray> {
     this.flush();
 
     const texture = this._syncTexture(source).texture;
@@ -1305,7 +1366,15 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
-  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType?: 'uint8',
+  ): PixelReadback;
   public createPixelReadback(
     source: RenderTexture,
     x: number,
@@ -1375,6 +1444,7 @@ export class WebGpuBackend implements RenderBackend {
     if (this._renderTarget.view !== view) {
       this._flushActiveRendererAndEndPass();
     }
+
     this._renderTarget.setView(view);
 
     return this;
@@ -1510,6 +1580,7 @@ export class WebGpuBackend implements RenderBackend {
     for (const target of [...this._renderTargetDestroyHandlers.keys()]) {
       this._unsubscribeRenderTarget(target);
     }
+
     this._context?.unconfigure();
     this._context = null;
     this._device = null;
@@ -1737,7 +1808,10 @@ export class WebGpuBackend implements RenderBackend {
       // fresh record costs nothing measurable; giving them the state's own
       // record would mean the default path and an override path could not be
       // resolved in the same batch.
-      return { view: state.view, sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this.isNonFilterableTexture(texture)) };
+      return {
+        view: state.view,
+        sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this.isNonFilterableTexture(texture)),
+      };
     }
 
     // Refreshed in place: `_syncTexture` may have replaced the GPU texture (and
@@ -1799,14 +1873,23 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Compressed bytes cannot be normalized at upload; their DFD association governs the sample instead.
-    if (texture.compressed !== null) return texture.colorSpace !== 'none';
-    if (!texture.premultiplyAlpha) return false;
+    if (texture.compressed !== null) {
+      return texture.colorSpace !== 'none';
+    }
+
+    if (!texture.premultiplyAlpha) {
+      return false;
+    }
 
     return !this._needsColorNormalization(texture);
   }
 
   /** Part of the renderer SDK contract for extension renderers. */
-  public getTransformStorageBuffer(minCount: number): { readonly buffer: GPUBuffer; readonly tintBuffer: GPUBuffer; readonly count: number } {
+  public getTransformStorageBuffer(minCount: number): {
+    readonly buffer: GPUBuffer;
+    readonly tintBuffer: GPUBuffer;
+    readonly count: number;
+  } {
     return this._getTransformStorage().getBuffer(this.device, minCount, this._accountant);
   }
 
@@ -2332,7 +2415,13 @@ export class WebGpuBackend implements RenderBackend {
 
       payload.renderer.rebaseRetainedNodeIndices(batch.bytes, base);
 
-      device.queue.writeBuffer(bundle.instanceBuffer!, batch.byteOffset, batch.bytes.buffer, batch.bytes.byteOffset, batch.bytes.byteLength);
+      device.queue.writeBuffer(
+        bundle.instanceBuffer!,
+        batch.byteOffset,
+        batch.bytes.buffer,
+        batch.bytes.byteOffset,
+        batch.bytes.byteLength,
+      );
       stampRetainedBatchGeneration(batch.instruction);
     }
 
@@ -2936,7 +3025,8 @@ export class WebGpuBackend implements RenderBackend {
       code = 'out-of-memory';
     }
 
-    const message = typeof (error as { message?: unknown } | null)?.message === 'string' ? (error as { message: string }).message : String(error);
+    const message =
+      typeof (error as { message?: unknown } | null)?.message === 'string' ? (error as { message: string }).message : String(error);
 
     this._reportRenderError(
       new RenderError({
@@ -3252,7 +3342,11 @@ export class WebGpuBackend implements RenderBackend {
    * bytes either way and does not depend on every implementation matching the
    * spec's upper bound.
    */
-  private _acquirePartialUploadScratch(state: ManagedWebGpuTextureState, source: Float32Array | Uint8Array, length: number): Float32Array | Uint8Array {
+  private _acquirePartialUploadScratch(
+    state: ManagedWebGpuTextureState,
+    source: Float32Array | Uint8Array,
+    length: number,
+  ): Float32Array | Uint8Array {
     const isFloat = source instanceof Float32Array;
     let scratch = state.partialUploadScratch;
 
@@ -3359,7 +3453,12 @@ export class WebGpuBackend implements RenderBackend {
     if (!awaitingSource && state.version !== textureVersion) {
       const gpuFormat = this._getGpuTextureFormat(texture);
 
-      if (state.width !== texture.width || state.height !== texture.height || state.mipLevelCount !== mipLevelCount || state.format !== gpuFormat) {
+      if (
+        state.width !== texture.width ||
+        state.height !== texture.height ||
+        state.mipLevelCount !== mipLevelCount ||
+        state.format !== gpuFormat
+      ) {
         state.texture.destroy();
 
         const resizedTexture = this.device.createTexture({
@@ -3527,7 +3626,8 @@ export class WebGpuBackend implements RenderBackend {
           });
         }
 
-        const canvasReadbackContext = canvasSource !== null && this._canvasExternalImageCopySupported !== true ? get2dContext(canvasSource) : null;
+        const canvasReadbackContext =
+          canvasSource !== null && this._canvasExternalImageCopySupported !== true ? get2dContext(canvasSource) : null;
 
         if (this._needsColorNormalization(texture)) {
           // The Safari canvas workaround and the normalization pass both need CPU
@@ -3759,7 +3859,11 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _assertTextureFilterable(texture: Texture | RenderTexture, scaleMode: ScaleModes): void {
-    if (!scaleModeRequiresLinearFiltering(scaleMode) || !isFloat32Texture(texture) || this.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable) {
+    if (
+      !scaleModeRequiresLinearFiltering(scaleMode) ||
+      !isFloat32Texture(texture) ||
+      this.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable
+    ) {
       return;
     }
 
@@ -3835,19 +3939,24 @@ export class WebGpuBackend implements RenderBackend {
     if (texture instanceof DepthTexture) {
       return depthAttachmentFormat;
     }
+
     if (texture instanceof DataTexture) {
       // `instanceof DataTexture` erases the generic, widening `format` to `any`;
       // the class invariant guarantees it is a `DataTextureFormat`.
       const format: DataTextureFormat = texture.format;
+
       return webgpuDataTextureFormat(format).gpuFormat;
     }
+
     if (texture instanceof RenderTexture) {
       return webgpuColorTextureFormat(texture.format);
     }
+
     const compressed = compressedPayloadOf(texture);
 
     if (compressed !== null) {
       const gpuFormat = this._compressedFormats.gpuFormats.get(compressed.format);
+
       if (gpuFormat === undefined) {
         throw new RenderError({
           code: 'unsupported-format',
@@ -3855,8 +3964,10 @@ export class WebGpuBackend implements RenderBackend {
           message: `This device cannot sample the compressed texture format "${compressed.format}". Declare an asset variant this device supports, or check backend.supportedTextureFormats before constructing the texture.`,
         });
       }
+
       return gpuFormat;
     }
+
     return texture.colorSpace === 'srgb' ? 'rgba8unorm-srgb' : managedTextureFormat;
   }
 
@@ -3920,6 +4031,7 @@ export class WebGpuBackend implements RenderBackend {
       // `instanceof DataTexture` erases the generic, widening `format` to `any`;
       // the class invariant guarantees it is a `DataTextureFormat`.
       const format: DataTextureFormat = texture.format;
+
       return dataTextureBytesPerPixel(format);
     }
 

@@ -127,7 +127,9 @@ export class TileColliderStreamer {
     let count = 0;
 
     for (const entry of this._built.values()) {
-      if (entry.body !== null) count++;
+      if (entry.body !== null) {
+        count++;
+      }
     }
 
     return count;
@@ -141,7 +143,9 @@ export class TileColliderStreamer {
     const ordered = [...this._built.values()].sort((a, b) => a.cy - b.cy || a.cx - b.cx);
 
     for (const entry of ordered) {
-      if (entry.body !== null) yield entry.body;
+      if (entry.body !== null) {
+        yield entry.body;
+      }
     }
   }
 
@@ -154,12 +158,16 @@ export class TileColliderStreamer {
    * layer is destroyed.
    */
   public sync(): void {
-    if (this._destroyed || this._layer.destroyed) return;
+    if (this._destroyed || this._layer.destroyed) {
+      return;
+    }
 
     const layer = this._layer;
     const offsetChanged = layer.offsetX !== this._offsetX || layer.offsetY !== this._offsetY;
 
-    if (!offsetChanged && layer.revision === this._layerRevision) return;
+    if (!offsetChanged && layer.revision === this._layerRevision) {
+      return;
+    }
 
     if (offsetChanged) {
       // Geometry is emitted in layer pixel space, so a moved layer invalidates
@@ -194,9 +202,14 @@ export class TileColliderStreamer {
     }
 
     for (const [key, entry] of this._built) {
-      if (seen.has(key)) continue;
+      if (seen.has(key)) {
+        continue;
+      }
 
-      if (entry.body !== null) this._world.destroyBody(entry.body);
+      if (entry.body !== null) {
+        this._world.destroyBody(entry.body);
+      }
+
       this._built.delete(key);
     }
 
@@ -208,14 +221,19 @@ export class TileColliderStreamer {
    * {@link sync}. Bodies it did not create are untouched. Idempotent.
    */
   public destroy(): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
+
     this._destroyed = true;
     this._clear();
   }
 
   private _clear(): void {
     for (const entry of this._built.values()) {
-      if (entry.body !== null) this._world.destroyBody(entry.body);
+      if (entry.body !== null) {
+        this._world.destroyBody(entry.body);
+      }
     }
 
     this._built.clear();
@@ -231,7 +249,9 @@ export class TileColliderStreamer {
   private _syncBlock(cx: number, cy: number, chunk: ReadonlyTileChunk | null): void {
     const key = chunkKey(cx, cy);
 
-    if (this._seen.has(key)) return;
+    if (this._seen.has(key)) {
+      return;
+    }
 
     this._seen.add(key);
 

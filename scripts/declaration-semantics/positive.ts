@@ -6,7 +6,19 @@
  * correct consumer code - the defect class that source-only type tests cannot
  * see, because the source and the emit differ.
  */
-import { Application, Asset, Assets, Container, fontType, type Loader, musicType, type Scene, type SceneNode, type Sprite, type Texture } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Assets,
+  Container,
+  fontType,
+  type Loader,
+  musicType,
+  type Scene,
+  type SceneNode,
+  type Sprite,
+  type Texture,
+} from '@codexo/exojs';
 
 import { Armor, BareScene, DataScene, Health, LocalizedAssetType, MetaAssetType, type PlayerData, Spin } from './fixtures';
 

@@ -5,9 +5,11 @@ const normalizeToCatalogPath = (key: string): string => {
   const normalized = key.split('\\').join('/');
   const marker = '/examples/';
   const idx = normalized.lastIndexOf(marker);
+
   if (idx === -1) {
     return normalized.split('/').slice(-2).join('/');
   }
+
   return normalized.slice(idx + marker.length);
 };
 
@@ -30,16 +32,19 @@ const DISPLAY_SOURCE_BY_PATH = new Map<string, string>();
 export const presentExampleSource = (source: string): string => {
   const withoutMarkers = source.replace(/^[ \t]*\/\/ #(?:region|endregion)\b[^\n]*\n(?:[ \t]*\n)?/gmu, '');
 
-  return withoutMarkers.replace(/^(import(?: type)? \{)\n([\s\S]*?)\n\} from (['"][^'"]+['"];)$/gmu, (_match, head: string, body: string, tail: string) => {
-    const specifiers = body
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
-      .join(' ')
-      .replace(/,\s*$/u, '');
+  return withoutMarkers.replace(
+    /^(import(?: type)? \{)\n([\s\S]*?)\n\} from (['"][^'"]+['"];)$/gmu,
+    (_match, head: string, body: string, tail: string) => {
+      const specifiers = body
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join(' ')
+        .replace(/,\s*$/u, '');
 
-    return `${head} ${specifiers} } from ${tail}`;
-  });
+      return `${head} ${specifiers} } from ${tail}`;
+    },
+  );
 };
 
 for (const [key, sourceCode] of Object.entries(jsModules)) {
@@ -49,7 +54,10 @@ for (const [key, sourceCode] of Object.entries(jsModules)) {
 }
 
 for (const [key, sourceCode] of Object.entries(tsModules)) {
-  if (key.endsWith('.d.ts')) continue;
+  if (key.endsWith('.d.ts')) {
+    continue;
+  }
+
   // TS sources are keyed by the equivalent .js catalog path.
   const catalogPath = normalizeToCatalogPath(key).replace(/\.ts$/, '.js');
   DISPLAY_SOURCE_BY_PATH.set(catalogPath, presentExampleSource(sourceCode));
@@ -64,4 +72,6 @@ export const getExampleSource = (chapter: string, slug: string): string =>
 // injected directly as a browser module script (used by guide preview embeds
 // and the smoke harness).
 export const getExampleExecutionSource = (chapter: string, slug: string): string =>
-  EXEC_SOURCE_BY_PATH.get(`${chapter}/${slug}.js`) ?? DISPLAY_SOURCE_BY_PATH.get(`${chapter}/${slug}.js`) ?? `// Missing source: ${chapter}/${slug}.js`;
+  EXEC_SOURCE_BY_PATH.get(`${chapter}/${slug}.js`) ??
+  DISPLAY_SOURCE_BY_PATH.get(`${chapter}/${slug}.js`) ??
+  `// Missing source: ${chapter}/${slug}.js`;

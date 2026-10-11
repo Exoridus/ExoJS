@@ -7,4 +7,13 @@ export type { DiagonalPolicy, GridSpaceOptions } from './spaces/GridSpace';
 export { GridSpace } from './spaces/GridSpace';
 export type { WaypointEdgeOptions } from './spaces/WaypointGraph';
 export { WaypointGraph } from './spaces/WaypointGraph';
-export type { FindPathOptions, FloodOptions, FloodRegion, NavigationSpace, PathEdge, PathResult, PathStatus, PrunedExpansion } from './types';
+export type {
+  FindPathOptions,
+  FloodOptions,
+  FloodRegion,
+  NavigationSpace,
+  PathEdge,
+  PathResult,
+  PathStatus,
+  PrunedExpansion,
+} from './types';

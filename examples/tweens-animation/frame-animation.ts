@@ -1,4 +1,14 @@
-import { AnimatedSprite, Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Spritesheet, type SpritesheetData } from '@codexo/exojs';
+import {
+  AnimatedSprite,
+  Application,
+  Asset,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  Scene,
+  Spritesheet,
+  type SpritesheetData,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'] as const;
@@ -41,11 +51,13 @@ class FrameAnimationScene extends Scene {
     });
     this.inputs.onTrigger(Keyboard.Space, () => {
       this.playing = !this.playing;
+
       if (this.playing) {
         this.sprite.resume();
       } else {
         this.sprite.pause();
       }
+
       this.updateHud(this.sprite.currentFrame);
     });
     this.inputs.onTrigger(Keyboard.Right, () => this.selectCharacter());
@@ -55,6 +67,7 @@ class FrameAnimationScene extends Scene {
   private selectCharacter(): void {
     this.characterIndex = (this.characterIndex + 1) % CHARACTERS.length;
     this.sprite.play(CHARACTERS[this.characterIndex]);
+
     if (!this.playing) {
       this.sprite.pause();
     }

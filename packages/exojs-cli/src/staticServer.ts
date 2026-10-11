@@ -54,17 +54,23 @@ interface ByteRange {
  * case a 416 is owed: a well-formed range that starts past the end.
  */
 const resolveRange = (header: string | undefined, size: number): ByteRange | 'unsatisfiable' | null => {
-  if (header === undefined) return null;
+  if (header === undefined) {
+    return null;
+  }
 
   const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
 
-  if (match === null) return null;
+  if (match === null) {
+    return null;
+  }
 
   const [, rawStart, rawEnd] = match;
   const hasStart = rawStart !== '';
   const hasEnd = rawEnd !== '';
 
-  if (!hasStart && !hasEnd) return null;
+  if (!hasStart && !hasEnd) {
+    return null;
+  }
 
   // A suffix range ("-500") counts back from the end, and asking for more than
   // the file holds is satisfied by the whole file rather than refused.
@@ -76,7 +82,9 @@ const resolveRange = (header: string | undefined, size: number): ByteRange | 'un
 
   const start = Number(rawStart);
 
-  if (start >= size) return 'unsatisfiable';
+  if (start >= size) {
+    return 'unsatisfiable';
+  }
 
   return { start, end: hasEnd ? Math.min(Number(rawEnd), size - 1) : size - 1 };
 };
@@ -134,7 +142,9 @@ export const startStaticServer = async (options: StaticServerOptions): Promise<S
       throw new CliError(`"${options.root}" is not a directory`);
     }
   } catch (error: unknown) {
-    if (error instanceof CliError) throw error;
+    if (error instanceof CliError) {
+      throw error;
+    }
 
     throw new CliError(`cannot serve "${options.root}": the directory does not exist`, {
       hint: 'Build the app first, then point `exo serve` at its output directory.',
@@ -251,7 +261,10 @@ export const startStaticServer = async (options: StaticServerOptions): Promise<S
     server.once('error', (error: NodeJS.ErrnoException) => {
       rejectPort(
         error.code === 'EADDRINUSE'
-          ? new CliError(`port ${port} is already in use`, { hint: 'Pass --port with a free port, or --port 0 to let the system pick one.', cause: error })
+          ? new CliError(`port ${port} is already in use`, {
+              hint: 'Pass --port with a free port, or --port 0 to let the system pick one.',
+              cause: error,
+            })
           : error,
       );
     });

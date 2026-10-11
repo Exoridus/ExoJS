@@ -71,8 +71,12 @@ class ColorTransformsScene extends Scene {
       .setAnchor(0.5)
       .setScale(3)
       .setPosition(width * 0.72, height / 2);
-    this.referenceLabel = new Text('ORIGINAL', { fontSize: 22, fillColor: Color.white }).setAnchor(0.5).setPosition(width * 0.28, height * 0.72);
-    this.processedLabel = new Text('TRANSFORMED', { fontSize: 22, fillColor: Color.white }).setAnchor(0.5).setPosition(width * 0.72, height * 0.72);
+    this.referenceLabel = new Text('ORIGINAL', { fontSize: 22, fillColor: Color.white })
+      .setAnchor(0.5)
+      .setPosition(width * 0.28, height * 0.72);
+    this.processedLabel = new Text('TRANSFORMED', { fontSize: 22, fillColor: Color.white })
+      .setAnchor(0.5)
+      .setPosition(width * 0.72, height * 0.72);
     // Grading is display-referred: the matrix and both lookups run on encoded
     // sRGB values, which is what the numbers below were written against, and
     // the result returns to linear premultiplied colour. `'linear-srgb'` would

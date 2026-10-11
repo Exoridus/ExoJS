@@ -129,7 +129,8 @@ export const createPlanckAdapter = async (): Promise<PhysicsAdapter> => {
         });
 
         body.createFixture({
-          shape: desc.shape.kind === 'box' ? new P.BoxShape(desc.shape.width / 2, desc.shape.height / 2) : new P.CircleShape(desc.shape.radius),
+          shape:
+            desc.shape.kind === 'box' ? new P.BoxShape(desc.shape.width / 2, desc.shape.height / 2) : new P.CircleShape(desc.shape.radius),
           density: desc.density,
           friction: desc.friction,
           restitution: desc.restitution,
@@ -147,7 +148,9 @@ export const createPlanckAdapter = async (): Promise<PhysicsAdapter> => {
         // Box2D's own default, written out for the same reason the other arms
         // write it out: the scene requires it, so no arm is left resting on a
         // default that a library release could change.
-        created.createJoint(new P.RevoluteJoint({ collideConnected: false }, table[joint.bodyA]!, table[joint.bodyB]!, { x: joint.x, y: joint.y }));
+        created.createJoint(
+          new P.RevoluteJoint({ collideConnected: false }, table[joint.bodyA]!, table[joint.bodyB]!, { x: joint.x, y: joint.y }),
+        );
       }
 
       stepIndex = 0;

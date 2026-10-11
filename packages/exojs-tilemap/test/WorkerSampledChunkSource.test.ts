@@ -63,29 +63,27 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     width: 512,
     height: 512,
     uid: 0,
     label: 'test',
     destroy: vi.fn(),
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeTileset = (): TileSet => {
-  return new TileSet({
+const makeTileset = (): TileSet =>
+  new TileSet({
     name: 'tiles',
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
     tileWidth: 32,
     tileHeight: 32,
     tileCount: 16,
   });
-};
 
-const makeUnboundedLayer = (tileset: TileSet, chunkWidth = 4, chunkHeight = 4): TileLayer => {
-  return new TileLayer({
+const makeUnboundedLayer = (tileset: TileSet, chunkWidth = 4, chunkHeight = 4): TileLayer =>
+  new TileLayer({
     id: 0,
     name: 'l',
     tileWidth: 16,
@@ -94,7 +92,6 @@ const makeUnboundedLayer = (tileset: TileSet, chunkWidth = 4, chunkHeight = 4): 
     chunkWidth,
     chunkHeight,
   });
-};
 
 describe('createWorkerSampledChunkSource', () => {
   it('composes a ChunkPayload from a values response', async () => {
@@ -114,6 +111,7 @@ describe('createWorkerSampledChunkSource', () => {
     expect(payload).not.toBeNull();
     expect(payload!.width).toBe(2);
     expect(payload!.height).toBe(2);
+
     for (let i = 0; i < 4; i++) {
       expect(unpackTile(payload!.tiles[i])).toEqual({ tilesetIndex: 0, localTileId: 3, transform: TILE_TRANSFORM_IDENTITY });
     }
@@ -161,6 +159,7 @@ describe('createWorkerSampledChunkSource', () => {
 
     const payload = await payloadPromise;
     expect(payload).not.toBeNull();
+
     for (let localTy = 0; localTy < 4; localTy++) {
       expect(unpackTile(payload!.tiles[localTy * 4 + 0])).toEqual({ tilesetIndex: 0, localTileId: 7, transform: TILE_TRANSFORM_IDENTITY });
       expect(payload!.tiles[localTy * 4 + 1]).toBe(0);
@@ -180,7 +179,7 @@ describe('createWorkerSampledChunkSource', () => {
 
     const okPromise = source.getChunk(0, 0);
     const failPromise = source.getChunk(1, 0);
-    const [okRequest, failRequest] = worker.posted as { requestId: number }[];
+    const [okRequest, failRequest] = worker.posted as Array<{ requestId: number }>;
 
     // Respond out of order: the second-issued request fails, the first succeeds.
     worker.respond({ requestId: failRequest.requestId, error: 'boom' });

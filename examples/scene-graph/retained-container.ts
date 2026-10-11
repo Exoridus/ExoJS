@@ -21,7 +21,14 @@ const FIELD_ROWS = 60;
 const TILE_SPACING = 34;
 const FIELD_COUNT = FIELD_COLUMNS * FIELD_ROWS;
 
-const drawAtlasCell = (context: CanvasRenderingContext2D, x: number, y: number, background: string, accent: string, shape: string): void => {
+const drawAtlasCell = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  background: string,
+  accent: string,
+  shape: string,
+): void => {
   context.fillStyle = background;
   context.fillRect(x, y, 64, 64);
 

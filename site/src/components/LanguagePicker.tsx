@@ -21,17 +21,30 @@ export const LanguagePicker = ({ baseUrl, locale }: LanguagePickerProps): JSX.El
   }, [language]);
 
   const chooseLanguage = (nextLanguage: Language): void => {
-    if (language === nextLanguage) return;
+    if (language === nextLanguage) {
+      return;
+    }
+
     window.localStorage.setItem(STORAGE_KEY, nextLanguage);
     window.location.assign(buildLocaleHref(baseUrl, nextLanguage));
   };
 
   return (
     <div className={cx(css(styles, 'root'), css(styles, 'lang'))} role="group" aria-label="Language selector">
-      <button type="button" data-active={language === 'en' ? 'true' : 'false'} aria-pressed={language === 'en'} onClick={() => chooseLanguage('en')}>
+      <button
+        type="button"
+        data-active={language === 'en' ? 'true' : 'false'}
+        aria-pressed={language === 'en'}
+        onClick={() => chooseLanguage('en')}
+      >
         EN
       </button>
-      <button type="button" data-active={language === 'de' ? 'true' : 'false'} aria-pressed={language === 'de'} onClick={() => chooseLanguage('de')}>
+      <button
+        type="button"
+        data-active={language === 'de' ? 'true' : 'false'}
+        aria-pressed={language === 'de'}
+        onClick={() => chooseLanguage('de')}
+      >
         DE
       </button>
     </div>

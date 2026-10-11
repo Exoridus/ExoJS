@@ -80,7 +80,9 @@ const infiniteRepeat = -1;
  */
 const assertValidRepeat = (context: string, repeat: number): void => {
   if (!Number.isInteger(repeat) || (repeat !== infiniteRepeat && repeat < 1)) {
-    throw new Error(`AnimatedSprite ${context} has an invalid repeat value (${repeat}). Must be ${infiniteRepeat} (infinite) or a positive integer.`);
+    throw new Error(
+      `AnimatedSprite ${context} has an invalid repeat value (${repeat}). Must be ${infiniteRepeat} (infinite) or a positive integer.`,
+    );
   }
 };
 
@@ -209,7 +211,9 @@ export class AnimatedSprite extends Sprite {
 
     if (clip.frameDurations) {
       if (clip.frameDurations.length !== frames.length) {
-        throw new Error(`AnimatedSprite clip "${name}" frameDurations length (${clip.frameDurations.length}) must match its frame count (${frames.length}).`);
+        throw new Error(
+          `AnimatedSprite clip "${name}" frameDurations length (${clip.frameDurations.length}) must match its frame count (${frames.length}).`,
+        );
       }
 
       for (const duration of clip.frameDurations) {
@@ -225,7 +229,9 @@ export class AnimatedSprite extends Sprite {
 
     if (clip.frameOffsets) {
       if (clip.frameOffsets.length !== frames.length) {
-        throw new Error(`AnimatedSprite clip "${name}" frameOffsets length (${clip.frameOffsets.length}) must match its frame count (${frames.length}).`);
+        throw new Error(
+          `AnimatedSprite clip "${name}" frameOffsets length (${clip.frameOffsets.length}) must match its frame count (${frames.length}).`,
+        );
       }
 
       for (const offset of clip.frameOffsets) {
@@ -274,7 +280,10 @@ export class AnimatedSprite extends Sprite {
    * state the normalized internal store no longer exposes directly.
    * @internal
    */
-  public _getClipDefinitions(): Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'repeat'>> & AnimatedSpriteClipDefinition> {
+  public _getClipDefinitions(): Record<
+    string,
+    Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'repeat'>> & AnimatedSpriteClipDefinition
+  > {
     const out: Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'repeat'>> & AnimatedSpriteClipDefinition> = {};
 
     for (const [name, clip] of this._clips) {
@@ -342,6 +351,7 @@ export class AnimatedSprite extends Sprite {
     if (options.repeat !== undefined) {
       this._repeatOverride = options.repeat;
     }
+
     this._playing = true;
     this._syncSystemRegistration();
 

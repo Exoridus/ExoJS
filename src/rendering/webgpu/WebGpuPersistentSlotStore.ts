@@ -74,9 +74,21 @@ export const persistentPremultiplyMaskIndex = 36;
 export interface WebGpuPersistentSlotCapableRenderer {
   readonly _supportsPersistentSlots?: boolean;
   _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGpuBackend): WebGpuPersistentSlotStore | null;
-  _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
+  _rekeyPersistentSlotStore(
+    store: WebGpuPersistentSlotStore,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean;
   _writePersistentSlotRows(store: WebGpuPersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
-  _drawPersistentSlots(store: WebGpuPersistentSlotStore, order: Uint32Array, orderCount: number, offset: number, count: number, backend: WebGpuBackend): void;
+  _drawPersistentSlots(
+    store: WebGpuPersistentSlotStore,
+    order: Uint32Array,
+    orderCount: number,
+    offset: number,
+    count: number,
+    backend: WebGpuBackend,
+  ): void;
 }
 
 /**
@@ -509,7 +521,8 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
       });
       this._orderCapacity = next;
       this._bindGroup = null;
-      this._accountedOrderBytes = this._accountant?.reallocate(this._accountedOrderBytes, next * orderBytesPerEntry) ?? next * orderBytesPerEntry;
+      this._accountedOrderBytes =
+        this._accountant?.reallocate(this._accountedOrderBytes, next * orderBytesPerEntry) ?? next * orderBytesPerEntry;
     }
 
     this._order.set(order.subarray(offset, offset + count), offset);

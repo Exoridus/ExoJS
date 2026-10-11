@@ -46,7 +46,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'getting-started/what-is-exojs',
         level: 'intro',
-        learningGoals: ['Decide whether a code-first canvas runtime fits the project', 'Distinguish the Guide, Playground, package README, and API reference'],
+        learningGoals: [
+          'Decide whether a code-first canvas runtime fits the project',
+          'Distinguish the Guide, Playground, package README, and API reference',
+        ],
         prerequisites: [],
         examples: [],
         apiLinks: ['application', 'scene'],
@@ -54,7 +57,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'getting-started/setup',
         level: 'intro',
-        learningGoals: ['Run a starter and choose among the current templates', 'Locate startup, scene code, public assets, and production output'],
+        learningGoals: [
+          'Run a starter and choose among the current templates',
+          'Locate startup, scene code, public assets, and production output',
+        ],
         prerequisites: ['getting-started/what-is-exojs'],
         examples: [],
         apiLinks: ['application'],
@@ -62,7 +68,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'getting-started/your-first-scene',
         level: 'intro',
-        learningGoals: ['Draw a visible object without external assets', 'Separate scene setup, time-based updates, and explicit world rendering'],
+        learningGoals: [
+          'Draw a visible object without external assets',
+          'Separate scene setup, time-based updates, and explicit world rendering',
+        ],
         prerequisites: ['getting-started/setup'],
         examples: ['getting-started/hello-world'],
         apiLinks: ['application', 'scene', 'sprite', 'texture', 'loader'],
@@ -88,7 +97,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'runtime/application',
         level: 'intro',
-        learningGoals: ['Give the canvas and application services a clear host lifetime', 'Await startup and distinguish stop from permanent teardown'],
+        learningGoals: [
+          'Give the canvas and application services a clear host lifetime',
+          'Await startup and distinguish stop from permanent teardown',
+        ],
         prerequisites: ['getting-started/your-first-scene'],
         examples: ['getting-started/hello-world', 'getting-started/resize-and-dpr'],
         apiLinks: ['application'],
@@ -107,7 +119,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'runtime/scene-graph',
         level: 'intermediate',
-        learningGoals: ['Compose local transforms through a parent hierarchy', 'Separate hierarchy, rendering order, and resource ownership'],
+        learningGoals: [
+          'Compose local transforms through a parent hierarchy',
+          'Separate hierarchy, rendering order, and resource ownership',
+        ],
         prerequisites: ['runtime/scenes-and-lifecycle'],
         examples: ['scene-graph/nested-transforms', 'scene-graph/pivot-and-anchor', 'debug-layer/pointer-and-hittest', 'scene-graph/masks'],
         apiLinks: ['container', 'drawable'],
@@ -131,13 +146,20 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'Render one world through independent views without duplicating simulation',
         ],
         prerequisites: ['runtime/scene-graph'],
-        examples: ['application-scenes/world-vs-screen-coords', 'application-scenes/multi-view-split-screen', 'application-scenes/picture-in-picture'],
+        examples: [
+          'application-scenes/world-vs-screen-coords',
+          'application-scenes/multi-view-split-screen',
+          'application-scenes/picture-in-picture',
+        ],
         apiLinks: ['view', 'pass-context'],
       },
       {
         path: 'input/keyboard-and-actions',
         level: 'intro',
-        learningGoals: ['Bind physical controls to named gameplay actions', 'Use held values and transition signals with scene availability'],
+        learningGoals: [
+          'Bind physical controls to named gameplay actions',
+          'Use held values and transition signals with scene availability',
+        ],
         prerequisites: ['runtime/scenes-and-lifecycle'],
         examples: ['input/keyboard', 'input/key-rebinding', 'input/action-mapping'],
         apiLinks: ['keyboard', 'input-system'],
@@ -145,7 +167,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'input/mouse-and-pointer',
         level: 'intro',
-        learningGoals: ['Convert pointer coordinates through the intended view', 'Handle capture, gestures, cancellation, and pointer lifetime'],
+        learningGoals: [
+          'Convert pointer coordinates through the intended view',
+          'Handle capture, gestures, cancellation, and pointer lifetime',
+        ],
         prerequisites: ['runtime/coordinates-and-views', 'input/keyboard-and-actions'],
         examples: ['input/mouse-and-pointer', 'input/multitouch', 'application-scenes/world-vs-screen-coords'],
         apiLinks: ['pointer', 'input-system'],
@@ -161,7 +186,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'input/chords-and-sequences',
         level: 'intermediate',
-        learningGoals: ['Choose simultaneous chords or ordered input sequences', 'Handle sequence timing, cancellation, and progress correctly'],
+        learningGoals: [
+          'Choose simultaneous chords or ordered input sequences',
+          'Handle sequence timing, cancellation, and progress correctly',
+        ],
         prerequisites: ['input/keyboard-and-actions'],
         examples: ['input/action-mapping', 'input/key-rebinding'],
         apiLinks: ['chord-action', 'sequence-action', 'action-map'],
@@ -169,7 +197,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'runtime/ui-and-widgets',
         level: 'intermediate',
-        learningGoals: ['Build a screen-fixed HUD using owned widgets', 'Coordinate layout, focus, modal interaction, and DOM accessibility'],
+        learningGoals: [
+          'Build a screen-fixed HUD using owned widgets',
+          'Coordinate layout, focus, modal interaction, and DOM accessibility',
+        ],
         prerequisites: ['runtime/scenes-and-lifecycle', 'input/keyboard-and-actions'],
         examples: ['ui/hud-and-widgets', 'ui/settings-menu', 'ui/text-entry-and-scrolling'],
         apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'interaction-system'],
@@ -184,7 +215,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'assets/loading-and-resources',
         level: 'intermediate',
-        learningGoals: ['Choose awaited loading or a deliberate placeholder', 'Release independent resource claims through their owning scope'],
+        learningGoals: [
+          'Choose awaited loading or a deliberate placeholder',
+          'Release independent resource claims through their owning scope',
+        ],
         prerequisites: ['runtime/scenes-and-lifecycle'],
         examples: ['application-scenes/loading-screen'],
         apiLinks: ['loader', 'texture'],
@@ -203,7 +237,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'assets/device-variants',
         level: 'advanced',
-        learningGoals: ['Select an asset source using actual capabilities', 'Keep a usable fallback and distinguish compression format from container'],
+        learningGoals: [
+          'Select an asset source using actual capabilities',
+          'Keep a usable fallback and distinguish compression format from container',
+        ],
         prerequisites: ['assets/loading-and-resources'],
         examples: [],
         apiLinks: ['loader', 'texture', 'compressed-texture', 'compressed-texture-format', 'asset-variant-set'],
@@ -222,7 +259,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'assets/aseprite',
         level: 'intermediate',
-        learningGoals: ['Load an Aseprite export and choose an authored animation tag', 'Handle frame timing, atlas layout, and resource lifetime'],
+        learningGoals: [
+          'Load an Aseprite export and choose an authored animation tag',
+          'Handle frame timing, atlas layout, and resource lifetime',
+        ],
         prerequisites: ['assets/loading-and-resources', 'rendering/sprites'],
         examples: [],
         apiLinks: ['aseprite-sheet', 'animated-sprite', 'loader'],
@@ -241,7 +281,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'assets/ldtk',
         level: 'intermediate',
-        learningGoals: ['Choose eager map loading or project-driven level loading', 'Resolve external levels and keep level resources independently owned'],
+        learningGoals: [
+          'Choose eager map loading or project-driven level loading',
+          'Resolve external levels and keep level resources independently owned',
+        ],
         prerequisites: ['assets/loading-and-resources'],
         examples: [],
         apiLinks: ['ldtk-map', 'tile-map', 'tile-map-node', 'loader'],
@@ -249,15 +292,29 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'assets/worlds-and-spawning',
         level: 'advanced',
-        learningGoals: ['Spawn owned game objects from authored level data', 'Unload a level and handle failed or cancelled acquisition safely'],
+        learningGoals: [
+          'Spawn owned game objects from authored level data',
+          'Unload a level and handle failed or cancelled acquisition safely',
+        ],
         prerequisites: ['assets/tiled-maps', 'assets/loading-and-resources'],
         examples: ['tilemap/editor-objects-gameplay', 'tilemap/level-loading-and-ownership'],
-        apiLinks: ['map-world', 'map-world-runtime', 'map-level-runtime', 'map-object-spawner', 'map-spawn-session', 'ldtk-project', 'loader-scope'],
+        apiLinks: [
+          'map-world',
+          'map-world-runtime',
+          'map-level-runtime',
+          'map-object-spawner',
+          'map-spawn-session',
+          'ldtk-project',
+          'loader-scope',
+        ],
       },
       {
         path: 'rendering/infinite-maps',
         level: 'advanced',
-        learningGoals: ['Separate a map source from resident rendered chunks', 'Budget streaming work and clean up a chunk source at the owner boundary'],
+        learningGoals: [
+          'Separate a map source from resident rendered chunks',
+          'Budget streaming work and clean up a chunk source at the owner boundary',
+        ],
         prerequisites: ['assets/tiled-maps'],
         examples: ['tilemap/worker-streamed-terrain', 'tilemap/tiled-infinite-map'],
         apiLinks: ['tile-map', 'tile-layer', 'chunk-streamer', 'chunk-source', 'tilemap-functions', 'tiled-map'],
@@ -272,7 +329,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'rendering/graphics',
         level: 'intro',
-        learningGoals: ['Create reusable geometry in local coordinates', 'Change geometry deliberately instead of rebuilding unchanged shapes every frame'],
+        learningGoals: [
+          'Create reusable geometry in local coordinates',
+          'Change geometry deliberately instead of rebuilding unchanged shapes every frame',
+        ],
         prerequisites: ['getting-started/your-first-scene'],
         examples: ['geometry-graphics/graphics-gradient', 'geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
         apiLinks: ['graphics', 'color'],
@@ -297,7 +357,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'rendering/text',
         level: 'intro',
-        learningGoals: ['Choose text rendering and load the required font', 'Distinguish layout, ink bounds, wrapping, and shaping constraints'],
+        learningGoals: [
+          'Choose text rendering and load the required font',
+          'Distinguish layout, ink bounds, wrapping, and shaping constraints',
+        ],
         prerequisites: ['assets/loading-and-resources', 'runtime/scene-graph'],
         examples: ['text-fonts/typographic-styling', 'text-fonts/multiline-and-wrap'],
         apiLinks: ['text', 'bitmap-text', 'text-style'],
@@ -305,7 +368,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'rendering/pixel-snapping',
         level: 'intermediate',
-        learningGoals: ['Choose position or geometry snapping for the intended image', 'Keep rendering alignment separate from simulation coordinates'],
+        learningGoals: [
+          'Choose position or geometry snapping for the intended image',
+          'Keep rendering alignment separate from simulation coordinates',
+        ],
         prerequisites: ['rendering/sprites', 'getting-started/resize-dpr-and-canvas'],
         examples: ['sprites-textures/texture-sampling'],
         apiLinks: ['drawable', 'sprite', 'view'],
@@ -313,7 +379,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'rendering/render-targets',
         level: 'advanced',
-        learningGoals: ['Render into an owned texture with scoped target state', 'Handle resizing, feedback, and borrowed output textures safely'],
+        learningGoals: [
+          'Render into an owned texture with scoped target state',
+          'Handle resizing, feedback, and borrowed output textures safely',
+        ],
         prerequisites: ['runtime/coordinates-and-views', 'rendering/sprites'],
         examples: ['render-targets/render-to-texture', 'render-targets/mini-map'],
         apiLinks: ['render-target', 'render-texture', 'multi-render-target', 'mesh-material'],
@@ -321,7 +390,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'rendering/color-pipeline',
         level: 'advanced',
-        learningGoals: ['Tell colour from numeric data and declare each at its source', 'Choose target formats, the output transform and the right readback'],
+        learningGoals: [
+          'Tell colour from numeric data and declare each at its source',
+          'Choose target formats, the output transform and the right readback',
+        ],
         prerequisites: ['rendering/sprites', 'rendering/render-targets'],
         examples: ['render-targets/color-pipeline', 'sprites-textures/blendmodes'],
         apiLinks: ['texture', 'render-texture', 'color'],
@@ -340,7 +412,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'rendering/immediate-mode',
         level: 'advanced',
-        learningGoals: ['Submit procedural drawing through a reusable immediate-mode path', 'Keep packed buffers, transforms, and their lifetimes explicit'],
+        learningGoals: [
+          'Submit procedural drawing through a reusable immediate-mode path',
+          'Keep packed buffers, transforms, and their lifetimes explicit',
+        ],
         prerequisites: ['rendering/graphics'],
         examples: ['geometry-graphics/immediate-mode-rendering'],
         apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh', 'mesh-material', 'shader', 'matrix', 'color'],
@@ -355,31 +430,59 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'rendering/animation',
         level: 'intermediate',
-        learningGoals: ['Choose frame animation or property interpolation', 'Handle repeat semantics, pause policy, and competing animations'],
+        learningGoals: [
+          'Choose frame animation or property interpolation',
+          'Handle repeat semantics, pause policy, and competing animations',
+        ],
         prerequisites: ['runtime/scenes-and-lifecycle', 'rendering/sprites'],
-        examples: ['tweens-animation/easing-curves', 'tweens-animation/frame-animation', 'tweens-animation/tween-basics', 'tweens-animation/tween-chains'],
+        examples: [
+          'tweens-animation/easing-curves',
+          'tweens-animation/frame-animation',
+          'tweens-animation/tween-basics',
+          'tweens-animation/tween-chains',
+        ],
         apiLinks: ['tween', 'tween-system', 'animated-sprite'],
       },
       {
         path: 'effects/filters',
         level: 'intermediate',
-        learningGoals: ['Choose a node, group, or frame effect boundary', 'Own filter resources and distinguish logical effects from hardware passes'],
+        learningGoals: [
+          'Choose a node, group, or frame effect boundary',
+          'Own filter resources and distinguish logical effects from hardware passes',
+        ],
         prerequisites: ['rendering/sprites'],
-        examples: ['filters/blur-filter', 'filters/color-matrix-filter', 'filters/crt-scanlines', 'filters/custom-fragment-shader', 'filters/metaballs'],
+        examples: [
+          'filters/blur-filter',
+          'filters/color-matrix-filter',
+          'filters/crt-scanlines',
+          'filters/custom-fragment-shader',
+          'filters/metaballs',
+        ],
         apiLinks: ['filter', 'color-matrix-filter', 'blur-filter'],
       },
       {
         path: 'effects/post-processing',
         level: 'advanced',
-        learningGoals: ['Compose frame passes and filters in an explicit order', 'Avoid read-write feedback and restore scoped rendering state'],
+        learningGoals: [
+          'Compose frame passes and filters in an explicit order',
+          'Avoid read-write feedback and restore scoped rendering state',
+        ],
         prerequisites: ['effects/filters', 'rendering/render-targets'],
-        examples: ['filters/bloom-filter', 'render-targets/render-pipeline', 'render-targets/trail-feedback', 'render-targets/water-mirror'],
+        examples: [
+          'filters/bloom-filter',
+          'render-targets/render-pipeline',
+          'render-targets/trail-feedback',
+          'render-targets/water-mirror',
+        ],
         apiLinks: ['render-target', 'filter'],
       },
       {
         path: 'effects/particles',
         level: 'intermediate',
-        learningGoals: ['Build a bounded scene-owned emitter in local space', 'Inspect CPU/GPU routing and handle changes that restart live particles'],
+        learningGoals: [
+          'Build a bounded scene-owned emitter in local space',
+          'Inspect CPU/GPU routing and handle changes that restart live particles',
+        ],
         prerequisites: ['runtime/scenes-and-lifecycle'],
         examples: [
           'particles/emitter-basics',
@@ -394,7 +497,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'effects/lighting',
         level: 'intermediate',
-        learningGoals: ['Choose a lighting model rather than an assumed quality tier', 'Register lights, shadows, and normal sources with correct ownership'],
+        learningGoals: [
+          'Choose a lighting model rather than an assumed quality tier',
+          'Register lights, shadows, and normal sources with correct ownership',
+        ],
         prerequisites: ['runtime/scenes-and-lifecycle', 'rendering/sprites'],
         examples: ['lighting/shadow-casters', 'lighting/lightmap-normals', 'lighting/radiance-rooms'],
         apiLinks: ['lighting', 'point-light', 'spot-light', 'line-light', 'sun-light', 'lit-material'],
@@ -402,7 +508,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'effects/custom-mesh-shaders',
         level: 'advanced',
-        learningGoals: ['Use material schemas and backend shader counterparts', 'Separate host-side types from shader compilation and visual validation'],
+        learningGoals: [
+          'Use material schemas and backend shader counterparts',
+          'Separate host-side types from shader compilation and visual validation',
+        ],
         prerequisites: ['rendering/graphics', 'rendering/sprites'],
         examples: ['geometry-graphics/mesh-textured-quad', 'geometry-graphics/mesh-deformed-grid'],
         apiLinks: ['mesh'],
@@ -431,7 +540,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'audio/spatial-audio',
         level: 'intermediate',
-        learningGoals: ['Map world positions into a consistent audio space', 'Own listener and source updates without conflating pan with volume'],
+        learningGoals: [
+          'Map world positions into a consistent audio space',
+          'Own listener and source updates without conflating pan with volume',
+        ],
         prerequisites: ['audio/audio-basics', 'runtime/coordinates-and-views'],
         examples: ['spatial-audio/listener-and-source'],
         apiLinks: ['audio-listener', 'audio-system', 'audio-send', 'audio-zone', 'spatial-zones'],
@@ -461,7 +573,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'audio/audio-reactive-visualization',
         level: 'intermediate',
-        learningGoals: ['Map one live analysis stream into bounded visual changes', 'Correlate audio time with presentation and own spectrum-history textures'],
+        learningGoals: [
+          'Map one live analysis stream into bounded visual changes',
+          'Correlate audio time with presentation and own spectrum-history textures',
+        ],
         prerequisites: ['audio/audio-basics', 'audio/beat-detection'],
         examples: ['showcase/audio-visualisation', 'beat-detection/beat-sync-pulse', 'showcase/audio-reactive-particles'],
         apiLinks: ['audio-analyser', 'beat-detector'],
@@ -476,7 +591,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'recipes/gameplay-collision',
         level: 'advanced',
-        learningGoals: ['Choose hit tests, overlaps, sweeps, or a physics world', 'Keep coordinate space and continuous-motion limitations explicit'],
+        learningGoals: [
+          'Choose hit tests, overlaps, sweeps, or a physics world',
+          'Keep coordinate space and continuous-motion limitations explicit',
+        ],
         prerequisites: ['runtime/scene-graph'],
         examples: ['showcase/rectangles-collision'],
         apiLinks: ['bounds', 'circle'],
@@ -484,7 +602,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'physics/physics-basics',
         level: 'intermediate',
-        learningGoals: ['Bind visible nodes to a scene-owned physics world', 'Choose exactly one clock and preserve rotation and interpolation conventions'],
+        learningGoals: [
+          'Bind visible nodes to a scene-owned physics world',
+          'Choose exactly one clock and preserve rotation and interpolation conventions',
+        ],
         prerequisites: ['runtime/scenes-and-lifecycle'],
         examples: [],
         apiLinks: ['physics-world', 'physics-body', 'collider', 'box-shape', 'circle-shape', 'physics-binding'],
@@ -492,15 +613,30 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'physics/joints-and-dynamics',
         level: 'advanced',
-        learningGoals: ['Choose a joint or contact policy for the intended motion', 'Understand fast-body, shape, event, and solver limitations'],
+        learningGoals: [
+          'Choose a joint or contact policy for the intended motion',
+          'Understand fast-body, shape, event, and solver limitations',
+        ],
         prerequisites: ['physics/physics-basics'],
         examples: [],
-        apiLinks: ['joint', 'distance-joint', 'revolute-joint', 'weld-joint', 'prismatic-joint', 'wheel-joint', 'mouse-joint', 'physics-world'],
+        apiLinks: [
+          'joint',
+          'distance-joint',
+          'revolute-joint',
+          'weld-joint',
+          'prismatic-joint',
+          'wheel-joint',
+          'mouse-joint',
+          'physics-world',
+        ],
       },
       {
         path: 'pathfinding/grid-pathfinding',
         level: 'intermediate',
-        learningGoals: ['Build a weighted navigation grid and interpret query results', 'Separate path search budgets from movement and collision'],
+        learningGoals: [
+          'Build a weighted navigation grid and interpret query results',
+          'Separate path search budgets from movement and collision',
+        ],
         prerequisites: ['runtime/coordinates-and-views'],
         examples: ['pathfinding/grid-navigation', 'pathfinding/tilemap-navigation'],
         apiLinks: ['pathfinder', 'grid-space', 'grid-space-options', 'path-result', 'find-path-options'],
@@ -519,7 +655,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'runtime/serialization-and-prefabs',
         level: 'advanced',
-        learningGoals: ['Separate persistent state from a live scene graph', 'Load referenced assets and validate authored or saved data before instantiation'],
+        learningGoals: [
+          'Separate persistent state from a live scene graph',
+          'Load referenced assets and validate authored or saved data before instantiation',
+        ],
         prerequisites: ['runtime/scene-graph', 'assets/loading-and-resources'],
         examples: [],
         apiLinks: ['scene', 'prefab', 'web-storage-store', 'serialization-registry', 'scene-node'],
@@ -556,7 +695,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'recipes/game-feel',
         level: 'intermediate',
-        learningGoals: ['Combine bounded visual and audio feedback for a gameplay event', 'Prevent overlapping effects from fighting over shared properties'],
+        learningGoals: [
+          'Combine bounded visual and audio feedback for a gameplay event',
+          'Prevent overlapping effects from fighting over shared properties',
+        ],
         prerequisites: ['rendering/animation', 'audio/audio-basics'],
         examples: ['showcase/screen-shake-on-explosion', 'showcase/gamepad-spaceship'],
         apiLinks: [],
@@ -564,7 +706,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'recipes/ui-patterns',
         level: 'intermediate',
-        learningGoals: ['Implement dialogue reveal and deliberate advance behavior', 'Keep choices, focus, text boundaries, and cancellation explicit'],
+        learningGoals: [
+          'Implement dialogue reveal and deliberate advance behavior',
+          'Keep choices, focus, text boundaries, and cancellation explicit',
+        ],
         prerequisites: ['runtime/ui-and-widgets', 'input/keyboard-and-actions'],
         examples: ['showcase/dialog-system'],
         apiLinks: [],
@@ -601,7 +746,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'shipping/troubleshooting',
         level: 'intro',
-        learningGoals: ['Trace a visible failure to its first observable cause', 'Produce a minimal reproduction with versions and backend context'],
+        learningGoals: [
+          'Trace a visible failure to its first observable cause',
+          'Produce a minimal reproduction with versions and backend context',
+        ],
         prerequisites: ['getting-started/setup'],
         examples: ['performance/backend-comparison', 'input/keyboard', 'input/gamepad', 'audio-basics/play-sound'],
         apiLinks: [],
@@ -617,7 +765,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'debugging/performance',
         level: 'intermediate',
-        learningGoals: ['Separate simulation, submission, pixel work, and memory', 'Measure a controlled production workload before keeping an optimization'],
+        learningGoals: [
+          'Separate simulation, submission, pixel work, and memory',
+          'Measure a controlled production workload before keeping an optimization',
+        ],
         prerequisites: ['debugging/debugging-and-inspection'],
         examples: ['performance/backend-comparison', 'particles/gpu-particles'],
         apiLinks: ['performance-layer'],
@@ -647,7 +798,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'shipping/typed-worklets-and-workers',
         level: 'advanced',
-        learningGoals: ['Keep worker and worklet code in the correct execution environment', 'Own asynchronous startup, messages, and teardown'],
+        learningGoals: [
+          'Keep worker and worklet code in the correct execution environment',
+          'Own asynchronous startup, messages, and teardown',
+        ],
         prerequisites: ['getting-started/setup'],
         examples: [],
         apiLinks: [],
@@ -655,7 +809,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'shipping/typed-shaders',
         level: 'advanced',
-        learningGoals: ['Import shader files through the build pipeline', 'Separate typed source imports from actual GPU program validation'],
+        learningGoals: [
+          'Import shader files through the build pipeline',
+          'Separate typed source imports from actual GPU program validation',
+        ],
         prerequisites: ['effects/custom-mesh-shaders'],
         examples: [],
         apiLinks: [],
@@ -692,7 +849,10 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         path: 'debugging/custom-renderers',
         level: 'advanced',
-        learningGoals: ['Choose the smallest rendering extension point that fits', 'Respect composed pass state and recover caller-owned GPU resources'],
+        learningGoals: [
+          'Choose the smallest rendering extension point that fits',
+          'Respect composed pass state and recover caller-owned GPU resources',
+        ],
         prerequisites: ['rendering/render-targets', 'effects/custom-mesh-shaders'],
         examples: ['render-targets/render-pipeline', 'custom-renderers/custom-triangle-renderer'],
         apiLinks: [],
@@ -717,7 +877,13 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['runtime/scenes-and-lifecycle', 'rendering/render-targets'],
         examples: ['application-scenes/custom-transition', 'application-scenes/multiple-scenes'],
-        apiLinks: ['scene-transition', 'phased-scene-transition', 'scene-transition-session', 'scene-transition-lifecycle-error', 'scene-director'],
+        apiLinks: [
+          'scene-transition',
+          'phased-scene-transition',
+          'scene-transition-session',
+          'scene-transition-lifecycle-error',
+          'scene-director',
+        ],
       },
     ],
   },
@@ -750,10 +916,15 @@ export interface GuideTopic {
   description: string;
   path: string;
 }
+
 export const getAdjacentChapters = (path: string): { previous: GuideChapterMeta | null; next: GuideChapterMeta | null } => {
   const index = GUIDE_CHAPTERS.findIndex(chapter => chapter.path === path);
-  return index < 0 ? { previous: null, next: null } : { previous: GUIDE_CHAPTERS[index - 1] ?? null, next: GUIDE_CHAPTERS[index + 1] ?? null };
+
+  return index < 0
+    ? { previous: null, next: null }
+    : { previous: GUIDE_CHAPTERS[index - 1] ?? null, next: GUIDE_CHAPTERS[index + 1] ?? null };
 };
+
 export const isGuidePath = (path: string): boolean => GUIDE_CHAPTER_BY_PATH.has(path);
 
 export const GUIDE_LEARNING_PATH: ReadonlyArray<LearningPathStep> = [

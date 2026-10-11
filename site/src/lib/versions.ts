@@ -60,53 +60,60 @@ const currentEntry: VersionInfo = {
   latest: false,
 };
 
-export const hasVersions = (): boolean => {
-  return _catalog !== null && _catalog.versions.length > 0;
-};
+export const hasVersions = (): boolean => _catalog !== null && _catalog.versions.length > 0;
 
-export const getVersions = (): ReadonlyArray<VersionInfo> => {
-  return _catalog?.versions ?? [];
-};
+export const getVersions = (): ReadonlyArray<VersionInfo> => _catalog?.versions ?? [];
 
-export const getLatestStableId = (): string | null => {
-  return _catalog?.latestStable ?? null;
-};
+export const getLatestStableId = (): string | null => _catalog?.latestStable ?? null;
 
 export const getVersionById = (id: string | null | undefined): VersionInfo | null => {
-  if (!id) return null;
+  if (!id) {
+    return null;
+  }
+
   return _catalog?.versions.find(version => version.id === id) ?? null;
 };
 
-export const isCurrentVersion = (id: string | null | undefined): boolean => {
-  return id === CURRENT_VERSION_ID;
-};
+export const isCurrentVersion = (id: string | null | undefined): boolean => id === CURRENT_VERSION_ID;
 
-export const getVersionLoadError = (): string | null => {
-  return _loadError;
-};
+export const getVersionLoadError = (): string | null => _loadError;
 
 export const onVersionsLoaded = (callback: () => void): (() => void) => {
   _loadListeners.add(callback);
+
   return () => _loadListeners.delete(callback);
 };
 
 const compareSemver = (a: string, b: string): number => {
   const partsA = a.split('.').map(n => parseInt(n, 10) || 0);
   const partsB = b.split('.').map(n => parseInt(n, 10) || 0);
+
   for (let i = 0; i < 3; i++) {
     const da = partsA[i] ?? 0;
     const db = partsB[i] ?? 0;
-    if (da !== db) return da - db;
+
+    if (da !== db) {
+      return da - db;
+    }
   }
+
   return 0;
 };
 
 const readCache = (): VersionCatalog | null => {
   try {
     const raw = window.localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
+
+    if (!raw) {
+      return null;
+    }
+
     const cached = JSON.parse(raw) as CachedCatalog;
-    if (Date.now() - cached.storedAt > CACHE_TTL_MS) return null;
+
+    if (Date.now() - cached.storedAt > CACHE_TTL_MS) {
+      return null;
+    }
+
     return cached.catalog;
   } catch {
     return null;
@@ -131,15 +138,25 @@ const buildCatalog = (doc: NpmRegistryDocument): VersionCatalog => {
   // (e.g., `legacy-2x: 2.1.2`). Those are explicitly off the canonical line
   // and should not appear in the dropdown.
   const pinnedToNonLatest = new Set<string>();
+
   for (const [tag, id] of Object.entries(distTags)) {
-    if (tag === 'latest') continue;
+    if (tag === 'latest') {
+      continue;
+    }
+
     pinnedToNonLatest.add(id);
   }
 
   const ids = Object.entries(doc.versions ?? {})
     .filter(([id, meta]) => {
-      if (typeof meta.deprecated === 'string') return false;
-      if (pinnedToNonLatest.has(id)) return false;
+      if (typeof meta.deprecated === 'string') {
+        return false;
+      }
+
+      if (pinnedToNonLatest.has(id)) {
+        return false;
+      }
+
       return true;
     })
     .map(([id]) => id)
@@ -167,9 +184,14 @@ export const loadVersionCatalog = async (): Promise<void> => {
   _loadError = null;
 
   const cached = readCache();
+
   if (cached !== null) {
     _catalog = cached;
-    for (const listener of _loadListeners) listener();
+
+    for (const listener of _loadListeners) {
+      listener();
+    }
+
     return;
   }
 
@@ -199,5 +221,7 @@ export const loadVersionCatalog = async (): Promise<void> => {
     _loadError = error instanceof Error ? error.message : String(error);
   }
 
-  for (const listener of _loadListeners) listener();
+  for (const listener of _loadListeners) {
+    listener();
+  }
 };

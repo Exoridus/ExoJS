@@ -1,5 +1,13 @@
 import type { LibraryProvenance } from '../shared/provenance';
-import { csvField, formatCount as count, formatMs as ms, mergeCellResults, mergeLibraries, readExistingReport, writeReportArtifacts } from '../shared/report';
+import {
+  csvField,
+  formatCount as count,
+  formatMs as ms,
+  mergeCellResults,
+  mergeLibraries,
+  readExistingReport,
+  writeReportArtifacts,
+} from '../shared/report';
 import type { Provenance } from './driver';
 import type { Backend, CellResult } from './EngineAdapter';
 
@@ -28,7 +36,8 @@ const HITCH_RATIO = 4;
 const HITCH_FLOOR_MS = 8;
 
 /** True when the cell's CPU time is periodically spiking rather than uniformly fast. */
-export const isHitching = (result: CellResult): boolean => result.cpuMsP95 >= HITCH_FLOOR_MS && result.cpuMsP95 >= result.cpuMsMedian * HITCH_RATIO;
+export const isHitching = (result: CellResult): boolean =>
+  result.cpuMsP95 >= HITCH_FLOOR_MS && result.cpuMsP95 >= result.cpuMsMedian * HITCH_RATIO;
 
 /** The `cpuMsP95` cell text, suffixed `hitching` when the spike test trips. */
 const cpuP95Cell = (result: CellResult): string => (isHitching(result) ? `${ms(result.cpuMsP95)} hitching` : ms(result.cpuMsP95));

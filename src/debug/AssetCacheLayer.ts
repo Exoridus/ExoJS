@@ -48,7 +48,8 @@ const formatBytes = (bytes: number): string => {
 };
 
 /** The tail of a source string, which is the part that identifies it at panel width. */
-const shorten = (source: string, maxLength: number): string => (source.length <= maxLength ? source : `...${source.slice(source.length - maxLength + 3)}`);
+const shorten = (source: string, maxLength: number): string =>
+  source.length <= maxLength ? source : `...${source.slice(source.length - maxLength + 3)}`;
 
 /**
  * Debug layer that reports what the application's {@link Loader} currently

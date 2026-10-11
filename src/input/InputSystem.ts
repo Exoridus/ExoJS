@@ -635,9 +635,17 @@ export class InputSystem {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStart(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onStart(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this.createBinding(channel, options);
-    if (callback) binding.onStart.add(callback);
+
+    if (callback) {
+      binding.onStart.add(callback);
+    }
+
     return binding;
   }
 
@@ -661,9 +669,17 @@ export class InputSystem {
    * if (right.active) this.x += speed * delta;
    * ```
    */
-  public onActive(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onActive(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this.createBinding(channel, options);
-    if (callback) binding.onActive.add(callback);
+
+    if (callback) {
+      binding.onActive.add(callback);
+    }
+
     return binding;
   }
 
@@ -675,9 +691,17 @@ export class InputSystem {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStop(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onStop(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this.createBinding(channel, options);
-    if (callback) binding.onStop.add(callback);
+
+    if (callback) {
+      binding.onStop.add(callback);
+    }
+
     return binding;
   }
 
@@ -690,9 +714,17 @@ export class InputSystem {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onTrigger(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onTrigger(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this.createBinding(channel, options);
-    if (callback) binding.onTrigger.add(callback);
+
+    if (callback) {
+      binding.onTrigger.add(callback);
+    }
+
     return binding;
   }
 
@@ -1254,7 +1286,13 @@ export class InputSystem {
     const lastIndex = journal.length - 1;
     const last = journal[lastIndex];
 
-    if (flag === PointerStateFlag.Move && last !== undefined && last.kind === 'pointer' && last.flag === PointerStateFlag.Move && last.pointer === pointer) {
+    if (
+      flag === PointerStateFlag.Move &&
+      last !== undefined &&
+      last.kind === 'pointer' &&
+      last.flag === PointerStateFlag.Move &&
+      last.pointer === pointer
+    ) {
       journal[lastIndex] = { kind: 'pointer', pointer, flag, x, y, closedPress: false, maxDistance: 0 };
 
       return;
@@ -1511,6 +1549,7 @@ export class InputSystem {
     for (const pad of this._gamepads) {
       if (!pad.connected) {
         pad._bind(browserGamepad, definition);
+
         return pad;
       }
     }
@@ -1540,6 +1579,7 @@ export class InputSystem {
 
     for (let i = gamepadSlots - 1; i >= 0; i--) {
       const slotPad = this._gamepads[i];
+
       if (slotPad !== undefined && slotPad.connected) {
         lastOccupiedSlot = i;
         break;
@@ -1550,6 +1590,7 @@ export class InputSystem {
 
     for (let target = 0; target < gamepadSlots; target++) {
       const targetPad = this._gamepads[target];
+
       if (targetPad === undefined || targetPad.connected) {
         continue;
       }
@@ -1578,6 +1619,7 @@ export class InputSystem {
 
     if (lastOccupiedSlot >= 0) {
       const emptiedSlot = this._gamepads[lastOccupiedSlot];
+
       if (emptiedSlot !== undefined) {
         emptiedSlot._dispatchDisconnect();
         this.onGamepadDisconnected.dispatch(emptiedSlot);
@@ -1687,6 +1729,7 @@ export class InputSystem {
               this.onPointerSwipe.dispatch(pointer, x, y);
             }
           }
+
           break;
 
         case PointerStateFlag.Cancel:

@@ -35,7 +35,10 @@ export interface GenerateChangelogResult {
 }
 
 /** Assemble the missing entries; writes the file only when `write` is set. */
-export const generateChangelog = (repoRoot: string, options: { readonly since?: string; readonly write: boolean }): GenerateChangelogResult => {
+export const generateChangelog = (
+  repoRoot: string,
+  options: { readonly since?: string; readonly write: boolean },
+): GenerateChangelogResult => {
   const since = options.since ?? latestReleaseTag(repoRoot);
   const path = resolve(repoRoot, CHANGELOG_PATH);
   const changelog = readFileSync(path, 'utf8');
@@ -60,7 +63,9 @@ if (isMain) {
   const repoRoot = resolve(fileURLToPath(new URL('../..', import.meta.url)));
   const result = generateChangelog(repoRoot, since !== undefined ? { since, write } : { write });
 
-  console.log(`release:changelog: ${result.commits} commit(s) since ${result.since}, ${result.entries} changelog entr${result.entries === 1 ? 'y' : 'ies'}.`);
+  console.log(
+    `release:changelog: ${result.commits} commit(s) since ${result.since}, ${result.entries} changelog entr${result.entries === 1 ? 'y' : 'ies'}.`,
+  );
 
   if (result.rendered.length === 0) {
     console.log('Nothing to add: every entry is already in the Unreleased section.');

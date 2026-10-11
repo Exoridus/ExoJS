@@ -1,5 +1,15 @@
 // Auto-generated from retained-container.ts - edit the .ts source, not this file.
-import { Application, Color, Container, FixedResolutionCanvasSizing, Rectangle, RetainedContainer, Scene, Sprite, Texture } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Rectangle,
+  RetainedContainer,
+  Scene,
+  Sprite,
+  Texture,
+} from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A decor field far larger than the viewport: thousands of sprites that are
 // authored ONCE and never mutated again - the exact shape the retained tier is

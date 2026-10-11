@@ -1,5 +1,16 @@
 // Auto-generated from pause-blur.ts - edit the .ts source, not this file.
-import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Keyboard, Label, Panel, Scene, SceneAvailability, Sprite } from '@codexo/exojs';
+import {
+  Application,
+  BlurFilter,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  Label,
+  Panel,
+  Scene,
+  SceneAvailability,
+  Sprite,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const PAUSE_BLUR_STRENGTH = 3;
 const PAUSE_FADE_SECONDS = 0.35;

@@ -5,12 +5,13 @@ import { useState } from 'react';
 
 import { GameScene, TitleScene } from './scenes';
 
-function Hud() {
+const Hud = () => {
   const scene = useActiveScene();
-  return <div style={{ position: 'absolute', top: 8, left: 8, color: 'white' }}>{scene?.constructor.name}</div>;
-}
 
-export function App() {
+  return <div style={{ position: 'absolute', top: 8, left: 8, color: 'white' }}>{scene?.constructor.name}</div>;
+};
+
+export const App = () => {
   const [screen, setScreen] = useState<'title' | 'game'>('title');
 
   return (
@@ -27,5 +28,5 @@ export function App() {
       </Scenes>
     </ExoCanvas>
   );
-}
+};
 // #endregion guide:end-to-end

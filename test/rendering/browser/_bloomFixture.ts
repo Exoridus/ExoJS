@@ -58,7 +58,9 @@ const flatTexture = (color: Color, size: number): Texture => {
 
   const context = source.getContext('2d');
 
-  if (context === null) throw new Error('A 2D context is required to build bloom fixtures.');
+  if (context === null) {
+    throw new Error('A 2D context is required to build bloom fixtures.');
+  }
 
   context.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
   context.fillRect(0, 0, size, size);

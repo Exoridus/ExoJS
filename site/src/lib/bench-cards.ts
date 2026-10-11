@@ -19,7 +19,16 @@
  */
 
 import type { BenchProfileDocument, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
-import { armLabel, formatLoad, isQuantitative, isWasmReferenceArm, orderArms, OUTCOME_ORDER, outcomeOf, publishedMs } from './bench-profiles';
+import {
+  armLabel,
+  formatLoad,
+  isQuantitative,
+  isWasmReferenceArm,
+  orderArms,
+  OUTCOME_ORDER,
+  outcomeOf,
+  publishedMs,
+} from './bench-profiles';
 
 /** One arm's time on one load of one scenario. */
 export interface CardArm {
@@ -233,7 +242,12 @@ const cardsOf = (sections: readonly ProfileSection[], backend?: ProfileBackendNa
   // Which arms a load leaves out is stated once for the page rather than on
   // every card that leaves one out: the rule is the same everywhere, and a
   // reader who wants the absent arm's own story has the full results.
-  return [...byScenario.entries()].map(([id, card]) => ({ id, category: card.category, loads: card.loads, ...(backend !== undefined && { backend }) }));
+  return [...byScenario.entries()].map(([id, card]) => ({
+    id,
+    category: card.category,
+    loads: card.loads,
+    ...(backend !== undefined && { backend }),
+  }));
 };
 
 /** The rendering cards of one profile on one backend, or an empty list where it measured none. */
@@ -304,7 +318,9 @@ const jsPeerArms = (load: CardLoad): readonly CardArm[] => load.arms.filter(arm 
 const worstPeerOutcomeIndex = (load: CardLoad): number | undefined => {
   const peers = jsPeerArms(load);
 
-  if (peers.length === 0) return undefined;
+  if (peers.length === 0) {
+    return undefined;
+  }
 
   return Math.max(...peers.map(arm => OUTCOME_ORDER.indexOf(arm.outcome)));
 };
@@ -341,11 +357,16 @@ export const openingSelection = (card: BenchCard): OpeningSelection => {
 
   const best = pool.reduce(
     (best, entry) => {
-      if (best === undefined) return entry;
+      if (best === undefined) {
+        return entry;
+      }
+
       // Within the leading tier every candidate already ties on the ladder, so
       // only size breaks it. Outside it, a lower index is strictly better than a
       // bigger load at a worse one - the ladder position is read before size.
-      if (leading.length === 0 && entry.index !== best.index) return entry.index < best.index ? entry : best;
+      if (leading.length === 0 && entry.index !== best.index) {
+        return entry.index < best.index ? entry : best;
+      }
 
       return entry.load.count > best.load.count ? entry : best;
     },

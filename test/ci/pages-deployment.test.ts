@@ -34,6 +34,7 @@ const jobBlock = (workflow: string, job: string) => {
   expect(start, `job '${job}' not found`).toBeGreaterThan(-1);
   const rest = workflow.slice(start + 1);
   const next = rest.search(/\n {2}[a-z][\w-]*:\n/);
+
   return next === -1 ? rest : rest.slice(0, next);
 };
 
@@ -70,7 +71,15 @@ describe('site artifact production at a release (release.yml)', () => {
 
 describe('Pages deployment (deploy-pages.yml)', () => {
   it('builds no source code of its own', () => {
-    for (const forbidden of ['pnpm install', 'pnpm build', 'pnpm site:build', 'pnpm --filter', 'pnpm/action-setup', 'actions/setup-node', 'actions/checkout']) {
+    for (const forbidden of [
+      'pnpm install',
+      'pnpm build',
+      'pnpm site:build',
+      'pnpm --filter',
+      'pnpm/action-setup',
+      'actions/setup-node',
+      'actions/checkout',
+    ]) {
       expect(deployPages, `deploy-pages.yml must not run '${forbidden}'`).not.toContain(forbidden);
     }
   });

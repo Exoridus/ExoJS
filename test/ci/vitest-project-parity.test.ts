@@ -40,6 +40,7 @@ const matchesPattern = (pattern: string, name: string): boolean => {
   const negated = pattern.startsWith('!');
   const body = negated ? pattern.slice(1) : pattern;
   const regexp = new RegExp(`^${body.split('*').map(escapeRegExp).join('.*')}$`, 'i');
+
   return negated ? !regexp.test(name) : regexp.test(name);
 };
 
@@ -64,6 +65,7 @@ describe('every vitest project is actually run', () => {
 
   it('keeps the serial measurements out of the parallel `test` script', () => {
     const selected = projectPatterns(packageJson.scripts['test']!);
+
     for (const project of ['physics-perf', 'rendering-alloc']) {
       expect(selected.some(pattern => matchesPattern(pattern, project))).toBe(false);
     }

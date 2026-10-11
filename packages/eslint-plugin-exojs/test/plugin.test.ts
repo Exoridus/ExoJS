@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { exoEnginePlugin, exoEngineRulesConfig, exoPlugin, exoRulesConfig } from '../src/index.ts';
 
-const lint = (code: string, config: object[], filename = 'file.ts'): Linter.LintMessage[] => new Linter().verify(code, config as Linter.Config[], filename);
+const lint = (code: string, config: object[], filename = 'file.ts'): Linter.LintMessage[] =>
+  new Linter().verify(code, config as Linter.Config[], filename);
 
 const ALLOCATING_HOOK = 'class Effect { getOutputBounds(i, o) { return { x: 0 }; } }';
 
@@ -76,7 +77,10 @@ describe('exoRulesConfig', () => {
 
   it('adds the migration rule in the strict tier, also at error severity', () => {
     const deprecatedApi = { Old: 'Use New instead.' };
-    const messages = lint("import { Old } from '@codexo/exojs';\nOld();", exoRulesConfig({ files: ['**/*.ts'], deprecatedApi, tier: 'strict' }));
+    const messages = lint(
+      "import { Old } from '@codexo/exojs';\nOld();",
+      exoRulesConfig({ files: ['**/*.ts'], deprecatedApi, tier: 'strict' }),
+    );
 
     expect(messages).toHaveLength(1);
     expect(messages[0]?.ruleId).toBe('exojs/no-deprecated-api');
@@ -107,7 +111,10 @@ describe('exoEngineRulesConfig', () => {
   });
 
   it('resolves alongside exoRulesConfig in one config', () => {
-    const config = [...exoRulesConfig({ files: ['**/*.ts'] }), ...exoEngineRulesConfig({ files: ['**/*.ts'], allocationFreeHooks: ['getOutputBounds'] })];
+    const config = [
+      ...exoRulesConfig({ files: ['**/*.ts'] }),
+      ...exoEngineRulesConfig({ files: ['**/*.ts'], allocationFreeHooks: ['getOutputBounds'] }),
+    ];
     const messages = lint(ALLOCATING_HOOK, config);
 
     expect(messages.map(message => message.ruleId)).toEqual(['exojs-engine/no-allocation-in-hot-hook']);

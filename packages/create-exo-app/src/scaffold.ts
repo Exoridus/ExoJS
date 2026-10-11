@@ -31,19 +31,16 @@ export const TEMPLATE_DESCRIPTIONS: Record<TemplateName, string> = {
 /** Absolute path of a template's source directory inside this package. */
 export const templateDirectory = (template: TemplateName): string => join(__dirname, '..', 'templates', template);
 
-const isInteractive = (): boolean => {
-  return process.stdin.isTTY === true;
-};
+const isInteractive = (): boolean => process.stdin.isTTY === true;
 
-const prompt = (question: string): Promise<string> => {
-  return new Promise(resolve => {
+const prompt = (question: string): Promise<string> =>
+  new Promise(resolve => {
     const rl = createInterface({ input: process.stdin, output: process.stdout });
     rl.question(question, answer => {
       rl.close();
       resolve(answer.trim());
     });
   });
-};
 
 const promptProjectName = async (): Promise<string> => {
   const answer = await prompt('Project name: ');
@@ -66,21 +63,34 @@ const promptProjectName = async (): Promise<string> => {
 const engineRange = (): string => {
   const own = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')) as { version: string };
   const match = /^(\d+)\.(\d+)\./.exec(own.version);
+
   if (!match) {
     throw new Error(`create-exo-app has an unparseable version "${own.version}"; expected <major>.<minor>.<patch>.`);
   }
+
   return `${match[1]}.${match[2]}.x`;
 };
 
 /** Rewrites every `@codexo/*` dependency in the manifest to the engine range. */
 const pinEngineDependencies = (manifest: Record<string, unknown>): void => {
   const range = engineRange();
+
   for (const bucket of ['dependencies', 'devDependencies']) {
     const deps = manifest[bucket];
-    if (typeof deps !== 'object' || deps === null) continue;
+
+    if (typeof deps !== 'object' || deps === null) {
+      continue;
+    }
+
     for (const [name, value] of Object.entries(deps as Record<string, unknown>)) {
-      if (!name.startsWith('@codexo/')) continue;
-      if (typeof value !== 'string') continue;
+      if (!name.startsWith('@codexo/')) {
+        continue;
+      }
+
+      if (typeof value !== 'string') {
+        continue;
+      }
+
       (deps as Record<string, string>)[name] = range;
     }
   }
@@ -95,16 +105,25 @@ const promptTemplate = async (): Promise<TemplateName> => {
 
   const answer = await prompt('\nEnter number or name [1]: ');
 
-  if (!answer || answer === '1') return 'minimal';
+  if (!answer || answer === '1') {
+    return 'minimal';
+  }
 
   const num = parseInt(answer, 10);
   const byNumber = Number.isNaN(num) ? undefined : TEMPLATES[num - 1];
-  if (byNumber) return byNumber;
+
+  if (byNumber) {
+    return byNumber;
+  }
 
   const matched = TEMPLATES.find(t => t === answer);
-  if (matched) return matched;
+
+  if (matched) {
+    return matched;
+  }
 
   console.error(`Unknown template: "${answer}". Using "minimal".`);
+
   return 'minimal';
 };
 
@@ -143,6 +162,7 @@ export const scaffoldApp = (options: ScaffoldOptions): string => {
 
   if (existsSync(destDir)) {
     const entries = readdirSync(destDir);
+
     if (entries.length > 0 && !force) {
       console.error(`Error: directory "${projectName}" already exists and is not empty.`);
       console.error('Use --force to overwrite.');
@@ -158,7 +178,7 @@ export const scaffoldApp = (options: ScaffoldOptions): string => {
   const pkgJson = JSON.parse(pkgContent) as Record<string, unknown>;
   pkgJson.name = basename(projectName);
   pinEngineDependencies(pkgJson);
-  writeFileSync(pkgPath, JSON.stringify(pkgJson, null, 2) + '\n');
+  writeFileSync(pkgPath, `${JSON.stringify(pkgJson, null, 2)}\n`);
 
   return destDir;
 };
@@ -177,6 +197,7 @@ export const runScaffolder = async (argv: readonly string[]): Promise<void> => {
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? '';
+
     if (arg === '--template' || arg === '-t') {
       templateArg = argv[++i] ?? null;
     } else if (arg === '--force' || arg === '-f') {
@@ -192,16 +213,19 @@ export const runScaffolder = async (argv: readonly string[]): Promise<void> => {
       console.error(`Usage: create-exo-app <project-name> [--template ${TEMPLATES.join('|')}]`);
       process.exit(1);
     }
+
     projectName = await promptProjectName();
   }
 
   let template: TemplateName;
+
   if (templateArg !== null) {
     if (!(TEMPLATES as readonly string[]).includes(templateArg)) {
       console.error(`Error: unknown template "${templateArg}".`);
       console.error(`Valid templates: ${TEMPLATES.join(', ')}`);
       process.exit(1);
     }
+
     template = templateArg as TemplateName;
   } else if (isInteractive()) {
     template = await promptTemplate();

@@ -12,16 +12,39 @@ import { Signal } from '#core/Signal';
 import { type Asset, AssetImpl, type ResourceAsset, type ValueAsset } from './Asset';
 import type { AssetConstructor } from './AssetConstructor';
 import { AssetDecoder } from './AssetDecoder';
-import type { AssetDefinitions, AssetInput, AssetTypeName, CatalogEntry, InferLoadedEntry, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
+import type {
+  AssetDefinitions,
+  AssetInput,
+  AssetTypeName,
+  CatalogEntry,
+  InferLoadedEntry,
+  KindByPath,
+  LeafForPath,
+  ResourceForKind,
+} from './AssetDefinitions';
 import { _readMeta, type CatalogResourceLeaf, type CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
 import type { AssetReferenceLookup } from './AssetRequestLog';
-import { type AssetInspection, AssetResidency, type AssetResidencySignals, type AssetStats, type ClaimParticipation } from './AssetResidency';
+import {
+  type AssetInspection,
+  AssetResidency,
+  type AssetResidencySignals,
+  type AssetStats,
+  type ClaimParticipation,
+} from './AssetResidency';
 import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import type { AnyAssetType } from './AssetType';
 import { AssetTypeRegistry } from './AssetTypeRegistry';
 import { AssetVariantSet } from './AssetVariantSet';
-import { type AssetLocator, type CanonicalAsset, canonicalizeSource, type ResourceKey, resourceKey, type SourceKey, sourceKey } from './canonicalKey';
+import {
+  type AssetLocator,
+  type CanonicalAsset,
+  canonicalizeSource,
+  type ResourceKey,
+  resourceKey,
+  type SourceKey,
+  sourceKey,
+} from './canonicalKey';
 import { createLeaf } from './catalogLeaf';
 import { LoadBatch } from './LoadBatch';
 import { LoaderScope, type LoaderScopeOptions } from './LoaderScope';
@@ -260,7 +283,11 @@ export class Loader {
     const acquired = sourceKey(locator, this._typeRegistry._sourceDiscriminator(type, selected, options));
 
     return {
-      key: resourceKey(this._typeRegistry._typeIdentity(type), acquired, this._typeRegistry._identityDiscriminator(type, selected, options)),
+      key: resourceKey(
+        this._typeRegistry._typeIdentity(type),
+        acquired,
+        this._typeRegistry._identityDiscriminator(type, selected, options),
+      ),
       sourceKey: acquired,
       locator,
       type,
@@ -638,7 +665,9 @@ export class Loader {
     const request = this._decoder._containerRequest(url);
     const reader = await ContainerReader.open(request.url, { store: options.store, init: request.init });
 
-    if (pack !== undefined) verifyPackLength(pack, reader.byteLength);
+    if (pack !== undefined) {
+      verifyPackLength(pack, reader.byteLength);
+    }
 
     return reader;
   }
@@ -888,7 +917,8 @@ export class Loader {
       const { type, source: path, ctor } = this._resolveBarePath(arg0);
 
       // The font type requires a family option - infer it from the filename when not provided
-      const options: unknown = type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
+      const options: unknown =
+        type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
       // Canonicalized from the caller's logical path, not the variant selected for
       // it: the selection happens again inside, and the request keeps the name a
@@ -903,17 +933,20 @@ export class Loader {
           this._residency._settleParticipation(participation);
           notifyFn?.(true);
           this._onFgBatchSettled(claimer, path, true);
+
           return v;
         },
         (error: unknown) => {
           this._residency._settleParticipation(participation);
           notifyFn?.(false);
           this._onFgBatchSettled(claimer, path, false, this._settleError(error));
+
           throw error;
         },
       );
       const queue = new LoadingQueue(promise, 1, () => this._cancelParticipations([participation]));
       notifyFn = queue._notifyItem.bind(queue);
+
       return queue;
     }
 
@@ -1101,17 +1134,22 @@ export class Loader {
     // (an AssetImpl carries no stamped meta, so the guard above misses it).
     if (input instanceof AssetImpl) {
       if (options !== undefined) {
-        throw new Error('Loader: get(Asset.type(...), options) is not supported. Put per-asset options in Asset.type(type, path, options).');
+        throw new Error(
+          'Loader: get(Asset.type(...), options) is not supported. Put per-asset options in Asset.type(type, path, options).',
+        );
       }
 
       const { type, source: src, ...rest } = input._config;
       const opts = Object.keys(rest).length > 0 ? rest : undefined;
 
       let leaf: object;
+
       try {
         leaf = createLeaf(input._assetType?.leaf ?? this._typeRegistry.leafFor(type), type, src, opts);
       } catch {
-        throw new Error(`Loader: get() hands out a catalog leaf, and the "${type}" type has none - use load(Asset.type('${type}', ...)) instead.`);
+        throw new Error(
+          `Loader: get() hands out a catalog leaf, and the "${type}" type has none - use load(Asset.type('${type}', ...)) instead.`,
+        );
       }
 
       this._adopt(leaf, claimer);
@@ -1157,7 +1195,9 @@ export class Loader {
       return ref;
     }
 
-    throw new Error(`Loader: type "${type}" inferred from "${path}" hands out no catalog leaf - ` + `use load(Asset.type('${type}', '${path}')) instead.`);
+    throw new Error(
+      `Loader: type "${type}" inferred from "${path}" hands out no catalog leaf - ` + `use load(Asset.type('${type}', '${path}')) instead.`,
+    );
   }
 
   /**
@@ -1204,7 +1244,9 @@ export class Loader {
       const resolved = this._typeRegistry.resolveTypeName(type);
 
       if (resolved === undefined) {
-        throw new Error(`Loader: peek(Asset.type('${String(type)}', ...)) - no asset type "${String(type)}" is installed on this application.`);
+        throw new Error(
+          `Loader: peek(Asset.type('${String(type)}', ...)) - no asset type "${String(type)}" is installed on this application.`,
+        );
       }
 
       ctor = resolved;
@@ -1275,6 +1317,7 @@ export class Loader {
 
     if (key !== undefined) {
       this._release(key, claimer);
+
       return;
     }
 
@@ -1549,6 +1592,7 @@ export class Loader {
           (error: unknown) => {
             notifyFn?.(false);
             this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
+
             throw error;
           },
         );
@@ -1572,6 +1616,7 @@ export class Loader {
           this._residency._settleParticipation(participation);
           notifyFn?.(false);
           this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
+
           throw error;
         },
       );
@@ -1601,6 +1646,7 @@ export class Loader {
       }
     } catch (error) {
       this._cancelParticipations(participations);
+
       throw error;
     }
 
@@ -1635,15 +1681,22 @@ export class Loader {
 
       return loaded.then(
         value => {
-          if (participation !== undefined) this._residency._settleParticipation(participation);
+          if (participation !== undefined) {
+            this._residency._settleParticipation(participation);
+          }
+
           results.set(alias, value);
           notifyFn?.(true);
           this._onFgBatchSettled(claimer, alias, true);
         },
         (error: unknown) => {
-          if (participation !== undefined) this._residency._settleParticipation(participation);
+          if (participation !== undefined) {
+            this._residency._settleParticipation(participation);
+          }
+
           notifyFn?.(false);
           this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
+
           throw error;
         },
       );

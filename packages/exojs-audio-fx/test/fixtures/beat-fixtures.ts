@@ -30,10 +30,12 @@ export interface BeatFixture {
 
 const xorshift32 = (seed: number): (() => number) => {
   let s = seed >>> 0 || 1; // state must never be 0
+
   return () => {
     s ^= s << 13;
     s ^= s >> 17;
     s ^= s << 5;
+
     return (s >>> 0) / 0x100000000;
   };
 };
@@ -51,9 +53,11 @@ const makeNoiseBurst = (rand: () => number): Float32Array => {
   const len = Math.round(CLICK_DURATION_SEC * SAMPLE_RATE);
   const buf = new Float32Array(len);
   const decayConst = 500; // 1/e time in samples
+
   for (let i = 0; i < len; i++) {
     buf[i] = (rand() * 2 - 1) * Math.exp(-i / decayConst);
   }
+
   return buf;
 };
 
@@ -63,7 +67,8 @@ const makeNoiseBurst = (rand: () => number): Float32Array => {
  */
 const makeImpulse = (): Float32Array => {
   const buf = new Float32Array(1);
-  buf[0] = 1.0;
+  buf[0] = 1;
+
   return buf;
 };
 
@@ -103,11 +108,13 @@ const makeKickDrum = (_rand: () => number): Float32Array => {
   const pitchDecay = 0.03 * SAMPLE_RATE; // 30 ms pitch drop (1/e time constant)
   const ampDecay = 0.13 * SAMPLE_RATE; // 130 ms amplitude 1/e decay
   let phase = 0;
+
   for (let i = 0; i < len; i++) {
     const freq = 80 + (180 - 80) * Math.exp(-i / pitchDecay); // 180 → 80 Hz
     buf[i] = Math.cos(2 * Math.PI * phase) * Math.exp(-i / ampDecay);
     phase += freq / SAMPLE_RATE;
   }
+
   return buf;
 };
 
@@ -123,6 +130,7 @@ const makeSnareDrum = (rand: () => number): Float32Array => {
   const noiseDecay = 0.08 * SAMPLE_RATE; // 80 ms noise (1/e)
   const toneDecay = 0.03 * SAMPLE_RATE; // 30 ms tone (1/e)
   let tonePhase = 0;
+
   for (let i = 0; i < len; i++) {
     const noise = rand() * 2 - 1;
     const noiseAmp = 0.65 * Math.exp(-i / noiseDecay);
@@ -130,6 +138,7 @@ const makeSnareDrum = (rand: () => number): Float32Array => {
     buf[i] = (noise * noiseAmp + Math.cos(2 * Math.PI * tonePhase) * toneAmp) * 0.5;
     tonePhase += 220 / SAMPLE_RATE; // 220 Hz snare body resonance
   }
+
   return buf;
 };
 
@@ -146,12 +155,14 @@ const makeHiHatDrum = (rand: () => number): Float32Array => {
   const buf = new Float32Array(len);
   const decaySamples = 0.012 * SAMPLE_RATE; // 12 ms 1/e decay
   let prevX = 0;
+
   for (let i = 0; i < len; i++) {
     const x = rand() * 2 - 1;
     const hp = x - prevX; // first-difference: zero at DC, gain = 2 at Nyquist
     prevX = x;
     buf[i] = hp * Math.exp(-i / decaySamples) * 0.08; // 8 % of kick peak
   }
+
   return buf;
 };
 
@@ -165,11 +176,13 @@ const makeSoftSwell = (rand: () => number): Float32Array => {
   const attackLen = Math.round(SWELL_ATTACK_SEC * SAMPLE_RATE);
   const decayConst = 0.12 * SAMPLE_RATE; // 120 ms 1/e decay after the attack peak
   const buf = new Float32Array(swellLen);
+
   for (let i = 0; i < swellLen; i++) {
     const noise = rand() * 2 - 1;
     const env = i < attackLen ? i / attackLen : Math.exp(-(i - attackLen) / decayConst);
     buf[i] = noise * env;
   }
+
   return buf;
 };
 
@@ -177,27 +190,45 @@ const makeSoftSwell = (rand: () => number): Float32Array => {
 
 const peakNormalize = (buf: Float32Array): Float32Array => {
   let peak = 0;
+
   for (const v of buf) {
     const abs = Math.abs(v);
-    if (abs > peak) peak = abs;
+
+    if (abs > peak) {
+      peak = abs;
+    }
   }
-  if (peak === 0) return new Float32Array(buf.length);
+
+  if (peak === 0) {
+    return new Float32Array(buf.length);
+  }
+
   const gain = 0.99 / peak;
   const out = new Float32Array(buf.length);
-  for (let i = 0; i < buf.length; i++) out[i] = buf[i] * gain;
+
+  for (let i = 0; i < buf.length; i++) {
+    out[i] = buf[i] * gain;
+  }
+
   return out;
 };
 
 const buildBuffer = (onsetTimesSec: number[], clickShape: Float32Array, durationSec: number): Float32Array => {
   const totalSamples = Math.ceil(durationSec * SAMPLE_RATE);
   const buf = new Float32Array(totalSamples);
+
   for (const t of onsetTimesSec) {
     const startIdx = Math.round(t * SAMPLE_RATE);
+
     for (let i = 0; i < clickShape.length; i++) {
       const idx = startIdx + i;
-      if (idx < totalSamples) buf[idx] += clickShape[i];
+
+      if (idx < totalSamples) {
+        buf[idx] += clickShape[i];
+      }
     }
   }
+
   return peakNormalize(buf);
 };
 
@@ -222,9 +253,13 @@ const buildKitBuffer = (
 
   const write = (timeSec: number, shape: Float32Array): void => {
     const start = Math.round(timeSec * SAMPLE_RATE);
+
     for (let i = 0; i < shape.length; i++) {
       const idx = start + i;
-      if (idx < totalSamples) buf[idx] += shape[i];
+
+      if (idx < totalSamples) {
+        buf[idx] += shape[i];
+      }
     }
   };
 
@@ -240,9 +275,13 @@ const buildKitBuffer = (
 
     // 8th-note hi-hat: midpoint to the next beat.
     // For the final beat, estimate using the last known inter-beat interval.
-    const nextTime = i + 1 < beatTimesSec.length ? beatTimesSec[i + 1] : beatTimesSec[i] + (i > 0 ? beatTimesSec[i] - beatTimesSec[i - 1] : 60 / 180);
+    const nextTime =
+      i + 1 < beatTimesSec.length ? beatTimesSec[i + 1] : beatTimesSec[i] + (i > 0 ? beatTimesSec[i] - beatTimesSec[i - 1] : 60 / 180);
     const hatTime = (beatTime + nextTime) / 2;
-    if (hatTime < durationSec) write(hatTime, hatShape);
+
+    if (hatTime < durationSec) {
+      write(hatTime, hatShape);
+    }
   }
 
   return peakNormalize(buf);
@@ -262,6 +301,7 @@ export const clicktrack = (bpm: number, durationSec = DEFAULT_DURATION_SEC, useI
   const ibi = 60 / bpm;
   const count = Math.floor((durationSec * bpm) / 60);
   const beatTimesSec = Array.from({ length: count }, (_, i) => i * ibi);
+
   return {
     samples: buildBuffer(beatTimesSec, shape, durationSec),
     beatTimesSec,
@@ -282,6 +322,7 @@ export const halfTime = (baseBpm = 128, durationSec = DEFAULT_DURATION_SEC): Bea
   const totalPulses = Math.floor((durationSec * baseBpm) / 60);
   const beatTimesSec = Array.from({ length: Math.floor(totalPulses / 2) }, (_, i) => i * 2 * ibi);
   const trueBpm = baseBpm / 2;
+
   return {
     samples: buildBuffer(beatTimesSec, shape, durationSec),
     beatTimesSec,
@@ -303,6 +344,7 @@ export const doubleTime = (baseBpm = 64, durationSec = DEFAULT_DURATION_SEC): Be
   const ibi = 60 / trueBpm;
   const count = Math.floor((durationSec * trueBpm) / 60);
   const beatTimesSec = Array.from({ length: count }, (_, i) => i * ibi);
+
   return {
     samples: buildBuffer(beatTimesSec, shape, durationSec),
     beatTimesSec,
@@ -325,6 +367,7 @@ export const tempoRamp = (fromBpm = 120, toBpm = 135, durationSec = 20): BeatFix
   // Integrate instantaneous tempo to get beat positions
   const beatTimesSec: number[] = [];
   let t = 0;
+
   while (t < durationSec) {
     beatTimesSec.push(t);
     t += 60 / instBpm(t);
@@ -357,6 +400,7 @@ export const breakDrop = (bpm = 128, durationSec = 24): BeatFixture => {
   for (let t = 0; t < grooveEnd - 1e-9; t += ibi) {
     beatTimesSec.push(t);
   }
+
   // Drop section (silence during break - no GT beats)
   for (let t = breakEnd; t < durationSec - 1e-9; t += ibi) {
     beatTimesSec.push(t);
@@ -384,10 +428,15 @@ export const swing = (bpm = 120, swingPct = 0.67, durationSec = DEFAULT_DURATION
 
   // All onset times: main beats + swung 8th notes
   const allOnsets: number[] = [...beatTimesSec];
+
   for (let i = 0; i < count; i++) {
     const swungTime = i * ibi + swingPct * ibi;
-    if (swungTime < durationSec) allOnsets.push(swungTime);
+
+    if (swungTime < durationSec) {
+      allOnsets.push(swungTime);
+    }
   }
+
   allOnsets.sort((a, b) => a - b);
 
   return {
@@ -414,6 +463,7 @@ export const grooveOffset = (bpm = 120, jitterMs = 10, durationSec = DEFAULT_DUR
   const beatTimesSec = Array.from({ length: count }, (_, i) => {
     const grid = i * ibi;
     const jitter = (jitterRand() * 2 - 1) * jitterSec;
+
     return Math.max(0, grid + jitter);
   });
 
@@ -470,12 +520,14 @@ export const tempoDrift = (fromBpm = 150, toBpm = 128, durationSec = 30): BeatFi
     const x = Math.min(1, Math.max(0, t / durationSec));
     // Triangle wave: x ∈ [0, 0.5] → [0, 1]; x ∈ [0.5, 1] → [1, 0]
     const tri = x <= 0.5 ? x * 2 : (1 - x) * 2;
+
     return fromBpm + (toBpm - fromBpm) * tri;
   };
 
   // Integrate instantaneous tempo to produce beat positions
   const beatTimesSec: number[] = [];
   let t = 0;
+
   while (t < durationSec) {
     beatTimesSec.push(t);
     t += 60 / instBpm(t);
@@ -503,6 +555,7 @@ export const djMixDrift = (baseBpm = 180, driftBpm = 5, durationSec = 30): BeatF
   // Integrate instantaneous tempo to produce beat positions
   const beatTimesSec: number[] = [];
   let t = 0;
+
   while (t < durationSec) {
     beatTimesSec.push(t);
     t += 60 / instBpm(t);
@@ -552,27 +605,24 @@ export const softOnset = (bpm = 90, durationSec = DEFAULT_DURATION_SEC): BeatFix
 export const CLICKTRACK_BPMS = [50, 60, 90, 120, 128, 140, 180, 220, 250, 300] as const;
 export type ClicktrackBpm = (typeof CLICKTRACK_BPMS)[number];
 
-export const allClicktracks = (durationSec = DEFAULT_DURATION_SEC): BeatFixture[] => {
-  return CLICKTRACK_BPMS.map(bpm => clicktrack(bpm, durationSec));
-};
+export const allClicktracks = (durationSec = DEFAULT_DURATION_SEC): BeatFixture[] =>
+  CLICKTRACK_BPMS.map(bpm => clicktrack(bpm, durationSec));
 
 /** Complete fixture suite for the Stage-1 + Stage-2 testbench. */
-export const allFixtures = (durationSec = DEFAULT_DURATION_SEC): BeatFixture[] => {
-  return [
-    ...allClicktracks(durationSec),
-    halfTime(128, durationSec),
-    doubleTime(64, durationSec),
-    tempoRamp(120, 135, Math.max(durationSec, 20)),
-    breakDrop(128, Math.max(durationSec, 24)),
-    swing(120, 0.67, durationSec),
-    grooveOffset(120, 10, durationSec),
-    // Stage-2 fixtures
-    djMix(180, Math.max(durationSec, 30)),
-    tempoDrift(150, 128, Math.max(durationSec, 30)),
-    djMixDrift(180, 5, Math.max(durationSec, 30)),
-    softOnset(90, durationSec),
-  ];
-};
+export const allFixtures = (durationSec = DEFAULT_DURATION_SEC): BeatFixture[] => [
+  ...allClicktracks(durationSec),
+  halfTime(128, durationSec),
+  doubleTime(64, durationSec),
+  tempoRamp(120, 135, Math.max(durationSec, 20)),
+  breakDrop(128, Math.max(durationSec, 24)),
+  swing(120, 0.67, durationSec),
+  grooveOffset(120, 10, durationSec),
+  // Stage-2 fixtures
+  djMix(180, Math.max(durationSec, 30)),
+  tempoDrift(150, 128, Math.max(durationSec, 30)),
+  djMixDrift(180, 5, Math.max(durationSec, 30)),
+  softOnset(90, durationSec),
+];
 
 /** Fixed adversarial signals; beat annotations exclude distractors and silent gaps. */
 export const adversarialFixtures = (): BeatFixture[] => {
@@ -595,8 +645,10 @@ export const adversarialFixtures = (): BeatFixture[] => {
   const distractors = clicktrack(120, durationSec);
   distractors.label = 'offbeat-distractors';
   const burst = makeNoiseBurst(xorshift32(0x4d495231));
+
   for (const time of distractors.beatTimesSec) {
     const offset = Math.round((time + 0.25) * SAMPLE_RATE);
+
     for (let i = 0; i < burst.length && offset + i < distractors.samples.length; i++) {
       distractors.samples[offset + i] += burst[i] * 0.65;
     }
@@ -605,12 +657,14 @@ export const adversarialFixtures = (): BeatFixture[] => {
   const tone = new Float32Array(durationSec * SAMPLE_RATE);
   const noise = new Float32Array(tone.length);
   const random = xorshift32(0x4d495232);
+
   for (let i = 0; i < tone.length; i++) {
     const time = i / SAMPLE_RATE;
     const fade = Math.min(1, time / 0.2, (durationSec - time) / 0.2);
     tone[i] = Math.sin(2 * Math.PI * 440 * time) * 0.2 * fade;
     noise[i] = (random() * 2 - 1) * 0.1 * fade;
   }
+
   return [
     delayed,
     quiet,

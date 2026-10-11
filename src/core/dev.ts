@@ -58,6 +58,7 @@ export const assertDefined = <T>(value: T | null | undefined, message?: string):
   if (__DEV__ && (value === null || value === undefined)) {
     throw new Error(`[ExoJS] ${message ?? 'expected a defined value'}`);
   }
+
   return value as T;
 };
 

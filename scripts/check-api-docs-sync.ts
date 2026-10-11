@@ -9,8 +9,8 @@ const repoRoot = path.resolve(__dirname, '..');
 const apiDir = path.resolve(repoRoot, 'site', 'src', 'content', 'api');
 const tmpDir = path.resolve(repoRoot, '.workspace', 'tmp-api-check');
 
-const green = (s: string): string => `\x1b[32m${s}\x1b[0m`;
-const red = (s: string): string => `\x1b[31m${s}\x1b[0m`;
+const green = (s: string): string => `\x1B[32m${s}\x1B[0m`;
+const red = (s: string): string => `\x1B[31m${s}\x1B[0m`;
 
 const run = (cmd: string, cwd: string): void => {
   execSync(cmd, { cwd, stdio: 'pipe' });
@@ -18,9 +18,11 @@ const run = (cmd: string, cwd: string): void => {
 
 const copyDirContents = (src: string, dst: string): void => {
   fs.mkdirSync(dst, { recursive: true });
+
   for (const entry of fs.readdirSync(src)) {
     const srcPath = path.join(src, entry);
     const dstPath = path.join(dst, entry);
+
     if (fs.statSync(srcPath).isFile()) {
       fs.copyFileSync(srcPath, dstPath);
     }
@@ -29,12 +31,17 @@ const copyDirContents = (src: string, dst: string): void => {
 
 const collectFiles = (dir: string): string[] => {
   const out: string[] = [];
-  if (!fs.existsSync(dir)) return out;
+
+  if (!fs.existsSync(dir)) {
+    return out;
+  }
+
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (entry.isFile() && entry.name.endsWith('.json')) {
       out.push(entry.name);
     }
   }
+
   return out.sort();
 };
 
@@ -53,6 +60,7 @@ const compareDirectories = (currentDir: string, generatedDir: string): boolean =
     diffs.push(`  + ${name}`);
     diffCount += 1;
   }
+
   for (const name of removed) {
     diffs.push(`  - ${name}`);
     diffCount += 1;
@@ -61,6 +69,7 @@ const compareDirectories = (currentDir: string, generatedDir: string): boolean =
   for (const name of common) {
     const aContent = fs.readFileSync(path.join(currentDir, name), 'utf8');
     const bContent = fs.readFileSync(path.join(generatedDir, name), 'utf8');
+
     if (aContent !== bContent) {
       diffs.push(`  ~ ${name}`);
       diffCount += 1;
@@ -69,8 +78,13 @@ const compareDirectories = (currentDir: string, generatedDir: string): boolean =
 
   if (diffCount > 0) {
     console.log(red(`API docs are out of sync — ${diffCount} file(s) differ:`));
-    for (const d of diffs) console.log(d);
+
+    for (const d of diffs) {
+      console.log(d);
+    }
+
     console.log(red('\nRun `pnpm docs:api:generate` to regenerate.'));
+
     return false;
   }
 
@@ -83,21 +97,25 @@ const main = (): void => {
   // 1. Backup current API directory
   const backupDir = path.resolve(tmpDir, 'backup');
   fs.rmSync(tmpDir, { recursive: true, force: true });
+
   if (fs.existsSync(apiDir)) {
     copyDirContents(apiDir, backupDir);
   }
 
   // 2. Regenerate API docs (writes to the real apiDir)
   console.log('Regenerating API docs...');
+
   try {
     run('pnpm --filter @codexo/exojs-examples build:api', repoRoot);
   } catch {
     console.log(red('API doc generation failed. Check TypeDoc errors above.'));
+
     // Restore backup before exiting
     if (fs.existsSync(backupDir)) {
       fs.rmSync(apiDir, { recursive: true, force: true });
       copyDirContents(backupDir, apiDir);
     }
+
     fs.rmSync(tmpDir, { recursive: true, force: true });
     process.exit(1);
   }

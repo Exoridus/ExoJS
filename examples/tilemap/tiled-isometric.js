@@ -31,11 +31,17 @@ class IsometricScene extends Scene {
     outlines.fillColor = new Color(72, 226, 218, 0.07);
     for (const object of gameplay.objects) {
       const display = gameplay.getDisplayObject(object);
-      if (display.kind === 'polygon') outlines.drawPolygon(display.points.flatMap(point => [display.x + point.x, display.y + point.y]));
+      if (display.kind === 'polygon') {
+        outlines.drawPolygon(display.points.flatMap(point => [display.x + point.x, display.y + point.y]));
+      }
     }
     const spawn = gameplay.objects.find(object => object.name === 'Spawn');
     this.body = this.world.add(
-      new PhysicsBody({ position: { x: spawn.x, y: spawn.y }, fixedRotation: true, colliders: [{ shape: new CircleShape(12), friction: 0 }] }),
+      new PhysicsBody({
+        position: { x: spawn.x, y: spawn.y },
+        fixedRotation: true,
+        colliders: [{ shape: new CircleShape(12), friction: 0 }],
+      }),
     );
     this.actor.fillColor = new Color(255, 211, 89);
     this.actor.lineColor = new Color(56, 43, 29);
@@ -70,7 +76,9 @@ class IsometricScene extends Scene {
     const x = (pointer.x - origin.x) / scale;
     const y = (pointer.y - origin.y) / scale;
     const { tx, ty } = this.map.pixelToTile(x, y);
-    if (tx < 0 || ty < 0 || tx >= 10 || ty >= 10) return;
+    if (tx < 0 || ty < 0 || tx >= 10 || ty >= 10) {
+      return;
+    }
     const projection = this.map.projection;
     this.target = { x: (tx + 0.5) * projection.logicalTileWidth, y: (ty + 0.5) * projection.logicalTileHeight };
     this.selection.clear();

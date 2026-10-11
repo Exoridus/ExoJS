@@ -56,7 +56,16 @@ const EXPECTED = {
   // default: the frame no longer runs the player's Phase-1 transform pre-pass
   // over the 1000 rows, only the root's own matrix resolves. If this climbs back
   // toward 2001, the root's instruction tier stopped engaging on a static frame.
-  staticPlain: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  staticPlain: {
+    collect: 1,
+    inView: 1,
+    globalTransform: 2,
+    materialKey: 0,
+    submittedNodes: 1000,
+    culledNodes: 0,
+    drawCalls: 1,
+    batches: 1,
+  },
 
   // Plain Container with the camera panning one pixel every frame. Re-pinned
   // from a full re-collect (collect 1001 / inView 1001 / gt 6002 / mk 1000) to
@@ -175,7 +184,16 @@ const EXPECTED = {
   // rows - only the root's own matrix and the group boundary compose. If this
   // climbs back toward 1002, the instruction tier stopped engaging and the
   // splice regressed to per-node entry replay.
-  panRetained: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  panRetained: {
+    collect: 1,
+    inView: 1,
+    globalTransform: 2,
+    materialKey: 0,
+    submittedNodes: 1000,
+    culledNodes: 0,
+    drawCalls: 1,
+    batches: 1,
+  },
 
   // Plain Container, 10 of the 1000 sprites moved every frame. A transform-only
   // move no longer throws the frame away: the moved rows are patched in place and
@@ -188,7 +206,16 @@ const EXPECTED = {
   // cascade resolves a few ancestors - O(k), not O(n). If `collect` climbs back
   // toward 1001, the row patch stopped engaging and every moving scene regressed
   // to a full rebuild.
-  mutate10: { collect: 1, inView: 1, globalTransform: 2082, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  mutate10: {
+    collect: 1,
+    inView: 1,
+    globalTransform: 2082,
+    materialKey: 0,
+    submittedNodes: 1000,
+    culledNodes: 0,
+    drawCalls: 1,
+    batches: 1,
+  },
 } as const;
 
 const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
@@ -356,8 +383,10 @@ describe('CPU collect-path shape gate', () => {
       const root = new Container();
       const sprites = populate(root, SPRITE_COUNT);
       let frame = 0;
+
       const mutate = (): void => {
         frame++;
+
         // Toggle 10 sprites between two positions so they are dirty every frame.
         for (let i = 0; i < 10; i++) {
           sprites[i]!.setPosition((i * 137) % 1216, ((i * 251) % 656) + (frame % 2));
@@ -370,7 +399,9 @@ describe('CPU collect-path shape gate', () => {
       // path stopped engaging.
       expectCounters(measureFrameCounters(harness, root, { beforeFrame: mutate }), EXPECTED.mutate10);
 
-      for (const sprite of sprites) sprite.destroy();
+      for (const sprite of sprites) {
+        sprite.destroy();
+      }
     });
   });
 });

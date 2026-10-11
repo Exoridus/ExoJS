@@ -53,7 +53,9 @@ export class SceneCoroutines implements Destroyable {
     let count = 0;
 
     for (const coroutine of this._coroutines.keys()) {
-      if (!coroutine.settled) count++;
+      if (!coroutine.settled) {
+        count++;
+      }
     }
 
     return count;

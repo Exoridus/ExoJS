@@ -11,7 +11,15 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaOccluder, type Lighting, type LightingDebugView, LightmapLighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
+import {
+  AlphaOccluder,
+  type Lighting,
+  type LightingDebugView,
+  LightmapLighting,
+  PointLight,
+  PolygonOccluder,
+  RadianceLighting,
+} from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
@@ -51,10 +59,13 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
+
   if (context === null) {
     throw new Error('2D canvas context unavailable.');
   }
+
   paint(context);
+
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
 
@@ -121,7 +132,7 @@ const bouncePanel: Wall = { x: 452, y: 400, width: 26, height: 230 };
 const bounceApron: Wall = { x: 360, y: 400, width: 150, height: 250 };
 
 /** A wall's own box, as the four corners an occluder takes. */
-const outline = (wall: Wall): readonly { x: number; y: number }[] => {
+const outline = (wall: Wall): ReadonlyArray<{ x: number; y: number }> => {
   const halfWidth = wall.width / 2;
   const halfHeight = wall.height / 2;
 

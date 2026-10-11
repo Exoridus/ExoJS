@@ -90,7 +90,13 @@ describe('a target an earlier pass sampled (WebGL2)', () => {
     shown.filters = [show];
 
     passes
-      .addPass(new CallbackRenderPass(pass => pass.render(square, { view: context.view }), { target, clear: Color.transparentBlack, label: 'test:into' }))
+      .addPass(
+        new CallbackRenderPass(pass => pass.render(square, { view: context.view }), {
+          target,
+          clear: Color.transparentBlack,
+          label: 'test:into',
+        }),
+      )
       .addPass(new CallbackRenderPass(pass => pass.render(shown, { view: context.view }), { label: 'test:show' }));
 
     const frame = async (): Promise<readonly [number, number]> => {

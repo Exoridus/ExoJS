@@ -54,7 +54,7 @@ export interface ExoCanvasProps extends HTMLAttributes<HTMLDivElement> {
  * </ExoCanvas>
  * ```
  */
-export function ExoCanvas({ options, onReady, onError, canvasProps, children, style, ...divProps }: ExoCanvasProps): ReactElement {
+export const ExoCanvas = ({ options, onReady, onError, canvasProps, children, style, ...divProps }: ExoCanvasProps): ReactElement => {
   const { app, canvasRef } = useExoApplication(options, onReady, onError);
 
   const { style: canvasStyle, ...restCanvasProps } = canvasProps ?? {};
@@ -69,4 +69,4 @@ export function ExoCanvas({ options, onReady, onError, canvasProps, children, st
       </div>
     </ExoContext.Provider>
   );
-}
+};

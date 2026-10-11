@@ -8,9 +8,7 @@ import { VocoderEffect } from '../../src/effects/VocoderEffect';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeModulatorBus = (): AudioBus => {
-  return new AudioBus('modulator-test');
-};
+const makeModulatorBus = (): AudioBus => new AudioBus('modulator-test');
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -55,7 +53,7 @@ describe('VocoderEffect', () => {
     it('defaults wet to 1.0', () => {
       const modulator = makeModulatorBus();
       const filter = new VocoderEffect({ modulator });
-      expect(filter.wet).toBe(1.0);
+      expect(filter.wet).toBe(1);
       filter.destroy();
     });
 
@@ -115,8 +113,13 @@ describe('VocoderEffect', () => {
     it('after await filter.ready: workletNode has 2 inputs (carrier + modulator) and a stereo output', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -143,8 +146,13 @@ describe('VocoderEffect', () => {
     it('processorOptions numBands is forwarded to AudioWorkletNode', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -158,8 +166,13 @@ describe('VocoderEffect', () => {
     it('processorOptions minHz and maxHz are forwarded', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -174,8 +187,13 @@ describe('VocoderEffect', () => {
     it('processorOptions bandQ is forwarded', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -214,6 +232,7 @@ describe('VocoderEffect', () => {
       let callCount = 0;
       const getOutputNodeSpy = vi.spyOn(modulator, 'getOutputNode').mockImplementation(() => {
         callCount++;
+
         return callCount === 1 ? null : fakeOutputNode;
       });
       const onceSetupSpy = vi.spyOn(modulator, 'onceSetup');

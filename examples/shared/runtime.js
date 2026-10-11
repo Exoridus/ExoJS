@@ -1,12 +1,10 @@
 // Auto-generated from runtime.ts - edit the .ts source, not this file.
-export function getExampleMeta() {
+export const getExampleMeta = () => {
   const meta = globalThis.__EXAMPLE_META__;
   return meta && typeof meta === 'object' ? meta : {};
-}
-export function supportsWebGpu() {
-  return typeof navigator !== 'undefined' && 'gpu' in navigator;
-}
-export function createInfoElement(maxWidth = '430px') {
+};
+export const supportsWebGpu = () => typeof navigator !== 'undefined' && 'gpu' in navigator;
+export const createInfoElement = (maxWidth = '430px') => {
   const element = document.createElement('aside');
   Object.assign(element.style, {
     position: 'fixed',
@@ -27,8 +25,8 @@ export function createInfoElement(maxWidth = '430px') {
     whiteSpace: 'normal',
   });
   return element;
-}
-export function showInfo(element, title, detail, isError = false) {
+};
+export const showInfo = (element, title, detail, isError = false) => {
   if (!element.isConnected) {
     document.body.append(element);
   }
@@ -43,10 +41,8 @@ export function showInfo(element, title, detail, isError = false) {
     color: isError ? '#ffb4b4' : '#ffffff',
   });
   element.replaceChildren(titleElement, detailElement);
-}
-export function formatErrorMessage(error) {
-  return error instanceof Error ? error.message : String(error);
-}
+};
+export const formatErrorMessage = error => (error instanceof Error ? error.message : String(error));
 // ---------------------------------------------------------------------------
 // Example helper kit
 //
@@ -64,7 +60,7 @@ const CORNER_STYLES = {
   'bottom-left': { bottom: '16px', left: '16px' },
   'bottom-right': { bottom: '16px', right: '16px' },
 };
-function createPanel(corner = 'top-left') {
+const createPanel = (corner = 'top-left') => {
   const panel = document.createElement('aside');
   Object.assign(panel.style, {
     position: 'fixed',
@@ -82,8 +78,8 @@ function createPanel(corner = 'top-left') {
     ...(CORNER_STYLES[corner] ?? CORNER_STYLES['top-left']),
   });
   return panel;
-}
-function createKeyChip(label) {
+};
+const createKeyChip = label => {
   const chip = document.createElement('kbd');
   chip.textContent = label;
   Object.assign(chip.style, {
@@ -98,8 +94,8 @@ function createKeyChip(label) {
     whiteSpace: 'nowrap',
   });
   return chip;
-}
-function createControlRow(control) {
+};
+const createControlRow = control => {
   const row = document.createElement('div');
   Object.assign(row.style, { display: 'flex', alignItems: 'baseline', gap: '4px', margin: '4px 0' });
   const rawKeys = control.keys ?? [];
@@ -113,13 +109,13 @@ function createControlRow(control) {
   action.style.color = '#c4d2ec';
   row.append(keysWrap, action);
   return row;
-}
+};
 /**
  * Mount a non-blocking on-screen panel with a title, a controls legend, an
  * optional live status line, and an optional hint. Returns a handle to update
  * the status/controls and to remove the panel.
  */
-export function mountControls(options = {}) {
+export const mountControls = (options = {}) => {
   const { title = '', controls = [], status = '', hint = '', corner = 'top-left' } = options;
   const panel = createPanel(corner);
   panel.style.pointerEvents = 'none';
@@ -152,24 +148,24 @@ export function mountControls(options = {}) {
       panel.remove();
     },
   };
-}
-function createControlRowContainer() {
+};
+const createControlRowContainer = () => {
   const row = document.createElement('div');
   Object.assign(row.style, { display: 'flex', alignItems: 'center', gap: '10px', margin: '6px 0' });
   return row;
-}
-function createControlLabel(text) {
+};
+const createControlLabel = text => {
   const label = document.createElement('span');
   label.textContent = text;
   Object.assign(label.style, { flex: '0 0 auto', minWidth: '92px', color: '#c4d2ec', fontSize: '12px' });
   return label;
-}
+};
 /**
  * Mount a predictable DOM control panel over the canvas - sliders, toggles,
  * cycles, and buttons - so interactive examples expose their parameters in a
  * consistent, discoverable way instead of hand-rolling canvas hit-tests.
  */
-export function mountControlPanel(options = {}) {
+export const mountControlPanel = (options = {}) => {
   const { title = '', corner = 'bottom-left' } = options;
   const panel = createPanel(corner);
   panel.style.pointerEvents = 'auto';
@@ -195,7 +191,13 @@ export function mountControlPanel(options = {}) {
       input.step = String(step);
       input.value = String(value);
       input.style.flex = '1 1 auto';
-      Object.assign(readout.style, { flex: '0 0 auto', minWidth: '42px', textAlign: 'right', color: '#9fd0ff', font: `600 12px ${FONT_STACK}` });
+      Object.assign(readout.style, {
+        flex: '0 0 auto',
+        minWidth: '42px',
+        textAlign: 'right',
+        color: '#9fd0ff',
+        font: `600 12px ${FONT_STACK}`,
+      });
       const render = v => {
         readout.textContent = Number(v).toFixed(2);
       };
@@ -312,4 +314,4 @@ export function mountControlPanel(options = {}) {
       panel.remove();
     },
   };
-}
+};

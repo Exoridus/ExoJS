@@ -306,7 +306,9 @@ export class ApplicationSizing {
     const backingWidth = Math.max(1, Math.round(metrics.renderWidth * this._pixelRatio));
     const backingHeight = Math.max(1, Math.round(metrics.renderHeight * this._pixelRatio));
     const cssChanged =
-      metrics.cssWidth !== null && metrics.cssHeight !== null && (metrics.cssWidth !== this._cssWidth || metrics.cssHeight !== this._cssHeight);
+      metrics.cssWidth !== null &&
+      metrics.cssHeight !== null &&
+      (metrics.cssWidth !== this._cssWidth || metrics.cssHeight !== this._cssHeight);
     const backingChanged = backingWidth !== this._surface.width || backingHeight !== this._surface.height;
     const logicalChanged = metrics.logicalWidth !== this._logicalWidth || metrics.logicalHeight !== this._logicalHeight;
 

@@ -22,13 +22,14 @@ const asTileLayerNode = (node: ImageLayerNode | TileLayerNode): TileLayerNode =>
   if (!(node instanceof TileLayerNode)) {
     throw new Error('expected a TileLayerNode');
   }
+
   return node;
 };
 
 // ── helpers (conventions shared with nodes.test.ts) ────────────────────
 
-const fakeTexture = (width = 512, height = 512): Texture => {
-  return {
+const fakeTexture = (width = 512, height = 512): Texture =>
+  ({
     width,
     height,
     flipY: false,
@@ -36,18 +37,16 @@ const fakeTexture = (width = 512, height = 512): Texture => {
     label: 'test',
     destroy: vi.fn(),
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeTileset = (name = 'tiles'): TileSet => {
-  return new TileSet({
+const makeTileset = (name = 'tiles'): TileSet =>
+  new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
     tileWidth: 32,
     tileHeight: 32,
     tileCount: 16,
   });
-};
 
 interface LayerOpts {
   readonly id?: number;
@@ -74,17 +73,17 @@ const makeLayer = (tileset: TileSet, opts: LayerOpts = {}): TileLayer => {
     ...(opts.offsetX === undefined ? {} : { offsetX: opts.offsetX }),
     ...(opts.offsetY === undefined ? {} : { offsetY: opts.offsetY }),
   });
+
   return layer;
 };
 
-const makeImageLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer => {
-  return new ImageLayer({
+const makeImageLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer =>
+  new ImageLayer({
     id: opts.id ?? 100,
     image: opts.image ?? 'bg.png',
     texture: opts.texture === undefined ? fakeTexture() : opts.texture,
     ...opts,
   });
-};
 
 const fillLayer = (layer: TileLayer, tileset: TileSet): TileLayer => {
   // Only finite layers can be filled exhaustively; an infinite one would make
@@ -92,11 +91,13 @@ const fillLayer = (layer: TileLayer, tileset: TileSet): TileLayer => {
   if (layer.width === undefined || layer.height === undefined) {
     throw new Error('fillLayer needs a finite layer');
   }
+
   for (let ty = 0; ty < layer.height; ty++) {
     for (let tx = 0; tx < layer.width; tx++) {
       layer.setTileAt(tx, ty, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     }
   }
+
   return layer;
 };
 
@@ -116,6 +117,7 @@ const makeWorldMap = (): { map: TileMap; tileset: TileSet } => {
       fillLayer(makeLayer(tileset, { id: 3, name: 'roofs' }), tileset),
     ],
   });
+
   return { map, tileset };
 };
 
@@ -215,7 +217,11 @@ describe('TileMapView direct layer-node access', () => {
       tileWidth: 32,
       tileHeight: 32,
       tilesets: [tileset],
-      layers: [makeLayer(tileset, { id: 1, name: 'decor' }), makeLayer(tileset, { id: 2, name: 'decor' }), makeLayer(tileset, { id: 3, name: 'solid' })],
+      layers: [
+        makeLayer(tileset, { id: 1, name: 'decor' }),
+        makeLayer(tileset, { id: 2, name: 'decor' }),
+        makeLayer(tileset, { id: 3, name: 'solid' }),
+      ],
     });
     const view = map.createView();
 
@@ -924,7 +930,7 @@ describe('TileMapView heterogeneous bands', () => {
     const { map } = makeInterleavedMap();
     const band = map.createView({ bands: { stage: [1, 2] } }).band('stage');
 
-    expectTypeOf(band.layerNodes).toEqualTypeOf<readonly (TileLayerNode | ImageLayerNode)[]>();
+    expectTypeOf(band.layerNodes).toEqualTypeOf<ReadonlyArray<TileLayerNode | ImageLayerNode>>();
   });
 
   it('band.getLayerNodeById finds image members too', () => {
@@ -1174,7 +1180,10 @@ describe('TileMapBand transform', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapBand bounds', () => {
-  const makeBoundsScene = (layerOpts: readonly LayerOpts[], definition: TileMapBandDefinition): { map: TileMap; view: TileMapView; band: TileMapBand } => {
+  const makeBoundsScene = (
+    layerOpts: readonly LayerOpts[],
+    definition: TileMapBandDefinition,
+  ): { map: TileMap; view: TileMapView; band: TileMapBand } => {
     const tileset = makeTileset();
     const map = new TileMap({
       name: 'bounds',
@@ -1414,8 +1423,8 @@ describe('TileMapBand visibility & opacity', () => {
 describe('TileMapView type contracts', () => {
   it('the bands option accepts ids and names mixed in one definition', () => {
     expectTypeOf({ ground: [1, 'name'] } as const).toMatchTypeOf<NonNullable<TileMapViewOptions['bands']>>();
-    expectTypeOf<Record<string, readonly (number | string)[]>>().toMatchTypeOf<NonNullable<TileMapViewOptions['bands']>>();
-    expectTypeOf<{ bands: { b: (number | string)[] }; cullable: boolean }>().toMatchTypeOf<TileMapViewOptions>();
+    expectTypeOf<Record<string, ReadonlyArray<number | string>>>().toMatchTypeOf<NonNullable<TileMapViewOptions['bands']>>();
+    expectTypeOf<{ bands: { b: Array<number | string> }; cullable: boolean }>().toMatchTypeOf<TileMapViewOptions>();
   });
 
   it('selector and definition unions are exact', () => {
@@ -1429,7 +1438,7 @@ describe('TileMapView type contracts', () => {
     expectTypeOf<TileMapView['band']>().returns.toEqualTypeOf<TileMapBand>();
     expectTypeOf<TileMapView['layers']>().toEqualTypeOf<readonly TileLayerNode[]>();
     expectTypeOf<TileMapView['bands']>().toEqualTypeOf<readonly TileMapBand[]>();
-    expectTypeOf<TileMapBand['layerNodes']>().toEqualTypeOf<readonly (TileLayerNode | ImageLayerNode)[]>();
+    expectTypeOf<TileMapBand['layerNodes']>().toEqualTypeOf<ReadonlyArray<TileLayerNode | ImageLayerNode>>();
   });
 
   it('createView returns TileMapView and its options are optional', () => {

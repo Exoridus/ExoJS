@@ -74,37 +74,49 @@ class InfiniteGridScene extends Scene {
       this.move.x = -1;
     });
     this.inputs.onStop(Keyboard.A, () => {
-      if (this.move.x < 0) this.move.x = 0;
+      if (this.move.x < 0) {
+        this.move.x = 0;
+      }
     });
     this.inputs.onActive(Keyboard.D, () => {
       this.move.x = 1;
     });
     this.inputs.onStop(Keyboard.D, () => {
-      if (this.move.x > 0) this.move.x = 0;
+      if (this.move.x > 0) {
+        this.move.x = 0;
+      }
     });
     this.inputs.onActive(Keyboard.W, () => {
       this.move.y = -1;
     });
     this.inputs.onStop(Keyboard.W, () => {
-      if (this.move.y < 0) this.move.y = 0;
+      if (this.move.y < 0) {
+        this.move.y = 0;
+      }
     });
     this.inputs.onActive(Keyboard.S, () => {
       this.move.y = 1;
     });
     this.inputs.onStop(Keyboard.S, () => {
-      if (this.move.y > 0) this.move.y = 0;
+      if (this.move.y > 0) {
+        this.move.y = 0;
+      }
     });
     this.inputs.onActive(Keyboard.Q, () => {
       this.move.zoom = -1;
     });
     this.inputs.onStop(Keyboard.Q, () => {
-      if (this.move.zoom < 0) this.move.zoom = 0;
+      if (this.move.zoom < 0) {
+        this.move.zoom = 0;
+      }
     });
     this.inputs.onActive(Keyboard.E, () => {
       this.move.zoom = 1;
     });
     this.inputs.onStop(Keyboard.E, () => {
-      if (this.move.zoom > 0) this.move.zoom = 0;
+      if (this.move.zoom > 0) {
+        this.move.zoom = 0;
+      }
     });
   }
 

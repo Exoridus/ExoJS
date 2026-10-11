@@ -31,7 +31,11 @@ const gradient = (): ColorGradient =>
     { t: 1, color: new Color(47, 181, 113, 0.3) },
   ]);
 
-export const particleParityFixtures: ReadonlyArray<{ name: string; modules: () => UpdateModule[]; seed?: (system: ParticleSystem) => void }> = [
+export const particleParityFixtures: ReadonlyArray<{
+  name: string;
+  modules: () => UpdateModule[];
+  seed?: (system: ParticleSystem) => void;
+}> = [
   { name: 'integration', modules: () => [] },
   { name: 'force', modules: () => [new ApplyForce(8, -4)] },
   { name: 'drag', modules: () => [new Drag(0.4)] },

@@ -33,12 +33,14 @@ class FetchRequest {
       return (await response.json()) as T;
     } catch (error) {
       console.error(`Error while parsing json response! (${this._url})`, error);
+
       return null;
     }
   }
 
   public async getText(): Promise<string | null> {
     const response = await this.getResponse();
+
     return response && (await response.text());
   }
 
@@ -82,9 +84,7 @@ const defaultRequestOptions: RequestInit = {
 
 const uniqueRequests = new Map<string, FetchRequest>();
 
-export const createRequest = (url: string): FetchRequest => {
-  return new FetchRequest(url, defaultRequestOptions);
-};
+export const createRequest = (url: string): FetchRequest => new FetchRequest(url, defaultRequestOptions);
 
 export const createUniqueRequest = (url: string): FetchRequest => {
   const existing = uniqueRequests.get(url);

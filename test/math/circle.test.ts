@@ -10,7 +10,8 @@ import { Vector } from '#math/Vector';
 
 // A minimal stand-in for a SceneNode, which Circle only ever accesses through
 // `collisionType` + `getBounds()` in its intersectsWith()/collidesWith() switches.
-const fakeSceneNode = (bounds: Rectangle): Collidable => ({ collisionType: CollisionType.SceneNode, getBounds: () => bounds }) as unknown as Collidable;
+const fakeSceneNode = (bounds: Rectangle): Collidable =>
+  ({ collisionType: CollisionType.SceneNode, getBounds: () => bounds }) as unknown as Collidable;
 
 // A Collidable with a collisionType outside the known enum, to exercise the
 // `default` branch of the intersectsWith()/collidesWith() switches.

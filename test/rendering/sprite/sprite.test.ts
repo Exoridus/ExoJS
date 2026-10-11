@@ -7,7 +7,8 @@ import type { Texture } from '#rendering/texture/Texture';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeTexture = (w = 64, h = 32, flipY = false): Texture => ({ width: w, height: h, flipY, updateSource: () => undefined }) as unknown as Texture;
+const makeTexture = (w = 64, h = 32, flipY = false): Texture =>
+  ({ width: w, height: h, flipY, updateSource: () => {} }) as unknown as Texture;
 
 describe('Sprite', () => {
   describe('texture / textureFrame property setters', () => {
@@ -49,7 +50,7 @@ describe('Sprite', () => {
         flipY: false,
         ready: false,
         loaded,
-        updateSource: () => undefined,
+        updateSource: () => {},
       } as unknown as Texture;
 
       return {
@@ -153,7 +154,8 @@ describe('Sprite', () => {
   // It is a caller bug, not a runtime condition, so it fails in every build
   // rather than warning in dev and taking the texture anyway.
   describe('destroyed-texture guard', () => {
-    const destroyedTexture = (): Texture => ({ width: 16, height: 16, flipY: false, destroyed: true, updateSource: () => undefined }) as unknown as Texture;
+    const destroyedTexture = (): Texture =>
+      ({ width: 16, height: 16, flipY: false, destroyed: true, updateSource: () => {} }) as unknown as Texture;
 
     test('throws when a destroyed texture is assigned', () => {
       expect(() => new Sprite(null).setTexture(destroyedTexture())).toThrow(/destroy\(\)ed/);
@@ -371,7 +373,7 @@ describe('Sprite sized before its deferred texture loads', () => {
       flipY: false,
       ready: false,
       loaded,
-      updateSource: () => undefined,
+      updateSource: () => {},
     } as unknown as Texture;
 
     return {

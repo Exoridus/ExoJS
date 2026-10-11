@@ -81,7 +81,7 @@ describe('ObjectLayer typed accessors (schema is opt-in)', () => {
     type Polys = ReturnType<typeof layer.byKind<typeof ObjectKind.Polygon>>;
     expectTypeOf<Polys>().toEqualTypeOf<PolygonObject[]>();
     // PolygonObject carries `points`; the narrowing exposes it.
-    expectTypeOf<Polys[number]['points']>().toEqualTypeOf<readonly { readonly x: number; readonly y: number }[]>();
+    expectTypeOf<Polys[number]['points']>().toEqualTypeOf<ReadonlyArray<{ readonly x: number; readonly y: number }>>();
   });
 });
 

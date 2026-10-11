@@ -60,7 +60,9 @@ export class SearchState {
    * Returns `true` when the node was already part of this search.
    */
   public touch(node: number): boolean {
-    if (this.stamp[node] === this.generation) return true;
+    if (this.stamp[node] === this.generation) {
+      return true;
+    }
 
     this.stamp[node] = this.generation;
     this.gScore[node] = Infinity;

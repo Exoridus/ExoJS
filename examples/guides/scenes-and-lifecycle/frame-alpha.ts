@@ -1,4 +1,4 @@
-import { type RenderingContext, Scene, Sprite } from '@codexo/exojs';
+import { type RenderingContext, Scene, type Sprite } from '@codexo/exojs';
 import { PhysicsWorld } from '@codexo/exojs-physics';
 
 class GameScene extends Scene {

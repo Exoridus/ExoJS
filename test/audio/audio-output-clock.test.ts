@@ -140,7 +140,9 @@ describe('AudioOutputClock', () => {
 
     test('ignores a reading that moves backwards within the same source', () => {
       let contextTime = 5;
-      const clock = new AudioOutputClock(asContext({ currentTime: 0, getOutputTimestamp: () => ({ contextTime, performanceTime: contextTime * 1000 }) }));
+      const clock = new AudioOutputClock(
+        asContext({ currentTime: 0, getOutputTimestamp: () => ({ contextTime, performanceTime: contextTime * 1000 }) }),
+      );
 
       expect(clock.snapshot().contextTime).toBe(5);
 

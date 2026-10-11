@@ -154,8 +154,20 @@ export class WebGpuTransformStorage {
       if (this._needsFullUpload) {
         // Post-grow: the new GPUBuffers are empty; upload the full [0, snapshot.count)
         // range so rows already consumed by earlier flushes this frame are present.
-        device.queue.writeBuffer(this._storageBuffer!, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, snapshot.count * slotBytes);
-        device.queue.writeBuffer(this._tintStorageBuffer!, 0, this._buffer.tintData.buffer, this._buffer.tintData.byteOffset, snapshot.count * tintSlotBytes);
+        device.queue.writeBuffer(
+          this._storageBuffer!,
+          0,
+          this._buffer.data.buffer,
+          this._buffer.data.byteOffset,
+          snapshot.count * slotBytes,
+        );
+        device.queue.writeBuffer(
+          this._tintStorageBuffer!,
+          0,
+          this._buffer.tintData.buffer,
+          this._buffer.tintData.byteOffset,
+          snapshot.count * tintSlotBytes,
+        );
         this._buffer.recordUpload(snapshot.count);
         this._accountant?.recordBufferUpload(snapshot.count * slotBytes + snapshot.count * tintSlotBytes);
         this._needsFullUpload = false;

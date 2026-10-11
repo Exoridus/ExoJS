@@ -167,7 +167,13 @@ describe('layoutText with a browser shaper', () => {
   test('the ellipsis candidate is measured complete, ellipsis included', () => {
     const shaper = makeShaper();
 
-    layoutText('alpha beta\ngamma', style(), { maxWidth: 60, maxHeight: 16, overflow: 'ellipsis', shaping: 'browser' }, makeProvider(), shaper);
+    layoutText(
+      'alpha beta\ngamma',
+      style(),
+      { maxWidth: 60, maxHeight: 16, overflow: 'ellipsis', shaping: 'browser' },
+      makeProvider(),
+      shaper,
+    );
 
     expect(shaper.measured.some(line => line.endsWith('…'))).toBe(true);
     expect(shaper.shaped.at(-1)?.endsWith('…')).toBe(true);

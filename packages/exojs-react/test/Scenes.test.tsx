@@ -11,9 +11,14 @@ import { MockApplication } from './support/mock-application';
 // above this file's imports (top-level bindings are not initialised yet).
 vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
-  const { MockApplication: MockApp, configureApplicationState, configureConcurrentNavigationError } = await import('./support/mock-application');
+  const {
+    MockApplication: MockApp,
+    configureApplicationState,
+    configureConcurrentNavigationError,
+  } = await import('./support/mock-application');
   configureApplicationState(actual.ApplicationState);
   configureConcurrentNavigationError(actual.ConcurrentSceneNavigationError);
+
   return { ...actual, Application: MockApp };
 });
 
@@ -21,31 +26,37 @@ class TitleScene extends ExoScene {}
 class GameScene extends ExoScene {}
 
 /** Reads the active scene from the Scenes context and prints its class name. */
-function ActiveProbe(): ReactElement {
+const ActiveProbe = (): ReactElement => {
   const scene = useActiveScene();
 
   return <span data-testid="active">{scene?.constructor.name ?? 'none'}</span>;
-}
+};
 
 // `app` is a MockApplication: the `@codexo/exojs` module is vi.mock'ed above, so
 // `new Application()` constructs the mock. The context still types its value as
 // the engine class, hence the cast on the way in.
-function Tree({ app, active, transition }: { app: MockApplication; active: string; transition?: SceneTransitionSelection }): ReactElement {
-  return (
-    <ExoContext.Provider value={app as unknown as Application}>
-      <Scenes active={active} {...(transition === undefined ? {} : { transition })}>
-        <Scene name="title" component={TitleScene}>
-          <span data-testid="hud">title-hud</span>
-          <ActiveProbe />
-        </Scene>
-        <Scene name="game" component={GameScene}>
-          <span data-testid="hud">game-hud</span>
-          <ActiveProbe />
-        </Scene>
-      </Scenes>
-    </ExoContext.Provider>
-  );
-}
+const Tree = ({
+  app,
+  active,
+  transition,
+}: {
+  app: MockApplication;
+  active: string;
+  transition?: SceneTransitionSelection;
+}): ReactElement => (
+  <ExoContext.Provider value={app as unknown as Application}>
+    <Scenes active={active} {...(transition === undefined ? {} : { transition })}>
+      <Scene name="title" component={TitleScene}>
+        <span data-testid="hud">title-hud</span>
+        <ActiveProbe />
+      </Scene>
+      <Scene name="game" component={GameScene}>
+        <span data-testid="hud">game-hud</span>
+        <ActiveProbe />
+      </Scene>
+    </Scenes>
+  </ExoContext.Provider>
+);
 
 const makeApp = (): MockApplication => new Application() as unknown as MockApplication;
 
@@ -299,28 +310,26 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
 });
 
 describe('useActiveScene(SceneClass)', () => {
-  function NarrowedProbe({ sceneClass }: { sceneClass: abstract new () => ExoScene }): ReactElement {
+  const NarrowedProbe = ({ sceneClass }: { sceneClass: abstract new () => ExoScene }): ReactElement => {
     const scene = useActiveScene(sceneClass);
 
     return <span data-testid="narrowed">{scene?.constructor.name ?? 'none'}</span>;
-  }
+  };
 
-  function NarrowedTree({ app, active }: { app: MockApplication; active: string }): ReactElement {
-    return (
-      <ExoContext.Provider value={app as unknown as Application}>
-        <Scenes active={active}>
-          <Scene name="title" component={TitleScene}>
-            <span data-testid="hud">title-hud</span>
-            <NarrowedProbe sceneClass={GameScene} />
-          </Scene>
-          <Scene name="game" component={GameScene}>
-            <span data-testid="hud">game-hud</span>
-            <NarrowedProbe sceneClass={GameScene} />
-          </Scene>
-        </Scenes>
-      </ExoContext.Provider>
-    );
-  }
+  const NarrowedTree = ({ app, active }: { app: MockApplication; active: string }): ReactElement => (
+    <ExoContext.Provider value={app as unknown as Application}>
+      <Scenes active={active}>
+        <Scene name="title" component={TitleScene}>
+          <span data-testid="hud">title-hud</span>
+          <NarrowedProbe sceneClass={GameScene} />
+        </Scene>
+        <Scene name="game" component={GameScene}>
+          <span data-testid="hud">game-hud</span>
+          <NarrowedProbe sceneClass={GameScene} />
+        </Scene>
+      </Scenes>
+    </ExoContext.Provider>
+  );
 
   it('returns the active scene when it is an instance of the given class', async () => {
     const app = makeApp();

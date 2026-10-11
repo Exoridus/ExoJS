@@ -59,7 +59,10 @@ export class PhysicsBodyComponent extends Component {
     // body is the transform authority, and the node merely shows where it is.
     // A failed attempt leaves the flags set, so the retry reads the node anew.
     if (this._adoptNodePosition || this._adoptNodeAngle) {
-      body.setTransform(this._adoptNodePosition ? nodeWorldPosition(node) : body.position, this._adoptNodeAngle ? nodeWorldAngle(node) : body.angle);
+      body.setTransform(
+        this._adoptNodePosition ? nodeWorldPosition(node) : body.position,
+        this._adoptNodeAngle ? nodeWorldAngle(node) : body.angle,
+      );
     }
 
     this.world.add(body);
@@ -70,6 +73,7 @@ export class PhysicsBodyComponent extends Component {
       // A failed enable leaves the component inactive; the body must not keep
       // simulating behind it.
       this.world.remove(body);
+
       throw error;
     }
 

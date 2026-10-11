@@ -3,7 +3,10 @@ import { PHYSICS_ARCHETYPES, seedFor, warmupStepsFor, warmupStepsForArchetype } 
 import type { PhysicsArchetypeId, PhysicsArchetypeSpec } from '../src/physics/PhysicsAdapter';
 import { selectMutationIndices } from '../src/shared/mutation';
 
-const byId = Object.fromEntries(PHYSICS_ARCHETYPES.map(archetype => [archetype.id, archetype])) as Record<PhysicsArchetypeId, PhysicsArchetypeSpec>;
+const byId = Object.fromEntries(PHYSICS_ARCHETYPES.map(archetype => [archetype.id, archetype])) as Record<
+  PhysicsArchetypeId,
+  PhysicsArchetypeSpec
+>;
 
 /** Scene for a cell, at the deterministic seed the driver would give it. */
 const sceneFor = (id: PhysicsArchetypeId, bodyCount: number): ReturnType<typeof describePhysicsScene> =>
@@ -17,7 +20,8 @@ const sceneFor = (id: PhysicsArchetypeId, bodyCount: number): ReturnType<typeof 
  * contain. A pair meant to be read as a delta must therefore share at least one
  * rung; identical ladders are one way to get that and not the requirement.
  */
-const sharedRungs = (a: PhysicsArchetypeId, b: PhysicsArchetypeId): number[] => byId[a].bodyCounts.filter(count => byId[b].bodyCounts.includes(count));
+const sharedRungs = (a: PhysicsArchetypeId, b: PhysicsArchetypeId): number[] =>
+  byId[a].bodyCounts.filter(count => byId[b].bodyCounts.includes(count));
 
 describe('raycast', () => {
   test('simulates the mixed scene unchanged, so the delta against it is query cost', () => {
@@ -93,7 +97,8 @@ describe('body-churn', () => {
 
     // The impulses differ by construction - a body that lives one step gets
     // none - so the layout is what has to match for the delta to carry one cause.
-    const layout = (id: PhysicsArchetypeId, bodyCount: number): unknown => sceneFor(id, bodyCount).bodies.map(body => ({ ...body, perturb: undefined }));
+    const layout = (id: PhysicsArchetypeId, bodyCount: number): unknown =>
+      sceneFor(id, bodyCount).bodies.map(body => ({ ...body, perturb: undefined }));
 
     for (const bodyCount of shared) {
       expect(layout('body-churn', bodyCount)).toEqual(layout('many-dynamic', bodyCount));
@@ -206,7 +211,11 @@ describe('settling-pile', () => {
     for (const [index, body] of settlingBodies.entries()) {
       const baseBody = baseBodies[index]!;
 
-      expect({ ...body, friction: undefined, restitution: undefined }).toEqual({ ...baseBody, friction: undefined, restitution: undefined });
+      expect({ ...body, friction: undefined, restitution: undefined }).toEqual({
+        ...baseBody,
+        friction: undefined,
+        restitution: undefined,
+      });
     }
   });
 
@@ -270,7 +279,7 @@ describe('body-count ladders', () => {
   });
 
   test('every archetype read as a delta against another shares a rung with it', () => {
-    const deltas: readonly (readonly [PhysicsArchetypeId, PhysicsArchetypeId])[] = [
+    const deltas: ReadonlyArray<readonly [PhysicsArchetypeId, PhysicsArchetypeId]> = [
       ['raycast', 'mixed-static-dynamic'],
       ['body-churn', 'many-dynamic'],
       ['settling-pile', 'many-dynamic'],
@@ -284,7 +293,9 @@ describe('body-count ladders', () => {
 
   test('an archetype naming a warmup override names one for every rung of its own ladder', () => {
     for (const archetype of PHYSICS_ARCHETYPES) {
-      if (archetype.warmupStepsOverride === undefined) continue;
+      if (archetype.warmupStepsOverride === undefined) {
+        continue;
+      }
 
       // An override keyed on a count the ladder no longer contains is silently
       // inert: the cell falls back to the shared schedule, which for this
@@ -305,7 +316,9 @@ describe('body-count ladders', () => {
 describe('warmupStepsForArchetype', () => {
   test('falls back to the shared schedule for every archetype that names no override', () => {
     for (const archetype of PHYSICS_ARCHETYPES) {
-      if (archetype.warmupStepsOverride !== undefined) continue;
+      if (archetype.warmupStepsOverride !== undefined) {
+        continue;
+      }
 
       for (const bodyCount of archetype.bodyCounts) {
         expect(warmupStepsForArchetype(archetype, bodyCount)).toBe(warmupStepsFor(bodyCount));

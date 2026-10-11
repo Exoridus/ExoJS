@@ -75,9 +75,7 @@ describe('DelayEffect', () => {
       let gainCallCount = 0;
       // DelayEffect._setupNodes order: inputGain, outputGain, feedbackGain, dryGain, wetGain
       const gains = [inputGain, outputGain, feedbackGain, dryGain, wetGain];
-      gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
       delaySpy = vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
     });
 
@@ -134,7 +132,7 @@ describe('DelayEffect', () => {
   describe('feedback setter', () => {
     it('clamps feedback to 0.95 maximum', () => {
       const filter = new DelayEffect();
-      filter.feedback = 1.0;
+      filter.feedback = 1;
       expect(filter.feedback).toBe(0.95);
       filter.destroy();
     });
@@ -215,15 +213,15 @@ describe('DelayEffect', () => {
       const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       const delay = makeDelayNode(ctx);
       let gainCallCount = 0;
-      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gainNodes[gainCallCount++] as unknown as GainNode;
-      });
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
       const delaySpy = vi.spyOn(ctx, 'createDelay').mockReturnValue(delay as unknown as DelayNode);
       const filter = new DelayEffect();
       filter.destroy();
+
       for (const node of gainNodes) {
         expect(node.disconnect).toHaveBeenCalled();
       }
+
       expect(delay.disconnect).toHaveBeenCalled();
       gainSpy.mockRestore();
       delaySpy.mockRestore();

@@ -101,7 +101,9 @@ describe('multiAttachmentGuard', () => {
     test('throws when the GLSL fragment shader under-declares outputs for WebGL2', () => {
       const mesh = meshWithShader(singleOutputGlsl, dualOutputWgsl);
 
-      expect(() => assertDrawsAllAttachments(mesh, 2, RenderBackendType.WebGl2)).toThrow(/declares 1 output\(s\) but the active render target has 2/);
+      expect(() => assertDrawsAllAttachments(mesh, 2, RenderBackendType.WebGl2)).toThrow(
+        /declares 1 output\(s\) but the active render target has 2/,
+      );
     });
 
     test('throws when the WGSL fragment shader under-declares outputs for WebGPU', () => {

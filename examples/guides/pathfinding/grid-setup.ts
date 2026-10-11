@@ -8,7 +8,9 @@ const grid = GridSpace.from(
   64,
   40,
   (x, y) => {
-    if (isWall(x, y)) return 0;
+    if (isWall(x, y)) {
+      return 0;
+    }
 
     return isMud(x, y) ? 4 : 1;
   },

@@ -13,12 +13,17 @@ const logDirectory = resolve(rootDir, '.workspace/logs');
 const runner = createExecRunner({ logDirectory });
 
 const run = (dir: string, args: readonly string[]): boolean => {
-  if (mode === 'verbose') console.log(`\n=== ${dir}: pnpm ${args.join(' ')} ===\n`);
+  if (mode === 'verbose') {
+    console.log(`\n=== ${dir}: pnpm ${args.join(' ')} ===\n`);
+  }
+
   const result = runner.run({ command: 'pnpm', args, cwd: resolve(rootDir, dir) });
+
   if (mode === 'verbose' || result.code !== 0) {
     process.stdout.write(result.stdout);
     process.stderr.write(result.stderr);
   }
+
   return result.code === 0;
 };
 
@@ -26,6 +31,7 @@ let failed = 0;
 
 for (const pkg of packages) {
   const ok = run(pkg.dir, ['pack', '--dry-run']) && run(pkg.dir, ['dlx', PUBLINT, '--strict', '.']);
+
   if (!ok) {
     failed += 1;
     console.error(`\n${pkg.name} failed the publish check.`);

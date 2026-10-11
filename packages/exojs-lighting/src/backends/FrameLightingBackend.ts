@@ -410,7 +410,8 @@ ${sunQuadWgsl}`,
     // whole reason to filter here instead of on a node is to see the light the
     // system produced, and an `rgba8` intermediate would clip it away again
     // between the composite and the first filter.
-    this._shaded = options.post.length === 0 ? null : new RenderTexture(1, 1, { format: this._target.format, scaleMode: ScaleModes.Linear });
+    this._shaded =
+      options.post.length === 0 ? null : new RenderTexture(1, 1, { format: this._target.format, scaleMode: ScaleModes.Linear });
     this._compositePass = new CallbackRenderPass(pass => this._drawComposite(pass), {
       label: 'lighting:composite',
       ...(this._shaded !== null && { target: this._shaded, clear: Color.transparentBlack }),
@@ -465,7 +466,15 @@ ${sunQuadWgsl}`,
     this._app.onResize.remove(this._onResize);
     this._detachOwnPasses();
 
-    for (const pass of [this._maskPass, this._filler?.pass, this._normalPass, this._lightPass, this._compositePass, this._postPass, this._debugPass]) {
+    for (const pass of [
+      this._maskPass,
+      this._filler?.pass,
+      this._normalPass,
+      this._lightPass,
+      this._compositePass,
+      this._postPass,
+      this._debugPass,
+    ]) {
       if (pass) {
         this._app.framePasses.removePass(pass);
       }
@@ -832,7 +841,12 @@ ${sunQuadWgsl}`,
    */
   private _writeAmbientClear(ambient: Color): void {
     ambient.writeLinear(scratchLinearAmbient);
-    this._ambientClear.set(scratchLinearAmbient[0]! * 255, scratchLinearAmbient[1]! * 255, scratchLinearAmbient[2]! * 255, scratchLinearAmbient[3]);
+    this._ambientClear.set(
+      scratchLinearAmbient[0]! * 255,
+      scratchLinearAmbient[1]! * 255,
+      scratchLinearAmbient[2]! * 255,
+      scratchLinearAmbient[3],
+    );
   }
 
   /**
@@ -1345,7 +1359,10 @@ ${sunQuadWgsl}`,
 
   /** One mask texel in world units, along whichever axis resolves it worse. */
   protected _maskTexel(): number {
-    return Math.max(this._fieldView.width / Math.max(1, this._maskTarget.width), this._fieldView.height / Math.max(1, this._maskTarget.height));
+    return Math.max(
+      this._fieldView.width / Math.max(1, this._maskTarget.width),
+      this._fieldView.height / Math.max(1, this._maskTarget.height),
+    );
   }
 
   /** The normal field the light shader should read: the prepass, or nothing at all. */
@@ -1466,7 +1483,14 @@ ${normalPrepassWgsl}`,
 
       // Lengthened by a texel at each end as well: two edges meeting at a corner
       // would otherwise leave a hole exactly one texel wide at the join.
-      this._transform.set(dirX * (length + texel * 2), -dirY * texel * 2, x1 - dirX * texel, dirY * (length + texel * 2), dirX * texel * 2, y1 - dirY * texel);
+      this._transform.set(
+        dirX * (length + texel * 2),
+        -dirY * texel * 2,
+        x1 - dirX * texel,
+        dirY * (length + texel * 2),
+        dirX * texel * 2,
+        y1 - dirY * texel,
+      );
       this._maskBatch.add(this._transform, Color.white);
     }
   }
@@ -1584,7 +1608,12 @@ ${normalPrepassWgsl}`,
     // shrunk to fit.
     const scale = this._debug === 'mask' ? 1 + 2 * this._fieldMargin : 1;
 
-    if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0 && this._compositeScale === scale) {
+    if (
+      this._target.width === width &&
+      this._target.height === height &&
+      this._compositeBatch.count > 0 &&
+      this._compositeScale === scale
+    ) {
       return;
     }
 
@@ -1595,7 +1624,14 @@ ${normalPrepassWgsl}`,
     this._compositeScale = scale;
     this._compositeBatch.clear();
     this._compositeBatch.add(
-      this._transform.set(logicalWidth * scale, 0, (logicalWidth * (1 - scale)) / 2, 0, logicalHeight * scale, (logicalHeight * (1 - scale)) / 2),
+      this._transform.set(
+        logicalWidth * scale,
+        0,
+        (logicalWidth * (1 - scale)) / 2,
+        0,
+        logicalHeight * scale,
+        (logicalHeight * (1 - scale)) / 2,
+      ),
       Color.white,
     );
   }

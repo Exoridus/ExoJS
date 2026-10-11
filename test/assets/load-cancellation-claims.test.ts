@@ -62,8 +62,8 @@ const flush = async (): Promise<void> => {
 
 const ignoreRejection = async (queue: PromiseLike<unknown>): Promise<void> => {
   await queue.then(
-    () => undefined,
-    () => undefined,
+    () => {},
+    () => {},
   );
 };
 

@@ -53,7 +53,9 @@ const byId = new Map<string, AnyAssetType>(coreAssetTypes.map(type => [type.id, 
  * from a bare path.
  */
 const byExtension = new Map<string, AssetTypeName>(
-  coreAssetTypes.filter(type => type.leaf !== 'none').flatMap(type => type.extensions.map(extension => [normalizeExtension(extension), type.id])),
+  coreAssetTypes
+    .filter(type => type.leaf !== 'none')
+    .flatMap(type => type.extensions.map(extension => [normalizeExtension(extension), type.id])),
 );
 
 /** The built-in type a file suffix names, or `undefined`. @internal */

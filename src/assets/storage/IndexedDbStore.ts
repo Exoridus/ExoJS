@@ -94,7 +94,11 @@ export class IndexedDbStore implements CacheStore {
     const options = typeof nameOrOptions === 'string' ? { name: nameOrOptions } : nameOrOptions;
 
     if (!supportsIndexedDb) {
-      throw new AssetCacheError({ operation: 'connect', message: 'IndexedDbStore requires a host with IndexedDB support.', store: options.name });
+      throw new AssetCacheError({
+        operation: 'connect',
+        message: 'IndexedDbStore requires a host with IndexedDB support.',
+        store: options.name,
+      });
     }
 
     this._name = options.name;
@@ -149,7 +153,11 @@ export class IndexedDbStore implements CacheStore {
 
   public async clear(namespace?: string): Promise<void> {
     const store = await this._objectStore('clear', 'readwrite');
-    const committed = transactionComplete(store.transaction, { operation: 'clear', message: 'Clearing the cache failed.', store: namespace });
+    const committed = transactionComplete(store.transaction, {
+      operation: 'clear',
+      message: 'Clearing the cache failed.',
+      store: namespace,
+    });
 
     if (namespace === undefined) {
       store.clear();

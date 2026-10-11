@@ -241,9 +241,13 @@ export class WebGl2TextureNormalizer {
       // The level is written in full, so blending would mix the normalized texel
       // with whatever the level held instead of replacing it.
       gl.disable(gl.BLEND);
+
       // The frame in progress may have a clip, a stencil test or a colour mask
       // live; any of them would cut the level being written short.
-      for (let index = 0; index < passThroughRasterCapabilities; index++) gl.disable(capabilities[index]!);
+      for (let index = 0; index < passThroughRasterCapabilities; index++) {
+        gl.disable(capabilities[index]!);
+      }
+
       gl.colorMask(true, true, true, true);
       gl.viewport(0, 0, target.width, target.height);
       gl.activeTexture(gl.TEXTURE0);
@@ -267,7 +271,17 @@ export class WebGl2TextureNormalizer {
 
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, quadVertexCount);
     } finally {
-      this._restore(previousFramebuffer, previousViewport, previousProgram, previousArray, previousBuffer, previousUnit, previousBinding, unitZeroBinding);
+      this._restore(
+        previousFramebuffer,
+        previousViewport,
+        previousProgram,
+        previousArray,
+        previousBuffer,
+        previousUnit,
+        previousBinding,
+        unitZeroBinding,
+      );
+
       for (let index = 0; index < passThroughRasterCapabilities; index++) {
         if (enabled[index] === 1) {
           gl.enable(capabilities[index]!);

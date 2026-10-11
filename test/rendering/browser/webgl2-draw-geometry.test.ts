@@ -148,7 +148,8 @@ const contractMaterial = (vertexBody: string): MeshMaterial =>
     shader: new Shader({
       glsl: {
         vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${vertexBody}`,
-        fragment: '#version 300 es\nprecision mediump float;\nin vec4 v_tint;\nout vec4 fragColor;\nvoid main(){fragColor=vec4(v_tint.rgb*v_tint.a,v_tint.a);}',
+        fragment:
+          '#version 300 es\nprecision mediump float;\nin vec4 v_tint;\nout vec4 fragColor;\nvoid main(){fragColor=vec4(v_tint.rgb*v_tint.a,v_tint.a);}',
       },
     }),
   });

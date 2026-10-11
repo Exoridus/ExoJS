@@ -18,7 +18,23 @@ describe('coreAssetTypes', () => {
   });
 
   test('covers every built-in kind the engine ships', () => {
-    expect(ids).toEqual(['texture', 'sound', 'music', 'video', 'json', 'text', 'svg', 'subtitle', 'xml', 'csv', 'binary', 'bmFont', 'font', 'image', 'wasm']);
+    expect(ids).toEqual([
+      'texture',
+      'sound',
+      'music',
+      'video',
+      'json',
+      'text',
+      'svg',
+      'subtitle',
+      'xml',
+      'csv',
+      'binary',
+      'bmFont',
+      'font',
+      'image',
+      'wasm',
+    ]);
   });
 
   test('no two built-ins claim the same suffix', () => {

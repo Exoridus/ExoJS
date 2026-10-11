@@ -53,7 +53,9 @@ export class BmFontAssetType extends AssetType<BmFontData, BmFont, undefined, st
   public createFactory(): AssetFactory<BmFontData, BmFont> {
     return {
       async create(source, context) {
-        const pages = await Promise.all(source.pages.map(page => context.dependencies.load(Asset.type('texture', resolveSubAssetPath(page, context.source)))));
+        const pages = await Promise.all(
+          source.pages.map(page => context.dependencies.load(Asset.type('texture', resolveSubAssetPath(page, context.source)))),
+        );
 
         return new BmFont(source, pages);
       },

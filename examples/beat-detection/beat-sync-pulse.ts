@@ -1,7 +1,7 @@
 import {
   Application,
   Asset,
-  AudioStream,
+  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   type RenderingContext,

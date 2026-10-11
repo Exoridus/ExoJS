@@ -66,7 +66,9 @@ describe('resourceKey', () => {
   test('a source that spells out a discriminator never composes that request key', () => {
     // Browsers accept an unencoded `|` in a query string, so a source may
     // legitimately look like "<source>|<discriminator>" already.
-    expect(resourceKey('texture', 'url:/a.png?v=1|mimeType=image/webp')).not.toBe(resourceKey('texture', 'url:/a.png?v=1', 'mimeType=image/webp'));
+    expect(resourceKey('texture', 'url:/a.png?v=1|mimeType=image/webp')).not.toBe(
+      resourceKey('texture', 'url:/a.png?v=1', 'mimeType=image/webp'),
+    );
   });
 
   test('escaping is itself unambiguous, so an escape sequence in a source stays distinct', () => {

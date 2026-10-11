@@ -119,7 +119,10 @@ const createHarness = (): Harness => {
         pointerDistanceThreshold: 10,
       },
     },
-    _backingStoreToLogical: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({ x: backingStoreX, y: backingStoreY }),
+    _backingStoreToLogical: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({
+      x: backingStoreX,
+      y: backingStoreY,
+    }),
     rendering: { view: identity, screenView: identity },
     scenes: {
       get currentScene(): Scene | null {
@@ -462,6 +465,7 @@ describe('InteractionSystem — cross-pointer order preserved end-to-end (Bug C)
     fireContextMenu(canvas, 25, 25);
 
     input.preFrame(Time.seconds(0));
+
     try {
       interaction.preFrame(frameDelta);
     } catch {

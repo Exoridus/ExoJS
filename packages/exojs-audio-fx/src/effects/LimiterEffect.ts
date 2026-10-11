@@ -101,7 +101,10 @@ export class LimiterEffect extends AudioEffect {
    * not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('LimiterEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('LimiterEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -110,7 +113,10 @@ export class LimiterEffect extends AudioEffect {
    * not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('LimiterEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('LimiterEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -124,6 +130,7 @@ export class LimiterEffect extends AudioEffect {
 
   public set threshold(value: number) {
     this._threshold = Math.max(-60, Math.min(0, value));
+
     if (this._setup) {
       this._setup.compressor.threshold.setTargetAtTime(this._threshold, this._setup.compressor.context.currentTime, 0.01);
     }
@@ -139,6 +146,7 @@ export class LimiterEffect extends AudioEffect {
 
   public set attack(value: number) {
     this._attack = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       this._setup.compressor.attack.setTargetAtTime(this._attack, this._setup.compressor.context.currentTime, 0.01);
     }
@@ -154,6 +162,7 @@ export class LimiterEffect extends AudioEffect {
 
   public set release(value: number) {
     this._release = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       this._setup.compressor.release.setTargetAtTime(this._release, this._setup.compressor.context.currentTime, 0.01);
     }
@@ -170,6 +179,7 @@ export class LimiterEffect extends AudioEffect {
 
   public set ratio(value: number) {
     this._ratio = Math.max(1, Math.min(20, value));
+
     if (this._setup) {
       this._setup.compressor.ratio.setTargetAtTime(this._ratio, this._setup.compressor.context.currentTime, 0.01);
     }
@@ -186,6 +196,7 @@ export class LimiterEffect extends AudioEffect {
 
   public set knee(value: number) {
     this._knee = Math.max(0, Math.min(40, value));
+
     if (this._setup) {
       this._setup.compressor.knee.setTargetAtTime(this._knee, this._setup.compressor.context.currentTime, 0.01);
     }
@@ -201,6 +212,7 @@ export class LimiterEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -210,6 +222,7 @@ export class LimiterEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.compressor.disconnect();

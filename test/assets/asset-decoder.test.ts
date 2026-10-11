@@ -66,7 +66,9 @@ describe('AssetDecoder', () => {
   test('_dispatchFetch stores what the factory built', async () => {
     const { decoder, typeRegistry, storeResource, canonical } = createDecoder();
 
-    typeRegistry.installAll([testAssetType<string, string>({ id: 'typeA', token: TypeA, acquires: false, create: async () => 'factory-result' })]);
+    typeRegistry.installAll([
+      testAssetType<string, string>({ id: 'typeA', token: TypeA, acquires: false, create: async () => 'factory-result' }),
+    ]);
 
     const result = await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope);
 
@@ -118,7 +120,9 @@ describe('AssetDecoder', () => {
   test('_dispatchFetch rejects with a clear error when no type is installed for the token', async () => {
     const { decoder, storeResource, canonical } = createDecoder();
 
-    await expect(decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope)).rejects.toThrow(/No asset type is installed for TypeA/);
+    await expect(decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope)).rejects.toThrow(
+      /No asset type is installed for TypeA/,
+    );
     expect(storeResource).not.toHaveBeenCalled();
   });
 
@@ -168,7 +172,9 @@ describe('AssetDecoder', () => {
     const { cache, contexts } = createFakeCache(() => 'never-used');
     const { decoder, typeRegistry, canonical } = createDecoder({ cache });
 
-    typeRegistry.installAll([testAssetType<string, string>({ id: 'typeA', token: TypeA, acquires: false, create: async () => 'streamed' })]);
+    typeRegistry.installAll([
+      testAssetType<string, string>({ id: 'typeA', token: TypeA, acquires: false, create: async () => 'streamed' }),
+    ]);
 
     await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope);
 
@@ -197,14 +203,18 @@ describe('AssetDecoder', () => {
       }),
     ]);
 
-    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(8), fakeScope)).rejects.toThrow(/cannot be built from container bytes/);
+    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(8), fakeScope)).rejects.toThrow(
+      /cannot be built from container bytes/,
+    );
     expect(storeResource).not.toHaveBeenCalled();
   });
 
   test('_injectSource throws when no type is installed for the token, and never stores', async () => {
     const { decoder, storeResource, canonical } = createDecoder();
 
-    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(4), fakeScope)).rejects.toThrow(/No asset type is installed/);
+    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(4), fakeScope)).rejects.toThrow(
+      /No asset type is installed/,
+    );
     expect(storeResource).not.toHaveBeenCalled();
   });
 

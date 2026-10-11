@@ -10,7 +10,9 @@ describe('contact events', () => {
   it('fires collisionStart once on overlap and collisionEnd on separation', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
-    const movingBody = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 8, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const movingBody = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 8, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }),
+    );
 
     const starts: CollisionEvent[] = [];
     const ends: CollisionEvent[] = [];
@@ -87,7 +89,9 @@ describe('contact events', () => {
       world.onCollisionEnd.add(() => log.push('end'));
 
       colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });
-      const mover = world.add(new PhysicsBody({ type: 'dynamic', position: { x: -60, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+      const mover = world.add(
+        new PhysicsBody({ type: 'dynamic', position: { x: -60, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }),
+      );
       mover.linearVelocityX = 600;
 
       for (let i = 0; i < count; i++) {
@@ -111,7 +115,9 @@ describe('contact events', () => {
       world.onSensorExit.add(() => log.push('exit'));
 
       colliderAt(world, new BoxShape(40, 40), { x: 0, y: 0 }, 0, 'static', { isSensor: true });
-      const mover = world.add(new PhysicsBody({ type: 'kinematic', position: { x: -120, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+      const mover = world.add(
+        new PhysicsBody({ type: 'kinematic', position: { x: -120, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }),
+      );
       mover.linearVelocityX = 240;
 
       for (let i = 0; i < count; i++) {
@@ -130,7 +136,9 @@ describe('contact events', () => {
   it('defers body destruction requested inside a callback', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
-    const projectile = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 8, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const projectile = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 8, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }),
+    );
 
     world.onCollisionStart.add(() => {
       // Deferred: must not throw or corrupt the live arrays mid-dispatch.
@@ -206,7 +214,9 @@ describe('contact events', () => {
     const world = new PhysicsWorld();
     // Solid collider added first → lower id; sensor added second → higher id.
     const solid = colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });
-    const sensorBody = world.add(new PhysicsBody({ type: 'static', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(20, 20), isSensor: true }] }));
+    const sensorBody = world.add(
+      new PhysicsBody({ type: 'static', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(20, 20), isSensor: true }] }),
+    );
     const sensor = sensorBody.colliders[0]!;
 
     const enters: SensorEvent[] = [];
@@ -221,7 +231,9 @@ describe('contact events', () => {
   it('fires one sensor event (with the lower-id collider as sensor) when both overlapping colliders are sensors', () => {
     const world = new PhysicsWorld();
     const first = colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 }, 0, 'static', { isSensor: true });
-    const secondBody = world.add(new PhysicsBody({ type: 'static', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(20, 20), isSensor: true }] }));
+    const secondBody = world.add(
+      new PhysicsBody({ type: 'static', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(20, 20), isSensor: true }] }),
+    );
     const second = secondBody.colliders[0]!;
 
     const enters: SensorEvent[] = [];
@@ -268,7 +280,11 @@ describe('collision filter group override', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }, 0, 'static', { filter: { group: 5, category: 0x0001, mask: 0x0000 } });
     world.add(
-      new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), filter: { group: 5, mask: 0x0000 } }] }),
+      new PhysicsBody({
+        type: 'kinematic',
+        position: { x: 5, y: 0 },
+        colliders: [{ shape: new BoxShape(10, 10), filter: { group: 5, mask: 0x0000 } }],
+      }),
     );
 
     const start = vi.fn();
@@ -281,7 +297,9 @@ describe('collision filter group override', () => {
   it('a shared negative group never collides, overriding an otherwise-matching mask', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }, 0, 'static', { filter: { group: -3 } });
-    world.add(new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), filter: { group: -3 } }] }));
+    world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), filter: { group: -3 } }] }),
+    );
 
     const start = vi.fn();
     world.onCollisionStart.add(start);
@@ -293,7 +311,9 @@ describe('collision filter group override', () => {
   it('different non-zero groups fall through to the normal category/mask check', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }, 0, 'static', { filter: { group: 5 } });
-    world.add(new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), filter: { group: 7 } }] }));
+    world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), filter: { group: 7 } }] }),
+    );
 
     const start = vi.fn();
     world.onCollisionStart.add(start);

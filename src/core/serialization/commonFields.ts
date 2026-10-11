@@ -18,30 +18,94 @@ import type { SerializedNode } from './types';
  * and `a` in 0..1. Runtime caches, matrices and dirty flags are never written.
  */
 export const writeCommonFields = (node: SceneNode, out: SerializedNode): void => {
-  if (node.x !== 0) out.x = node.x;
-  if (node.y !== 0) out.y = node.y;
-  if (node.rotation !== 0) out.rotation = node.rotation;
-  if (node.scale.x !== 1) out.scaleX = node.scale.x;
-  if (node.scale.y !== 1) out.scaleY = node.scale.y;
-  if (node.skewX !== 0) out.skewX = node.skewX;
-  if (node.skewY !== 0) out.skewY = node.skewY;
-  if (node.origin.x !== 0) out.originX = node.origin.x;
-  if (node.origin.y !== 0) out.originY = node.origin.y;
-  if (!node.visible) out.visible = false;
-  if (node.zIndex !== 0) out.zIndex = node.zIndex;
-  if (node.name !== null) out.name = node.name;
+  if (node.x !== 0) {
+    out.x = node.x;
+  }
+
+  if (node.y !== 0) {
+    out.y = node.y;
+  }
+
+  if (node.rotation !== 0) {
+    out.rotation = node.rotation;
+  }
+
+  if (node.scale.x !== 1) {
+    out.scaleX = node.scale.x;
+  }
+
+  if (node.scale.y !== 1) {
+    out.scaleY = node.scale.y;
+  }
+
+  if (node.skewX !== 0) {
+    out.skewX = node.skewX;
+  }
+
+  if (node.skewY !== 0) {
+    out.skewY = node.skewY;
+  }
+
+  if (node.origin.x !== 0) {
+    out.originX = node.origin.x;
+  }
+
+  if (node.origin.y !== 0) {
+    out.originY = node.origin.y;
+  }
+
+  if (!node.visible) {
+    out.visible = false;
+  }
+
+  if (node.zIndex !== 0) {
+    out.zIndex = node.zIndex;
+  }
+
+  if (node.name !== null) {
+    out.name = node.name;
+  }
 
   if (node instanceof RenderNode) {
-    if (!node.cullable) out.cullable = false;
-    if (node.cullArea !== null) out.cullArea = [node.cullArea.x, node.cullArea.y, node.cullArea.width, node.cullArea.height];
-    if (node.interactive) out.interactive = true;
-    if (node.draggable) out.draggable = true;
-    if (node.focusable) out.focusable = true;
-    if (node.tabIndex !== 0) out.tabIndex = node.tabIndex;
-    if (node.cursor !== null) out.cursor = node.cursor;
-    if (node.clip) out.clip = true;
-    if (node.preserveDrawOrder) out.preserveDrawOrder = true;
-    if (node.cacheAsTexture) out.cacheAsTexture = true;
+    if (!node.cullable) {
+      out.cullable = false;
+    }
+
+    if (node.cullArea !== null) {
+      out.cullArea = [node.cullArea.x, node.cullArea.y, node.cullArea.width, node.cullArea.height];
+    }
+
+    if (node.interactive) {
+      out.interactive = true;
+    }
+
+    if (node.draggable) {
+      out.draggable = true;
+    }
+
+    if (node.focusable) {
+      out.focusable = true;
+    }
+
+    if (node.tabIndex !== 0) {
+      out.tabIndex = node.tabIndex;
+    }
+
+    if (node.cursor !== null) {
+      out.cursor = node.cursor;
+    }
+
+    if (node.clip) {
+      out.clip = true;
+    }
+
+    if (node.preserveDrawOrder) {
+      out.preserveDrawOrder = true;
+    }
+
+    if (node.cacheAsTexture) {
+      out.cacheAsTexture = true;
+    }
 
     const clipShape = node.clipShape;
 
@@ -75,8 +139,13 @@ export const writeCommonFields = (node: SceneNode, out: SerializedNode): void =>
     // frames differ in size) has to know it is anchored before it can re-derive
     // the origin for a new box; an origin restored on its own leaves the anchor
     // at (0, 0) and the pivot goes stale on the next frame change.
-    if (node.anchor.x !== 0) out.anchorX = node.anchor.x;
-    if (node.anchor.y !== 0) out.anchorY = node.anchor.y;
+    if (node.anchor.x !== 0) {
+      out.anchorX = node.anchor.x;
+    }
+
+    if (node.anchor.y !== 0) {
+      out.anchorY = node.anchor.y;
+    }
   }
 };
 
@@ -88,13 +157,34 @@ export const writeCommonFields = (node: SceneNode, out: SerializedNode): void =>
  * resetting scale). Absent fields keep the node's constructed defaults.
  */
 export const applyCommonFields = (node: SceneNode, data: SerializedNode): void => {
-  if (typeof data.x === 'number') node.x = data.x;
-  if (typeof data.y === 'number') node.y = data.y;
-  if (typeof data.rotation === 'number') node.rotation = data.rotation;
-  if (typeof data.scaleX === 'number') node.scale.x = data.scaleX;
-  if (typeof data.scaleY === 'number') node.scale.y = data.scaleY;
-  if (typeof data.skewX === 'number') node.skewX = data.skewX;
-  if (typeof data.skewY === 'number') node.skewY = data.skewY;
+  if (typeof data.x === 'number') {
+    node.x = data.x;
+  }
+
+  if (typeof data.y === 'number') {
+    node.y = data.y;
+  }
+
+  if (typeof data.rotation === 'number') {
+    node.rotation = data.rotation;
+  }
+
+  if (typeof data.scaleX === 'number') {
+    node.scale.x = data.scaleX;
+  }
+
+  if (typeof data.scaleY === 'number') {
+    node.scale.y = data.scaleY;
+  }
+
+  if (typeof data.skewX === 'number') {
+    node.skewX = data.skewX;
+  }
+
+  if (typeof data.skewY === 'number') {
+    node.skewY = data.skewY;
+  }
+
   // The anchor is applied BEFORE the origin, and deliberately so: writing the
   // anchor re-derives the origin from the layout box, so an origin that was
   // stored explicitly has to be written afterwards to win. Applying it the
@@ -109,14 +199,30 @@ export const applyCommonFields = (node: SceneNode, data: SerializedNode): void =
     }
   }
 
-  if (typeof data.originX === 'number') node.origin.x = data.originX;
-  if (typeof data.originY === 'number') node.origin.y = data.originY;
-  if (data.visible === false) node.visible = false;
-  if (typeof data.zIndex === 'number') node.zIndex = data.zIndex;
-  if (typeof data.name === 'string') node.name = data.name;
+  if (typeof data.originX === 'number') {
+    node.origin.x = data.originX;
+  }
+
+  if (typeof data.originY === 'number') {
+    node.origin.y = data.originY;
+  }
+
+  if (data.visible === false) {
+    node.visible = false;
+  }
+
+  if (typeof data.zIndex === 'number') {
+    node.zIndex = data.zIndex;
+  }
+
+  if (typeof data.name === 'string') {
+    node.name = data.name;
+  }
 
   if (node instanceof RenderNode) {
-    if (data.cullable === false) node.cullable = false;
+    if (data.cullable === false) {
+      node.cullable = false;
+    }
 
     const cullArea = data.cullArea;
 
@@ -124,14 +230,37 @@ export const applyCommonFields = (node: SceneNode, data: SerializedNode): void =
       node.cullArea = new Rectangle(Number(cullArea[0]), Number(cullArea[1]), Number(cullArea[2]), Number(cullArea[3]));
     }
 
-    if (data.interactive === true) node.interactive = true;
-    if (data.draggable === true) node.draggable = true;
-    if (data.focusable === true) node.focusable = true;
-    if (typeof data.tabIndex === 'number') node.tabIndex = data.tabIndex;
-    if (typeof data.cursor === 'string') node.cursor = data.cursor;
-    if (data.clip === true) node.clip = true;
-    if (data.preserveDrawOrder === true) node.preserveDrawOrder = true;
-    if (data.cacheAsTexture === true) node.cacheAsTexture = true;
+    if (data.interactive === true) {
+      node.interactive = true;
+    }
+
+    if (data.draggable === true) {
+      node.draggable = true;
+    }
+
+    if (data.focusable === true) {
+      node.focusable = true;
+    }
+
+    if (typeof data.tabIndex === 'number') {
+      node.tabIndex = data.tabIndex;
+    }
+
+    if (typeof data.cursor === 'string') {
+      node.cursor = data.cursor;
+    }
+
+    if (data.clip === true) {
+      node.clip = true;
+    }
+
+    if (data.preserveDrawOrder === true) {
+      node.preserveDrawOrder = true;
+    }
+
+    if (data.cacheAsTexture === true) {
+      node.cacheAsTexture = true;
+    }
 
     const clipShape = data.clipShape;
 

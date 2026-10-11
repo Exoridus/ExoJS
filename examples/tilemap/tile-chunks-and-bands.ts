@@ -10,7 +10,7 @@ import {
   type RenderingContext,
   Scene,
   type Seconds,
-  Sprite,
+  type Sprite,
   Spritesheet,
   type SpritesheetData,
   TextureRegion,
@@ -182,6 +182,7 @@ class TileChunksAndBandsScene extends Scene {
   private setupHud(): void {
     const chunkCount = (name: string): number => {
       const layer = this.mapView.getLayerNodesByName(name)[0];
+
       return layer ? layer.children.length : 0;
     };
 

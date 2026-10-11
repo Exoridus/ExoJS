@@ -25,7 +25,7 @@ const createRuntime = (): { backend: RenderBackend; context: RenderingContext } 
   const stats = createRenderStats();
 
   const backend: RenderBackend = {
-    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
+    ...createRenderBackendDouble({ renderTarget, stats }),
     stats,
     renderTarget,
     get view() {

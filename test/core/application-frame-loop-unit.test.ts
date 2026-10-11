@@ -292,7 +292,12 @@ describe('FrameLoop', () => {
 
       // Nine out of every ten frames now take four vsync intervals. The
       // estimate has to stay at the interval the tenth still hits.
-      runFrames(loop, host, [4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 1000 / 60], 60);
+      runFrames(
+        loop,
+        host,
+        [4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 4000 / 60, 1000 / 60],
+        60,
+      );
 
       expect(loop.displayFrameSeconds).toBeCloseTo(1 / 60, 5);
 

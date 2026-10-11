@@ -37,6 +37,7 @@ const defaultCapacity = 4096;
  * color that is not white.
  */
 let defaultWhiteTexture: Texture | null = null;
+
 const getDefaultWhiteTexture = (): Texture => {
   if (defaultWhiteTexture === null) {
     const canvas = document.createElement('canvas');
@@ -81,6 +82,7 @@ const getDefaultWhiteTexture = (): Texture => {
  * it are released by the backend when the renderer disconnects.
  */
 let defaultRenderMode: ParticleRenderMode | null = null;
+
 const getDefaultRenderMode = (): ParticleRenderMode => {
   defaultRenderMode ??= new QuadParticles();
 
@@ -199,7 +201,10 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   private _glState: ParticleGlState | null = null;
   private readonly _backendSignals: Signal[] = [];
   private readonly _onBackendReset = (): void => {
-    if (this._gpuMode) this._releaseSimulation();
+    if (this._gpuMode) {
+      this._releaseSimulation();
+    }
+
     this._compiled = false;
   };
   private _gpuMode = false;
@@ -415,7 +420,10 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
   /** Actual simulation path after the most recent update; CPU until an eligible backend is attached. */
   public get simulationBackend(): 'cpu' | 'webgl2' | 'webgpu' {
-    if (this._glState !== null) return 'webgl2';
+    if (this._glState !== null) {
+      return 'webgl2';
+    }
+
     return this._gpuMode ? 'webgpu' : 'cpu';
   }
 
@@ -450,7 +458,9 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     let live = 0;
 
     for (let i = 0; i < count; i++) {
-      if (alive[i] === 1) live++;
+      if (alive[i] === 1) {
+        live++;
+      }
     }
 
     return live;
@@ -584,7 +594,9 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   }
 
   public clearSpawnModules(): this {
-    for (const mod of this._spawnModules) mod.destroy();
+    for (const mod of this._spawnModules) {
+      mod.destroy();
+    }
 
     this._spawnModules.length = 0;
 
@@ -592,7 +604,9 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   }
 
   public clearUpdateModules(): this {
-    for (const mod of this._updateModules) mod.destroy();
+    for (const mod of this._updateModules) {
+      mod.destroy();
+    }
 
     this._updateModules.length = 0;
     this._invalidateProgram();
@@ -604,7 +618,10 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     this._deathGeneration++;
     this._resetPendingDeaths();
     this._simulationState?.discardDeaths();
-    for (const mod of this._deathModules) mod.destroy();
+
+    for (const mod of this._deathModules) {
+      mod.destroy();
+    }
 
     this._deathModules.length = 0;
     this._invalidateProgram();
@@ -765,10 +782,19 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     const backend = builder.backend;
 
     if (this._backend !== backend) {
-      for (const signal of this._backendSignals) signal.remove(this._onBackendReset);
+      for (const signal of this._backendSignals) {
+        signal.remove(this._onBackendReset);
+      }
+
       this._backendSignals.length = 0;
       this._backend = backend;
-      const events = backend as unknown as { onContextLost?: Signal; onContextRestored?: Signal; onDeviceLost?: Signal; onDeviceRestored?: Signal };
+      const events = backend as unknown as {
+        onContextLost?: Signal;
+        onContextRestored?: Signal;
+        onDeviceLost?: Signal;
+        onDeviceRestored?: Signal;
+      };
+
       for (const signal of [events.onContextLost, events.onContextRestored, events.onDeviceLost, events.onDeviceRestored]) {
         if (signal !== undefined) {
           signal.add(this._onBackendReset);
@@ -789,8 +815,14 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
   /** Per-frame entry point. Routes to CPU or GPU pipeline based on auto-detection at first call. */
   public update(delta: Seconds): this {
-    if (this.destroyed) return this;
-    if (this._glState?.destroyed === true) this._releaseSimulation();
+    if (this.destroyed) {
+      return this;
+    }
+
+    if (this._glState?.destroyed === true) {
+      this._releaseSimulation();
+    }
+
     if (!this._compiled) {
       this._compile();
       this._compiled = true;
@@ -813,9 +845,16 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   }
 
   public override destroy(): void {
-    if (this.destroyed) return;
+    if (this.destroyed) {
+      return;
+    }
+
     this._deathGeneration++;
-    for (const signal of this._backendSignals) signal.remove(this._onBackendReset);
+
+    for (const signal of this._backendSignals) {
+      signal.remove(this._onBackendReset);
+    }
+
     this._backendSignals.length = 0;
     super.destroy();
 
@@ -841,6 +880,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     for (const frame of this._frames) {
       frame.destroy();
     }
+
     this._frames.length = 0;
 
     this._gpuMode = false;
@@ -861,12 +901,15 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
   private _compile(): void {
     const gl = (this._backend as unknown as { context?: WebGL2RenderingContext } | null)?.context;
+
     if (gl !== undefined && typeof gl.createTransformFeedback === 'function' && this._device === null) {
       this._compileGl(gl);
+
       return;
     }
 
-    const eligible = this._simulation !== 'cpu' && this._updateModules.every(m => typeof m.wgsl === 'function') && this._renderMode.gpuEligible;
+    const eligible =
+      this._simulation !== 'cpu' && this._updateModules.every(m => typeof m.wgsl === 'function') && this._renderMode.gpuEligible;
 
     // Already running on the GPU: keep the buffers the device has been
     // integrating and swap the program, or - when the change made the system
@@ -915,31 +958,63 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     const { alive, count } = this._storage;
 
     for (let i = 0; i < count; i++) {
-      if (alive[i] === 1) this._gpuDirtySlots.add(i);
+      if (alive[i] === 1) {
+        this._gpuDirtySlots.add(i);
+      }
     }
   }
 
   private _compileGl(gl: WebGL2RenderingContext): void {
-    const eligible = this._simulation !== 'cpu' && this._renderMode instanceof QuadParticles && this._updateModules.every(m => typeof m.glsl === 'function');
+    const eligible =
+      this._simulation !== 'cpu' &&
+      this._renderMode instanceof QuadParticles &&
+      this._updateModules.every(m => typeof m.glsl === 'function');
+
     if (!eligible || gl.isContextLost()) {
-      if (this._glState !== null) this._releaseSimulation();
+      if (this._glState !== null) {
+        this._releaseSimulation();
+      }
+
       return;
     }
+
     const textureCount = 1 + this._updateModules.reduce((count, mod) => count + (mod.glsl!().textures?.length ?? 0), 0);
-    if (textureCount > gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) || Math.max(1, this._frames.length) > gl.getParameter(gl.MAX_TEXTURE_SIZE)) {
-      if (this._glState !== null) this._releaseSimulation();
+
+    if (
+      textureCount > gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) ||
+      Math.max(1, this._frames.length) > gl.getParameter(gl.MAX_TEXTURE_SIZE)
+    ) {
+      if (this._glState !== null) {
+        this._releaseSimulation();
+      }
+
       return;
     }
+
     if (this._glState !== null) {
       this._glState.setProgram(this._updateModules, this._deathModules.length > 0);
+
       return;
     }
-    this._glState = new ParticleGlState(gl, this.capacity, this._updateModules, this._frames, this._texture, this._textureFrame, this._deathModules.length > 0);
-    const renderer = this._backend?.rendererRegistry.resolve(this) as unknown as { _trackSimulation?: (state: ParticleGlState) => void } | undefined;
+
+    this._glState = new ParticleGlState(
+      gl,
+      this.capacity,
+      this._updateModules,
+      this._frames,
+      this._texture,
+      this._textureFrame,
+      this._deathModules.length > 0,
+    );
+    const renderer = this._backend?.rendererRegistry.resolve(this) as unknown as
+      { _trackSimulation?: (state: ParticleGlState) => void } | undefined;
     renderer?._trackSimulation?.(this._glState);
     this._gpuMode = true;
+
     for (let i = 0; i < this._storage.count; i++) {
-      if (this._storage.alive[i] === 1) this._gpuDirtySlots.add(i);
+      if (this._storage.alive[i] === 1) {
+        this._gpuDirtySlots.add(i);
+      }
     }
   }
 
@@ -1071,13 +1146,16 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     }
 
     for (let i = 0; i < liveCount; i++) {
-      if (alive[i] === 0) continue;
+      if (alive[i] === 0) {
+        continue;
+      }
 
       elapsed[i] = elapsed[i]! + dt;
 
       if (elapsed[i]! >= lifetime[i]!) {
         const report = reportsDeaths && this._pendingDeathCount < this.capacity;
         overflow ||= reportsDeaths && !report;
+
         // The lifetime is about to become the expiry sentinel, so keep the one
         // the particle was spawned with: it is the CPU's own value, and the
         // record the device appends carries only what the device integrated.
@@ -1120,9 +1198,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
     // Trim trailing dead slots for the next frame.
     let newLiveCount = storage.count;
+
     while (newLiveCount > 0 && alive[newLiveCount - 1] === 0) {
       newLiveCount--;
     }
+
     storage.count = newLiveCount;
 
     // Deaths the device could not stage stay queued here: they are appended
@@ -1161,7 +1241,10 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     const generation = this._deathGeneration;
     await this._simulationState?.readDeaths(records => {
       for (const record of records) {
-        if (this.destroyed || this._deathGeneration !== generation) return;
+        if (this.destroyed || this._deathGeneration !== generation) {
+          return;
+        }
+
         this._reportDeath({
           x: record.x,
           y: record.y,

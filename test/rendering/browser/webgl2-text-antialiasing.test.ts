@@ -38,7 +38,9 @@ const rampPixelsOnRow = (frame: Uint8Array, row: number): number => {
   for (let x = 0; x < size; x++) {
     const value = frame[(row * size + x) * 4]!;
 
-    if (value > 12 && value < 243) count++;
+    if (value > 12 && value < 243) {
+      count++;
+    }
   }
 
   return count;
@@ -49,7 +51,9 @@ const litPixelsOnRow = (frame: Uint8Array, row: number): number => {
   let count = 0;
 
   for (let x = 0; x < size; x++) {
-    if (frame[(row * size + x) * 4]! > 12) count++;
+    if (frame[(row * size + x) * 4]! > 12) {
+      count++;
+    }
   }
 
   return count;

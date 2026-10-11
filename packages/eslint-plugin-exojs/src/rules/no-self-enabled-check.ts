@@ -32,8 +32,13 @@ export interface NoSelfEnabledCheckOptions {
 
 /** Whether the expression reads `this.enabled` rather than assigning to it. */
 const isSelfEnabledRead = (node: MemberExpression & Rule.NodeParentExtension): boolean => {
-  if (node.computed || node.object.type !== 'ThisExpression') return false;
-  if (node.property.type !== 'Identifier' || node.property.name !== 'enabled') return false;
+  if (node.computed || node.object.type !== 'ThisExpression') {
+    return false;
+  }
+
+  if (node.property.type !== 'Identifier' || node.property.name !== 'enabled') {
+    return false;
+  }
 
   // `this.enabled = value` writes; `this.enabled ||= value` and `this.enabled +=
   // 1` also read, so only the plain assignment target is exempt.
@@ -94,11 +99,15 @@ export const noSelfEnabledCheck: Rule.RuleModule = {
         if (current.type === 'FunctionExpression' || current.type === 'FunctionDeclaration') {
           const owner: Rule.Node | null | undefined = (current as { parent?: Rule.Node | null }).parent;
 
-          if (owner?.type !== 'MethodDefinition' && owner?.type !== 'PropertyDefinition') return false;
+          if (owner?.type !== 'MethodDefinition' && owner?.type !== 'PropertyDefinition') {
+            return false;
+          }
         }
 
         // A static block, or a field initialiser outside the hook.
-        if (current.type === 'ClassBody' || current.type === 'StaticBlock') return false;
+        if (current.type === 'ClassBody' || current.type === 'StaticBlock') {
+          return false;
+        }
 
         current = (current as { parent?: Rule.Node | null }).parent;
       }
@@ -108,7 +117,9 @@ export const noSelfEnabledCheck: Rule.RuleModule = {
 
     return {
       MemberExpression(node) {
-        if (!isSelfEnabledRead(node) || !isInsideHook(node)) return;
+        if (!isSelfEnabledRead(node) || !isInsideHook(node)) {
+          return;
+        }
 
         context.report({ node, messageId: 'selfEnabledCheck', data: { hook } });
       },

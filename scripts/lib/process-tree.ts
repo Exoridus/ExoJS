@@ -1,12 +1,15 @@
-import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { type ChildProcess, spawn, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const signalGroup = (group: number, signal: NodeJS.Signals): string | undefined => {
   try {
     process.kill(-group, signal);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') return String(error);
+    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
+      return String(error);
+    }
   }
+
   return undefined;
 };
 
@@ -14,25 +17,36 @@ const signalGroup = (group: number, signal: NodeJS.Signals): string | undefined 
 const ownedGroups = (root: number): number[] => {
   const groups = new Set([root]);
   const snapshot = spawnSync('ps', ['-A', '-o', 'pid=,ppid=,pgid='], { encoding: 'utf8', timeout: 1000 });
-  if (snapshot.status !== 0) return [...groups];
+
+  if (snapshot.status !== 0) {
+    return [...groups];
+  }
+
   const rows = snapshot.stdout
     .trim()
     .split('\n')
     .map(line => line.trim().split(/\s+/).map(Number));
   const descendants = new Set([root]);
   let changed = true;
+
   while (changed) {
     changed = false;
+
     for (const [pid, parent, group] of rows) {
       if (pid && parent && group && descendants.has(parent) && !descendants.has(pid)) {
         descendants.add(pid);
+
         // A descendant's inherited group may belong to an ancestor outside our tree.
         // Only a descendant that leads its own group grants ownership of that group.
-        if (pid === group) groups.add(group);
+        if (pid === group) {
+          groups.add(group);
+        }
+
         changed = true;
       }
     }
   }
+
   return [...groups];
 };
 
@@ -43,9 +57,14 @@ export const stopProcessTree = async (
   birth: { earliest: number; latest: number; exitedAt?: number },
 ): Promise<string | undefined> => {
   const pid = child.pid;
-  if (pid === undefined) return undefined;
+
+  if (pid === undefined) {
+    return undefined;
+  }
+
   if (process.platform === 'win32') {
     const powershell = join(process.env['SystemRoot'] ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+
     return new Promise(resolve => {
       const killer = spawn(
         powershell,
@@ -82,7 +101,9 @@ export const stopProcessTree = async (
       killer.once('close', code => {
         clearTimeout(timer);
         resolve(
-          code === 0 ? undefined : `Process-tree cleanup exited ${code} for owned PID ${pid}: ${diagnostic.trim()}; inspect descendants before retrying.`,
+          code === 0
+            ? undefined
+            : `Process-tree cleanup exited ${code} for owned PID ${pid}: ${diagnostic.trim()}; inspect descendants before retrying.`,
         );
       });
     });
@@ -90,16 +111,26 @@ export const stopProcessTree = async (
 
   const groups = ownedGroups(pid);
   const errors: string[] = [];
+
   for (const group of groups) {
     const error = signalGroup(group, 'SIGTERM');
-    if (error) errors.push(error);
+
+    if (error) {
+      errors.push(error);
+    }
   }
+
   // A root may exit first while a descendant ignores SIGTERM and holds stdout.
   // Do not settle early on the root's exit/close event.
   await new Promise<void>(resolve => setTimeout(resolve, graceMs));
+
   for (const group of groups) {
     const error = signalGroup(group, 'SIGKILL');
-    if (error) errors.push(error);
+
+    if (error) {
+      errors.push(error);
+    }
   }
+
   return errors.length > 0 ? errors.join('; ') : undefined;
 };

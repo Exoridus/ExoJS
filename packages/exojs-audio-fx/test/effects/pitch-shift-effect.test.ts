@@ -25,13 +25,13 @@ describe('PitchShiftEffect', () => {
   describe('construction with defaults', () => {
     it('uses default pitch of 1.0', () => {
       const filter = new PitchShiftEffect();
-      expect(filter.pitch).toBe(1.0);
+      expect(filter.pitch).toBe(1);
       filter.destroy();
     });
 
     it('uses default wet of 1.0', () => {
       const filter = new PitchShiftEffect();
-      expect(filter.wet).toBe(1.0);
+      expect(filter.wet).toBe(1);
       filter.destroy();
     });
 
@@ -52,7 +52,7 @@ describe('PitchShiftEffect', () => {
 
     it('clamps pitch to maximum 4.0 on construction', () => {
       const filter = new PitchShiftEffect({ pitch: 10 });
-      expect(filter.pitch).toBe(4.0);
+      expect(filter.pitch).toBe(4);
       filter.destroy();
     });
 
@@ -66,7 +66,7 @@ describe('PitchShiftEffect', () => {
     it('clamps pitch to maximum 4.0 via setter', () => {
       const filter = new PitchShiftEffect();
       filter.pitch = 100;
-      expect(filter.pitch).toBe(4.0);
+      expect(filter.pitch).toBe(4);
       filter.destroy();
     });
 
@@ -86,7 +86,7 @@ describe('PitchShiftEffect', () => {
 
     it('clamps wet to maximum 1.0 on construction', () => {
       const filter = new PitchShiftEffect({ wet: 2 });
-      expect(filter.wet).toBe(1.0);
+      expect(filter.wet).toBe(1);
       filter.destroy();
     });
 
@@ -100,7 +100,7 @@ describe('PitchShiftEffect', () => {
     it('clamps wet to maximum 1.0 via setter', () => {
       const filter = new PitchShiftEffect();
       filter.wet = 1.5;
-      expect(filter.wet).toBe(1.0);
+      expect(filter.wet).toBe(1);
       filter.destroy();
     });
   });
@@ -137,8 +137,13 @@ describe('PitchShiftEffect', () => {
     it('processorOptions.grainSize is forwarded to AudioWorkletNode', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -151,8 +156,13 @@ describe('PitchShiftEffect', () => {
     it('default grainSize of 1024 is forwarded', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -193,9 +203,9 @@ describe('PitchShiftEffect', () => {
       const node = filter['_workletNode']!;
       const param = node.parameters.get('pitch') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
-      filter.pitch = 2.0;
-      expect(filter.pitch).toBe(2.0);
-      expect(param.setTargetAtTime).toHaveBeenCalledWith(2.0, expect.anything(), expect.anything());
+      filter.pitch = 2;
+      expect(filter.pitch).toBe(2);
+      expect(param.setTargetAtTime).toHaveBeenCalledWith(2, expect.anything(), expect.anything());
       filter.destroy();
     });
 

@@ -122,7 +122,9 @@ export class Matrix implements Cloneable<Matrix> {
    */
   public getInverse(result: Matrix = this): Matrix {
     const determinant =
-      this.a * (this.z * this.d - this.y * this.f) - this.b * (this.z * this.c - this.y * this.e) + this.x * (this.f * this.c - this.d * this.e);
+      this.a * (this.z * this.d - this.y * this.f) -
+      this.b * (this.z * this.c - this.y * this.e) +
+      this.x * (this.f * this.c - this.d * this.e);
 
     if (determinant === 0) {
       return result.copy(Matrix.identity);
@@ -220,7 +222,7 @@ export class Matrix implements Cloneable<Matrix> {
    * (as OpenGL expects). When `true` it is row-major.
    */
   public toArray(transpose = false): Float32Array {
-    const array = this._array || (this._array = new Float32Array(9));
+    const array = (this._array ||= new Float32Array(9));
 
     if (transpose) {
       array[0] = this.a;

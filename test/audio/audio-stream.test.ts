@@ -17,6 +17,7 @@ const createAudioElementStub = (): HTMLAudioElement => {
   Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
   Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
   Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
+
   return el;
 };
 

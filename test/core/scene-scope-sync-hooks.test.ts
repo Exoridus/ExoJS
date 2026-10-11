@@ -291,7 +291,9 @@ describe('synchronous hook contract', () => {
 
       registry.add(new AsyncFixedSystem() as never);
 
-      expect(() => registry._fixedUpdate(Time.toSeconds(Time.milliseconds(16)))).toThrow(/AsyncFixedSystem\.fixedUpdate\(\) returned a Promise/);
+      expect(() => registry._fixedUpdate(Time.toSeconds(Time.milliseconds(16)))).toThrow(
+        /AsyncFixedSystem\.fixedUpdate\(\) returned a Promise/,
+      );
     });
 
     test('an async draw() phase throws', () => {

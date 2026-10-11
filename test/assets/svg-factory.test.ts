@@ -43,7 +43,11 @@ afterEach(() => {
 
 const lastImage = (): HTMLImageElement => {
   const image = capturedImages.at(-1);
-  if (!image) throw new Error('No Image instance was created by the factory under test.');
+
+  if (!image) {
+    throw new Error('No Image instance was created by the factory under test.');
+  }
+
   return image;
 };
 
@@ -66,7 +70,9 @@ describe('SvgFactory', () => {
     const promise = factory.create('<svg></svg>', factoryContext());
     lastImage().dispatchEvent(new Event('error'));
 
-    await expect(promise).rejects.toThrow('Failed to decode SVG source - the markup may be malformed, or (if loaded as the wrong asset type) not SVG at all.');
+    await expect(promise).rejects.toThrow(
+      'Failed to decode SVG source - the markup may be malformed, or (if loaded as the wrong asset type) not SVG at all.',
+    );
   });
 
   test('create() rejects with a clear message on "abort"', async () => {

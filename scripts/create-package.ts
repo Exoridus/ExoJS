@@ -68,10 +68,18 @@ const parseArgs = (argv: readonly string[]): Options => {
     const eq = arg.indexOf('=');
     const flag = arg.startsWith('--') && eq !== -1 ? arg.slice(0, eq) : arg;
     const inlineValue = arg.startsWith('--') && eq !== -1 ? arg.slice(eq + 1) : undefined;
+
     const takeValue = (): string => {
-      if (inlineValue !== undefined) return inlineValue;
+      if (inlineValue !== undefined) {
+        return inlineValue;
+      }
+
       const next = argv[++i];
-      if (next === undefined) fail(`${flag} expects a value`);
+
+      if (next === undefined) {
+        fail(`${flag} expects a value`);
+      }
+
       return next;
     };
 
@@ -79,8 +87,12 @@ const parseArgs = (argv: readonly string[]): Options => {
       case '--dep':
         for (const d of takeValue().split(',')) {
           const trimmed = d.trim();
-          if (trimmed) deps.push(trimmed);
+
+          if (trimmed) {
+            deps.push(trimmed);
+          }
         }
+
         break;
       case '--description':
         description = takeValue();
@@ -94,13 +106,21 @@ const parseArgs = (argv: readonly string[]): Options => {
         process.exit(0);
         break;
       default:
-        if (arg.startsWith('-')) fail(`unknown flag: ${arg}`);
-        if (name !== undefined) fail(`unexpected extra argument: ${arg}`);
+        if (arg.startsWith('-')) {
+          fail(`unknown flag: ${arg}`);
+        }
+
+        if (name !== undefined) {
+          fail(`unexpected extra argument: ${arg}`);
+        }
+
         name = arg;
     }
   }
 
-  if (name === undefined) fail('a package <name> is required');
+  if (name === undefined) {
+    fail('a package <name> is required');
+  }
 
   // Tolerate a leading scope/prefix the user may have typed; the canonical name
   // is the bare kebab segment.
@@ -114,10 +134,13 @@ const parseArgs = (argv: readonly string[]): Options => {
 const KEBAB_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 const toCamel = (kebab: string): string => kebab.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+
 const toPascal = (kebab: string): string => {
   const camel = toCamel(kebab);
+
   return camel.charAt(0).toUpperCase() + camel.slice(1);
 };
+
 const toTitle = (kebab: string): string =>
   kebab
     .split('-')
@@ -131,7 +154,11 @@ const writeFile = (relPath: string, contents: string): void => {
 /** Insert `lines` (each gets a trailing newline) immediately before `anchor`. */
 const insertBefore = (content: string, anchor: string, lines: readonly string[]): string => {
   const idx = content.indexOf(anchor);
-  if (idx === -1) throw new Error(`anchor not found: ${anchor}`);
+
+  if (idx === -1) {
+    throw new Error(`anchor not found: ${anchor}`);
+  }
+
   return content.slice(0, idx) + lines.map(l => `${l}\n`).join('') + content.slice(idx);
 };
 
@@ -140,20 +167,30 @@ const insertBefore = (content: string, anchor: string, lines: readonly string[])
 const opts = parseArgs(process.argv.slice(2));
 const { name, deps, inOfflineSmoke } = opts;
 
-if (!KEBAB_RE.test(name)) fail(`name "${name}" is not kebab-case (lowercase letters/digits, single dashes)`);
+if (!KEBAB_RE.test(name)) {
+  fail(`name "${name}" is not kebab-case (lowercase letters/digits, single dashes)`);
+}
 
 const pkgName = `@codexo/exojs-${name}`;
 const pkgDirRel = `packages/exojs-${name}`;
 const pkgDir = resolve(rootDir, pkgDirRel);
 
-if (existsSync(pkgDir)) fail(`directory already exists: ${pkgDirRel}`);
+if (existsSync(pkgDir)) {
+  fail(`directory already exists: ${pkgDirRel}`);
+}
 
 const lockstepPath = resolve(rootDir, 'scripts/release/lockstep-packages.ts');
 const lockstepSrc = readFileSync(lockstepPath, 'utf8');
-if (lockstepSrc.includes(`'${pkgName}'`)) fail(`${pkgName} is already in LOCKSTEP_PACKAGES`);
+
+if (lockstepSrc.includes(`'${pkgName}'`)) {
+  fail(`${pkgName} is already in LOCKSTEP_PACKAGES`);
+}
 
 for (const dep of deps) {
-  if (!KEBAB_RE.test(dep)) fail(`--dep "${dep}" is not kebab-case`);
+  if (!KEBAB_RE.test(dep)) {
+    fail(`--dep "${dep}" is not kebab-case`);
+  }
+
   if (!existsSync(resolve(rootDir, `packages/exojs-${dep}`))) {
     fail(`--dep "${dep}" → packages/exojs-${dep} does not exist`);
   }
@@ -174,6 +211,7 @@ mkdirSync(resolve(pkgDir, 'src'), { recursive: true });
 mkdirSync(resolve(pkgDir, 'test'), { recursive: true });
 
 const generated: string[] = [];
+
 const emit = (relPath: string, contents: string): void => {
   writeFile(relPath, contents);
   generated.push(`${pkgDirRel}/${relPath}`);
@@ -223,7 +261,7 @@ emit('package.json', `${JSON.stringify(manifest, null, 2)}\n`);
 
 // tsconfig.json - Core paths to source (+ each runtime dep), like aseprite/tiled.
 // Hand-built (not JSON.stringify) to keep the references' inline-array style.
-const pathEntries: [string, string][] = [
+const pathEntries: Array<[string, string]> = [
   ['@codexo/exojs', '../../src/index.ts'],
   ['@codexo/exojs/extensions', '../../src/extensions/index.ts'],
   ['@codexo/exojs/renderer-sdk', '../../src/renderer-sdk.ts'],
@@ -241,17 +279,22 @@ const pathLines = pathEntries.map(([k, v]) => `      "${k}": ["${v}"]`).join(',\
 // (tilemap, etc.) contribute nothing.
 const SOURCE_CONDITION_RE = /-source$/;
 const customConditions = ['@codexo/exojs-source'];
+
 for (const dep of deps) {
   const depPkg = JSON.parse(readFileSync(resolve(rootDir, `packages/exojs-${dep}/package.json`), 'utf8')) as {
     imports?: Record<string, unknown>;
   };
   const star = depPkg.imports?.['#*'];
+
   if (star && typeof star === 'object') {
     for (const cond of Object.keys(star)) {
-      if (SOURCE_CONDITION_RE.test(cond) && !customConditions.includes(cond)) customConditions.push(cond);
+      if (SOURCE_CONDITION_RE.test(cond) && !customConditions.includes(cond)) {
+        customConditions.push(cond);
+      }
     }
   }
 }
+
 const conditionsLine = `[${customConditions.map(c => `"${c}"`).join(', ')}]`;
 
 emit(
@@ -289,7 +332,7 @@ emit('rolldown.config.ts', rolldownConfig);
 // of its own). Same `paths` shape as tsconfig.json, but resolved against
 // Core's (and each runtime dep's) *built* declarations, not source - see
 // packages/exojs-particles/tsconfig.build.json for the pattern this mirrors.
-const buildPathEntries: [string, string][] = [
+const buildPathEntries: Array<[string, string]> = [
   ['@codexo/exojs', '../../dist/esm/index.d.ts'],
   ['@codexo/exojs/extensions', '../../dist/esm/extensions/index.d.ts'],
   ['@codexo/exojs/renderer-sdk', '../../dist/esm/renderer-sdk.d.ts'],
@@ -418,13 +461,22 @@ const wired: string[] = [];
   const lanesPath = resolve(rootDir, 'scripts/ci/select-lanes.ts');
   const src = readFileSync(lanesPath, 'utf8');
   const dirName = `exojs-${name}`;
+
   if (src.includes(`'${dirName}'`)) {
     wired.push('scripts/ci/select-lanes.ts (already present)');
   } else {
     const arrayStart = src.indexOf('const RUNTIME_PACKAGES = [');
-    if (arrayStart === -1) throw new Error('RUNTIME_PACKAGES array not found in select-lanes.ts');
+
+    if (arrayStart === -1) {
+      throw new Error('RUNTIME_PACKAGES array not found in select-lanes.ts');
+    }
+
     const closeIdx = src.indexOf('];', arrayStart);
-    if (closeIdx === -1) throw new Error('RUNTIME_PACKAGES closing not found in select-lanes.ts');
+
+    if (closeIdx === -1) {
+      throw new Error('RUNTIME_PACKAGES closing not found in select-lanes.ts');
+    }
+
     const updated = `${src.slice(0, closeIdx)}  '${dirName}',\n${src.slice(closeIdx)}`;
     writeFileSync(lanesPath, updated, 'utf8');
     wired.push('scripts/ci/select-lanes.ts (RUNTIME_PACKAGES)');
@@ -437,6 +489,7 @@ const wired: string[] = [];
   const wsPath = resolve(rootDir, 'pnpm-workspace.yaml');
   const src = readFileSync(wsPath, 'utf8');
   const memberLine = `  - ${pkgDirRel}`;
+
   if (src.includes(`${memberLine}\n`)) {
     wired.push('pnpm-workspace.yaml (already present)');
   } else {
@@ -452,10 +505,16 @@ const out = process.stdout;
 out.write(`\nScaffolded ${pkgName} (library${deps.length ? `, deps: ${deps.join(', ')}` : ''}) @ v${coreVersion}\n\n`);
 
 out.write('Generated files:\n');
-for (const f of generated) out.write(`  + ${f}\n`);
+
+for (const f of generated) {
+  out.write(`  + ${f}\n`);
+}
 
 out.write('\nAuto-wired (single sources of truth):\n');
-for (const w of wired) out.write(`  ✓ ${w}\n`);
+
+for (const w of wired) {
+  out.write(`  ✓ ${w}\n`);
+}
 
 const filterFlag = `--filter "${pkgName}"`;
 out.write(`

@@ -35,8 +35,20 @@ describe('resolveBarrierResolution', () => {
   });
 
   test('an explicit filter resolution overrides inheritance in both directions', () => {
-    expect(resolveBarrierResolution(2, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [withResolution(new ColorMatrixFilter(), 1)] })).toBe(1);
-    expect(resolveBarrierResolution(1, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [withResolution(new ColorMatrixFilter(), 4)] })).toBe(4);
+    expect(
+      resolveBarrierResolution(2, {
+        cacheAsTexture: false,
+        cacheResolution: 'inherit',
+        filters: [withResolution(new ColorMatrixFilter(), 1)],
+      }),
+    ).toBe(1);
+    expect(
+      resolveBarrierResolution(1, {
+        cacheAsTexture: false,
+        cacheResolution: 'inherit',
+        filters: [withResolution(new ColorMatrixFilter(), 4)],
+      }),
+    ).toBe(4);
   });
 
   test('an explicit cache resolution overrides inheritance', () => {
@@ -52,15 +64,23 @@ describe('resolveBarrierResolution', () => {
   });
 
   test('a cache and its filters are minimised together', () => {
-    expect(resolveBarrierResolution(3, { cacheAsTexture: true, cacheResolution: 2, filters: [withResolution(new ColorMatrixFilter(), 1)] })).toBe(1);
-    expect(resolveBarrierResolution(3, { cacheAsTexture: true, cacheResolution: 1, filters: [withResolution(new ColorMatrixFilter(), 2)] })).toBe(1);
+    expect(
+      resolveBarrierResolution(3, { cacheAsTexture: true, cacheResolution: 2, filters: [withResolution(new ColorMatrixFilter(), 1)] }),
+    ).toBe(1);
+    expect(
+      resolveBarrierResolution(3, { cacheAsTexture: true, cacheResolution: 1, filters: [withResolution(new ColorMatrixFilter(), 2)] }),
+    ).toBe(1);
   });
 
   test('a nonsensical override falls back to inheritance rather than producing an unusable target', () => {
     for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(resolveBarrierResolution(2, { cacheAsTexture: false, cacheResolution: 'inherit', filters: [withResolution(new ColorMatrixFilter(), bad)] })).toBe(
-        2,
-      );
+      expect(
+        resolveBarrierResolution(2, {
+          cacheAsTexture: false,
+          cacheResolution: 'inherit',
+          filters: [withResolution(new ColorMatrixFilter(), bad)],
+        }),
+      ).toBe(2);
       expect(resolveBarrierResolution(2, { cacheAsTexture: true, cacheResolution: bad, filters: noFilters })).toBe(2);
     }
   });

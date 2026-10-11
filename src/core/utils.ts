@@ -97,7 +97,9 @@ export const supportsPointerEvents: boolean = typeof PointerEvent !== 'undefined
  * @param userAgent - The UA string to classify.
  */
 export const isWebKitUserAgent = (userAgent: string): boolean =>
-  userAgent.includes('AppleWebKit') && userAgent.includes('Safari/') && !['Chrome', 'Chromium', 'Edg/'].some(token => userAgent.includes(token));
+  userAgent.includes('AppleWebKit') &&
+  userAgent.includes('Safari/') &&
+  !['Chrome', 'Chromium', 'Edg/'].some(token => userAgent.includes(token));
 
 /**
  * Lazy-cached probe for the third `EventListenerOptions` argument to
@@ -153,6 +155,7 @@ export const vibrate = (pattern: VibratePattern): boolean => {
   if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') {
     return false;
   }
+
   return navigator.vibrate(pattern);
 };
 
@@ -186,7 +189,8 @@ export const removeArrayItems = <T = unknown>(array: T[], startIndex: number, am
  * strings as playable on a transient `<audio>` element. Use to gate format
  * selection (e.g. prefer OGG, fall back to MP3).
  */
-export const supportsCodec = (...codecs: string[]): boolean => codecs.some(codec => getAudioElement().canPlayType(codec).replace(codecNotSupportedPattern, ''));
+export const supportsCodec = (...codecs: string[]): boolean =>
+  codecs.some(codec => getAudioElement().canPlayType(codec).replace(codecNotSupportedPattern, ''));
 
 /**
  * Resolve the natural pixel dimensions of any `CanvasImageSource`. Returns

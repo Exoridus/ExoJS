@@ -92,7 +92,10 @@ export class WidgetBackground {
 
   private _paintAnimated(background: UIAnimatedBackground, width: number, height: number): void {
     const reusable =
-      this._node instanceof AnimatedSprite && this._painted !== null && this._painted.kind === 'animated' && sameAnimated(this._painted, background);
+      this._node instanceof AnimatedSprite &&
+      this._painted !== null &&
+      this._painted.kind === 'animated' &&
+      sameAnimated(this._painted, background);
     const sprite = reusable ? (this._node as AnimatedSprite) : this._replaceNode(new AnimatedSprite(background.texture, background.clips));
 
     // `play` restarts the clip by default, which would rewind the animation on
@@ -106,7 +109,10 @@ export class WidgetBackground {
 
   private _paintSprite(background: UISpriteBackground, width: number, height: number): void {
     const reusable =
-      this._node instanceof RepeatingSprite && this._painted !== null && this._painted.kind === 'sprite' && sameSprite(this._painted, background);
+      this._node instanceof RepeatingSprite &&
+      this._painted !== null &&
+      this._painted.kind === 'sprite' &&
+      sameSprite(this._painted, background);
     const mode = background.fit === 'tile' ? 'repeat' : 'stretch';
     const sprite = reusable
       ? (this._node as RepeatingSprite)
@@ -120,7 +126,10 @@ export class WidgetBackground {
     // `NineSliceSprite`, so a descriptor that changes any of them needs a new
     // sprite rather than an in-place update.
     const reusable =
-      this._node instanceof NineSliceSprite && this._painted !== null && this._painted.kind === 'nineSlice' && sameNineSlice(this._painted, background);
+      this._node instanceof NineSliceSprite &&
+      this._painted !== null &&
+      this._painted.kind === 'nineSlice' &&
+      sameNineSlice(this._painted, background);
     const sprite = reusable
       ? (this._node as NineSliceSprite)
       : this._replaceNode(

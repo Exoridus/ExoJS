@@ -1,4 +1,14 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  Text,
+  type Texture,
+} from '@codexo/exojs';
 
 class TextureLoaderScene extends Scene {
   private sprites!: Sprite[];
@@ -23,6 +33,7 @@ class TextureLoaderScene extends Scene {
       const sprite = new Sprite(texture);
       sprite.setAnchor(0.5);
       sprite.setPosition((width / this.textures.length) * (index + 0.5), height * 0.6);
+
       return sprite;
     });
 

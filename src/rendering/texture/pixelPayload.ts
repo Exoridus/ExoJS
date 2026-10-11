@@ -52,7 +52,10 @@ export const validateRgba8Payload = ({ levels }: Rgba8TexturePayload): Rgba8Text
 
     if (!(level.data instanceof Uint8Array) || level.data.byteLength !== expectedBytes) {
       const actualBytes = level.data instanceof Uint8Array ? level.data.byteLength : 'a non-Uint8Array value';
-      throw new Error(`RGBA8 mip level ${index} is ${level.width}x${level.height}, which needs ${expectedBytes} bytes, but carries ${actualBytes}.`);
+
+      throw new Error(
+        `RGBA8 mip level ${index} is ${level.width}x${level.height}, which needs ${expectedBytes} bytes, but carries ${actualBytes}.`,
+      );
     }
   }
 

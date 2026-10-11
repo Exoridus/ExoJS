@@ -61,6 +61,7 @@ describe('backend-neutral particle modules', () => {
     expect(glsl?.key).toBe(wgsl.key);
     expect(glsl?.uniforms).toEqual(wgsl.uniforms);
     expect(glsl?.textures).toEqual(wgsl.textures);
+
     for (const texture of glsl?.textures ?? []) {
       expect(module.textureData?.().get(texture.name)?.byteLength).toBe(1024);
     }

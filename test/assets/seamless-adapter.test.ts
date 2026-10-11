@@ -4,9 +4,7 @@ import { logger, LogSeverity } from '#core/Logger';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 
-const bufferStub = (duration = 2): AudioBuffer => {
-  return { duration } as AudioBuffer;
-};
+const bufferStub = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
 
 describe('textureSeamlessAdapter', () => {
   test("createPlaceholder returns an empty 'loading' texture", () => {
@@ -113,7 +111,9 @@ describe('textureSeamlessAdapter', () => {
   test('fill warns once when the payload size mismatches the pre-size', () => {
     const warnings: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+      if (entry.severity === LogSeverity.Warning) {
+        warnings.push(entry.message);
+      }
     });
 
     try {
@@ -135,7 +135,9 @@ describe('textureSeamlessAdapter', () => {
   test('fill does not warn without a pre-size, and fail consumes the pre-size (no warn on heal)', () => {
     const warnings: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+      if (entry.severity === LogSeverity.Warning) {
+        warnings.push(entry.message);
+      }
     });
 
     try {

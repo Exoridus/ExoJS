@@ -45,7 +45,9 @@ const slide = (options: TileColliderOptions): SlideTrace => {
     }),
   );
 
-  for (let step = 0; step < 90; step++) world.step(DT);
+  for (let step = 0; step < 90; step++) {
+    world.step(DT);
+  }
 
   body.wake();
   body.linearVelocityX = SPEED;
@@ -81,7 +83,9 @@ const dropOnto = (layer: TileLayer, options: TileColliderOptions, x: number, y: 
     }),
   );
 
-  for (let step = 0; step < 240; step++) world.step(DT);
+  for (let step = 0; step < 240; step++) {
+    world.step(DT);
+  }
 
   return body.y;
 };
@@ -132,7 +136,10 @@ describe('outline region mode', () => {
 
     for (let ty = 1; ty < 7; ty++) {
       for (let tx = 1; tx < 7; tx++) {
-        if (tx >= 3 && tx <= 4 && ty >= 3 && ty <= 4) continue;
+        if (tx >= 3 && tx <= 4 && ty >= 3 && ty <= 4) {
+          continue;
+        }
+
         place(layer, tileset, tx, ty);
       }
     }

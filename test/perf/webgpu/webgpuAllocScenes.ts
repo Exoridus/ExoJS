@@ -132,7 +132,14 @@ export const WEBGPU_ALLOC_ARCHETYPES: readonly WebGpuAllocArchetype[] = [
     id: 'nested/1000 d4',
     rationale: 'Many Group scopes, all clean: per-scope plan playback with retained group resources.',
     build: () => {
-      const { root } = buildNestedScene({ count: 1000, perContainer: 8, depth: 4, textures: [makeCanvasTexture()], viewW: VIEW_WIDTH, viewH: VIEW_HEIGHT });
+      const { root } = buildNestedScene({
+        count: 1000,
+        perContainer: 8,
+        depth: 4,
+        textures: [makeCanvasTexture()],
+        viewW: VIEW_WIDTH,
+        viewH: VIEW_HEIGHT,
+      });
 
       return { root, teardown: () => root.destroy() };
     },
@@ -165,7 +172,8 @@ export const WEBGPU_ALLOC_ARCHETYPES: readonly WebGpuAllocArchetype[] = [
   },
   {
     id: 'blend/1000 alternating',
-    rationale: 'The same modes alternating per sprite — ~1000 flushes per frame. Deliberately pathological: it makes a per-flush cost legible.',
+    rationale:
+      'The same modes alternating per sprite — ~1000 flushes per frame. Deliberately pathological: it makes a per-flush cost legible.',
     build: () => {
       const { root } = buildSpriteScene({
         count: 1000,
@@ -182,7 +190,13 @@ export const WEBGPU_ALLOC_ARCHETYPES: readonly WebGpuAllocArchetype[] = [
     id: 'texture/8 distinct',
     rationale: 'Eight textures cycled across 1000 sprites — texture state lookup and material bind groups once per bound texture per draw.',
     build: () => {
-      const { root } = buildSpriteScene({ count: 1000, textures: makeCanvasTextures(8), assign: 'distinct', viewW: VIEW_WIDTH, viewH: VIEW_HEIGHT });
+      const { root } = buildSpriteScene({
+        count: 1000,
+        textures: makeCanvasTextures(8),
+        assign: 'distinct',
+        viewW: VIEW_WIDTH,
+        viewH: VIEW_HEIGHT,
+      });
 
       return { root, teardown: () => root.destroy() };
     },
@@ -226,7 +240,8 @@ export const WEBGPU_ALLOC_ARCHETYPES: readonly WebGpuAllocArchetype[] = [
   },
   {
     id: 'mesh/1000 moving',
-    rationale: 'Mesh draws with every transform dirty — mesh transforms take the same storage path as sprites but through the mesh renderer.',
+    rationale:
+      'Mesh draws with every transform dirty — mesh transforms take the same storage path as sprites but through the mesh renderer.',
     build: () => {
       const { root, meshes } = buildMeshScene({ count: 1000, textures: [makeCanvasTexture()], viewW: VIEW_WIDTH, viewH: VIEW_HEIGHT });
       let frame = 0;
@@ -248,4 +263,5 @@ export const WEBGPU_ALLOC_ARCHETYPES: readonly WebGpuAllocArchetype[] = [
   },
 ];
 
-export const findWebGpuArchetype = (id: string): WebGpuAllocArchetype | undefined => WEBGPU_ALLOC_ARCHETYPES.find(archetype => archetype.id === id);
+export const findWebGpuArchetype = (id: string): WebGpuAllocArchetype | undefined =>
+  WEBGPU_ALLOC_ARCHETYPES.find(archetype => archetype.id === id);

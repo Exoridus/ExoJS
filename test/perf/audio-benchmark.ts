@@ -35,12 +35,13 @@ let _sourceIdCounter = 0;
 
 const makeBufferSource = (): AudioBufferSourceNode => {
   const id = ++_sourceIdCounter;
+
   return {
     _id: id,
-    connect: () => undefined,
-    disconnect: () => undefined,
-    start: () => undefined,
-    stop: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
+    start: () => {},
+    stop: () => {},
     playbackRate: { value: 1 },
     detune: { value: 0 },
     loop: false,
@@ -53,22 +54,22 @@ const makeBufferSource = (): AudioBufferSourceNode => {
 
 const makeGain = (): GainNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
     context: null as unknown as AudioContext,
     gain: {
       value: 1,
-      setTargetAtTime: () => undefined,
-      cancelScheduledValues: () => undefined,
-      setValueAtTime: () => undefined,
-      linearRampToValueAtTime: () => undefined,
+      setTargetAtTime: () => {},
+      cancelScheduledValues: () => {},
+      setValueAtTime: () => {},
+      linearRampToValueAtTime: () => {},
     },
   }) as unknown as GainNode;
 
 const makePanner = (): PannerNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
     context: { currentTime: 0 } as AudioContext,
     panningModel: 'equalpower' as PanningModelType,
     distanceModel: 'linear' as DistanceModelType,
@@ -82,20 +83,20 @@ const makePanner = (): PannerNode =>
 
 const makeStereoPanner = (): StereoPannerNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
-    pan: { value: 0, setTargetAtTime: () => undefined },
+    connect: () => {},
+    disconnect: () => {},
+    pan: { value: 0, setTargetAtTime: () => {} },
   }) as unknown as StereoPannerNode;
 
 const makeBiquadFilter = (): BiquadFilterNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
     context: { currentTime: 0 } as AudioContext,
     type: 'lowpass' as BiquadFilterType,
-    frequency: { value: 350, setValueAtTime: () => undefined, setTargetAtTime: () => undefined },
-    Q: { value: 1, setValueAtTime: () => undefined, setTargetAtTime: () => undefined },
-    gain: { value: 0, setValueAtTime: () => undefined, setTargetAtTime: () => undefined },
+    frequency: { value: 350, setValueAtTime: () => {}, setTargetAtTime: () => {} },
+    Q: { value: 1, setValueAtTime: () => {}, setTargetAtTime: () => {} },
+    gain: { value: 0, setValueAtTime: () => {}, setTargetAtTime: () => {} },
   }) as unknown as BiquadFilterNode;
 
 const MOCK_LISTENER = {
@@ -157,9 +158,11 @@ if (typeof (globalThis as Record<string, unknown>)['OfflineAudioContext'] === 'u
     writable: true,
     value: class {
       public sampleRate: number;
+
       constructor(_c: number, _l: number, sr: number) {
         this.sampleRate = sr;
       }
+
       decodeAudioData() {
         return Promise.resolve({} as AudioBuffer);
       }
@@ -173,10 +176,10 @@ if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'unde
     configurable: true,
     writable: true,
     value: class {
-      connect = () => undefined;
-      disconnect = () => undefined;
+      connect = () => {};
+      disconnect = () => {};
       parameters = new Map<string, AudioParam>();
-      port = { postMessage: () => undefined, onmessage: null };
+      port = { postMessage: () => {}, onmessage: null };
     },
   });
 }
@@ -229,6 +232,7 @@ const results: BenchmarkResult[] = [];
       name: 'many-sounds-play',
       setup() {
         system = new AudioSystem();
+
         for (let i = 0; i < 50; i++) {
           sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
         }
@@ -245,6 +249,7 @@ const results: BenchmarkResult[] = [];
         for (const s of sounds) {
           s.destroy();
         }
+
         sounds.length = 0;
         system!.destroy();
         system = null;
@@ -265,6 +270,7 @@ const results: BenchmarkResult[] = [];
       name: 'audio-system-pre-update',
       setup() {
         system = new AudioSystem();
+
         for (let i = 0; i < 20; i++) {
           const s = new Sound(makeAudioBuffer());
           spatialSounds.push(s);
@@ -278,6 +284,7 @@ const results: BenchmarkResult[] = [];
         for (const s of spatialSounds) {
           s.destroy();
         }
+
         spatialSounds.length = 0;
         system!.destroy();
         system = null;
@@ -305,9 +312,11 @@ const results: BenchmarkResult[] = [];
             new LowpassFilter({ frequency: 500 }),
             new LowpassFilter({ frequency: 200 }),
           ];
+
           for (const f of filters) {
             bus!.addEffect(f);
           }
+
           for (const f of filters) {
             bus!.removeEffect(f);
             f.destroy();
@@ -336,6 +345,7 @@ const results: BenchmarkResult[] = [];
       name: 'spatial-voice-tick',
       setup() {
         system = new AudioSystem();
+
         for (let i = 0; i < 20; i++) {
           const s = new Sound(makeAudioBuffer());
           spatialSounds.push(s);
@@ -350,9 +360,11 @@ const results: BenchmarkResult[] = [];
       },
       teardown() {
         spatialVoices.length = 0;
+
         for (const s of spatialSounds) {
           s.destroy();
         }
+
         spatialSounds.length = 0;
         system!.destroy();
         system = null;

@@ -11,6 +11,7 @@ interface Candidate extends BasisTarget {
 }
 
 const candidates = new Map<Format, Candidate>();
+
 for (const [linear, srgb, id, alpha] of [
   [Format.Bc7RgbaUnorm, Format.Bc7RgbaUnormSrgb, 6, true],
   [Format.Astc4x4Unorm, Format.Astc4x4Srgb, 10, true],
@@ -28,7 +29,11 @@ for (const [linear, srgb, id, alpha] of [
 export const selectBasisTarget = (formats: readonly Format[], hasAlpha: boolean, srgb: boolean): BasisTarget => {
   for (const format of formats) {
     const candidate = candidates.get(format);
-    if (candidate?.srgb === srgb && (!hasAlpha || candidate.alpha)) return candidate;
+
+    if (candidate?.srgb === srgb && (!hasAlpha || candidate.alpha)) {
+      return candidate;
+    }
   }
+
   return { id: 13 };
 };

@@ -62,7 +62,8 @@ const intersectionSat = (shapeA: Collidable, shapeB: Collidable): boolean => {
   return true;
 };
 
-const intersectionPointPoint = (pointA: PointLike, pointB: PointLike, threshold = 0): boolean => intersectionPrimitivePointPoint(pointA, pointB, threshold);
+const intersectionPointPoint = (pointA: PointLike, pointB: PointLike, threshold = 0): boolean =>
+  intersectionPrimitivePointPoint(pointA, pointB, threshold);
 
 const intersectionPointLine = (point: PointLike, line: Line, threshold = 0.1): boolean =>
   intersectionPointLineSegment(point, line.fromPosition, line.toPosition, threshold);
@@ -197,7 +198,8 @@ const intersectionRectPoly = (rectangle: Rectangle, polygon: Polygon): boolean =
 const intersectionCircleCircle = ({ x: x1, y: y1, radius: r1 }: Circle, { x: x2, y: y2, radius: r2 }: Circle): boolean =>
   getDistance(x1, y1, x2, y2) <= r1 + r2;
 
-const intersectionCircleEllipse = (circle: Circle, ellipse: Ellipse): boolean => polygonsIntersect(buildCirclePoints(circle), buildEllipsePoints(ellipse));
+const intersectionCircleEllipse = (circle: Circle, ellipse: Ellipse): boolean =>
+  polygonsIntersect(buildCirclePoints(circle), buildEllipsePoints(ellipse));
 
 const shouldExcludeLeftVoronoi = (
   circleX: number,
@@ -369,6 +371,7 @@ const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): CollisionRe
 
   if (overlap < 0) {
     difference.destroy();
+
     return null;
   }
 
@@ -558,7 +561,8 @@ const getCollisionEllipseCircle = (ellipse: Ellipse, circle: Circle, swap = fals
   if (distance > 0) {
     normalX = dx / distance;
     normalY = dy / distance;
-    const ellipseBoundary = 1 / Math.sqrt((normalX * normalX) / (ellipse.rx * ellipse.rx) + (normalY * normalY) / (ellipse.ry * ellipse.ry));
+    const ellipseBoundary =
+      1 / Math.sqrt((normalX * normalX) / (ellipse.rx * ellipse.rx) + (normalY * normalY) / (ellipse.ry * ellipse.ry));
     overlap = ellipseBoundary + circle.radius - distance;
   } else {
     // Coincident centers - use the smaller ellipse axis as the push direction.
@@ -632,6 +636,7 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
       if (getVoronoiRegionForPoint(edgeBx, edgeBy, positionBx, positionBy) === VoronoiRegion.right) {
         if (pointDistanceA > radius) {
           projection.destroy();
+
           return null;
         }
 
@@ -655,6 +660,7 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
       if (getVoronoiRegionForPoint(edgeBx, edgeBy, positionBx, positionBy) === VoronoiRegion.left) {
         if (pointDistanceB > radius) {
           projection.destroy();
+
           return null;
         }
 
@@ -675,6 +681,7 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
 
       if (distance > 0 && Math.abs(distance) > radius) {
         projection.destroy();
+
         return null;
       }
 
@@ -716,7 +723,9 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
  * approach used for ellipse-vs-circle and ellipse-vs-rectangle.
  */
 const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): CollisionResponse | null => {
-  if (!intersectionEllipseEllipse(ellipseA, ellipseB)) return null;
+  if (!intersectionEllipseEllipse(ellipseA, ellipseB)) {
+    return null;
+  }
 
   const dx = ellipseA.x - ellipseB.x;
   const dy = ellipseA.y - ellipseB.y;
@@ -745,7 +754,9 @@ const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): Colli
     }
   }
 
-  if (overlap <= 0) return null;
+  if (overlap <= 0) {
+    return null;
+  }
 
   const projectionN = ellipseA.position.clone().set(normalX, normalY);
   const projectionV = ellipseA.position.clone().set(normalX * overlap, normalY * overlap);
@@ -799,6 +810,7 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
 
     if (!projA.overlaps(projB)) {
       projection.destroy();
+
       return null;
     }
 
@@ -831,6 +843,7 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
 
     if (!projA.overlaps(projB)) {
       projection.destroy();
+
       return null;
     }
 

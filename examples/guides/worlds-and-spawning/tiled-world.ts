@@ -2,7 +2,7 @@ import { Asset, type LoaderScope } from '@codexo/exojs';
 import { MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
 
 // #region guide:tiled-world
-export function createTiledWorld(scope: LoaderScope): MapWorldRuntime {
+export const createTiledWorld = (scope: LoaderScope): MapWorldRuntime => {
   const world = new MapWorld({
     name: 'overworld',
     levels: [
@@ -23,5 +23,5 @@ export function createTiledWorld(scope: LoaderScope): MapWorldRuntime {
     scope,
     load: context => context.scope.load(Asset.type('tileMap', `${context.level.id}.tmj`)),
   });
-}
+};
 // #endregion guide:tiled-world

@@ -124,6 +124,7 @@ describe('onAppInitialized', () => {
     const { Application, ApplicationState, onAppInitialized } = await loadHarness();
     const app = new Application({ backend: { type: 'webgl2' } });
     const observed: Array<{ backend: boolean; capabilities: boolean; state: string }> = [];
+
     const probe = (announced: ApplicationType): void => {
       observed.push({
         backend: announced.backend !== null,
@@ -154,6 +155,7 @@ describe('onAppInitialized', () => {
     await app.start();
 
     const late: ApplicationType[] = [];
+
     const lateListener = (announced: ApplicationType): void => {
       late.push(announced);
     };

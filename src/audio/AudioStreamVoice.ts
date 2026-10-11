@@ -60,6 +60,7 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
     this._element.loop = init.loop;
     this._basePlaybackRate = init.playbackRate;
     this._element.playbackRate = init.playbackRate;
+
     if (init.startTime !== undefined) {
       this._element.currentTime = Math.max(0, init.startTime);
     }
@@ -85,7 +86,10 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   }
 
   public seek(t: number): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._element.currentTime = Math.max(0, t);
   }
 
@@ -95,14 +99,20 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
 
   /** While playback is still waiting for the autoplay unlock, also cancels that deferred start. */
   public pause(): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._clearUnlockHandler();
     this._element.pause();
   }
 
   /** While audio is still locked, defers the start to the unlock gesture again. */
   public resume(): void {
-    if (this._ended || this._unlockHandler !== null) return;
+    if (this._ended || this._unlockHandler !== null) {
+      return;
+    }
+
     this._startPlayback();
   }
 
@@ -119,7 +129,10 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   }
 
   public set loop(value: boolean) {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._element.loop = value;
   }
 
@@ -132,7 +145,10 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   }
 
   public set playbackRate(value: number) {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._basePlaybackRate = clamp(value, 0.1, 20);
     this._element.playbackRate = this._basePlaybackRate;
   }
@@ -155,7 +171,10 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   // -------------------------------------------------------------------------
 
   protected override _applyDopplerRate(ratio: number): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._element.playbackRate = clamp(this._basePlaybackRate * ratio, 0.1, 20);
   }
 
@@ -185,13 +204,18 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   private _startPlayback(): void {
     if (isAudioContextReady()) {
       this._play();
+
       return;
     }
 
     this._unlockHandler = (): void => {
       this._clearUnlockHandler();
-      if (!this._ended) this._play();
+
+      if (!this._ended) {
+        this._play();
+      }
     };
+
     onAudioContextReady.add(this._unlockHandler);
   }
 

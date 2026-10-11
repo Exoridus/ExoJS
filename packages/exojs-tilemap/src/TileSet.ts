@@ -123,15 +123,19 @@ export class TileSet {
     const columns = options.columns ?? Math.floor(atlasWidth / options.tileWidth);
 
     validatePositiveInteger(columns, 'columns');
+
     if (columns <= 0) {
       throw new Error(`TileSet columns must be positive (got ${columns}).`);
     }
 
     if (options.tileWidth * columns + spacing * (columns - 1) > atlasWidth) {
-      throw new Error(`TileSet grid width exceeds atlas: ${options.tileWidth}*${columns}` + ` + ${spacing}*${columns - 1} > ${atlasWidth}.`);
+      throw new Error(
+        `TileSet grid width exceeds atlas: ${options.tileWidth}*${columns}` + ` + ${spacing}*${columns - 1} > ${atlasWidth}.`,
+      );
     }
 
     const rows = Math.ceil(options.tileCount / columns);
+
     if (rows > 0 && options.tileHeight * rows + spacing * (rows - 1) > atlasHeight) {
       throw new Error(`TileSet grid height exceeds atlas: ${options.tileHeight}*${rows}` + ` + ${spacing}*${rows - 1} > ${atlasHeight}.`);
     }
@@ -165,6 +169,7 @@ export class TileSet {
     if (localTileId < 0 || localTileId >= this.tileCount) {
       throw new Error(`Tile definition localTileId ${localTileId} out of range [0, ${this.tileCount - 1}].`);
     }
+
     const props = definition.properties ? Object.freeze({ ...definition.properties }) : undefined;
     const animation = definition.animation ? Object.freeze(definition.animation.map(frame => Object.freeze({ ...frame }))) : undefined;
     const collision = definition.collision ? Object.freeze([...definition.collision]) : undefined;
@@ -186,6 +191,7 @@ export class TileSet {
   public setDefinitions(definitions: readonly TileDefinition[]): void {
     const map = this._definitions as Map<number, TileDefinition>;
     map.clear();
+
     for (const def of definitions) {
       const props = def.properties ? Object.freeze({ ...def.properties }) : undefined;
       const animation = def.animation ? Object.freeze(def.animation.map(frame => Object.freeze({ ...frame }))) : undefined;
@@ -216,8 +222,10 @@ export class TileSet {
     if (localTileId < 0 || localTileId >= this.tileCount) {
       throw new Error(`getTileRect: localTileId ${localTileId} out of range [0, ${this.tileCount - 1}].`);
     }
+
     const col = localTileId % this.columns;
     const row = Math.floor(localTileId / this.columns);
+
     return {
       x: this.margin + col * (this.tileWidth + this.spacing),
       y: this.margin + row * (this.tileHeight + this.spacing),
@@ -241,9 +249,11 @@ export class TileSet {
    */
   public get allDefinitions(): Readonly<Record<number, TileProperties | undefined>> {
     const result: Record<number, TileProperties | undefined> = {};
+
     for (const [id, def] of this._definitions) {
       result[id] = def.properties;
     }
+
     return Object.freeze(result);
   }
 }

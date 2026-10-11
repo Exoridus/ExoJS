@@ -2,7 +2,17 @@ import { Color } from '#core/Color';
 import type { LayoutOptions } from '#rendering/text/LayoutOptions';
 import type { ResolvedTextGradient, TextGradient, TextStyleOptions } from '#rendering/text/TextStyle';
 
-import { FONT_STYLES, FONT_VARIANTS, FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS, TEXT_TRANSFORMS } from './read';
+import {
+  FONT_STYLES,
+  FONT_VARIANTS,
+  FONT_WEIGHTS,
+  readBoolean,
+  readEnum,
+  readNumber,
+  readString,
+  TEXT_ALIGNMENTS,
+  TEXT_TRANSFORMS,
+} from './read';
 
 // ── Options bags ───────────────────────────────────────────────────────────────
 
@@ -17,7 +27,9 @@ export const compact = <T extends object>(options: T): { [K in keyof T]: Exclude
   const out: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(options)) {
-    if (value !== undefined) out[key] = value;
+    if (value !== undefined) {
+      out[key] = value;
+    }
   }
 
   return out as { [K in keyof T]: Exclude<T[K], undefined> };
@@ -30,9 +42,12 @@ export const colorToArray = (color: Color): [number, number, number, number] => 
 
 /** Deserialize a `[r, g, b, a]` tuple back to a {@link Color}, or `undefined`. */
 export const arrayToColor = (value: unknown): Color | undefined =>
-  Array.isArray(value) && value.length === 4 ? new Color(Number(value[0]), Number(value[1]), Number(value[2]), Number(value[3])) : undefined;
+  Array.isArray(value) && value.length === 4
+    ? new Color(Number(value[0]), Number(value[1]), Number(value[2]), Number(value[3]))
+    : undefined;
 
-const colorEquals = (color: Color, r: number, g: number, b: number, a: number): boolean => color.r === r && color.g === g && color.b === b && color.a === a;
+const colorEquals = (color: Color, r: number, g: number, b: number, a: number): boolean =>
+  color.r === r && color.g === g && color.b === b && color.a === a;
 
 // ── TextStyle ────────────────────────────────────────────────────────────────
 
@@ -64,31 +79,97 @@ export const serializeStyle = (style: {
 }): Record<string, unknown> | undefined => {
   const out: Record<string, unknown> = {};
 
-  if (style.fontFamily !== 'Arial') out.fontFamily = style.fontFamily;
-  if (style.fontWeight !== 'normal') out.fontWeight = style.fontWeight;
-  if (style.fontStyle !== 'normal') out.fontStyle = style.fontStyle;
-  if (style.fontVariant !== 'normal') out.fontVariant = style.fontVariant;
-  if (style.fontSize !== 20) out.fontSize = style.fontSize;
-  if (!colorEquals(style.fillColor, 255, 255, 255, 1)) out.fillColor = colorToArray(style.fillColor);
-  if (!colorEquals(style.outlineColor, 0, 0, 0, 1)) out.outlineColor = colorToArray(style.outlineColor);
-  if (style.outlineWidth !== 0) out.outlineWidth = style.outlineWidth;
-  if (style.align !== 'left') out.align = style.align;
-  if (style.textTransform !== 'none') out.textTransform = style.textTransform;
-  if (style.lineHeight !== 1.2) out.lineHeight = style.lineHeight;
-  if (style.leading !== 0) out.leading = style.leading;
-  if (!colorEquals(style.shadowColor, 0, 0, 0, 1)) out.shadowColor = colorToArray(style.shadowColor);
-  if (style.shadowOffsetX !== 0) out.shadowOffsetX = style.shadowOffsetX;
-  if (style.shadowOffsetY !== 0) out.shadowOffsetY = style.shadowOffsetY;
-  if (style.shadowAlpha !== 0) out.shadowAlpha = style.shadowAlpha;
-  if (style.shadowBlur !== 0) out.shadowBlur = style.shadowBlur;
+  if (style.fontFamily !== 'Arial') {
+    out.fontFamily = style.fontFamily;
+  }
 
-  if (style.underline) out.underline = true;
-  if (style.strikethrough) out.strikethrough = true;
-  if (style.decorationColor !== null) out.decorationColor = colorToArray(style.decorationColor);
-  if (style.decorationThickness !== 0) out.decorationThickness = style.decorationThickness;
-  if (style.decorationOffset !== 0) out.decorationOffset = style.decorationOffset;
+  if (style.fontWeight !== 'normal') {
+    out.fontWeight = style.fontWeight;
+  }
 
-  if (style.gradient !== null) out.gradient = gradientToJson(style.gradient);
+  if (style.fontStyle !== 'normal') {
+    out.fontStyle = style.fontStyle;
+  }
+
+  if (style.fontVariant !== 'normal') {
+    out.fontVariant = style.fontVariant;
+  }
+
+  if (style.fontSize !== 20) {
+    out.fontSize = style.fontSize;
+  }
+
+  if (!colorEquals(style.fillColor, 255, 255, 255, 1)) {
+    out.fillColor = colorToArray(style.fillColor);
+  }
+
+  if (!colorEquals(style.outlineColor, 0, 0, 0, 1)) {
+    out.outlineColor = colorToArray(style.outlineColor);
+  }
+
+  if (style.outlineWidth !== 0) {
+    out.outlineWidth = style.outlineWidth;
+  }
+
+  if (style.align !== 'left') {
+    out.align = style.align;
+  }
+
+  if (style.textTransform !== 'none') {
+    out.textTransform = style.textTransform;
+  }
+
+  if (style.lineHeight !== 1.2) {
+    out.lineHeight = style.lineHeight;
+  }
+
+  if (style.leading !== 0) {
+    out.leading = style.leading;
+  }
+
+  if (!colorEquals(style.shadowColor, 0, 0, 0, 1)) {
+    out.shadowColor = colorToArray(style.shadowColor);
+  }
+
+  if (style.shadowOffsetX !== 0) {
+    out.shadowOffsetX = style.shadowOffsetX;
+  }
+
+  if (style.shadowOffsetY !== 0) {
+    out.shadowOffsetY = style.shadowOffsetY;
+  }
+
+  if (style.shadowAlpha !== 0) {
+    out.shadowAlpha = style.shadowAlpha;
+  }
+
+  if (style.shadowBlur !== 0) {
+    out.shadowBlur = style.shadowBlur;
+  }
+
+  if (style.underline) {
+    out.underline = true;
+  }
+
+  if (style.strikethrough) {
+    out.strikethrough = true;
+  }
+
+  if (style.decorationColor !== null) {
+    out.decorationColor = colorToArray(style.decorationColor);
+  }
+
+  if (style.decorationThickness !== 0) {
+    out.decorationThickness = style.decorationThickness;
+  }
+
+  if (style.decorationOffset !== 0) {
+    out.decorationOffset = style.decorationOffset;
+  }
+
+  if (style.gradient !== null) {
+    out.gradient = gradientToJson(style.gradient);
+  }
 
   return Object.keys(out).length > 0 ? out : undefined;
 };
@@ -132,55 +213,117 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
   const source = data as Record<string, unknown>;
   const options: TextStyleOptions = {};
 
-  if (typeof source.fontFamily === 'string') options.fontFamily = source.fontFamily;
+  if (typeof source.fontFamily === 'string') {
+    options.fontFamily = source.fontFamily;
+  }
 
   const fontWeight = readEnum(source, 'fontWeight', FONT_WEIGHTS);
-  if (fontWeight !== undefined) options.fontWeight = fontWeight;
+
+  if (fontWeight !== undefined) {
+    options.fontWeight = fontWeight;
+  }
 
   const fontStyle = readEnum(source, 'fontStyle', FONT_STYLES);
-  if (fontStyle !== undefined) options.fontStyle = fontStyle;
+
+  if (fontStyle !== undefined) {
+    options.fontStyle = fontStyle;
+  }
 
   const fontVariant = readEnum(source, 'fontVariant', FONT_VARIANTS);
-  if (fontVariant !== undefined) options.fontVariant = fontVariant;
 
-  if (typeof source.fontSize === 'number') options.fontSize = source.fontSize;
+  if (fontVariant !== undefined) {
+    options.fontVariant = fontVariant;
+  }
+
+  if (typeof source.fontSize === 'number') {
+    options.fontSize = source.fontSize;
+  }
 
   const fillColor = arrayToColor(source.fillColor);
-  if (fillColor !== undefined) options.fillColor = fillColor;
+
+  if (fillColor !== undefined) {
+    options.fillColor = fillColor;
+  }
 
   const outlineColor = arrayToColor(source.outlineColor);
-  if (outlineColor !== undefined) options.outlineColor = outlineColor;
 
-  if (typeof source.outlineWidth === 'number') options.outlineWidth = source.outlineWidth;
+  if (outlineColor !== undefined) {
+    options.outlineColor = outlineColor;
+  }
+
+  if (typeof source.outlineWidth === 'number') {
+    options.outlineWidth = source.outlineWidth;
+  }
 
   const align = readEnum(source, 'align', TEXT_ALIGNMENTS);
-  if (align !== undefined) options.align = align;
+
+  if (align !== undefined) {
+    options.align = align;
+  }
 
   const textTransform = readEnum(source, 'textTransform', TEXT_TRANSFORMS);
-  if (textTransform !== undefined) options.textTransform = textTransform;
 
-  if (typeof source.lineHeight === 'number') options.lineHeight = source.lineHeight;
-  if (typeof source.leading === 'number') options.leading = source.leading;
+  if (textTransform !== undefined) {
+    options.textTransform = textTransform;
+  }
+
+  if (typeof source.lineHeight === 'number') {
+    options.lineHeight = source.lineHeight;
+  }
+
+  if (typeof source.leading === 'number') {
+    options.leading = source.leading;
+  }
 
   const shadowColor = arrayToColor(source.shadowColor);
-  if (shadowColor !== undefined) options.shadowColor = shadowColor;
 
-  if (typeof source.shadowOffsetX === 'number') options.shadowOffsetX = source.shadowOffsetX;
-  if (typeof source.shadowOffsetY === 'number') options.shadowOffsetY = source.shadowOffsetY;
-  if (typeof source.shadowAlpha === 'number') options.shadowAlpha = source.shadowAlpha;
-  if (typeof source.shadowBlur === 'number') options.shadowBlur = source.shadowBlur;
+  if (shadowColor !== undefined) {
+    options.shadowColor = shadowColor;
+  }
 
-  if (typeof source.underline === 'boolean') options.underline = source.underline;
-  if (typeof source.strikethrough === 'boolean') options.strikethrough = source.strikethrough;
+  if (typeof source.shadowOffsetX === 'number') {
+    options.shadowOffsetX = source.shadowOffsetX;
+  }
+
+  if (typeof source.shadowOffsetY === 'number') {
+    options.shadowOffsetY = source.shadowOffsetY;
+  }
+
+  if (typeof source.shadowAlpha === 'number') {
+    options.shadowAlpha = source.shadowAlpha;
+  }
+
+  if (typeof source.shadowBlur === 'number') {
+    options.shadowBlur = source.shadowBlur;
+  }
+
+  if (typeof source.underline === 'boolean') {
+    options.underline = source.underline;
+  }
+
+  if (typeof source.strikethrough === 'boolean') {
+    options.strikethrough = source.strikethrough;
+  }
 
   const decorationColor = arrayToColor(source.decorationColor);
-  if (decorationColor !== undefined) options.decorationColor = decorationColor;
 
-  if (typeof source.decorationThickness === 'number') options.decorationThickness = source.decorationThickness;
-  if (typeof source.decorationOffset === 'number') options.decorationOffset = source.decorationOffset;
+  if (decorationColor !== undefined) {
+    options.decorationColor = decorationColor;
+  }
+
+  if (typeof source.decorationThickness === 'number') {
+    options.decorationThickness = source.decorationThickness;
+  }
+
+  if (typeof source.decorationOffset === 'number') {
+    options.decorationOffset = source.decorationOffset;
+  }
 
   const gradient = jsonToGradient(source.gradient);
-  if (gradient !== undefined) options.gradient = gradient;
+
+  if (gradient !== undefined) {
+    options.gradient = gradient;
+  }
 
   return options;
 };
@@ -197,25 +340,36 @@ export const gradientToJson = (gradient: ResolvedTextGradient): Record<string, u
  * to no gradient rather than to a half-built one the style would then reject.
  */
 export const jsonToGradient = (value: unknown): TextGradient | undefined => {
-  if (typeof value !== 'object' || value === null) return undefined;
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
 
   const source = value as Record<string, unknown>;
-  if (!Array.isArray(source.stops)) return undefined;
+
+  if (!Array.isArray(source.stops)) {
+    return undefined;
+  }
 
   const stops: Array<{ offset: number; color: Color }> = [];
 
   for (const entry of source.stops) {
-    if (typeof entry !== 'object' || entry === null) continue;
+    if (typeof entry !== 'object' || entry === null) {
+      continue;
+    }
 
     const stop = entry as Record<string, unknown>;
     const color = arrayToColor(stop.color);
 
-    if (color === undefined || typeof stop.offset !== 'number') continue;
+    if (color === undefined || typeof stop.offset !== 'number') {
+      continue;
+    }
 
     stops.push({ offset: stop.offset, color });
   }
 
-  if (stops.length < 2) return undefined;
+  if (stops.length < 2) {
+    return undefined;
+  }
 
   return typeof source.angle === 'number' ? { stops, angle: source.angle } : { stops };
 };
@@ -272,7 +426,9 @@ export const readLayoutOptions = (value: unknown): LayoutOptions | undefined => 
     const read = LAYOUT_READERS[key] as (source: Record<string, unknown>, key: string) => unknown;
     const parsed = read(source, key);
 
-    if (parsed !== undefined) out[key] = parsed;
+    if (parsed !== undefined) {
+      out[key] = parsed;
+    }
   }
 
   return Object.keys(out).length > 0 ? out : undefined;
@@ -297,7 +453,9 @@ export const pickLayoutOptions = (source: Readonly<LayoutOptions>): LayoutOption
   for (const key of LAYOUT_KEYS) {
     const value = bag[key];
 
-    if (value !== undefined) out[key] = value;
+    if (value !== undefined) {
+      out[key] = value;
+    }
   }
 
   return out;

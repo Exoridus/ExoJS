@@ -173,7 +173,8 @@ export const createMatterJsAdapter = async (): Promise<PhysicsAdapter> => {
         // `Query.ray` is a segment query, so the unit direction and distance are
         // converted back to an end point.
         castRay: ray =>
-          M.Query.ray(queryBodies, { x: ray.x, y: ray.y }, { x: ray.x + ray.dx * ray.maxDistance, y: ray.y + ray.dy * ray.maxDistance }).length > 0,
+          M.Query.ray(queryBodies, { x: ray.x, y: ray.y }, { x: ray.x + ray.dx * ray.maxDistance, y: ray.y + ray.dy * ray.maxDistance })
+            .length > 0,
       });
       engine = created;
     },

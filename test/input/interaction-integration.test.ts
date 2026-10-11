@@ -85,8 +85,8 @@ const createHarness = (dragThreshold?: number): Harness => {
     toJSON: () => ({}),
   } as DOMRect);
 
-  Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
-  Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+  Object.defineProperty(canvas, 'setPointerCapture', { value: () => {}, writable: true, configurable: true });
+  Object.defineProperty(canvas, 'releasePointerCapture', { value: () => {}, writable: true, configurable: true });
 
   const scene = new Scene();
   const identity = { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }) };

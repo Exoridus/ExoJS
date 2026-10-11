@@ -52,7 +52,9 @@ const live = new Set<VideoFixture>();
 export const liveVideoFixtureCount = (): number => live.size;
 
 export const disposeAllVideoFixtures = (): void => {
-  for (const fixture of [...live]) fixture.dispose();
+  for (const fixture of [...live]) {
+    fixture.dispose();
+  }
 };
 
 const describeState = (video: HTMLVideoElement, stream: MediaStream): string =>
@@ -79,8 +81,13 @@ export const createPaintedVideoFixture = async (
 
   const ctx = source.getContext('2d');
 
-  if (ctx === null) throw new MediaFixtureError('a 2D canvas context is unavailable');
-  if (typeof source.captureStream !== 'function') throw new MediaFixtureError('HTMLCanvasElement.captureStream is unavailable');
+  if (ctx === null) {
+    throw new MediaFixtureError('a 2D canvas context is unavailable');
+  }
+
+  if (typeof source.captureStream !== 'function') {
+    throw new MediaFixtureError('HTMLCanvasElement.captureStream is unavailable');
+  }
 
   paint(ctx, size);
 
@@ -92,7 +99,9 @@ export const createPaintedVideoFixture = async (
   const fixture: VideoFixture = {
     video,
     dispose: () => {
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
 
       disposed = true;
       clearTimeout(timer);
@@ -134,6 +143,7 @@ export const createPaintedVideoFixture = async (
     });
   } catch (error) {
     fixture.dispose();
+
     throw error;
   }
 

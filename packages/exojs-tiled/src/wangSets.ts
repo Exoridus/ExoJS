@@ -83,10 +83,21 @@ const convertCornerWangSet = (wangSet: TiledWangSetData, tilesetIndex: number): 
     const id = wangTile.wangid;
     let mask = 0;
 
-    if ((id[cornerIndexTopLeft] ?? 0) > 0) mask |= blobBitTopLeft;
-    if ((id[cornerIndexTopRight] ?? 0) > 0) mask |= blobBitTopRight;
-    if ((id[cornerIndexBottomLeft] ?? 0) > 0) mask |= blobBitBottomLeft;
-    if ((id[cornerIndexBottomRight] ?? 0) > 0) mask |= blobBitBottomRight;
+    if ((id[cornerIndexTopLeft] ?? 0) > 0) {
+      mask |= blobBitTopLeft;
+    }
+
+    if ((id[cornerIndexTopRight] ?? 0) > 0) {
+      mask |= blobBitTopRight;
+    }
+
+    if ((id[cornerIndexBottomLeft] ?? 0) > 0) {
+      mask |= blobBitBottomLeft;
+    }
+
+    if ((id[cornerIndexBottomRight] ?? 0) > 0) {
+      mask |= blobBitBottomRight;
+    }
 
     // Last writer wins when two wangtiles produce the same mask
     // (shouldn't happen in well-formed data, but be lenient).
@@ -124,10 +135,21 @@ const convertEdgeWangSet = (wangSet: TiledWangSetData, tilesetIndex: number): Wa
     const id = wangTile.wangid;
     let mask = 0;
 
-    if ((id[edgeIndexTop] ?? 0) > 0) mask |= edgeBitTop;
-    if ((id[edgeIndexRight] ?? 0) > 0) mask |= edgeBitRight;
-    if ((id[edgeIndexBottom] ?? 0) > 0) mask |= edgeBitBottom;
-    if ((id[edgeIndexLeft] ?? 0) > 0) mask |= edgeBitLeft;
+    if ((id[edgeIndexTop] ?? 0) > 0) {
+      mask |= edgeBitTop;
+    }
+
+    if ((id[edgeIndexRight] ?? 0) > 0) {
+      mask |= edgeBitRight;
+    }
+
+    if ((id[edgeIndexBottom] ?? 0) > 0) {
+      mask |= edgeBitBottom;
+    }
+
+    if ((id[edgeIndexLeft] ?? 0) > 0) {
+      mask |= edgeBitLeft;
+    }
 
     blobMap.set(mask, wangTile.tileid);
   }

@@ -8,7 +8,9 @@ import { WeakHandleSet } from '#assets/WeakHandleSet';
 const forceGc = async (): Promise<void> => {
   const gc = (globalThis as { gc?: () => void }).gc;
 
-  if (!gc) throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
+  if (!gc) {
+    throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
+  }
 
   for (let i = 0; i < 10; i++) {
     gc();

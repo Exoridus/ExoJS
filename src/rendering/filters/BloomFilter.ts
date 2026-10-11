@@ -405,4 +405,5 @@ export class BloomFilter extends Filter {
 const clampNonNegative = (value: number): number => Math.max(0, value);
 
 /** A whole number of halvings inside the range the chain is built for. */
-const clampLevels = (levels: number | undefined): number => (levels === undefined ? 3 : Math.min(MAX_LEVELS, Math.max(1, Math.floor(levels))));
+const clampLevels = (levels: number | undefined): number =>
+  levels === undefined ? 3 : Math.min(MAX_LEVELS, Math.max(1, Math.floor(levels)));

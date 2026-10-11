@@ -176,6 +176,7 @@ describe('WebGL2 per-attachment blend', () => {
       globalCalls.push({ src: srcRgb, dst: dstRgb });
       order.push('global');
     };
+
     mutable['blendEquation'] = (): void => {
       order.push('global-equation');
     };
@@ -311,8 +312,12 @@ describe('WebGL2 per-attachment blend', () => {
     // A pass split by blend group would cost the single rasterization the
     // target exists for, and a shader cannot read its own attachment to blend
     // there - so there is nothing to fall back to.
-    expect(() => harness!.backend.setAttachmentBlendModes([BlendModes.Normal, BlendModes.Additive], BlendModes.Normal)).toThrow(RenderError);
-    expect(() => harness!.backend.setAttachmentBlendModes([BlendModes.Normal, BlendModes.Additive], BlendModes.Normal)).toThrow(/OES_draw_buffers_indexed/);
+    expect(() => harness!.backend.setAttachmentBlendModes([BlendModes.Normal, BlendModes.Additive], BlendModes.Normal)).toThrow(
+      RenderError,
+    );
+    expect(() => harness!.backend.setAttachmentBlendModes([BlendModes.Normal, BlendModes.Additive], BlendModes.Normal)).toThrow(
+      /OES_draw_buffers_indexed/,
+    );
     expect(harness.indexedCalls).toEqual([]);
 
     harness.backend.setRenderTarget(null);
@@ -545,7 +550,9 @@ describe('WebGPU per-attachment blend', () => {
       backend.flush();
 
       const additive = getWebGpuBlendState(BlendModes.Additive);
-      const blends = environment.pipelineTargetBlends().find(targets => targets.length === 1 && JSON.stringify(targets[0]) === JSON.stringify(additive));
+      const blends = environment
+        .pipelineTargetBlends()
+        .find(targets => targets.length === 1 && JSON.stringify(targets[0]) === JSON.stringify(additive));
 
       expect(blends).toBeDefined();
 

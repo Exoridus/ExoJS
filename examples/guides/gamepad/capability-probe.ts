@@ -15,6 +15,7 @@ class ProbeScene extends Scene {
   // #region guide:capability-probe
   override init(): void {
     const pad = this.app.input.getGamepad(0);
+
     if (pad.hasChannel(GamepadAxis.RightStickX)) {
       pad.onActive(GamepadAxis.RightStickX, value => {
         this.camera.rotate(value * 2);
@@ -34,6 +35,7 @@ class VibrationScene extends Scene {
   // #region guide:vibration
   override init(): void {
     const pad = this.app.input.getGamepad(0);
+
     if (pad.canVibrate) {
       void pad.vibrate({
         duration: 200, // ms
@@ -61,7 +63,9 @@ class HotplugScene extends Scene {
     }
 
     this.app.input.onGamepadConnected.add(p => {
-      if (!this._activePad) this.bindPad(p);
+      if (!this._activePad) {
+        this.bindPad(p);
+      }
     });
   }
   // #endregion guide:hotplug

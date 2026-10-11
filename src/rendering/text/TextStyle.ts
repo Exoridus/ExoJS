@@ -72,7 +72,9 @@ const _normalizeGradient = (gradient: TextGradient): ResolvedTextGradient => {
 };
 
 const _cloneGradient = (gradient: ResolvedTextGradient | null): ResolvedTextGradient | null =>
-  gradient === null ? null : { stops: gradient.stops.map(stop => ({ offset: stop.offset, color: stop.color.clone() })), angle: gradient.angle };
+  gradient === null
+    ? null
+    : { stops: gradient.stops.map(stop => ({ offset: stop.offset, color: stop.color.clone() })), angle: gradient.angle };
 
 /**
  * Describes how costly a style change is to incorporate.
@@ -88,8 +90,14 @@ export type StyleChangeHint = 'tint' | 'layout' | 'font';
  * @internal
  */
 export const mergeHint = (a: StyleChangeHint, b: StyleChangeHint): StyleChangeHint => {
-  if (a === 'font' || b === 'font') return 'font';
-  if (a === 'layout' || b === 'layout') return 'layout';
+  if (a === 'font' || b === 'font') {
+    return 'font';
+  }
+
+  if (a === 'layout' || b === 'layout') {
+    return 'layout';
+  }
+
   return 'tint';
 };
 
@@ -309,15 +317,20 @@ export class TextStyle {
    * Call this once per frame from the owning node's layout pass.
    */
   public consumeDirty(): StyleChangeHint | null {
-    if (!this._dirty) return null;
+    if (!this._dirty) {
+      return null;
+    }
+
     const hint = this._pendingHint;
     this._dirty = false;
     this._pendingHint = 'tint';
+
     return hint;
   }
 
   private _markDirty(hint: StyleChangeHint): void {
     this._pendingHint = mergeHint(this._pendingHint, hint);
+
     if (!this._dirty) {
       this._dirty = true;
       this.onChange.dispatch();
@@ -332,7 +345,11 @@ export class TextStyle {
 
   public set fontFamily(v: FontFace | FontFamily) {
     const family = typeof FontFace !== 'undefined' && v instanceof FontFace ? v.family : (v as FontFamily);
-    if (this._fontFamily === family) return;
+
+    if (this._fontFamily === family) {
+      return;
+    }
+
     this._fontFamily = family;
     this._markDirty('font');
   }
@@ -342,7 +359,10 @@ export class TextStyle {
   }
 
   public set fontWeight(v: FontWeight) {
-    if (this._fontWeight === v) return;
+    if (this._fontWeight === v) {
+      return;
+    }
+
     this._fontWeight = v;
     this._markDirty('font');
   }
@@ -352,7 +372,10 @@ export class TextStyle {
   }
 
   public set fontStyle(v: FontStyle) {
-    if (this._fontStyle === v) return;
+    if (this._fontStyle === v) {
+      return;
+    }
+
     this._fontStyle = v;
     this._markDirty('font');
   }
@@ -362,7 +385,10 @@ export class TextStyle {
   }
 
   public set fontVariant(v: FontVariant) {
-    if (this._fontVariant === v) return;
+    if (this._fontVariant === v) {
+      return;
+    }
+
     this._fontVariant = v;
     this._markDirty('font');
   }
@@ -374,7 +400,10 @@ export class TextStyle {
   }
 
   public set fontSize(v: number) {
-    if (this._fontSize === v) return;
+    if (this._fontSize === v) {
+      return;
+    }
+
     this._fontSize = v;
     this._markDirty('layout');
   }
@@ -384,7 +413,10 @@ export class TextStyle {
   }
 
   public set align(v: TextAlignment) {
-    if (this._align === v) return;
+    if (this._align === v) {
+      return;
+    }
+
     this._align = v;
     this._markDirty('layout');
   }
@@ -398,7 +430,10 @@ export class TextStyle {
   }
 
   public set textTransform(v: TextTransform) {
-    if (this._textTransform === v) return;
+    if (this._textTransform === v) {
+      return;
+    }
+
     this._textTransform = v;
     this._markDirty('layout');
   }
@@ -408,7 +443,10 @@ export class TextStyle {
   }
 
   public set lineHeight(v: number) {
-    if (this._lineHeight === v) return;
+    if (this._lineHeight === v) {
+      return;
+    }
+
     this._lineHeight = v;
     this._markDirty('layout');
   }
@@ -419,7 +457,10 @@ export class TextStyle {
   }
 
   public set leading(v: number) {
-    if (this._leading === v) return;
+    if (this._leading === v) {
+      return;
+    }
+
     this._leading = v;
     this._markDirty('layout');
   }
@@ -455,7 +496,10 @@ export class TextStyle {
   }
 
   public set outlineWidth(v: number) {
-    if (this._outlineWidth === v) return;
+    if (this._outlineWidth === v) {
+      return;
+    }
+
     this._outlineWidth = v;
     this._markDirty('tint');
   }
@@ -476,7 +520,10 @@ export class TextStyle {
   }
 
   public set shadowOffsetX(v: number) {
-    if (this._shadowOffsetX === v) return;
+    if (this._shadowOffsetX === v) {
+      return;
+    }
+
     this._shadowOffsetX = v;
     this._markDirty('tint');
   }
@@ -486,7 +533,10 @@ export class TextStyle {
   }
 
   public set shadowOffsetY(v: number) {
-    if (this._shadowOffsetY === v) return;
+    if (this._shadowOffsetY === v) {
+      return;
+    }
+
     this._shadowOffsetY = v;
     this._markDirty('tint');
   }
@@ -497,7 +547,10 @@ export class TextStyle {
   }
 
   public set shadowAlpha(v: number) {
-    if (this._shadowAlpha === v) return;
+    if (this._shadowAlpha === v) {
+      return;
+    }
+
     this._shadowAlpha = v;
     this._markDirty('tint');
   }
@@ -507,7 +560,10 @@ export class TextStyle {
   }
 
   public set shadowBlur(v: number) {
-    if (this._shadowBlur === v) return;
+    if (this._shadowBlur === v) {
+      return;
+    }
+
     this._shadowBlur = v;
     this._markDirty('tint');
   }
@@ -520,7 +576,10 @@ export class TextStyle {
   }
 
   public set underline(v: boolean) {
-    if (this._underline === v) return;
+    if (this._underline === v) {
+      return;
+    }
+
     this._underline = v;
     this._markDirty('layout');
   }
@@ -531,7 +590,10 @@ export class TextStyle {
   }
 
   public set strikethrough(v: boolean) {
-    if (this._strikethrough === v) return;
+    if (this._strikethrough === v) {
+      return;
+    }
+
     this._strikethrough = v;
     this._markDirty('layout');
   }
@@ -552,7 +614,10 @@ export class TextStyle {
   }
 
   public set decorationThickness(v: number) {
-    if (this._decorationThickness === v) return;
+    if (this._decorationThickness === v) {
+      return;
+    }
+
     this._decorationThickness = v;
     this._markDirty('layout');
   }
@@ -563,7 +628,10 @@ export class TextStyle {
   }
 
   public set decorationOffset(v: number) {
-    if (this._decorationOffset === v) return;
+    if (this._decorationOffset === v) {
+      return;
+    }
+
     this._decorationOffset = v;
     this._markDirty('layout');
   }
@@ -635,6 +703,7 @@ export class TextStyle {
       this._gradient = _cloneGradient(style._gradient);
       this._markDirty('font');
     }
+
     return this;
   }
 
@@ -666,6 +735,7 @@ export class TextStyle {
     s._gradient = _cloneGradient(this._gradient);
     s._dirty = true;
     s._pendingHint = 'font';
+
     return s;
   }
 }

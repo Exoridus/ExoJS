@@ -194,7 +194,9 @@ const packTextGradient = (
     target[offsetBase + i] = 0;
   }
 
-  if (gradient === null) return;
+  if (gradient === null) {
+    return;
+  }
 
   const radians = (gradient.angle * Math.PI) / 180;
   // CSS reads 0 degrees as "towards the top" and grows clockwise; the ink box

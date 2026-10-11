@@ -79,12 +79,14 @@ const setupSpy = (): {
   const oscillatorSpy = vi.spyOn(ctx, 'createOscillator').mockImplementation(() => {
     const node = createOscillatorMock();
     oscillators.push(node);
+
     return node as unknown as OscillatorNode;
   });
 
   const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     const node = createGainMock();
     gains.push(node);
+
     return node as unknown as GainNode;
   });
 
@@ -374,6 +376,7 @@ describe('AudioGenerator', () => {
     vi.resetModules();
     vi.doMock('#audio/audioContext', async importOriginal => {
       const actual = await importOriginal<typeof import('#audio/audioContext')>();
+
       return { ...actual, isAudioContextReady: () => false };
     });
 

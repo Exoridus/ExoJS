@@ -75,7 +75,12 @@ const REFERENCE_WARMUP = 600;
 const archetype: AllocationArchetype | undefined =
   referenceCount === undefined
     ? [...ALLOCATION_ARCHETYPES, ...ALLOCATION_REPORT_ONLY, ...ALL_FILTER_ARCHETYPES].find(candidate => candidate.id === id)
-    : { id, rationale: 'reference stage', warmup: REFERENCE_WARMUP, build: harness => buildScrollingWorldReference(harness, Number(referenceCount)) };
+    : {
+        id,
+        rationale: 'reference stage',
+        warmup: REFERENCE_WARMUP,
+        build: harness => buildScrollingWorldReference(harness, Number(referenceCount)),
+      };
 
 if (archetype === undefined) {
   throw new Error(`unknown archetype '${id}'`);
@@ -117,7 +122,10 @@ const sample = async (body: () => void): Promise<ProfileNode> => {
 
   body();
 
-  const { profile } = await post<{ profile: import('node:inspector').HeapProfiler.SamplingHeapProfile }>(session, 'HeapProfiler.stopSampling');
+  const { profile } = await post<{ profile: import('node:inspector').HeapProfiler.SamplingHeapProfile }>(
+    session,
+    'HeapProfiler.stopSampling',
+  );
   await post(session, 'HeapProfiler.disable');
   session.disconnect();
 
@@ -200,7 +208,8 @@ if (args.includes('--cpu')) {
   harness.destroy();
   timings.sort((a, b) => a - b);
 
-  const at = (quantile: number): number => Number((timings[Math.min(timings.length - 1, Math.floor(timings.length * quantile))]! * 1000).toFixed(1));
+  const at = (quantile: number): number =>
+    Number((timings[Math.min(timings.length - 1, Math.floor(timings.length * quantile))]! * 1000).toFixed(1));
 
   console.log(JSON.stringify({ id: archetype.id, frames, medianUs: at(0.5), p95Us: at(0.95) }));
   process.exit(0);
@@ -366,7 +375,9 @@ console.log(
     // One-time, NOT a rate: the reference stage's bootstrap window is dominated
     // by work that happens once, so dividing it by its frame count would
     // describe no frame the scene renders again.
-    ...(bootstrapBytes === null ? {} : { bootstrapMb: Number((bootstrapBytes / 1024 / 1024).toFixed(1)), bootstrapFrames: REFERENCE_BOOTSTRAP_FRAMES }),
+    ...(bootstrapBytes === null
+      ? {}
+      : { bootstrapMb: Number((bootstrapBytes / 1024 / 1024).toFixed(1)), bootstrapFrames: REFERENCE_BOOTSTRAP_FRAMES }),
     ...(wantProfile
       ? {
           callsites: callsites.map(row => ({

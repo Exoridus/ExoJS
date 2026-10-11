@@ -140,7 +140,9 @@ describe('an application hosted in a worker', () => {
   });
 
   test('starts, renders and reports a realm of its own', async ctx => {
-    if (!canTransferSurface(ctx)) return;
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
 
     canvas = createHostCanvas();
     worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
@@ -168,7 +170,9 @@ describe('an application hosted in a worker', () => {
   });
 
   test('routes host-normalised pointer input into the worker input pipeline', async ctx => {
-    if (!canTransferSurface(ctx)) return;
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
 
     canvas = createHostCanvas();
     worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
@@ -189,7 +193,9 @@ describe('an application hosted in a worker', () => {
   });
 
   test('runs its own frame loop, on a timer where the realm schedules no frames', async ctx => {
-    if (!canTransferSurface(ctx)) return;
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
 
     canvas = createHostCanvas();
     worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
@@ -209,7 +215,9 @@ describe('an application hosted in a worker', () => {
   });
 
   test('shuts down cleanly on request', async ctx => {
-    if (!canTransferSurface(ctx)) return;
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
 
     canvas = createHostCanvas();
     worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });

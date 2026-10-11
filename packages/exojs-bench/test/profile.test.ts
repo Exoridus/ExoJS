@@ -16,9 +16,17 @@ import type { PlatformVersionStamp } from '../src/shared/provenance';
 
 const WINDOWS_11: PlatformVersionStamp = { major: 11, source: 'detected', evidence: `os.release() reported '10.0.26200'` };
 const MACOS_27_BETA: PlatformVersionStamp = { major: 27, source: 'declared', evidence: `the runner declared '27-beta'` };
-const NO_VERSION: PlatformVersionStamp = { major: 0, source: 'undetermined', evidence: 'the kernel version does not name the product version' };
+const NO_VERSION: PlatformVersionStamp = {
+  major: 0,
+  source: 'undetermined',
+  evidence: 'the kernel version does not name the product version',
+};
 
-const renderingStamp = (adapter: string, backend: RenderingStamp['backend'] = 'webgl2', overrides: Partial<RenderingStamp> = {}): RenderingStamp => ({
+const renderingStamp = (
+  adapter: string,
+  backend: RenderingStamp['backend'] = 'webgl2',
+  overrides: Partial<RenderingStamp> = {},
+): RenderingStamp => ({
   backend,
   adapter,
   browser: 'chromium',
@@ -35,7 +43,12 @@ const renderingStamp = (adapter: string, backend: RenderingStamp['backend'] = 'w
   ...overrides,
 });
 
-const physicsStamp = (cpu: string, os: string, platformVersion: PlatformVersionStamp = WINDOWS_11, overrides: Partial<PhysicsStamp> = {}): PhysicsStamp => ({
+const physicsStamp = (
+  cpu: string,
+  os: string,
+  platformVersion: PlatformVersionStamp = WINDOWS_11,
+  overrides: Partial<PhysicsStamp> = {},
+): PhysicsStamp => ({
   browser: 'chromium',
   browserVersion: '151.0.7922.34',
   host: { cpu, cpuCount: 16, os, platformVersion, arch: 'x64' },
@@ -92,7 +105,10 @@ describe('normalizeCpuModel', () => {
 describe('deriveProfileParts', () => {
   it('prefers the adapter that names a model number over one naming an architecture', () => {
     const parts = deriveProfileParts({
-      rendering: [renderingStamp('nvidia blackwell', 'webgpu'), renderingStamp('ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002C05) Direct3D11, D3D11)')],
+      rendering: [
+        renderingStamp('nvidia blackwell', 'webgpu'),
+        renderingStamp('ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002C05) Direct3D11, D3D11)'),
+      ],
       physics: physicsStamp('AMD Ryzen 7 3700X 8-Core Processor', 'win32 10.0.26200'),
     });
 
@@ -128,7 +144,10 @@ describe('deriveProfileParts', () => {
   it('refuses a document whose domains were measured in different browsers rather than picking one', () => {
     const sources = {
       rendering: [renderingStamp('ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002C05) Direct3D11 vs_5_0 ps_5_0, D3D11)')],
-      physics: physicsStamp('AMD Ryzen 7 3700X 8-Core Processor', 'win32 10.0.26200', WINDOWS_11, { browser: 'webkit', browserVersion: '26.5' }),
+      physics: physicsStamp('AMD Ryzen 7 3700X 8-Core Processor', 'win32 10.0.26200', WINDOWS_11, {
+        browser: 'webkit',
+        browserVersion: '26.5',
+      }),
     };
 
     expect(() => deriveProfileParts(sources)).toThrow(ProfileSlugError);
@@ -188,7 +207,10 @@ describe('deriveProfileParts', () => {
 
   it('marks a pre-release platform in the operating-system part, so a beta run cannot overwrite a shipping one', () => {
     const onShipping = physicsStamp('Apple M3 Max', 'darwin 25.0.0', MACOS_27_BETA);
-    const onBeta: PhysicsStamp = { ...onShipping, prerelease: { value: true, source: 'declared', evidence: `the runner declared the platform as '27-beta'` } };
+    const onBeta: PhysicsStamp = {
+      ...onShipping,
+      prerelease: { value: true, source: 'declared', evidence: `the runner declared the platform as '27-beta'` },
+    };
 
     expect(deriveProfileParts({ physics: onShipping }).slug).toBe('m3-max-macos-27-chromium');
     expect(deriveProfileParts({ physics: onBeta }).slug).toBe('m3-max-macos-27-beta-chromium');
@@ -205,7 +227,9 @@ describe('computeProfileSignature', () => {
   it('ignores the signature field, so a signed document and its unsigned form agree', () => {
     const document = { schemaVersion: 1, profile: { slug: 'a-b-c' } };
 
-    expect(computeProfileSignature({ ...document, signature: { algorithm: 'sha256', value: 'stale' } })).toBe(computeProfileSignature(document));
+    expect(computeProfileSignature({ ...document, signature: { algorithm: 'sha256', value: 'stale' } })).toBe(
+      computeProfileSignature(document),
+    );
   });
 
   it('changes when any measured value changes', () => {

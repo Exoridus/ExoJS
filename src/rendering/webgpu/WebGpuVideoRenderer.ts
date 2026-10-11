@@ -260,7 +260,13 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       this._writtenViewUpdateId = view.updateId;
       this._hasWrittenProjection = true;
 
-      device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
+      device.queue.writeBuffer(
+        uniformBuffer,
+        0,
+        this._projectionData.buffer,
+        this._projectionData.byteOffset,
+        this._projectionData.byteLength,
+      );
     }
 
     const video = this._pendingVideo;
@@ -474,7 +480,12 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     u32[7] = this._pendingNodeIndex >>> 0;
   }
 
-  private _getOrCreateTransformBindGroup(device: GPUDevice, uniformBuffer: GPUBuffer, storageBuffer: GPUBuffer, tintBuffer: GPUBuffer): GPUBindGroup {
+  private _getOrCreateTransformBindGroup(
+    device: GPUDevice,
+    uniformBuffer: GPUBuffer,
+    storageBuffer: GPUBuffer,
+    tintBuffer: GPUBuffer,
+  ): GPUBindGroup {
     if (this._transformBindGroup !== null && this._transformStorageBuffer === storageBuffer && this._tintStorageBuffer === tintBuffer) {
       return this._transformBindGroup;
     }

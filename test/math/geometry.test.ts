@@ -1,4 +1,13 @@
-import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildRoundedRectangle, buildStar } from '#math/geometry';
+import {
+  buildCircle,
+  buildEllipse,
+  buildLine,
+  buildPath,
+  buildPolygon,
+  buildRectangle,
+  buildRoundedRectangle,
+  buildStar,
+} from '#math/geometry';
 
 // ---------------------------------------------------------------------------
 // Helpers

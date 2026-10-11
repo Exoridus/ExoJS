@@ -25,10 +25,14 @@ class ProbeWidget extends Widget {
 }
 
 const red: UITheme = createUITheme({
-  panel: { normal: { background: { kind: 'fill', color: new Color(255, 0, 0, 1), borderColor: Color.black, borderWidth: 0, cornerRadius: 0 } } },
+  panel: {
+    normal: { background: { kind: 'fill', color: new Color(255, 0, 0, 1), borderColor: Color.black, borderWidth: 0, cornerRadius: 0 } },
+  },
 });
 const blue: UITheme = createUITheme({
-  panel: { normal: { background: { kind: 'fill', color: new Color(0, 0, 255, 1), borderColor: Color.black, borderWidth: 0, cornerRadius: 0 } } },
+  panel: {
+    normal: { background: { kind: 'fill', color: new Color(0, 0, 255, 1), borderColor: Color.black, borderWidth: 0, cornerRadius: 0 } },
+  },
 });
 
 describe('theme cascade', () => {

@@ -18,7 +18,10 @@ const fixture = (name: string): ArrayBuffer => {
 };
 
 const load = (name: string, textureOptions?: TextureAssetOptions['textureOptions']) =>
-  new TextureFactory().create(fixture(name), factoryContext<TextureAssetOptions>(textureOptions === undefined ? undefined : { textureOptions }));
+  new TextureFactory().create(
+    fixture(name),
+    factoryContext<TextureAssetOptions>(textureOptions === undefined ? undefined : { textureOptions }),
+  );
 
 describe('KTX2 texture options', () => {
   test('a linear payload declared numeric loads as exact data with its upload options', async () => {

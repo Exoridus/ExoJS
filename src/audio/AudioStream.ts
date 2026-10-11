@@ -144,7 +144,9 @@ export class AudioStream implements Playable {
 
     this._activeVoice = voice;
     voice.onEnd.add((): void => {
-      if (this._activeVoice === voice) this._activeVoice = null;
+      if (this._activeVoice === voice) {
+        this._activeVoice = null;
+      }
     });
 
     return voice;
@@ -167,17 +169,23 @@ export class AudioStream implements Playable {
    * cannot be played again afterwards (see {@link AudioStream.destroyed}).
    */
   public destroy(): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
+
     this._destroyed = true;
     this._audioElement.removeEventListener('error', this._onErrorHandler);
+
     if (this._activeVoice !== null) {
       this._activeVoice.stop();
       this._activeVoice = null;
     }
+
     if (this._sourceNode !== null) {
       this._sourceNode.disconnect();
       this._sourceNode = null;
     }
+
     this.onError.destroy();
   }
 }

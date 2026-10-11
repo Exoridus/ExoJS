@@ -250,7 +250,11 @@ export class InputBinding {
    * post-construction release batch. Legacy/direct callers without a snapshot
    * fall back to the last PRE-watermark batch value, if any.
    */
-  private _seedUntouchedChannels(channels: Float32Array, allBatches: readonly ChannelEventBatch[], relevant: readonly ChannelEventBatch[]): void {
+  private _seedUntouchedChannels(
+    channels: Float32Array,
+    allBatches: readonly ChannelEventBatch[],
+    relevant: readonly ChannelEventBatch[],
+  ): void {
     const constructionBaseline = this._constructionBaseline;
     const relevantSet = new Set(relevant);
     const touchedByRelevant = new Set<number>();

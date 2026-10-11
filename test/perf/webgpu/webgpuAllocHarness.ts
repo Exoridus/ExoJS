@@ -108,7 +108,12 @@ const instrument = (device: GPUDevice): { counters: WebGpuWorkCounters; reset: (
     writeBuffer(buffer, offset, data, dataOffset, size);
   }) as GPUQueue['writeBuffer'];
 
-  queue.writeTexture = ((destination: GPUTexelCopyTextureInfo, data: BufferSource, layout: GPUTexelCopyBufferLayout, size: GPUExtent3D): void => {
+  queue.writeTexture = ((
+    destination: GPUTexelCopyTextureInfo,
+    data: BufferSource,
+    layout: GPUTexelCopyBufferLayout,
+    size: GPUExtent3D,
+  ): void => {
     counters.writeTextureCalls++;
     counters.writeTextureBytes += data.byteLength;
     writeTexture(destination, data, layout, size);
@@ -162,7 +167,9 @@ const instrument = (device: GPUDevice): { counters: WebGpuWorkCounters; reset: (
 
 /** `null` when this browser has no adapter at all - a measurement result, not a failure. */
 export const createWebGpuHarness = async (options: { instrument?: boolean } = {}): Promise<WebGpuHarness | null> => {
-  if (typeof navigator.gpu === 'undefined') return null;
+  if (typeof navigator.gpu === 'undefined') {
+    return null;
+  }
 
   const canvas = document.createElement('canvas');
 
@@ -228,7 +235,9 @@ export const makeCanvasTexture = (size = 64, seed = 0): Texture => {
 
   const ctx = canvas.getContext('2d');
 
-  if (ctx === null) throw new Error('A 2D context is required to build the fixture texture.');
+  if (ctx === null) {
+    throw new Error('A 2D context is required to build the fixture texture.');
+  }
 
   ctx.fillStyle = `rgb(${(seed * 53) % 256}, ${(seed * 97) % 256}, ${(seed * 151) % 256})`;
   ctx.fillRect(0, 0, size, size);

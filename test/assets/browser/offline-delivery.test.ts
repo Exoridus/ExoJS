@@ -31,6 +31,7 @@ const silentWav = (): ArrayBuffer => {
   const samples = 64;
   const buffer = new ArrayBuffer(44 + samples);
   const view = new DataView(buffer);
+
   const ascii = (offset: number, text: string): void => {
     for (let i = 0; i < text.length; i++) {
       view.setUint8(offset + i, text.charCodeAt(i));

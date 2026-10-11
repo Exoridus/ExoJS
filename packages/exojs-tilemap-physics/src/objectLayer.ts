@@ -31,7 +31,11 @@ export interface ObjectCollider {
  * skipped, as is any object the decomposition rejects - with a warning, not an
  * exception.
  */
-export const buildObjectLayerColliders = (world: PhysicsWorld, layer: ObjectLayer, options: ObjectColliderOptions = {}): ObjectCollider[] => {
+export const buildObjectLayerColliders = (
+  world: PhysicsWorld,
+  layer: ObjectLayer,
+  options: ObjectColliderOptions = {},
+): ObjectCollider[] => {
   const defaults = resolveDefaults(options);
   const accept = options.accept;
   const built: ObjectCollider[] = [];
@@ -42,7 +46,8 @@ export const buildObjectLayerColliders = (world: PhysicsWorld, layer: ObjectLaye
     }
 
     const p = layer.projection;
-    const offset = p === undefined ? { x: layer.offsetX, y: layer.offsetY } : p.pixelToLogical(p.originX + layer.offsetX, p.originY + layer.offsetY);
+    const offset =
+      p === undefined ? { x: layer.offsetX, y: layer.offsetY } : p.pixelToLogical(p.originX + layer.offsetX, p.originY + layer.offsetY);
     const x = object.x + offset.x;
     const y = object.y + offset.y;
     const material = resolveMaterial(defaults, options.material, { type: object.type, object });

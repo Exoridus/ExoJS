@@ -1,5 +1,16 @@
 // Auto-generated from sprite-follows-body.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Spritesheet, SystemOrder, Vector } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  Scene,
+  Sprite,
+  Spritesheet,
+  SystemOrder,
+  Vector,
+} from '@codexo/exojs';
 import { BoxShape, MouseJoint, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
 class SpriteFollowsBodyScene extends Scene {
@@ -69,7 +80,9 @@ class SpriteFollowsBodyScene extends Scene {
       return;
     }
     this.onEnd();
-    this.dragJoint = this.world.addJoint(new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }));
+    this.dragJoint = this.world.addJoint(
+      new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }),
+    );
   };
   onMove = pointer => {
     if (this.dragJoint) {

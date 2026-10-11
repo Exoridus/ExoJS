@@ -1,4 +1,12 @@
-import { Application, AssetCache, CacheRoute, IndexedDbStore, type LoaderOptions, MemoryCacheStore, NetworkFirstPolicy } from '@codexo/exojs';
+import {
+  Application,
+  AssetCache,
+  CacheRoute,
+  IndexedDbStore,
+  type LoaderOptions,
+  MemoryCacheStore,
+  NetworkFirstPolicy,
+} from '@codexo/exojs';
 
 // #region guide:cache-routes
 const persistent = new IndexedDbStore('my-game');

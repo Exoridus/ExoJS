@@ -534,7 +534,12 @@ export class PhysicsBody {
     const sin = Math.sin(newAngle);
 
     // origin = newCoM − R(newAngle)·comLocal (so rotation pivots about the CoM).
-    setTransform(this._transform, newComX - (cos * this._comX - sin * this._comY), newComY - (sin * this._comX + cos * this._comY), newAngle);
+    setTransform(
+      this._transform,
+      newComX - (cos * this._comX - sin * this._comY),
+      newComY - (sin * this._comX + cos * this._comY),
+      newAngle,
+    );
 
     this._resetDelta();
 

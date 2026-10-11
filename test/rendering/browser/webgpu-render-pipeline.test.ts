@@ -47,7 +47,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const withValidation = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, run: () => void): Promise<void> => {
   const device = getBackendDevice(backend);
@@ -83,7 +84,7 @@ describe('RenderPipeline WebGPU browser', () => {
       await withValidation(ctx, backend, () => {
         // A callback pass redirected into an off-screen target (cleared via the coordinator's
         // load op), nested one pipeline deep - the full composition path.
-        const inner = new RenderPipeline({ label: 'inner' }).addPass(new CallbackRenderPass(() => undefined, { target, clear: Color.red }));
+        const inner = new RenderPipeline({ label: 'inner' }).addPass(new CallbackRenderPass(() => {}, { target, clear: Color.red }));
         new RenderPipeline({ label: 'frame' }).addPass(inner).execute(context);
         backend.flush();
       });

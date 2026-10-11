@@ -91,7 +91,14 @@ const vertexSource = [
   '}',
 ].join('\n');
 
-const fragmentSource = ['#version 300 es', 'precision mediump float;', 'out vec4 fragColor;', 'void main() {', '  fragColor = vec4(1.0);', '}'].join('\n');
+const fragmentSource = [
+  '#version 300 es',
+  'precision mediump float;',
+  'out vec4 fragColor;',
+  'void main() {',
+  '  fragColor = vec4(1.0);',
+  '}',
+].join('\n');
 
 describe('WebGl2ShaderProgram — structured RenderError (contracts 1, 2)', () => {
   test('vertex compile failure throws RenderError with code shader-compile, label in message, marked excerpt in detail', () => {

@@ -80,7 +80,9 @@ const build = ({
   levelOffset,
   uncompressedByteLength,
 }: Spec): ArrayBuffer => {
-  const length = levelLength ?? (vkFormat === RGBA8_SRGB ? width * height * 4 : compressedLevelByteLength(CompressedTextureFormat.Bc7RgbaUnorm, width, height));
+  const length =
+    levelLength ??
+    (vkFormat === RGBA8_SRGB ? width * height * 4 : compressedLevelByteLength(CompressedTextureFormat.Bc7RgbaUnorm, width, height));
   const dfdOffset = HEADER_BYTES + LEVEL_ENTRY_BYTES;
   const kvdOffset = dfdOffset + dfd.length;
   const step = alignment(vkFormat);
@@ -119,7 +121,11 @@ const parse = (spec: Spec) => parseKtx2(build(spec), 'case.ktx2');
 
 describe('KTX2 descriptor by format family', () => {
   test('a registry RGBA8 sRGB descriptor with a linear alpha sample is read as sRGB colour', () => {
-    expect(parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2 })).toMatchObject({ kind: 'rgba8', colorSpace: 'srgb', alphaMode: 'straight' });
+    expect(parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2 })).toMatchObject({
+      kind: 'rgba8',
+      colorSpace: 'srgb',
+      alphaMode: 'straight',
+    });
   });
 
   test('BC1 is described by its own colour model, not RGBSDA', () => {
@@ -171,7 +177,9 @@ describe('KTX2 key/value data', () => {
   });
 
   test('still accepts the unterminated legacy spelling', () => {
-    expect(() => parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2, kvd: kvd(entry('KTXorientation', text('S=r,T=d'))) })).not.toThrow();
+    expect(() =>
+      parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2, kvd: kvd(entry('KTXorientation', text('S=r,T=d'))) }),
+    ).not.toThrow();
   });
 
   test('carries a vendor entry of arbitrary bytes past without decoding it', () => {
@@ -181,15 +189,23 @@ describe('KTX2 key/value data', () => {
   });
 
   test('names a bottom-up orientation instead of silently treating it as top-down', () => {
-    expect(() => parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2, kvd: kvd(entry('KTXorientation', text('ru\0'))) })).toThrow(
-      /bottom-up orientation "ru"/,
-    );
+    expect(() =>
+      parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2, kvd: kvd(entry('KTXorientation', text('ru\0'))) }),
+    ).toThrow(/bottom-up orientation "ru"/);
   });
 
   test('refuses another swizzle and a text value with an embedded NUL', () => {
-    expect(() => parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2, kvd: kvd(entry('KTXswizzle', text('bgra\0'))) })).toThrow(/swizzle "bgra"/);
+    expect(() => parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2, kvd: kvd(entry('KTXswizzle', text('bgra\0'))) })).toThrow(
+      /swizzle "bgra"/,
+    );
     expect(() =>
-      parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2, kvd: kvd(entry('KTXorientation', new Uint8Array([0x72, 0x00, 0x64, 0x00]))) }),
+      parse({
+        vkFormat: RGBA8_SRGB,
+        width: 2,
+        height: 2,
+        transfer: 2,
+        kvd: kvd(entry('KTXorientation', new Uint8Array([0x72, 0x00, 0x64, 0x00]))),
+      }),
     ).toThrow(/embedded NUL/);
   });
 });
@@ -205,10 +221,14 @@ describe('KTX2 level ranges', () => {
   });
 
   test('without supercompression the stored and uncompressed lengths must agree', () => {
-    expect(() => parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2, uncompressedByteLength: 20 })).toThrow(/must agree without supercompression/);
+    expect(() => parse({ vkFormat: RGBA8_SRGB, width: 2, height: 2, transfer: 2, uncompressedByteLength: 20 })).toThrow(
+      /must agree without supercompression/,
+    );
   });
 
   test('image data may not alias the header', () => {
-    expect(() => parse({ vkFormat: RGBA8_SRGB, width: 1, height: 1, transfer: 2, levelOffset: 0, levelLength: 4 })).toThrow(/overlaps header/);
+    expect(() => parse({ vkFormat: RGBA8_SRGB, width: 1, height: 1, transfer: 2, levelOffset: 0, levelLength: 4 })).toThrow(
+      /overlaps header/,
+    );
   });
 });

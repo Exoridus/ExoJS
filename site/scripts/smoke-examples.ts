@@ -44,15 +44,15 @@
  * belong in `BLANK_ALLOWLIST` with a reason. Capability/unsupported skips do
  * not fail the run.
  */
-import { createServer, type Server } from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { createServer, type Server } from 'node:http';
 import { availableParallelism } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
-import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
-import { chromium, firefox, type Browser, type BrowserContext, type Frame, type Page } from 'playwright';
+import { type Browser, type BrowserContext, chromium, firefox, type Frame, type Page } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..'); // site/
@@ -84,7 +84,8 @@ const BLANK_FAILURE = 'canvas rendered but appears blank - one uniform color, no
  * WebGPU-adapter skip: the environment's limit, not the example's.
  */
 const SOFTWARE_RASTERISER_LIMITED: Readonly<Record<string, string>> = {
-  'lighting/radiance-rooms.js': 'moving full-resolution radiance cascades saturate a software-rasterised renderer; the harness cannot sample the page',
+  'lighting/radiance-rooms.js':
+    'moving full-resolution radiance cascades saturate a software-rasterised renderer; the harness cannot sample the page',
   'performance/backend-comparison.js':
     '2200 moving sprites plus the debug overlay saturate a software-rasterised main thread; the harness cannot reach the page',
 };
@@ -96,7 +97,7 @@ const SOFTWARE_RASTERISER_LIMITED: Readonly<Record<string, string>> = {
  * settled frame the blank check screenshots is the one a user touching the
  * glass would see.
  */
-const holdPointers = async (frame: Frame, points: readonly (readonly [number, number])[]): Promise<number> =>
+const holdPointers = async (frame: Frame, points: ReadonlyArray<readonly [number, number]>): Promise<number> =>
   frame.evaluate(
     fractions => {
       const canvas = document.querySelector('canvas');
@@ -193,14 +194,13 @@ const RECOVERABLE = [
 
 const isRecoverable = (message: string): boolean => {
   const normalized = message.toLowerCase();
+
   return RECOVERABLE.some(pattern => normalized.includes(pattern));
 };
 
 // Collapse multi-line compiler/runtime messages to a single line so they fit a
 // markdown bullet / table cell.
-const oneLine = (message: string): string => {
-  return message.replace(/\s+/g, ' ').trim();
-};
+const oneLine = (message: string): string => message.replace(/\s+/g, ' ').trim();
 
 interface CatalogEntry {
   slug: string;
@@ -284,6 +284,7 @@ const startServer = (root: string): Promise<{ port: number; server: Server }> =>
 
   const server = createServer((req, res) => {
     let urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+
     // The site is built with a configured `base`, so every URL the emitted
     // HTML references carries that prefix while `dist` itself is flat.
     if (urlPath.startsWith(SITE_BASE)) {
@@ -293,10 +294,12 @@ const startServer = (root: string): Promise<{ port: number; server: Server }> =>
     if (!resolve(join(root, urlPath)).startsWith(root)) {
       res.writeHead(403);
       res.end('Forbidden');
+
       return;
     }
 
     let pending = files.get(urlPath);
+
     if (!pending) {
       pending = load(urlPath);
       files.set(urlPath, pending);
@@ -307,6 +310,7 @@ const startServer = (root: string): Promise<{ port: number; server: Server }> =>
         if (!file) {
           res.writeHead(404);
           res.end('Not found');
+
           return;
         }
 
@@ -352,7 +356,7 @@ interface FrameDiagnostics {
   /** `requestAnimationFrame` callbacks that actually executed. */
   animationFrames: number;
   /** `webglcontextlost` / `webglcontextrestored` events, with the time since navigation. */
-  contextEvents: { type: string; atMs: number }[];
+  contextEvents: Array<{ type: string; atMs: number }>;
   /** Whether the first canvas's WebGL2 context reports itself lost at read time. */
   contextLost: boolean | null;
 }
@@ -363,8 +367,8 @@ interface FrameDiagnostics {
 // engine's own canvas listener stays untouched.
 const captureDiagnostics = (): void => {
   interface SmokeWindow {
-    __SMOKE_ERRORS__?: { message: string }[];
-    __SMOKE_FRAMES__?: { animationFrames: number; contextEvents: { type: string; atMs: number }[] };
+    __SMOKE_ERRORS__?: Array<{ message: string }>;
+    __SMOKE_FRAMES__?: { animationFrames: number; contextEvents: Array<{ type: string; atMs: number }> };
   }
   const w = window as unknown as SmokeWindow;
   w.__SMOKE_ERRORS__ = [];
@@ -379,8 +383,9 @@ const captureDiagnostics = (): void => {
   });
 
   const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
+
   window.requestAnimationFrame = function (callback: FrameRequestCallback): number {
-    return nativeRequestAnimationFrame(function (time: number): void {
+    return nativeRequestAnimationFrame((time: number): void => {
       w.__SMOKE_FRAMES__!.animationFrames += 1;
       callback(time);
     });
@@ -395,7 +400,9 @@ const captureDiagnostics = (): void => {
 const readFrameDiagnostics = async (frame: Frame): Promise<FrameDiagnostics> =>
   frame
     .evaluate(() => {
-      const w = window as unknown as { __SMOKE_FRAMES__?: { animationFrames: number; contextEvents: { type: string; atMs: number }[] } };
+      const w = window as unknown as {
+        __SMOKE_FRAMES__?: { animationFrames: number; contextEvents: Array<{ type: string; atMs: number }> };
+      };
       const recorded = w.__SMOKE_FRAMES__ ?? { animationFrames: 0, contextEvents: [] };
       const canvas = document.querySelector('canvas');
       // `getContext` on a canvas that already holds a context returns that
@@ -472,6 +479,7 @@ const rendersDuringSettle = async (page: Page, previewFrame: Frame, durationMs: 
     rendered ||= !(await isCanvasBlank(page, previewFrame));
 
     const remaining = deadline - Date.now();
+
     if (remaining > 0) {
       await page.waitForTimeout(Math.min(400, remaining));
     }
@@ -488,7 +496,10 @@ const isCanvasBlank = async (page: Page, previewFrame: Frame): Promise<boolean> 
   // The iframe element is laid out normally, so its rect is what the viewer
   // actually sees.
   const box = await page.locator('iframe').first().boundingBox();
-  if (!box || box.width === 0 || box.height === 0) return true;
+
+  if (!box || box.width === 0 || box.height === 0) {
+    return true;
+  }
 
   // Examples draw their HUD as fixed-position `<aside>` overlays on top of the
   // canvas. Those are DOM, not rendered output, and would make a blank canvas
@@ -518,15 +529,22 @@ const isCanvasBlank = async (page: Page, previewFrame: Frame): Promise<boolean> 
     probe.width = gridSize;
     probe.height = gridSize;
     const ctx = probe.getContext('2d');
-    if (!ctx) return false; // cannot judge - do not report a false failure
+
+    if (!ctx) {
+      return false;
+    } // cannot judge - do not report a false failure
 
     ctx.drawImage(image, 0, 0, gridSize, gridSize);
     const { data } = ctx.getImageData(0, 0, gridSize, gridSize);
 
     const [r0, g0, b0, a0] = data;
+
     for (let i = 4; i < data.length; i += 4) {
-      if (data[i] !== r0 || data[i + 1] !== g0 || data[i + 2] !== b0 || data[i + 3] !== a0) return false;
+      if (data[i] !== r0 || data[i + 1] !== g0 || data[i + 2] !== b0 || data[i + 3] !== a0) {
+        return false;
+      }
     }
+
     return true;
   }, dataUrl);
 };
@@ -547,7 +565,10 @@ const waitForPreviewCanvas = async (page: Page, timeoutMs: number): Promise<Fram
 
     if (frame) {
       const hasCanvas = await frame.evaluate(() => !!document.querySelector('canvas')).catch(() => false);
-      if (hasCanvas) return frame;
+
+      if (hasCanvas) {
+        return frame;
+      }
     }
 
     await page.waitForTimeout(250);
@@ -568,7 +589,9 @@ const readCapabilityOverlay = async (page: Page): Promise<string | null> => {
       .evaluate(() => (document.body.getAttribute('data-preview-blanked') === 'capabilities' ? document.body.innerText : null))
       .catch(() => null);
 
-    if (text !== null) return text;
+    if (text !== null) {
+      return text;
+    }
   }
 
   return null;
@@ -589,7 +612,8 @@ const collectErrors = async (page: Page, pageErrors: readonly string[]): Promise
   const readFrame = (frame: Frame): Promise<string[]> =>
     frame
       .evaluate(() => {
-        const w = window as unknown as { __SMOKE_ERRORS__?: { message: string }[] };
+        const w = window as unknown as { __SMOKE_ERRORS__?: Array<{ message: string }> };
+
         return (w.__SMOKE_ERRORS__ ?? []).map(error => error.message);
       })
       .catch(() => [] as string[]);
@@ -625,16 +649,19 @@ const probeGraphics = async (browser: Browser, baseUrl: string, forceWebGl2: boo
   // Navigate to a real origin rather than about:blank - some Chromium builds
   // refuse to expose navigator.gpu on opaque origins.
   const page = await browser.newPage();
+
   try {
     if (forceWebGl2) {
       await page.addInitScript(withholdWebGpu);
     }
 
     await page.goto(`${baseUrl}/preview.html`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
+
     return await page.evaluate(async () => {
       const webgpu = await (async () => {
         try {
           const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
+
           return gpu !== undefined && (await gpu.requestAdapter()) !== null;
         } catch {
           return false;
@@ -645,6 +672,7 @@ const probeGraphics = async (browser: Browser, baseUrl: string, forceWebGl2: boo
         try {
           const gl = document.createElement('canvas').getContext('webgl2');
           const info = gl?.getExtension('WEBGL_debug_renderer_info');
+
           return gl && info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
         } catch {
           return '';
@@ -707,7 +735,9 @@ const createContextPool = (browser: Browser, colorScheme: 'light' | 'dark', forc
           if (forceWebGl2) {
             await context.addInitScript(withholdWebGpu);
           }
+
           await context.addInitScript(captureDiagnostics);
+
           return context;
         });
         contexts.set(hasTouch, pending);
@@ -744,22 +774,27 @@ const runExample = async (
   };
 
   const needsWebGpu = entry.backend === 'advanced' || capabilities.includes('webgpu');
+
   if (needsWebGpu && !graphics.webgpu) {
     result.status = 'skipped';
     result.note = 'WebGPU adapter unavailable in this environment';
+
     return result;
   }
 
   const rasteriserLimit = graphics.softwareRasteriser ? SOFTWARE_RASTERISER_LIMITED[entry.path] : undefined;
+
   if (rasteriserLimit) {
     result.status = 'skipped';
     result.note = `software rasteriser: ${rasteriserLimit}`;
+
     return result;
   }
 
   if (!existsSync(join(distDir, 'examples', entry.path))) {
     result.status = 'failed';
     result.note = `source missing in build output: ${entry.path}`;
+
     return result;
   }
 
@@ -820,6 +855,7 @@ const runExample = async (
     result.shellErrors = shell.map(oneLine);
 
     const recoverable = preview.find(isRecoverable);
+
     if (recoverable) {
       result.status = 'skipped';
       result.note = oneLine(`backend unsupported: ${recoverable}`);
@@ -842,6 +878,7 @@ const runExample = async (
       }
     } else if (!renderedDuringSettle && (await staysBlank(page, previewFrame, timeoutMs))) {
       const reason = BLANK_ALLOWLIST[entry.path];
+
       if (reason) {
         result.status = 'passed';
         result.note = `blank by design: ${reason}`;
@@ -866,6 +903,7 @@ const runExample = async (
         const injectedSource = await previewFrame
           .evaluate(() => document.querySelector<HTMLScriptElement>('script[type="module"]')?.textContent ?? '')
           .catch(() => '');
+
         if (injectedSource) {
           await writeFile(artifactBase, injectedSource, 'utf8');
         }
@@ -975,6 +1013,7 @@ const main = async (): Promise<void> => {
   if (!existsSync(join(distDir, 'preview.html'))) {
     console.error(`[smoke] Missing ${join(distDir, 'preview.html')}. Run "pnpm site:build" first.`);
     process.exitCode = 1;
+
     return;
   }
 
@@ -991,6 +1030,7 @@ const main = async (): Promise<void> => {
 
   const catalog = JSON.parse(readFileSync(catalogPath, 'utf8')) as Record<string, CatalogEntry[]>;
   let entries = Object.entries(catalog).flatMap(([category, list]) => list.map(entry => ({ ...entry, category })));
+
   if (values.only) {
     entries = entries.filter(entry => entry.path.includes(values.only!));
   }
@@ -1077,7 +1117,10 @@ const main = async (): Promise<void> => {
       while (true) {
         const index = cursor;
         cursor += 1;
-        if (index >= entries.length) return;
+
+        if (index >= entries.length) {
+          return;
+        }
 
         const entry = entries[index];
         const result = await runExample(pool, baseUrl, entry, index, graphics, timeoutMs, 'first', shotDir);
@@ -1085,8 +1128,12 @@ const main = async (): Promise<void> => {
 
         const tag = result.status.toUpperCase().padEnd(7);
         const line = `[smoke] ${tag} ${entry.path}${result.note ? ` — ${result.note}` : ''}`;
-        if (result.status === 'failed') console.error(line);
-        else console.log(line);
+
+        if (result.status === 'failed') {
+          console.error(line);
+        } else {
+          console.log(line);
+        }
       }
     } finally {
       await pool.close();
@@ -1131,8 +1178,12 @@ const main = async (): Promise<void> => {
 
       const tag = retryResult.status.toUpperCase().padEnd(7);
       const line = `[smoke] ${tag} ${entry.path}${retryResult.note ? ` - ${retryResult.note}` : ''}`;
-      if (retryResult.status === 'failed') console.error(line);
-      else console.log(line);
+
+      if (retryResult.status === 'failed') {
+        console.error(line);
+      } else {
+        console.log(line);
+      }
     }
 
     await retryPool.close();
@@ -1153,9 +1204,12 @@ const main = async (): Promise<void> => {
   // example each message was first seen in is kept: a message that only some
   // entries produce is a different problem from one the shell raises always.
   const shellErrors = new Map<string, string>();
+
   for (const result of results) {
     for (const message of result.shellErrors ?? []) {
-      if (!shellErrors.has(message)) shellErrors.set(message, result.path);
+      if (!shellErrors.has(message)) {
+        shellErrors.set(message, result.path);
+      }
     }
   }
 
@@ -1165,6 +1219,7 @@ const main = async (): Promise<void> => {
 
   if (shellErrors.size > 0) {
     console.error(`[smoke] playground shell raised ${shellErrors.size} distinct error(s) - a site defect, not an example defect:`);
+
     for (const [message, path] of shellErrors) {
       console.error(`[smoke]   ${message} (first seen in ${path})`);
     }
@@ -1207,48 +1262,64 @@ const writeReport = async (
 
   if (shellErrors.size > 0) {
     lines.push('## ❌ Playground shell', '');
-    lines.push('Raised by the playground page itself rather than by the example it ran - the entry named is where the message was first seen:', '');
+    lines.push(
+      'Raised by the playground page itself rather than by the example it ran - the entry named is where the message was first seen:',
+      '',
+    );
+
     for (const [message, path] of shellErrors) {
       lines.push(`- ${message} — first seen in \`${path}\``);
     }
+
     lines.push('');
   }
 
   const failed = results.filter(result => result.status === 'failed');
+
   if (failed.length > 0) {
     lines.push('## ❌ Failures', '');
+
     for (const result of failed) {
       lines.push(`- \`${result.path}\` — ${result.note}`);
     }
+
     lines.push('');
   }
 
   const warned = results.filter(result => result.status === 'warned');
+
   if (warned.length > 0) {
     lines.push('## ⚠️ Warnings', '');
+
     for (const result of warned) {
       lines.push(`- \`${result.path}\` — ${result.note}`);
     }
+
     lines.push('');
   }
 
   const skipped = results.filter(result => result.status === 'skipped');
+
   if (skipped.length > 0) {
     lines.push('## ⏭️ Skipped', '');
+
     for (const result of skipped) {
       lines.push(`- \`${result.path}\` — ${result.note}`);
     }
+
     lines.push('');
   }
 
   lines.push('## Full matrix', '');
   lines.push('| Example | Backend | Capabilities | Result | Note |');
   lines.push('| --- | --- | --- | --- | --- |');
+
   for (const result of results) {
     const caps = result.capabilities.length > 0 ? result.capabilities.join(', ') : '—';
     const note = (result.note || '').replace(/\|/g, '\\|');
     lines.push(`| \`${result.path}\` | ${result.backend} | ${caps} | ${icon[result.status]} ${result.status} | ${note} |`);
   }
+
   lines.push('');
 
   await mkdir(dirname(reportPath), { recursive: true });

@@ -66,7 +66,14 @@ describe('radiance raster mask', () => {
 
     expect(maskPass?.enabled).toBe(false);
     expect(backend.maskBlocks.pass.enabled).toBe(false);
-    expect(backend._radiance._walk).toMatchObject({ maskWidth: 0, maskHeight: 0, blocksWidth: 0, blocksHeight: 0, superblocksWidth: 0, superblocksHeight: 0 });
+    expect(backend._radiance._walk).toMatchObject({
+      maskWidth: 0,
+      maskHeight: 0,
+      blocksWidth: 0,
+      blocksHeight: 0,
+      superblocksWidth: 0,
+      superblocksHeight: 0,
+    });
 
     raster = true;
     lighting.update();
@@ -85,7 +92,14 @@ describe('radiance raster mask', () => {
 
     expect(maskPass?.enabled).toBe(false);
     expect(backend.maskBlocks.pass.enabled).toBe(false);
-    expect(backend._radiance._walk).toMatchObject({ maskWidth: 0, maskHeight: 0, blocksWidth: 0, blocksHeight: 0, superblocksWidth: 0, superblocksHeight: 0 });
+    expect(backend._radiance._walk).toMatchObject({
+      maskWidth: 0,
+      maskHeight: 0,
+      blocksWidth: 0,
+      blocksHeight: 0,
+      superblocksWidth: 0,
+      superblocksHeight: 0,
+    });
 
     lighting.destroy();
     texture.destroy();

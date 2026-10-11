@@ -98,11 +98,16 @@ export abstract class AudioEffect {
         pending = setup(context);
       } catch (error) {
         this._fail(error);
-        if (!deferred) throw error;
+
+        if (!deferred) {
+          throw error;
+        }
+
         logger.error(`${this.constructor.name}: its audio setup failed when the audio context unlocked; the effect is bypassed.`, {
           source: 'AudioEffect',
           ...(error instanceof Error && { error }),
         });
+
         return;
       }
 
@@ -158,14 +163,20 @@ export abstract class AudioEffect {
   }
 
   private _settle(): void {
-    if (this._state !== 'pending') return;
+    if (this._state !== 'pending') {
+      return;
+    }
+
     this._state = 'ready';
     this._resolveReady?.();
     this._clearReadyCallbacks();
   }
 
   private _fail(error: unknown): void {
-    if (this._state !== 'pending') return;
+    if (this._state !== 'pending') {
+      return;
+    }
+
     const failure = error instanceof Error ? error : new Error(String(error));
     this._state = 'failed';
     this._failure = failure;

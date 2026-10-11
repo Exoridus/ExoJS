@@ -9,8 +9,19 @@ const arm = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 70, y: 0
 world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 } }));
 
 // A powered hinge - a motor driving it toward 5 rad/s, capped torque:
-world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 5, maxMotorTorque: 1e8 }));
+world.addJoint(
+  new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 5, maxMotorTorque: 1e8 }),
+);
 
 // A limited hinge - the relative angle is clamped to ±45°:
-world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 }, enableLimit: true, lowerAngle: -Math.PI / 4, upperAngle: Math.PI / 4 }));
+world.addJoint(
+  new RevoluteJoint({
+    bodyA: anchor,
+    bodyB: arm,
+    anchor: { x: 0, y: 0 },
+    enableLimit: true,
+    lowerAngle: -Math.PI / 4,
+    upperAngle: Math.PI / 4,
+  }),
+);
 // #endregion guide:revolute-joint

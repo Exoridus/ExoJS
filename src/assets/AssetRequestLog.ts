@@ -100,7 +100,9 @@ export class AssetRequestLog {
       return { kind: 'error', message: request.unportable };
     }
 
-    return request.options === undefined ? { kind: 'request', source: request.source } : { kind: 'request', source: request.source, options: request.options };
+    return request.options === undefined
+      ? { kind: 'request', source: request.source }
+      : { kind: 'request', source: request.source, options: request.options };
   }
 
   public delete(key: ResourceKey): void {

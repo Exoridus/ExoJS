@@ -67,7 +67,8 @@ interface PendingMeshDraw {
 }
 
 /** WebGL2 element type for a mesh index width. */
-const glIndexType = (format: MeshIndexFormat): IndexElementTypes => (format === 'uint32' ? IndexElementTypes.UnsignedInt : IndexElementTypes.UnsignedShort);
+const glIndexType = (format: MeshIndexFormat): IndexElementTypes =>
+  format === 'uint32' ? IndexElementTypes.UnsignedInt : IndexElementTypes.UnsignedShort;
 
 interface GeometryCacheEntry {
   readonly geometry: Geometry;
@@ -123,7 +124,10 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   /** Reusable single-slot texture list handed to the recorder (avoids a per-batch array). */
   private readonly _retainedTextureScratch: [Texture | RenderTexture] = [Texture.white];
 
-  private readonly _defaultShader: WebGl2Shader = new WebGl2Shader(vertexSource, spliceGlslPrologue(fragmentSource, colorShaderSourcesGlsl));
+  private readonly _defaultShader: WebGl2Shader = new WebGl2Shader(
+    vertexSource,
+    spliceGlslPrologue(fragmentSource, colorShaderSourcesGlsl),
+  );
   private readonly _customShaders = new Map<AnyMaterial, WebGl2Shader>();
   private readonly _compatibilityCache = new Map<WebGl2Shader, boolean>();
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
@@ -308,6 +312,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     if (backend === null || connection === null || count === 0) {
       this._pendingCount = 0;
+
       return;
     }
 
@@ -340,9 +345,11 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   public destroy(): void {
     this.disconnect();
     this._defaultShader.destroy();
+
     for (const shader of this._customShaders.values()) {
       shader.destroy();
     }
+
     this._customShaders.clear();
     this._compatibilityCache.clear();
   }
@@ -376,10 +383,11 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       this._createBufferRuntime(gl, buffers),
       backend.accountant,
     );
-    const dynamicInstanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceAttributeData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl, buffers),
-      backend.accountant,
-    );
+    const dynamicInstanceBuffer = new WebGl2RenderBuffer(
+      BufferTypes.ArrayBuffer,
+      this._instanceAttributeData,
+      BufferUsage.DynamicDraw,
+    ).connect(this._createBufferRuntime(gl, buffers), backend.accountant);
 
     const dynamicVaoHandle = gl.createVertexArray();
 
@@ -392,7 +400,16 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       .addAttribute(dynamicVertexBuffer, this._defaultShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
       .addAttribute(dynamicVertexBuffer, this._defaultShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
       .addAttribute(dynamicVertexBuffer, this._defaultShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 16)
-      .addAttribute(dynamicNodeIndexBuffer, this._defaultShader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, 0, true, 1)
+      .addAttribute(
+        dynamicNodeIndexBuffer,
+        this._defaultShader.getAttribute('a_nodeIndex'),
+        gl.UNSIGNED_INT,
+        false,
+        Uint32Array.BYTES_PER_ELEMENT,
+        0,
+        true,
+        1,
+      )
       .connect(this._createVaoRuntime(gl, dynamicVaoHandle));
 
     this._connection = {
@@ -414,6 +431,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
 
     this._defaultShader.destroy();
+
     for (const customShader of this._customShaders.values()) {
       customShader.destroy();
     }
@@ -448,11 +466,13 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     if (this._canBatchStatic(draw)) {
       this._drawStaticBatch(index, index + 1, backend, connection);
+
       return;
     }
 
     if (draw.supportsInstancing && draw.material === null) {
       this._drawDynamicInstancedSingle(draw, backend, connection);
+
       return;
     }
 
@@ -564,7 +584,15 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // WebGl2RetainedGeometryRef (vertexBuffer/indexBuffer/indexCount).
     if (backend._isRetainedCapturing) {
       this._retainedTextureScratch[0] = first.texture;
-      backend.recordRetainedBatch(this, this._nodeIndexData.subarray(0, count), count, first.blendMode, this._retainedTextureScratch, 1, cacheEntry);
+      backend.recordRetainedBatch(
+        this,
+        this._nodeIndexData.subarray(0, count),
+        count,
+        first.blendMode,
+        this._retainedTextureScratch,
+        1,
+        cacheEntry,
+      );
     }
   }
 
@@ -595,7 +623,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       // compose is the fallback for shaders WITHOUT `u_group`.
       const groupTransform = backend.renderGroupTransform;
       const translation =
-        groupTransform !== null ? this._groupComposeScratch.copy(mesh.getGlobalTransform()).combine(groupTransform) : mesh.getGlobalTransform();
+        groupTransform !== null
+          ? this._groupComposeScratch.copy(mesh.getGlobalTransform()).combine(groupTransform)
+          : mesh.getGlobalTransform();
 
       shader.getUniform('u_translation').setValue(translation.toArray(false));
     }
@@ -757,7 +787,16 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       .addAttribute(geometry.vertexBuffer, shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
       .addAttribute(geometry.vertexBuffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
       .addAttribute(geometry.vertexBuffer, shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 16)
-      .addAttribute(instanceBuffer, shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, payload.byteOffset, true, 1);
+      .addAttribute(
+        instanceBuffer,
+        shader.getAttribute('a_nodeIndex'),
+        gl.UNSIGNED_INT,
+        false,
+        Uint32Array.BYTES_PER_ELEMENT,
+        payload.byteOffset,
+        true,
+        1,
+      );
   }
 
   /**
@@ -777,7 +816,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const transformTexture = payload.bundle.transformTexture;
     const tintTexture = payload.bundle.tintTexture;
 
-    if (backend === null || vao === null || geometry === null || geometry === undefined || transformTexture === null || tintTexture === null) {
+    if (
+      backend === null ||
+      vao === null ||
+      geometry === null ||
+      geometry === undefined ||
+      transformTexture === null ||
+      tintTexture === null
+    ) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
       return false;
@@ -863,7 +909,10 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
 
     const compatible =
-      shader.attributes.has('a_nodeIndex') && shader.uniforms.has('u_transforms') && !shader.uniforms.has('u_translation') && !shader.uniforms.has('u_tint');
+      shader.attributes.has('a_nodeIndex') &&
+      shader.uniforms.has('u_transforms') &&
+      !shader.uniforms.has('u_translation') &&
+      !shader.uniforms.has('u_tint');
 
     this._compatibilityCache.set(shader, compatible);
 
@@ -995,6 +1044,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     entry.vertexBuffer.upload(floatView);
     entry.indexBuffer.upload(indexData);
     entry.indexCount = indexCount;
+
     // A re-pack may cross the 16-bit ceiling in either direction, and every VAO
     // cached against this entry draws with the type set at its creation - so a
     // changed width has to be pushed onto all of them, not just recorded here.
@@ -1063,7 +1113,16 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       }
     }
 
-    vao.addAttribute(nodeIndexBuffer, shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, 0, true, 1);
+    vao.addAttribute(
+      nodeIndexBuffer,
+      shader.getAttribute('a_nodeIndex'),
+      gl.UNSIGNED_INT,
+      false,
+      Uint32Array.BYTES_PER_ELEMENT,
+      0,
+      true,
+      1,
+    );
 
     if (instances !== null && instanceBuffer !== null) {
       const strideBytes = instances.strideFloats * Float32Array.BYTES_PER_ELEMENT;
@@ -1078,7 +1137,16 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
           throw new Error(`RenderBatch instance attribute '${binding.name}' is not present in the material's linked shader.`);
         }
 
-        vao.addAttribute(instanceBuffer, attribute, gl.FLOAT, false, strideBytes, binding.offsetFloats * Float32Array.BYTES_PER_ELEMENT, false, 1);
+        vao.addAttribute(
+          instanceBuffer,
+          attribute,
+          gl.FLOAT,
+          false,
+          strideBytes,
+          binding.offsetFloats * Float32Array.BYTES_PER_ELEMENT,
+          false,
+          1,
+        );
       }
     }
 
@@ -1088,7 +1156,12 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     return vao;
   }
 
-  private _packVertices(mesh: Mesh, vertexStart: number, floatView: Float32Array = this._float32View, uintView: Uint32Array = this._uint32View): void {
+  private _packVertices(
+    mesh: Mesh,
+    vertexStart: number,
+    floatView: Float32Array = this._float32View,
+    uintView: Uint32Array = this._uint32View,
+  ): void {
     const positions = mesh.vertices;
     const uvs = mesh.uvs;
     const colors = mesh.colors;
@@ -1120,6 +1193,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     if (mesh.indices !== null) {
       target.set(mesh.indices, indexStart);
+
       return;
     }
 
@@ -1239,7 +1313,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
             if (attribute.integer) {
               gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
             } else {
-              gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+              gl.vertexAttribPointer(
+                attribute.location,
+                attribute.size,
+                attribute.type,
+                attribute.normalized,
+                attribute.stride,
+                attribute.start,
+              );
             }
 
             gl.enableVertexAttribArray(attribute.location);
@@ -1279,6 +1360,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
   private _getOrCreateCustomShader(material: AnyMaterial, gl: WebGL2RenderingContext): WebGl2Shader {
     const cached = this._customShaders.get(material);
+
     if (cached !== undefined) {
       return cached;
     }
@@ -1305,6 +1387,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // Wire material.destroy() through to evict + dispose the cached program.
     material.onDispose(() => {
       const stored = this._customShaders.get(material);
+
       if (stored !== undefined) {
         stored.destroy();
         this._customShaders.delete(material);
@@ -1320,7 +1403,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // entries of the material's dedicated `textures` map.
     for (const name of material._bindingSchema.scalarUniformNames) {
       if (shader.uniforms.has(name)) {
-        shader.getUniform(name).setValue(this._marshalUniformValue(material._getUniformValue(name) as Exclude<UniformValue, Texture | RenderTexture>));
+        shader
+          .getUniform(name)
+          .setValue(this._marshalUniformValue(material._getUniformValue(name) as Exclude<UniformValue, Texture | RenderTexture>));
       }
     }
 
@@ -1335,7 +1420,13 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
   }
 
-  private _bindCustomTexture(shader: WebGl2Shader, name: string, texture: Texture | RenderTexture, textureSlot: number, backend: WebGl2Backend): number {
+  private _bindCustomTexture(
+    shader: WebGl2Shader,
+    name: string,
+    texture: Texture | RenderTexture,
+    textureSlot: number,
+    backend: WebGl2Backend,
+  ): number {
     if (textureSlot >= maxCustomTextureSlots) {
       throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
     }
@@ -1352,9 +1443,11 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     if (value instanceof Float32Array || value instanceof Int32Array) {
       return value;
     }
+
     if (typeof value === 'number') {
       return new Float32Array([value]);
     }
+
     // readonly tuple [a, b], [a, b, c], [a, b, c, d]
     return new Float32Array(value as readonly number[]);
   }

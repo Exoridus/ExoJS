@@ -49,7 +49,9 @@ class CrossfadeTracksScene extends Scene {
     this.labelB = new Text('Track B', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(this.meterBX + METER_W / 2, height * 0.26);
-    this.nowPlaying = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, height * 0.15);
+    this.nowPlaying = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height * 0.15);
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued music starts.
     this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })

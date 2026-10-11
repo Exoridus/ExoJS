@@ -128,11 +128,15 @@ export class GlyphAtlasPool {
     const prefix = GlyphAtlasPool._typefacePrefix(font);
 
     for (const [key, atlas] of this._atlases) {
-      if (key.startsWith(prefix)) atlas.clear();
+      if (key.startsWith(prefix)) {
+        atlas.clear();
+      }
     }
 
     for (const [key, metrics] of this._shapedMetrics) {
-      if (key.startsWith(prefix)) metrics.clear();
+      if (key.startsWith(prefix)) {
+        metrics.clear();
+      }
     }
   }
 }
@@ -149,6 +153,7 @@ export const getDefaultGlyphAtlasPool = (): GlyphAtlasPool => {
   if (_defaultPool === null) {
     _defaultPool = new GlyphAtlasPool();
   }
+
   return _defaultPool;
 };
 

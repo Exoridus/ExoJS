@@ -21,7 +21,11 @@ import {
   spriteSharedStorageWgsl,
   spriteVertexCoreWgsl,
 } from '#rendering/sprite/materialSources';
-import { fillPersistentSpriteSlotTable, rekeyPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
+import {
+  fillPersistentSpriteSlotTable,
+  rekeyPersistentSpriteSlotTable,
+  writePersistentSpriteSlots,
+} from '#rendering/sprite/persistentSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -598,7 +602,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * slot's recorded texture index still names the texture it was written for.
    * @internal
    */
-  public _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+  public _rekeyPersistentSlotStore(
+    store: WebGpuPersistentSlotStore,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
     return rekeyPersistentSpriteSlotTable(source, store, this._maxBatchTextures, carried, previousHandleCount);
   }
 
@@ -888,7 +897,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /** Custom-material path: rotate the base texture through the material slot table on group(1), instanced. */
-  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: AnySpriteMaterial, backend: WebGpuBackend, nodeIndex: number): void {
+  private _renderCustom(
+    sprite: Sprite,
+    texture: Texture | RenderTexture,
+    material: AnySpriteMaterial,
+    backend: WebGpuBackend,
+    nodeIndex: number,
+  ): void {
     if (material.shader._resolveWgsl(materialUniformGroup) === null) {
       throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
@@ -972,7 +987,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       this._writtenViewUpdateId = view.updateId;
       this._hasWrittenProjection = true;
 
-      device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
+      device.queue.writeBuffer(
+        uniformBuffer,
+        0,
+        this._projectionData.buffer,
+        this._projectionData.byteOffset,
+        this._projectionData.byteLength,
+      );
     }
 
     const scissor = backend.getScissorRect();
@@ -997,6 +1018,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       // hazard below can be answered before anything is recorded into the pass.
       const material = this._currentMaterial;
       const customResources = material === null ? null : this._getOrCreateCustomResources(material, device);
+
       if (material !== null) {
         planUserUniformUpload(material, customResources!, device, 'sprite:material-user-uniform-buffer');
       }
@@ -1209,7 +1231,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * with the shared transform storage buffer. Cached against the storage buffer
    * identity, which changes only when its capacity grows.
    */
-  private _getOrCreateTransformBindGroup(device: GPUDevice, uniformBuffer: GPUBuffer, storageBuffer: GPUBuffer, tintBuffer: GPUBuffer): GPUBindGroup {
+  private _getOrCreateTransformBindGroup(
+    device: GPUDevice,
+    uniformBuffer: GPUBuffer,
+    storageBuffer: GPUBuffer,
+    tintBuffer: GPUBuffer,
+  ): GPUBindGroup {
     if (this._transformBindGroup !== null && this._transformStorageBuffer === storageBuffer && this._tintStorageBuffer === tintBuffer) {
       return this._transformBindGroup;
     }
@@ -1341,7 +1368,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     // Resolve the batch textures LIVE through the shared texture-set cache
     // (syncs dirty content, adopts refreshed views/samplers).
-    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures, material !== null, material?.sampler ?? null);
+    const textureBindGroup = this._getOrCreateTextureBindGroup(
+      device,
+      backend,
+      payload.textures,
+      material !== null,
+      material?.sampler ?? null,
+    );
 
     let customResources: CustomSpriteResources | null = null;
     let userBindGroup: GPUBindGroup | null = null;
@@ -1424,11 +1457,20 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const nativePipeline =
       material === null
         ? this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive)
-        : this._getOrCreateCustomPipeline(customResources!, payload.blendMode, backend.renderTargetFormats, coordinator.stencilActive, device);
+        : this._getOrCreateCustomPipeline(
+            customResources!,
+            payload.blendMode,
+            backend.renderTargetFormats,
+            coordinator.stencilActive,
+            device,
+          );
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, true);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
-    if (!nativeCompatible) bundle.nativeReplay.skipPass();
+
+    if (!nativeCompatible) {
+      bundle.nativeReplay.skipPass();
+    }
 
     if (
       !nativeCompatible ||
@@ -1450,9 +1492,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       pass.setPipeline(nativePipeline);
       pass.setBindGroup(0, nativeFrameBindGroup);
       pass.setBindGroup(1, textureBindGroup);
+
       if (userBindGroup !== null) {
         pass.setBindGroup(2, userBindGroup);
       }
+
       pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
       pass.setIndexBuffer(this._indexBuffer, 'uint16');
       pass.drawIndexed(indicesPerSprite, payload.instanceCount, 0, 0, 0);
@@ -1757,7 +1801,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /** Slot-capacity-bounded copy of the resolved views - the scratch may be longer. */
-  private _copyViews(resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>, slotCapacity: number): GPUTextureView[] {
+  private _copyViews(
+    resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>,
+    slotCapacity: number,
+  ): GPUTextureView[] {
     const views = new Array<GPUTextureView>(slotCapacity);
 
     for (let i = 0; i < slotCapacity; i++) {
@@ -1768,7 +1815,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /** Counterpart of {@link _copyViews} for the samplers. */
-  private _copySamplers(resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>, slotCapacity: number): GPUSampler[] {
+  private _copySamplers(
+    resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>,
+    slotCapacity: number,
+  ): GPUSampler[] {
     const samplers = new Array<GPUSampler>(slotCapacity);
 
     for (let i = 0; i < slotCapacity; i++) {
@@ -2048,11 +2098,26 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots} user texture bindings.`);
     }
 
-    return device.createBindGroupLayout({ label: 'sprite:material-bind-group-layout', entries: userUniformLayoutEntries(material, textureBindings.length) });
+    return device.createBindGroupLayout({
+      label: 'sprite:material-bind-group-layout',
+      entries: userUniformLayoutEntries(material, textureBindings.length),
+    });
   }
 
-  private _getUserBindGroup(material: AnySpriteMaterial, resources: CustomSpriteResources, backend: WebGpuBackend, device: GPUDevice): GPUBindGroup {
-    return resolveUserUniformBindGroup(device, backend, material, resources.userLayout, 'sprite:material-user-bind-group', resources.userUniform);
+  private _getUserBindGroup(
+    material: AnySpriteMaterial,
+    resources: CustomSpriteResources,
+    backend: WebGpuBackend,
+    device: GPUDevice,
+  ): GPUBindGroup {
+    return resolveUserUniformBindGroup(
+      device,
+      backend,
+      material,
+      resources.userLayout,
+      'sprite:material-user-bind-group',
+      resources.userUniform,
+    );
   }
 
   private _releaseCustomResources(resources: CustomSpriteResources): void {

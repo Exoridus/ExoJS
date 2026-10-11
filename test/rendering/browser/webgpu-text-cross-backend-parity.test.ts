@@ -78,7 +78,8 @@ const buildScene = (): { root: Container } => {
   return { root };
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const setupWebGpu = async (): Promise<WebGpuBackend> => {
   const backend = new WebGpuBackend(makeApp(makeCanvas()));
@@ -121,7 +122,9 @@ const readWebGpu = (backend: WebGpuBackend): Uint8ClampedArray => {
 
   const rctx = readback.getContext('2d');
 
-  if (!rctx) throw new Error('2D context required for readback.');
+  if (!rctx) {
+    throw new Error('2D context required for readback.');
+  }
 
   rctx.drawImage(backend.context.canvas as HTMLCanvasElement, 0, 0);
 
@@ -164,7 +167,8 @@ const readWebGl2 = (backend: WebGl2Backend): Uint8Array => {
   return out;
 };
 
-const luma = (frame: ArrayLike<number>, index: number): number => 0.299 * frame[index]! + 0.587 * frame[index + 1]! + 0.114 * frame[index + 2]!;
+const luma = (frame: ArrayLike<number>, index: number): number =>
+  0.299 * frame[index]! + 0.587 * frame[index + 1]! + 0.114 * frame[index + 2]!;
 
 /** Coverage mask: 1 where luma > 128 (ink), else 0. */
 const inkMask = (frame: ArrayLike<number>): Uint8Array => {
@@ -191,7 +195,10 @@ describe('Cross-backend parity: retained Text renders identically on WebGL2 and 
       // Drive each backend through F1 capture, F2 record, F3 instruction replay
       // so BOTH read back from their retained fast tier, not a fresh collect.
       for (let f = 0; f < 3; f++) {
-        if (!(await renderWebGpu(ctx, gpu, gpuScene.root))) return;
+        if (!(await renderWebGpu(ctx, gpu, gpuScene.root))) {
+          return;
+        }
+
         renderWebGl2(gl, glScene.root);
       }
 
@@ -208,7 +215,10 @@ describe('Cross-backend parity: retained Text renders identically on WebGL2 and 
       for (let p = 0; p < gpuMask.length; p++) {
         gpuInk += gpuMask[p]!;
         glInk += glMask[p]!;
-        if (gpuMask[p] === glMask[p]) agree++;
+
+        if (gpuMask[p] === glMask[p]) {
+          agree++;
+        }
       }
 
       // Both actually rendered glyphs (not an empty frame on either side).

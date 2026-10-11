@@ -27,6 +27,7 @@ const rootDir = resolve(import.meta.dirname!, '..', '..');
  */
 const topLevelRegisterCallLines = (relativePath: string): string[] => {
   const source = readFileSync(resolve(rootDir, relativePath), 'utf8');
+
   return source.split(/\r?\n/).filter(line => /^register\w*\(/.test(line));
 };
 

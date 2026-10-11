@@ -40,7 +40,14 @@ const floorTexture = canvasTexture(64, 64, context => {
 // an edge that turns away from the light.
 const cobbleSize = 96;
 const cobbleTexture = canvasTexture(cobbleSize, cobbleSize, context => {
-  const gradient = context.createRadialGradient(cobbleSize / 2, cobbleSize / 2, cobbleSize * 0.12, cobbleSize / 2, cobbleSize / 2, cobbleSize * 0.48);
+  const gradient = context.createRadialGradient(
+    cobbleSize / 2,
+    cobbleSize / 2,
+    cobbleSize * 0.12,
+    cobbleSize / 2,
+    cobbleSize / 2,
+    cobbleSize * 0.48,
+  );
   gradient.addColorStop(0, 'rgba(198, 190, 176, 1)');
   gradient.addColorStop(0.72, 'rgba(176, 168, 154, 1)');
   gradient.addColorStop(1, 'rgba(150, 142, 128, 0)');
@@ -132,7 +139,9 @@ class LightmapNormalsScene extends Scene {
   }
   draw(context) {
     context.render(this.world);
-    this.hud.setStatus(`${this.lighting.activeSurfaceCount} lit surfaces - ${this.lighting.quality} renderer - draw calls ${context.stats.drawCalls}`);
+    this.hud.setStatus(
+      `${this.lighting.activeSurfaceCount} lit surfaces - ${this.lighting.quality} renderer - draw calls ${context.stats.drawCalls}`,
+    );
   }
 }
 const app = new Application({

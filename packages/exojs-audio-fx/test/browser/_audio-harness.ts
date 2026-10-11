@@ -40,14 +40,19 @@ export const renderWorklet = async (opts: RenderOptions): Promise<Float32Array> 
     numberOfOutputs: 1,
     processorOptions: opts.processorOptions ?? {},
   });
+
   if (opts.params) {
     for (const [name, value] of Object.entries(opts.params)) {
       const param = node.parameters.get(name);
-      if (param) param.value = value;
+
+      if (param) {
+        param.value = value;
+      }
     }
   }
 
   let source: AudioScheduledSourceNode;
+
   if (opts.inputBuffer) {
     const buffer = ctx.createBuffer(1, opts.inputBuffer.length, sr);
     buffer.getChannelData(0).set(opts.inputBuffer);
@@ -60,11 +65,13 @@ export const renderWorklet = async (opts: RenderOptions): Promise<Float32Array> 
     osc.frequency.value = opts.inputFreq ?? 440;
     source = osc;
   }
+
   source.connect(node);
   node.connect(ctx.destination);
   source.start();
 
   const rendered = await ctx.startRendering();
+
   return rendered.getChannelData(0).slice();
 };
 
@@ -110,10 +117,14 @@ export const renderWorkletChannels = async (opts: ChannelRenderOptions): Promise
     ...(opts.modulatorFreq === undefined ? {} : { outputChannelCount: [2] }),
     processorOptions: opts.processorOptions ?? {},
   });
+
   if (opts.params) {
     for (const [name, value] of Object.entries(opts.params)) {
       const param = node.parameters.get(name);
-      if (param) param.value = value;
+
+      if (param) {
+        param.value = value;
+      }
     }
   }
 
@@ -123,6 +134,7 @@ export const renderWorkletChannels = async (opts: ChannelRenderOptions): Promise
     osc.type = opts.inputType ?? 'sine';
     osc.frequency.value = freq;
     osc.connect(merger, 0, channel);
+
     return osc;
   });
   merger.connect(node, 0, 0);
@@ -135,9 +147,13 @@ export const renderWorkletChannels = async (opts: ChannelRenderOptions): Promise
   }
 
   node.connect(ctx.destination);
-  for (const source of sources) source.start();
+
+  for (const source of sources) {
+    source.start();
+  }
 
   const rendered = await ctx.startRendering();
+
   return Array.from({ length: channels }, (_, channel) => rendered.getChannelData(channel).slice());
 };
 
@@ -146,10 +162,12 @@ export const magnitudeAt = (buf: Float32Array, freq: number, sampleRate = SAMPLE
   let re = 0;
   let im = 0;
   const omega = (2 * Math.PI * freq) / sampleRate;
+
   for (let i = 0; i < buf.length; i++) {
     re += buf[i] * Math.cos(omega * i);
     im -= buf[i] * Math.sin(omega * i);
   }
+
   return Math.sqrt(re * re + im * im) / buf.length;
 };
 
@@ -160,18 +178,29 @@ export const magnitudeAt = (buf: Float32Array, freq: number, sampleRate = SAMPLE
  */
 const powerSpectrum = (buf: Float32Array): { mag: Float32Array; n: number } => {
   let n = 1;
-  while (n * 2 <= buf.length) n *= 2;
+
+  while (n * 2 <= buf.length) {
+    n *= 2;
+  }
+
   const re = new Float32Array(n);
   const im = new Float32Array(n);
+
   for (let i = 0; i < n; i++) {
     const w = 0.5 * (1 - Math.cos((2 * Math.PI * i) / n)); // Hann reduces leakage
     re[i] = buf[i] * w;
   }
+
   // Bit-reversal permutation.
   for (let i = 1, j = 0; i < n; i++) {
     let bit = n >> 1;
-    for (; j & bit; bit >>= 1) j ^= bit;
+
+    for (; j & bit; bit >>= 1) {
+      j ^= bit;
+    }
+
     j ^= bit;
+
     if (i < j) {
       const tr = re[i];
       re[i] = re[j];
@@ -181,14 +210,17 @@ const powerSpectrum = (buf: Float32Array): { mag: Float32Array; n: number } => {
       im[j] = ti;
     }
   }
+
   // Butterflies.
   for (let len = 2; len <= n; len <<= 1) {
     const ang = (-2 * Math.PI) / len;
     const wr = Math.cos(ang);
     const wi = Math.sin(ang);
+
     for (let i = 0; i < n; i += len) {
       let cr = 1;
       let ci = 0;
+
       for (let k = 0; k < len >> 1; k++) {
         const ar = re[i + k];
         const ai = im[i + k];
@@ -204,9 +236,14 @@ const powerSpectrum = (buf: Float32Array): { mag: Float32Array; n: number } => {
       }
     }
   }
+
   const half = n >> 1;
   const mag = new Float32Array(half);
-  for (let i = 0; i < half; i++) mag[i] = re[i] * re[i] + im[i] * im[i];
+
+  for (let i = 0; i < half; i++) {
+    mag[i] = re[i] * re[i] + im[i] * im[i];
+  }
+
   return { mag, n };
 };
 
@@ -214,22 +251,32 @@ const powerSpectrum = (buf: Float32Array): { mag: Float32Array; n: number } => {
 export const dominantFreq = (buf: Float32Array, sampleRate = SAMPLE_RATE): number => {
   const { mag, n } = powerSpectrum(buf);
   let peak = 1;
-  for (let i = 1; i < mag.length; i++) if (mag[i] > mag[peak]) peak = i;
+
+  for (let i = 1; i < mag.length; i++) {
+    if (mag[i] > mag[peak]) {
+      peak = i;
+    }
+  }
+
   const a = mag[peak - 1] ?? 0;
   const b = mag[peak];
   const c = mag[peak + 1] ?? 0;
   const denom = a - 2 * b + c;
   const delta = denom !== 0 ? (0.5 * (a - c)) / denom : 0;
+
   return ((peak + delta) * sampleRate) / n;
 };
 
 export const rms = (buf: Float32Array): number => {
   let s = 0;
-  for (const v of buf) s += v * v;
+
+  for (const v of buf) {
+    s += v * v;
+  }
+
   return Math.sqrt(s / buf.length);
 };
 
 /** Return the tail of `buf` starting at `fromSeconds` (drops warmup transient). */
-export const tail = (buf: Float32Array, fromSeconds: number, sampleRate = SAMPLE_RATE): Float32Array => {
-  return buf.subarray(Math.floor(fromSeconds * sampleRate));
-};
+export const tail = (buf: Float32Array, fromSeconds: number, sampleRate = SAMPLE_RATE): Float32Array =>
+  buf.subarray(Math.floor(fromSeconds * sampleRate));

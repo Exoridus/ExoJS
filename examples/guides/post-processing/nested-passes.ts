@@ -4,7 +4,7 @@ import {
   Color,
   ColorMatrixFilter,
   Graphics,
-  RenderingContext,
+  type RenderingContext,
   RenderNodePass,
   RenderPipeline,
   RenderTexture,

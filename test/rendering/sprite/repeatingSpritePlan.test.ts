@@ -1,4 +1,11 @@
-import { buildRepeatingSpriteQuads, computeShaderTiling, validateFit, validateMode, validateOffset, validateSizeInput } from '#rendering/sprite/repeatingPlan';
+import {
+  buildRepeatingSpriteQuads,
+  computeShaderTiling,
+  validateFit,
+  validateMode,
+  validateOffset,
+  validateSizeInput,
+} from '#rendering/sprite/repeatingPlan';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 
 // ---------------------------------------------------------------------------
@@ -9,6 +16,7 @@ const makeTex = (w = 128, h = 64) => ({ width: w, height: h, flipY: false }) as 
 
 const makeRegion = (w: number, h: number, x = 0, y = 0, tw?: number, th?: number) => {
   const tex = makeTex(tw ?? w + x + 4, th ?? h + y + 4);
+
   return new TextureRegion(tex, { x, y, width: w, height: h });
 };
 
@@ -170,6 +178,7 @@ describe('buildRepeatingSpriteQuads — repeat/round', () => {
   test('no zero-area quads', () => {
     const r = makeRegion(64, 32);
     const quads = buildRepeatingSpriteQuads(r, 300, 200, 'repeat', 'repeat', 'round', 'round', 0, 0);
+
     for (const q of quads) {
       expect(q.x1 - q.x0).toBeGreaterThan(0);
       expect(q.y1 - q.y0).toBeGreaterThan(0);
@@ -179,6 +188,7 @@ describe('buildRepeatingSpriteQuads — repeat/round', () => {
   test('UVs stay within region bounds', () => {
     const r = makeRegion(64, 32);
     const quads = buildRepeatingSpriteQuads(r, 300, 200, 'repeat', 'repeat', 'round', 'round', 0, 0);
+
     for (const q of quads) {
       expect(q.u0).toBeGreaterThanOrEqual(r.u0 - 1e-6);
       expect(q.u1).toBeLessThanOrEqual(r.u1 + 1e-6);
@@ -221,9 +231,13 @@ describe('buildRepeatingSpriteQuads — mirror-repeat', () => {
     const quads = buildRepeatingSpriteQuads(r, 256, 32, 'mirror-repeat', 'stretch', 'round', 'round', 0, 0);
     // round(256/64)=4 segs in X; odd ones are mirrored
     let mirrorCount = 0;
+
     for (const q of quads) {
-      if (q.u1 < q.u0) mirrorCount++;
+      if (q.u1 < q.u0) {
+        mirrorCount++;
+      }
     }
+
     expect(mirrorCount).toBeGreaterThan(0);
   });
 });
@@ -238,6 +252,7 @@ describe('buildRepeatingSpriteQuads — atlas region UV', () => {
     // Region at (64,64) size 32×32 inside a 256×256 atlas
     const region = new TextureRegion(tex, { x: 64, y: 64, width: 32, height: 32 });
     const quads = buildRepeatingSpriteQuads(region, 100, 100, 'repeat', 'repeat', 'clip', 'clip', 0, 0);
+
     for (const q of quads) {
       expect(q.u0).toBeGreaterThanOrEqual(region.u0 - 1e-5);
       expect(q.u1).toBeLessThanOrEqual(region.u1 + 1e-5);

@@ -87,6 +87,8 @@ describe('KTX2 typed color metadata', () => {
   });
 
   test('rejects DFD transfer that contradicts the Vulkan storage format', () => {
-    expect(() => parseKtx2(buildKtx2({ vkFormat: 43, levelLengths: [64], transfer: 1 }), 'mismatch.ktx2')).toThrow(/contradicts.*vkFormat/i);
+    expect(() => parseKtx2(buildKtx2({ vkFormat: 43, levelLengths: [64], transfer: 1 }), 'mismatch.ktx2')).toThrow(
+      /contradicts.*vkFormat/i,
+    );
   });
 });

@@ -30,7 +30,9 @@ export class BinaryHeap {
   }
 
   public push(node: number, key: number): void {
-    if (this.count === this.nodes.length) this.grow();
+    if (this.count === this.nodes.length) {
+      this.grow();
+    }
 
     let index = this.count++;
 
@@ -40,7 +42,9 @@ export class BinaryHeap {
     while (index > 0) {
       const parent = (index - 1) >> 1;
 
-      if (!this.less(index, parent)) break;
+      if (!this.less(index, parent)) {
+        break;
+      }
 
       this.swap(index, parent);
       index = parent;
@@ -65,7 +69,9 @@ export class BinaryHeap {
     const keyA = this.keys[a]!;
     const keyB = this.keys[b]!;
 
-    if (keyA !== keyB) return keyA < keyB;
+    if (keyA !== keyB) {
+      return keyA < keyB;
+    }
 
     return this.nodes[a]! < this.nodes[b]!;
   }
@@ -86,12 +92,16 @@ export class BinaryHeap {
     for (;;) {
       const left = index * 2 + 1;
 
-      if (left >= this.count) break;
+      if (left >= this.count) {
+        break;
+      }
 
       const right = left + 1;
       const child = right < this.count && this.less(right, left) ? right : left;
 
-      if (!this.less(child, index)) break;
+      if (!this.less(child, index)) {
+        break;
+      }
 
       this.swap(index, child);
       index = child;

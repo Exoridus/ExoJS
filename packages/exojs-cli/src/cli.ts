@@ -88,11 +88,15 @@ export const runCli = async (argv: readonly string[]): Promise<number> => {
         throw new CliError(`unknown command "${command}"`, { hint: 'Run `exo --help` to see the commands this tool accepts.' });
     }
   } catch (error: unknown) {
-    if (!(error instanceof CliError)) throw error;
+    if (!(error instanceof CliError)) {
+      throw error;
+    }
 
     console.error(`exo: ${error.message}`);
 
-    if (error.hint !== undefined) console.error(error.hint);
+    if (error.hint !== undefined) {
+      console.error(error.hint);
+    }
 
     return error.exitCode;
   }

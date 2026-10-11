@@ -35,7 +35,10 @@ const aliasConfig = [
   { find: '@codexo/exojs-aseprite', replacement: fileURLToPath(new URL('./packages/exojs-aseprite/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-ldtk', replacement: fileURLToPath(new URL('./packages/exojs-ldtk/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-physics', replacement: fileURLToPath(new URL('./packages/exojs-physics/src/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs-tilemap-physics', replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)) },
+  {
+    find: '@codexo/exojs-tilemap-physics',
+    replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)),
+  },
   { find: '@codexo/exojs-lighting', replacement: fileURLToPath(new URL('./packages/exojs-lighting/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-pathfinding', replacement: fileURLToPath(new URL('./packages/exojs-pathfinding/src/index.ts', import.meta.url)) },
   // The CLI's `exo create` calls the scaffolder's library entry, whose package
@@ -71,8 +74,13 @@ const benchEngineHashImports = (): Plugin => {
     name: 'exojs-bench-engine-hash-imports',
     enforce: 'pre',
     async resolveId(source: string, importer: string | undefined, options) {
-      if (!source.startsWith('#')) return null;
-      if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) return null;
+      if (!source.startsWith('#')) {
+        return null;
+      }
+
+      if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) {
+        return null;
+      }
 
       // Re-enter resolution rather than returning the path: the engine's `#*`
       // specifiers carry no extension, and shader imports need `.frag`/`.wgsl`
@@ -156,7 +164,10 @@ const webgpuCoreExclude = [...configDefaults.exclude, ...webgpuMediaTests];
 // the OffscreenCanvas surface spec intermittently blocks the page inside native
 // WebGPU code, where no test timeout can fire. Chromium keeps both in Core, where
 // they pass.
-const firefoxIsolatedTests = ['test/rendering/browser/webgpu-device-lifecycle.test.ts', 'test/rendering/browser/webgpu-offscreen-surface.test.ts'];
+const firefoxIsolatedTests = [
+  'test/rendering/browser/webgpu-device-lifecycle.test.ts',
+  'test/rendering/browser/webgpu-offscreen-surface.test.ts',
+];
 const firefoxCoreExclude = [...webgpuCoreExclude, ...firefoxIsolatedTests];
 
 // Options every automated browser project shares. Vitest injects its own UI into
@@ -175,7 +186,9 @@ const browserWorkers = (variable: string, fallback?: number): { maxWorkers?: num
   const raw = process.env[variable];
   const value = raw === undefined ? fallback : Number.parseInt(raw, 10);
 
-  if (value !== undefined && (!Number.isInteger(value) || value < 1)) throw new Error(`${variable} must be a positive integer.`);
+  if (value !== undefined && (!Number.isInteger(value) || value < 1)) {
+    throw new Error(`${variable} must be a positive integer.`);
+  }
 
   return value === undefined ? {} : { maxWorkers: value };
 };
@@ -714,7 +727,9 @@ export default defineConfig({
             provider: webdriverio({
               capabilities: {
                 'moz:firefoxOptions': { ...(process.env['EXOJS_FIREFOX_BINARY'] ? { binary: process.env['EXOJS_FIREFOX_BINARY'] } : {}) },
-                'wdio:geckodriverOptions': { ...(process.env['EXOJS_GECKODRIVER_BINARY'] ? { binary: process.env['EXOJS_GECKODRIVER_BINARY'] } : {}) },
+                'wdio:geckodriverOptions': {
+                  ...(process.env['EXOJS_GECKODRIVER_BINARY'] ? { binary: process.env['EXOJS_GECKODRIVER_BINARY'] } : {}),
+                },
               },
             }),
             instances: [{ browser: 'firefox' }],

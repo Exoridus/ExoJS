@@ -48,7 +48,19 @@ const createTexture = (width: number, height: number): Texture => {
 
 // Text uses GlyphAtlasPool internally; inject a mock pool so Text construction
 // works without a real canvas 2D context (mirrors test/rendering/text/text.test.ts).
-const fixedGlyphInfo: GlyphInfo = { x: 0, y: 0, width: 8, height: 16, advance: 10, ascent: 13, page: 0, uvLeft: 0, uvTop: 0, uvRight: 0.01, uvBottom: 0.02 };
+const fixedGlyphInfo: GlyphInfo = {
+  x: 0,
+  y: 0,
+  width: 8,
+  height: 16,
+  advance: 10,
+  ascent: 13,
+  page: 0,
+  uvLeft: 0,
+  uvTop: 0,
+  uvRight: 0.01,
+  uvBottom: 0.02,
+};
 const mockPage = {
   texture: {
     width: 1024,
@@ -62,7 +74,7 @@ const mockPage = {
     flipY: false,
     addDestroyListener: () => mockPage.texture,
     removeDestroyListener: () => mockPage.texture,
-    destroy: () => undefined,
+    destroy: () => {},
   },
   index: 0,
   mode: 'sdf' as const,
@@ -89,8 +101,8 @@ afterEach(_resetDefaultSerializers);
  * serialization context calls - keeps the round-trip tests free of real asset
  * loading while exercising the exact asset-reference wiring.
  */
-const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader => {
-  return {
+const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader =>
+  ({
     keyFor(resource: object) {
       const hit = entries.find(entry => entry.resource === resource);
 
@@ -106,8 +118,7 @@ const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; res
 
       return hit ? hit.resource : null;
     },
-  } as unknown as Loader;
-};
+  }) as unknown as Loader;
 
 describe('serialization — registry', () => {
   it('resolves a registered type by name and by node (prototype walk)', () => {
@@ -323,6 +334,7 @@ describe('serialization — custom serializer', () => {
       read: data => {
         const marker = new Marker();
         marker.kind = String(data.kind);
+
         return marker;
       },
     });

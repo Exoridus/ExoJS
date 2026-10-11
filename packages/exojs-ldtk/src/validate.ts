@@ -40,14 +40,26 @@ export class LdtkFormatError extends Error {
 // ── Primitive helpers ────────────────────────────────────────────────────────
 
 const describeValue = (value: unknown): string => {
-  if (value === null) return 'null';
-  if (value === undefined) return 'undefined';
-  if (Array.isArray(value)) return 'an array';
+  if (value === null) {
+    return 'null';
+  }
+
+  if (value === undefined) {
+    return 'undefined';
+  }
+
+  if (Array.isArray(value)) {
+    return 'an array';
+  }
+
   return typeof value;
 };
 
 const joinPath = (path: string, key: string | number): string => {
-  if (typeof key === 'number') return `${path}[${key}]`;
+  if (typeof key === 'number') {
+    return `${path}[${key}]`;
+  }
+
   return path === '' ? key : `${path}.${key}`;
 };
 
@@ -55,6 +67,7 @@ const expectObject = (value: unknown, source: string, path: string): Record<stri
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new LdtkFormatError(source, path, `expected an object, got ${describeValue(value)}`);
   }
+
   return value as Record<string, unknown>;
 };
 
@@ -62,6 +75,7 @@ const expectArray = (value: unknown, source: string, path: string): readonly unk
   if (!Array.isArray(value)) {
     throw new LdtkFormatError(source, path, `expected an array, got ${describeValue(value)}`);
   }
+
   return value as readonly unknown[];
 };
 
@@ -69,6 +83,7 @@ const expectString = (value: unknown, source: string, path: string): string => {
   if (typeof value !== 'string') {
     throw new LdtkFormatError(source, path, `expected a string, got ${describeValue(value)}`);
   }
+
   return value;
 };
 
@@ -76,30 +91,37 @@ const expectNumber = (value: unknown, source: string, path: string): number => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new LdtkFormatError(source, path, `expected a finite number, got ${describeValue(value)}`);
   }
+
   return value;
 };
 
 const expectInteger = (value: unknown, source: string, path: string): number => {
   const n = expectNumber(value, source, path);
+
   if (!Number.isInteger(n)) {
     throw new LdtkFormatError(source, path, `expected an integer, got ${n}`);
   }
+
   return n;
 };
 
 const expectNonNegativeInteger = (value: unknown, source: string, path: string): number => {
   const n = expectInteger(value, source, path);
+
   if (n < 0) {
     throw new LdtkFormatError(source, path, `expected a non-negative integer, got ${n}`);
   }
+
   return n;
 };
 
 const expectPositiveInteger = (value: unknown, source: string, path: string): number => {
   const n = expectInteger(value, source, path);
+
   if (n <= 0) {
     throw new LdtkFormatError(source, path, `expected a positive integer, got ${n}`);
   }
+
   return n;
 };
 
@@ -112,19 +134,25 @@ const expectBoolean = (value: unknown, source: string, path: string): void => {
 /** `[x, y]` pixel/grid pairs (`px`, `src`, `__pivot`) are always two finite numbers. */
 const expectNumberPair = (value: unknown, source: string, path: string): void => {
   const pair = expectArray(value, source, path);
+
   if (pair.length !== 2) {
     throw new LdtkFormatError(source, path, `expected a pair of numbers, got ${pair.length} entries`);
   }
+
   expectNumber(pair[0], source, joinPath(path, 0));
   expectNumber(pair[1], source, joinPath(path, 1));
 };
 
 const optionalNumber = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
-  if (obj[key] !== undefined) expectNumber(obj[key], source, joinPath(path, key));
+  if (obj[key] !== undefined) {
+    expectNumber(obj[key], source, joinPath(path, key));
+  }
 };
 
 const optionalNonNegativeInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
-  if (obj[key] !== undefined) expectNonNegativeInteger(obj[key], source, joinPath(path, key));
+  if (obj[key] !== undefined) {
+    expectNonNegativeInteger(obj[key], source, joinPath(path, key));
+  }
 };
 
 /**
@@ -133,20 +161,27 @@ const optionalNonNegativeInteger = (obj: Record<string, unknown>, key: string, s
  * editor actually produces.
  */
 const nullableString = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
-  if (obj[key] !== undefined && obj[key] !== null) expectString(obj[key], source, joinPath(path, key));
+  if (obj[key] !== undefined && obj[key] !== null) {
+    expectString(obj[key], source, joinPath(path, key));
+  }
 };
 
 /** See {@link nullableString}. */
 const nullableInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
-  if (obj[key] !== undefined && obj[key] !== null) expectInteger(obj[key], source, joinPath(path, key));
+  if (obj[key] !== undefined && obj[key] !== null) {
+    expectInteger(obj[key], source, joinPath(path, key));
+  }
 };
 
 const optionalBoolean = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
-  if (obj[key] !== undefined) expectBoolean(obj[key], source, joinPath(path, key));
+  if (obj[key] !== undefined) {
+    expectBoolean(obj[key], source, joinPath(path, key));
+  }
 };
 
 const eachEntry = (value: unknown, source: string, path: string, visit: (item: unknown, itemPath: string) => void): void => {
   const array = expectArray(value, source, path);
+
   for (let i = 0; i < array.length; i++) {
     visit(array[i], joinPath(path, i));
   }
@@ -159,6 +194,7 @@ const WORLD_LAYOUTS: readonly LdtkWorldLayout[] = ['Free', 'GridVania', 'LinearH
 
 const validateLayerType = (value: unknown, source: string, path: string): void => {
   const type = expectString(value, source, path);
+
   if (!LAYER_TYPES.includes(type as LdtkLayerType)) {
     throw new LdtkFormatError(source, path, `unknown layer type "${type}" (expected one of ${LAYER_TYPES.join(', ')})`);
   }
@@ -173,7 +209,10 @@ const validateTilesetDef = (raw: unknown, source: string, path: string): void =>
   // `relPath` is null for an embedded ("embed atlas") tileset, which the loader
   // skips - anything other than a string or null is malformed.
   const relPathPath = joinPath(path, 'relPath');
-  if (def.relPath !== null) expectString(def.relPath, source, relPathPath);
+
+  if (def.relPath !== null) {
+    expectString(def.relPath, source, relPathPath);
+  }
 
   // A zero or negative grid size would make the loader's column arithmetic
   // divide by zero and yield a non-finite tile count.
@@ -189,7 +228,11 @@ const validateIntGridValueDef = (raw: unknown, source: string, path: string): vo
 
   expectNumber(value.value, source, joinPath(path, 'value'));
   const identifierPath = joinPath(path, 'identifier');
-  if (value.identifier !== null) expectString(value.identifier, source, identifierPath);
+
+  if (value.identifier !== null) {
+    expectString(value.identifier, source, identifierPath);
+  }
+
   expectString(value.color, source, joinPath(path, 'color'));
 };
 
@@ -207,7 +250,9 @@ const validateLayerDef = (raw: unknown, source: string, path: string): void => {
   optionalBoolean(def, 'parallaxScaling', source, path);
 
   if (def.intGridValues !== undefined) {
-    eachEntry(def.intGridValues, source, joinPath(path, 'intGridValues'), (item, itemPath) => validateIntGridValueDef(item, source, itemPath));
+    eachEntry(def.intGridValues, source, joinPath(path, 'intGridValues'), (item, itemPath) =>
+      validateIntGridValueDef(item, source, itemPath),
+    );
   }
 };
 
@@ -234,7 +279,9 @@ const validateDefs = (raw: unknown, source: string, path: string): void => {
  * is where an unsupported type is reported, and it names the type.
  */
 const validateFieldValue = (typeName: string, value: unknown, source: string, path: string): void => {
-  if (value === null || value === undefined) return;
+  if (value === null || value === undefined) {
+    return;
+  }
 
   // `LocalEnum.X` / `ExternEnum.X` - the selected entry's identifier.
   if (isLdtkFieldEnumType(typeName)) {
@@ -246,14 +293,17 @@ const validateFieldValue = (typeName: string, value: unknown, source: string, pa
   switch (typeName) {
     case 'Int':
       expectInteger(value, source, path);
+
       return;
 
     case 'Float':
       expectNumber(value, source, path);
+
       return;
 
     case 'Bool':
       expectBoolean(value, source, path);
+
       return;
 
     case 'String':
@@ -262,6 +312,7 @@ const validateFieldValue = (typeName: string, value: unknown, source: string, pa
     case 'FilePath':
     case 'Enum':
       expectString(value, source, path);
+
       return;
 
     case 'Point': {
@@ -363,18 +414,25 @@ const validateLayerInstance = (raw: unknown, source: string, path: string): void
   expectString(layer.iid, source, joinPath(path, 'iid'));
 
   nullableInteger(layer, '__tilesetDefUid', source, path);
+
   if (layer.gridTiles !== undefined) {
     validateTiles(layer.gridTiles, source, joinPath(path, 'gridTiles'));
   }
+
   if (layer.autoLayerTiles !== undefined) {
     validateTiles(layer.autoLayerTiles, source, joinPath(path, 'autoLayerTiles'));
   }
+
   if (layer.entityInstances !== undefined) {
-    eachEntry(layer.entityInstances, source, joinPath(path, 'entityInstances'), (item, itemPath) => validateEntityInstance(item, source, itemPath));
+    eachEntry(layer.entityInstances, source, joinPath(path, 'entityInstances'), (item, itemPath) =>
+      validateEntityInstance(item, source, itemPath),
+    );
   }
+
   if (layer.intGridCsv !== undefined) {
     eachEntry(layer.intGridCsv, source, joinPath(path, 'intGridCsv'), (item, itemPath) => expectNumber(item, source, itemPath));
   }
+
   optionalNumber(layer, 'pxOffsetX', source, path);
   optionalNumber(layer, 'pxOffsetY', source, path);
   optionalNumber(layer, 'opacity', source, path);
@@ -409,6 +467,7 @@ const validateLevel = (raw: unknown, source: string, path: string): void => {
   // `null` marks a level whose layers live in a separate `.ldtkl` file; the
   // loader resolves those before conversion.
   const layerInstancesPath = joinPath(path, 'layerInstances');
+
   if (level.layerInstances !== null) {
     eachEntry(level.layerInstances, source, layerInstancesPath, (item, itemPath) => validateLayerInstance(item, source, itemPath));
   }
@@ -423,10 +482,16 @@ const validateWorld = (raw: unknown, source: string, path: string): void => {
   expectNumber(world.worldGridHeight, source, joinPath(path, 'worldGridHeight'));
 
   const layoutPath = joinPath(path, 'worldLayout');
+
   if (world.worldLayout !== null) {
     const layout = expectString(world.worldLayout, source, layoutPath);
+
     if (!WORLD_LAYOUTS.includes(layout as LdtkWorldLayout)) {
-      throw new LdtkFormatError(source, layoutPath, `unknown world layout "${layout}" (expected one of ${WORLD_LAYOUTS.join(', ')} or null)`);
+      throw new LdtkFormatError(
+        source,
+        layoutPath,
+        `unknown world layout "${layout}" (expected one of ${WORLD_LAYOUTS.join(', ')} or null)`,
+      );
     }
   }
 

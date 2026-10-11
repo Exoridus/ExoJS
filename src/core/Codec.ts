@@ -25,9 +25,11 @@ const decodeBase64 = (input: string): Uint8Array => {
   const binary = atob(clean);
   const length = binary.length;
   const bytes = new Uint8Array(length);
+
   for (let i = 0; i < length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
+
   return bytes;
 };
 
@@ -58,19 +60,26 @@ const decompress = async (bytes: Uint8Array, format: DecompressFormat): Promise<
 
   const chunks: Uint8Array[] = [];
   let total = 0;
+
   for (;;) {
     const { done, value } = await reader.read();
-    if (done) break;
+
+    if (done) {
+      break;
+    }
+
     chunks.push(value);
     total += value.length;
   }
 
   const out = new Uint8Array(total);
   let offset = 0;
+
   for (const chunk of chunks) {
     out.set(chunk, offset);
     offset += chunk.length;
   }
+
   return out;
 };
 

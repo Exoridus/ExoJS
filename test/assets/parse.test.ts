@@ -10,6 +10,7 @@ import { materializeAssetTypes } from '#extensions/materialize';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -72,7 +73,7 @@ describe('parse post-load transform', () => {
       },
     });
 
-    await loader.load(assets).catch(() => undefined); // `bad` rejects; `good` resolves
+    await loader.load(assets).catch(() => {}); // `bad` rejects; `good` resolves
 
     expect(assets.good.state).toBe('ready');
     expect(assets.good.value).toEqual({ hp: 3, label: 'ok' });

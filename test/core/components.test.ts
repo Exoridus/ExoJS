@@ -715,6 +715,7 @@ describe('Mutation during dispatch (CMP-04)', () => {
     const holder = new Container();
 
     scope.scene.addChild(holder);
+
     tickers[0]!.onUpdate = () => {
       if (tickers[1]!.node.parent !== holder) {
         holder.addChild(tickers[1]!.node as unknown as Container);

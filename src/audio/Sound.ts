@@ -510,6 +510,7 @@ export class Sound implements Playable {
     // skip it, like `AudioGenerator` does.
     if (!isAudioContextReady()) {
       system._warnPlaybackWhileLocked('sound');
+
       return new NoopVoice(bus);
     }
 
@@ -567,13 +568,18 @@ export class Sound implements Playable {
 
     if (loadState.value === 'failed') {
       logger.warn('AudioSystem.play() called on a sound that failed to load; playing silence.', { source: 'Sound' });
+
       return new NoopVoice(bus);
     }
 
     if (buffer === null || loadState.value === 'loading') {
-      logger.warn('AudioSystem.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', {
-        source: 'Sound',
-      });
+      logger.warn(
+        'AudioSystem.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().',
+        {
+          source: 'Sound',
+        },
+      );
+
       return new NoopVoice(bus);
     }
 
@@ -585,7 +591,13 @@ export class Sound implements Playable {
    * pool limit, builds the {@link SoundVoice}, seeds spatialization from the
    * play-time options, and tracks the voice for eviction.
    */
-  private _buildVoice(system: AudioSystem, options: SoundPlayOptions, buffer: AudioBuffer, offset: number, window: SoundVoiceWindow): Voice {
+  private _buildVoice(
+    system: AudioSystem,
+    options: SoundPlayOptions,
+    buffer: AudioBuffer,
+    offset: number,
+    window: SoundVoiceWindow,
+  ): Voice {
     const loop = options.loop ?? this.loop;
     const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
     const detune = options.detune ?? 0;
@@ -604,6 +616,7 @@ export class Sound implements Playable {
       if (this._activeVoices.length >= this._poolSize) {
         const victimIndex = this._pickEvictionVictim();
         const victim = this._activeVoices[victimIndex];
+
         if (victim) {
           this._activeVoices.splice(victimIndex, 1);
           victim.voice.stop();
@@ -637,6 +650,7 @@ export class Sound implements Playable {
 
     voice.onEnd.add((): void => {
       const index = this._activeVoices.indexOf(pooledVoice);
+
       if (index !== -1) {
         this._activeVoices.splice(index, 1);
       }
@@ -651,6 +665,7 @@ export class Sound implements Playable {
   public _stopAllVoices(): void {
     const voices = [...this._activeVoices];
     this._activeVoices.length = 0;
+
     for (const pv of voices) {
       pv.voice.stop();
     }
@@ -695,6 +710,7 @@ export class Sound implements Playable {
       case SoundPoolStrategy.LeastRecentlyUsed: {
         return this._pickClosestToEnd(includePaused);
       }
+
       case SoundPoolStrategy.LowestPriority:
       // All pooled instances of this Sound share the same priority,
       // so LowestPriority degenerates to FIFO within a single Sound.
@@ -724,9 +740,11 @@ export class Sound implements Playable {
 
     for (let i = 0; i < this._activeVoices.length; i++) {
       const src = this._activeVoices[i];
+
       if (src === undefined || (!includePaused && src.voice.paused)) {
         continue;
       }
+
       const elapsed = now - src.startedAt;
       const remaining = src.effectiveDuration - elapsed;
 
@@ -744,7 +762,9 @@ export class Sound implements Playable {
       const victimIndex = this._pickEvictionVictim();
       const victim = this._activeVoices[victimIndex];
 
-      if (!victim) break;
+      if (!victim) {
+        break;
+      }
 
       this._activeVoices.splice(victimIndex, 1);
       victim.voice.stop();

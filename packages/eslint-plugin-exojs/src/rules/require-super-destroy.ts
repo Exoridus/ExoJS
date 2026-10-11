@@ -60,12 +60,19 @@ export interface RequireSuperDestroyOptions {
 /** Whether the subtree calls `super.<method>()` anywhere, at any depth. */
 const callsSuperMethod = (root: Node, method: string): boolean => {
   for (const node of walk(root)) {
-    if (node.type !== 'CallExpression') continue;
+    if (node.type !== 'CallExpression') {
+      continue;
+    }
 
     const callee = node.callee;
 
-    if (callee.type !== 'MemberExpression' || callee.object.type !== 'Super' || callee.computed) continue;
-    if (callee.property.type === 'Identifier' && callee.property.name === method) return true;
+    if (callee.type !== 'MemberExpression' || callee.object.type !== 'Super' || callee.computed) {
+      continue;
+    }
+
+    if (callee.property.type === 'Identifier' && callee.property.name === method) {
+      return true;
+    }
   }
 
   return false;
@@ -98,24 +105,35 @@ export const requireSuperDestroy: Rule.RuleModule = {
     const method = options.method ?? 'destroy';
 
     const check = (member: FunctionMember & Rule.NodeParentExtension): void => {
-      if (staticKeyName(member.key, member.computed) !== method) return;
+      if (staticKeyName(member.key, member.computed) !== method) {
+        return;
+      }
 
       const fn = memberFunction(member);
 
-      if (fn === undefined) return;
+      if (fn === undefined) {
+        return;
+      }
 
       const owner = owningClass(member);
       const base = owner === undefined ? undefined : superClassName(owner);
 
-      if (base === undefined || !baseClasses.has(base)) return;
-      if (callsSuperMethod(fn, method)) return;
+      if (base === undefined || !baseClasses.has(base)) {
+        return;
+      }
+
+      if (callsSuperMethod(fn, method)) {
+        return;
+      }
 
       context.report({ node: member.key, messageId: 'missingSuperCall', data: { method, base } });
     };
 
     return {
       MethodDefinition(node) {
-        if (node.kind !== 'method' || node.static) return;
+        if (node.kind !== 'method' || node.static) {
+          return;
+        }
 
         check(node);
       },
@@ -123,7 +141,9 @@ export const requireSuperDestroy: Rule.RuleModule = {
       // `super` resolves through the field's home object, so the chain is
       // expressible here too and its absence is the same defect.
       PropertyDefinition(node) {
-        if (node.static) return;
+        if (node.static) {
+          return;
+        }
 
         check(node);
       },

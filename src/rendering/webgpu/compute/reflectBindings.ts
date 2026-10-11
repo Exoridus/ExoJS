@@ -58,7 +58,12 @@ export const reflectComputeBindings = (wgsl: string, options?: { nonFilteringRes
     const viewDimension = textureViewDimensions.get(m[4]!)!;
     const component = m[5]!;
 
-    push(Number(m[1]), { kind: 'texture', binding: Number(m[2]), viewDimension, sampleType: sampleTypeFor(component, nonFiltering.has(name)) });
+    push(Number(m[1]), {
+      kind: 'texture',
+      binding: Number(m[2]),
+      viewDimension,
+      sampleType: sampleTypeFor(component, nonFiltering.has(name)),
+    });
   }
 
   for (const m of source.matchAll(storageTextureDecl)) {
@@ -72,21 +77,33 @@ export const reflectComputeBindings = (wgsl: string, options?: { nonFilteringRes
 };
 
 const samplerTypeFor = (comparison: boolean, nonFiltering: boolean): GPUSamplerBindingType => {
-  if (comparison) return 'comparison';
+  if (comparison) {
+    return 'comparison';
+  }
 
   return nonFiltering ? 'non-filtering' : 'filtering';
 };
 
 const sampleTypeFor = (component: string, nonFiltering: boolean): GPUTextureSampleType => {
-  if (component === 'i32') return 'sint';
-  if (component === 'u32') return 'uint';
+  if (component === 'i32') {
+    return 'sint';
+  }
+
+  if (component === 'u32') {
+    return 'uint';
+  }
 
   return nonFiltering ? 'unfilterable-float' : 'float';
 };
 
 const storageAccessFor = (accessToken: string): GPUStorageTextureAccess => {
-  if (accessToken === 'write') return 'write-only';
-  if (accessToken === 'read') return 'read-only';
+  if (accessToken === 'write') {
+    return 'write-only';
+  }
+
+  if (accessToken === 'read') {
+    return 'read-only';
+  }
 
   return 'read-write';
 };

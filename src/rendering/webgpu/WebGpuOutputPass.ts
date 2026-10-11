@@ -213,7 +213,9 @@ export class WebGpuOutputPass {
   private _createPipeline(backend: WebGpuBackend, connection: WebGpuOutputConnection, targetFormat: GPUTextureFormat): GPURenderPipeline {
     const device = backend.device;
     const module = device.createShaderModule({ code: outputPassShaderSource });
-    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [connection.sourceBindGroupLayout, connection.uniformBindGroupLayout] });
+    const pipelineLayout = device.createPipelineLayout({
+      bindGroupLayouts: [connection.sourceBindGroupLayout, connection.uniformBindGroupLayout],
+    });
 
     return device.createRenderPipeline({
       layout: pipelineLayout,

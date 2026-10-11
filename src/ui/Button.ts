@@ -79,10 +79,17 @@ export class Button extends Widget {
       const color = perState[state];
       const patch: { -readonly [Key in keyof UIFillPatch]: UIFillPatch[Key] } = {};
 
-      if (color !== undefined) patch.color = color.clone();
-      if (options.cornerRadius !== undefined) patch.cornerRadius = options.cornerRadius;
+      if (color !== undefined) {
+        patch.color = color.clone();
+      }
 
-      if (Object.keys(patch).length > 0) this._fills[state] = patch;
+      if (options.cornerRadius !== undefined) {
+        patch.cornerRadius = options.cornerRadius;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        this._fills[state] = patch;
+      }
     }
 
     if (options.skin !== undefined) {

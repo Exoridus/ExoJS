@@ -472,7 +472,13 @@ describe('Video', () => {
     test('an empty options bag touches nothing', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
-      const before = { volume: video.volume, loop: video.loop, playbackRate: video.playbackRate, time: video.currentTime, muted: video.muted };
+      const before = {
+        volume: video.volume,
+        loop: video.loop,
+        playbackRate: video.playbackRate,
+        time: video.currentTime,
+        muted: video.muted,
+      };
 
       video.applyOptions({});
 

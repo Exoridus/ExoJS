@@ -22,24 +22,24 @@ const makeParam = (): AudioParam =>
 
 const makeGain = (): GainNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
     context: null as unknown as AudioContext,
     gain: {
       value: 1,
-      setTargetAtTime: () => undefined,
-      cancelScheduledValues: () => undefined,
-      setValueAtTime: () => undefined,
-      linearRampToValueAtTime: () => undefined,
+      setTargetAtTime: () => {},
+      cancelScheduledValues: () => {},
+      setValueAtTime: () => {},
+      linearRampToValueAtTime: () => {},
     },
   }) as unknown as GainNode;
 
 const makeBufferSource = (): AudioBufferSourceNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
-    start: () => undefined,
-    stop: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
+    start: () => {},
+    stop: () => {},
     playbackRate: { value: 1 },
     detune: { value: 0 },
     loop: false,
@@ -50,12 +50,12 @@ const makeBufferSource = (): AudioBufferSourceNode =>
   }) as unknown as AudioBufferSourceNode;
 
 const makeStereoPanner = (): StereoPannerNode =>
-  ({ connect: () => undefined, disconnect: () => undefined, pan: { value: 0, setTargetAtTime: () => undefined } }) as unknown as StereoPannerNode;
+  ({ connect: () => {}, disconnect: () => {}, pan: { value: 0, setTargetAtTime: () => {} } }) as unknown as StereoPannerNode;
 
 const makePanner = (): PannerNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
     context: { currentTime: 0 } as AudioContext,
     panningModel: 'equalpower' as PanningModelType,
     distanceModel: 'linear' as DistanceModelType,
@@ -69,13 +69,13 @@ const makePanner = (): PannerNode =>
 
 const makeBiquadFilter = (): BiquadFilterNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
     context: { currentTime: 0 } as AudioContext,
     type: 'lowpass' as BiquadFilterType,
-    frequency: { value: 350, setValueAtTime: () => undefined, setTargetAtTime: () => undefined },
-    Q: { value: 1, setValueAtTime: () => undefined, setTargetAtTime: () => undefined },
-    gain: { value: 0, setValueAtTime: () => undefined, setTargetAtTime: () => undefined },
+    frequency: { value: 350, setValueAtTime: () => {}, setTargetAtTime: () => {} },
+    Q: { value: 1, setValueAtTime: () => {}, setTargetAtTime: () => {} },
+    gain: { value: 0, setValueAtTime: () => {}, setTargetAtTime: () => {} },
   }) as unknown as BiquadFilterNode;
 
 const makeMockContext = (): AudioContext =>
@@ -101,7 +101,13 @@ const makeMockContext = (): AudioContext =>
     createPanner: () => makePanner(),
     createBiquadFilter: () => makeBiquadFilter(),
     createBuffer: (ch: number, len: number, sr: number): AudioBuffer =>
-      ({ numberOfChannels: ch, length: len, sampleRate: sr, duration: len / sr, getChannelData: () => new Float32Array(len) }) as unknown as AudioBuffer,
+      ({
+        numberOfChannels: ch,
+        length: len,
+        sampleRate: sr,
+        duration: len / sr,
+        getChannelData: () => new Float32Array(len),
+      }) as unknown as AudioBuffer,
   }) as unknown as AudioContext;
 
 const installMocks = (): void => {
@@ -114,27 +120,30 @@ const installMocks = (): void => {
       }
     },
   });
+
   if (typeof (globalThis as Record<string, unknown>)['OfflineAudioContext'] === 'undefined') {
     Object.defineProperty(globalThis, 'OfflineAudioContext', {
       configurable: true,
       writable: true,
       value: class {
         sampleRate = 44100;
+
         decodeAudioData() {
           return Promise.resolve({} as AudioBuffer);
         }
       },
     });
   }
+
   if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'undefined') {
     Object.defineProperty(globalThis, 'AudioWorkletNode', {
       configurable: true,
       writable: true,
       value: class {
-        connect = () => undefined;
-        disconnect = () => undefined;
+        connect = () => {};
+        disconnect = () => {};
         parameters = new Map();
-        port = { postMessage: () => undefined, onmessage: null };
+        port = { postMessage: () => {}, onmessage: null };
       },
     });
   }
@@ -165,11 +174,21 @@ describe('audio', { timeout: benchTimeoutMs }, () => {
       const { Sound } = await import('../../src/audio/Sound');
       const system = new AudioSystem();
       const sounds: Array<InstanceType<typeof Sound>> = [];
-      for (let i = 0; i < 50; i++) sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
+
+      for (let i = 0; i < 50; i++) {
+        sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
+      }
+
       // Stopping within the iteration returns each voice to its sound's pool, so
       // the measured cost stays "50 plays" across iterations.
-      for (const s of sounds) system.play(s).stop();
-      for (const s of sounds) s.destroy();
+      for (const s of sounds) {
+        system.play(s).stop();
+      }
+
+      for (const s of sounds) {
+        s.destroy();
+      }
+
       system.destroy();
     }).run(benchRunOptions);
   });
@@ -179,11 +198,13 @@ describe('audio', { timeout: benchTimeoutMs }, () => {
       const { AudioListener } = await import('../../src/audio/AudioListener');
       const listener = new AudioListener();
       listener.target = { x: 0, y: 0 };
+
       for (let j = 0; j < 60; j++) {
         (listener.target as { x: number; y: number }).x = j * 0.5;
         (listener.target as { x: number; y: number }).y = j * 0.3;
         listener._tick();
       }
+
       listener.destroy();
     }).run(benchRunOptions);
   });
@@ -202,7 +223,11 @@ describe('audio', { timeout: benchTimeoutMs }, () => {
           new LowpassFilter({ frequency: 500 }),
           new LowpassFilter({ frequency: 200 }),
         ];
-        for (const f of filters) bus.addEffect(f);
+
+        for (const f of filters) {
+          bus.addEffect(f);
+        }
+
         for (const f of filters) {
           bus.removeEffect(f);
           f.destroy();

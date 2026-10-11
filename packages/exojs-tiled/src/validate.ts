@@ -55,13 +55,22 @@ export class TiledFormatError extends Error {
 // ── Primitive helpers ───────────────────────────────────────────────────────
 
 const describeValue = (value: unknown): string => {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return 'an array';
+  if (value === null) {
+    return 'null';
+  }
+
+  if (Array.isArray(value)) {
+    return 'an array';
+  }
+
   return typeof value;
 };
 
 const joinPath = (path: string, key: string | number): string => {
-  if (typeof key === 'number') return `${path}[${key}]`;
+  if (typeof key === 'number') {
+    return `${path}[${key}]`;
+  }
+
   return path === '' ? key : `${path}.${key}`;
 };
 
@@ -69,6 +78,7 @@ const expectObject = (value: unknown, source: string, path: string): Record<stri
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new TiledFormatError(source, path, `expected an object, got ${describeValue(value)}`);
   }
+
   return value as Record<string, unknown>;
 };
 
@@ -76,6 +86,7 @@ const expectArray = (value: unknown, source: string, path: string): readonly unk
   if (!Array.isArray(value)) {
     throw new TiledFormatError(source, path, `expected an array, got ${describeValue(value)}`);
   }
+
   return value;
 };
 
@@ -83,6 +94,7 @@ const expectString = (value: unknown, source: string, path: string): string => {
   if (typeof value !== 'string') {
     throw new TiledFormatError(source, path, `expected a string, got ${describeValue(value)}`);
   }
+
   return value;
 };
 
@@ -90,30 +102,37 @@ const expectNumber = (value: unknown, source: string, path: string): number => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new TiledFormatError(source, path, `expected a finite number, got ${describeValue(value)}`);
   }
+
   return value;
 };
 
 const expectInteger = (value: unknown, source: string, path: string): number => {
   const n = expectNumber(value, source, path);
+
   if (!Number.isInteger(n)) {
     throw new TiledFormatError(source, path, `expected an integer, got ${n}`);
   }
+
   return n;
 };
 
 const expectNonNegativeInteger = (value: unknown, source: string, path: string): number => {
   const n = expectInteger(value, source, path);
+
   if (n < 0) {
     throw new TiledFormatError(source, path, `expected a non-negative integer, got ${n}`);
   }
+
   return n;
 };
 
 const expectPositiveInteger = (value: unknown, source: string, path: string): number => {
   const n = expectInteger(value, source, path);
+
   if (n <= 0) {
     throw new TiledFormatError(source, path, `expected a positive integer, got ${n}`);
   }
+
   return n;
 };
 
@@ -121,41 +140,52 @@ const expectBoolean = (value: unknown, source: string, path: string): boolean =>
   if (typeof value !== 'boolean') {
     throw new TiledFormatError(source, path, `expected a boolean, got ${describeValue(value)}`);
   }
+
   return value;
 };
 
 const optionalString = (obj: Record<string, unknown>, key: string, source: string, path: string): string | undefined => {
   const value = obj[key];
+
   return value === undefined ? undefined : expectString(value, source, joinPath(path, key));
 };
 
 const optionalNumber = (obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined => {
   const value = obj[key];
+
   return value === undefined ? undefined : expectNumber(value, source, joinPath(path, key));
 };
 
 const optionalInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined => {
   const value = obj[key];
+
   return value === undefined ? undefined : expectInteger(value, source, joinPath(path, key));
 };
 
 const optionalNonNegativeInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined => {
   const value = obj[key];
+
   return value === undefined ? undefined : expectNonNegativeInteger(value, source, joinPath(path, key));
 };
 
 const optionalBoolean = (obj: Record<string, unknown>, key: string, source: string, path: string): boolean | undefined => {
   const value = obj[key];
+
   return value === undefined ? undefined : expectBoolean(value, source, joinPath(path, key));
 };
 
 const mapArray = <T>(value: unknown, source: string, path: string, fn: (item: unknown, itemPath: string) => T): readonly T[] => {
   const arr = expectArray(value, source, path);
+
   return arr.map((item, i) => fn(item, joinPath(path, i)));
 };
 
-const optionalMapArray = <T>(value: unknown, source: string, path: string, fn: (item: unknown, itemPath: string) => T): readonly T[] | undefined =>
-  value === undefined ? undefined : mapArray(value, source, path, fn);
+const optionalMapArray = <T>(
+  value: unknown,
+  source: string,
+  path: string,
+  fn: (item: unknown, itemPath: string) => T,
+): readonly T[] | undefined => (value === undefined ? undefined : mapArray(value, source, path, fn));
 
 // ── Custom properties ───────────────────────────────────────────────────────
 
@@ -164,8 +194,10 @@ const PROPERTY_TYPES: readonly TiledPropertyType[] = ['string', 'int', 'float', 
 const validateTiledClassPropertyValue = (raw: unknown, source: string, path: string): TiledClassPropertyValueData => {
   const obj = expectObject(raw, source, path);
   const result: Record<string, string | number | boolean | TiledClassPropertyValueData> = {};
+
   for (const [key, value] of Object.entries(obj)) {
     const memberPath = joinPath(path, key);
+
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
       result[key] = value;
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -174,6 +206,7 @@ const validateTiledClassPropertyValue = (raw: unknown, source: string, path: str
       throw new TiledFormatError(source, memberPath, `expected a string, number, boolean, or nested object, got ${describeValue(value)}`);
     }
   }
+
   return result;
 };
 
@@ -222,6 +255,7 @@ const validateTiledPropertiesArray = (value: unknown, source: string, path: stri
 
 const validateTiledPointData = (raw: unknown, source: string, path: string): TiledPointData => {
   const obj = expectObject(raw, source, path);
+
   return {
     x: expectNumber(obj.x, source, joinPath(path, 'x')),
     y: expectNumber(obj.y, source, joinPath(path, 'y')),
@@ -234,6 +268,7 @@ const validateTiledPointArray = (value: unknown, source: string, path: string): 
 /** @internal */
 export const validateTiledAnimationFrameData = (raw: unknown, source: string, path: string): TiledAnimationFrameData => {
   const obj = expectObject(raw, source, path);
+
   return {
     tileid: expectNonNegativeInteger(obj.tileid, source, joinPath(path, 'tileid')),
     duration: expectNonNegativeInteger(obj.duration, source, joinPath(path, 'duration')),
@@ -250,20 +285,26 @@ const validateTiledTextData = (raw: unknown, source: string, path: string): Tile
   const text = expectString(obj.text, source, joinPath(path, 'text'));
 
   let halign: TiledTextData['halign'];
+
   if (obj.halign !== undefined) {
     const value = expectString(obj.halign, source, joinPath(path, 'halign'));
+
     if (!HALIGN_VALUES.includes(value as TiledTextData['halign'])) {
       throw new TiledFormatError(source, joinPath(path, 'halign'), `unknown horizontal alignment "${value}"`);
     }
+
     halign = value as TiledTextData['halign'];
   }
 
   let valign: TiledTextData['valign'];
+
   if (obj.valign !== undefined) {
     const value = expectString(obj.valign, source, joinPath(path, 'valign'));
+
     if (!VALIGN_VALUES.includes(value as TiledTextData['valign'])) {
       throw new TiledFormatError(source, joinPath(path, 'valign'), `unknown vertical alignment "${value}"`);
     }
+
     valign = value as TiledTextData['valign'];
   }
 
@@ -341,6 +382,7 @@ const validateTiledGidArray = (value: unknown, source: string, path: string): re
 
 const validateTiledChunkData = (raw: unknown, source: string, path: string): TiledChunkData => {
   const obj = expectObject(raw, source, path);
+
   return {
     x: expectInteger(obj.x, source, joinPath(path, 'x')),
     y: expectInteger(obj.y, source, joinPath(path, 'y')),
@@ -350,7 +392,12 @@ const validateTiledChunkData = (raw: unknown, source: string, path: string): Til
   };
 };
 
-const validateTiledTileLayerData = (obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledTileLayerData => {
+const validateTiledTileLayerData = (
+  obj: Record<string, unknown>,
+  base: TiledLayerDataBase,
+  source: string,
+  path: string,
+): TiledTileLayerData => {
   // Validation runs AFTER the async decode pass (`decodeLayerData.ts`), which
   // turns base64/gzip/zlib `data` into a plain GID array and strips these
   // markers. Reaching here with them still set means the data was not decoded
@@ -364,6 +411,7 @@ const validateTiledTileLayerData = (obj: Record<string, unknown>, base: TiledLay
   }
 
   const encoding = obj.encoding;
+
   if (encoding !== undefined && !(typeof encoding === 'string' && SUPPORTED_TILE_LAYER_ENCODINGS.has(encoding))) {
     throw new TiledFormatError(
       source,
@@ -379,7 +427,11 @@ const validateTiledTileLayerData = (obj: Record<string, unknown>, base: TiledLay
   const hasChunks = obj.chunks !== undefined;
 
   if (hasData === hasChunks) {
-    throw new TiledFormatError(source, path, hasData ? 'tile layer has both "data" and "chunks"' : 'tile layer has neither "data" nor "chunks"');
+    throw new TiledFormatError(
+      source,
+      path,
+      hasData ? 'tile layer has both "data" and "chunks"' : 'tile layer has neither "data" nor "chunks"',
+    );
   }
 
   return {
@@ -388,17 +440,27 @@ const validateTiledTileLayerData = (obj: Record<string, unknown>, base: TiledLay
     width,
     height,
     data: hasData ? validateTiledGidArray(obj.data, source, joinPath(path, 'data')) : undefined,
-    chunks: hasChunks ? mapArray(obj.chunks, source, joinPath(path, 'chunks'), (item, itemPath) => validateTiledChunkData(item, source, itemPath)) : undefined,
+    chunks: hasChunks
+      ? mapArray(obj.chunks, source, joinPath(path, 'chunks'), (item, itemPath) => validateTiledChunkData(item, source, itemPath))
+      : undefined,
   };
 };
 
-const validateTiledObjectLayerData = (obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledObjectLayerData => {
+const validateTiledObjectLayerData = (
+  obj: Record<string, unknown>,
+  base: TiledLayerDataBase,
+  source: string,
+  path: string,
+): TiledObjectLayerData => {
   let draworder: TiledObjectLayerData['draworder'];
+
   if (obj.draworder !== undefined) {
     const value = expectString(obj.draworder, source, joinPath(path, 'draworder'));
+
     if (!DRAW_ORDERS.includes(value as NonNullable<TiledObjectLayerData['draworder']>)) {
       throw new TiledFormatError(source, joinPath(path, 'draworder'), `unknown draw order "${value}"`);
     }
+
     draworder = value as TiledObjectLayerData['draworder'];
   }
 
@@ -410,7 +472,12 @@ const validateTiledObjectLayerData = (obj: Record<string, unknown>, base: TiledL
   };
 };
 
-const validateTiledImageLayerData = (obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledImageLayerData => ({
+const validateTiledImageLayerData = (
+  obj: Record<string, unknown>,
+  base: TiledLayerDataBase,
+  source: string,
+  path: string,
+): TiledImageLayerData => ({
   ...base,
   type: 'imagelayer',
   image: obj.image === undefined ? '' : expectString(obj.image, source, joinPath(path, 'image')),
@@ -418,7 +485,12 @@ const validateTiledImageLayerData = (obj: Record<string, unknown>, base: TiledLa
   repeaty: optionalBoolean(obj, 'repeaty', source, path),
 });
 
-const validateTiledGroupLayerData = (obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledGroupLayerData => ({
+const validateTiledGroupLayerData = (
+  obj: Record<string, unknown>,
+  base: TiledLayerDataBase,
+  source: string,
+  path: string,
+): TiledGroupLayerData => ({
   ...base,
   type: 'group',
   layers: mapArray(obj.layers, source, joinPath(path, 'layers'), (item, itemPath) => validateTiledLayerData(item, source, itemPath)),
@@ -441,6 +513,7 @@ export const validateTiledLayerData = (raw: unknown, source: string, path: strin
       return validateTiledGroupLayerData(obj, base, source, path);
     default: {
       const known: readonly string[] = LAYER_TYPES;
+
       throw new TiledFormatError(source, joinPath(path, 'type'), `unknown layer type "${type}" (expected one of ${known.join(', ')})`);
     }
   }
@@ -452,14 +525,24 @@ export const validateTiledLayerData = (raw: unknown, source: string, path: strin
  * entire map; a mismatch indicates a hand-edited or corrupt file.
  * @internal
  */
-export const checkTiledLayerInfiniteConsistency = (layers: readonly TiledLayerData[], infinite: boolean, source: string, path: string): void => {
+export const checkTiledLayerInfiniteConsistency = (
+  layers: readonly TiledLayerData[],
+  infinite: boolean,
+  source: string,
+  path: string,
+): void => {
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
-    if (layer === undefined) continue;
+
+    if (layer === undefined) {
+      continue;
+    }
+
     const layerPath = joinPath(path, i);
 
     if (layer.type === 'tilelayer') {
       const hasChunks = layer.chunks !== undefined;
+
       if (hasChunks !== infinite) {
         throw new TiledFormatError(
           source,
@@ -480,12 +563,15 @@ export const validateTiledTileData = (raw: unknown, source: string, path: string
   const obj = expectObject(raw, source, path);
 
   let objectgroup: TiledObjectLayerData | undefined;
+
   if (obj.objectgroup !== undefined) {
     const objectgroupPath = joinPath(path, 'objectgroup');
     const layer = validateTiledLayerData(obj.objectgroup, source, objectgroupPath);
+
     if (layer.type !== 'objectgroup') {
       throw new TiledFormatError(source, objectgroupPath, `expected an "objectgroup" layer, got "${layer.type}"`);
     }
+
     objectgroup = layer;
   }
 
@@ -507,6 +593,7 @@ export const validateTiledTileData = (raw: unknown, source: string, path: string
 
 const validateTiledWangColorData = (raw: unknown, source: string, path: string): TiledWangColorData => {
   const obj = expectObject(raw, source, path);
+
   return {
     name: expectString(obj.name, source, joinPath(path, 'name')),
     color: expectString(obj.color, source, joinPath(path, 'color')),
@@ -518,19 +605,25 @@ const validateTiledWangColorData = (raw: unknown, source: string, path: string):
 const validateTiledWangTileData = (raw: unknown, source: string, path: string): TiledWangTileData => {
   const obj = expectObject(raw, source, path);
   const tileid = expectNonNegativeInteger(obj.tileid, source, joinPath(path, 'tileid'));
-  const wangid = mapArray(obj.wangid, source, joinPath(path, 'wangid'), (item, itemPath) => expectNonNegativeInteger(item, source, itemPath));
+  const wangid = mapArray(obj.wangid, source, joinPath(path, 'wangid'), (item, itemPath) =>
+    expectNonNegativeInteger(item, source, itemPath),
+  );
+
   return { tileid, wangid };
 };
 
 const validateTiledWangSetData = (raw: unknown, source: string, path: string): TiledWangSetData => {
   const obj = expectObject(raw, source, path);
+
   return {
     name: expectString(obj.name, source, joinPath(path, 'name')),
     // type is accepted as any string - unknown values are treated as-is per spec
     type: expectString(obj.type, source, joinPath(path, 'type')),
     tile: expectInteger(obj.tile, source, joinPath(path, 'tile')),
     colors: mapArray(obj.colors, source, joinPath(path, 'colors'), (item, itemPath) => validateTiledWangColorData(item, source, itemPath)),
-    wangtiles: mapArray(obj.wangtiles, source, joinPath(path, 'wangtiles'), (item, itemPath) => validateTiledWangTileData(item, source, itemPath)),
+    wangtiles: mapArray(obj.wangtiles, source, joinPath(path, 'wangtiles'), (item, itemPath) =>
+      validateTiledWangTileData(item, source, itemPath),
+    ),
     properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
   };
 };
@@ -544,17 +637,26 @@ const validateTiledVersion = (value: unknown, source: string, path: string): str
   if (typeof value !== 'string' && typeof value !== 'number') {
     throw new TiledFormatError(source, path, `expected a string or number, got ${describeValue(value)}`);
   }
+
   return value;
 };
 
 const validateTiledObjectAlignment = (obj: Record<string, unknown>, source: string, path: string): TiledObjectAlignment | undefined => {
   const value = obj.objectalignment;
-  if (value === undefined) return undefined;
+
+  if (value === undefined) {
+    return undefined;
+  }
 
   const alignmentPath = joinPath(path, 'objectalignment');
   const name = expectString(value, source, alignmentPath);
+
   if (!TILED_OBJECT_ALIGNMENTS.includes(name as TiledObjectAlignment)) {
-    throw new TiledFormatError(source, alignmentPath, `unknown object alignment "${name}" (expected one of ${TILED_OBJECT_ALIGNMENTS.join(', ')})`);
+    throw new TiledFormatError(
+      source,
+      alignmentPath,
+      `unknown object alignment "${name}" (expected one of ${TILED_OBJECT_ALIGNMENTS.join(', ')})`,
+    );
   }
 
   return name as TiledObjectAlignment;
@@ -613,6 +715,7 @@ export const validateTiledMapData = (raw: unknown, source: string): TiledMapData
   const obj = expectObject(raw, source, '');
 
   const type = expectString(obj.type, source, 'type');
+
   if (type !== 'map') {
     throw new TiledFormatError(source, 'type', `expected "map", got "${type}"`);
   }
@@ -620,17 +723,26 @@ export const validateTiledMapData = (raw: unknown, source: string): TiledMapData
   const version = validateTiledVersion(obj.version, source, 'version');
 
   const orientationValue = expectString(obj.orientation, source, 'orientation');
+
   if (!ORIENTATIONS.includes(orientationValue as TiledOrientation)) {
-    throw new TiledFormatError(source, 'orientation', `unknown orientation "${orientationValue}" (expected one of ${ORIENTATIONS.join(', ')})`);
+    throw new TiledFormatError(
+      source,
+      'orientation',
+      `unknown orientation "${orientationValue}" (expected one of ${ORIENTATIONS.join(', ')})`,
+    );
   }
+
   const orientation = orientationValue as TiledOrientation;
 
   let renderorder: TiledRenderOrder | undefined;
+
   if (obj.renderorder !== undefined) {
     const value = expectString(obj.renderorder, source, 'renderorder');
+
     if (!RENDER_ORDERS.includes(value as TiledRenderOrder)) {
       throw new TiledFormatError(source, 'renderorder', `unknown render order "${value}" (expected one of ${RENDER_ORDERS.join(', ')})`);
     }
+
     renderorder = value as TiledRenderOrder;
   }
 

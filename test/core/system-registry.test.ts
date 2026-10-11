@@ -172,7 +172,9 @@ describe('SystemRegistry.destroy() — a throwing system cannot strand the rest'
     const registry = new SystemRegistry();
     const reported: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Error) reported.push(entry.message);
+      if (entry.severity === LogSeverity.Error) {
+        reported.push(entry.message);
+      }
     });
 
     registry.add({

@@ -126,7 +126,9 @@ describe('chain collision', () => {
 
     world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [{ shape: flatFloor() }] }));
 
-    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 40 }, colliders: [{ shape: new BoxShape(120, 20), density: 1 }] }));
+    const box = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 40 }, colliders: [{ shape: new BoxShape(120, 20), density: 1 }] }),
+    );
 
     settle(world, 120);
 
@@ -147,7 +149,9 @@ describe('chain collision', () => {
       }),
     );
 
-    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 40 }, colliders: [{ shape: new BoxShape(20, 20), density: 1 }] }));
+    const box = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 40 }, colliders: [{ shape: new BoxShape(20, 20), density: 1 }] }),
+    );
 
     settle(world, 120);
 
@@ -160,7 +164,11 @@ describe('chain collision', () => {
     world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [{ shape: flatFloor() }] }));
 
     const box = world.add(
-      new PhysicsBody({ type: 'dynamic', position: { x: -120, y: 88 }, colliders: [{ shape: new BoxShape(20, 20), density: 1, friction: 0 }] }),
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: -120, y: 88 },
+        colliders: [{ shape: new BoxShape(20, 20), density: 1, friction: 0 }],
+      }),
     );
 
     settle(world, 30);
@@ -193,7 +201,9 @@ describe('chain collision', () => {
       }),
     );
 
-    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: -60, y: -40 }, colliders: [{ shape: new BoxShape(20, 20), density: 1 }] }));
+    const box = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: -60, y: -40 }, colliders: [{ shape: new BoxShape(20, 20), density: 1 }] }),
+    );
 
     settle(world, 180);
 
@@ -209,7 +219,9 @@ describe('chain collision', () => {
       started++;
     });
     world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 }, colliders: [{ shape: flatFloor() }] }));
-    world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new ChainShape(points(0, -50, 0, 50)) }] }));
+    world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new ChainShape(points(0, -50, 0, 50)) }] }),
+    );
 
     settle(world, 5);
 
@@ -224,7 +236,9 @@ describe('chain events use the authored collider', () => {
 
     world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [chain] }));
 
-    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 40 }, colliders: [{ shape: new BoxShape(120, 20), density: 1 }] }));
+    const box = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 40 }, colliders: [{ shape: new BoxShape(120, 20), density: 1 }] }),
+    );
 
     const started: CollisionEvent[] = [];
     const ended: CollisionEvent[] = [];
@@ -366,7 +380,9 @@ describe('chain lifecycle', () => {
 
     world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [chain] }));
 
-    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 40 }, colliders: [{ shape: new BoxShape(120, 20), density: 1 }] }));
+    const box = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 40 }, colliders: [{ shape: new BoxShape(120, 20), density: 1 }] }),
+    );
 
     settle(world, 120);
     expect(box.y).toBeCloseTo(90, 0);
@@ -387,7 +403,9 @@ describe('chain lifecycle', () => {
     // A bullet body elsewhere, just so the world runs the CCD pass at all -
     // `_advanceBullets` (and its broad-phase resync) is skipped entirely
     // without one.
-    const bullet = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 5000, y: 5000 }, isBullet: true, colliders: [{ shape: new CircleShape(4) }] }));
+    const bullet = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 5000, y: 5000 }, isBullet: true, colliders: [{ shape: new CircleShape(4) }] }),
+    );
     bullet.linearVelocityX = 600;
 
     expect(chain._treeProxy).toBe(-1);
@@ -443,7 +461,9 @@ describe('chain performance', () => {
     const chainRate = await measureAllocationRate(() => chainWorld.step(DT), { iterations: 200 });
     const boxRate = await measureAllocationRate(() => boxWorld.step(DT), { iterations: 200 });
 
-    console.log(`${(chainRate.bytesPerIteration / 1024).toFixed(2)} KB/step chain floor vs ${(boxRate.bytesPerIteration / 1024).toFixed(2)} KB/step box floor`);
+    console.log(
+      `${(chainRate.bytesPerIteration / 1024).toFixed(2)} KB/step chain floor vs ${(boxRate.bytesPerIteration / 1024).toFixed(2)} KB/step box floor`,
+    );
 
     // A chain that rebuilt its edge geometry per step would allocate a multiple
     // of the solid floor's rate; sharing the proxies keeps the two comparable.

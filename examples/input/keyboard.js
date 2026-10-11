@@ -55,7 +55,9 @@ class KeyboardScene extends Scene {
     const moveY = (this.down.active ? 1 : 0) - (this.up.active ? 1 : 0);
     this.position.x = Math.max(20, Math.min(width - 20, this.position.x + moveX * speed));
     this.position.y = Math.max(20, Math.min(height - 20, this.position.y + moveY * speed));
-    const held = [this.up.active && 'Up', this.down.active && 'Down', this.left.active && 'Left', this.right.active && 'Right'].filter(Boolean);
+    const held = [this.up.active && 'Up', this.down.active && 'Down', this.left.active && 'Left', this.right.active && 'Right'].filter(
+      Boolean,
+    );
     this.hud.setStatus(`Held: ${held.length ? held.join(' + ') : 'none'}`);
   }
   draw(context) {

@@ -208,9 +208,17 @@ export class Gamepad {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStart(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onStart(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this._createBinding(channel, options);
-    if (callback) binding.onStart.add(callback);
+
+    if (callback) {
+      binding.onStart.add(callback);
+    }
+
     return binding;
   }
 
@@ -228,9 +236,17 @@ export class Gamepad {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onActive(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onActive(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this._createBinding(channel, options);
-    if (callback) binding.onActive.add(callback);
+
+    if (callback) {
+      binding.onActive.add(callback);
+    }
+
     return binding;
   }
 
@@ -242,9 +258,17 @@ export class Gamepad {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStop(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onStop(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this._createBinding(channel, options);
-    if (callback) binding.onStop.add(callback);
+
+    if (callback) {
+      binding.onStop.add(callback);
+    }
+
     return binding;
   }
 
@@ -257,9 +281,17 @@ export class Gamepad {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onTrigger(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onTrigger(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this._createBinding(channel, options);
-    if (callback) binding.onTrigger.add(callback);
+
+    if (callback) {
+      binding.onTrigger.add(callback);
+    }
+
     return binding;
   }
 
@@ -378,6 +410,7 @@ export class Gamepad {
   public update(): void {
     if (this._browserGamepad === null || this._mapping === null) {
       this._updateBindings();
+
       return;
     }
 
@@ -386,6 +419,7 @@ export class Gamepad {
 
     for (const button of this._mapping.buttons) {
       const rawButton = rawButtons[button.index];
+
       if (rawButton === undefined) {
         continue;
       }
@@ -409,6 +443,7 @@ export class Gamepad {
 
     for (const axis of this._mapping.axes) {
       const rawAxis = rawAxes[axis.index];
+
       if (rawAxis === undefined) {
         continue;
       }
@@ -501,6 +536,7 @@ export class Gamepad {
     const resolved = list.map(c => this._resolveGamepadChannel(c));
     const binding = new InputBinding(resolved, options, this._detacher);
     this._bindings.add(binding);
+
     return binding;
   }
 

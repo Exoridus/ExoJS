@@ -304,56 +304,63 @@ export const reconcileRetainedTintRows = (
   const patchable = bundle !== null && typeof bundle.patchTintRow === 'function' && bundle.transformRowBase !== undefined;
   const base = fragment.recordedRowBase();
 
-  const applied = fragment.dirtyIndex.readSince(fragment.contentCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
-    const changed = node as unknown as RenderNode;
-    const drawable = changed as unknown as Drawable;
-    const rowIndex = fragment.recordedRowIndex(drawable);
+  const applied = fragment.dirtyIndex.readSince(
+    fragment.contentCursor,
+    DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect,
+    (node, marked) => {
+      const changed = node as unknown as RenderNode;
+      const drawable = changed as unknown as Drawable;
+      const rowIndex = fragment.recordedRowIndex(drawable);
 
-    // Same economy as the transform channel: a change to something this
-    // fragment drew is recognised by the row map, and only a mark the map does
-    // not know needs the walk to decide whether it is even ours. The root
-    // itself is ours: a change to it reaches everything below.
-    if (rowIndex === undefined && changed !== root && !owns(changed)) {
+      // Same economy as the transform channel: a change to something this
+      // fragment drew is recognised by the row map, and only a mark the map does
+      // not know needs the walk to decide whether it is even ours. The root
+      // itself is ours: a change to it reaches everything below.
+      if (rowIndex === undefined && changed !== root && !owns(changed)) {
+        return true;
+      }
+
+      // A change on or below a node the capture re-dispatches live is that
+      // dispatch's to pick up; the records hold nothing about it.
+      if (
+        rowIndex === undefined &&
+        changeBelongsToLiveEntry(changed, root, marked, candidate => fragment.hasLiveRecordFor(candidate), destinationOpaque)
+      ) {
+        return true;
+      }
+
+      if ((marked & (DirtyChannel.Content | DirtyChannel.Effect)) !== 0) {
+        // Not a tint-only change: nothing in a recorded product expresses a new
+        // texture, geometry or blend mode without re-recording it.
+        return false;
+      }
+
+      if (bundle === null) {
+        // No recording: the entry replay re-emits the draw and reads the live
+        // tint, so there is no baked row to correct.
+        return true;
+      }
+
+      if (!patchable) {
+        return false;
+      }
+
+      if (rowIndex === undefined) {
+        // Owned, but this product has no row for it: the capture culled it, or it
+        // arrived after the capture. Either way its colour cannot reach these
+        // pixels - a node that arrived also moved the structure revision, which
+        // the key check refuses on its own - so there is nothing to correct and
+        // nothing to rebuild for. Tinting something off-screen is an ordinary
+        // thing for a game to do every frame.
+        return true;
+      }
+
+      packTintRow(patchTintScratch, 0, drawable.tint);
+      bundle.patchTintRow!(rowIndex - base, patchTintScratch);
+
       return true;
-    }
-
-    // A change on or below a node the capture re-dispatches live is that
-    // dispatch's to pick up; the records hold nothing about it.
-    if (rowIndex === undefined && changeBelongsToLiveEntry(changed, root, marked, candidate => fragment.hasLiveRecordFor(candidate), destinationOpaque)) {
-      return true;
-    }
-
-    if ((marked & (DirtyChannel.Content | DirtyChannel.Effect)) !== 0) {
-      // Not a tint-only change: nothing in a recorded product expresses a new
-      // texture, geometry or blend mode without re-recording it.
-      return false;
-    }
-
-    if (bundle === null) {
-      // No recording: the entry replay re-emits the draw and reads the live
-      // tint, so there is no baked row to correct.
-      return true;
-    }
-
-    if (!patchable) {
-      return false;
-    }
-
-    if (rowIndex === undefined) {
-      // Owned, but this product has no row for it: the capture culled it, or it
-      // arrived after the capture. Either way its colour cannot reach these
-      // pixels - a node that arrived also moved the structure revision, which
-      // the key check refuses on its own - so there is nothing to correct and
-      // nothing to rebuild for. Tinting something off-screen is an ordinary
-      // thing for a game to do every frame.
-      return true;
-    }
-
-    packTintRow(patchTintScratch, 0, drawable.tint);
-    bundle.patchTintRow!(rowIndex - base, patchTintScratch);
-
-    return true;
-  });
+    },
+  );
 
   bundle?.flushRowPatches?.();
 

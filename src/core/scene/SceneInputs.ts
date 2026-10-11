@@ -22,7 +22,13 @@ export interface SceneActionMapOptions {
   readonly when?: SceneAvailability;
 }
 
-const gatedStates = new Set<SceneState>([SceneState.Preparing, SceneState.Ready, SceneState.Suspended, SceneState.Destroying, SceneState.Destroyed]);
+const gatedStates = new Set<SceneState>([
+  SceneState.Preparing,
+  SceneState.Ready,
+  SceneState.Suspended,
+  SceneState.Destroying,
+  SceneState.Destroyed,
+]);
 
 const whenPolicyAllows = (when: SceneAvailability, state: SceneState, paused: boolean): boolean => {
   if (gatedStates.has(state)) {
@@ -350,7 +356,11 @@ export class SceneInputs implements Destroyable {
    * @param options - Binding options, including the `when` policy.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStart(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onStart(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: SceneInputBindingOptions,
+  ): InputBinding {
     return this._bind('onStart', channel, callback, options);
   }
 
@@ -379,7 +389,11 @@ export class SceneInputs implements Destroyable {
    * if (right.active) this.x += speed * delta;
    * ```
    */
-  public onActive(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onActive(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: SceneInputBindingOptions,
+  ): InputBinding {
     return this._bind('onActive', channel, callback, options);
   }
 
@@ -392,7 +406,11 @@ export class SceneInputs implements Destroyable {
    * @param options - Binding options, including the `when` policy.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStop(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onStop(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: SceneInputBindingOptions,
+  ): InputBinding {
     return this._bind('onStop', channel, callback, options);
   }
 
@@ -408,7 +426,11 @@ export class SceneInputs implements Destroyable {
    * @param options - Binding options, including the `when` policy.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onTrigger(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onTrigger(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: SceneInputBindingOptions,
+  ): InputBinding {
     return this._bind('onTrigger', channel, callback, options);
   }
 

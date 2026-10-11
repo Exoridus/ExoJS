@@ -14,6 +14,7 @@ class MouseParallaxScene extends Scene {
     // Three layers at different depths
     this._layers = [0.15, 0.35, 0.6].map(speed => {
       const g = new Graphics();
+
       // ... draw layer content ...
       return { graphics: g, speed };
     });

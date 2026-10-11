@@ -64,6 +64,7 @@ export const measureAllocationRate = async (run: () => void, options: Allocation
       session.post(method, params, (error: Error | null, result?: unknown) => {
         if (error) {
           reject(error);
+
           return;
         }
 

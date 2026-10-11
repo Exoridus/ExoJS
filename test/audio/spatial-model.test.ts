@@ -135,7 +135,10 @@ const lastTarget = (param: MockParam): number | undefined => param.setTargetAtTi
  */
 const lastWritten = (param: MockParam): number | undefined => {
   const calls = [...param.setValueAtTime.mock.calls.keys()]
-    .map(index => ({ value: param.setValueAtTime.mock.calls[index]![0] as number, order: param.setValueAtTime.mock.invocationCallOrder[index]! }))
+    .map(index => ({
+      value: param.setValueAtTime.mock.calls[index]![0] as number,
+      order: param.setValueAtTime.mock.invocationCallOrder[index]!,
+    }))
     .concat(
       [...param.setTargetAtTime.mock.calls.keys()].map(index => ({
         value: param.setTargetAtTime.mock.calls[index]![0] as number,

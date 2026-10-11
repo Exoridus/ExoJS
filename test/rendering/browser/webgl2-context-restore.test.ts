@@ -117,7 +117,12 @@ const loseAndRestoreContext = async (backend: WebGl2Backend): Promise<void> => {
 
   const restored = new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(
-      () => reject(new Error(`webglcontextrestored not delivered within 5s (raw events: ${seen.join(',') || 'none'}, isLost: ${gl.isContextLost()})`)),
+      () =>
+        reject(
+          new Error(
+            `webglcontextrestored not delivered within 5s (raw events: ${seen.join(',') || 'none'}, isLost: ${gl.isContextLost()})`,
+          ),
+        ),
       5000,
     );
 

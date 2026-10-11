@@ -25,7 +25,10 @@ class BeatVisualScene extends Scene {
 
     // Animate something on 16th notes
     const sub = this.detector.subdivisionPhase(4);
-    if (sub < 0.05) this.sixteenthFlash = 0.1;
+
+    if (sub < 0.05) {
+      this.sixteenthFlash = 0.1;
+    }
     // #endregion guide:beat-visuals
   }
 }

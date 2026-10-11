@@ -8,6 +8,7 @@ const createCoreLoader = (): Loader => {
   const loader = new Loader();
   const owner = loader.createScope({ name: 'owner' });
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -15,7 +16,8 @@ const originalFetch = global.fetch;
 
 const mockFetchImage = (): ReturnType<typeof vi.fn> => {
   const fetchMock = vi.fn(
-    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
+    async (): Promise<Response> =>
+      ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
   );
 
   global.fetch = fetchMock as typeof fetch;

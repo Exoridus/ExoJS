@@ -13,7 +13,17 @@
  * the WebGPU backend (custom shaders, compute, GPU stress).
  */
 export type Capability =
-  'webgl2' | 'webgpu' | 'pointer' | 'keyboard' | 'gamepad' | 'touch' | 'audio' | 'fullscreen' | 'vibration' | 'offscreenCanvas' | 'webWorkers';
+  | 'webgl2'
+  | 'webgpu'
+  | 'pointer'
+  | 'keyboard'
+  | 'gamepad'
+  | 'touch'
+  | 'audio'
+  | 'fullscreen'
+  | 'vibration'
+  | 'offscreenCanvas'
+  | 'webWorkers';
 
 export interface ExampleRuntimeMeta {
   slug?: string;
@@ -81,9 +91,21 @@ export interface ControlBinding<T = number> {
 /** Handle returned by {@link mountControlPanel}. */
 export interface ControlPanelHandle {
   element: HTMLElement;
-  addSlider(options: { label: string; min?: number; max?: number; step?: number; value?: number; onChange?: (value: number) => void }): ControlBinding<number>;
+  addSlider(options: {
+    label: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    value?: number;
+    onChange?: (value: number) => void;
+  }): ControlBinding<number>;
   addToggle(options: { label: string; value?: boolean; onChange?: (value: boolean) => void }): ControlBinding<boolean>;
-  addCycle(options: { label: string; options: string[]; index?: number; onChange?: (index: number, value: string) => void }): ControlBinding<number>;
+  addCycle(options: {
+    label: string;
+    options: string[];
+    index?: number;
+    onChange?: (index: number, value: string) => void;
+  }): ControlBinding<number>;
   addButton(options: { label: string; onClick?: () => void }): { element: HTMLButtonElement };
   dispose(): void;
 }
@@ -103,17 +125,15 @@ export interface MountControlPanelOptions {
   corner?: OverlayCorner;
 }
 
-export function getExampleMeta(): ExampleRuntimeMeta {
+export const getExampleMeta = (): ExampleRuntimeMeta => {
   const meta = globalThis.__EXAMPLE_META__;
 
   return meta && typeof meta === 'object' ? meta : {};
-}
+};
 
-export function supportsWebGpu(): boolean {
-  return typeof navigator !== 'undefined' && 'gpu' in navigator;
-}
+export const supportsWebGpu = (): boolean => typeof navigator !== 'undefined' && 'gpu' in navigator;
 
-export function createInfoElement(maxWidth = '430px'): HTMLElement {
+export const createInfoElement = (maxWidth = '430px'): HTMLElement => {
   const element = document.createElement('aside');
 
   Object.assign(element.style, {
@@ -136,9 +156,9 @@ export function createInfoElement(maxWidth = '430px'): HTMLElement {
   });
 
   return element;
-}
+};
 
-export function showInfo(element: HTMLElement, title: string, detail: string, isError = false): void {
+export const showInfo = (element: HTMLElement, title: string, detail: string, isError = false): void => {
   if (!element.isConnected) {
     document.body.append(element);
   }
@@ -157,11 +177,9 @@ export function showInfo(element: HTMLElement, title: string, detail: string, is
   });
 
   element.replaceChildren(titleElement, detailElement);
-}
+};
 
-export function formatErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+export const formatErrorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 // ---------------------------------------------------------------------------
 // Example helper kit
@@ -183,7 +201,7 @@ const CORNER_STYLES: Record<OverlayCorner, Partial<CSSStyleDeclaration>> = {
   'bottom-right': { bottom: '16px', right: '16px' },
 };
 
-function createPanel(corner: OverlayCorner = 'top-left'): HTMLElement {
+const createPanel = (corner: OverlayCorner = 'top-left'): HTMLElement => {
   const panel = document.createElement('aside');
 
   Object.assign(panel.style, {
@@ -203,9 +221,9 @@ function createPanel(corner: OverlayCorner = 'top-left'): HTMLElement {
   });
 
   return panel;
-}
+};
 
-function createKeyChip(label: string): HTMLElement {
+const createKeyChip = (label: string): HTMLElement => {
   const chip = document.createElement('kbd');
 
   chip.textContent = label;
@@ -223,9 +241,9 @@ function createKeyChip(label: string): HTMLElement {
   });
 
   return chip;
-}
+};
 
-function createControlRow(control: ControlHint): HTMLElement {
+const createControlRow = (control: ControlHint): HTMLElement => {
   const row = document.createElement('div');
 
   Object.assign(row.style, { display: 'flex', alignItems: 'baseline', gap: '4px', margin: '4px 0' });
@@ -246,14 +264,14 @@ function createControlRow(control: ControlHint): HTMLElement {
   row.append(keysWrap, action);
 
   return row;
-}
+};
 
 /**
  * Mount a non-blocking on-screen panel with a title, a controls legend, an
  * optional live status line, and an optional hint. Returns a handle to update
  * the status/controls and to remove the panel.
  */
-export function mountControls(options: MountControlsOptions = {}): ControlsHandle {
+export const mountControls = (options: MountControlsOptions = {}): ControlsHandle => {
   const { title = '', controls = [], status = '', hint = '', corner = 'top-left' } = options;
 
   const panel = createPanel(corner);
@@ -293,17 +311,17 @@ export function mountControls(options: MountControlsOptions = {}): ControlsHandl
       panel.remove();
     },
   };
-}
+};
 
-function createControlRowContainer(): HTMLElement {
+const createControlRowContainer = (): HTMLElement => {
   const row = document.createElement('div');
 
   Object.assign(row.style, { display: 'flex', alignItems: 'center', gap: '10px', margin: '6px 0' });
 
   return row;
-}
+};
 
-function createControlLabel(text: string): HTMLElement {
+const createControlLabel = (text: string): HTMLElement => {
   const label = document.createElement('span');
 
   label.textContent = text;
@@ -311,14 +329,14 @@ function createControlLabel(text: string): HTMLElement {
   Object.assign(label.style, { flex: '0 0 auto', minWidth: '92px', color: '#c4d2ec', fontSize: '12px' });
 
   return label;
-}
+};
 
 /**
  * Mount a predictable DOM control panel over the canvas - sliders, toggles,
  * cycles, and buttons - so interactive examples expose their parameters in a
  * consistent, discoverable way instead of hand-rolling canvas hit-tests.
  */
-export function mountControlPanel(options: MountControlPanelOptions = {}): ControlPanelHandle {
+export const mountControlPanel = (options: MountControlPanelOptions = {}): ControlPanelHandle => {
   const { title = '', corner = 'bottom-left' } = options;
 
   const panel = createPanel(corner);
@@ -355,7 +373,13 @@ export function mountControlPanel(options: MountControlPanelOptions = {}): Contr
       input.value = String(value);
       input.style.flex = '1 1 auto';
 
-      Object.assign(readout.style, { flex: '0 0 auto', minWidth: '42px', textAlign: 'right', color: '#9fd0ff', font: `600 12px ${FONT_STACK}` });
+      Object.assign(readout.style, {
+        flex: '0 0 auto',
+        minWidth: '42px',
+        textAlign: 'right',
+        color: '#9fd0ff',
+        font: `600 12px ${FONT_STACK}`,
+      });
 
       const render = (v: number) => {
         readout.textContent = Number(v).toFixed(2);
@@ -500,4 +524,4 @@ export function mountControlPanel(options: MountControlPanelOptions = {}): Contr
       panel.remove();
     },
   };
-}
+};

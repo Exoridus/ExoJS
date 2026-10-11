@@ -87,10 +87,21 @@ const makeGlMock = (): WebGL2RenderingContext => {
 
     getShaderParameter: vi.fn(() => true),
     getProgramParameter: vi.fn((_, pname) => {
-      if (pname === 35714) return true; // LINK_STATUS
-      if (pname === 35721) return 2; // ACTIVE_ATTRIBUTES
-      if (pname === 35718) return 0; // ACTIVE_UNIFORMS
-      if (pname === 35382) return 0; // ACTIVE_UNIFORM_BLOCKS
+      if (pname === 35714) {
+        return true;
+      } // LINK_STATUS
+
+      if (pname === 35721) {
+        return 2;
+      } // ACTIVE_ATTRIBUTES
+
+      if (pname === 35718) {
+        return 0;
+      } // ACTIVE_UNIFORMS
+
+      if (pname === 35382) {
+        return 0;
+      } // ACTIVE_UNIFORM_BLOCKS
 
       return true;
     }),
@@ -109,8 +120,13 @@ const makeGlMock = (): WebGL2RenderingContext => {
     getShaderInfoLog: vi.fn(() => ''),
     getProgramInfoLog: vi.fn(() => ''),
     getAttribLocation: vi.fn((_prog, name) => {
-      if (name === 'aPosition') return 0;
-      if (name === 'aUv') return 1;
+      if (name === 'aPosition') {
+        return 0;
+      }
+
+      if (name === 'aUv') {
+        return 1;
+      }
 
       return -1;
     }),
@@ -141,6 +157,7 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
   const bindVertexArrayObject = vi.fn();
   const execute = vi.fn(pass => {
     pass.execute(backend);
+
     return backend;
   });
 
@@ -159,6 +176,7 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -169,6 +187,7 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
@@ -228,6 +247,7 @@ const makeWebGpuBackend = (): RenderBackend => {
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -238,10 +258,12 @@ const makeWebGpuBackend = (): RenderBackend => {
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
       currentTarget = target ?? root;
+
       return this;
     },
     pushScissorRect() {
@@ -264,6 +286,7 @@ const makeWebGpuBackend = (): RenderBackend => {
     },
     execute(pass: { execute(b: RenderBackend): void }) {
       pass.execute(this as unknown as RenderBackend);
+
       return this;
     },
     flush() {
@@ -302,9 +325,8 @@ const marshalOn = (name: string, value: ShaderFilterUniformValue): unknown => {
 };
 
 /** The WebGL2 pass a filter built on its first attachment, or `null`. */
-const glslPassOf = (filter: ShaderFilter): Record<string, unknown> | null => {
-  return (filter as unknown as Record<string, Record<string, unknown> | null>)['_glslPass'] ?? null;
-};
+const glslPassOf = (filter: ShaderFilter): Record<string, unknown> | null =>
+  (filter as unknown as Record<string, Record<string, unknown> | null>)['_glslPass'] ?? null;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -431,10 +453,21 @@ describe('ShaderFilter on WebGL2', () => {
     const samplerUniform = { name: 'uExtraTex', type: ShaderPrimitives.Sampler2D, size: 1 };
 
     (gl.getProgramParameter as unknown as MockInstance).mockImplementation((_prog: unknown, pname: number) => {
-      if (pname === 35714) return true; // LINK_STATUS
-      if (pname === 35721) return 2; // ACTIVE_ATTRIBUTES
-      if (pname === 35718) return 1; // ACTIVE_UNIFORMS (1 sampler)
-      if (pname === 35382) return 0; // ACTIVE_UNIFORM_BLOCKS
+      if (pname === 35714) {
+        return true;
+      } // LINK_STATUS
+
+      if (pname === 35721) {
+        return 2;
+      } // ACTIVE_ATTRIBUTES
+
+      if (pname === 35718) {
+        return 1;
+      } // ACTIVE_UNIFORMS (1 sampler)
+
+      if (pname === 35382) {
+        return 0;
+      } // ACTIVE_UNIFORM_BLOCKS
 
       return true;
     });
@@ -483,10 +516,10 @@ describe('ShaderFilter on WebGL2', () => {
 
   // 12. Tuple -> Float32Array marshalling
   test('marshals 2-tuple to Float32Array([a, b])', () => {
-    const result = marshalOn('uPair', [0.5, 1.0] as unknown as readonly [number, number]) as Float32Array;
+    const result = marshalOn('uPair', [0.5, 1] as unknown as readonly [number, number]) as Float32Array;
 
     expect(result).toBeInstanceOf(Float32Array);
-    expect(Array.from(result)).toEqual([0.5, 1.0]);
+    expect(Array.from(result)).toEqual([0.5, 1]);
   });
 
   test('marshals 4-tuple to Float32Array of length 4', () => {
@@ -514,7 +547,7 @@ describe('ShaderFilter on WebGL2', () => {
   test('destroy() clears the uniforms map and nulls internal resources', () => {
     const filter = new ShaderFilter({
       glsl: { fragment: minimalFragSrc },
-      uniforms: { uTime: 1.0 },
+      uniforms: { uTime: 1 },
     });
 
     filter.destroy();

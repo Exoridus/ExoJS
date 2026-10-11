@@ -68,7 +68,10 @@ const expectedOffsets: ReadonlyArray<readonly [path: string, offset: number, siz
 
 const expectedByteLength = 320;
 
-const flatten = (members: ReadonlyArray<{ readonly name: string; readonly node: UniformNodeLayout }>, prefix: string): Map<string, UniformNodeLayout> => {
+const flatten = (
+  members: ReadonlyArray<{ readonly name: string; readonly node: UniformNodeLayout }>,
+  prefix: string,
+): Map<string, UniformNodeLayout> => {
   const flat = new Map<string, UniformNodeLayout>();
 
   for (const member of members) {
@@ -77,11 +80,15 @@ const flatten = (members: ReadonlyArray<{ readonly name: string; readonly node: 
     flat.set(path, member.node);
 
     if (member.node.kind === 'struct') {
-      for (const [key, node] of flatten(member.node.members, `${path}.`)) flat.set(key, node);
+      for (const [key, node] of flatten(member.node.members, `${path}.`)) {
+        flat.set(key, node);
+      }
     }
 
     if (member.node.kind === 'array' && member.node.element.kind === 'struct') {
-      for (const [key, node] of flatten(member.node.element.members, `${path}.`)) flat.set(key, node);
+      for (const [key, node] of flatten(member.node.element.members, `${path}.`)) {
+        flat.set(key, node);
+      }
     }
   }
 

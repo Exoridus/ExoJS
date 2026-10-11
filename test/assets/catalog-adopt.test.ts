@@ -18,6 +18,7 @@ const createCoreLoader = (): Loader => {
   const loader = new Loader();
   const owner = loader.createScope({ name: 'owner' });
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -895,7 +896,9 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     // comment), so this reaches into internals to set up the precondition
     // rather than exercising a real eviction API that does not exist.
     leaf._fail(new Error('later failure'));
-    (loader as unknown as { _residency: { _resources: Map<string, unknown> } })._residency._resources.delete(loader['_canonicalize'](Json, 'stale.json').key);
+    (loader as unknown as { _residency: { _resources: Map<string, unknown> } })._residency._resources.delete(
+      loader['_canonicalize'](Json, 'stale.json').key,
+    );
 
     expect(leaf.loadState).toBe('failed');
     expect(() => leaf.value).toThrow("'failed'"); // gated by state, as expected

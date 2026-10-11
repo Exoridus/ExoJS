@@ -14,12 +14,14 @@ import { Time } from '#core/units';
 
 const makeStream = (): MediaStream => {
   const tracks = [{ stop: vi.fn() }, { stop: vi.fn() }];
+
   return { getTracks: () => tracks } as unknown as MediaStream;
 };
 
 const stubGetUserMedia = (stream: MediaStream): MockInstance => {
   const getUserMedia = vi.fn().mockResolvedValue(stream);
   vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
+
   return getUserMedia;
 };
 
@@ -44,18 +46,28 @@ class MockMediaRecorder {
 
   public stop(): void {
     this.state = 'inactive';
-    for (const h of this._handlers['dataavailable'] ?? []) h({ data: new Blob(['chunk']) });
-    for (const h of this._handlers['stop'] ?? []) (h as unknown as () => void)();
+
+    for (const h of this._handlers['dataavailable'] ?? []) {
+      h({ data: new Blob(['chunk']) });
+    }
+
+    for (const h of this._handlers['stop'] ?? []) {
+      (h as unknown as () => void)();
+    }
   }
 
   /** Test-only helper: fire the 'error' listeners without ever reaching 'stop'. */
   public triggerError(): void {
-    for (const h of this._handlers['error'] ?? []) (h as unknown as () => void)();
+    for (const h of this._handlers['error'] ?? []) {
+      (h as unknown as () => void)();
+    }
   }
 
   /** Test-only helper: fire a raw 'dataavailable' event with arbitrary data. */
   public triggerDataAvailable(data: Blob): void {
-    for (const h of this._handlers['dataavailable'] ?? []) h({ data });
+    for (const h of this._handlers['dataavailable'] ?? []) {
+      h({ data });
+    }
   }
 }
 

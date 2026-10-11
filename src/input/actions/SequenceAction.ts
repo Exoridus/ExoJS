@@ -191,16 +191,25 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
 
       for (const event of batch.channels) {
         const index = this._channels.indexOf(event.channel);
-        if (index === -1) continue;
+
+        if (index === -1) {
+          continue;
+        }
 
         const wasActive = Math.abs(this._values[index] ?? 0) > this._threshold;
         this._values[index] = event.value;
         const active = Math.abs(event.value) > this._threshold;
-        if (!wasActive && active) entered.push(event.channel);
+
+        if (!wasActive && active) {
+          entered.push(event.channel);
+        }
+
         touched = true;
       }
 
-      if (!touched) continue;
+      if (!touched) {
+        continue;
+      }
 
       const expected = this._stepChannels[this._step] ?? [];
       const hasUnexpectedEntry = entered.some(channel => !expected.includes(channel));
@@ -223,7 +232,10 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
         const first = this._stepChannels[0] ?? [];
         const batchBelongsToFirst = entered.every(channel => first.includes(channel));
         const firstAfter = this._isStepActive(0);
-        if (batchBelongsToFirst && !firstBefore && firstAfter) this._acceptStep(now);
+
+        if (batchBelongsToFirst && !firstBefore && firstAfter) {
+          this._acceptStep(now);
+        }
       }
     }
 
@@ -255,7 +267,10 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
   }
 
   private _expire(now: number): void {
-    if ((this._lastStepAt !== null && now - this._lastStepAt > this._maxGap) || (this._startedAt !== null && now - this._startedAt > this._timeout)) {
+    if (
+      (this._lastStepAt !== null && now - this._lastStepAt > this._maxGap) ||
+      (this._startedAt !== null && now - this._startedAt > this._timeout)
+    ) {
       this._resetProgress();
     }
   }
@@ -269,11 +284,15 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
   /** A step is active if ANY ONE of its alternatives has every one of its own channels active - `'|'`'s OR-of-AND semantics. */
   private _isStepActive(index: number): boolean {
     const step = this._steps[index];
-    if (step === undefined) return false;
+
+    if (step === undefined) {
+      return false;
+    }
 
     return step.some(alternative =>
       alternative.every(channel => {
         const valueIndex = this._channels.indexOf(channel);
+
         return valueIndex !== -1 && Math.abs(this._values[valueIndex] ?? 0) > this._threshold;
       }),
     );
@@ -283,12 +302,17 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     const touched = new Set<number>();
 
     for (const batch of sample.batches) {
-      for (const event of batch.channels) touched.add(event.channel);
+      for (const event of batch.channels) {
+        touched.add(event.channel);
+      }
     }
 
     for (let i = 0; i < this._channels.length; i++) {
       const channel = this._channels[i]!;
-      if (!touched.has(channel)) this._values[i] = sample.values[channel] ?? 0;
+
+      if (!touched.has(channel)) {
+        this._values[i] = sample.values[channel] ?? 0;
+      }
     }
   }
 }

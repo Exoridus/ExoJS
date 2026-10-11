@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaOccluder, Lighting, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, type Lighting, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Nothing here models a shadow. Each wall registers the outline it already
@@ -26,10 +26,13 @@ const canvasTexture = (width: number, height: number, paint: (context: CanvasRen
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d');
+
   if (context === null) {
     throw new Error('2D canvas context unavailable.');
   }
+
   paint(context);
+
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
 

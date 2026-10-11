@@ -16,13 +16,19 @@ const withScene = async (
   const { root, texture } = blurScene(filters);
 
   try {
-    if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();
     texture.destroy();
     backend.destroy();
-    for (const filter of filters) filter.destroy();
+
+    for (const filter of filters) {
+      filter.destroy();
+    }
   }
 };
 

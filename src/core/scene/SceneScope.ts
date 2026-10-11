@@ -355,11 +355,19 @@ export class SceneScope<Data = unknown> {
       return;
     }
 
-    if (__DEV__) Perf.mark(fixedUpdateStartMark);
-    const result = this.scene.fixedUpdate(step) as unknown;
-    if (__DEV__) Perf.measure(fixedUpdateMeasure, fixedUpdateStartMark);
+    if (__DEV__) {
+      Perf.mark(fixedUpdateStartMark);
+    }
 
-    if (result !== undefined) this._requireSynchronousFrameHook(result, 'fixedUpdate');
+    const result = this.scene.fixedUpdate(step) as unknown;
+
+    if (__DEV__) {
+      Perf.measure(fixedUpdateMeasure, fixedUpdateStartMark);
+    }
+
+    if (result !== undefined) {
+      this._requireSynchronousFrameHook(result, 'fixedUpdate');
+    }
 
     this._components?.fixedUpdate(step);
     this.systems._fixedUpdate(step);
@@ -380,11 +388,19 @@ export class SceneScope<Data = unknown> {
       return;
     }
 
-    if (__DEV__) Perf.mark(updateStartMark);
-    const result = this.scene.update(delta) as unknown;
-    if (__DEV__) Perf.measure(updateMeasure, updateStartMark);
+    if (__DEV__) {
+      Perf.mark(updateStartMark);
+    }
 
-    if (result !== undefined) this._requireSynchronousFrameHook(result, 'update');
+    const result = this.scene.update(delta) as unknown;
+
+    if (__DEV__) {
+      Perf.measure(updateMeasure, updateStartMark);
+    }
+
+    if (result !== undefined) {
+      this._requireSynchronousFrameHook(result, 'update');
+    }
 
     this._components?.update(delta);
     this.systems._update(delta);
@@ -406,11 +422,19 @@ export class SceneScope<Data = unknown> {
       return;
     }
 
-    if (__DEV__) Perf.mark(drawStartMark);
-    const result = this.scene.draw(context) as unknown;
-    if (__DEV__) Perf.measure(drawMeasure, drawStartMark);
+    if (__DEV__) {
+      Perf.mark(drawStartMark);
+    }
 
-    if (result !== undefined) this._requireSynchronousFrameHook(result, 'draw');
+    const result = this.scene.draw(context) as unknown;
+
+    if (__DEV__) {
+      Perf.measure(drawMeasure, drawStartMark);
+    }
+
+    if (result !== undefined) {
+      this._requireSynchronousFrameHook(result, 'draw');
+    }
 
     this.systems._draw(context);
     this.scene._peekUI()?._render(context);

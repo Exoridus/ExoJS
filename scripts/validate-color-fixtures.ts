@@ -34,7 +34,7 @@ if (tool === undefined) {
 }
 
 const version = execFileSync(tool, ['--version'], { encoding: 'utf8' }).trim();
-const results: { file: string; sha256: string; valid: boolean; exitCode: number | null; messages: unknown[] }[] = [];
+const results: Array<{ file: string; sha256: string; valid: boolean; exitCode: number | null; messages: unknown[] }> = [];
 
 for (const path of fixtureDirs.flatMap(directory =>
   readdirSync(directory)
@@ -52,7 +52,13 @@ for (const path of fixtureDirs.flatMap(directory =>
     }
   })();
 
-  results.push({ file, sha256: createHash('sha256').update(readFileSync(path)).digest('hex'), valid: run.status === 0, exitCode: run.status, messages });
+  results.push({
+    file,
+    sha256: createHash('sha256').update(readFileSync(path)).digest('hex'),
+    valid: run.status === 0,
+    exitCode: run.status,
+    messages,
+  });
 }
 
 const failed = results.filter(result => !result.valid);

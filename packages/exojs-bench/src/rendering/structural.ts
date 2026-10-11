@@ -39,6 +39,7 @@ export const attachWebGl2Probe = (gl: WebGL2RenderingContext): StructuralProbe =
 
     target[methodName] = function wrapped(this: unknown, ...args: unknown[]) {
       onCall();
+
       return (original as (...fnArgs: unknown[]) => unknown).apply(this, args);
     };
 
@@ -125,6 +126,7 @@ export const attachWebGpuProbe = (device: GPUDevice): StructuralProbe => {
 
     target[methodName] = function wrapped(this: unknown, ...args: unknown[]) {
       bump();
+
       return (original as (...fnArgs: unknown[]) => unknown).apply(this, args);
     };
 
@@ -172,7 +174,12 @@ export const attachWebGpuProbe = (device: GPUDevice): StructuralProbe => {
     wrapReturn(encoder, 'beginRenderPass', pass => instrumentPass(pass as Record<string, unknown>), false);
   };
 
-  wrapReturn(device as unknown as Record<string, unknown>, 'createCommandEncoder', encoder => instrumentEncoder(encoder as Record<string, unknown>), true);
+  wrapReturn(
+    device as unknown as Record<string, unknown>,
+    'createCommandEncoder',
+    encoder => instrumentEncoder(encoder as Record<string, unknown>),
+    true,
+  );
 
   const queue = (device as unknown as { queue: Record<string, unknown> }).queue;
 
