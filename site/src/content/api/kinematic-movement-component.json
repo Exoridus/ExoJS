@@ -1,0 +1,706 @@
+{
+  "title": "KinematicMovementComponent",
+  "description": "Moves a kinematic body in requested directions without passing through colliders: blocked motion stops at the obstacle and slides along it, and a corner between two walls stops it. Call move with the direction for the coming step. A command lasts until the world has advanced once - one `PhysicsWorld.fixedUpdate`, or one `PhysicsWorld.step` call that ran at least one fixed step - and the body stands still in any step no command was given for. Issue it every fixed step while the body should move, typically from a `BehaviorComponent.fixedUpdate`, which runs before a world registered as a scene system steps. Nothing has to be cleared when the controlling code stops: no command means no motion. The world resolves the command at the start of its step against the geometry as it then stands, sets the body's velocity to the motion it found and integrates it like any kinematic motion, so contacts, interpolation and the bound node see continuous movement rather than a teleport. The body stays the single transform authority. Motion is translation only; the body's angular velocity is left to the caller. Every non-sensor circle, capsule and polygon collider of the body is cast, under its own collision filter. Static, kinematic and dynamic colliders block alike - a dynamic body in the way stops the movement rather than being pushed - and sensors never block. Two movements moving towards each other in one step each cast against the other's position before the step. The component holds the body's movement while it is active: enabling a second movement for the same body throws. Disabling it zeroes the body's velocity. Positions and directions are in the world's simulation space.",
+  "symbol": "KinematicMovementComponent",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 21,
+  "counts": {
+    "constructors": 1,
+    "methods": 8,
+    "properties": 12,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Moves a kinematic body in requested directions without passing through colliders: blocked motion stops at the obstacle and slides along it, and a corner between two walls stops it.",
+        "Call move with the direction for the coming step. A command lasts until the world has advanced once - one `PhysicsWorld.fixedUpdate`, or one `PhysicsWorld.step` call that ran at least one fixed step - and the body stands still in any step no command was given for. Issue it every fixed step while the body should move, typically from a `BehaviorComponent.fixedUpdate`, which runs before a world registered as a scene system steps. Nothing has to be cleared when the controlling code stops: no command means no motion.",
+        "The world resolves the command at the start of its step against the geometry as it then stands, sets the body's velocity to the motion it found and integrates it like any kinematic motion, so contacts, interpolation and the bound node see continuous movement rather than a teleport. The body stays the single transform authority. Motion is translation only; the body's angular velocity is left to the caller.",
+        "Every non-sensor circle, capsule and polygon collider of the body is cast, under its own collision filter. Static, kinematic and dynamic colliders block alike - a dynamic body in the way stops the movement rather than being pushed - and sensors never block. Two movements moving towards each other in one step each cast against the other's position before the step.",
+        "The component holds the body's movement while it is active: enabling a second movement for the same body throws. Disabling it zeroes the body's velocity. Positions and directions are in the world's simulation space."
+      ],
+      "importLine": "import { KinematicMovementComponent } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(physics: PhysicsBodyComponent, options: KinematicMovementOptions): KinematicMovementComponent",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "physics",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBodyComponent",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KinematicMovementOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KinematicMovementComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "physics",
+              "type": "PhysicsBodyComponent",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "KinematicMovementOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "KinematicMovementComponent",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "End the component for good: disable it if active, detach it from its node if attached, then run onDestroy. Idempotent. Destroying a node destroys every component still attached to it. Every step runs even when a hook throws; the first error is rethrown afterwards."
+        },
+        {
+          "name": "move",
+          "signature": "move(direction: Readonly<PointLike>): void",
+          "signatureTokens": [
+            {
+              "text": "move",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "direction",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "direction",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Moves the body along direction during the world's next fixed step, at maxSpeed times the direction's length. A direction longer than 1 is shortened to 1, so analog input below full deflection moves slower and a raw difference vector moves at full speed. The last call before the step wins."
+        },
+        {
+          "name": "onAttach",
+          "signature": "onAttach(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onAttach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called after the component was attached to node. The node may not be in any scene yet."
+        },
+        {
+          "name": "onDestroy",
+          "signature": "onDestroy(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDestroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called once, at the end of destroy."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called after the component was removed from its node; node is no longer readable."
+        },
+        {
+          "name": "onDisable",
+          "signature": "onDisable(): void",
+          "signatureTokens": [
+            {
+              "text": "onDisable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called when the component stops being active."
+        },
+        {
+          "name": "onEnable",
+          "signature": "onEnable(): void",
+          "signatureTokens": [
+            {
+              "text": "onEnable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called when the component becomes active. Release in onDisable what this acquires."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(): void",
+          "signatureTokens": [
+            {
+              "text": "stop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Cancels a pending command and halts the body at once."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "[componentHost]",
+          "signature": "[componentHost]: SceneNode",
+          "signatureTokens": [
+            {
+              "text": "[componentHost]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-only carrier of the accepted host type, read by ComponentHostCheck. Never present at runtime."
+        },
+        {
+          "name": "physics",
+          "signature": "physics: PhysicsBodyComponent",
+          "signatureTokens": [
+            {
+              "text": "physics",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBodyComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The physics component whose body this component moves."
+        },
+        {
+          "name": "active",
+          "signature": "active: boolean",
+          "signatureTokens": [
+            {
+              "text": "active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is enabled in an active scene right now: between its onEnable and onDisable. Stays true while the scene is paused."
+        },
+        {
+          "name": "attached",
+          "signature": "attached: boolean",
+          "signatureTokens": [
+            {
+              "text": "attached",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is attached to a node."
+        },
+        {
+          "name": "blocked",
+          "signature": "blocked: boolean",
+          "signatureTokens": [
+            {
+              "text": "blocked",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when a collider shortened the motion of the last resolved step. Reset by the next step that resolves a command."
+        },
+        {
+          "name": "body",
+          "signature": "body: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "body",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The moved body."
+        },
+        {
+          "name": "contactNormal",
+          "signature": "contactNormal: Readonly<Vector>",
+          "signatureTokens": [
+            {
+              "text": "contactNormal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Surface normal of the last collider that shortened the motion, pointing away from it; zero when the last step was not blocked."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether destroy has run. A destroyed component cannot be attached again."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The component's own switch. true by default. Turning it off disables an active component (and stops a BehaviorComponent's frame hooks) without detaching it: it stays on its node and in Scene.query results. Turning it back on enables it again once its node is in an active scene - during a frame, from the next frame on."
+        },
+        {
+          "name": "maxSpeed",
+          "signature": "maxSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "maxSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Speed in world units per second for a direction of length 1."
+        },
+        {
+          "name": "node",
+          "signature": "node: N",
+          "signatureTokens": [
+            {
+              "text": "node",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "N",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node this component is attached to."
+        },
+        {
+          "name": "scene",
+          "signature": "scene: Scene<void, Application<object>> | null",
+          "signatureTokens": [
+            {
+              "text": "scene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene whose root or UI layer the component's node belongs to, or null while it belongs to none. A retained scene still counts."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/KinematicMovementComponent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/KinematicMovementComponent.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/KinematicMovementComponent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/KinematicMovementComponent.ts"
+}

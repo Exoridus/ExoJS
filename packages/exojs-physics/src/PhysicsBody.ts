@@ -84,6 +84,8 @@ export class PhysicsBody {
 
   /** @internal - set by `PhysicsBodyComponent`; such a body may not be constrained by a joint. */
   public _componentManaged = false;
+  /** @internal - the movement component currently driving this body, so a second one is refused. */
+  public _movement: object | null = null;
 
   /**
    * @internal - whether the body left a world through `remove` and has not

@@ -1,0 +1,229 @@
+{
+  "title": "ShapeCastHit",
+  "description": "The first obstacle a PhysicsWorld.shapeCast meets. Pass one as `out` to reuse it across casts.",
+  "symbol": "ShapeCastHit",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The first obstacle a PhysicsWorld.shapeCast meets. Pass one as `out` to reuse it across casts."
+      ],
+      "importLine": "import { ShapeCastHit } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "body",
+          "signature": "body: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "body",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "collider",
+          "signature": "collider: Collider",
+          "signatureTokens": [
+            {
+              "text": "collider",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The blocking collider; a chain is reported as the chain, never as one of its edges."
+        },
+        {
+          "name": "distance",
+          "signature": "distance: number",
+          "signatureTokens": [
+            {
+              "text": "distance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance travelled before contact: fraction times the displacement's length."
+        },
+        {
+          "name": "fraction",
+          "signature": "fraction: number",
+          "signatureTokens": [
+            {
+              "text": "fraction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fraction of the displacement travelled before contact, in [0, 1]."
+        },
+        {
+          "name": "initialOverlap",
+          "signature": "initialOverlap: boolean",
+          "signatureTokens": [
+            {
+              "text": "initialOverlap",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when the shape already overlapped the collider at its start position. fraction and distance are then 0, normal is the direction that separates the shape from the collider, and penetration says how deep the overlap is."
+        },
+        {
+          "name": "normal",
+          "signature": "normal: { x: number; y: number }",
+          "signatureTokens": [
+            {
+              "text": "normal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Unit surface normal at the contact, pointing from the obstacle back toward the cast shape."
+        },
+        {
+          "name": "penetration",
+          "signature": "penetration: number",
+          "signatureTokens": [
+            {
+              "text": "penetration",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Overlap depth at the start position; 0 unless initialOverlap."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/query/QueryEngine.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/query/QueryEngine.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/query/QueryEngine.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/query/QueryEngine.ts"
+}

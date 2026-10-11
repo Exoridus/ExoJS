@@ -6,10 +6,10 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 40,
+  "memberCount": 41,
   "counts": {
     "constructors": 1,
-    "methods": 19,
+    "methods": 20,
     "properties": 16,
     "events": 4
   },
@@ -1708,6 +1708,177 @@
           ],
           "returnType": "void",
           "description": "Remove a joint, waking both bodies so they respond to the lost constraint. Deferred when called inside a callback."
+        },
+        {
+          "name": "shapeCast",
+          "signature": "shapeCast(shape: AnyShape, position: Readonly<PointLike>, displacement: Readonly<PointLike>, options?: ShapeCastOptions, out?: ShapeCastHit): ShapeCastHit | null",
+          "signatureTokens": [
+            {
+              "text": "shapeCast",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "shape",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyShape",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "position",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "displacement",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapeCastOptions",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapeCastHit",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapeCastHit",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "shape",
+              "type": "AnyShape",
+              "optional": false
+            },
+            {
+              "name": "position",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            },
+            {
+              "name": "displacement",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ShapeCastOptions",
+              "optional": true
+            },
+            {
+              "name": "out",
+              "type": "ShapeCastHit",
+              "optional": true
+            }
+          ],
+          "returnType": "ShapeCastHit | null",
+          "description": "Translates shape from position by displacement and returns the first collider in its way, or null when the whole motion is free. The cast is exact and translation-only, the same sweep PhysicsBody.isBullet relies on, so thin geometry cannot be skipped however long the motion is. Static, kinematic and dynamic colliders block alike, at their current placement. Sensors block only with ShapeCastOptions.includeSensors. Chains stay one-sided: a shape crossing a chain from its back face passes. A collider the shape already overlaps at position is reported with ShapeCastHit.initialOverlap set and fraction 0 - but only when the displacement does not lead out of it, so a shape resting against a wall can still cast along it or away from it. With a zero displacement the cast reports the deepest such overlap, or null. Pass out to reuse a hit object; the cast then allocates nothing."
         },
         {
           "name": "step",

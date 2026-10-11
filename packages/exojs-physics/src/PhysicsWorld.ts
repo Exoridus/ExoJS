@@ -16,7 +16,7 @@ import type { CollisionEvent, SensorEvent } from './events';
 import { type Joint, softConstraint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
 import { PhysicsBody } from './PhysicsBody';
-import type { QueryFilter, RayHit } from './query/QueryEngine';
+import type { QueryFilter, RayHit, ShapeCastHit, ShapeCastOptions } from './query/QueryEngine';
 import { QueryEngine } from './query/QueryEngine';
 import type { AnyShape } from './shapes/AnyShape';
 import { sleepPenetrationTolerance, sleepPushOutProgressSpeed } from './solver/tolerances';
@@ -165,6 +165,15 @@ const isUnresolved = (record: ContactRecord, dt: number): boolean => {
 
   return false;
 };
+
+/**
+ * Something that resolves its body's motion at the start of every fixed step,
+ * against the geometry as the step finds it.
+ * @internal
+ */
+export interface StepController {
+  _beforeStep(fixedDelta: number): void;
+}
 
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
@@ -415,6 +424,7 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
+  private readonly _stepControllers: StepController[] = [];
   /** Colliders with a deferred removal queued but not yet applied; see {@link assertBodyKeepsItsMass}. */
   private readonly _pendingColliderRemovals = new Set<Collider>();
   /**
@@ -460,6 +470,12 @@ export class PhysicsWorld implements BodyOwner {
    */
   public _ccdBroadPhaseCandidates = 0;
 
+  /**
+   * @internal - counts the {@link step} and {@link fixedUpdate} calls that
+   * advanced the simulation. A movement command records it, which is how a
+   * command lasts exactly until the call that consumed it.
+   */
+  public _stepEpoch = 0;
   private _nextBodyId = 1;
   private _nextColliderId = 1;
   private _dispatching = false;
@@ -818,6 +834,8 @@ export class PhysicsWorld implements BodyOwner {
         this._stepOnce(h, subStepCount, gravityX, gravityY, contactHertz, dampingRatio, hasJoints, hasBullets);
         this._dispatchEvents();
       }
+
+      this._stepEpoch++;
     }
 
     // `step` is called once per rendered frame, so presenting here is already
@@ -858,6 +876,7 @@ export class PhysicsWorld implements BodyOwner {
     );
 
     this._dispatchEvents();
+    this._stepEpoch++;
 
     // Interpolated presentation is a per-FRAME job and moves to `update`; this
     // phase can run several times per frame, and the blend factor is only final
@@ -901,6 +920,17 @@ export class PhysicsWorld implements BodyOwner {
     hasJoints: boolean,
     hasBullets: boolean,
   ): void {
+    // Controllers cast against the geometry the previous step left behind and
+    // only set velocities, so one index sync serves all of them and the step
+    // below integrates exactly the motion they resolved.
+    if (this._stepControllers.length > 0) {
+      this._query._syncIndex();
+
+      for (const controller of this._stepControllers) {
+        controller._beforeStep(this.timeStepper.fixedDelta);
+      }
+    }
+
     // Detection runs once per fixed step (collider geometry is already current
     // from the previous frame's finalize / attach / setTransform). TGS-Soft
     // reuses the manifolds across the sub-steps below.
@@ -1073,6 +1103,71 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /**
+   * Translates `shape` from `position` by `displacement` and returns the first
+   * collider in its way, or `null` when the whole motion is free. The cast is
+   * exact and translation-only, the same sweep {@link PhysicsBody.isBullet}
+   * relies on, so thin geometry cannot be skipped however long the motion is.
+   *
+   * Static, kinematic and dynamic colliders block alike, at their current
+   * placement. Sensors block only with {@link ShapeCastOptions.includeSensors}.
+   * Chains stay one-sided: a shape crossing a chain from its back face passes.
+   *
+   * A collider the shape already overlaps at `position` is reported with
+   * {@link ShapeCastHit.initialOverlap} set and fraction `0` - but only when the
+   * displacement does not lead out of it, so a shape resting against a wall
+   * can still cast along it or away from it. With a zero displacement the cast
+   * reports the deepest such overlap, or `null`.
+   *
+   * Pass `out` to reuse a hit object; the cast then allocates nothing.
+   *
+   * @throws TypeError for a segment or chain, which enclose no area to cast.
+   * @throws RangeError for a non-finite position or displacement.
+   *
+   * @example
+   * ```ts
+   * const hit = world.shapeCast(new CircleShape(8), body.position, { x: 0, y: 120 }, { exclude: [body] });
+   *
+   * if (hit !== null && !hit.initialOverlap) {
+   *   console.log(`ground ${hit.distance}px below, normal`, hit.normal);
+   * }
+   * ```
+   */
+  public shapeCast(
+    shape: AnyShape,
+    position: Readonly<PointLike>,
+    displacement: Readonly<PointLike>,
+    options?: ShapeCastOptions,
+    out?: ShapeCastHit,
+  ): ShapeCastHit | null {
+    this._assertAlive();
+
+    return this._query.shapeCast(shape, position, displacement, options, out);
+  }
+
+  /** @internal - the query engine, for controllers that cast bodies through it. */
+  public get _queries(): QueryEngine {
+    return this._query;
+  }
+
+  /** @internal - run `controller` at the start of every fixed step until it is removed. */
+  public _addStepController(controller: StepController): void {
+    this._assertAlive();
+
+    if (!this._stepControllers.includes(controller)) {
+      this._stepControllers.push(controller);
+    }
+  }
+
+  /** @internal */
+  public _removeStepController(controller: StepController): void {
+    const index = this._stepControllers.indexOf(controller);
+
+    if (index !== -1) {
+      this._stepControllers.splice(index, 1);
+    }
+  }
+
+  /**
    * Release every body, collider, binding and backend resource. Changes queued
    * from an event callback are applied first; if one of them throws, the world
    * is still fully released and the first such error is rethrown afterwards.
@@ -1120,6 +1215,7 @@ export class PhysicsWorld implements BodyOwner {
     this._joints.length = 0;
     this._uncollidableJointPairs.clear();
     this._commands.length = 0;
+    this._stepControllers.length = 0;
     this._pendingBodyRemovals.clear();
     this._pendingJoints.clear();
     this._bindings.clear();
