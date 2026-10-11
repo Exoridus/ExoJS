@@ -31,9 +31,9 @@ export interface NavigationAgentOptions<Payload = unknown> {
   /** The space routes are searched in. Any {@link NavigationSpace} works. */
   readonly space: NavigationSpace<Payload>;
   /**
-   * Carries out the motion the component asks for. The agent must be the
-   * movement's only source of commands: a `KinematicMovementComponent` that a
-   * `CharacterMovementComponent` drives rejects the agent's commands with an
+   * Carries out the motion the component asks for. This component must be
+   * the movement's only source of commands: a `KinematicMovementComponent`
+   * that a `CharacterMovementComponent` drives rejects its commands with an
    * error for as long as the character is enabled.
    */
   readonly movement: NavigationMovement;

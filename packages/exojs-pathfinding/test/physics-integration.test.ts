@@ -173,8 +173,8 @@ describe('navigation over a tilemap with physics-backed movement', () => {
     const { node, physics, movement, agent, frame, runUntil } = await setup();
     const character = node.addComponent(new CharacterMovementComponent(movement, { up: { x: 0, y: -1 }, gravity: 0 }));
 
-    // One movement authority per body: the agent's command is rejected rather
-    // than merged with the character's.
+    // One movement authority per body: the navigation command is rejected
+    // rather than merged with the character's.
     agent.moveTo({ x: 8.5 * TILE, y: 2.5 * TILE });
     expect(() => frame()).toThrow(/CharacterMovementComponent drives this movement/);
 
