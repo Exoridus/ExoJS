@@ -46,9 +46,12 @@ const matchesPattern = (pattern: string, name: string): boolean => {
 
 const escapeRegExp = (text: string): string => text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
+/** `scripts/run-tests.ts` passes its arguments to `vitest run`, so it selects projects the same way. */
+const runsVitest = (command: string): boolean => command.startsWith('vitest ') || command.startsWith('tsx scripts/run-tests.ts ');
+
 const scriptsRunning = (project: string): string[] =>
   Object.entries(packageJson.scripts)
-    .filter(([, command]) => command.startsWith('vitest ') && projectPatterns(command).some(pattern => matchesPattern(pattern, project)))
+    .filter(([, command]) => runsVitest(command) && projectPatterns(command).some(pattern => matchesPattern(pattern, project)))
     .map(([name]) => name);
 
 /** Scripts reachable from a lane, following one level of `pnpm <script>` delegation (`test:coverage` -> `test`). */

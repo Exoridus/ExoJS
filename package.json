@@ -126,7 +126,7 @@
     "lint:shaders": "tsx scripts/check-shader-sources.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run --project=\"exojs*\" --project=rendering-perf",
+    "test": "tsx scripts/run-tests.ts --project=\"exojs*\" --project=rendering-perf",
     "test:core": "vitest run --project=exojs",
     "test:watch": "vitest --project=exojs",
     "test:coverage": "pnpm test --coverage",
