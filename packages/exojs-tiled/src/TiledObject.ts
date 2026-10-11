@@ -31,7 +31,14 @@ export class TiledObject {
   public readonly polygon?: readonly TiledPointData[] | undefined;
   public readonly polyline?: readonly TiledPointData[] | undefined;
   public readonly text?: TiledTextData | undefined;
+  /** Path of the object template this object was placed from, relative to the map. */
   public readonly template?: string | undefined;
+  /**
+   * `true` while this object was placed from a template that has not been
+   * merged in, which only happens for maps built from data without the
+   * Loader; such an object holds only the fields the instance overrides.
+   */
+  public readonly templatePending: boolean;
   public readonly properties: readonly TiledPropertyData[];
 
   public constructor(data: TiledObjectData) {
@@ -51,6 +58,7 @@ export class TiledObject {
     this.polyline = data.polyline;
     this.text = data.text;
     this.template = data.template;
+    this.templatePending = data.template !== undefined && data.instanceFields !== undefined;
     this.properties = data.properties ?? [];
   }
 

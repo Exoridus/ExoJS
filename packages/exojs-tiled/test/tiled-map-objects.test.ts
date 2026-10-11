@@ -38,8 +38,8 @@ const TEXTURE_SIZES: Record<string, { w: number; h: number }> = {
   'tiles-b.png': { w: 80, h: 20 },
 };
 
-const tiledMapFrom = async (document: unknown): Promise<TileMap> => {
-  const { loadSource } = makeTiledContext({ ...FIXTURES, 'inline.tmj': document }, TEXTURE_SIZES);
+const tiledMapFrom = async (document: unknown, extra: Record<string, unknown> = {}): Promise<TileMap> => {
+  const { loadSource } = makeTiledContext({ ...FIXTURES, ...extra, 'inline.tmj': document }, TEXTURE_SIZES);
 
   return (await loadSource('inline.tmj')).toTileMap();
 };
@@ -257,15 +257,16 @@ describe('Tiled objects as MapObjectDescriptors', () => {
         height: 16,
         rotation: 0,
         visible: true,
-        template: 'templates/chest.tx',
+        template: 'templates/chest.tj',
       }),
+      { 'templates/chest.tj': { type: 'template', object: { name: 'chest', type: 'Chest', width: 16, height: 16 } } },
     );
 
     const [descriptor] = [...mapObjectDescriptors(map)];
 
     // `template` has no place in the format-neutral model; the escape hatch is
     // what keeps it reachable.
-    expect((descriptor?.object.source as TiledObject).template).toBe('templates/chest.tx');
+    expect((descriptor?.object.source as TiledObject).template).toBe('templates/chest.tj');
   });
 
   it('dispatches several object kinds through one spawner', async () => {

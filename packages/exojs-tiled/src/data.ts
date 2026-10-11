@@ -236,9 +236,43 @@ export interface TiledObjectData {
   readonly polygon?: readonly TiledPointData[] | undefined;
   readonly polyline?: readonly TiledPointData[] | undefined;
   readonly text?: TiledTextData | undefined;
-  /** Path to a `.tx` object template this object was instantiated from. */
+  /**
+   * Path of the object template (`.tj`) this object was placed from, relative
+   * to the map. Loading the map through the Loader merges the template in.
+   */
   readonly template?: string | undefined;
+  /**
+   * For an object placed from a template whose template has not been merged
+   * in yet, the fields the map file sets on the instance itself. Absent once
+   * the template is resolved, and for objects without a template.
+   */
+  readonly instanceFields?: readonly TiledTemplateField[] | undefined;
   readonly properties?: readonly TiledPropertyData[] | undefined;
+}
+
+/** An object field a template supplies and an instance may override. */
+export type TiledTemplateField =
+  | 'name'
+  | 'type'
+  | 'class'
+  | 'width'
+  | 'height'
+  | 'rotation'
+  | 'visible'
+  | 'gid'
+  | 'point'
+  | 'ellipse'
+  | 'polygon'
+  | 'polyline'
+  | 'text'
+  | 'properties';
+
+/** A Tiled JSON object template (`.tj`). */
+export interface TiledTemplateData {
+  /** The external tileset the template object's `gid` refers to, with the first gid the template file assigns it. */
+  readonly tileset?: { readonly firstgid: number; readonly source: string } | undefined;
+  /** The template object. Its id and placement are unused; every instance has its own. */
+  readonly object: TiledObjectData;
 }
 
 // ── Layers ───────────────────────────────────────────────────────────────────

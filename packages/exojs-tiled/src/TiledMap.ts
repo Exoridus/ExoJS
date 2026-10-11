@@ -164,6 +164,18 @@ export class TiledMap {
       );
     }
 
+    walkLayers(this.layers, 'layers', (layer, layerPath) => {
+      const pending = layer instanceof TiledObjectLayer ? layer.objects.find(object => object.templatePending) : undefined;
+
+      if (pending !== undefined) {
+        throw new TiledFormatError(
+          this.source,
+          layerPath,
+          `object ${pending.id} is placed from template "${pending.template ?? ''}", which is merged in only when the map is loaded through the Loader`,
+        );
+      }
+    });
+
     const projection = new TileProjection({
       orientation: this.orientation,
       tileWidth: this.tileWidth,
