@@ -1,12 +1,13 @@
 ---
 import PlaygroundExamplePage from '../../../../components/pages/PlaygroundExamplePage.astro';
+import { EXAMPLE_ALIASES, EXAMPLE_TOOL_RELOCATIONS, resolveExampleToolRelocation } from '../../../../lib/example-aliases';
 import { getAllExamples } from '../../../../lib/examples-catalog';
 import { CURRENT_VERSION_ID } from '../../../../lib/versions';
-import { EXAMPLE_ALIASES, EXAMPLE_TOOL_RELOCATIONS, resolveExampleToolRelocation } from '../../../../lib/example-aliases';
 
-export async function getStaticPaths() {
-    return [...getAllExamples().map(entry => entry.path), ...Object.keys(EXAMPLE_ALIASES), ...Object.keys(EXAMPLE_TOOL_RELOCATIONS)].map(path => ({ params: { path: path.replace(/\.js$/, '') } }));
-}
+export const getStaticPaths = async () =>
+  [...getAllExamples().map(entry => entry.path), ...Object.keys(EXAMPLE_ALIASES), ...Object.keys(EXAMPLE_TOOL_RELOCATIONS)].map(path => ({
+    params: { path: path.replace(/\.js$/, '') },
+  }));
 
 const routePath = (Astro.params as Record<string, string | undefined>).path ?? '';
 const relocation = resolveExampleToolRelocation(CURRENT_VERSION_ID, `${routePath}.js`);
@@ -14,5 +15,15 @@ const toolHref = relocation === null ? null : `${import.meta.env.BASE_URL}de/${r
 ---
 
 {toolHref !== null ? (
-    <html lang="de"><head><meta http-equiv="refresh" content={`0;url=${toolHref}`} /><link rel="canonical" href={toolHref} /></head><body><a href={toolHref}>Asset Browser öffnen</a></body></html>
-) : <PlaygroundExamplePage locale="de" path={`${routePath}.js`} />}
+  <html lang="de">
+    <head>
+      <meta http-equiv="refresh" content={`0;url=${toolHref}`} />
+      <link rel="canonical" href={toolHref} />
+    </head>
+    <body>
+      <a href={toolHref}>Asset Browser öffnen</a>
+    </body>
+  </html>
+) : (
+  <PlaygroundExamplePage locale="de" path={`${routePath}.js`} />
+)}

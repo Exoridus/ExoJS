@@ -1,19 +1,20 @@
 ---
-import AppShell from '../../layouts/AppShell.astro';
-import { extractSnippetRegion } from '../../lib/source-snippets';
 import { Code } from 'astro:components';
-import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
+
 import ExampleThumb from '../../components/ExampleThumb.astro';
 import { GuideExamplePreview } from '../../components/GuideExamplePreview';
 import InstallCommand from '../../components/InstallCommand.astro';
+import AppShell from '../../layouts/AppShell.astro';
 import { appInfo } from '../../lib/app-info';
-import { getAllExamples, getExamplesForChapter } from '../../lib/examples-catalog';
 import { getExampleExecutionSource } from '../../lib/example-sources';
+import { getAllExamples, getExamplesForChapter } from '../../lib/examples-catalog';
 import { GUIDE_PARTS } from '../../lib/guide-structure';
 import { SHIKI_THEMES } from '../../lib/shiki-theme';
+import { extractSnippetRegion } from '../../lib/source-snippets';
+import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 
 interface Props {
-    locale: 'en' | 'de';
+  locale: 'en' | 'de';
 }
 
 const { locale } = Astro.props;
@@ -37,907 +38,952 @@ npm install
 npm run dev`;
 
 const examples = [
-    {
-        title: 'Bonfire',
-        description: 'Per-frame particle emitter with falloff and color ramp.',
-        chapter: 'Particles',
-        tags: ['particles', 'color'],
-        anim: 'particles' as const,
-        href: `${localeBase}playground/?example=particles/bonfire`,
-    },
-    {
-        title: 'Retro Display',
-        description: 'Tune scanlines, grain, and RGB separation in one display filter.',
-        chapter: 'Filters',
-        tags: ['filter', 'blend'],
-        anim: 'chroma' as const,
-        href: `${localeBase}playground/?example=filters/crt-scanlines`,
-    },
-    {
-        title: 'Beat and Tempo',
-        description: 'Pulse a sprite on detected beats and follow the BPM estimate.',
-        chapter: 'Audio',
-        tags: ['audio', 'beat'],
-        anim: 'fft' as const,
-        href: `${localeBase}playground/?example=beat-detection/beat-sync-pulse`,
-    },
-    {
-        title: 'Sprite Animation',
-        description: 'Switch named clips and pause an animated sprite.',
-        chapter: 'Animation',
-        tags: ['sprite', 'anim'],
-        anim: 'frames' as const,
-        href: `${localeBase}playground/?example=tweens-animation/frame-animation`,
-    },
-    {
-        title: 'Normal-Mapped Lighting',
-        description: 'Drag one light and vary the count over a normal-mapped floor.',
-        chapter: 'Lighting',
-        tags: ['lighting', 'normal-map'],
-        anim: 'lights' as const,
-        href: `${localeBase}playground/?example=lighting/many-lights`,
-    },
-    {
-        title: 'Camera Navigation and Coordinates',
-        description: 'Pan, zoom, and place world-space markers beneath a fixed HUD.',
-        chapter: 'Sprites & Cameras',
-        tags: ['scene', 'view'],
-        anim: 'camera' as const,
-        href: `${localeBase}playground/?example=application-scenes/world-vs-screen-coords`,
-    },
+  {
+    title: 'Bonfire',
+    description: 'Per-frame particle emitter with falloff and color ramp.',
+    chapter: 'Particles',
+    tags: ['particles', 'color'],
+    anim: 'particles' as const,
+    href: `${localeBase}playground/?example=particles/bonfire`,
+  },
+  {
+    title: 'Retro Display',
+    description: 'Tune scanlines, grain, and RGB separation in one display filter.',
+    chapter: 'Filters',
+    tags: ['filter', 'blend'],
+    anim: 'chroma' as const,
+    href: `${localeBase}playground/?example=filters/crt-scanlines`,
+  },
+  {
+    title: 'Beat and Tempo',
+    description: 'Pulse a sprite on detected beats and follow the BPM estimate.',
+    chapter: 'Audio',
+    tags: ['audio', 'beat'],
+    anim: 'fft' as const,
+    href: `${localeBase}playground/?example=beat-detection/beat-sync-pulse`,
+  },
+  {
+    title: 'Sprite Animation',
+    description: 'Switch named clips and pause an animated sprite.',
+    chapter: 'Animation',
+    tags: ['sprite', 'anim'],
+    anim: 'frames' as const,
+    href: `${localeBase}playground/?example=tweens-animation/frame-animation`,
+  },
+  {
+    title: 'Normal-Mapped Lighting',
+    description: 'Drag one light and vary the count over a normal-mapped floor.',
+    chapter: 'Lighting',
+    tags: ['lighting', 'normal-map'],
+    anim: 'lights' as const,
+    href: `${localeBase}playground/?example=lighting/many-lights`,
+  },
+  {
+    title: 'Camera Navigation and Coordinates',
+    description: 'Pan, zoom, and place world-space markers beneath a fixed HUD.',
+    chapter: 'Sprites & Cameras',
+    tags: ['scene', 'view'],
+    anim: 'camera' as const,
+    href: `${localeBase}playground/?example=application-scenes/world-vs-screen-coords`,
+  },
 ];
 ---
 
 <AppShell title="ExoJS" description="A TypeScript-first 2D runtime for games and interactive apps.">
-    {locale === 'de' && <EnglishFallbackNotice />}
-    <div
-        class="home"
-        data-pagefind-body={locale === 'en' ? true : undefined}
-        data-pagefind-meta={locale === 'en' ? 'title:ExoJS — TypeScript-first 2D runtime' : undefined}
-    >
-        <section class="hero">
-            <div class="hero-inner">
-                <div class="hero-copy">
-                    <h1><span class="nowrap">A TypeScript-first</span><br />2D runtime for<br /><span class="hero-token-wrap"><span class="hero-token" id="hero-token">arcade games</span></span></h1>
-                    <p class="lead">Build a game, visualization, or interactive canvas with scenes, rendering, input, audio, and explicit resource lifetimes. Keep the surrounding web application in the tools you already use.</p>
-                    <div class="hero-cta">
-                        <a class="btn btn-primary" href={`${localeBase}guide/`}>Read the Guide</a>
-                        <a class="btn btn-ghost" href={`${localeBase}playground/`}>Open Playground</a>
-                        <a class="btn btn-link" href={`${localeBase}api/`}>Browse API</a>
-                    </div>
-                    <div class="hero-install">
-                        <InstallCommand />
-                        <a class="hero-download" href={`${appInfo.repositoryUrl}/releases/latest/download/exojs-full.zip`} rel="noopener">
-                            <span class="hero-download-label">Or download the latest release</span>
-                            <span class="hero-download-note">Full ZIP, built runtime, examples, and documentation</span>
-                        </a>
-                    </div>
-                </div>
-                <div class="hero-snippet">
-                    <div class="head">
-                        <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
-                        <span class="file">basic-lightmap.ts</span>
-                        <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">lighting</span></span>
-                    </div>
-                    <Code code={heroSnippet} lang="ts" themes={SHIKI_THEMES} />
-                </div>
-            </div>
-        </section>
-
-        <section class="live-hero" aria-label="Live example">
-            <img
-                class="hero-companion"
-                src={`${import.meta.env.BASE_URL}brand/companion-hero.webp`}
-                alt=""
-                aria-hidden="true"
-                width="208"
-                height="208"
-                loading="lazy"
-                decoding="async"
-            />
-            <div class="live-hero-head">
-                <span class="live-tag"><span class="live-dot"></span>Live — rendering in your browser</span>
-                <h2>{heroExampleTitle}</h2>
-                <p>Not a video or a GIF — this is the engine running in the page. Hit play, then open it in the Playground and edit it live.</p>
-            </div>
-            <div class="live-hero-stage">
-                <GuideExamplePreview
-                    client:visible
-                    chapter="lighting"
-                    slug="many-lights"
-                    title={heroExampleTitle}
-                    sourceCode={heroExampleSource}
-                    capabilities={heroExample?.capabilities ?? []}
-                />
-            </div>
-            <div class="live-hero-actions">
-                <a class="btn btn-ghost" href={`${localeBase}playground/?example=lighting/many-lights`}>Open in Playground</a>
-                <a class="btn btn-link" href={`${localeBase}playground/`}>Browse all {demoCount} demos</a>
-            </div>
-        </section>
-
-        <div class="cap-strip">
-            <article class="cap">
-                <span class="cap-icon">SCN</span>
-                <h4>Scenes & lifecycle</h4>
-                <p>Compose scenes from sprites, graphics, and text. Lifecycle hooks make state predictable.</p>
-            </article>
-            <article class="cap">
-                <span class="cap-icon">INP</span>
-                <h4>Unified input</h4>
-                <p>Keyboard, pointer, and gamepad behind one action mapping API.</p>
-            </article>
-            <article class="cap">
-                <span class="cap-icon">AUD</span>
-                <h4>Spatial audio</h4>
-                <p>Buses, effects, and listener-source positioning built on Web Audio.</p>
-            </article>
-            <article class="cap">
-                <span class="cap-icon">FX</span>
-                <h4>Filters & particles</h4>
-                <p>Compose filters and optional particles; simulation uses a CPU or eligible WebGPU compute path.</p>
-            </article>
+  {locale === 'de' && <EnglishFallbackNotice />}
+  <div
+    class="home"
+    data-pagefind-body={locale === 'en' ? true : undefined}
+    data-pagefind-meta={locale === 'en' ? 'title:ExoJS — TypeScript-first 2D runtime' : undefined}
+  >
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <h1>
+            <span class="nowrap">A TypeScript-first</span>
+            <br />
+            2D runtime for
+            <br />
+            <span class="hero-token-wrap">
+              <span class="hero-token" id="hero-token">
+                arcade games
+              </span>
+            </span>
+          </h1>
+          <p class="lead">
+            Build a game, visualization, or interactive canvas with scenes, rendering, input, audio, and explicit resource lifetimes. Keep
+            the surrounding web application in the tools you already use.
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href={`${localeBase}guide/`}>
+              Read the Guide
+            </a>
+            <a class="btn btn-ghost" href={`${localeBase}playground/`}>
+              Open Playground
+            </a>
+            <a class="btn btn-link" href={`${localeBase}api/`}>
+              Browse API
+            </a>
+          </div>
+          <div class="hero-install">
+            <InstallCommand />
+            <a class="hero-download" href={`${appInfo.repositoryUrl}/releases/latest/download/exojs-full.zip`} rel="noopener">
+              <span class="hero-download-label">Or download the latest release</span>
+              <span class="hero-download-note">Full ZIP, built runtime, examples, and documentation</span>
+            </a>
+          </div>
         </div>
-
-        <div class="bench-teaser">
-            <p>Inspect named rendering and physics workloads, the machine and browser behind each result, and the measurement limits. The benchmark pages publish the evidence without an overall engine score.</p>
-            <a class="btn btn-ghost" href={`${localeBase}benchmarks/`}>See the benchmarks</a>
+        <div class="hero-snippet">
+          <div class="head">
+            <span class="dot3"></span>
+            <span class="dot3"></span>
+            <span class="dot3"></span>
+            <span class="file">basic-lightmap.ts</span>
+            <span class="caps">
+              <span class="cap cap-accent">scene</span>
+              <span class="cap">lighting</span>
+            </span>
+          </div>
+          <Code code={heroSnippet} lang="ts" themes={SHIKI_THEMES} />
         </div>
+      </div>
+    </section>
 
-        <section class="section">
-            <div class="section-head">
-                <div class="l">
-                    <h2>Live examples.</h2>
-                    <p>Open any of these in the Playground. The code and preview stay in sync with the running example.</p>
-                </div>
-                <div class="r">examples / {chapterCount} chapters / {demoCount} demos</div>
-            </div>
-            <div class="examples">
-                {examples.map((example, index) => (
-                    <a class="ex-card" href={example.href}>
-                        <ExampleThumb anim={example.anim} title={example.title} tone={index % 6} />
-                        <div class="ex-meta">
-                            <div class="row">
-                                {example.tags.map(tag => (
-                                    <span class="badge">{tag}</span>
-                                ))}
-                            </div>
-                            <h4>{example.title}</h4>
-                            <p>{example.description}</p>
-                            <div class="chapter">{example.chapter}</div>
-                        </div>
-                    </a>
-                ))}
-            </div>
-        </section>
+    <section class="live-hero" aria-label="Live example">
+      <img
+        class="hero-companion"
+        src={`${import.meta.env.BASE_URL}brand/companion-hero.webp`}
+        alt=""
+        aria-hidden="true"
+        width="208"
+        height="208"
+        loading="lazy"
+        decoding="async"
+      />
+      <div class="live-hero-head">
+        <span class="live-tag">
+          <span class="live-dot"></span>Live — rendering in your browser
+        </span>
+        <h2>{heroExampleTitle}</h2>
+        <p>Not a video or a GIF — this is the engine running in the page. Hit play, then open it in the Playground and edit it live.</p>
+      </div>
+      <div class="live-hero-stage">
+        <GuideExamplePreview
+          client:visible
+          chapter="lighting"
+          slug="many-lights"
+          title={heroExampleTitle}
+          sourceCode={heroExampleSource}
+          capabilities={heroExample?.capabilities ?? []}
+        />
+      </div>
+      <div class="live-hero-actions">
+        <a class="btn btn-ghost" href={`${localeBase}playground/?example=lighting/many-lights`}>
+          Open in Playground
+        </a>
+        <a class="btn btn-link" href={`${localeBase}playground/`}>
+          Browse all {demoCount} demos
+        </a>
+      </div>
+    </section>
 
-        <section class="quickstart">
-            <div class="quickstart-inner">
-                <div>
-                    <h3>Start small. Add the systems you need.</h3>
-                    <p>Create a Vite and TypeScript starter, or add the ESM package to an existing application. The Guide explains both paths.</p>
-                    <a class="btn btn-ghost" href={`${localeBase}guide/getting-started/setup/`}>Open Getting Started</a>
-                </div>
-                <div>
-                    <InstallCommand />
-                    <div class="snippet">
-                        <Code code={quickstartSnippet} lang="bash" themes={SHIKI_THEMES} />
-                    </div>
-                </div>
-            </div>
-        </section>
+    <div class="cap-strip">
+      <article class="cap">
+        <span class="cap-icon">SCN</span>
+        <h4>Scenes & lifecycle</h4>
+        <p>Compose scenes from sprites, graphics, and text. Lifecycle hooks make state predictable.</p>
+      </article>
+      <article class="cap">
+        <span class="cap-icon">INP</span>
+        <h4>Unified input</h4>
+        <p>Keyboard, pointer, and gamepad behind one action mapping API.</p>
+      </article>
+      <article class="cap">
+        <span class="cap-icon">AUD</span>
+        <h4>Spatial audio</h4>
+        <p>Buses, effects, and listener-source positioning built on Web Audio.</p>
+      </article>
+      <article class="cap">
+        <span class="cap-icon">FX</span>
+        <h4>Filters & particles</h4>
+        <p>Compose filters and optional particles; simulation uses a CPU or eligible WebGPU compute path.</p>
+      </article>
     </div>
+
+    <div class="bench-teaser">
+      <p>
+        Inspect named rendering and physics workloads, the machine and browser behind each result, and the measurement limits. The benchmark
+        pages publish the evidence without an overall engine score.
+      </p>
+      <a class="btn btn-ghost" href={`${localeBase}benchmarks/`}>
+        See the benchmarks
+      </a>
+    </div>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="l">
+          <h2>Live examples.</h2>
+          <p>Open any of these in the Playground. The code and preview stay in sync with the running example.</p>
+        </div>
+        <div class="r">
+          examples / {chapterCount} chapters / {demoCount} demos
+        </div>
+      </div>
+      <div class="examples">
+        {examples.map((example, index) => (
+          <a class="ex-card" href={example.href}>
+            <ExampleThumb anim={example.anim} title={example.title} tone={index % 6} />
+            <div class="ex-meta">
+              <div class="row">
+                {example.tags.map(tag => (
+                  <span class="badge">{tag}</span>
+                ))}
+              </div>
+              <h4>{example.title}</h4>
+              <p>{example.description}</p>
+              <div class="chapter">{example.chapter}</div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="quickstart">
+      <div class="quickstart-inner">
+        <div>
+          <h3>Start small. Add the systems you need.</h3>
+          <p>Create a Vite and TypeScript starter, or add the ESM package to an existing application. The Guide explains both paths.</p>
+          <a class="btn btn-ghost" href={`${localeBase}guide/getting-started/setup/`}>
+            Open Getting Started
+          </a>
+        </div>
+        <div>
+          <InstallCommand />
+          <div class="snippet">
+            <Code code={quickstartSnippet} lang="bash" themes={SHIKI_THEMES} />
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
 </AppShell>
 
 <style>
-    .home {
-        position: relative;
-        isolation: isolate;
+  .home {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .hero {
+    position: relative;
+    padding: var(--s-12) var(--s-7) var(--s-11);
+    overflow: hidden;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    background-position: -1px -1px;
+    mask-image: radial-gradient(120% 80% at 70% 0%, #000 35%, transparent 75%);
+    pointer-events: none;
+    z-index: -1;
+    animation: hero-grid-drift 26s linear infinite;
+  }
+
+  /* Slowly drift the grid by exactly one cell so the loop is seamless. */
+  @keyframes hero-grid-drift {
+    to {
+      background-position: 63px 63px;
+    }
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    right: -160px;
+    top: -120px;
+    width: 520px;
+    height: 520px;
+    background: radial-gradient(closest-side, var(--accent-soft), transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+    animation: hero-glow-breathe 9s ease-in-out infinite;
+  }
+
+  @keyframes hero-glow-breathe {
+    0%,
+    100% {
+      opacity: 0.8;
+      transform: scale(1);
     }
 
-    .hero {
-        position: relative;
-        padding: var(--s-12) var(--s-7) var(--s-11);
-        overflow: hidden;
-        border-bottom: 1px solid var(--line-soft);
+    50% {
+      opacity: 1;
+      transform: scale(1.09);
+    }
+  }
+
+  .hero-inner {
+    position: relative;
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: var(--s-10);
+    align-items: center;
+  }
+
+  .hero-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Companion mascot — a waving greeter presenting the live example, perched in
+     the top-right of the live-hero section. Decorative (aria-hidden). */
+  .hero-companion {
+    position: absolute;
+    top: -58px;
+    right: var(--s-4);
+    z-index: 3;
+    width: clamp(120px, 13vw, 172px);
+    height: auto;
+    pointer-events: none;
+    filter: drop-shadow(0 14px 26px rgb(0 0 0 / 0.4));
+    animation: companion-float 4.6s ease-in-out infinite;
+  }
+
+  @keyframes companion-float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-0.6deg);
     }
 
-    .hero::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background-image:
-            linear-gradient(var(--grid-line) 1px, transparent 1px),
-            linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-        background-size: 64px 64px;
-        background-position: -1px -1px;
-        mask-image: radial-gradient(120% 80% at 70% 0%, #000 35%, transparent 75%);
-        pointer-events: none;
-        z-index: -1;
-        animation: hero-grid-drift 26s linear infinite;
+    50% {
+      transform: translateY(-10px) rotate(0.6deg);
     }
+  }
 
-    /* Slowly drift the grid by exactly one cell so the loop is seamless. */
-    @keyframes hero-grid-drift {
-        to {
-            background-position: 63px 63px;
-        }
-    }
-
-    .hero::after {
-        content: '';
-        position: absolute;
-        right: -160px;
-        top: -120px;
-        width: 520px;
-        height: 520px;
-        background: radial-gradient(closest-side, var(--accent-soft), transparent 70%);
-        pointer-events: none;
-        z-index: -1;
-        animation: hero-glow-breathe 9s ease-in-out infinite;
-    }
-
-    @keyframes hero-glow-breathe {
-        0%,
-        100% {
-            opacity: 0.8;
-            transform: scale(1);
-        }
-        50% {
-            opacity: 1;
-            transform: scale(1.09);
-        }
-    }
-
-    .hero-inner {
-        position: relative;
-        max-width: 1180px;
-        margin: 0 auto;
-        display: grid;
-        grid-template-columns: 1fr 1.1fr;
-        gap: var(--s-10);
-        align-items: center;
-    }
-
-    .hero-copy {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    /* Companion mascot — a waving greeter presenting the live example, perched in
-       the top-right of the live-hero section. Decorative (aria-hidden). */
-    .hero-companion {
-        position: absolute;
-        top: -58px;
-        right: var(--s-4);
-        z-index: 3;
-        width: clamp(120px, 13vw, 172px);
-        height: auto;
-        pointer-events: none;
-        filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.4));
-        animation: companion-float 4.6s ease-in-out infinite;
-    }
-
-    @keyframes companion-float {
-        0%,
-        100% {
-            transform: translateY(0) rotate(-0.6deg);
-        }
-        50% {
-            transform: translateY(-10px) rotate(0.6deg);
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .hero-companion,
-        .hero::before,
-        .hero::after,
-        .cap-icon {
-            animation: none;
-        }
-    }
-
-    .hero h1 {
-        font-size: clamp(40px, 5.4vw, 68px);
-        font-weight: 600;
-        line-height: 1.02;
-        letter-spacing: -0.025em;
-        margin: 0 0 var(--s-5);
-        color: var(--fg);
-    }
-
-    .nowrap {
-        white-space: nowrap;
-    }
-
-    .hero-token-wrap {
-        display: block;
-    }
-
-    .hero-token {
-        display: inline-block;
-        color: var(--accent);
-        font-weight: 500;
-        white-space: nowrap;
-        will-change: transform, opacity;
-    }
-
-    @keyframes token-exit {
-        to {
-            opacity: 0;
-            transform: translateY(-0.28em);
-        }
-    }
-
-    @keyframes token-enter {
-        from {
-            opacity: 0;
-            transform: translateY(0.32em);
-        }
-    }
-
-    .hero-token.is-exiting {
-        animation: token-exit 240ms cubic-bezier(0.7, 0, 0.84, 0) forwards;
-    }
-
-    .hero-token.is-entering {
-        animation: token-enter 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    .hero p.lead {
-        font-size: 18px;
-        color: var(--fg-muted);
-        max-width: 540px;
-        margin: 0 0 var(--s-7);
-        line-height: 1.55;
-        text-wrap: pretty;
-    }
-
-    .hero-cta {
-        display: flex;
-        gap: var(--s-3);
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .hero-install {
-        margin-top: var(--s-5);
-        max-width: 420px;
-        display: grid;
-        gap: var(--s-3);
-        justify-items: start;
-    }
-
-    /*
-     * The archive itself, through GitHub's `/releases/latest/download/<asset>`
-     * redirect, so the button downloads instead of landing on release notes.
-     * It resolves against whatever release is newest, which is why the release
-     * workflow uploads a second copy of the Full ZIP under a version-less name:
-     * a URL carrying the version would have to be rebuilt for every release,
-     * and the version in `package.json` is the one being developed and is ahead
-     * of the last release for most of a cycle.
-     */
-    .hero-download {
-        display: grid;
-        gap: 2px;
-        text-decoration: none;
-        color: var(--fg-muted);
-        font-size: 13px;
-    }
-
-    .hero-download-label {
-        color: var(--accent);
-        font-weight: 500;
-    }
-
-    .hero-download:hover .hero-download-label {
-        text-decoration: underline;
-    }
-
-    .hero-download-note {
-        color: var(--fg-faint);
-    }
-
-    .home .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--s-2);
-        padding: 9px 14px;
-        border-radius: var(--r-3);
-        font-size: 14px;
-        font-weight: 500;
-        transition:
-            background var(--transition-fast),
-            border-color var(--transition-fast),
-            color var(--transition-fast),
-            transform var(--transition-fast);
-        border: 1px solid transparent;
-        white-space: nowrap;
-        text-decoration: none;
-    }
-
-    .home .btn:active {
-        transform: translateY(1px);
-    }
-
-    .home .btn-primary {
-        background: var(--accent);
-        color: var(--accent-fg);
-    }
-
-    .home .btn-primary:hover {
-        background: color-mix(in oklab, var(--accent), white 8%);
-    }
-
-    .home .btn-ghost {
-        background: transparent;
-        border-color: var(--line);
-        color: var(--fg);
-    }
-
-    .home .btn-ghost:hover {
-        background: var(--bg-elevated);
-        border-color: var(--fg-faint);
-    }
-
-    .home .btn-link {
-        padding: 0;
-        color: var(--accent);
-        border-bottom: 1px solid var(--accent-line);
-        border-radius: 0;
-    }
-
-    .hero-snippet {
-        background: var(--bg-code);
-        border: 1px solid var(--line);
-        border-radius: var(--r-4);
-        box-shadow: var(--shadow-2);
-        overflow: hidden;
-        position: relative;
-    }
-
-    .hero-snippet .head {
-        display: flex;
-        align-items: center;
-        gap: var(--s-2);
-        padding: 10px 14px;
-        border-bottom: 1px solid oklch(30% 0.014 245);
-        background: oklch(18% 0.012 245);
-        color: oklch(70% 0.012 245);
-        font-family: var(--f-mono);
-        font-size: 12px;
-    }
-
-    .hero-snippet .dot3 {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: oklch(35% 0.014 245);
-    }
-
-    .hero-snippet .file {
-        margin-left: var(--s-2);
-    }
-
-    .hero-snippet .caps {
-        margin-left: auto;
-        display: flex;
-        gap: 6px;
-    }
-
-    .hero-snippet .cap {
-        display: inline-flex;
-        align-items: center;
-        border-radius: var(--r-pill);
-        border: 1px solid var(--line-soft);
-        padding: 2px 8px;
-        font-size: 11px;
-        color: oklch(78% 0.012 245);
-        background: oklch(20% 0.012 245);
-    }
-
-    .hero-snippet .cap-accent {
-        color: oklch(82% 0.13 142);
-        border-color: oklch(58% 0.16 142 / 0.42);
-        background: oklch(22% 0.014 142 / 0.32);
-    }
-
-    .hero-snippet :global(pre.astro-code) {
-        margin: 0;
-        padding: var(--s-5) !important;
-        border: 0 !important;
-        border-radius: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        font-size: 12.5px;
-        line-height: 1.6;
-        overflow-x: hidden !important;
-        mask-image: linear-gradient(90deg, #000 92%, transparent);
-    }
-
-    .live-hero {
-        position: relative;
-        max-width: 1180px;
-        margin: var(--s-10) auto 0;
-        padding: 0 var(--s-7);
-    }
-
-    .live-hero-head {
-        margin-bottom: var(--s-5);
-    }
-
-    .live-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        margin-bottom: var(--s-3);
-        font-family: var(--f-mono);
-        font-size: 12px;
-        color: var(--accent);
-    }
-
-    .live-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-soft);
-    }
-
-    .live-hero-head h2 {
-        margin: 0 0 6px;
-        font-size: 28px;
-        font-weight: 600;
-        letter-spacing: -0.015em;
-    }
-
-    .live-hero-head p {
-        margin: 0;
-        color: var(--fg-muted);
-        max-width: 640px;
-        line-height: 1.55;
-    }
-
-    .live-hero-stage {
-        border: 1px solid var(--line);
-        border-radius: var(--r-4);
-        overflow: hidden;
-        box-shadow: var(--shadow-2);
-        background: var(--bg-code);
-    }
-
-    .live-hero-actions {
-        display: flex;
-        gap: var(--s-3);
-        align-items: center;
-        margin-top: var(--s-4);
-    }
-
-    .cap-strip {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: var(--s-4);
-        max-width: 1180px;
-        margin: var(--s-10) auto 0;
-        padding: 0 var(--s-7);
-    }
-
-    .bench-teaser {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--s-4);
-        max-width: 1180px;
-        margin: var(--s-6) auto 0;
-        padding: var(--s-5) var(--s-7);
-    }
-
-    .bench-teaser p {
-        margin: 0;
-        flex: 1 1 32ch;
-        max-width: 74ch;
-        color: var(--fg-muted);
-        line-height: 1.6;
-    }
-
-    .cap {
-        padding: var(--s-5);
-        border-radius: var(--r-3);
-        background: var(--bg-elevated);
-        border: 1px solid var(--line-soft);
-        display: flex;
-        flex-direction: column;
-        gap: var(--s-2);
-    }
-
+  @media (prefers-reduced-motion: reduce) {
+    .hero-companion,
+    .hero::before,
+    .hero::after,
     .cap-icon {
-        width: 32px;
-        height: 32px;
-        display: grid;
-        place-items: center;
-        border-radius: var(--r-2);
-        background: var(--accent-soft);
-        color: var(--accent);
-        margin-bottom: var(--s-2);
-        font-size: 13px;
-        font-family: var(--f-mono);
-        font-weight: 700;
-        animation: cap-pulse 4.8s ease-in-out infinite;
+      animation: none;
+    }
+  }
+
+  .hero h1 {
+    font-size: clamp(40px, 5.4vw, 68px);
+    font-weight: 600;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    margin: 0 0 var(--s-5);
+    color: var(--fg);
+  }
+
+  .nowrap {
+    white-space: nowrap;
+  }
+
+  .hero-token-wrap {
+    display: block;
+  }
+
+  .hero-token {
+    display: inline-block;
+    color: var(--accent);
+    font-weight: 500;
+    white-space: nowrap;
+    will-change: transform, opacity;
+  }
+
+  @keyframes token-exit {
+    to {
+      opacity: 0;
+      transform: translateY(-0.28em);
+    }
+  }
+
+  @keyframes token-enter {
+    from {
+      opacity: 0;
+      transform: translateY(0.32em);
+    }
+  }
+
+  .hero-token.is-exiting {
+    animation: token-exit 240ms cubic-bezier(0.7, 0, 0.84, 0) forwards;
+  }
+
+  .hero-token.is-entering {
+    animation: token-enter 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .hero p.lead {
+    font-size: 18px;
+    color: var(--fg-muted);
+    max-width: 540px;
+    margin: 0 0 var(--s-7);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .hero-cta {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .hero-install {
+    margin-top: var(--s-5);
+    max-width: 420px;
+    display: grid;
+    gap: var(--s-3);
+    justify-items: start;
+  }
+
+  /*
+   * The archive itself, through GitHub's `/releases/latest/download/<asset>`
+   * redirect, so the button downloads instead of landing on release notes.
+   * It resolves against whatever release is newest, which is why the release
+   * workflow uploads a second copy of the Full ZIP under a version-less name:
+   * a URL carrying the version would have to be rebuilt for every release,
+   * and the version in `package.json` is the one being developed and is ahead
+   * of the last release for most of a cycle.
+   */
+  .hero-download {
+    display: grid;
+    gap: 2px;
+    text-decoration: none;
+    color: var(--fg-muted);
+    font-size: 13px;
+  }
+
+  .hero-download-label {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .hero-download:hover .hero-download-label {
+    text-decoration: underline;
+  }
+
+  .hero-download-note {
+    color: var(--fg-faint);
+  }
+
+  .home .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: 9px 14px;
+    border-radius: var(--r-3);
+    font-size: 14px;
+    font-weight: 500;
+    transition:
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      color var(--transition-fast),
+      transform var(--transition-fast);
+    border: 1px solid transparent;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .home .btn:active {
+    transform: translateY(1px);
+  }
+
+  .home .btn-primary {
+    background: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  .home .btn-primary:hover {
+    background: color-mix(in oklab, var(--accent), white 8%);
+  }
+
+  .home .btn-ghost {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--fg);
+  }
+
+  .home .btn-ghost:hover {
+    background: var(--bg-elevated);
+    border-color: var(--fg-faint);
+  }
+
+  .home .btn-link {
+    padding: 0;
+    color: var(--accent);
+    border-bottom: 1px solid var(--accent-line);
+    border-radius: 0;
+  }
+
+  .hero-snippet {
+    background: var(--bg-code);
+    border: 1px solid var(--line);
+    border-radius: var(--r-4);
+    box-shadow: var(--shadow-2);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .hero-snippet .head {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: 10px 14px;
+    border-bottom: 1px solid oklch(30% 0.014 245);
+    background: oklch(18% 0.012 245);
+    color: oklch(70% 0.012 245);
+    font-family: var(--f-mono);
+    font-size: 12px;
+  }
+
+  .hero-snippet .dot3 {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: oklch(35% 0.014 245);
+  }
+
+  .hero-snippet .file {
+    margin-left: var(--s-2);
+  }
+
+  .hero-snippet .caps {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+  }
+
+  .hero-snippet .cap {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line-soft);
+    padding: 2px 8px;
+    font-size: 11px;
+    color: oklch(78% 0.012 245);
+    background: oklch(20% 0.012 245);
+  }
+
+  .hero-snippet .cap-accent {
+    color: oklch(82% 0.13 142);
+    border-color: oklch(58% 0.16 142 / 0.42);
+    background: oklch(22% 0.014 142 / 0.32);
+  }
+
+  .hero-snippet :global(pre.astro-code) {
+    margin: 0;
+    /* stylelint-disable declaration-no-important -- Shiki writes inline styles on the generated <pre>, which only !important can outrank */
+    padding: var(--s-5) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 12.5px;
+    line-height: 1.6;
+    overflow-x: hidden !important;
+    /* stylelint-enable declaration-no-important */
+    mask-image: linear-gradient(90deg, #000 92%, transparent);
+  }
+
+  .live-hero {
+    position: relative;
+    max-width: 1180px;
+    margin: var(--s-10) auto 0;
+    padding: 0 var(--s-7);
+  }
+
+  .live-hero-head {
+    margin-bottom: var(--s-5);
+  }
+
+  .live-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: var(--s-3);
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .live-hero-head h2 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  .live-hero-head p {
+    margin: 0;
+    color: var(--fg-muted);
+    max-width: 640px;
+    line-height: 1.55;
+  }
+
+  .live-hero-stage {
+    border: 1px solid var(--line);
+    border-radius: var(--r-4);
+    overflow: hidden;
+    box-shadow: var(--shadow-2);
+    background: var(--bg-code);
+  }
+
+  .live-hero-actions {
+    display: flex;
+    gap: var(--s-3);
+    align-items: center;
+    margin-top: var(--s-4);
+  }
+
+  .cap-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--s-4);
+    max-width: 1180px;
+    margin: var(--s-10) auto 0;
+    padding: 0 var(--s-7);
+  }
+
+  .bench-teaser {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-4);
+    max-width: 1180px;
+    margin: var(--s-6) auto 0;
+    padding: var(--s-5) var(--s-7);
+  }
+
+  .bench-teaser p {
+    margin: 0;
+    flex: 1 1 32ch;
+    max-width: 74ch;
+    color: var(--fg-muted);
+    line-height: 1.6;
+  }
+
+  .cap {
+    padding: var(--s-5);
+    border-radius: var(--r-3);
+    background: var(--bg-elevated);
+    border: 1px solid var(--line-soft);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+
+  .cap-icon {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-2);
+    background: var(--accent-soft);
+    color: var(--accent);
+    margin-bottom: var(--s-2);
+    font-size: 13px;
+    font-family: var(--f-mono);
+    font-weight: 700;
+    animation: cap-pulse 4.8s ease-in-out infinite;
+  }
+
+  /* Staggered glow travelling across the four feature icons. */
+  .cap:nth-child(2) .cap-icon {
+    animation-delay: 1.2s;
+  }
+
+  .cap:nth-child(3) .cap-icon {
+    animation-delay: 2.4s;
+  }
+
+  .cap:nth-child(4) .cap-icon {
+    animation-delay: 3.6s;
+  }
+
+  @keyframes cap-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 transparent;
     }
 
-    /* Staggered glow travelling across the four feature icons. */
-    .cap:nth-child(2) .cap-icon {
-        animation-delay: 1.2s;
+    50% {
+      box-shadow: 0 0 16px 1px var(--accent-soft);
     }
-    .cap:nth-child(3) .cap-icon {
-        animation-delay: 2.4s;
-    }
-    .cap:nth-child(4) .cap-icon {
-        animation-delay: 3.6s;
-    }
+  }
 
-    @keyframes cap-pulse {
-        0%,
-        100% {
-            box-shadow: 0 0 0 0 transparent;
-        }
-        50% {
-            box-shadow: 0 0 16px 1px var(--accent-soft);
-        }
-    }
+  .cap h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
 
-    .cap h4 {
-        margin: 0;
-        font-size: 14px;
-        font-weight: 600;
-    }
+  .cap p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--fg-muted);
+    line-height: 1.5;
+  }
 
-    .cap p {
-        margin: 0;
-        font-size: 13px;
-        color: var(--fg-muted);
-        line-height: 1.5;
-    }
+  .section {
+    padding: var(--s-11) var(--s-7);
+    max-width: 1180px;
+    margin: 0 auto;
+  }
 
-    .section {
-        padding: var(--s-11) var(--s-7);
-        max-width: 1180px;
-        margin: 0 auto;
-    }
+  .section-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    margin-bottom: var(--s-7);
+    gap: var(--s-5);
+  }
 
-    .section-head {
-        display: flex;
-        align-items: end;
-        justify-content: space-between;
-        margin-bottom: var(--s-7);
-        gap: var(--s-5);
-    }
+  .section-head .l h2 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
 
-    .section-head .l h2 {
-        margin: 0 0 6px;
-        font-size: 28px;
-        font-weight: 600;
-        letter-spacing: -0.015em;
-    }
+  .section-head .l p {
+    margin: 0;
+    color: var(--fg-muted);
+  }
 
-    .section-head .l p {
-        margin: 0;
-        color: var(--fg-muted);
-    }
+  .section-head .r {
+    color: var(--fg-faint);
+    font-family: var(--f-mono);
+    font-size: 12px;
+    white-space: nowrap;
+  }
 
-    .section-head .r {
-        color: var(--fg-faint);
-        font-family: var(--f-mono);
-        font-size: 12px;
-        white-space: nowrap;
+  .examples {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-4);
+  }
+
+  .ex-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-4);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition:
+      border-color var(--transition-fast),
+      transform var(--transition-fast);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .ex-card:hover {
+    border-color: var(--line);
+    transform: translateY(-2px);
+  }
+
+  .ex-meta {
+    padding: var(--s-4) var(--s-5);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ex-meta .row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .ex-meta h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .ex-meta p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--fg-muted);
+    max-width: none;
+  }
+
+  .ex-meta .chapter {
+    color: var(--fg-faint);
+    font-family: var(--f-mono);
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: var(--r-pill);
+    font-size: 11px;
+    font-family: var(--f-mono);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: var(--bg-elevated);
+    color: var(--fg-muted);
+    border: 1px solid var(--line-soft);
+    white-space: nowrap;
+  }
+
+  .quickstart {
+    border-top: 1px solid var(--line-soft);
+    background: var(--bg-elevated);
+  }
+
+  .quickstart-inner {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: var(--s-10);
+    padding: var(--s-11) var(--s-7);
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .quickstart h3 {
+    margin: 0 0 var(--s-3);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .quickstart p {
+    margin: 0 0 var(--s-5);
+    color: var(--fg-muted);
+    max-width: 460px;
+  }
+
+  .snippet {
+    margin-top: 12px;
+  }
+
+  .snippet :global(pre.astro-code) {
+    margin: 0;
+  }
+
+  @media (width <= 1000px) {
+    .hero-inner {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (width <= 900px) {
+    .cap-strip {
+      grid-template-columns: repeat(2, 1fr);
     }
 
     .examples {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--s-4);
-    }
-
-    .ex-card {
-        background: var(--bg-elevated);
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        transition:
-            border-color var(--transition-fast),
-            transform var(--transition-fast);
-        color: inherit;
-        text-decoration: none;
-    }
-
-    .ex-card:hover {
-        border-color: var(--line);
-        transform: translateY(-2px);
-    }
-
-    .ex-meta {
-        padding: var(--s-4) var(--s-5);
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .ex-meta .row {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
-
-    .ex-meta h4 {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 600;
-    }
-
-    .ex-meta p {
-        margin: 0;
-        font-size: 13px;
-        color: var(--fg-muted);
-        max-width: none;
-    }
-
-    .ex-meta .chapter {
-        color: var(--fg-faint);
-        font-family: var(--f-mono);
-        font-size: 11px;
-        margin-top: 4px;
-    }
-
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 3px 8px;
-        border-radius: var(--r-pill);
-        font-size: 11px;
-        font-family: var(--f-mono);
-        font-weight: 500;
-        letter-spacing: 0.02em;
-        background: var(--bg-elevated);
-        color: var(--fg-muted);
-        border: 1px solid var(--line-soft);
-        white-space: nowrap;
-    }
-
-    .quickstart {
-        border-top: 1px solid var(--line-soft);
-        background: var(--bg-elevated);
+      grid-template-columns: 1fr;
     }
 
     .quickstart-inner {
-        display: grid;
-        grid-template-columns: 1fr 1.2fr;
-        gap: var(--s-10);
-        padding: var(--s-11) var(--s-7);
-        max-width: 1180px;
-        margin: 0 auto;
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (width <= 760px) {
+    .hero {
+      padding: var(--s-8) var(--s-4) var(--s-7);
     }
 
-    .quickstart h3 {
-        margin: 0 0 var(--s-3);
-        font-size: 24px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
+    /* Shrink the live-hero greeter so it never crowds the heading on phones. */
+    .hero-companion {
+      width: 92px;
+      top: -32px;
+      right: var(--s-3);
     }
 
-    .quickstart p {
-        margin: 0 0 var(--s-5);
-        color: var(--fg-muted);
-        max-width: 460px;
+    .hero-inner {
+      gap: var(--s-6);
     }
 
-    .snippet {
-        margin-top: 12px;
+    .hero h1 {
+      font-size: clamp(2rem, 11vw, 2.8rem);
+      margin-bottom: var(--s-4);
     }
 
-    .snippet :global(pre.astro-code) {
-        margin: 0;
+    .hero p.lead {
+      font-size: 0.96rem;
+      margin-bottom: var(--s-5);
     }
 
-    @media (max-width: 1000px) {
-        .hero-inner {
-            grid-template-columns: 1fr;
-        }
+    .hero-snippet .head {
+      padding: 8px 11px;
     }
 
-    @media (max-width: 900px) {
-        .cap-strip {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .examples {
-            grid-template-columns: 1fr;
-        }
-
-        .quickstart-inner {
-            grid-template-columns: 1fr;
-        }
+    .hero-snippet .caps {
+      display: none;
     }
 
-    @media (max-width: 760px) {
-        .hero {
-            padding: var(--s-8) var(--s-4) var(--s-7);
-        }
-
-        /* Shrink the live-hero greeter so it never crowds the heading on phones. */
-        .hero-companion {
-            width: 92px;
-            top: -32px;
-            right: var(--s-3);
-        }
-
-        .hero-inner {
-            gap: var(--s-6);
-        }
-
-        .hero h1 {
-            font-size: clamp(2rem, 11vw, 2.8rem);
-            margin-bottom: var(--s-4);
-        }
-
-        .hero p.lead {
-            font-size: 0.96rem;
-            margin-bottom: var(--s-5);
-        }
-
-        .hero-snippet .head {
-            padding: 8px 11px;
-        }
-
-        .hero-snippet .caps {
-            display: none;
-        }
-
-        .hero-snippet :global(pre.astro-code) {
-            padding: var(--s-3) var(--s-4) !important;
-            max-height: 15.5rem;
-            overflow: auto;
-            font-size: 12px;
-            line-height: 1.6;
-        }
-
-        .cap-strip {
-            margin-top: var(--s-7);
-            padding: 0 var(--s-4);
-            grid-template-columns: 1fr;
-        }
-
-        .section {
-            padding: var(--s-8) var(--s-4);
-        }
-
-        .quickstart-inner {
-            padding: var(--s-8) var(--s-4);
-        }
+    .hero-snippet :global(pre.astro-code) {
+      /* stylelint-disable-next-line declaration-no-important -- must keep outranking Shiki's inline padding at this breakpoint */
+      padding: var(--s-3) var(--s-4) !important;
+      max-height: 15.5rem;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.6;
     }
+
+    .cap-strip {
+      margin-top: var(--s-7);
+      padding: 0 var(--s-4);
+      grid-template-columns: 1fr;
+    }
+
+    .section {
+      padding: var(--s-8) var(--s-4);
+    }
+
+    .quickstart-inner {
+      padding: var(--s-8) var(--s-4);
+    }
+  }
 </style>
 
 <script>
-    const TOKENS = ['arcade games', 'interactive apps', 'audio visualizers', 'particle effects', 'motion graphics', 'creative tools'];
-    const INTERVAL = 3200;
-    const DURATION = 240;
+  const TOKENS = ['arcade games', 'interactive apps', 'audio visualizers', 'particle effects', 'motion graphics', 'creative tools'];
+  const INTERVAL = 3200;
+  const DURATION = 240;
 
-    const el = document.getElementById('hero-token');
-    if (el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        let idx = 0;
-        setInterval(() => {
-            el.classList.add('is-exiting');
-            setTimeout(() => {
-                idx = (idx + 1) % TOKENS.length;
-                el.textContent = TOKENS[idx] ?? '';
-                el.classList.remove('is-exiting');
-                el.classList.add('is-entering');
-                el.addEventListener('animationend', () => el.classList.remove('is-entering'), { once: true });
-            }, DURATION);
-        }, INTERVAL);
-    }
+  const el = document.getElementById('hero-token');
+  if (el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let idx = 0;
+    setInterval(() => {
+      el.classList.add('is-exiting');
+      setTimeout(() => {
+        idx = (idx + 1) % TOKENS.length;
+        el.textContent = TOKENS[idx] ?? '';
+        el.classList.remove('is-exiting');
+        el.classList.add('is-entering');
+        el.addEventListener('animationend', () => el.classList.remove('is-entering'), { once: true });
+      }, DURATION);
+    }, INTERVAL);
+  }
 </script>

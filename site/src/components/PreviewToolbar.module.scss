@@ -107,7 +107,7 @@
   cursor: default;
 }
 
-@media (max-width: 1119px) {
+@media (width <= 1119px) {
   // Below the desktop breakpoint the editor always stacks; the layout
   // toggle would be a no-op there.
   .button--layout {
@@ -115,7 +115,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .title {
     max-width: 150px;
   }

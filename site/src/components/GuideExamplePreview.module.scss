@@ -32,6 +32,7 @@
   gap: 10px;
   border: 1px solid var(--accent-line);
   background: var(--accent-soft);
+
   /* The paused stage is dark in both themes, so the label cannot follow --fg. */
   color: oklch(95% 0.005 245);
   border-radius: var(--r-pill);
@@ -56,7 +57,7 @@
   height: 0;
   border-top: 7px solid transparent;
   border-bottom: 7px solid transparent;
-  border-left: 11px solid currentColor;
+  border-left: 11px solid currentcolor;
 }
 
 .preview-hint {

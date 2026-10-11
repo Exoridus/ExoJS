@@ -185,7 +185,7 @@
   font-family: var(--f-mono);
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .editor-host {
     min-height: 300px;
     height: 360px;

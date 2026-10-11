@@ -89,7 +89,7 @@
   color: var(--violet);
 }
 
-@media (max-width: 1119px) {
+@media (width <= 1119px) {
   .link {
     min-height: 44px;
   }
