@@ -6,11 +6,11 @@
   "subsystem": "aseprite",
   "importPath": "@codexo/exojs-aseprite",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -51,7 +51,32 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Slice colour from the editor, as #RRGGBBAA."
+        },
+        {
+          "name": "data",
+          "signature": "data?: string",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Free-form user data attached to the slice in the editor."
         },
         {
           "name": "keys",
@@ -84,7 +109,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Keys in ascending frame order."
         },
         {
           "name": "name",

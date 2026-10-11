@@ -6,11 +6,11 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 21,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 18,
+    "properties": 21,
     "events": 0
   },
   "sections": [
@@ -123,6 +123,31 @@
           "params": [],
           "returnType": null,
           "description": "Map height in tiles."
+        },
+        {
+          "name": "hexsidelength",
+          "signature": "hexsidelength?: number",
+          "signatureTokens": [
+            {
+              "text": "hexsidelength",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Hexagonal maps: length in pixels of the straight sides along the stagger axis."
         },
         {
           "name": "infinite",
@@ -310,6 +335,72 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "staggeraxis",
+          "signature": "staggeraxis?: \"x\" | \"y\"",
+          "signatureTokens": [
+            {
+              "text": "staggeraxis",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"x\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"y\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Staggered and hexagonal maps: the axis whose every other row or column is shifted."
+        },
+        {
+          "name": "staggerindex",
+          "signature": "staggerindex?: \"even\" | \"odd\"",
+          "signatureTokens": [
+            {
+              "text": "staggerindex",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"even\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"odd\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Staggered and hexagonal maps: whether the odd or the even rows or columns are shifted."
         },
         {
           "name": "tiledversion",

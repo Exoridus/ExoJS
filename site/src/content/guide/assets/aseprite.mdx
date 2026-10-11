@@ -159,22 +159,21 @@ sheet.slices.has('hitbox');        // true when the 'hitbox' slice exists
 sheet.slices.get('hitbox').keys;   // AsepriteSliceKey[] — bounds per frame
 ```
 
-A slice's bounds can change per frame — each `AsepriteSlice` carries one `AsepriteSliceKey` per frame at which its bounds change, not one key per rendered frame. Resolve the key that applies to a given frame index yourself by taking the last key whose `frame` is at or before it:
+A slice's bounds can change per frame — each `AsepriteSlice` carries one `AsepriteSliceKey` per frame at which its shape changes, not one key per rendered frame. `sheet.getSlice(name, frameIndex)` resolves the key in effect on a sheet frame, joined with the slice's editor colour and user data, and returns `null` before the slice's first key. `clipFrameIndices` maps the frame a playing `AnimatedSprite` shows back to its sheet frame:
 
 ```ts
-import type { AsepriteSlice } from '@codexo/exojs-aseprite';
+const frame = sheet.clipFrameIndices.get(sprite.currentClip!)![sprite.currentFrame]!;
+const hitbox = sheet.getSlice('hitbox', frame);
 
-function resolveSliceBounds(slice: AsepriteSlice, frameIndex: number) {
-    let bounds = slice.keys[0]?.bounds;
-
-    for (const key of slice.keys) {
-        if (key.frame > frameIndex) break;
-        bounds = key.bounds;
-    }
-
-    return bounds;
-}
+hitbox?.bounds; // { x, y, w, h } on the untrimmed canvas
+hitbox?.pivot;  // { x, y } relative to the bounds, when a pivot was set
+hitbox?.center; // nine-slice centre relative to the bounds, when set
+hitbox?.data;   // the slice's user data from the editor
 ```
+
+Slice rectangles are in pixels of the untrimmed sprite canvas — the space a sprite from `createAnimatedSprite()` lays out trimmed frames in through `frameOffsets` — so a hitbox stays aligned however a frame was trimmed. Subtract the sprite's origin to place it in node-local coordinates. The sheet never turns slices into colliders or UI on its own; deciding what a slice means stays with your code.
+
+`sheet.tags` keeps each frame tag with the editor colour and user data that clips do not carry.
 
 ## Not yet supported
 

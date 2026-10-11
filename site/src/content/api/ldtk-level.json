@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "bgColor",
-          "signature": "bgColor?: string",
+          "signature": "bgColor?: null | string",
           "signatureTokens": [
             {
               "text": "bgColor",
@@ -45,13 +45,21 @@
               "kind": "punctuation"
             },
             {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "string",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The level's own background colour, #rrggbb; null when it uses the project default."
         },
         {
           "name": "externalRelPath",

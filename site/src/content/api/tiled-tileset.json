@@ -6,11 +6,11 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 25,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 21,
+    "properties": 22,
     "events": 0
   },
   "sections": [
@@ -308,6 +308,27 @@
           "params": [],
           "returnType": null,
           "description": "First global tile id owned by this tileset."
+        },
+        {
+          "name": "idCount",
+          "signature": "idCount: number",
+          "signatureTokens": [
+            {
+              "text": "idCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of local tile ids this tileset spans. Equal to tileCount for an atlas; for a collection of images it reaches the highest tile id, because tiles removed in the editor leave their ids unused."
         },
         {
           "name": "imageHeight",
@@ -765,7 +786,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Last global tile id (inclusive) owned by this tileset. Empty (lastGid < firstGid) when tileCount is 0."
+          "description": "Last global tile id (inclusive) owned by this tileset. Empty (lastGid < firstGid) when idCount is 0."
         }
       ],
       "paragraphs": [],

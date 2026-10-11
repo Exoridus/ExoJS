@@ -1,16 +1,16 @@
 {
   "title": "TileSetOptions",
-  "description": "Options for constructing a TileSet.",
+  "description": "Options for constructing a TileSet: an atlas grid or an image collection.",
   "symbol": "TileSetOptions",
-  "kind": "interface",
+  "kind": "type",
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 11,
+  "memberCount": 0,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 11,
+    "properties": 0,
     "events": 0
   },
   "sections": [
@@ -19,269 +19,35 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for constructing a TileSet."
+        "Options for constructing a TileSet: an atlas grid or an image collection."
       ],
       "importLine": "import { TileSetOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },
     {
-      "id": "properties",
-      "title": "Properties",
+      "id": "definition",
+      "title": "Definition",
       "members": [
         {
-          "name": "class",
-          "signature": "class?: string",
+          "name": "TileSetOptions",
+          "signature": "AtlasTileSetOptions | ImageCollectionTileSetOptions",
           "signatureTokens": [
             {
-              "text": "class",
-              "kind": "name"
+              "text": "AtlasTileSetOptions",
+              "kind": "type"
             },
             {
-              "text": "?",
+              "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Tileset class/type string (Tiled class). Defaults to ''."
-        },
-        {
-          "name": "columns",
-          "signature": "columns?: number",
-          "signatureTokens": [
-            {
-              "text": "columns",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Number of tile columns in the atlas grid. Computed from texture width / tileWidth if omitted."
-        },
-        {
-          "name": "margin",
-          "signature": "margin?: number",
-          "signatureTokens": [
-            {
-              "text": "margin",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Pixel margin around the atlas. Defaults to 0."
-        },
-        {
-          "name": "name",
-          "signature": "name: string",
-          "signatureTokens": [
-            {
-              "text": "name",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Stable runtime name (unique within a TileMap)."
-        },
-        {
-          "name": "offsetX",
-          "signature": "offsetX?: number",
-          "signatureTokens": [
-            {
-              "text": "offsetX",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Visual drawing offset in pixels applied to every tile of this set drawn by a tile layer. Defaults to 0."
-        },
-        {
-          "name": "offsetY",
-          "signature": "offsetY?: number",
-          "signatureTokens": [
-            {
-              "text": "offsetY",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Visual drawing offset in pixels applied to every tile of this set drawn by a tile layer. Defaults to 0."
-        },
-        {
-          "name": "spacing",
-          "signature": "spacing?: number",
-          "signatureTokens": [
-            {
-              "text": "spacing",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Pixel spacing between tiles in the atlas. Defaults to 0."
-        },
-        {
-          "name": "texture",
-          "signature": "texture: TextureRegion",
-          "signatureTokens": [
-            {
-              "text": "texture",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TextureRegion",
+              "text": "ImageCollectionTileSetOptions",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Texture atlas for this tileset. Textures are Loader-owned."
-        },
-        {
-          "name": "tileCount",
-          "signature": "tileCount: number",
-          "signatureTokens": [
-            {
-              "text": "tileCount",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Total number of tiles in this tileset."
-        },
-        {
-          "name": "tileHeight",
-          "signature": "tileHeight: number",
-          "signatureTokens": [
-            {
-              "text": "tileHeight",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Height of each tile in pixels."
-        },
-        {
-          "name": "tileWidth",
-          "signature": "tileWidth: number",
-          "signatureTokens": [
-            {
-              "text": "tileWidth",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Width of each tile in pixels."
+          "description": ""
         }
       ],
       "paragraphs": [],

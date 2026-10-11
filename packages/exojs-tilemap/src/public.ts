@@ -59,7 +59,7 @@ export type { ChunkRange, TileLayerOptions } from './TileLayer';
 export { TileLayer } from './TileLayer';
 export type { TileMapOptions } from './TileMap';
 export { TileMap } from './TileMap';
-export type { TileSetOptions } from './TileSet';
+export type { AtlasTileSetOptions, ImageCollectionTileSetOptions, TileSetBaseOptions, TileSetOptions } from './TileSet';
 export { TileSet } from './TileSet';
 // Scene/rendering nodes (advanced). The per-chunk drawable and the
 // per-backend renderers stay package-internal.
@@ -114,6 +114,6 @@ export { createWorkerSampledChunkSource } from './WorkerSampledChunkSource';
 // Wang autotiling: automatic tile selection based on neighbor bitmasks.
 export type { AutoTileOptions } from './autoTile';
 export { autoTile, refreshCell } from './autoTile';
-export { TileProjection, type TileProjectionOptions } from './TileProjection';
+export { type TileOrientation, TileProjection, type TileProjectionOptions } from './TileProjection';
 export type { WangSetOptions } from './WangSet';
 export { WangSet } from './WangSet';
