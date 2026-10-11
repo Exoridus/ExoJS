@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Distance from the destination, in navigation units, at which the agent counts as arrived. Raise it when the actor cannot reach the destination point itself - a body stopped by the target's own collider, a destination closer to a wall than the actor's radius. Defaults to 0: the agent steers onto the destination exactly."
+          "description": "Distance from the destination, in navigation units, at which the component counts as arrived. Raise it when the actor cannot reach the destination point itself - a body stopped by the target's own collider, a destination closer to a wall than the actor's radius. Defaults to 0: it steers onto the destination exactly."
         },
         {
           "name": "movement",
@@ -72,7 +72,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Carries out the motion the agent asks for."
+          "description": "Carries out the motion the component asks for."
         },
         {
           "name": "pathfinder",
@@ -134,7 +134,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The agent's live position in navigation space, read every fixed step - a physics body, a vector the game keeps up to date, or an object with x/y getters that convert from another space. Defaults to the node's own x/y, which only matches navigation space for a node whose parent applies no transform and whose position is not a projection."
+          "description": "The actor's live position in navigation space, read every fixed step - a physics body, a vector the game keeps up to date, or an object with x/y getters that convert from another space. Defaults to the node's own x/y, which only matches navigation space for a node whose parent applies no transform and whose position is not a projection."
         },
         {
           "name": "repathInterval",
@@ -159,7 +159,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shortest time between two searches the agent starts on its own - for a followed target changing node, a space revision, the end of a partial route or missing progress. It also sets how long the agent watches for progress before it decides it is stuck. A new command searches at once. Defaults to a quarter second."
+          "description": "Shortest time between two searches the component starts on its own - for a followed target changing node, a space revision, the end of a partial route or missing progress. It also sets how long the component watches for progress before it decides it is stuck. A new command searches at once. Defaults to a quarter second."
         },
         {
           "name": "search",
@@ -184,7 +184,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Search options for every route the agent plans."
+          "description": "Search options for every route the component plans."
         },
         {
           "name": "space",

@@ -407,7 +407,7 @@ describe('NavigationAgentComponent', () => {
     agent.moveTo(center(9, 0));
     frame();
 
-    // The movement moved the node, but the agent steered from the logical position.
+    // The movement moved the node, but steering started from the logical position.
     expect(node.x).toBeCloseTo(901, 9);
     expect(node.y).toBeCloseTo(900, 9);
   });

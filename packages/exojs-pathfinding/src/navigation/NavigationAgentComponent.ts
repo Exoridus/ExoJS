@@ -12,9 +12,10 @@ import type { NavigationMovement } from './NavigationMovement';
  * - `navigating` - following a route, including a partial one that a search
  *   budget cut short.
  * - `arrived` - within `arrivalDistance` of the destination. A followed target
- *   that moves away puts the agent back to `navigating`.
- * - `unreachable` - no route leads to the destination, or the agent has
- *   reached the closest point a `snapToNearest` search could offer.
+ *   that moves away puts it back to `navigating`.
+ * - `unreachable` - no route leads to the destination, the search budget is
+ *   too small to get past its own node, or it has reached the
+ *   closest point a `snapToNearest` search could offer.
  * - `blocked` - a route exists, but the movement made no progress along it
  *   even after a fresh search.
  *
@@ -27,10 +28,10 @@ export type NavigationStatus = 'idle' | 'navigating' | 'arrived' | 'unreachable'
 export interface NavigationAgentOptions<Payload = unknown> {
   /** The space routes are searched in. Any {@link NavigationSpace} works. */
   readonly space: NavigationSpace<Payload>;
-  /** Carries out the motion the agent asks for. */
+  /** Carries out the motion the component asks for. */
   readonly movement: NavigationMovement;
   /**
-   * The agent's live position in navigation space, read every fixed step - a
+   * The actor's live position in navigation space, read every fixed step - a
    * physics body, a vector the game keeps up to date, or an object with
    * `x`/`y` getters that convert from another space. Defaults to the node's
    * own `x`/`y`, which only matches navigation space for a node whose parent
@@ -43,20 +44,20 @@ export interface NavigationAgentOptions<Payload = unknown> {
    * the per-pathfinder buffers.
    */
   readonly pathfinder?: Pathfinder | undefined;
-  /** Search options for every route the agent plans. */
+  /** Search options for every route the component plans. */
   readonly search?: FindPathOptions | undefined;
   /**
-   * Distance from the destination, in navigation units, at which the agent
+   * Distance from the destination, in navigation units, at which the component
    * counts as arrived. Raise it when the actor cannot reach the destination
    * point itself - a body stopped by the target's own collider, a destination
-   * closer to a wall than the actor's radius. Defaults to `0`: the agent steers
+   * closer to a wall than the actor's radius. Defaults to `0`: it steers
    * onto the destination exactly.
    */
   readonly arrivalDistance?: number | undefined;
   /**
-   * Shortest time between two searches the agent starts on its own - for a
+   * Shortest time between two searches the component starts on its own - for a
    * followed target changing node, a space revision, the end of a partial
-   * route or missing progress. It also sets how long the agent watches for
+   * route or missing progress. It also sets how long the component watches for
    * progress before it decides it is stuck. A new command searches at once.
    * Defaults to a quarter second.
    */
@@ -85,13 +86,13 @@ let sharedPathfinder: Pathfinder | null = null;
  * waypoints, slows down onto the destination, notices when the route goes
  * stale and plans again.
  *
- * The agent decides where to go; a {@link NavigationMovement} performs the
- * motion. The agent never touches the actor's transform itself, so the same
+ * An agent decides where to go; a {@link NavigationMovement} performs the
+ * motion. It never touches the actor's transform itself, so the same
  * agent drives a physics-backed movement, one that writes a node position, or
  * one the game provides. Positions, destinations and targets are all read in
  * the navigation space's coordinates.
  *
- * The agent steers in its fixed update, which a scene runs before its
+ * It steers in its fixed update, which a scene runs before its
  * systems, so a movement backed by a physics world registered as a scene
  * system receives each step's command before that world steps. Nothing is
  * searched every step: a route is planned on a new command and replanned only
@@ -100,8 +101,8 @@ let sharedPathfinder: Pathfinder | null = null;
  * no progress - and automatic replans are at most one per
  * {@link NavigationAgentOptions.repathInterval}.
  *
- * Disabling the agent stops the movement and keeps the command; enabling it
- * again plans a fresh route to it. Pausing the scene pauses the agent.
+ * Disabling the component stops the movement and keeps the command; enabling it
+ * again plans a fresh route to it. Pausing the scene pauses it.
  *
  * @example
  * ```ts
@@ -182,13 +183,13 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
     return this._path;
   }
 
-  /** Index into {@link path}'s points of the waypoint the agent is heading for. */
+  /** Index into {@link path}'s points of the waypoint currently steered for. */
   public get waypointIndex(): number {
     return this._waypoint;
   }
 
   /**
-   * Where the agent is going: the fixed destination, or the followed target's
+   * Where navigation is heading: the fixed destination, or the followed target's
    * position when it was last read. `null` while idle.
    */
   public get destination(): Readonly<Vector> | null {
@@ -222,7 +223,7 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
     this._setGoal(target.x, target.y);
   }
 
-  /** Cancels navigation: the agent becomes `idle` and the movement is stopped. */
+  /** Cancels navigation: the status becomes `idle` and the movement is stopped. */
   public stop(): void {
     const wasActive = this._hasGoal;
 
@@ -356,7 +357,7 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
     this._replanRequested = false;
     this._resetProgress(x, y);
     // A route planned because the last one made no progress gets one window to
-    // do better; failing that, the agent reports `blocked` instead of
+    // do better; failing that, the status turns `blocked` instead of
     // searching again and again from the same spot.
     this._stalled = false;
     this._stallRetry = stalled;

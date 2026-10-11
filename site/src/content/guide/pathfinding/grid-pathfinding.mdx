@@ -112,7 +112,7 @@ Keep the two in step wherever you edit the map:
   title="examples/guides/pathfinding/tilemap-bridge.ts"
 />
 
-The [Tilemap Navigation](/ExoJS/en/playground/?example=pathfinding/tilemap-navigation) example does exactly this against a live [`TileLayer`](/ExoJS/en/api/tile-layer/).
+For a [`TileLayer`](/ExoJS/en/api/tile-layer/), [`TileNavigationSpace`](/ExoJS/en/api/tile-navigation-space/) packages this bridge as a class: it takes the same cost callback, follows edits, chunk loads and evictions on its own, and resamples only what changed — see [Navigation agents](/ExoJS/en/guide/pathfinding/navigation-agents/), and the [Tilemap Navigation](/ExoJS/en/playground/?example=pathfinding/tilemap-navigation) example that uses it.
 
 ## Reachable areas
 

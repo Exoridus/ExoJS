@@ -1,0 +1,85 @@
+---
+title: 'Navigation agents'
+description: 'Move actors with collision-aware kinematic movement, send them to destinations or after moving targets with NavigationAgentComponent, and navigate tile maps that change while you play.'
+---
+
+import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+
+# Navigation agents
+
+A path is a list of points. Getting an actor along it — progressing from waypoint to waypoint, slowing down onto the destination, sliding along walls, noticing that the route went stale — is the part every game used to write itself. Three pieces cover it, each usable on its own:
+
+- [`KinematicMovementComponent`](/ExoJS/en/api/kinematic-movement-component/) in `@codexo/exojs-physics` performs motion: it moves a kinematic body in the direction it is told, stops at colliders and slides along them.
+- [`NavigationAgentComponent`](/ExoJS/en/api/navigation-agent-component/) in `@codexo/exojs-pathfinding` decides motion: it plans routes through any navigation space and tells a movement where to go next.
+- [`TileNavigationSpace`](/ExoJS/en/api/tile-navigation-space/) in `@codexo/exojs-pathfinding` turns a tile layer into a navigation space that keeps up with edits.
+
+None of them imports another. The agent talks to its movement through the four-member [`NavigationMovement`](/ExoJS/en/api/navigation-movement/) contract, and the tile space reads the layer through a structural [`TileNavigationSource`](/ExoJS/en/api/tile-navigation-source/), so a `TileLayer` fits without the pathfinding package depending on the tilemap package.
+
+## Movement that respects walls
+
+A kinematic body ignores contacts — it goes wherever its velocity takes it, through walls included. `KinematicMovementComponent` adds the missing collision response for the common case of an actor that should be stopped rather than pushed:
+
+<SourceSnippet
+  source="examples/guides/pathfinding/navigation-agents.ts"
+  region="kinematic-movement"
+  language="ts"
+  title="examples/guides/pathfinding/navigation-agents.ts"
+/>
+
+`move` takes a direction whose length scales `maxSpeed`, so analog input below full deflection moves slower. When the world steps, the movement casts the body's shapes along the requested motion with [`PhysicsWorld.shapeCast`](/ExoJS/en/api/physics-world/), stops just short of the first obstacle, slides the rest of the way along it, and sets the body's velocity to the result. The world then integrates that velocity as usual — the body is never teleported, and interpolation and contacts see continuous motion.
+
+A command lasts exactly one world step. Stop issuing it and the body stops; there is no velocity to clear when the controlling code is disabled. `blocked` and `contactNormal` report what stopped the last step.
+
+<Callout type="info" title="What it deliberately does not do">
+The movement is translation only and makes no platformer decisions: no stepping over ledges, no slope limits, no grounded state, no jump buffering. Dynamic bodies in the way block it rather than being pushed. Those policies belong to a character controller built on top of it.
+</Callout>
+
+## Navigating a tile map
+
+`TileNavigationSpace` wraps a tile layer in a navigation space. The cost callback is your traversal policy — the same layer can be read differently by different spaces:
+
+<SourceSnippet
+  source="examples/guides/pathfinding/navigation-agents.ts"
+  region="tile-navigation"
+  language="ts"
+  title="examples/guides/pathfinding/navigation-agents.ts"
+/>
+
+Synchronisation is pull-based. Reading the space's `revision` — which every search and every agent does — compares the layer's revision first and returns at once when nothing changed. When something did, only the chunks whose own revision moved are resampled, chunk loads and evictions included, and the space's revision advances only if a cell's cost actually changed. An unbounded, streamed layer needs an explicit `window` of cells to navigate; nothing outside it is allocated or walkable.
+
+Navigation cost and physical collision are separate decisions on purpose. Water can be walkable but expensive, a sensor need not block a route, and a door can close for one actor and not another. Build colliders with `TileColliderStreamer` from `@codexo/exojs-tilemap-physics` and navigation with `TileNavigationSpace`, from the same layer, with the rules each needs.
+
+<Callout type="warning" title="Logical coordinates">
+Routes are in the layer's logical space — the space its physics colliders live in. For an isometric map that is the unprojected grid of square cells, not the screen diamonds. Orthogonal maps with non-square tiles, and orientations other than orthogonal and isometric, are rejected with an error rather than routed with a wrong distance metric.
+</Callout>
+
+## Sending an agent
+
+<SourceSnippet
+  source="examples/guides/pathfinding/navigation-agents.ts"
+  region="navigation-agent"
+  language="ts"
+  title="examples/guides/pathfinding/navigation-agents.ts"
+/>
+
+`moveTo` copies a fixed destination; `follow` reads a target's position every fixed step — a physics body, a vector you update, anything with `x` and `y`. On the final node the agent steers onto the exact point, and it reports its progress through `status` and `onStatusChange`: `navigating`, `arrived`, `unreachable` when no route exists, or `blocked` when a route exists but the movement made no progress along it.
+
+The agent searches when it is given a new command and otherwise only when the route went stale: the space's revision changed, a followed target entered another node, a budget-limited partial route ran out, or the actor stopped making progress. Those automatic searches are limited to one per `repathInterval` per agent and staggered between agents, so a crowd following one player does not search every frame — or all in the same one.
+
+<Callout type="tip" title="Positions belong to one space">
+The agent reads its own position, its target and its destination in navigation coordinates, and hands its movement directions in the same space. Pass the physics body as `position` rather than relying on the node: the node is where the body was last drawn, and with a projected or interpolated presentation that is a different place.
+</Callout>
+
+## Your own movement, your own space
+
+Nothing about the agent requires physics or a tile map. Anything with `maxSpeed`, `move` and `stop` is a movement, and any [`NavigationSpace`](/ExoJS/en/api/navigation-space/) is a space:
+
+<SourceSnippet
+  source="examples/guides/pathfinding/navigation-agents.ts"
+  region="custom-movement"
+  language="ts"
+  title="examples/guides/pathfinding/navigation-agents.ts"
+/>
+
+The [Tilemap Navigation](/ExoJS/en/playground/?example=pathfinding/tilemap-navigation) example puts all of it together — a player on kinematic movement, hunters that follow it around walls you can open and close, and a patrol on a waypoint graph. [Kinematic Movement](/ExoJS/en/playground/?example=physics/kinematic-movement) shows the movement alone.

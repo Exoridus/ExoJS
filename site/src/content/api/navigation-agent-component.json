@@ -1,6 +1,6 @@
 {
   "title": "NavigationAgentComponent",
-  "description": "Moves its actor to a destination, or after a moving target, through any NavigationSpace: it plans the route, progresses along its waypoints, slows down onto the destination, notices when the route goes stale and plans again. The agent decides where to go; a NavigationMovement performs the motion. The agent never touches the actor's transform itself, so the same agent drives a physics-backed movement, one that writes a node position, or one the game provides. Positions, destinations and targets are all read in the navigation space's coordinates. The agent steers in its fixed update, which a scene runs before its systems, so a movement backed by a physics world registered as a scene system receives each step's command before that world steps. Nothing is searched every step: a route is planned on a new command and replanned only when it went stale - the space's revision changed, a followed target moved to another node, a budget-limited partial route ran out, or the actor made no progress - and automatic replans are at most one per NavigationAgentOptions.repathInterval. Disabling the agent stops the movement and keeps the command; enabling it again plans a fresh route to it. Pausing the scene pauses the agent.",
+  "description": "Moves its actor to a destination, or after a moving target, through any NavigationSpace: it plans the route, progresses along its waypoints, slows down onto the destination, notices when the route goes stale and plans again. An agent decides where to go; a NavigationMovement performs the motion. It never touches the actor's transform itself, so the same agent drives a physics-backed movement, one that writes a node position, or one the game provides. Positions, destinations and targets are all read in the navigation space's coordinates. It steers in its fixed update, which a scene runs before its systems, so a movement backed by a physics world registered as a scene system receives each step's command before that world steps. Nothing is searched every step: a route is planned on a new command and replanned only when it went stale - the space's revision changed, a followed target moved to another node, a budget-limited partial route ran out, or the actor made no progress - and automatic replans are at most one per NavigationAgentOptions.repathInterval. Disabling the component stops the movement and keeps the command; enabling it again plans a fresh route to it. Pausing the scene pauses it.",
   "symbol": "NavigationAgentComponent",
   "kind": "class",
   "subsystem": "pathfinding",
@@ -20,9 +20,9 @@
       "members": [],
       "paragraphs": [
         "Moves its actor to a destination, or after a moving target, through any NavigationSpace: it plans the route, progresses along its waypoints, slows down onto the destination, notices when the route goes stale and plans again.",
-        "The agent decides where to go; a NavigationMovement performs the motion. The agent never touches the actor's transform itself, so the same agent drives a physics-backed movement, one that writes a node position, or one the game provides. Positions, destinations and targets are all read in the navigation space's coordinates.",
-        "The agent steers in its fixed update, which a scene runs before its systems, so a movement backed by a physics world registered as a scene system receives each step's command before that world steps. Nothing is searched every step: a route is planned on a new command and replanned only when it went stale - the space's revision changed, a followed target moved to another node, a budget-limited partial route ran out, or the actor made no progress - and automatic replans are at most one per NavigationAgentOptions.repathInterval.",
-        "Disabling the agent stops the movement and keeps the command; enabling it again plans a fresh route to it. Pausing the scene pauses the agent."
+        "An agent decides where to go; a NavigationMovement performs the motion. It never touches the actor's transform itself, so the same agent drives a physics-backed movement, one that writes a node position, or one the game provides. Positions, destinations and targets are all read in the navigation space's coordinates.",
+        "It steers in its fixed update, which a scene runs before its systems, so a movement backed by a physics world registered as a scene system receives each step's command before that world steps. Nothing is searched every step: a route is planned on a new command and replanned only when it went stale - the space's revision changed, a followed target moved to another node, a budget-limited partial route ran out, or the actor made no progress - and automatic replans are at most one per NavigationAgentOptions.repathInterval.",
+        "Disabling the component stops the movement and keeps the command; enabling it again plans a fresh route to it. Pausing the scene pauses it."
       ],
       "importLine": "import { NavigationAgentComponent } from '@codexo/exojs-pathfinding'",
       "sourceLink": null
@@ -506,7 +506,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Cancels navigation: the agent becomes idle and the movement is stopped."
+          "description": "Cancels navigation: the status becomes idle and the movement is stopped."
         },
         {
           "name": "update",
@@ -741,7 +741,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Where the agent is going: the fixed destination, or the followed target's position when it was last read. null while idle."
+          "description": "Where navigation is heading: the fixed destination, or the followed target's position when it was last read. null while idle."
         },
         {
           "name": "destroyed",
@@ -989,7 +989,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Index into path's points of the waypoint the agent is heading for."
+          "description": "Index into path's points of the waypoint currently steered for."
         }
       ],
       "paragraphs": [],

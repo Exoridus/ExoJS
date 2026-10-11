@@ -653,6 +653,24 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['waypoint-graph', 'waypoint-edge-options', 'path-edge', 'navigation-space'],
       },
       {
+        path: 'pathfinding/navigation-agents',
+        level: 'intermediate',
+        learningGoals: [
+          'Move kinematic bodies with collision-aware movement and route them with navigation agents',
+          'Keep tile-map navigation in step with edits while navigation and collision stay separate policies',
+        ],
+        prerequisites: ['pathfinding/grid-pathfinding', 'physics/physics-basics'],
+        examples: ['pathfinding/tilemap-navigation', 'physics/kinematic-movement'],
+        apiLinks: [
+          'navigation-agent-component',
+          'navigation-movement',
+          'kinematic-movement-component',
+          'tile-navigation-space',
+          'tile-navigation-source',
+          'shape-cast-hit',
+        ],
+      },
+      {
         path: 'runtime/serialization-and-prefabs',
         level: 'advanced',
         learningGoals: [

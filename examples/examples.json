@@ -1028,10 +1028,10 @@
       "path": "pathfinding/tilemap-navigation.js",
       "language": "typescript",
       "title": "Editable Map Navigation",
-      "description": "Click to route an agent; switch to wall editing and click a tile to open or close a path while the route updates.",
+      "description": "Move through a tile map while navigation agents hunt you around its walls; click a tile to open or close it and watch every route adapt.",
       "backend": "core",
-      "tags": ["pathfinding", "tilemap", "pointer"],
-      "capabilities": ["pointer"],
+      "tags": ["pathfinding", "tilemap", "physics", "keyboard", "pointer"],
+      "capabilities": ["keyboard", "pointer"],
       "level": "intermediate"
     },
     {
@@ -1088,6 +1088,17 @@
       "backend": "core",
       "tags": ["physics", "binding", "pointer", "joints"],
       "capabilities": ["pointer", "keyboard"],
+      "level": "intro"
+    },
+    {
+      "slug": "kinematic-movement",
+      "path": "physics/kinematic-movement.js",
+      "language": "typescript",
+      "title": "Kinematic Movement",
+      "description": "Steer a kinematic body with the keyboard; it stops at walls, slides along them and comes to rest in tight corners.",
+      "backend": "core",
+      "tags": ["physics", "movement", "keyboard"],
+      "capabilities": ["keyboard"],
       "level": "intro"
     },
     {
