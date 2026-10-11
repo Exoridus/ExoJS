@@ -597,6 +597,22 @@ describe('CharacterMovementComponent', () => {
       expect(body.y).toBeGreaterThan(REST_Y - 0.2);
     });
 
+    it('stays on the ground walking down a step no taller than maxStepHeight', async () => {
+      const { world, spawn, floor, frame } = await setup();
+
+      floor();
+      colliderAt(world, new BoxShape(200, 10), { x: 0, y: FLOOR - 5 });
+
+      const { character, controls, body } = spawn({ position: { x: 0, y: REST_Y - 10 - 0.05 }, maxStepHeight: 12 });
+
+      frame();
+      controls.input = 1;
+      run(frame, 45, () => expect(character.grounded).toBe(true));
+
+      expect(body.x).toBeGreaterThan(150);
+      expect(body.y).toBeGreaterThan(REST_Y - 0.2);
+    });
+
     it('does not snap back to the ground while launching', async () => {
       const { world, spawn, frame } = await setup();
 

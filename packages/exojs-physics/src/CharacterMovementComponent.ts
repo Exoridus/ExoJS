@@ -31,6 +31,8 @@ export interface CharacterMovementOptions {
   readonly maxFallSpeed?: number;
 }
 
+type SlideMode = 'walk' | 'snap' | 'air';
+
 /**
  * How far below the body the support probe reaches. A slide ends at most
  * `contactOffset / minApproach` (`0.1`) short of the surface that stopped it,
@@ -126,7 +128,8 @@ export class CharacterMovementComponent extends Component implements MovementDri
   private readonly _wallNormal = new Vector();
   private readonly _velocity = new Vector();
 
-  private _walking = false;
+  /** What the slide in progress is for; decides how {@link _constrainNormal} treats its contacts. */
+  private _slideMode: SlideMode = 'air';
   private _airborne = false;
   private _wallBlocked = false;
   private _probeCandidate: Collider | null = null;
@@ -410,7 +413,7 @@ export class CharacterMovementComponent extends Component implements MovementDri
 
       const sideways = speed * fixedDelta;
 
-      this._walking = false;
+      this._slideMode = 'air';
       this.movement._slide(0, 0, this._freeX * fixedDelta - upY * sideways, this._freeY * fixedDelta + upX * sideways, this, null, result);
     }
 
@@ -429,6 +432,15 @@ export class CharacterMovementComponent extends Component implements MovementDri
     const upY = this._up.y;
     const along = normal.x * upX + normal.y * upY;
 
+    if (this._slideMode === 'snap') {
+      // Ground ends the snap where it is met; anything else is slid off.
+      if (along >= this._minWalkableCos) {
+        normal.set(upX, upY);
+      }
+
+      return;
+    }
+
     if (along <= -this._minWalkableCos) {
       this._onCeiling = true;
     } else if (along < this._minWalkableCos) {
@@ -437,12 +449,12 @@ export class CharacterMovementComponent extends Component implements MovementDri
 
       // On the ground, a surface too steep to stand on stops the walk like a
       // wall. Sliding along its true normal would carry the character up it.
-      if (this._walking && along > 0) {
+      if (this._slideMode === 'walk' && along > 0) {
         normal.set(normal.x - along * upX, normal.y - along * upY);
         normal.normalize();
       }
 
-      if (this._walking) {
+      if (this._slideMode === 'walk') {
         this._wallBlocked = true;
       }
     }
@@ -508,9 +520,8 @@ export class CharacterMovementComponent extends Component implements MovementDri
     const tangentX = -groundY;
     const tangentY = groundX;
 
-    this._walking = true;
+    this._slideMode = 'walk';
     movement._slide(startX, startY, tangentX * distance, tangentY * distance, this, null, walk);
-    this._walking = false;
 
     let stepped = false;
 
@@ -524,7 +535,11 @@ export class CharacterMovementComponent extends Component implements MovementDri
     if (!stepped) {
       const reach = this._maxStepHeight + Math.abs(distance) * Math.tan(this._maxSlopeAngle) + supportProbe;
 
-      movement._sweep(walk.x, walk.y, -upX * reach, -upY * reach, null, scratch);
+      // Sliding rather than stopping at the first contact lets a rounded body
+      // come off the edge of a step down onto the lower ground; a contact
+      // that is not walkable at the end means there is no ground to snap to.
+      this._slideMode = 'snap';
+      movement._slide(walk.x, walk.y, -upX * reach, -upY * reach, this, null, scratch);
 
       if (scratch.blocked && scratch.normalX * upX + scratch.normalY * upY >= this._minWalkableCos) {
         walk.x = scratch.x;
@@ -538,6 +553,7 @@ export class CharacterMovementComponent extends Component implements MovementDri
     }
 
     if (carryVelocityX !== 0 || carryVelocityY !== 0) {
+      this._slideMode = 'air';
       movement._slide(walk.x, walk.y, carryVelocityX * fixedDelta, carryVelocityY * fixedDelta, this, exclude, scratch);
       walk.x = scratch.x;
       walk.y = scratch.y;
