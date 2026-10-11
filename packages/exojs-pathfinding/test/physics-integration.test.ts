@@ -10,7 +10,15 @@ import {
   TextureRegion,
   Time,
 } from '@codexo/exojs';
-import { BoxShape, CircleShape, KinematicMovementComponent, PhysicsBody, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
+import {
+  BoxShape,
+  CharacterMovementComponent,
+  CircleShape,
+  KinematicMovementComponent,
+  PhysicsBody,
+  PhysicsBodyComponent,
+  PhysicsWorld,
+} from '@codexo/exojs-physics';
 import { type ResolvedTile, TILE_TRANSFORM_IDENTITY, TileLayer, TileSet } from '@codexo/exojs-tilemap';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
@@ -159,6 +167,20 @@ describe('navigation over a tilemap with physics-backed movement', () => {
     expect(farthest).toBeLessThanOrEqual(destination.x + 1e-6);
     expect(physics.body.x).toBeCloseTo(destination.x, 6);
     expect(physics.body.y).toBeCloseTo(destination.y, 6);
+  });
+
+  it('refuses to steer a movement a character drives, and steers it again once the character is disabled', async () => {
+    const { node, physics, movement, agent, frame, runUntil } = await setup();
+    const character = node.addComponent(new CharacterMovementComponent(movement, { up: { x: 0, y: -1 }, gravity: 0 }));
+
+    // One movement authority per body: the agent's command is rejected rather
+    // than merged with the character's.
+    agent.moveTo({ x: 8.5 * TILE, y: 2.5 * TILE });
+    expect(() => frame()).toThrow(/CharacterMovementComponent drives this movement/);
+
+    character.enabled = false;
+    runUntil(() => agent.status === 'arrived');
+    expect(physics.body.x).toBeCloseTo(8.5 * TILE, 6);
   });
 
   it('stops its agents without errors when the tile layer is destroyed', async () => {
