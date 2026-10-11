@@ -95,9 +95,10 @@ const shapes = [
 
 describe('a collinear chain seam', () => {
   it.each(shapes)('carries a $kind across at constant velocity', ({ shape }) => {
-    const trace = slideAcross(shape(), flatFloor());
+    // 25 steps cross both interior vertices and stop before the floor's free
+    // end at x = 150, where a rounded body rightly tips over the corner.
+    const trace = slideAcross(shape(), flatFloor(), -120, 25);
 
-    // Both interior vertices are crossed within these 40 steps.
     expect(trace.x).toBeGreaterThan(50);
     expect(trace.maxUpward).toBeLessThan(5);
     expect(trace.maxSpin).toBeLessThan(0.5);

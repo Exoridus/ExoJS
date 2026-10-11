@@ -631,6 +631,23 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
       },
       {
+        path: 'physics/character-movement',
+        level: 'intermediate',
+        learningGoals: [
+          'Layer a character over a body and its kinematic movement with one movement authority',
+          'Keep jump rules in game code on top of reported ground and contact state',
+        ],
+        prerequisites: ['physics/physics-basics'],
+        examples: ['physics/character-movement'],
+        apiLinks: [
+          'character-movement-component',
+          'character-movement-options',
+          'kinematic-movement-component',
+          'physics-body-component',
+          'chain-shape',
+        ],
+      },
+      {
         path: 'pathfinding/grid-pathfinding',
         level: 'intermediate',
         learningGoals: [

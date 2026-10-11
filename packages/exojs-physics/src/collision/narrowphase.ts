@@ -1,11 +1,12 @@
 import type { PointLike } from '@codexo/exojs';
 
+import { ChainEdgeShape } from '../shapes/ChainEdgeShape';
 import { chainEdgeAdmits } from './chainAdjacency';
 import type { CollisionProxy } from './CollisionProxy';
 import type { PairTable } from './dispatch';
 import { needsFlip, symmetricEntry, symmetricTable } from './dispatch';
 import type { Manifold } from './Manifold';
-import { closestPointOnSegment, pointSegmentDistanceSquared } from './segments';
+import { closestPointOnSegment, pointSegmentDistanceSquared, segmentSegmentDistanceSquared } from './segments';
 
 const eps = 1e-9;
 
@@ -480,18 +481,17 @@ const collideRoundedPolygons: CollidePair = (a, b, manifold, callerFlip) => {
   const posSide = tx * v2x + ty * v2y;
 
   const clipped1 = _clipped1Scratch;
+  const flipNormal = refSwapped !== callerFlip;
 
   if (clipSegment(-tx, -ty, negSide, incident, clipped1, encodeId(refSwapped, refEdge, 0xffe)) < 2) {
-    return false;
+    return collideCoreEnds(v1x, v1y, v2x, v2y, ref, incident, inc, totalRadius, flipNormal, encodeId(refSwapped, refEdge, 0xffd), manifold);
   }
 
   const clipped2 = _clipped2Scratch;
 
   if (clipSegment(tx, ty, posSide, clipped1, clipped2, encodeId(refSwapped, refEdge, 0xfff)) < 2) {
-    return false;
+    return collideCoreEnds(v1x, v1y, v2x, v2y, ref, incident, inc, totalRadius, flipNormal, encodeId(refSwapped, refEdge, 0xffd), manifold);
   }
-
-  const flipNormal = refSwapped !== callerFlip;
 
   manifold.normalX = flipNormal ? -refNx : refNx;
   manifold.normalY = flipNormal ? -refNy : refNy;
@@ -525,6 +525,100 @@ const collideRoundedPolygons: CollidePair = (a, b, manifold, callerFlip) => {
 
   return cp > 0;
 };
+
+const _coreRef: PointLike = { x: 0, y: 0 };
+const _coreInc: PointLike = { x: 0, y: 0 };
+
+/**
+ * Contact between the rounded outlines of a reference edge and an incident
+ * face whose cores lie beyond each other's ends, where clipping leaves no
+ * point: a capsule's cap resting on a polygon's corner or a chain vertex. The
+ * face-normal SAT still counts such a pair as touching, but the contact is
+ * between the two closest core points, along the line joining them. Without
+ * it a rounded body passing over a corner loses its contact there.
+ *
+ * A chain vertex only has such a corner where the chain turns away from the
+ * body. At a straight or inward join the neighbouring edge's face already
+ * holds the contact, and a second one from the vertex would tilt it.
+ */
+const collideCoreEnds = (
+  v1x: number,
+  v1y: number,
+  v2x: number,
+  v2y: number,
+  ref: CollisionProxy,
+  incident: readonly [ClipVertex, ClipVertex],
+  inc: CollisionProxy,
+  totalRadius: number,
+  flipNormal: boolean,
+  id: number,
+  manifold: Manifold,
+): boolean => {
+  const i0 = incident[0];
+  const i1 = incident[1];
+  const distanceSquared = segmentSegmentDistanceSquared(v1x, v1y, v2x, v2y, i0.x, i0.y, i1.x, i1.y, _coreRef, _coreInc);
+
+  // Cores that touch or cross have no direction between them; clipping owns those.
+  if (distanceSquared >= totalRadius * totalRadius || distanceSquared < 1e-12) {
+    return false;
+  }
+
+  if (!isCornerOf(ref, _coreRef) || !isCornerOf(inc, _coreInc)) {
+    return false;
+  }
+
+  const distance = Math.sqrt(distanceSquared);
+  const nx = (_coreInc.x - _coreRef.x) / distance;
+  const ny = (_coreInc.y - _coreRef.y) / distance;
+  const incidentRadius = radiusOf(inc);
+  const point = manifold.points[0];
+
+  manifold.normalX = flipNormal ? -nx : nx;
+  manifold.normalY = flipNormal ? -ny : ny;
+  point.x = _coreInc.x - nx * incidentRadius;
+  point.y = _coreInc.y - ny * incidentRadius;
+  point.penetration = totalRadius - distance;
+  point.id = id;
+  manifold.pointCount = 1;
+
+  return true;
+};
+
+/** Squared distance below which a closest point counts as a segment's endpoint. */
+const endpointEpsilonSquared = 1e-12;
+
+/**
+ * `false` when `point` is the end of a chain edge whose neighbour continues the
+ * surface straight or turns towards the body there; `true` for any other point
+ * and any other shape.
+ */
+const isCornerOf = (proxy: CollisionProxy, point: Readonly<PointLike>): boolean => {
+  const shape = proxy.shape;
+
+  if (!(shape instanceof ChainEdgeShape)) {
+    return true;
+  }
+
+  const vertices = proxy.worldVertices;
+  const startX = point.x - vertices[0]!;
+  const startY = point.y - vertices[1]!;
+
+  if (startX * startX + startY * startY <= endpointEpsilonSquared) {
+    return !shape.hasPrevious || shape.previousSin < -convexTurn;
+  }
+
+  const endX = point.x - vertices[2]!;
+  const endY = point.y - vertices[3]!;
+
+  if (endX * endX + endY * endY <= endpointEpsilonSquared) {
+    return !shape.hasNext || shape.nextSin > convexTurn;
+  }
+
+  return true;
+};
+
+/** Smallest turn, as the sine between neighbouring edge normals, that makes a chain vertex a corner. */
+const convexTurn = 1e-6;
 
 /**
  * Boolean overlap test (no manifold) used by sensors and shape-overlap queries.
