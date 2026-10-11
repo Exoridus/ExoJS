@@ -521,9 +521,15 @@ const collideRoundedPolygons: CollidePair = (a, b, manifold, callerFlip) => {
     }
   }
 
+  if (cp === 0) {
+    // Both clipped points lie beyond the rounded reference face, yet the
+    // incident face's core end can still be within reach of a reference corner.
+    return collideCoreEnds(v1x, v1y, v2x, v2y, ref, incident, inc, totalRadius, flipNormal, encodeId(refSwapped, refEdge, 0xffd), manifold);
+  }
+
   manifold.pointCount = cp;
 
-  return cp > 0;
+  return true;
 };
 
 const _coreRef: PointLike = { x: 0, y: 0 };
@@ -622,7 +628,10 @@ const convexTurn = 1e-6;
 
 /**
  * Boolean overlap test (no manifold) used by sensors and shape-overlap queries.
- * Exact for the circle/circle, circle/polygon and polygon/polygon pairs.
+ * Exact for every supported pair and in agreement with {@link collide}, except
+ * that it ignores chain one-sidedness: a shape behind a chain edge overlaps it.
+ * As in {@link collide}, exact tangency counts as overlap for pairs involving a
+ * circle and not for the others.
  */
 export const testOverlap = (a: CollisionProxy, b: CollisionProxy): boolean => {
   const ta = a.shape.type;
@@ -646,10 +655,67 @@ const circlesOverlap: OverlapPair = (a, b) => {
   return dx * dx + dy * dy <= rsum * rsum;
 };
 
+/**
+ * The face axes alone are exact only for radius-free operands. Once a radius
+ * rounds a core, the separating direction in a vertex region is the line
+ * between the two closest core points, which no face axis covers, so cores
+ * that are apart are decided by their true distance instead.
+ */
 const roundedPolygonsOverlap: OverlapPair = (a, b) => {
   const totalRadius = radiusOf(a) + radiusOf(b);
+  const separation = Math.max(findMaxSeparation(a, b, _sepA).separation, findMaxSeparation(b, a, _sepB).separation);
 
-  return findMaxSeparation(a, b, _sepA).separation < totalRadius && findMaxSeparation(b, a, _sepB).separation < totalRadius;
+  if (separation >= totalRadius) {
+    return false;
+  }
+
+  // Overlapping cores, or cores whose gap a face axis already measures exactly.
+  if (separation <= 0 || totalRadius === 0) {
+    return true;
+  }
+
+  return coreDistanceSquared(a, b) < totalRadius * totalRadius;
+};
+
+/**
+ * Squared distance between two convex cores that do not overlap: the closest
+ * pair always lies on some pair of edges. A two-vertex ring is one segment
+ * traversed both ways, so it contributes a single edge.
+ */
+const coreDistanceSquared = (a: CollisionProxy, b: CollisionProxy): number => {
+  const av = a.worldVertices;
+  const bv = b.worldVertices;
+  const ac = countOf(a);
+  const bc = countOf(b);
+  const aEdges = ac === 2 ? 1 : ac;
+  const bEdges = bc === 2 ? 1 : bc;
+  let best = Infinity;
+
+  for (let i = 0; i < aEdges; i++) {
+    const i2 = (i + 1) % ac;
+
+    for (let j = 0; j < bEdges; j++) {
+      const j2 = (j + 1) % bc;
+      const distanceSquared = segmentSegmentDistanceSquared(
+        av[i * 2]!,
+        av[i * 2 + 1]!,
+        av[i2 * 2]!,
+        av[i2 * 2 + 1]!,
+        bv[j * 2]!,
+        bv[j * 2 + 1]!,
+        bv[j2 * 2]!,
+        bv[j2 * 2 + 1]!,
+        _coreRef,
+        _coreInc,
+      );
+
+      if (distanceSquared < best) {
+        best = distanceSquared;
+      }
+    }
+  }
+
+  return best;
 };
 
 /**
