@@ -19,9 +19,10 @@ export const loadFixture = (name: string): unknown => JSON.parse(readFileSync(jo
 /**
  * Drives the two Tiled types against a set of in-memory fixtures.
  *
- * The dependency scope answers the three requests a Tiled load makes: a
- * `texture` for every image, a `json` for every external `.tsj`, and a
- * `tiledSource` for the document the runtime map is derived from.
+ * The dependency scope answers the requests a Tiled load makes: a `texture`
+ * for every image, a `json` for every external `.tsj`, a `text` for every
+ * object template, and a `tiledSource` for the document the runtime map is
+ * derived from. A string fixture is served as text as is.
  */
 export const makeTiledContext = (fixtures: Record<string, unknown>, textureSizes: Record<string, { w: number; h: number }> = {}) => {
   const textureLoad = vi.fn((asset: unknown): Texture => {
@@ -44,9 +45,11 @@ export const makeTiledContext = (fixtures: Record<string, unknown>, textureSizes
       return textureLoad(asset);
     }
 
-    if (type === 'json') {
+    if (type === 'json' || type === 'text') {
       if (Object.hasOwn(fixtures, source)) {
-        return fixtures[source];
+        const fixture = fixtures[source];
+
+        return type === 'text' && typeof fixture !== 'string' ? JSON.stringify(fixture) : fixture;
       }
 
       throw new Error(`makeTiledContext: no fixture registered for "${source}"`);

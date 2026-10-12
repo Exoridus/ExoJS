@@ -1,16 +1,16 @@
 {
   "title": "TileSet",
-  "description": "A resolved tileset: a uniform grid of tiles within a texture atlas. Does **not** own its texture - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter. Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata.",
+  "description": "A resolved tileset: either a uniform grid of tiles within one texture atlas, or a collection of separate tile images. Does **not** own its textures - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter. Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata. Tiles of an atlas set batch into one draw per chunk; an image collection costs one draw per change of image in a chunk's draw order, so prefer atlases for dense layers.",
   "symbol": "TileSet",
   "kind": "class",
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 18,
+  "memberCount": 20,
   "counts": {
     "constructors": 1,
-    "methods": 4,
-    "properties": 13,
+    "methods": 5,
+    "properties": 14,
     "events": 0
   },
   "sections": [
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A resolved tileset: a uniform grid of tiles within a texture atlas.",
-        "Does **not** own its texture - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter.",
-        "Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata."
+        "A resolved tileset: either a uniform grid of tiles within one texture atlas, or a collection of separate tile images.",
+        "Does **not** own its textures - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter.",
+        "Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata. Tiles of an atlas set batch into one draw per chunk; an image collection costs one draw per change of image in a chunk's draw order, so prefer atlases for dense layers."
       ],
       "importLine": "import { TileSet } from '@codexo/exojs-tilemap'",
       "sourceLink": null
@@ -291,7 +291,62 @@
             }
           ],
           "returnType": "{ height: number; width: number; x: number; y: number }",
-          "description": "Compute the pixel-space source rectangle for a local tile ID within the atlas, accounting for columns, spacing, and margin."
+          "description": "Compute the pixel-space source rectangle for a local tile ID, relative to getTileTexture: the grid cell within the atlas (accounting for columns, spacing, and margin), or the whole image of a collection tile."
+        },
+        {
+          "name": "getTileTexture",
+          "signature": "getTileTexture(localTileId: number): TextureRegion | null",
+          "signatureTokens": [
+            {
+              "text": "getTileTexture",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "localTileId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureRegion",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "localTileId",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "TextureRegion | null",
+          "description": "The texture region a local tile id samples from: the atlas for an atlas set, the tile's own image for an image collection. null for an id outside the set or a collection id without an image."
         },
         {
           "name": "setDefinitions",
@@ -401,7 +456,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Number of columns in the atlas grid."
+          "description": "Number of columns in the atlas grid; 0 for an image collection."
         },
         {
           "name": "margin",
@@ -422,7 +477,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Pixel margin around the atlas."
+          "description": "Pixel margin around the atlas; 0 for an image collection."
         },
         {
           "name": "name",
@@ -506,7 +561,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Number of rows implied by tileCount and columns."
+          "description": "Number of rows implied by tileCount and columns; 0 for an image collection."
         },
         {
           "name": "spacing",
@@ -527,11 +582,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Pixel spacing between tiles in the atlas."
+          "description": "Pixel spacing between tiles in the atlas; 0 for an image collection."
         },
         {
           "name": "texture",
-          "signature": "texture: TextureRegion",
+          "signature": "texture: TextureRegion | null",
           "signatureTokens": [
             {
               "text": "texture",
@@ -544,11 +599,19 @@
             {
               "text": "TextureRegion",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Atlas texture region - Loader-owned, never destroyed by the tileset."
+          "description": "Atlas texture region - Loader-owned, never destroyed by the tileset. null for an image collection."
         },
         {
           "name": "tileCount",
@@ -591,6 +654,55 @@
           "params": [],
           "returnType": null,
           "description": "Tile height in pixels."
+        },
+        {
+          "name": "tileImages",
+          "signature": "tileImages: null | readonly TextureRegion | null[]",
+          "signatureTokens": [
+            {
+              "text": "tileImages",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureRegion",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-tile images of an image collection, indexed by local tile id, or null for an atlas set. Use getTileTexture to read either kind."
         },
         {
           "name": "tileWidth",

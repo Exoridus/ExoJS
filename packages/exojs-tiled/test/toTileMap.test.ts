@@ -263,54 +263,6 @@ describe('runtime binding vs source.toTileMap() equivalence', () => {
   });
 });
 
-// ── Unsupported-map rejection (no silent corruption) ─────────────────────────
-
-describe('TiledMap.toTileMap() — rejects maps it cannot convert faithfully', () => {
-  const baseLayer = {
-    id: 1,
-    name: 'Ground',
-    type: 'tilelayer',
-    visible: true,
-    opacity: 1,
-    x: 0,
-    y: 0,
-    width: 2,
-    height: 1,
-    data: [1, 1],
-  };
-  const baseTileset = {
-    firstgid: 1,
-    name: 'tiles',
-    image: 'tiles-a.png',
-    imagewidth: 64,
-    imageheight: 32,
-    tilewidth: 16,
-    tileheight: 16,
-    columns: 4,
-    tilecount: 8,
-  };
-
-  it('throws TiledFormatError for an unsupported staggered map', async () => {
-    const { loadSource } = makeContext({
-      'iso.tmj': {
-        type: 'map',
-        version: '1.10',
-        orientation: 'staggered',
-        width: 2,
-        height: 1,
-        tilewidth: 16,
-        tileheight: 16,
-        infinite: false,
-        layers: [baseLayer],
-        tilesets: [baseTileset],
-      },
-    });
-    const map = await loadSource('iso.tmj');
-    expect(() => map.toTileMap()).toThrow(TiledFormatError);
-    expect(() => map.toTileMap()).toThrow(/orthogonal/);
-  });
-});
-
 // ── Infinite maps / chunk provider ────────────────────────────────────────
 
 describe('TiledMap.toTileMap() — infinite maps', () => {

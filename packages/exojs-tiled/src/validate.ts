@@ -23,6 +23,8 @@ import type {
   TiledPropertyData,
   TiledPropertyType,
   TiledRenderOrder,
+  TiledTemplateData,
+  TiledTemplateField,
   TiledTextData,
   TiledTileData,
   TiledTileLayerData,
@@ -160,6 +162,21 @@ const optionalInteger = (obj: Record<string, unknown>, key: string, source: stri
   const value = obj[key];
 
   return value === undefined ? undefined : expectInteger(value, source, joinPath(path, key));
+};
+
+const optionalChoice = <T extends string>(
+  obj: Record<string, unknown>,
+  key: string,
+  choices: readonly T[],
+  source: string,
+): T | undefined => {
+  const value = optionalString(obj, key, source, '');
+
+  if (value !== undefined && !choices.includes(value as T)) {
+    throw new TiledFormatError(source, key, `unknown ${key} "${value}" (expected one of ${choices.join(', ')})`);
+  }
+
+  return value as T | undefined;
 };
 
 const optionalNonNegativeInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined => {
@@ -327,31 +344,101 @@ const validateTiledTextData = (raw: unknown, source: string, path: string): Tile
 // ── Objects ──────────────────────────────────────────────────────────────────
 
 /** @internal */
+/** Object fields a template supplies and an instance may override. */
+const TEMPLATE_FIELDS: readonly TiledTemplateField[] = [
+  'name',
+  'type',
+  'class',
+  'width',
+  'height',
+  'rotation',
+  'visible',
+  'gid',
+  'point',
+  'ellipse',
+  'polygon',
+  'polyline',
+  'text',
+  'properties',
+];
+
+/**
+ * An object placed from a template stores only what it overrides, and a
+ * template's object has no placement of its own; Tiled's defaults stand in
+ * for whatever such a partial object leaves out.
+ */
+const validateObjectBody = (
+  obj: Record<string, unknown>,
+  source: string,
+  path: string,
+  partial: boolean,
+): Omit<TiledObjectData, 'id' | 'x' | 'y'> => ({
+  name: partial ? (optionalString(obj, 'name', source, path) ?? '') : expectString(obj.name, source, joinPath(path, 'name')),
+  // Tiled 1.9 renamed the object's `type` member to `class` and 1.10 renamed
+  // it back, so a file written by either version carries only one of the two.
+  // Requiring `type` would reject every 1.9-authored map outright.
+  type: optionalString(obj, 'type', source, path) ?? '',
+  class: optionalString(obj, 'class', source, path),
+  width: partial ? (optionalNumber(obj, 'width', source, path) ?? 0) : expectNumber(obj.width, source, joinPath(path, 'width')),
+  height: partial ? (optionalNumber(obj, 'height', source, path) ?? 0) : expectNumber(obj.height, source, joinPath(path, 'height')),
+  rotation: partial ? (optionalNumber(obj, 'rotation', source, path) ?? 0) : expectNumber(obj.rotation, source, joinPath(path, 'rotation')),
+  visible: partial
+    ? (optionalBoolean(obj, 'visible', source, path) ?? true)
+    : expectBoolean(obj.visible, source, joinPath(path, 'visible')),
+  gid: optionalNonNegativeInteger(obj, 'gid', source, path),
+  point: optionalBoolean(obj, 'point', source, path),
+  ellipse: optionalBoolean(obj, 'ellipse', source, path),
+  polygon: obj.polygon === undefined ? undefined : validateTiledPointArray(obj.polygon, source, joinPath(path, 'polygon')),
+  polyline: obj.polyline === undefined ? undefined : validateTiledPointArray(obj.polyline, source, joinPath(path, 'polyline')),
+  text: obj.text === undefined ? undefined : validateTiledTextData(obj.text, source, joinPath(path, 'text')),
+  properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
+});
+
 export const validateTiledObjectData = (raw: unknown, source: string, path: string): TiledObjectData => {
   const obj = expectObject(raw, source, path);
+  const template = optionalString(obj, 'template', source, path);
 
   return {
     id: expectNonNegativeInteger(obj.id, source, joinPath(path, 'id')),
-    name: expectString(obj.name, source, joinPath(path, 'name')),
-    // Tiled 1.9 renamed the object's `type` member to `class` and 1.10 renamed
-    // it back, so a file written by either version carries only one of the two.
-    // Requiring `type` would reject every 1.9-authored map outright.
-    type: optionalString(obj, 'type', source, path) ?? '',
-    class: optionalString(obj, 'class', source, path),
     x: expectNumber(obj.x, source, joinPath(path, 'x')),
     y: expectNumber(obj.y, source, joinPath(path, 'y')),
-    width: expectNumber(obj.width, source, joinPath(path, 'width')),
-    height: expectNumber(obj.height, source, joinPath(path, 'height')),
-    rotation: expectNumber(obj.rotation, source, joinPath(path, 'rotation')),
-    visible: expectBoolean(obj.visible, source, joinPath(path, 'visible')),
-    gid: optionalNonNegativeInteger(obj, 'gid', source, path),
-    point: optionalBoolean(obj, 'point', source, path),
-    ellipse: optionalBoolean(obj, 'ellipse', source, path),
-    polygon: obj.polygon === undefined ? undefined : validateTiledPointArray(obj.polygon, source, joinPath(path, 'polygon')),
-    polyline: obj.polyline === undefined ? undefined : validateTiledPointArray(obj.polyline, source, joinPath(path, 'polyline')),
-    text: obj.text === undefined ? undefined : validateTiledTextData(obj.text, source, joinPath(path, 'text')),
-    template: optionalString(obj, 'template', source, path),
-    properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
+    ...validateObjectBody(obj, source, path, template !== undefined),
+    template,
+    ...(template !== undefined && { instanceFields: TEMPLATE_FIELDS.filter(field => obj[field] !== undefined) }),
+  };
+};
+
+/**
+ * Validates a Tiled JSON object template (`.tj`): the object every instance
+ * starts from, and the external tileset its `gid` refers to.
+ */
+export const validateTiledTemplateData = (raw: unknown, source: string): TiledTemplateData => {
+  const obj = expectObject(raw, source, '');
+
+  if (obj.type !== 'template') {
+    throw new TiledFormatError(source, 'type', `expected "template", got ${describeValue(obj.type)}`);
+  }
+
+  const object = expectObject(obj.object, source, 'object');
+  let tileset: TiledTemplateData['tileset'];
+
+  if (obj.tileset !== undefined) {
+    const ref = expectObject(obj.tileset, source, 'tileset');
+
+    tileset = {
+      firstgid: expectPositiveInteger(ref.firstgid, source, 'tileset/firstgid'),
+      source: expectString(ref.source, source, 'tileset/source'),
+    };
+  }
+
+  return {
+    tileset,
+    object: {
+      id: optionalNonNegativeInteger(object, 'id', source, 'object') ?? 0,
+      x: 0,
+      y: 0,
+      ...validateObjectBody(object, source, 'object', true),
+    },
   };
 };
 
@@ -586,6 +673,10 @@ export const validateTiledTileData = (raw: unknown, source: string, path: string
     image: optionalString(obj, 'image', source, path),
     imagewidth: optionalNonNegativeInteger(obj, 'imagewidth', source, path),
     imageheight: optionalNonNegativeInteger(obj, 'imageheight', source, path),
+    x: optionalNonNegativeInteger(obj, 'x', source, path),
+    y: optionalNonNegativeInteger(obj, 'y', source, path),
+    width: optionalNonNegativeInteger(obj, 'width', source, path),
+    height: optionalNonNegativeInteger(obj, 'height', source, path),
   };
 };
 
@@ -762,6 +853,9 @@ export const validateTiledMapData = (raw: unknown, source: string): TiledMapData
     tilewidth: expectPositiveInteger(obj.tilewidth, source, 'tilewidth'),
     tileheight: expectPositiveInteger(obj.tileheight, source, 'tileheight'),
     infinite,
+    staggeraxis: optionalChoice(obj, 'staggeraxis', ['x', 'y'] as const, source),
+    staggerindex: optionalChoice(obj, 'staggerindex', ['odd', 'even'] as const, source),
+    hexsidelength: optionalNonNegativeInteger(obj, 'hexsidelength', source, ''),
     compressionlevel: optionalInteger(obj, 'compressionlevel', source, ''),
     nextlayerid: optionalNonNegativeInteger(obj, 'nextlayerid', source, ''),
     nextobjectid: optionalNonNegativeInteger(obj, 'nextobjectid', source, ''),

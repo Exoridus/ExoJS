@@ -139,9 +139,14 @@ const convertLevel = (
     tilesets: runtimeTilesets,
     layers: runtimeLayers,
     objectLayers: runtimeObjectLayers,
+    backgroundColor: parseLdtkColor(level.__bgColor ?? level.bgColor ?? data.defaultLevelBgColor),
     properties: buildLdtkLevelProperties(level, worldIid),
   });
 };
+
+/** A `#rrggbb` LDtk colour as `0xRRGGBB`, or `null` when absent or malformed. */
+const parseLdtkColor = (color: string | null | undefined): number | null =>
+  color !== null && color !== undefined && /^#[\da-f]{6}$/i.test(color) ? Number.parseInt(color.slice(1), 16) : null;
 
 /**
  * The property bag a level contributes to its runtime representation - user
@@ -514,9 +519,22 @@ const convertEntity = (entity: LdtkEntityInstance, id: number): TileMapObject =>
     height: entity.height,
     rotation: 0,
     visible: true,
-    properties: convertFieldInstances(entity.fieldInstances),
+    properties: buildLdtkEntityProperties(entity),
     source: entity,
   };
+};
+
+/**
+ * An entity's property bag: its fields, then `ldtkTags` - the tags of its
+ * definition - when it has any, so spawn code can dispatch on a tag such as
+ * `Enemy` without reading the raw entity. Like the level keys, the reserved
+ * key wins over a same-named field.
+ */
+const buildLdtkEntityProperties = (entity: LdtkEntityInstance): TileProperties => {
+  const properties = convertFieldInstances(entity.fieldInstances);
+  const tags = entity.__tags ?? [];
+
+  return tags.length === 0 ? properties : { ...properties, ldtkTags: [...tags] };
 };
 
 /**

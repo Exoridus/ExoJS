@@ -6,6 +6,8 @@ import {
   type AsepriteFrameTag,
   type AsepriteLayer,
   type AsepriteSlice,
+  type AsepriteSliceFrame,
+  type AsepriteSliceKey,
   isAsepriteArrayData,
 } from './AsepriteData';
 
@@ -140,7 +142,8 @@ const resolveTaggedFrames = (frameArray: AsepriteFrameData[], indices: number[])
  *   (keyed by zero-based index string: `"0"`, `"1"`, ...).
  * - A `clips` map of {@link AnimatedSpriteClipDefinition} entries built from
  *   `meta.frameTags`, one per named tag.
- * - The `slices` and `layers` metadata maps, carried through verbatim.
+ * - The `slices`, `layers` and `tags` metadata maps, carried through verbatim,
+ *   and {@link getSlice} to read a slice on a given frame.
  *
  * Call {@link createAnimatedSprite} to obtain a ready-to-use
  * {@link AnimatedSprite} with all clips pre-registered.
@@ -169,8 +172,8 @@ export class AsepriteSheet {
    * name. Slices describe editor-defined regions - hitboxes, nine-patch
    * borders, UI anchor points - that aren't part of the frame/animation
    * data itself. Each {@link AsepriteSlice} carries one {@link AsepriteSliceKey}
-   * per frame at which its bounds change; consumers resolve the applicable
-   * key for a given frame index themselves.
+   * per frame at which its bounds change; {@link getSlice} resolves the key
+   * in effect on a given frame.
    */
   public readonly slices: ReadonlyMap<string, AsepriteSlice>;
 
@@ -188,6 +191,21 @@ export class AsepriteSheet {
   public readonly layers: ReadonlyMap<string, AsepriteLayer>;
 
   /**
+   * Frame tags from the Aseprite `meta.frameTags` metadata, keyed by tag
+   * name, with the editor colour and user data that {@link clips} do not
+   * carry. Empty when the export has no tags.
+   */
+  public readonly tags: ReadonlyMap<string, AsepriteFrameTag>;
+
+  /**
+   * For every clip in {@link clips}, the sheet frame index of each of its
+   * frames, in play order: the index an {@link AnimatedSprite}'s
+   * `currentFrame` selects. Use it to look up per-frame metadata such as
+   * {@link getSlice} for the frame being shown.
+   */
+  public readonly clipFrameIndices: ReadonlyMap<string, readonly number[]>;
+
+  /**
    * @internal - use {@link AsepriteSheet.parse} to create instances.
    * The public modifier is required for the Loader's `AssetConstructor` token
    * contract; users should call `parse()` instead of constructing directly.
@@ -197,11 +215,56 @@ export class AsepriteSheet {
     clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>,
     slices: ReadonlyMap<string, AsepriteSlice>,
     layers: ReadonlyMap<string, AsepriteLayer> = new Map(),
+    tags: ReadonlyMap<string, AsepriteFrameTag> = new Map(),
+    clipFrameIndices: ReadonlyMap<string, readonly number[]> = new Map(),
   ) {
     this.spritesheet = spritesheet;
     this.clips = clips;
     this.slices = slices;
     this.layers = layers;
+    this.tags = tags;
+    this.clipFrameIndices = clipFrameIndices;
+  }
+
+  /**
+   * The shape slice `name` has on sheet frame `frameIndex`: its most recent
+   * key at or before that frame, with the slice's colour and user data.
+   * `null` when the sheet has no such slice or the slice starts later.
+   *
+   * Rectangles and points are in pixels of the untrimmed sprite canvas - the
+   * space a sprite from {@link createAnimatedSprite} lays its frames out in,
+   * before its origin is subtracted - so they line up with trimmed frames too.
+   * The pivot and nine-slice centre stay relative to the bounds, as authored.
+   *
+   * @example
+   * ```ts
+   * const frame = sheet.clipFrameIndices.get(sprite.currentClip!)![sprite.currentFrame]!;
+   * const hitbox = sheet.getSlice('hitbox', frame);
+   * ```
+   */
+  public getSlice(name: string, frameIndex: number): AsepriteSliceFrame | null {
+    const slice = this.slices.get(name);
+    let current: AsepriteSliceKey | undefined;
+
+    for (const key of slice?.keys ?? []) {
+      if (key.frame <= frameIndex && (current === undefined || key.frame >= current.frame)) {
+        current = key;
+      }
+    }
+
+    if (slice === undefined || current === undefined) {
+      return null;
+    }
+
+    return {
+      name,
+      keyFrame: current.frame,
+      bounds: current.bounds,
+      ...(current.center !== undefined && { center: current.center }),
+      ...(current.pivot !== undefined && { pivot: current.pivot }),
+      ...(slice.color !== undefined && { color: slice.color }),
+      ...(slice.data !== undefined && { data: slice.data }),
+    };
   }
 
   /**
@@ -245,6 +308,8 @@ export class AsepriteSheet {
 
     // Build clips from frameTags, resolving frame indices into Rectangles.
     const clips = new Map<string, AnimatedSpriteClipDefinition>();
+    const clipFrameIndices = new Map<string, readonly number[]>();
+    const tags = new Map<string, AsepriteFrameTag>();
     const frameTags = data.meta.frameTags ?? [];
 
     for (const tag of frameTags) {
@@ -253,6 +318,8 @@ export class AsepriteSheet {
       // (durations, offsets) built below.
       const taggedFrames = resolveTaggedFrames(frameArray, expandFrameIndices(tag));
       const frames = taggedFrames.map(({ index }) => spritesheet.getFrame(String(index)));
+
+      tags.set(tag.name, tag);
 
       if (frames.length === 0) {
         continue;
@@ -294,6 +361,10 @@ export class AsepriteSheet {
         frameDurations,
         ...(frameOffsets ? { frameOffsets } : {}),
       });
+      clipFrameIndices.set(
+        tag.name,
+        taggedFrames.map(({ index }) => index),
+      );
     }
 
     // Build the slices map from meta.slices, keyed by slice name.
@@ -311,7 +382,7 @@ export class AsepriteSheet {
       layers.set(layer.name, layer);
     }
 
-    return new AsepriteSheet(spritesheet, clips, slices, layers);
+    return new AsepriteSheet(spritesheet, clips, slices, layers, tags, clipFrameIndices);
   }
 
   /**

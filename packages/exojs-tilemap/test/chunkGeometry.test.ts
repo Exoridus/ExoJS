@@ -197,7 +197,7 @@ describe('buildChunkPages', () => {
     // mutable object (e.g. a not-yet-decoded image, or a lost GPU context) that
     // can legitimately report 0 afterwards. buildChunkPages must guard against it.
     const tileset = makeTileset('degenerate', 16, 32, 32, 512, 512);
-    (tileset.texture.texture as unknown as { width: number }).width = 0;
+    (tileset.texture!.texture as unknown as { width: number }).width = 0;
 
     const pages = buildChunkPages(stubChunk(packTile(0, 0, TILE_TRANSFORM_IDENTITY)), [tileset], 32, 32);
     expect(pages).toHaveLength(0);

@@ -50,8 +50,8 @@ Loading a `.tmj` here throws `No renderer/handler` style errors directing you to
 
 Once the extension is active, load a `.tmj` map with an explicit descriptor or by path. Both resolve to the same handler.
 
-<Callout type="invalid" title="Orthogonal and isometric Tiled JSON maps">
-XML (`.tmx`/`.tsx`), staggered or hexagonal orientations, collection-of-images tilesets, and `zstd` compression each raise a clear error rather than loading. Export an orthogonal or isometric JSON map (`.tmj`) with CSV, gzip, or zlib data. Infinite (chunked) maps **are** supported: `toTileMap()` converts each chunked layer to an unbounded runtime layer whose data streams in on demand via `getChunkSource()` — see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter.
+<Callout type="invalid" title="Tiled JSON maps only">
+XML (`.tmx`/`.tsx`/`.tx`) and `zstd` compression raise a clear error rather than loading. Export a JSON map (`.tmj`) with CSV, gzip, or zlib data, and save object templates as JSON (`.tj`). Every orientation loads — orthogonal, isometric, staggered, and hexagonal — and infinite (chunked) maps **are** supported: `toTileMap()` converts each chunked layer to an unbounded runtime layer whose data streams in on demand via `getChunkSource()` — see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter.
 </Callout>
 
 ```ts
@@ -77,7 +77,7 @@ map.tileWidth;        // tile width in pixels
 map.tileHeight;       // tile height in pixels
 map.layers;           // readonly tile/object layers
 map.tilesets;         // readonly tileset definitions
-map.tilesets[0].texture; // the Texture resolved for an image tileset (undefined for a collection)
+map.tilesets[0].texture; // the Texture resolved for an atlas tileset (undefined for a collection)
 map.data;             // the raw parsed TiledMapData
 ```
 
@@ -285,13 +285,14 @@ map.destroy(); // releases the TiledMap; does NOT destroy tileset textures
 
 ## Supported scope
 
-The extension covers the common orthogonal workflow, including format details beyond the basics:
+The extension covers the Tiled JSON workflow, including format details beyond the basics:
 
-- Orthogonal orientation
+- Orthogonal, isometric, staggered, and hexagonal orientations (see [Staggered and hexagonal maps](#staggered-and-hexagonal-maps) below)
 - Tile layers, including base64 and gzip/zlib-compressed `data`
 - Infinite (chunked) maps — each chunked layer becomes an unbounded runtime layer whose data streams in on demand via `getChunkSource()` (see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter)
-- Image-based (atlas) tilesets, embedded in the map or referenced externally (`.tsj`)
+- Atlas tilesets and collection-of-images tilesets, embedded in the map or referenced externally (`.tsj`)
 - Object layers — rectangle, ellipse, point, polygon, polyline, tile, and text objects
+- Object templates saved as JSON (`.tj`), merged into each placed object when the map loads
 - Image layers
 - Per-tile collision shapes, animation frames, and custom properties
 - Wang/autotile sets, via the `tiledWangSetToWangSet` conversion step (see [Wang and autotile sets](#wang-and-autotile-sets) above)
@@ -301,10 +302,10 @@ The extension covers the common orthogonal workflow, including format details be
 These raise a clear error or are intentionally absent from this release:
 
 - **`.tmx` maps and `.tsx` tilesets (XML)** — only the JSON format is parsed: `.tmj` for maps, `.tsj` for external tilesets. Export from Tiled as JSON.
-- **Non-orthogonal orientations** — isometric, staggered, and hexagonal throw.
-- **Collection-of-images tilesets** — a tileset built from one image per tile, rather than a single atlas, throws in `toTileMap()`. Use an atlas tileset.
+- **XML object templates (`.tx`)** — a map that places objects from an XML template fails to load with an error naming the template. Save templates as JSON (`.tj`) in Tiled; those are merged in.
+- **Hexagonal tiles rotated by 60° or 120°** — the runtime turns tiles only in quarter steps, so `toTileMap()` rejects a hexagonal map that uses those rotations. Flipped hexagonal tiles are fine.
+- **Tile collision on staggered and hexagonal maps** — `buildTileCollisionGeometry`, `TileColliderStreamer`, and `TileNavigationSpace` work on rectangular logical cells and throw for these grids. Build colliders and navigation for hexagons yourself.
 - **`zstd`-compressed tile data** — no native decoder is wired up; re-export with gzip, zlib, or uncompressed CSV data instead.
-- **Object templates (`.tx`)** — an object's template path is preserved on `TiledObject.template` but not fetched or merged into the object. Avoid templates, or resolve them yourself.
 - **Text kerning** — Tiled's per-text `kerning` flag is parsed (`TiledTextData.kerning`) but dropped during `toTileMap()`; it isn't carried into `TextStyle`.
 
 ## Where to look next
@@ -326,4 +327,24 @@ Object layers expose logical shapes for gameplay. Use `layer.getDisplayObject(ob
 
 `TileColliderStreamer` and `buildObjectLayerColliders` operate in logical space. Bind an actor explicitly with `TilePhysicsBinding(body, node, map.projection)` and synchronize after stepping physics. Its node parent uses map display coordinates. The binding leaves sprite rotation and scale application-owned. Do not also use a direct physics-to-node binding for that node.
 
-The WebGL2 and WebGPU renderers share projected geometry and global diagonal ordering across storage chunks. Bounds include tall artwork and tileset offsets; only consecutive equal-texture runs batch. More texture changes can therefore increase draw calls. LDtk stays natively orthogonal, and staggered/hexagonal maps are not supported.
+The WebGL2 and WebGPU renderers share projected geometry and global diagonal ordering across storage chunks. Bounds include tall artwork and tileset offsets; only consecutive equal-texture runs batch. More texture changes can therefore increase draw calls. LDtk stays natively orthogonal.
+
+## Staggered and hexagonal maps
+
+Staggered and hexagonal maps keep Tiled's layout: `TileProjection` carries the map's `staggerAxis`, `staggerIndex`, and `hexSideLength`, `tileToPixel(tx, ty)` returns the top-left corner of a cell's bounding box, and `pixelToTile(x, y)` picks the cell the editor would pick at that point — including at cell edges and for negative cells of infinite maps. Tiled stores the objects of these maps in plain pixels, so object layers need no projection here.
+
+Cells draw row by row; when columns are staggered, each row draws its unshifted columns before its shifted ones. That order holds across storage chunks, so artwork taller than its cell overlaps the row above it as it does in Tiled. A hexagonal tile may be flipped but not turned by 60° or 120°.
+
+Physics and navigation stay with rectangular cells. Tile collision, `TileColliderStreamer`, and `TileNavigationSpace` reject these grids instead of treating hexagons as squares.
+
+## Collection-of-images tilesets
+
+A tileset made of one image per tile converts to a runtime `TileSet` whose `tileImages` holds each tile's own texture region; `getTileTexture(id)` returns it for either kind of tileset. Every image keeps its own size and is drawn bottom-left aligned in its cell, so larger images extend up and to the right, and tiles removed in the editor leave their ids empty. Tiled 1.9 sub-rectangles of a shared image are honoured.
+
+Tiles of an atlas batch into one draw per chunk. A collection costs one draw each time the image changes in a chunk's draw order, which the renderer keeps in cell order so overlapping images stack as in Tiled. Prefer an atlas for dense layers and a collection for scattered props.
+
+## Object templates
+
+An object placed from a template stores only its id, its position, and the fields it overrides. When the map loads, every template is fetched once through the map's dependency scope and merged into its instances: the instance keeps its own id, position, and overrides, inherits every other field, and merges properties by name. A tile template's tile is renumbered into the map's gids for the same tileset. `TiledObject.template` keeps the template path.
+
+A map built from data without the Loader keeps its templates unresolved, and `toTileMap()` rejects it rather than producing objects that lack their template's fields.

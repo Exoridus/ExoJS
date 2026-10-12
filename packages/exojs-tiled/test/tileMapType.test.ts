@@ -137,7 +137,7 @@ describe('tileMapType - texture ownership', () => {
 
     // TileMap.destroy() clears the tilesets array but must NOT destroy the
     // texture, which the loader owns and other maps may share.
-    const texture = tileMap.tilesets[0]!.texture.texture;
+    const texture = tileMap.tilesets[0]!.texture!.texture;
 
     expect(texture).toBeInstanceOf(Texture);
 

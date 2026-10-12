@@ -2,6 +2,7 @@ import type { AssetFactoryContext, Texture } from '@codexo/exojs';
 import { Asset } from '@codexo/exojs';
 
 import type { TiledLayerData, TiledMapData, TiledTilesetData, TiledTilesetRefData } from './data';
+import { resolveTiledTemplates } from './templates';
 import { TiledMap } from './TiledMap';
 import type { TiledLoadOptions } from './tiledOptions';
 import { TiledTileset, type TiledTilesetResources } from './TiledTileset';
@@ -109,13 +110,15 @@ const loadImageLayerTextures = async (
 };
 
 /**
- * Assembles a validated Tiled document into a {@link TiledMap}: resolves every
- * tileset (external `.tsj` or embedded) and its images, loads every image
+ * Assembles a validated Tiled document into a {@link TiledMap}: merges every
+ * object template in, resolves every tileset (external `.tsj` or embedded)
+ * and its images, loads every image
  * layer's texture, and validates the GIDs against the assembled tilesets.
  * @internal
  */
-export const loadTiledMap = async (data: TiledMapData, context: TiledContext): Promise<TiledMap> => {
+export const loadTiledMap = async (authored: TiledMapData, context: TiledContext): Promise<TiledMap> => {
   const source = context.source;
+  const data = await resolveTiledTemplates(authored, source, context);
   const [tilesets, imageTextures] = await Promise.all([
     Promise.all(data.tilesets.map(ref => loadTiledTileset(ref, source, context))),
     loadImageLayerTextures(data.layers, source, context),

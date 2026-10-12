@@ -101,6 +101,8 @@ export type {
   TiledPropertyData,
   TiledPropertyType,
   TiledRenderOrder,
+  TiledTemplateData,
+  TiledTemplateField,
   TiledTextData,
   TiledTileData,
   TiledTileLayerData,

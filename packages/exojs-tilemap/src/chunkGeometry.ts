@@ -1,4 +1,4 @@
-import type { Texture } from '@codexo/exojs';
+import type { Texture, TextureRegion } from '@codexo/exojs';
 
 import type { ReadonlyTileChunk } from './TileChunk';
 import type { TileProjection } from './TileProjection';
@@ -33,14 +33,15 @@ export interface TileQuad {
 }
 
 /**
- * Geometry sharing one tileset texture. Orthogonal chunks group tiles by
- * tileset; isometric chunks keep consecutive runs to preserve painter order.
+ * Geometry sharing one texture. Orthogonal chunks of atlas tiles group tiles
+ * by texture; isometric chunks, and chunks holding image-collection tiles,
+ * keep consecutive runs to preserve draw order.
  * @internal
  */
 export interface ChunkPage {
-  /** The tileset all quads in this page draw from. */
+  /** The tileset the first quad of this page draws from. */
   readonly tileset: TileSet;
-  /** The underlying GPU texture (the tileset's atlas), bound once per page. */
+  /** The underlying GPU texture (an atlas or one collection image), bound once per page. */
   readonly texture: Texture;
   /** The tile quads in deterministic projection-specific draw order. */
   readonly quads: readonly TileQuad[];
@@ -65,56 +66,71 @@ export const resetTileGeometryRebuildCount = (): void => {
   tileGeometryRebuildCount = 0;
 };
 
-const drawableTileset = (tilesets: readonly TileSet[], tilesetIndex: number, localTileId: number): TileSet | undefined => {
-  const tileset = tilesets[tilesetIndex];
+interface DrawableCell {
+  readonly decoded: NonNullable<ReturnType<typeof unpackTile>>;
+  readonly tileset: TileSet;
+  readonly region: TextureRegion;
+}
 
+/** The tile a packed cell draws, or `null` when the cell must stay empty. */
+const drawableCell = (packed: number, tilesets: readonly TileSet[]): DrawableCell | null => {
+  const decoded = packed === 0 ? null : unpackTile(packed);
+
+  if (decoded === null) {
+    return null;
+  }
+
+  const tileset = tilesets[decoded.tilesetIndex];
   // getTileRect throws for an invalid id; malformed cells must remain empty.
-  if (tileset === undefined || localTileId >= tileset.tileCount) {
-    return undefined;
+  const region = tileset?.getTileTexture(decoded.localTileId) ?? null;
+
+  if (tileset === undefined || region === null || region.texture.width <= 0 || region.texture.height <= 0) {
+    return null;
   }
 
-  const texture = tileset.texture.texture;
-
-  if (texture.width <= 0 || texture.height <= 0) {
-    return undefined;
-  }
-
-  return tileset;
+  return { decoded, tileset, region };
 };
 
-const pageQuads = (tileset: TileSet, isometric: boolean, buckets: Map<TileSet, TileQuad[]>, ordered: ChunkPage[]): TileQuad[] => {
-  let bucket: TileQuad[] | undefined;
+const pageQuads = (
+  tileset: TileSet,
+  texture: Texture,
+  ordered: boolean,
+  buckets: Map<Texture, ChunkPage>,
+  runs: ChunkPage[],
+): TileQuad[] => {
+  if (ordered) {
+    const previous = runs[runs.length - 1];
 
-  if (isometric) {
-    const previous = ordered[ordered.length - 1];
-
-    if (previous?.tileset === tileset) {
-      bucket = previous.quads as TileQuad[];
+    if (previous?.texture === texture) {
+      return previous.quads as TileQuad[];
     }
-  } else {
-    bucket = buckets.get(tileset);
+
+    const page: ChunkPage = { tileset, texture, quads: [] };
+
+    runs.push(page);
+
+    return page.quads as TileQuad[];
   }
 
-  if (bucket === undefined) {
-    bucket = [];
-    buckets.set(tileset, bucket);
+  let page = buckets.get(texture);
 
-    if (isometric) {
-      ordered.push({ tileset, texture: tileset.texture.texture, quads: bucket });
-    }
+  if (page === undefined) {
+    page = { tileset, texture, quads: [] };
+    buckets.set(texture, page);
   }
 
-  return bucket;
+  return page.quads as TileQuad[];
 };
 
-const tilesetPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<TileSet, TileQuad[]>): ChunkPage[] => {
+/** Atlas pages in the layer's tileset order, so overlapping tiles keep a stable stacking. */
+const atlasPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<Texture, ChunkPage>): ChunkPage[] => {
   const pages: ChunkPage[] = [];
 
   for (const tileset of tilesets) {
-    const quads = buckets.get(tileset);
+    const page = tileset.texture === null ? undefined : buckets.get(tileset.texture.texture);
 
-    if (quads !== undefined && quads.length > 0) {
-      pages.push({ tileset, texture: tileset.texture.texture, quads });
+    if (page !== undefined && page.quads.length > 0 && !pages.includes(page)) {
+      pages.push(page);
     }
   }
 
@@ -122,15 +138,77 @@ const tilesetPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<TileSet
 };
 
 /**
+ * Collection images differ in size and usually overhang their cells, so they
+ * must be drawn in cell order like Tiled does; bucketing them by texture would
+ * restack every overlap.
+ */
+const hasImageCollection = (tilesets: readonly TileSet[]): boolean => tilesets.some(tileset => tileset.tileImages !== null);
+
+/**
+ * Local cells of a chunk in draw order, as flat `lx, ly` pairs: row-major for
+ * orthogonal grids, by diagonal for isometric ones, and by band for staggered
+ * and hexagonal ones (see {@link TileProjection._band}). With `band` set, only
+ * that diagonal or band is listed.
+ */
+const cellOrder = (
+  width: number,
+  height: number,
+  projection: TileProjection | undefined,
+  band: number | undefined,
+  firstTileX: number,
+  firstTileY: number,
+): number[] => {
+  const cells: number[] = [];
+
+  if (projection?.staggered === true) {
+    const passes = projection.staggerAxis === 'x' ? 2 : 1;
+
+    for (let ly = 0; ly < height; ly++) {
+      for (let pass = 0; pass < passes; pass++) {
+        if (band !== undefined && band !== ly * passes + pass) {
+          continue;
+        }
+
+        for (let lx = 0; lx < width; lx++) {
+          if (projection._band(firstTileX + lx, firstTileY + ly) - (firstTileY + ly) * passes === pass) {
+            cells.push(lx, ly);
+          }
+        }
+      }
+    }
+
+    return cells;
+  }
+
+  const isometric = projection?.orientation === 'isometric';
+
+  for (let row = 0; row < (isometric ? width + height - 1 : height); row++) {
+    if (band !== undefined && row !== band) {
+      continue;
+    }
+
+    for (let lx = 0; lx < width; lx++) {
+      const ly = isometric ? row - lx : row;
+
+      if (ly >= 0 && ly < height) {
+        cells.push(lx, ly);
+      }
+    }
+  }
+
+  return cells;
+};
+
+/**
  * Build per-tileset page geometry for a single chunk.
  *
- * Iterates packed cells in row-major or isometric diagonal order, skipping
+ * Iterates packed cells in draw order (see {@link cellOrder}), skipping
  * empties, out-of-range tilesets, and out-of-range local tile ids (all treated
  * as empty - this is the renderer's half of the G-GID contract). Each surviving
  * cell is resolved to its source UV rect (from `tileset.getTileRect` + the
  * tileset `TextureRegion`) and a chunk-local destination rect (bottom-left
- * aligned per Tiled orthogonal semantics, so tilesets whose tiles are taller
- * than the map grid extend upward).
+ * aligned per Tiled semantics, so tilesets whose tiles are taller than the map
+ * grid extend upward).
  *
  * Allocation happens here only - the result is cached on the owning
  * {@link import('./TileChunkNode').TileChunkNode} keyed by `chunk.revision`, so
@@ -140,6 +218,10 @@ const tilesetPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<TileSet
  * @param tilesets   The layer's tileset array (packed `tilesetIndex` selects one).
  * @param tileWidth  Map/layer tile cell width in pixels.
  * @param tileHeight Map/layer tile cell height in pixels.
+ * @param band       Isometric diagonal, or staggered/hexagonal band, to build alone.
+ * @param firstTileX Grid column of the chunk's first cell; staggered and hexagonal
+ *                   cells are placed absolutely, relative to the projection origin.
+ * @param firstTileY Grid row of the chunk's first cell.
  * @internal
  */
 export const buildChunkPages = (
@@ -148,9 +230,11 @@ export const buildChunkPages = (
   tileWidth: number,
   tileHeight: number,
   projection?: TileProjection,
-  diagonal?: number,
+  band?: number,
   geometryX = 0,
   geometryY = 0,
+  firstTileX = 0,
+  firstTileY = 0,
 ): ChunkPage[] => {
   tileGeometryRebuildCount++;
 
@@ -158,74 +242,68 @@ export const buildChunkPages = (
     return [];
   }
 
-  const buckets = new Map<TileSet, TileQuad[]>();
-  const ordered: ChunkPage[] = [];
+  const buckets = new Map<Texture, ChunkPage>();
+  const runs: ChunkPage[] = [];
   const isometric = projection?.orientation === 'isometric';
-  const width = chunk.width;
-  const height = chunk.height;
+  const staggered = projection?.staggered === true;
+  const ordered = isometric || staggered || hasImageCollection(tilesets);
+  const cells = cellOrder(chunk.width, chunk.height, projection, band, firstTileX, firstTileY);
+  // Artwork bottom-aligns on the cell box, which staggered and hexagonal grids round to even pixels.
+  const cellHeight = projection?._cellHeight ?? tileHeight;
 
-  for (let row = 0; row < (isometric ? width + height - 1 : height); row++) {
-    if (diagonal !== undefined && row !== diagonal) {
+  for (let i = 0; i < cells.length; i += 2) {
+    const lx = cells[i]!;
+    const ly = cells[i + 1]!;
+    const cell = drawableCell(chunk.getRawAt(lx, ly), tilesets);
+
+    if (cell === null) {
       continue;
     }
 
-    for (let lx = 0; lx < width; lx++) {
-      const ly = isometric ? row - lx : row;
+    const { decoded, tileset, region } = cell;
+    const texture = region.texture;
+    const textureWidth = texture.width;
+    const textureHeight = texture.height;
 
-      if (ly < 0 || ly >= height) {
-        continue;
-      }
+    const rect = tileset.getTileRect(decoded.localTileId);
 
-      const packed = chunk.getRawAt(lx, ly);
+    // Absolute source pixel rect = tileset-region offset + in-atlas tile rect.
+    const sx = region.x + rect.x;
+    const sy = region.y + rect.y;
+    // Exact tile UVs, no half-texel inset. This assumes NEAREST filtering on
+    // the tileset atlas (the typical pixel-art case). Under LINEAR/mipmap
+    // filtering an atlas WITHOUT extrusion padding can bleed neighbouring
+    // tiles at the edges; author tilesets with extruded margins for linear
+    // sampling. (Extrusion-aware tilemap UV insetting - already done on the
+    // NineSlice/RepeatingSprite geometry paths - is a v0.14 follow-up.)
+    const u0 = sx / textureWidth;
+    const v0 = sy / textureHeight;
+    const u1 = (sx + rect.width) / textureWidth;
+    const v1 = (sy + rect.height) / textureHeight;
 
-      if (packed === 0) {
-        continue;
-      }
+    // Cell top-left before bottom alignment: isometric cells start at their
+    // top vertex, staggered and hexagonal cells at their bounding box corner.
+    let cellX: number;
+    let cellY: number;
 
-      const decoded = unpackTile(packed);
+    if (staggered) {
+      const origin = projection.tileToPixel(firstTileX + lx, firstTileY + ly);
 
-      if (decoded === null) {
-        continue;
-      }
-
-      const tileset = drawableTileset(tilesets, decoded.tilesetIndex, decoded.localTileId);
-
-      if (tileset === undefined) {
-        continue;
-      }
-
-      const region = tileset.texture;
-      const texture = region.texture;
-      const textureWidth = texture.width;
-      const textureHeight = texture.height;
-
-      const rect = tileset.getTileRect(decoded.localTileId);
-
-      // Absolute source pixel rect = tileset-region offset + in-atlas tile rect.
-      const sx = region.x + rect.x;
-      const sy = region.y + rect.y;
-      // Exact tile UVs, no half-texel inset. This assumes NEAREST filtering on
-      // the tileset atlas (the typical pixel-art case). Under LINEAR/mipmap
-      // filtering an atlas WITHOUT extrusion padding can bleed neighbouring
-      // tiles at the edges; author tilesets with extruded margins for linear
-      // sampling. (Extrusion-aware tilemap UV insetting - already done on the
-      // NineSlice/RepeatingSprite geometry paths - is a v0.14 follow-up.)
-      const u0 = sx / textureWidth;
-      const v0 = sy / textureHeight;
-      const u1 = (sx + rect.width) / textureWidth;
-      const v1 = (sy + rect.height) / textureHeight;
-
-      // Isometric cells start at their top vertex; artwork is bottom-aligned
-      // with the cell base before applying the tileset's display offset.
-      const x0 = geometryX + (isometric ? ((lx - ly) * tileWidth) / 2 - tileWidth / 2 : lx * tileWidth) + tileset.offsetX;
-      const y0 = geometryY + (isometric ? ((lx + ly) * tileHeight) / 2 : ly * tileHeight) + tileHeight - rect.height + tileset.offsetY;
-      const x1 = x0 + rect.width;
-      const y1 = y0 + rect.height;
-
-      const bucket = pageQuads(tileset, isometric, buckets, ordered);
-      bucket.push({ x0, y0, x1, y1, u0, v0, u1, v1, orient: orientCode(decoded.transform) });
+      cellX = origin.x - projection.originX;
+      cellY = origin.y - projection.originY;
+    } else {
+      cellX = geometryX + (isometric ? ((lx - ly) * tileWidth) / 2 - tileWidth / 2 : lx * tileWidth);
+      cellY = geometryY + (isometric ? ((lx + ly) * tileHeight) / 2 : ly * tileHeight);
     }
+
+    const x0 = cellX + tileset.offsetX;
+    const y0 = cellY + cellHeight - rect.height + tileset.offsetY;
+    const x1 = x0 + rect.width;
+    const y1 = y0 + rect.height;
+
+    const bucket = pageQuads(tileset, texture, ordered, buckets, runs);
+    bucket.push({ x0, y0, x1, y1, u0, v0, u1, v1, orient: orientCode(decoded.transform) });
   }
 
-  return isometric ? ordered : tilesetPages(tilesets, buckets);
+  return ordered ? runs : atlasPages(tilesets, buckets);
 };

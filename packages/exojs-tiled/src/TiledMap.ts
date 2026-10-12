@@ -24,7 +24,13 @@ import type {
   TiledRenderOrder,
   TiledTileData,
 } from './data';
-import { maskTiledGid, TILED_FLIPPED_DIAGONALLY_FLAG, TILED_FLIPPED_HORIZONTALLY_FLAG, TILED_FLIPPED_VERTICALLY_FLAG } from './gid';
+import {
+  maskTiledGid,
+  TILED_FLIPPED_DIAGONALLY_FLAG,
+  TILED_FLIPPED_HORIZONTALLY_FLAG,
+  TILED_FLIPPED_VERTICALLY_FLAG,
+  TILED_ROTATED_HEXAGONAL_120_FLAG,
+} from './gid';
 import { getTiledObjectAnchorOffset, resolveTiledObjectAlignment } from './objectAlignment';
 import { createTiledLayer, TiledGroupLayer, TiledImageLayer, type TiledLayer, TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 import type { TiledObject } from './TiledObject';
@@ -63,6 +69,12 @@ export class TiledMap {
   /** Tile grid cell height in pixels. */
   public readonly tileHeight: number;
   public readonly infinite: boolean;
+  /** Staggered and hexagonal maps: the shifted axis. Tiled's default `'y'` when the file leaves it out. */
+  public readonly staggerAxis: 'x' | 'y';
+  /** Staggered and hexagonal maps: which rows or columns are shifted. Tiled's default `'odd'` when the file leaves it out. */
+  public readonly staggerIndex: 'odd' | 'even';
+  /** Hexagonal maps: length of the straight sides along the stagger axis; `0` otherwise. */
+  public readonly hexSideLength: number;
   public readonly backgroundColor?: string | undefined;
   public readonly layers: readonly TiledLayer[];
   /** Tilesets used by this map, sorted by {@link TiledTileset.firstGid} ascending. */
@@ -88,6 +100,9 @@ export class TiledMap {
     this.tileWidth = data.tilewidth;
     this.tileHeight = data.tileheight;
     this.infinite = data.infinite;
+    this.staggerAxis = data.staggeraxis ?? 'y';
+    this.staggerIndex = data.staggerindex ?? 'odd';
+    this.hexSideLength = data.orientation === 'hexagonal' ? (data.hexsidelength ?? 0) : 0;
     this.backgroundColor = data.backgroundcolor;
     this.properties = data.properties ?? [];
     this._imageTextures = imageTextures;
@@ -130,11 +145,11 @@ export class TiledMap {
    * Convert this parsed Tiled source model into a format-independent runtime
    * {@link TileMap} from `@codexo/exojs-tilemap`.
    *
-   * Orthogonal and isometric maps with atlas tilesets are supported. An unsupported
-   * map, a collection-of-images tileset, or a tileset with no image at all
-   * throws {@link TiledFormatError} rather than silently producing wrong
-   * (misplaced) or empty geometry. Tile
-   * layers become renderable `TileLayer`s, object groups become data-only
+   * Orthogonal, isometric, staggered and hexagonal maps with atlas and
+   * collection-of-images tilesets are supported. A tileset with no image at
+   * all, or a hexagonal tile rotated by 60 or 120 degrees, throws
+   * {@link TiledFormatError} rather than silently producing wrong (misplaced)
+   * or empty geometry. Tile layers become renderable `TileLayer`s, object groups become data-only
    * `ObjectLayer`s, and image layers become data-only `ImageLayer`s; group
    * layer children are flattened in document order.
    *
@@ -156,26 +171,36 @@ export class TiledMap {
   public toTileMap(): TileMap {
     this._chunkSources.clear();
 
-    if (this.orientation !== 'orthogonal' && this.orientation !== 'isometric') {
-      throw new TiledFormatError(
-        this.source,
-        'orientation',
-        `toTileMap() supports orthogonal and isometric maps, got "${this.orientation}"`,
-      );
+    if (this.orientation === 'hexagonal') {
+      rejectHexagonalRotations(this.layers, this.source);
     }
+
+    walkLayers(this.layers, 'layers', (layer, layerPath) => {
+      const pending = layer instanceof TiledObjectLayer ? layer.objects.find(object => object.templatePending) : undefined;
+
+      if (pending !== undefined) {
+        throw new TiledFormatError(
+          this.source,
+          layerPath,
+          `object ${pending.id} is placed from template "${pending.template ?? ''}", which is merged in only when the map is loaded through the Loader`,
+        );
+      }
+    });
 
     const projection = new TileProjection({
       orientation: this.orientation,
       tileWidth: this.tileWidth,
       tileHeight: this.tileHeight,
       originX: this.orientation === 'isometric' ? (this.height * this.tileWidth) / 2 : 0,
+      staggerAxis: this.staggerAxis,
+      staggerIndex: this.staggerIndex,
+      hexSideLength: this.hexSideLength,
     });
 
-    // Build runtime tilesets. Every tileset must resolve to an atlas texture:
-    // a collection-of-images tileset is not supported yet, and a tileset with
-    // no image at all is unusable. Both throw TiledFormatError rather than
-    // dropping the tileset - a skipped tileset makes every cell and tile object
-    // that references it disappear from the runtime map without a diagnostic.
+    // Build runtime tilesets: an atlas texture, or one texture per tile for a
+    // collection of images. A tileset with neither is unusable and throws
+    // TiledFormatError rather than being dropped - a skipped tileset makes every
+    // cell and tile object that references it disappear without a diagnostic.
     const runtimeTilesets: TileSet[] = [];
     // indexToRuntime[i] = runtime TileSet for tilesets[i], or null for a hole in
     // the (caller-supplied) tilesets array.
@@ -189,15 +214,15 @@ export class TiledMap {
         continue;
       }
 
-      if (!tiledTs.texture) {
-        if (tiledTs.tileTextures.size > 0) {
-          throw new TiledFormatError(
-            this.source,
-            `tilesets/${tiledTs.name}`,
-            `tileset "${tiledTs.name}" is a collection-of-images tileset; ` + `toTileMap() requires atlas tilesets in this release`,
-          );
-        }
+      if (!tiledTs.texture && tiledTs.tileTextures.size > 0) {
+        const rts = buildCollectionTileSet(tiledTs, this.source);
 
+        runtimeTilesets.push(rts);
+        indexToRuntime.push(rts);
+        continue;
+      }
+
+      if (!tiledTs.texture) {
         throw new TiledFormatError(
           this.source,
           `tilesets/${tiledTs.name}`,
@@ -221,15 +246,8 @@ export class TiledMap {
         offsetX: tiledTs.tileOffset.x,
         offsetY: tiledTs.tileOffset.y,
       });
-      // Carry per-tile metadata (properties + animation frames) into the runtime
-      // tileset. Without this, Tiled tile animations and per-tile properties are
-      // lost at conversion. Out-of-range entries are skipped defensively.
-      const defs = buildTileDefinitions(tiledTs.tiles, tiledTs.tileCount);
 
-      if (defs.length > 0) {
-        rts.setDefinitions(defs);
-      }
-
+      applyTileDefinitions(rts, tiledTs);
       runtimeTilesets.push(rts);
       indexToRuntime.push(rts);
     }
@@ -371,6 +389,41 @@ const findTilesetIndexForGid = (baseGid: number, tiledTilesets: readonly TiledTi
   }
 
   return -1;
+};
+
+const HEXAGONAL_ROTATION_FLAGS = TILED_FLIPPED_DIAGONALLY_FLAG | TILED_ROTATED_HEXAGONAL_120_FLAG;
+
+const findHexagonalRotation = (gids: readonly number[] | undefined): number | undefined =>
+  gids?.find(gid => ((gid >>> 0) & HEXAGONAL_ROTATION_FLAGS) !== 0);
+
+/**
+ * On a hexagonal map the diagonal flag means a 60 degree turn and a fourth
+ * flag a 120 degree one. Tiles turn only in quarter steps at runtime, so such
+ * a tile would draw at the wrong angle; the map is rejected instead, before
+ * any chunk streams in.
+ */
+const rejectHexagonalRotations = (layers: readonly TiledLayer[], source: string): void => {
+  walkLayers(layers, 'layers', (layer, layerPath) => {
+    let rotated: number | undefined;
+
+    if (layer instanceof TiledTileLayer) {
+      rotated = findHexagonalRotation(layer.data);
+
+      for (const chunk of layer.chunks ?? []) {
+        rotated ??= findHexagonalRotation(chunk.data);
+      }
+    } else if (layer instanceof TiledObjectLayer) {
+      rotated = findHexagonalRotation(layer.objects.flatMap(object => (object.gid === undefined ? [] : [object.gid])));
+    }
+
+    if (rotated !== undefined) {
+      throw new TiledFormatError(
+        source,
+        layerPath,
+        `tile gid ${maskTiledGid(rotated)} is rotated by 60 or 120 degrees, which hexagonal maps do not support at runtime; flip it instead`,
+      );
+    }
+  });
 };
 
 /**
@@ -838,6 +891,67 @@ const parseTiledColor = (value: string | undefined): number | null => {
  * frames referencing out-of-range local ids, are skipped so the runtime tileset
  * never receives malformed definitions.
  */
+/**
+ * Runtime tileset for a collection-of-images tileset: each tile samples its own
+ * texture, cut to the tile's sub-rectangle when one is set (Tiled 1.9+). Ids
+ * without a tile - removed in the editor - stay empty.
+ */
+const buildCollectionTileSet = (tiledTs: TiledTileset, source: string): TileSet => {
+  const tileImages: Array<TextureRegion | null> = Array.from({ length: tiledTs.idCount }, () => null);
+  let tileWidth = tiledTs.tileWidth;
+  let tileHeight = tiledTs.tileHeight;
+
+  for (const tile of tiledTs.tiles) {
+    const texture = tiledTs.tileTextures.get(tile.id);
+
+    if (texture === undefined) {
+      continue;
+    }
+
+    const x = tile.x ?? 0;
+    const y = tile.y ?? 0;
+    const width = tile.width ?? tile.imagewidth ?? texture.width;
+    const height = tile.height ?? tile.imageheight ?? texture.height;
+
+    if (width <= 0 || height <= 0 || x + width > texture.width || y + height > texture.height) {
+      throw new TiledFormatError(
+        source,
+        `tilesets/${tiledTs.name}/tiles/${tile.id}`,
+        `tile ${tile.id} cuts ${width}x${height} at (${x}, ${y}) from an image measuring ${texture.width}x${texture.height}`,
+      );
+    }
+
+    tileImages[tile.id] = new TextureRegion(texture, { x, y, width, height });
+    tileWidth = Math.max(tileWidth, width);
+    tileHeight = Math.max(tileHeight, height);
+  }
+
+  const rts = new TileSet({
+    name: tiledTs.name,
+    tileImages,
+    tileWidth,
+    tileHeight,
+    class: tiledTs.class,
+    offsetX: tiledTs.tileOffset.x,
+    offsetY: tiledTs.tileOffset.y,
+  });
+
+  applyTileDefinitions(rts, tiledTs);
+
+  return rts;
+};
+
+const applyTileDefinitions = (rts: TileSet, tiledTs: TiledTileset): void => {
+  // Carry per-tile metadata (properties + animation frames) into the runtime
+  // tileset. Without this, Tiled tile animations and per-tile properties are
+  // lost at conversion. Out-of-range entries are skipped defensively.
+  const defs = buildTileDefinitions(tiledTs.tiles, rts.tileCount);
+
+  if (defs.length > 0) {
+    rts.setDefinitions(defs);
+  }
+};
+
 const buildTileDefinitions = (tiles: readonly TiledTileData[], tileCount: number): TileDefinition[] => {
   const defs: TileDefinition[] = [];
 

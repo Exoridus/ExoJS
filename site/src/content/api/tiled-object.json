@@ -6,11 +6,11 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 19,
+  "memberCount": 20,
   "counts": {
     "constructors": 1,
     "methods": 1,
-    "properties": 17,
+    "properties": 18,
     "events": 0
   },
   "sections": [
@@ -430,7 +430,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Path of the object template this object was placed from, relative to the map."
+        },
+        {
+          "name": "templatePending",
+          "signature": "templatePending: boolean",
+          "signatureTokens": [
+            {
+              "text": "templatePending",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true while this object was placed from a template that has not been merged in, which only happens for maps built from data without the Loader; such an object holds only the fields the instance overrides."
         },
         {
           "name": "text",

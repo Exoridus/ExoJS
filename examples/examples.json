@@ -970,6 +970,17 @@
       "level": "intermediate"
     },
     {
+      "slug": "hexagonal-grid",
+      "path": "tilemap/hexagonal-grid.js",
+      "language": "typescript",
+      "title": "Hexagonal & Staggered Grids",
+      "description": "Lay out hexagonal and staggered tile maps the way Tiled does, pick cells under the pointer, and draw every tile from its own image with trees overhanging the row above.",
+      "backend": "core",
+      "tags": ["tilemap", "hexagonal", "pointer"],
+      "capabilities": ["pointer"],
+      "level": "intermediate"
+    },
+    {
       "slug": "tile-chunks-and-bands",
       "path": "tilemap/tile-chunks-and-bands.js",
       "language": "typescript",

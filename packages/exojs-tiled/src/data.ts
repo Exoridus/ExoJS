@@ -5,12 +5,12 @@
 // TiledLayer, TiledObject, ...) live alongside this module and are built
 // from these shapes by `validate.ts` / `loadTiledMap.ts`.
 //
-// Field coverage targets the orthogonal-map feature set described in the
-// v0.13 Tiled phase-2 spec (tile/object/image/group layers, embedded and
-// external tilesets, custom properties, tile animations). Hex/isometric-only
-// fields (grid, hexsidelength, staggeraxis/-index, transformations, parallax
-// origin) are intentionally not modelled. Wangsets (terrain/auto-tile
-// definitions) are modelled via {@link TiledWangSetData}.
+// Field coverage targets what the runtime conversion uses: tile/object/image/
+// group layers, embedded and external tilesets, custom properties, tile
+// animations, and the stagger/hexagon layout of staggered and hexagonal maps.
+// Editor-only fields (tileset grid, transformations, parallax origin) are not
+// modelled. Wangsets (terrain/auto-tile definitions) are modelled via
+// {@link TiledWangSetData}.
 
 /** A 2D point as written by Tiled (used for tile offsets and object shapes). */
 export interface TiledPointData {
@@ -79,6 +79,14 @@ export interface TiledTileData {
   readonly image?: string | undefined;
   readonly imagewidth?: number | undefined;
   readonly imageheight?: number | undefined;
+  /** Left edge of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to 0. */
+  readonly x?: number | undefined;
+  /** Top edge of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to 0. */
+  readonly y?: number | undefined;
+  /** Width of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to the image width. */
+  readonly width?: number | undefined;
+  /** Height of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to the image height. */
+  readonly height?: number | undefined;
 }
 
 // ── Wangsets (terrains / auto-tile definitions) ───────────────────────────────
@@ -228,9 +236,43 @@ export interface TiledObjectData {
   readonly polygon?: readonly TiledPointData[] | undefined;
   readonly polyline?: readonly TiledPointData[] | undefined;
   readonly text?: TiledTextData | undefined;
-  /** Path to a `.tx` object template this object was instantiated from. */
+  /**
+   * Path of the object template (`.tj`) this object was placed from, relative
+   * to the map. Loading the map through the Loader merges the template in.
+   */
   readonly template?: string | undefined;
+  /**
+   * For an object placed from a template whose template has not been merged
+   * in yet, the fields the map file sets on the instance itself. Absent once
+   * the template is resolved, and for objects without a template.
+   */
+  readonly instanceFields?: readonly TiledTemplateField[] | undefined;
   readonly properties?: readonly TiledPropertyData[] | undefined;
+}
+
+/** An object field a template supplies and an instance may override. */
+export type TiledTemplateField =
+  | 'name'
+  | 'type'
+  | 'class'
+  | 'width'
+  | 'height'
+  | 'rotation'
+  | 'visible'
+  | 'gid'
+  | 'point'
+  | 'ellipse'
+  | 'polygon'
+  | 'polyline'
+  | 'text'
+  | 'properties';
+
+/** A Tiled JSON object template (`.tj`). */
+export interface TiledTemplateData {
+  /** The external tileset the template object's `gid` refers to, with the first gid the template file assigns it. */
+  readonly tileset?: { readonly firstgid: number; readonly source: string } | undefined;
+  /** The template object. Its id and placement are unused; every instance has its own. */
+  readonly object: TiledObjectData;
 }
 
 // ── Layers ───────────────────────────────────────────────────────────────────
@@ -320,6 +362,12 @@ export interface TiledMapData {
   /** Tile grid cell height in pixels. */
   readonly tileheight: number;
   readonly infinite: boolean;
+  /** Staggered and hexagonal maps: the axis whose every other row or column is shifted. */
+  readonly staggeraxis?: 'x' | 'y' | undefined;
+  /** Staggered and hexagonal maps: whether the odd or the even rows or columns are shifted. */
+  readonly staggerindex?: 'odd' | 'even' | undefined;
+  /** Hexagonal maps: length in pixels of the straight sides along the stagger axis. */
+  readonly hexsidelength?: number | undefined;
   readonly compressionlevel?: number | undefined;
   readonly nextlayerid?: number | undefined;
   readonly nextobjectid?: number | undefined;
