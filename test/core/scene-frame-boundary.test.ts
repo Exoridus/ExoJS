@@ -388,7 +388,7 @@ describe('frame trace baseline', () => {
   });
 });
 
-describe('navigation requested during dispatch commits at the frame boundary (LC-03)', () => {
+describe('navigation requested during dispatch commits at the frame boundary', () => {
   describe.each([0, 1, 3])('with %i fixed steps', steps => {
     test.each(requestPoints)('restore() from %s', async point => {
       const { app, frame, sceneA, scopeA, scopeB } = await start();
@@ -732,7 +732,7 @@ describe('a transitioned change whose session ends while its commit waits for th
   });
 });
 
-describe('stop and destroy during dispatch invalidate at once and still close the window (LC-04)', () => {
+describe('stop and destroy during dispatch invalidate at once and still close the window', () => {
   test.each(['B:fixedUpdate', 'B.beh1:fixedUpdate', 'B:update', 'B.beh1:update', 'B:draw'] as const)(
     'stop() from %s ends the scene for the rest of the frame',
     async point => {
@@ -946,7 +946,7 @@ describe('navigation requested after teardown began in the same frame', () => {
   });
 });
 
-describe('registry mutations around a deferred commit (LC-05)', () => {
+describe('registry mutations around a deferred commit', () => {
   test('a system added by the outgoing scene in its last frame joins at that frame boundary, not in the frame', async () => {
     const { app, frame, scopeB } = await start();
     const added = new ProbeSystem('added');
@@ -1121,7 +1121,7 @@ describe('a close error that recurs every frame', () => {
   });
 });
 
-describe('pause completes the dispatch unit it was requested in (DG-02, PH-09)', () => {
+describe('pause completes the dispatch unit it was requested in', () => {
   /** The frame of a scene that paused before its own preFrame phase: only drawing remains. */
   const pausedFrame = (label: string, steps: number): string[] => [
     'app:preFrame',

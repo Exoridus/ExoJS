@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
-import { SceneAvailability } from '#core/scene/SceneAvailability';
-import { SceneState } from '#core/scene/SceneState';
+import { SceneAvailability, sceneAvailabilityAllows } from '#core/scene/SceneAvailability';
+import { type SceneState } from '#core/scene/SceneState';
 import type { Destroyable } from '#core/types';
 import type { ActionMap, ActionRecord, AnyActionMap } from '#input/actions/ActionMap';
 import type { InputScope } from '#input/actions/InputScope';
@@ -21,26 +21,6 @@ export interface SceneActionMapOptions {
   /** Visible scene states in which this map may sample. Default: `'active'`. */
   readonly when?: SceneAvailability;
 }
-
-const gatedStates = new Set<SceneState>([
-  SceneState.Preparing,
-  SceneState.Ready,
-  SceneState.Suspended,
-  SceneState.Destroying,
-  SceneState.Destroyed,
-]);
-
-const whenPolicyAllows = (when: SceneAvailability, state: SceneState, paused: boolean): boolean => {
-  if (gatedStates.has(state)) {
-    return false;
-  }
-
-  if (when === SceneAvailability.Always) {
-    return true;
-  }
-
-  return when === SceneAvailability.Active ? !paused : paused;
-};
 
 type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
 
@@ -318,7 +298,7 @@ export class SceneInputs implements Destroyable {
    * apart, so neither inlines this check itself.
    */
   private _allowedNow(when: SceneAvailability): boolean {
-    return !this._suspended && !this._app.scenes._transitionGateOpen && whenPolicyAllows(when, this._getState(), this._getPaused());
+    return !this._suspended && !this._app.scenes._transitionGateOpen && sceneAvailabilityAllows(when, this._getState(), this._getPaused());
   }
 
   /**

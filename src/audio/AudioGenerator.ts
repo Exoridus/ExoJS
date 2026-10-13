@@ -224,13 +224,12 @@ export class AudioGenerator implements Playable {
   /**
    * Index of the voice to stop when the pool is at capacity.
    *
-   * Paused voices are considered only as a last resort - same rule, and same
-   * reason, as {@link Sound}: a paused voice is not a stale one, it is frozen
-   * exactly where a scene pause or retention suspension left it, but its
-   * `startedAt` keeps aging against the still-running context clock, so both
-   * strategies would otherwise single it out. Evicting it stops it for good, and
-   * {@link SceneAudio.restore} then passes over it (it is `ended`, not
-   * `paused`), so the held note never comes back.
+   * Silent voices - paused by their caller or held by a paused or retained
+   * scene - are considered only as a last resort - same rule, and same reason,
+   * as {@link Sound}: such a voice is not a stale one, it is frozen exactly
+   * where it stopped, but its `startedAt` keeps aging against the still-running
+   * context clock, so both strategies would otherwise single it out. Evicting
+   * it stops it for good, so the held note never comes back.
    */
   private _pickEvictionVictim(): number {
     const unpaused = this._pickVictim(false);
@@ -248,7 +247,7 @@ export class AudioGenerator implements Playable {
       for (let i = 0; i < this._activeVoices.length; i++) {
         const pooled = this._activeVoices[i];
 
-        if (pooled === undefined || (!includePaused && pooled.voice.paused)) {
+        if (pooled === undefined || (!includePaused && pooled.voice._isHalted)) {
           continue;
         }
 
@@ -265,7 +264,7 @@ export class AudioGenerator implements Playable {
     for (let i = 0; i < this._activeVoices.length; i++) {
       const pooled = this._activeVoices[i];
 
-      if (pooled !== undefined && (includePaused || !pooled.voice.paused)) {
+      if (pooled !== undefined && (includePaused || !pooled.voice._isHalted)) {
         return i;
       }
     }

@@ -989,13 +989,15 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * callback - lets that step or phase finish on the scene, its behaviours
    * and its systems, and stops everything after it; a pause requested before
    * the scene's first step of a frame prevents every step of that frame.
-   * Input and interaction are not both gated the same way:
-   * a {@link SceneInputs} binding whose {@link SceneAvailability} `when`
-   * option is left at its default (`'active'`) stops dispatching while
-   * paused, but {@link SceneInteraction.observe}/{@link SceneInteraction.scope}
-   * have no pause gate at all and keep firing pointer hit-testing and Tab
-   * traversal against the frozen world - a caller that needs interaction to
-   * stop too has to check {@link SceneDirector.paused} in its own handlers.
+   * Tweens, sprite animations and audio voices tracked by the scene follow
+   * their {@link SceneAvailability} `when` policy from the moment they are
+   * created, without their own play/pause state being changed. Input and
+   * interaction differ in their defaults: a {@link SceneInputs} binding stops
+   * dispatching while paused unless given another `when`, while
+   * {@link SceneInteraction.observe}/{@link SceneInteraction.scope} default to
+   * `'always'`, and the scene's own root stays hit-testable - a pause menu
+   * that must shield the world pushes its panel as a scope with
+   * `when: 'paused'`.
    * This does not change {@link SceneDirector.state} - see
    * {@link SceneDirector.paused} instead. No-op (returns `false`) when no
    * scene is active, it is not currently `Active`, or it is already paused.

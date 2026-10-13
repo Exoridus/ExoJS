@@ -122,6 +122,7 @@ export class AnimatedSprite extends Sprite {
    * after the owning stage has already been swapped out.
    */
   private _system: AnimationSystem | null = null;
+  private _availability: (() => boolean) | null = null;
 
   public readonly onComplete = new Signal<[clip: string]>();
   public readonly onFrame = new Signal<[clip: string, frame: number]>();
@@ -397,6 +398,25 @@ export class AnimatedSprite extends Sprite {
   }
 
   /**
+   * Bind playback time to an owner's availability: while `available` reports
+   * `false`, {@link update} advances nothing, and {@link playing} keeps
+   * reporting what was last requested. `null` unbinds.
+   * @internal
+   */
+  public _setAvailability(available: (() => boolean) | null): void {
+    this._availability = available;
+  }
+
+  /**
+   * Whether `available` is the binding currently in force - so an owner can
+   * tell whether the sprite is still its own to stop and unbind.
+   * @internal
+   */
+  public _isBoundTo(available: () => boolean): boolean {
+    return this._availability === available;
+  }
+
+  /**
    * Advance playback by `deltaSeconds` - seconds, the same unit as
    * {@link Tween.update}, and the unit a `Time` delta reports through
    * `delta.seconds`. Clip authoring stays in its own units:
@@ -413,7 +433,7 @@ export class AnimatedSprite extends Sprite {
    * and a later {@link resume} starts the paused frame's hold afresh.
    */
   public update(deltaSeconds: number): this {
-    if (!this._playing || this._currentClipName === null) {
+    if (!this._playing || this._currentClipName === null || (this._availability !== null && !this._availability())) {
       return this;
     }
 

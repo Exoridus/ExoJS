@@ -57,12 +57,13 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   /** `audioContext.currentTime` when the current source started. */
   private _startedAt: number;
   /**
-   * `true` between {@link SoundVoice.pause} and {@link SoundVoice.resume}. While
+   * `true` while the voice is actually silent - paused by its caller or held
+   * by its owner (see {@link BaseVoice._setHeld}). While
    * set there is NO live source: `_source` still points at the retired node so
    * the field can stay non-nullable, but nothing may be scheduled on it and
    * nothing may start a replacement until `resume()`.
    */
-  private _paused = false;
+  private _halted = false;
   /** Buffer offset (absolute seconds) the paused playhead sits at. */
   private _pausedAt = 0;
 
@@ -96,7 +97,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     const span = this.duration;
 
     // Paused: the context clock keeps running, the playhead does not.
-    if (this._paused) {
+    if (this._halted) {
       return clamp(this._pausedAt - this._window.base, 0, span);
     }
 
@@ -127,7 +128,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
 
     // Paused: move the point playback will resume from. Starting a source here
     // would make a seek audibly un-pause the voice.
-    if (this._paused) {
+    if (this._halted) {
       this._pausedAt = offset;
 
       return;
@@ -154,7 +155,59 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
    * see {@link SoundVoice._reachedWindowEnd}.
    */
   public pause(): void {
-    if (this._ended || this._paused) {
+    if (this._ended) {
+      return;
+    }
+
+    this._halt();
+
+    // A voice that was already over ends instead of pausing.
+    if (!this._ended) {
+      this._pauseRequested = true;
+    }
+  }
+
+  /**
+   * Restart from the offset {@link SoundVoice.pause} kept. While the voice's
+   * owner holds it (a paused scene), playback restarts once the hold is
+   * released.
+   */
+  public resume(): void {
+    if (this._ended) {
+      return;
+    }
+
+    this._pauseRequested = false;
+
+    if (!this._held) {
+      this._unhalt();
+    }
+  }
+
+  public get paused(): boolean {
+    return this._pauseRequested;
+  }
+
+  /**
+   * Whether the voice is actually silent - paused by its caller or held by
+   * its owner. What pool eviction protects, since a held voice is as idle as
+   * a paused one.
+   * @internal
+   */
+  public get _isHalted(): boolean {
+    return this._halted;
+  }
+
+  protected override _applyHold(): void {
+    if (this._held) {
+      this._halt();
+    } else if (!this._pauseRequested) {
+      this._unhalt();
+    }
+  }
+
+  private _halt(): void {
+    if (this._ended || this._halted) {
       return;
     }
 
@@ -162,8 +215,8 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     // past its window end while the callback is still in flight. Retiring it
     // clears that callback, so pausing here would strand the voice as
     // permanently paused-but-not-ended: holding its pool slot, its entry in the
-    // system's voice registry, and its place in `SceneAudio._suspended`, with
-    // nothing left that could ever finish it. It is over - end it properly.
+    // system's voice registry, and its owner's hold, with nothing left that
+    // could ever finish it. It is over - end it properly.
     if (this._reachedWindowEnd()) {
       this._finish();
 
@@ -171,9 +224,9 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     }
 
     // Read the playhead before the flag flips - `time` reports the frozen
-    // value once `_paused` is set.
+    // value once `_halted` is set.
     this._pausedAt = this._window.base + this.time;
-    this._paused = true;
+    this._halted = true;
     this._retireSource();
   }
 
@@ -192,19 +245,15 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     return this._offsetAtStart + elapsed >= this._window.end;
   }
 
-  public resume(): void {
-    if (this._ended || !this._paused) {
+  private _unhalt(): void {
+    if (this._ended || !this._halted) {
       return;
     }
 
-    this._paused = false;
+    this._halted = false;
     this._source = this._startSource(this._pausedAt);
     this._offsetAtStart = this._pausedAt;
     this._startedAt = this._audioContext.currentTime;
-  }
-
-  public get paused(): boolean {
-    return this._paused;
   }
 
   // -------------------------------------------------------------------------
@@ -219,7 +268,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     // Paused too: there is no live source to re-bound, and `_startSource`
     // reads `_loop` when `resume()` builds the replacement, so recording the
     // flag is all that is needed - and all that is allowed.
-    if (this._loop === value || this._ended || this._paused) {
+    if (this._loop === value || this._ended || this._halted) {
       this._loop = value;
 
       return;
@@ -265,7 +314,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
 
     // Paused: no live param to ramp, and no playhead to re-base (`time` is
     // frozen). The resumed source picks the rate up from `_startSource`.
-    if (this._playbackRate === rate || this._ended || this._paused) {
+    if (this._playbackRate === rate || this._ended || this._halted) {
       this._playbackRate = rate;
 
       return;
@@ -286,7 +335,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   public set detune(value: number) {
     this._detune = value;
 
-    if (!this._ended && !this._paused) {
+    if (!this._ended && !this._halted) {
       this._source.detune.setTargetAtTime(value, this._audioContext.currentTime, 0.01);
     }
   }
@@ -299,7 +348,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     // Paused: the per-frame spatial tick still runs (the voice is not ended and
     // stays registered), but there is no live rate param to modulate. The
     // ratio is recomputed on the next tick after resume anyway.
-    if (this._ended || this._paused) {
+    if (this._ended || this._halted) {
       return;
     }
 

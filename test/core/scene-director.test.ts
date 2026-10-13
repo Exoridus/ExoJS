@@ -775,31 +775,39 @@ describe('SceneDirector — retention', () => {
 
   test('a when:"active" tween stays frozen across pause -> retain -> restore, and resumes when the scene resumes', async () => {
     const app = createApplicationStub();
+    const target = { x: 0 };
     let tween!: Tween;
     const FirstScene = makeSceneClass({
       init() {
-        tween = this.tweens.create({}, { when: SceneAvailability.Active }).to({}, 1).start();
+        tween = this.tweens.create(target, { when: SceneAvailability.Active }).to({ x: 100 }, 1).start();
       },
     });
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+    const tick = (): void => app.tweens.preFrame(Time.seconds(0.25));
 
     await director.change(FirstScene);
     director.pause();
+    tick();
 
-    expect(tween.state).toBe(TweenState.Paused);
+    expect(target.x).toBe(0);
 
     await director.change(SecondScene, { suspendCurrent: true });
+    tick();
     await director.restore(FirstScene);
+    tick();
 
     expect(director.state).toBe(SceneState.Active);
     expect(director.paused).toBe(true);
-    expect(tween.state).toBe(TweenState.Paused);
+    expect(target.x).toBe(0);
+    // Held by the scene, not paused: the tween still reports what its caller asked for.
+    expect(tween.state).toBe(TweenState.Active);
 
     director.resume();
+    tick();
 
     expect(director.paused).toBe(false);
-    expect(tween.state).toBe(TweenState.Active);
+    expect(target.x).toBeCloseTo(25, 5);
   });
 
   test('restoreScene() rejects with RetainedSceneNotFoundError when nothing is retained for the target', async () => {
