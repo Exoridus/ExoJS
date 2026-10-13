@@ -84,7 +84,7 @@ export class TileChunk implements ReadonlyTileChunk {
    * this push, an in-place tile edit after capture would replay stale cached
    * geometry forever. Package-internal; not part of {@link ReadonlyTileChunk}.
    */
-  private _dirtyListeners: Set<() => void> | null = null;
+  private _dirtyListeners: Set<(written?: PackedTile) => void> | null = null;
 
   /**
    * @param cx Signed chunk X coordinate (must be finite safe integer).
@@ -239,7 +239,7 @@ export class TileChunk implements ReadonlyTileChunk {
     this._tiles[i] = packed;
     this._revision++;
     this._empty = null; // invalidate cache
-    this._notifyDirty();
+    this._notifyDirty(packed);
 
     return true;
   }
@@ -274,7 +274,7 @@ export class TileChunk implements ReadonlyTileChunk {
     this._tiles.fill(0);
     this._revision++;
     this._empty = true;
-    this._notifyDirty();
+    this._notifyDirty(0);
   }
 
   /**
@@ -283,9 +283,11 @@ export class TileChunk implements ReadonlyTileChunk {
    * `TileChunkNode` - e.g. two `TileLayerNode`s over the same `TileLayer`).
    * Package-internal: called by `TileChunkNode` to push mutations onto the
    * scene-node content-revision chain (see the `_dirtyListeners` field).
+   * `written` is the tile word every changed cell now holds when that is known,
+   * or `undefined` when cells may hold arbitrary new words.
    * @internal
    */
-  public _addDirtyListener(listener: () => void): void {
+  public _addDirtyListener(listener: (written?: PackedTile) => void): void {
     (this._dirtyListeners ??= new Set()).add(listener);
   }
 
@@ -293,17 +295,17 @@ export class TileChunk implements ReadonlyTileChunk {
    * Unregister a listener added via {@link _addDirtyListener} (node destroy).
    * @internal
    */
-  public _removeDirtyListener(listener: () => void): void {
+  public _removeDirtyListener(listener: (written?: PackedTile) => void): void {
     this._dirtyListeners?.delete(listener);
   }
 
-  private _notifyDirty(): void {
+  private _notifyDirty(written?: PackedTile): void {
     if (this._dirtyListeners === null) {
       return;
     }
 
     for (const listener of this._dirtyListeners) {
-      listener();
+      listener(written);
     }
   }
 }

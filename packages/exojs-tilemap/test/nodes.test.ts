@@ -24,12 +24,14 @@ const fakeTexture = (width = 512, height = 512): Texture =>
     destroyed: false,
   }) as unknown as Texture;
 
-const makeTileset = (name = 'tiles'): TileSet =>
+// Tiles of the grid's own size stay inside their cells, so node bounds and node
+// counts below are the plain cell layout rather than artwork overhang.
+const makeTileset = (name = 'tiles', size = 32): TileSet =>
   new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
-    tileWidth: 32,
-    tileHeight: 32,
+    tileWidth: size,
+    tileHeight: size,
     tileCount: 16,
   });
 
@@ -663,7 +665,7 @@ describe('TileMapNode interleaved image layers', () => {
 
 describe('unbounded layer/map nodes', () => {
   it('TileLayerNode.getLocalBounds() falls back to children aggregate when unbounded, and is not cullable', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -706,7 +708,7 @@ describe('unbounded layer/map nodes', () => {
   });
 
   it('TileMapNode.getLocalBounds() falls back to children aggregate when the map is unbounded', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -742,7 +744,7 @@ describe('unbounded layer/map nodes', () => {
   });
 
   it('TileMapNode is not cullable when the map is unbounded, and cullable when bounded', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const unboundedLayer = new TileLayer({
       id: 1,
       name: 'l',
@@ -779,7 +781,7 @@ describe('unbounded layer/map nodes', () => {
   });
 
   it('TileLayerNode.getLocalBounds() excludes chunk nodes hidden via visible = false', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -817,7 +819,7 @@ describe('unbounded layer/map nodes', () => {
   });
 
   it('TileMapNode.getLocalBounds() excludes layer nodes hidden via visible = false', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layerA = new TileLayer({
       id: 1,
       name: 'a',
@@ -868,7 +870,7 @@ describe('unbounded layer/map nodes', () => {
   });
 
   it('TileLayerNode.getLocalBounds() aggregates a chunk at negative coordinates', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -898,7 +900,7 @@ describe('unbounded layer/map nodes', () => {
 
 describe('TileLayerNode structural-listener reaction', () => {
   it('adopting a new non-empty chunk adds exactly one TileChunkNode, without touching other chunk nodes', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -932,7 +934,7 @@ describe('TileLayerNode structural-listener reaction', () => {
   });
 
   it('adopting an empty chunk does not add a TileChunkNode', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -950,7 +952,7 @@ describe('TileLayerNode structural-listener reaction', () => {
   });
 
   it('evicting a chunk removes and destroys its TileChunkNode', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -978,7 +980,7 @@ describe('TileLayerNode structural-listener reaction', () => {
   });
 
   it('evicting a coordinate with no chunk node is a no-op that does not affect other nodes', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -1002,7 +1004,7 @@ describe('TileLayerNode structural-listener reaction', () => {
   });
 
   it('re-adopting at an already-resident coordinate replaces the node with fresh content', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -1032,7 +1034,7 @@ describe('TileLayerNode structural-listener reaction', () => {
   });
 
   it("a freshly-adopted chunk node gets the layer's current tint even when opacity/tint have not changed since the last full sync", () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',
@@ -1069,7 +1071,7 @@ describe('TileLayerNode structural-listener reaction', () => {
   });
 
   it('destroy() unsubscribes from the layer — further layer mutation does not affect the destroyed node', () => {
-    const tileset = makeTileset();
+    const tileset = makeTileset('tiles', 16);
     const layer = new TileLayer({
       id: 1,
       name: 'l',

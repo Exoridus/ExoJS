@@ -11,10 +11,11 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileLayerNode, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -22,9 +23,11 @@ import { readWebGpuPixels } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import {
   createQuadrantTexture,
+  createSolidRectTexture,
   createSolidTexture,
   isometricOverlapMap,
   makeTileset,
+  orthogonalOverhangLayer,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -410,6 +413,52 @@ describe('webgpu isometric tilemap', () => {
       map.destroy();
       red.destroy();
       blue.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('webgpu orthogonal tilemap', () => {
+  test('draws overhanging artwork over neighbouring chunks like Tiled, whatever the load order, and keeps it when its cells are culled', async ctx => {
+    const backend = await setupBackend();
+    const blue = createSolidTexture('#0000ff');
+    const red = createSolidRectTexture('#ff0000', 16, 48);
+    const green = createSolidRectTexture('#00ff00', 32, 32);
+    const { layer, streamIn } = orthogonalOverhangLayer(blue, red, green);
+    const node = new TileLayerNode(layer);
+    const root = new Container();
+
+    root.addChild(node);
+
+    try {
+      streamIn();
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const read = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(read(8, 8), [255, 0, 0, 255]);
+      expectPixelNear(read(8, 24), [255, 0, 0, 255]);
+      expectPixelNear(read(24, 8), [0, 0, 255, 255]);
+      expectPixelNear(read(56, 8), [0, 255, 0, 255]);
+      expectPixelNear(read(40, 40), [0, 0, 0, 255]);
+
+      // The tree's cell is now below the canvas; only its overhang is in view.
+      root.y = 32;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const culled = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(culled(8, 40), [255, 0, 0, 255]);
+      expectPixelNear(culled(8, 56), [255, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      blue.destroy();
+      red.destroy();
+      green.destroy();
       backend.destroy();
     }
   });

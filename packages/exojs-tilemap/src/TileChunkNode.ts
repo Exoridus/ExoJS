@@ -1,8 +1,8 @@
 import type { ReadonlyRectangle } from '@codexo/exojs';
 import { Drawable } from '@codexo/exojs/renderer-sdk';
 
-import type { ChunkPage } from './chunkGeometry';
-import { buildChunkPages } from './chunkGeometry';
+import type { ArtworkReach, ChunkPage } from './chunkGeometry';
+import { artworkReach, buildChunkPages } from './chunkGeometry';
 import type { ReadonlyTileChunk } from './TileChunk';
 import { TileChunk } from './TileChunk';
 import { TileProjection } from './TileProjection';
@@ -11,9 +11,10 @@ import type { TileSet } from './TileSet';
 /**
  * A single renderable tile chunk. One `TileChunkNode` is a {@link Drawable}
  * that owns the batched quad geometry for exactly one {@link ReadonlyTileChunk}
- * of one {@link import('./TileLayer').TileLayer}. Orthogonal nodes use the
- * chunk's pixel origin; isometric nodes draw one diagonal slice and share
- * the projection origin to keep pixel snapping independent of chunk layout.
+ * of one {@link import('./TileLayer').TileLayer}. Orthogonal nodes draw the
+ * whole chunk, or one of its rows, from the chunk's pixel origin; isometric
+ * nodes draw one diagonal slice and share the projection origin to keep pixel
+ * snapping independent of chunk layout.
  *
  * Geometry is built lazily and cached against the source chunk's `revision`:
  * the renderer reads {@link TileChunkNode.pages} on each visible frame, but a
@@ -38,13 +39,14 @@ export class TileChunkNode extends Drawable {
   private readonly _geometryY: number;
   private readonly _firstTileX: number;
   private readonly _firstTileY: number;
-  /** Isometric diagonal, or staggered/hexagonal band, this node draws alone. */
+  /** Isometric diagonal, staggered/hexagonal band, or orthogonal row this node draws alone. */
   public readonly diagonal: number | undefined;
   public readonly depth: number;
   public readonly firstColumn: number;
 
   private _pages: ChunkPage[] = [];
   private _builtRevision = -1;
+  private _reach: ArtworkReach | undefined;
 
   /**
    * Bound once so `TileChunk._addDirtyListener`/`_removeDirtyListener` add and
@@ -68,6 +70,8 @@ export class TileChunkNode extends Drawable {
    *                         report a smaller `chunk.width`, but always start at
    *                         `cx * chunkWidthTiles`.
    * @param chunkHeightTiles The layer's (unclamped) chunk height in tiles.
+   * @param reach          How far the tilesets' artwork reaches past a cell; computed from
+   *                       `tilesets` when omitted.
    */
   public constructor(
     chunk: ReadonlyTileChunk,
@@ -78,6 +82,7 @@ export class TileChunkNode extends Drawable {
     chunkHeightTiles: number,
     projection = new TileProjection({ tileWidth, tileHeight }),
     diagonal?: number,
+    reach?: ArtworkReach,
   ) {
     super();
 
@@ -87,6 +92,7 @@ export class TileChunkNode extends Drawable {
     this._tileHeight = tileHeight;
     this._projection = projection;
     this.diagonal = diagonal;
+    this._reach = reach;
     const tx = chunk.cx * chunkWidthTiles;
     const ty = chunk.cy * chunkHeightTiles;
     this._firstTileX = tx;
@@ -97,9 +103,13 @@ export class TileChunkNode extends Drawable {
       // per-band nodes sort into the order Tiled draws the whole map in.
       this.depth = (projection.staggerAxis === 'x' ? ty * 2 : ty) + (diagonal ?? 0);
       this.firstColumn = tx;
-    } else {
+    } else if (projection.orientation === 'isometric') {
       this.depth = tx + ty + (diagonal ?? 0);
       this.firstColumn = tx + Math.max(0, (diagonal ?? 0) - chunk.height + 1);
+    } else {
+      // Whole chunks sort row-major; per-row nodes interleave by grid row like staggered bands.
+      this.depth = ty + (diagonal ?? 0);
+      this.firstColumn = tx;
     }
 
     const position = projection.tileToPixel(tx, ty);
@@ -170,7 +180,16 @@ export class TileChunkNode extends Drawable {
     const iso = this._projection.orientation === 'isometric';
 
     if (!iso) {
-      return this._localBounds.set(0, 0, this._chunk.width * this._tileWidth, this._chunk.height * this._tileHeight);
+      const reach = (this._reach ??= artworkReach(this._tilesets, this._tileWidth, this._tileHeight));
+      const top = (this.diagonal ?? 0) * this._tileHeight - reach.top;
+      const rows = this.diagonal === undefined ? this._chunk.height : 1;
+
+      return this._localBounds.set(
+        -reach.left,
+        top,
+        this._chunk.width * this._tileWidth + reach.left + reach.right,
+        rows * this._tileHeight + reach.top + reach.bottom,
+      );
     }
 
     const d = this.diagonal;

@@ -34,8 +34,9 @@ export interface TileQuad {
 
 /**
  * Geometry sharing one texture. Orthogonal chunks of atlas tiles group tiles
- * by texture; isometric chunks, and chunks holding image-collection tiles,
- * keep consecutive runs to preserve draw order.
+ * by texture, followed by consecutive runs of the tiles whose overlaps need
+ * cell order; isometric chunks, and chunks holding image-collection tiles, keep
+ * consecutive runs to preserve draw order.
  * @internal
  */
 export interface ChunkPage {
@@ -138,6 +139,93 @@ const atlasPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<Texture, 
 };
 
 /**
+ * How far tile artwork can reach past its cell on each side, in pixels.
+ * @internal
+ */
+export interface ArtworkReach {
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+}
+
+/** The reach of a tileset's largest tile, with its tile offset, past a bottom-left anchored cell. */
+const tilesetReach = (tileset: TileSet, cellWidth: number, cellHeight: number): ArtworkReach => {
+  let width = tileset.tileWidth;
+  let height = tileset.tileHeight;
+
+  for (const image of tileset.tileImages ?? []) {
+    if (image !== null) {
+      width = Math.max(width, image.width);
+      height = Math.max(height, image.height);
+    }
+  }
+
+  return {
+    left: Math.max(0, -tileset.offsetX),
+    top: Math.max(0, height - cellHeight - tileset.offsetY),
+    right: Math.max(0, tileset.offsetX + width - cellWidth),
+    bottom: Math.max(0, tileset.offsetY),
+  };
+};
+
+/**
+ * The furthest any tile of `tilesets` can reach past an orthogonal cell.
+ * @internal
+ */
+export const artworkReach = (tilesets: readonly TileSet[], cellWidth: number, cellHeight: number): ArtworkReach => {
+  let left = 0;
+  let top = 0;
+  let right = 0;
+  let bottom = 0;
+
+  for (const tileset of tilesets) {
+    const reach = tilesetReach(tileset, cellWidth, cellHeight);
+
+    left = Math.max(left, reach.left);
+    top = Math.max(top, reach.top);
+    right = Math.max(right, reach.right);
+    bottom = Math.max(bottom, reach.bottom);
+  }
+
+  return { left, top, right, bottom };
+};
+
+/**
+ * Whether drawing whole orthogonal chunks in row-major chunk order can stack two
+ * tiles differently from Tiled's row-by-row order.
+ *
+ * Chunk rows never share a grid row, so only two chunks of the same chunk row can
+ * disagree with Tiled: a tile `a` in the left chunk drawn in a later row than a
+ * tile `b` in the right chunk. They overlap only when `a` reaches right or `b`
+ * reaches left, and `a` reaches up or `b` reaches down - so artwork that reaches
+ * only sideways, or only up and down, keeps the whole-chunk order exact however
+ * far it reaches.
+ * @internal
+ */
+export const needsRowOrder = (tilesets: readonly TileSet[], cellWidth: number, cellHeight: number): boolean => {
+  let right = false;
+  let left = false;
+  let up = false;
+  let down = false;
+
+  for (const tileset of tilesets) {
+    const reach = tilesetReach(tileset, cellWidth, cellHeight);
+
+    if ((reach.right > 0 && reach.top > 0) || (reach.left > 0 && reach.bottom > 0)) {
+      return true;
+    }
+
+    right ||= reach.right > 0;
+    left ||= reach.left > 0;
+    up ||= reach.top > 0;
+    down ||= reach.bottom > 0;
+  }
+
+  return (right && down) || (left && up);
+};
+
+/**
  * Collection images differ in size and usually overhang their cells, so they
  * must be drawn in cell order like Tiled does; bucketing them by texture would
  * restack every overlap.
@@ -145,10 +233,48 @@ const atlasPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<Texture, 
 const hasImageCollection = (tilesets: readonly TileSet[]): boolean => tilesets.some(tileset => tileset.tileImages !== null);
 
 /**
+ * Decides, cell by cell in draw order, which atlas tiles of an orthogonal chunk
+ * must keep their cell order: a tile overhanging its cell, and a tile under an
+ * overhang drawn before it. Every other tile overlaps nothing drawn before it in
+ * the chunk, so it can batch by texture ahead of them. Pixel rects are relative
+ * to the chunk's first cell.
+ */
+const cellOrderTracker = (
+  width: number,
+  height: number,
+  cellWidth: number,
+  cellHeight: number,
+): ((lx: number, ly: number, x0: number, y0: number, x1: number, y1: number) => boolean) => {
+  let covered: Uint8Array | null = null;
+
+  return (lx, ly, x0, y0, x1, y1) => {
+    const left = lx * cellWidth;
+    const top = ly * cellHeight;
+
+    if (x0 >= left && y0 >= top && x1 <= left + cellWidth && y1 <= top + cellHeight) {
+      return covered !== null && covered[ly * width + lx] === 1;
+    }
+
+    covered ??= new Uint8Array(width * height);
+
+    const lastX = Math.min(width - 1, Math.ceil(x1 / cellWidth) - 1);
+    const lastY = Math.min(height - 1, Math.ceil(y1 / cellHeight) - 1);
+
+    for (let y = Math.max(0, Math.floor(y0 / cellHeight)); y <= lastY; y++) {
+      for (let x = Math.max(0, Math.floor(x0 / cellWidth)); x <= lastX; x++) {
+        covered[y * width + x] = 1;
+      }
+    }
+
+    return true;
+  };
+};
+
+/**
  * Local cells of a chunk in draw order, as flat `lx, ly` pairs: row-major for
  * orthogonal grids, by diagonal for isometric ones, and by band for staggered
  * and hexagonal ones (see {@link TileProjection._band}). With `band` set, only
- * that diagonal or band is listed.
+ * that diagonal, band, or row is listed.
  */
 const cellOrder = (
   width: number,
@@ -218,7 +344,7 @@ const cellOrder = (
  * @param tilesets   The layer's tileset array (packed `tilesetIndex` selects one).
  * @param tileWidth  Map/layer tile cell width in pixels.
  * @param tileHeight Map/layer tile cell height in pixels.
- * @param band       Isometric diagonal, or staggered/hexagonal band, to build alone.
+ * @param band       Isometric diagonal, staggered/hexagonal band, or orthogonal row to build alone.
  * @param firstTileX Grid column of the chunk's first cell; staggered and hexagonal
  *                   cells are placed absolutely, relative to the projection origin.
  * @param firstTileY Grid row of the chunk's first cell.
@@ -247,6 +373,7 @@ export const buildChunkPages = (
   const isometric = projection?.orientation === 'isometric';
   const staggered = projection?.staggered === true;
   const ordered = isometric || staggered || hasImageCollection(tilesets);
+  const keepsCellOrder = ordered ? null : cellOrderTracker(chunk.width, chunk.height, tileWidth, tileHeight);
   const cells = cellOrder(chunk.width, chunk.height, projection, band, firstTileX, firstTileY);
   // Artwork bottom-aligns on the cell box, which staggered and hexagonal grids round to even pixels.
   const cellHeight = projection?._cellHeight ?? tileHeight;
@@ -301,9 +428,12 @@ export const buildChunkPages = (
     const x1 = x0 + rect.width;
     const y1 = y0 + rect.height;
 
-    const bucket = pageQuads(tileset, texture, ordered, buckets, runs);
+    const inOrder =
+      keepsCellOrder === null ? ordered : keepsCellOrder(lx, ly, x0 - geometryX, y0 - geometryY, x1 - geometryX, y1 - geometryY);
+
+    const bucket = pageQuads(tileset, texture, inOrder, buckets, runs);
     bucket.push({ x0, y0, x1, y1, u0, v0, u1, v1, orient: orientCode(decoded.transform) });
   }
 
-  return ordered ? runs : atlasPages(tilesets, buckets);
+  return ordered ? runs : [...atlasPages(tilesets, buckets), ...runs];
 };
