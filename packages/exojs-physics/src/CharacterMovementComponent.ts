@@ -90,11 +90,11 @@ const negligible = 1e-6;
  * const movement = hero.addComponent(new KinematicMovementComponent(physics, { maxSpeed: 240 }));
  * const character = hero.addComponent(new CharacterMovementComponent(movement, { gravity: 1600, maxStepHeight: 8 }));
  *
- * class Controls extends BehaviorComponent {
+ * class PlayerControls extends BehaviorComponent {
  *   public override fixedUpdate(): void {
- *     character.move(input.horizontal);
+ *     character.move(controls.walk.value);
  *
- *     if (input.jumpPressed && character.grounded) {
+ *     if (controls.jump.tick.pressed && character.grounded) {
  *       character.launch({ x: 0, y: -520 });
  *     }
  *   }

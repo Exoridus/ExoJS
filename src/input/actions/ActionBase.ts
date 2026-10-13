@@ -156,4 +156,13 @@ export abstract class ActionBase<Binding> {
 
   /** Clear all state, as if no source had ever been touched. @internal */
   public abstract _reset(): void;
+
+  /**
+   * Forget occurrences sampled for a fixed step that has not started yet.
+   * Kept apart from {@link _reset}, which a rebind or a scope change also
+   * runs, because what was already sampled stays owned across those.
+   *
+   * @internal
+   */
+  public _dropTickInput(): void {}
 }

@@ -140,6 +140,34 @@ Within a frame, notifications arrive by category — gamepad buttons and axes, b
 
 A callback that throws stops neither the other callbacks nor the rest of the frame's input, and no event is delivered a second time on a later frame. Pointer events still reach the scene graph in that frame. The exception then reaches `app.onError` — several exceptions from one frame together as one `AggregateError` — and the rest of that frame is skipped, as for any other error in a frame. An exception from an `onCanvasFocusChange` listener raised outside the frame's input stage goes to `app.onError` right away and does not fail a frame.
 
+## Fixed steps and the tick view
+
+A frame runs zero, one or several fixed steps, so the frame API does not fit fixed-step code: `jump.pressed` is `true` in every fixed step of the frame the press happened in, and in none when that frame runs no step. Read a button's `tick` view there instead. It hands each press and release to exactly one fixed step — a frame without a step keeps them for the next one, and a frame with several delivers them to the first — and counts them, so two taps before a step arrive as `pressCount` 2 rather than one lost `true`. `tick.active` and `tick.value` give the held state for every step:
+
+```ts
+import { ActionMap, ButtonAction, Keyboard, Scene } from '@codexo/exojs';
+
+class Game extends Scene {
+    private readonly controls = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    public override init(): void {
+        this.inputs.attach(this.controls);
+    }
+
+    public override fixedUpdate(): void {
+        if (this.controls.jump.tick.pressed) {
+            // one jump per press, whatever the frame rate
+        }
+    }
+}
+```
+
+Every reader of the same step sees the same values — reading takes nothing away from another behavior or system. `SequenceAction` has the same view with `triggered` and `triggerCount`; axis and vector values are held state and read the same in either context. Outside a fixed step the tick counts are zero, and `tick.step` identifies the step being read.
+
+Occurrences belong to the map that sampled them, so put gameplay maps on `this.inputs`. When the scene pauses or is suspended before a step could take them, they are dropped: a press interrupted by a pause never turns into a jump after resume, and a press from one scene never reaches the next. Stopping the application, or frames skipped while the document is hidden under `pauseOnHidden`, drop them the same way. Opening an `InputScope` keeps what was already sampled, because the press happened while gameplay owned the input. A map attached to `app.input` belongs to the application and delivers to its fixed steps regardless of the scene.
+
+If a fixed step throws, what it was handed counts as delivered and does not come back in the next step. If the input stage of a frame fails before any step runs, its occurrences wait for the next step like those of any frame without one.
+
 ## Action mapping: one intent, many devices
 
 Hard-coding `Keyboard.Space` for jump works until someone picks up a controller. Hard-coding `GamepadButton.South` works until someone prefers the keyboard. Action mapping means naming what the player intends to do — "jump", "move right", "pause" — and binding each intent to one or more input channels regardless of device.

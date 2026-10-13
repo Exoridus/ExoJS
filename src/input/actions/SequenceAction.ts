@@ -5,6 +5,7 @@ import { ActionBase, channelsFromTokens, tokensFromChannels } from './ActionBase
 import { InputBindingError } from './InputBindingError';
 import { type InputSequence, type NormalizedStep, normalizeSequence, type ValidatedSequenceBinding } from './pattern';
 import type { SerializedActionBinding } from './serialization';
+import { type SequenceTickState, SequenceTickView, TickLedger } from './TickLedger';
 import type { ActionOptions, ActionSample } from './types';
 
 /**
@@ -98,6 +99,16 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
   private _startedAt: number | null = null;
   private _lastStepAt: number | null = null;
   private _triggered = false;
+  private _completions = 0;
+  private readonly _ticks = new TickLedger();
+
+  /**
+   * What the current fixed step owns of this sequence: its completions,
+   * counted and delivered to exactly one fixed step. Read it from fixed-step
+   * code instead of {@link triggered}, which describes the frame. See
+   * {@link SequenceTickState}.
+   */
+  public readonly tick: SequenceTickState = new SequenceTickView(this._ticks);
 
   /**
    * @throws {Error} If the pattern is empty, a string pattern contains an
@@ -174,6 +185,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
   /** @internal */
   public override _update(sample: ActionSample): void {
     this._triggered = false;
+    this._completions = 0;
 
     if (!this._seeded) {
       this._seeded = true;
@@ -245,6 +257,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     // timestamp in - `maxGap`/`timeout` would be enforced on the next event
     // rather than when they actually elapse.
     this._expire(sample.timestamp);
+    this._ticks.record(sample.clock, this._completions, 0);
   }
 
   /** Clear all state, as if no source had ever been touched. @internal */
@@ -255,6 +268,11 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     this._resetProgress();
   }
 
+  /** @internal */
+  public override _dropTickInput(): void {
+    this._ticks.drop();
+  }
+
   private _acceptStep(now: number): void {
     this._startedAt ??= now;
     this._lastStepAt = now;
@@ -262,6 +280,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
 
     if (this._step === this._steps.length) {
       this._triggered = true;
+      this._completions++;
       this._resetProgress();
     }
   }

@@ -110,6 +110,24 @@ export interface ActionSample {
    * transitions can ignore this field.
    */
   timestamp: number;
+  /**
+   * The owning {@link InputSystem}'s fixed-step clock, shared by reference so
+   * an action can tell which fixed step owns what it sampled - see
+   * {@link TickLedger}. Absent on a sample built without a system, whose
+   * actions then deliver nothing to fixed steps.
+   */
+  readonly clock?: TickClock | undefined;
+}
+
+/**
+ * Fixed-step clock of one {@link InputSystem}. `serial` counts the fixed steps
+ * started so far; `active` is `true` while one of them runs.
+ *
+ * @internal
+ */
+export interface TickClock {
+  serial: number;
+  active: boolean;
 }
 
 /**
@@ -208,7 +226,7 @@ export class ActionOwnership {
 
     this._baselineValues = null;
 
-    return values === null ? null : { values, batches: [], frameId: sample.frameId, timestamp: sample.timestamp };
+    return values === null ? null : { values, batches: [], frameId: sample.frameId, timestamp: sample.timestamp, clock: sample.clock };
   }
 
   /**
@@ -226,7 +244,7 @@ export class ActionOwnership {
       return sample;
     }
 
-    return { values: sample.values, batches: filtered, frameId: sample.frameId, timestamp: sample.timestamp };
+    return { values: sample.values, batches: filtered, frameId: sample.frameId, timestamp: sample.timestamp, clock: sample.clock };
   }
 
   /** Forget the current owner, as if this map had never been sampled. */

@@ -253,6 +253,7 @@ describe('Application', () => {
     rawApp['systems'] = systems;
     rawApp['scenes'] = sceneDirector;
     rawApp['input'] = { _prepareFrame: vi.fn(), _finishInteractionFrame: vi.fn() };
+    rawApp['_inputTickClock'] = { open: vi.fn(), close: vi.fn(), retire: vi.fn() };
     rawApp['interaction'] = { _prepareFrame: vi.fn() };
     rawApp['_audio'] = { _prepareFrame: vi.fn() };
     rawApp['tweens'] = { _prepareFrame: vi.fn() };
@@ -622,6 +623,7 @@ describe('Application', () => {
     rawApp['platform'] = { now: () => 0, requestFrame: vi.fn().mockReturnValue(99), cancelFrame: cancelSpy };
     rawApp['_state'] = ApplicationState.Running;
     rawApp['scenes'] = sceneDirector;
+    rawApp['_inputTickClock'] = { open: vi.fn(), close: vi.fn(), retire: vi.fn() };
 
     // A real scheduler rather than a double: this spec is about `stop()`
     // reaching the pending frame request and both running clocks, which are

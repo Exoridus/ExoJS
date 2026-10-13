@@ -1,0 +1,199 @@
+{
+  "title": "ButtonTickState",
+  "description": "What the current fixed step owns of a button-like action: every press and release the input frames sampled since the previous fixed step, plus the held state. Each occurrence is delivered to exactly one fixed step: a frame that runs no fixed step keeps its occurrences for the next one, and a frame that runs several delivers them to the first and none to the others. Every reader of the same step sees the same values; reading takes nothing away from another reader. Read it during a fixed step (`fixedUpdate` of a scene, behavior or system, or `Application.onFixedFrame`); outside one the counts are zero. Occurrences belong to the map that sampled them. They are dropped when that map stops being sampled before a fixed step could take them - its scene pauses or is suspended under a `when` policy that excludes it, the map is detached, or the application stops or skips frames while the document is hidden - so an old press never becomes a delayed action after resume. Opening or closing an InputScope above the map, or rebinding it, keeps what was already sampled.",
+  "symbol": "ButtonTickState",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What the current fixed step owns of a button-like action: every press and release the input frames sampled since the previous fixed step, plus the held state.",
+        "Each occurrence is delivered to exactly one fixed step: a frame that runs no fixed step keeps its occurrences for the next one, and a frame that runs several delivers them to the first and none to the others. Every reader of the same step sees the same values; reading takes nothing away from another reader. Read it during a fixed step (`fixedUpdate` of a scene, behavior or system, or `Application.onFixedFrame`); outside one the counts are zero.",
+        "Occurrences belong to the map that sampled them. They are dropped when that map stops being sampled before a fixed step could take them - its scene pauses or is suspended under a `when` policy that excludes it, the map is detached, or the application stops or skips frames while the document is hidden - so an old press never becomes a delayed action after resume. Opening or closing an InputScope above the map, or rebinding it, keeps what was already sampled."
+      ],
+      "importLine": "import { ButtonTickState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "active",
+          "signature": "active: boolean",
+          "signatureTokens": [
+            {
+              "text": "active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Held state as of the latest input frame, the same for every step of a frame."
+        },
+        {
+          "name": "pressCount",
+          "signature": "pressCount: number",
+          "signatureTokens": [
+            {
+              "text": "pressCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Presses delivered to this step."
+        },
+        {
+          "name": "pressed",
+          "signature": "pressed: boolean",
+          "signatureTokens": [
+            {
+              "text": "pressed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when at least one press was delivered to this step."
+        },
+        {
+          "name": "releaseCount",
+          "signature": "releaseCount: number",
+          "signatureTokens": [
+            {
+              "text": "releaseCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Releases delivered to this step."
+        },
+        {
+          "name": "released",
+          "signature": "released: boolean",
+          "signatureTokens": [
+            {
+              "text": "released",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when at least one release was delivered to this step."
+        },
+        {
+          "name": "step",
+          "signature": "step: number",
+          "signatureTokens": [
+            {
+              "text": "step",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Serial of the fixed step this view describes, identical for every action of the same application within one step; 0 outside a fixed step and before the action's first input frame."
+        },
+        {
+          "name": "value",
+          "signature": "value: number",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Aggregate value as of the latest input frame."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/TickLedger.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/TickLedger.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/TickLedger.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/TickLedger.ts"
+}
