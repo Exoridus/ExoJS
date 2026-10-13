@@ -1797,8 +1797,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._destroyPromise = this._disposeManagedResources()
       .catch((error: unknown) => {
-        logger.error('Application.destroy() failed during teardown.', { source: 'Application', ...(error instanceof Error && { error }) });
-        this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+        this._reportTeardownError(error);
       })
       .then(() => {
         this._setState(ApplicationState.Destroyed);
@@ -1844,46 +1843,60 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       });
     }
 
+    const failures: unknown[] = [];
+
+    // Every stage is guarded on its own: a throw from one subsystem must not
+    // leave the backend, platform subscriptions or Signals behind it alive.
+    const attempt = (stage: () => void): void => {
+      try {
+        stage();
+      } catch (error) {
+        failures.push(error);
+      }
+    };
+
     // Extensions installed last, so they are undone first - while the loader,
     // backend, audio and their own systems are all still alive for a disposer
     // to unhook from. Scenes go ahead of even this, because a scene may hold
     // whatever an extension installed.
     disposeExtensions(this._extensionDisposers);
 
-    this.loader.destroy();
+    attempt(() => this.loader.destroy());
 
     // The core systems run as systems but belong to the application, not to
     // the registry - which destroys whatever is still registered when it goes
     // down. Unregister them first so they are torn down exactly once, here, in
     // reverse registration order.
-    for (const system of [...this._coreSystems].reverse()) {
-      this.systems._removeCoreSystem(system);
-    }
+    attempt(() => {
+      for (const system of [...this._coreSystems].reverse()) {
+        this.systems._removeCoreSystem(system);
+      }
+    });
 
-    this.systems.destroy();
+    attempt(() => this.systems.destroy());
 
-    this._releaseOutputTarget();
-    this._releaseFramePasses();
-    this._rendering.destroy();
-    this.animations.destroy();
-    this.tweens.destroy();
-    this.coroutines.destroy();
-    this._audio.destroy();
-    this.interaction.destroy();
-    this.input.destroy();
-    this._backend.destroy();
+    attempt(() => this._releaseOutputTarget());
+    attempt(() => this._releaseFramePasses());
+    attempt(() => this._rendering.destroy());
+    attempt(() => this.animations.destroy());
+    attempt(() => this.tweens.destroy());
+    attempt(() => this.coroutines.destroy());
+    attempt(() => this._audio.destroy());
+    attempt(() => this.interaction.destroy());
+    attempt(() => this.input.destroy());
+    attempt(() => this._backend.destroy());
 
     // Only what this application created is ours to tear down; an injected
     // adapter or connectivity may outlive us or be shared.
     if (this._ownsConnectivity) {
-      this.connectivity.destroy();
+      attempt(() => this.connectivity.destroy());
     }
 
     if (this._ownsPlatform) {
-      this.platform.destroy();
+      attempt(() => this.platform.destroy());
     }
 
-    this._scheduler.destroy();
+    attempt(() => this._scheduler.destroy());
     this.onResize.destroy();
     this.onFrame.destroy();
     this.onFixedFrame.destroy();
@@ -1891,7 +1904,30 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.onVisibilityChange.destroy();
     this.onBackendLost.destroy();
     this.onBackendRestored.destroy();
+
+    // Reported before `onError` goes down, so its listeners still see them.
+    for (const failure of failures) {
+      this._reportTeardownError(failure);
+    }
+
     this.onError.destroy();
+  }
+
+  /**
+   * Log a teardown failure and forward it to {@link Application.onError}. A
+   * throwing listener is logged rather than propagated: `destroy()` must still
+   * settle, reach `Destroyed`, and deliver every failure to the other listeners.
+   */
+  private _reportTeardownError(error: unknown): void {
+    const normalized = error instanceof Error ? error : new Error(String(error));
+
+    logger.error('Application.destroy() failed during teardown.', { source: 'Application', error: normalized });
+    this.onError.dispatchIsolated(listenerError => {
+      logger.error('An Application.onError listener threw while a teardown failure was reported.', {
+        source: 'Application',
+        ...(listenerError instanceof Error && { error: listenerError }),
+      });
+    }, normalized);
   }
 
   /**

@@ -658,7 +658,15 @@ export class SceneScope<Data = unknown> {
     const normalized = error instanceof Error ? error : new Error(String(error));
 
     logger.error('A SceneScope lifecycle stage failed.', { source: 'SceneScope', error: normalized });
-    this._app.onError.dispatch(normalized);
+    // Isolated: a throwing listener must not escape a teardown documented
+    // never to throw, hide the remaining failures from the other listeners, or
+    // replace the activation error a failed prepare() rethrows.
+    this._app.onError.dispatchIsolated(listenerError => {
+      logger.error('An Application.onError listener threw while a scene lifecycle failure was reported.', {
+        source: 'SceneScope',
+        ...(listenerError instanceof Error && { error: listenerError }),
+      });
+    }, normalized);
   }
 
   private _reportErrors(errors: unknown[]): void {
