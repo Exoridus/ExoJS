@@ -354,8 +354,9 @@ export class SceneScope<Data = unknown> {
    * gated to `Active` and unpaused. The gate is taken once per step: a pause
    * requested inside the step lets the step finish on all three, so a
    * command issued in it is never left waiting for a world step that only
-   * runs after resume. Ending the scope (stop, destroy) inside the step skips
-   * whatever of it is still ahead.
+   * runs after resume. Ending the scope inside the step lets the callback
+   * that ended it return and skips every callback still ahead - the rest of
+   * the behaviour or system pass included.
    */
   public fixedUpdate(step: Seconds): void {
     if (this._state !== SceneState.Active || this._paused) {
@@ -553,6 +554,9 @@ export class SceneScope<Data = unknown> {
     const previous = this._state;
 
     this._state = SceneState.Destroying;
+    // A stop from inside a system pass ends this scope's part in the frame
+    // at once: the systems after the one that stopped it do not run.
+    this.systems._halt();
     this._onStateChange(previous, this._state);
 
     const errors: unknown[] = [];

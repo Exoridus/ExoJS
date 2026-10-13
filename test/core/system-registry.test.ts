@@ -257,3 +257,24 @@ describe('SystemRegistry frame-scoped mutations', () => {
     expect(registry.has(system)).toBe(false);
   });
 });
+
+describe('SystemRegistry._halt', () => {
+  test('ends the pass in progress after the running system and keeps every later pass empty', () => {
+    const registry = new SystemRegistry();
+    const log: string[] = [];
+
+    registry.add({
+      update: (): void => {
+        log.push('first');
+        registry._halt();
+      },
+    });
+    registry.add(makeSystem(log, 'second'));
+
+    tick(registry);
+    tick(registry);
+
+    expect(log).toEqual(['first']);
+    expect(registry.size).toBe(2);
+  });
+});

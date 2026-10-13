@@ -318,7 +318,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * registry key) when `target` is not present in
    * `ApplicationOptions.scenes`; with {@link RetainedSceneConflictError}
    * when `target` already has a retained instance (restore or unload it
-   * first).
+   * first); with {@link SceneNavigationAbortedError} when the application
+   * stops or is destroyed before the switch commits, or was already being
+   * destroyed when this was called.
    */
   public async change<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
   public async change<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
@@ -654,7 +656,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
    * navigation is already in flight; with {@link RetainedSceneNotFoundError}
-   * when `target` has no retained instance.
+   * when `target` has no retained instance; with
+   * {@link SceneNavigationAbortedError} under the same conditions as
+   * {@link SceneDirector.change}.
    */
   public async restore<K extends RegistryKeyOf<Registry>>(target: K, options?: RestoreSceneOptions): Promise<this>;
   public async restore<C extends NavigableSceneConstructor<Registry>>(target: C, options?: RestoreSceneOptions): Promise<this>;
@@ -791,9 +795,17 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * data always wins, never silently ignored.
    *
    * Rejects with {@link UnregisteredSceneError} (dev builds) when `target` is
-   * not present in `ApplicationOptions.scenes`.
+   * not present in `ApplicationOptions.scenes`; with
+   * {@link SceneNavigationAbortedError} once the application is being
+   * destroyed.
    */
   public async preload<C extends AnySceneConstructor>(target: C, ...args: PreloadArgs<InferSceneData<C>>): Promise<void> {
+    // A scene prepared now would land in `_preloaded` after teardown has
+    // already ended every entry there.
+    if (this._destroyed) {
+      throw new SceneNavigationAbortedError();
+    }
+
     const { data } = resolvePreloadArgs(args);
     const existing = this._preloaded.get(target);
 
@@ -1632,6 +1644,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * {@link SceneDirector._dispose}, which must always be able to proceed.
    */
   private async _runWithNavigation(action: () => Promise<void>): Promise<void> {
+    if (this._destroyed) {
+      throw new SceneNavigationAbortedError();
+    }
+
     if (this._navigationInFlight) {
       throw new ConcurrentSceneNavigationError();
     }

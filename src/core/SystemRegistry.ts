@@ -215,6 +215,7 @@ export class SystemRegistry implements Destroyable {
   private _sequence = 0;
   private _activeCount = 0;
   private _frameActive = false;
+  private _halted = false;
   private _preFrameDirty = false;
   private _fixedDirty = false;
   private _updateDirty = false;
@@ -373,6 +374,18 @@ export class SystemRegistry implements Destroyable {
   }
 
   /**
+   * Stop dispatching for good: the phase pass in progress ends after the
+   * system currently running, and no later pass calls any system. Used by an
+   * owner whose participation ends mid-frame, so the systems after the one
+   * that ended it do not run against it. Registration and teardown are
+   * unaffected.
+   * @internal
+   */
+  public _halt(): void {
+    this._halted = true;
+  }
+
+  /**
    * Register a system the owning {@link Application} owns. Identical to
    * {@link SystemRegistry.add} apart from marking it, so that removing it later
    * warns in development and so that the owner can take it back out at teardown
@@ -404,6 +417,10 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._preFrameList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.preFrame!(delta) as unknown;
 
@@ -426,6 +443,10 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._fixedList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.fixedUpdate!(step) as unknown;
 
@@ -448,6 +469,10 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._updateList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.update!(delta) as unknown;
 
@@ -470,6 +495,10 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._drawList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.draw!(context) as unknown;
 
@@ -492,6 +521,10 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._postFrameList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.postFrame!(delta, budget) as unknown;
 

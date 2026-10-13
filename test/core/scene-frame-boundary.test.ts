@@ -195,11 +195,13 @@ class SceneB extends TracedScene {
 
 class SceneC extends TracedScene {
   public static instances = 0;
+  public static last: SceneC | null = null;
   public readonly label = 'C';
 
   public constructor() {
     super();
     SceneC.instances++;
+    SceneC.last = this;
   }
 }
 
@@ -814,6 +816,110 @@ describe('stop and destroy during dispatch invalidate at once and still close th
     expect(scopeA.state).toBe(SceneState.Destroyed);
     expect(scopeB.state).toBe(SceneState.Destroyed);
     expect(destroyA).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('stop from inside a system pass', () => {
+  test.each(['B.sys1:preFrame', 'B.sys1:fixedUpdate', 'B.sys1:update', 'B.sys1:draw', 'B.sys1:postFrame'] as const)(
+    'stop() from %s runs no further scene callback, the rest of that pass included',
+    async point => {
+      const { app, frame, scopeB } = await start();
+
+      at(point, () => app.stop());
+
+      const trace = frame(2);
+
+      expect(trace).toContain(point);
+      expect(trace.slice(trace.indexOf(point) + 1).filter(entry => entry.startsWith('B'))).toEqual([]);
+      expect(windowOpen(scopeB.systems)).toBe(false);
+
+      await flush();
+
+      expect(scopeB.state).toBe(SceneState.Destroyed);
+    },
+  );
+});
+
+describe('activation after teardown began', () => {
+  test.each([true, false])('change() after destroy() activates nothing (requested mid-frame: %s)', async midFrame => {
+    const { app, frame } = await start();
+    let changed = null as Promise<unknown> | null;
+    let destroyed = null as Promise<unknown> | null;
+
+    const request = (): void => {
+      destroyed = app.destroy();
+      changed = app.scenes.change(SceneC);
+    };
+
+    SceneC.last = null;
+
+    if (midFrame) {
+      at('B:update', request);
+      frame(1);
+    } else {
+      request();
+    }
+
+    await expect(changed).rejects.toBeInstanceOf(SceneNavigationAbortedError);
+    await destroyed;
+    harness = null;
+
+    expect(app.scenes.currentScene).toBeNull();
+
+    if (SceneC.last !== null) {
+      expect(scopeOf(SceneC.last)?.state ?? SceneState.Destroyed).toBe(SceneState.Destroyed);
+    }
+  });
+
+  test('preload() after destroy() leaves no prepared scene behind', async () => {
+    const { app } = await start();
+
+    SceneC.last = null;
+
+    const destroyed = app.destroy();
+    const preloaded = app.scenes.preload(SceneC);
+
+    await expect(preloaded).rejects.toBeInstanceOf(SceneNavigationAbortedError);
+    await destroyed;
+    harness = null;
+
+    expect(SceneC.last).toBeNull();
+  });
+
+  test('the rest of a frame that called destroy() still runs against live engine resources', async () => {
+    const { app, frame } = await start();
+    const released: string[] = [];
+    const backend = (app as unknown as { _backend: { destroy: () => void } })._backend;
+
+    vi.spyOn(app.loader, 'destroy').mockImplementation(() => {
+      released.push('loader');
+    });
+    vi.spyOn(app.input, 'destroy').mockImplementation(() => {
+      released.push('input');
+    });
+    vi.mocked(backend.destroy).mockImplementation(() => {
+      released.push('backend');
+    });
+
+    const seen: string[][] = [];
+    let destroyed = null as Promise<unknown> | null;
+
+    at('B:fixedUpdate', () => {
+      destroyed = app.destroy();
+    });
+
+    for (const point of ['B:update', 'B.sys2:update', 'B:draw', 'B.sys2:postFrame']) {
+      at(point, () => seen.push([point, ...released]));
+    }
+
+    frame(1);
+
+    expect(seen).toEqual([['B:update'], ['B.sys2:update'], ['B:draw'], ['B.sys2:postFrame']]);
+
+    await destroyed;
+    harness = null;
+
+    expect(released).toEqual(expect.arrayContaining(['loader', 'input', 'backend']));
   });
 });
 
