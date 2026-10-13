@@ -3,8 +3,8 @@ import {
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
-  type RenderingContext,
   Scene,
+  SceneAvailability,
   type Seconds,
   Sprite,
   Text,
@@ -25,16 +25,20 @@ class PauseResumeScene extends Scene {
     this.label = new Text('Space or click: pause update', { fillColor: Color.white, fontSize: 16 });
     this.label.setAnchor(0.5, 0);
     this.label.setPosition(width / 2, 16);
+    this.addChild(this.sprite);
+    this.addChild(this.label);
 
-    this.inputs.onTrigger(Keyboard.Space, () => {
-      this.toggle();
-    });
+    // A scene binding fires only while the scene is active unless told
+    // otherwise; the key that resumes has to work while it is paused too.
+    this.inputs.onTrigger(Keyboard.Space, () => this.toggle(), { when: SceneAvailability.Always });
 
-    // Same toggle on click/tap so the pause works without a keyboard.
-    app.input.onPointerTap.add(() => {
-      this.toggle();
-    });
+    // Same toggle on click/tap so the pause works without a keyboard. A global
+    // signal, so the scene removes its listener when it ends.
+    app.input.onPointerTap.add(this.onTap);
+    this.track({ destroy: () => app.input.onPointerTap.remove(this.onTap) });
   }
+
+  private readonly onTap = (): void => this.toggle();
 
   private toggle(): void {
     if (this.app.scenes.paused) {
@@ -48,11 +52,6 @@ class PauseResumeScene extends Scene {
 
   override update(delta: Seconds): void {
     this.sprite.rotate(delta * 180);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.sprite);
-    context.render(this.label);
   }
 }
 

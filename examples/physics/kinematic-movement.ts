@@ -36,7 +36,7 @@ class Steering extends BehaviorComponent {
 }
 
 class KinematicMovementScene extends Scene {
-  private readonly world = new PhysicsWorld();
+  private world!: PhysicsWorld;
   private readonly controls = new ActionMap({
     move: new VectorAction([
       { up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D },
@@ -49,6 +49,7 @@ class KinematicMovementScene extends Scene {
   private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
+    this.world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
     this.inputs.attach(this.controls);
 

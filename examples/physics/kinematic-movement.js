@@ -33,7 +33,7 @@ class Steering extends BehaviorComponent {
   }
 }
 class KinematicMovementScene extends Scene {
-  world = new PhysicsWorld();
+  world;
   controls = new ActionMap({
     move: new VectorAction([
       { up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D },
@@ -45,6 +45,7 @@ class KinematicMovementScene extends Scene {
   debug;
   hud;
   init() {
+    this.world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
     this.inputs.attach(this.controls);
     const walls = new PhysicsBody({ type: 'static' });

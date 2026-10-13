@@ -1,5 +1,5 @@
 // Auto-generated from pause-and-resume.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, SceneAvailability, Sprite, Text } from '@codexo/exojs';
 class PauseResumeScene extends Scene {
   sprite;
   label;
@@ -12,14 +12,17 @@ class PauseResumeScene extends Scene {
     this.label = new Text('Space or click: pause update', { fillColor: Color.white, fontSize: 16 });
     this.label.setAnchor(0.5, 0);
     this.label.setPosition(width / 2, 16);
-    this.inputs.onTrigger(Keyboard.Space, () => {
-      this.toggle();
-    });
-    // Same toggle on click/tap so the pause works without a keyboard.
-    app.input.onPointerTap.add(() => {
-      this.toggle();
-    });
+    this.addChild(this.sprite);
+    this.addChild(this.label);
+    // A scene binding fires only while the scene is active unless told
+    // otherwise; the key that resumes has to work while it is paused too.
+    this.inputs.onTrigger(Keyboard.Space, () => this.toggle(), { when: SceneAvailability.Always });
+    // Same toggle on click/tap so the pause works without a keyboard. A global
+    // signal, so the scene removes its listener when it ends.
+    app.input.onPointerTap.add(this.onTap);
+    this.track({ destroy: () => app.input.onPointerTap.remove(this.onTap) });
   }
+  onTap = () => this.toggle();
   toggle() {
     if (this.app.scenes.paused) {
       this.app.scenes.resume();
@@ -30,10 +33,6 @@ class PauseResumeScene extends Scene {
   }
   update(delta) {
     this.sprite.rotate(delta * 180);
-  }
-  draw(context) {
-    context.render(this.sprite);
-    context.render(this.label);
   }
 }
 const app = new Application({
