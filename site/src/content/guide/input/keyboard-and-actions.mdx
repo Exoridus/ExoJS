@@ -132,6 +132,14 @@ A common pattern is to pause gameplay on focus loss and resume on return. The en
 
 All scene-scoped bindings are cleaned up when the scene's `destroy` hook runs — no manual `.unbind()` calls needed unless you want to detach a binding mid-scene.
 
+## When input callbacks run
+
+Key, binding, gamepad, wheel and pointer callbacks do not run inside the browser's event handlers. Input is collected as it arrives and published once per frame, at the start of the frame, before any `fixedUpdate` or `update`. All input state — channels, bindings, action maps — is brought up to date first, so every callback, whatever its kind, reads any binding or action at the same frame's state; that includes a binding's own `value` and `active`, while the callback's argument carries the value of the one transition it reports. A key tapped twice in one frame reaches `onStart`/`onStop` and `onKeyDown`/`onKeyUp` twice, while an action's `pressed` and `released` sum up the frame. Because action maps are already sampled when callbacks run, a scope pushed or a scene paused from a callback takes effect for action maps on the next frame, and input a callback raises itself (a virtual button pressing a key) reaches bindings and action maps on the next frame too.
+
+Within a frame, notifications arrive by category — gamepad buttons and axes, bindings, keys, the wheel, then pointer events and context-menu requests in the order they happened — not in one global order across devices. Gamepad connect and disconnect are reported while the pads are polled, canvas focus and pointer-lock changes as soon as the browser reports them.
+
+A callback that throws stops neither the other callbacks nor the rest of the frame's input, and no event is delivered a second time on a later frame. Pointer events still reach the scene graph in that frame. The exception then reaches `app.onError` — several exceptions from one frame together as one `AggregateError` — and the rest of that frame is skipped, as for any other error in a frame. An exception from an `onCanvasFocusChange` listener raised outside the frame's input stage goes to `app.onError` right away and does not fail a frame.
+
 ## Action mapping: one intent, many devices
 
 Hard-coding `Keyboard.Space` for jump works until someone picks up a controller. Hard-coding `GamepadButton.South` works until someone prefers the keyboard. Action mapping means naming what the player intends to do — "jump", "move right", "pause" — and binding each intent to one or more input channels regardless of device.
