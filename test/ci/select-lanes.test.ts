@@ -557,6 +557,24 @@ describe('CI lane selection — site data gates the unit lane', () => {
     expect(decide('packages/exojs-tilemap/README.md').lanes.unit).toBe(false);
   });
 
+  it('a top-down template change runs the unit lane that plays the starter, alongside its own verify lane', () => {
+    for (const file of [
+      'packages/create-exo-app/templates/top-down/src/actor.ts',
+      'packages/create-exo-app/templates/top-down/public/assets/town-square.tmj',
+    ]) {
+      const { areas, lanes } = decide(file);
+      expect({ file, siteData: areas.siteData, engine: areas.engine, unit: lanes.unit, verify: lanes.createExoAppVerify }).toEqual({
+        file,
+        siteData: true,
+        engine: false,
+        unit: true,
+        verify: true,
+      });
+    }
+
+    expect(decide('packages/create-exo-app/templates/minimal/src/main.ts').lanes.unit).toBe(false);
+  });
+
   it('site pages and components stay out of the area: no suite reads them', () => {
     const { areas, lanes } = decide('site/src/pages/index.astro', 'site/src/components/Nav.astro');
     expect(areas.siteData).toBe(false);
