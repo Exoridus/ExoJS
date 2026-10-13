@@ -12,8 +12,6 @@ export interface ComponentRuntimeHost {
   readonly scene: Scene;
   /** Whether components may be active: the scene is `Active`, paused or not. */
   isLive(): boolean;
-  /** Whether behaviours may be called right now: `Active` and not paused. */
-  isTicking(): boolean;
   reportError(error: unknown): void;
 }
 
@@ -380,7 +378,13 @@ export class ComponentRuntime {
   public endFrame(): void {
     this._frameActive = false;
     this._generation++;
-    this._compact();
+
+    // A frame closed from inside a behaviour (its scope suspended mid-pass)
+    // must not shrink the list that pass is still indexing; the pass compacts
+    // once it unwinds.
+    if (this._dispatching === 0) {
+      this._compact();
+    }
 
     if (this._pendingJoins.size > 0) {
       const joins = [...this._pendingJoins];
@@ -432,8 +436,9 @@ export class ComponentRuntime {
           continue;
         }
 
-        // A behaviour that paused, retained or ended its scene stops the rest.
-        if (!this._host.isTicking()) {
+        // A behaviour that retained or ended its scene stops the rest. Pausing
+        // does not: the pass finishes, so the scene's step stays whole.
+        if (!this._host.isLive()) {
           break;
         }
 

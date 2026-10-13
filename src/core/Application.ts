@@ -1275,6 +1275,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *    remaining time ({@link FrameBudget}). Work placed here overlaps the GPU
    *    drawing the frame just submitted.
    *
+   * The scene that opens a frame is the scene that runs it to the end. A
+   * scene navigation requested from any of these phases commits after the
+   * frame has finished. Only {@link Application.stop} ends the active
+   * scene's part in a frame early; {@link Application.destroy} lets the frame
+   * finish and tears the scene down after it.
+   *
    * Running one frame is all this does: scheduling belongs to the loop, so a
    * manual call runs an extra frame alongside a live loop rather than forking
    * a second one, and does not restart a loop that {@link Application.stop}
@@ -1300,6 +1306,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // Frame guard (render-fail surface): a throwing frame is reported
       // through the error pipeline instead of killing the RAF loop; the loop
       // halts only after `maxConsecutiveFrameErrors` consecutive failures.
+      let completed = false;
+
       try {
         const { rawDeltaMs, frameDelta, fixedSteps } = this._scheduler.beginFrame(timestamp);
         const frameStart = this.platform.now();
@@ -1370,14 +1378,24 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           Perf.clearMeasures(systemsMeasure);
         }
 
-        this._errors.resetFrameErrors();
+        completed = true;
       } catch (error) {
         this._handleFrameError(error);
       } finally {
         this._inFrame = false;
 
-        this.scenes._endFrame();
-        this.systems._endFrame();
+        // Closing a window applies buffered mutations, which runs registry
+        // listeners. Each close is guarded on its own: a throw escaping here
+        // would strand the application window and end the frame chain, since
+        // only a frame callback that returns schedules the next one.
+        const scenesClosed = this._closeFrameWindow(this.scenes);
+        const systemsClosed = this._closeFrameWindow(this.systems);
+
+        // Only a frame that also closed cleanly ends a failure streak, so a
+        // close error that recurs every frame still reaches the guard's limit.
+        if (completed && scenesClosed && systemsClosed) {
+          this._errors.resetFrameErrors();
+        }
 
         this._scheduler.endFrame();
       }
@@ -1403,6 +1421,18 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       source: 'core',
       error: error instanceof Error ? error : new Error(String(error)),
     });
+  }
+
+  private _closeFrameWindow(owner: { _endFrame(): void }): boolean {
+    try {
+      owner._endFrame();
+
+      return true;
+    } catch (error) {
+      this._handleFrameError(error);
+
+      return false;
+    }
   }
 
   /**
