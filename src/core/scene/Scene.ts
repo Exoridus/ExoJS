@@ -494,8 +494,10 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
    * Fixed-timestep logic hook. Called zero or more times per frame with a
    * constant `delta` ({@link Application.fixedTimeStep}) before {@link Scene.update},
-   * so physics and deterministic gameplay advance at a frame-rate-independent
-   * rate. Put `physicsWorld.step(delta)` and movement here; leave camera, UI and
+   * so deterministic gameplay advances at a frame-rate-independent rate. Put
+   * movement and other simulation commands here; a physics world registered in
+   * {@link Scene.systems} steps right after this hook and the scene's behaviours
+   * in the same fixed step, so it applies what they issued. Leave camera, UI and
    * purely visual work in {@link Scene.update}. Default is a no-op. Override in
    * subclass.
    *

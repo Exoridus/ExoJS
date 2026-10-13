@@ -173,6 +173,14 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
 };
 
 /**
+ * Development builds only: the registry each system last entered, so a system
+ * entering a second registry while the first still runs it is reported. Both
+ * keys and values are weak so a detached system cannot retain its old registry.
+ * Diagnostic only - it decides nothing about dispatch or ownership.
+ */
+const devLastRegistry: WeakMap<System, WeakRef<SystemRegistry>> | null = __DEV__ ? new WeakMap() : null;
+
+/**
  * Phase-dispatching registry of {@link System}s, shared by `Scene` (as
  * `scene.systems`) and `Application` (as `app.systems`). Each system
  * participates only in the scheduler phases it implements
@@ -595,6 +603,19 @@ export class SystemRegistry implements Destroyable {
       after: options?.after ?? [],
       active: true,
     };
+
+    if (__DEV__) {
+      const previous = devLastRegistry!.get(system)?.deref();
+
+      if (previous !== undefined && previous !== this && previous.has(system)) {
+        logger.warn(
+          'SystemRegistry.add(): this system is already registered with another system registry. Both dispatch the phases it takes part in, so a phase both include runs twice per frame or fixed step, and both destroy it. Register it with one registry; `remove()` it from the other first to move it.',
+          { source: 'SystemRegistry' },
+        );
+      }
+
+      devLastRegistry!.set(system, new WeakRef(this));
+    }
 
     this._registrations.set(system, registration);
     this._activeCount++;

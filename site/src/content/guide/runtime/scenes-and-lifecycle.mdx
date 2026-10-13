@@ -60,11 +60,13 @@ Keep loading, object construction, and event binding out of `draw`. Repeating th
 
 Both update hooks receive **seconds**. `fixedUpdate` runs zero or more times before the variable update as the accumulated time permits. The default step is `1 / 60` second; `ApplicationOptions.fixedTimeStep` changes it. Catch-up is bounded, so a long stall is not a promise that every elapsed simulation step will eventually execute.
 
-A constant timestep makes simulation timing consistent; it does not by itself guarantee deterministic results across machines, inputs, or physics implementations. For an automatically registered physics system, let that system step its world. Do not also call `world.step()` from `fixedUpdate`.
+A constant timestep makes simulation timing consistent; it does not by itself guarantee deterministic results across machines, inputs, or physics implementations. For a physics world registered in `this.systems`, let that system step its world, built with `fixedDelta: this.app.fixedTimeStep`. Do not also call `world.step()` from `fixedUpdate`.
 
-`app.frameAlpha` exposes the fractional remainder between fixed steps. The scene graph does not interpolate automatically. Keep previous and current simulation state and interpolate the rendered representation when you need smooth presentation between steps:
+`app.frameAlpha` exposes the fractional remainder between fixed steps. The scene graph does not interpolate automatically. A physics world does it for its bound nodes when it interpolates and reads the host's fraction; the bodies remain the simulation state:
 
 <SourceSnippet source="examples/guides/scenes-and-lifecycle/frame-alpha.ts" region="frame-alpha" language="ts" title="Interpolate presentation, not simulation state" />
+
+For simulation state of your own, keep its previous and current fixed-step values and blend only the rendered representation by `app.frameAlpha` in `update`.
 
 ## Navigate, pause, or retain?
 

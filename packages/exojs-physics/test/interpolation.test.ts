@@ -229,8 +229,8 @@ describe('system-driven interpolation', () => {
     node.setPosition(-1, -1);
 
     // Two fixed steps for this frame: neither may present.
-    world.fixedUpdate(Time.seconds(0));
-    world.fixedUpdate(Time.seconds(0));
+    world.fixedUpdate(Time.seconds(FIXED));
+    world.fixedUpdate(Time.seconds(FIXED));
 
     expect(node.x).toBe(-1);
 
@@ -249,7 +249,7 @@ describe('system-driven interpolation', () => {
     const node = fakeNode();
 
     world.bind(body, node as unknown as SceneNode);
-    world.fixedUpdate(Time.seconds(0));
+    world.fixedUpdate(Time.seconds(FIXED));
 
     expect(node.x).toBeCloseTo(body.x, 6);
 
