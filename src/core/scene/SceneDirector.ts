@@ -284,6 +284,18 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
+   * @internal `true` once the scene the current frame was opened for has
+   * stopped being the active one - which, with navigation committing at the
+   * frame boundary, only an {@link Application.stop} from inside the frame
+   * does. Its nodes stay registered until its asynchronous teardown reaches
+   * them, so {@link InteractionSystem} must not route the rest of the frame
+   * to them.
+   */
+  public get _frameSceneEnded(): boolean {
+    return this._frameScope !== null && this._frameScope !== this._activeScope;
+  }
+
+  /**
    * Switch to a fresh instance of `target` (a registered key or a
    * constructor), ending the previously active scene permanently - unless
    * `options.suspendCurrent` is set, in which case the outgoing scene is
