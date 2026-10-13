@@ -36,6 +36,7 @@ import { disposeExtensions, installExtensions } from '#extensions/lifetime';
 import { materializeAssetTypes, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import { InputSystem } from '#input/InputSystem';
+import { InputTickClock } from '#input/InputTickClock';
 import { InteractionSystem } from '#input/InteractionSystem';
 import type { PointLike } from '#math/PointLike';
 import { Random } from '#math/Random';
@@ -192,6 +193,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly connectivity: Connectivity;
   public readonly loader: Loader;
   public readonly input: InputSystem;
+  /** @internal Fixed-step clock behind every action's `tick` view - see {@link InputTickClock}. */
+  public readonly _inputTickClock = new InputTickClock();
   public readonly interaction: InteractionSystem;
   public readonly scenes: SceneDirector<Registry>;
   /**
@@ -1239,6 +1242,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return;
     }
 
+    this._inputTickClock.retire();
+
     this.scenes._abortInFlightNavigation(reason);
   }
 
@@ -1296,6 +1301,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     if (this._scheduler.active) {
       if (this.pauseOnHidden && !this._documentVisible) {
         this._scheduler.skipFrame(timestamp);
+        this._inputTickClock.retire();
 
         return this;
       }
@@ -1338,11 +1344,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
         // so they see this frame's input and before the variable update/draw.
         for (let step = 0; step < fixedSteps; step++) {
+          this._inputTickClock.open();
           this.systems._fixedUpdate(this._scheduler.stepSeconds);
           this.scenes.fixedUpdate(this._scheduler.stepSeconds);
           this.onFixedFrame.dispatch(this._scheduler.stepSeconds);
         }
 
+        this._inputTickClock.close();
         this._scheduler.captureAlpha();
 
         if (__DEV__) {
@@ -1380,6 +1388,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         completed = true;
       } catch (error) {
+        // Before the report: an `onError` listener is not inside a fixed step.
+        this._inputTickClock.close();
         this._handleFrameError(error);
       } finally {
         this._inFrame = false;

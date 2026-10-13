@@ -406,6 +406,7 @@ class ActionMapBase<T extends ActionRecord> {
     this._owner = null;
     this._availability = null;
     this._wasAvailable = true;
+    this._dropTickInput();
     owner._releaseActionMapCapture?.(this);
     owner._detachActionMap(this);
   }
@@ -524,13 +525,31 @@ class ActionMapBase<T extends ActionRecord> {
     }
   }
 
-  /** Clear every action's state - used when an owner stops feeding the map. @internal */
-  public _reset(): void {
+  /**
+   * Clear every action's state - used when an owner stops feeding the map.
+   * Occurrences already sampled for the next fixed step go with it unless
+   * `dropTickInput` is `false`, for a reset that does not end ownership (a
+   * scope above the map opening or closing).
+   *
+   * @internal
+   */
+  public _reset(dropTickInput = true): void {
     for (const action of this._actions) {
       action._reset();
     }
 
+    if (dropTickInput) {
+      this._dropTickInput();
+    }
+
     this._ownership.reset();
+  }
+
+  /** Forget every occurrence sampled for a fixed step that has not started yet. @internal */
+  public _dropTickInput(): void {
+    for (const action of this._actions) {
+      action._dropTickInput();
+    }
   }
 }
 

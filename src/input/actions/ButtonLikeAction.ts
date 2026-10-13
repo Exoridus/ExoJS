@@ -1,4 +1,5 @@
 import { ActionBase } from './ActionBase';
+import { type ButtonTickState, ButtonTickView, TickLedger } from './TickLedger';
 import type { ActionSample } from './types';
 
 /**
@@ -30,6 +31,16 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
   protected _active = false;
   protected _pressedThisFrame = false;
   protected _releasedThisFrame = false;
+  private readonly _ticks = new TickLedger();
+
+  /**
+   * What the current fixed step owns of this action: presses and releases
+   * counted and delivered to exactly one fixed step, plus the held state.
+   * Read it from fixed-step code instead of {@link pressed}, which describes
+   * the frame and is `true` in every fixed step a frame runs - or in none
+   * when the frame runs no step. See {@link ButtonTickState}.
+   */
+  public readonly tick: ButtonTickState = new ButtonTickView(this, this._ticks);
 
   protected constructor(binding: Binding, threshold: number) {
     super(binding);
@@ -122,6 +133,8 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
     this._releasedThisFrame = false;
 
     let wasActive = this._active;
+    let presses = 0;
+    let releases = 0;
 
     for (const batch of sample.batches) {
       let touchedBoundChannel = false;
@@ -144,16 +157,19 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
       const isActive = Math.abs(this._aggregate(this._values)) > this._threshold;
 
       if (!wasActive && isActive) {
-        this._pressedThisFrame = true;
+        presses++;
       } else if (wasActive && !isActive) {
-        this._releasedThisFrame = true;
+        releases++;
       }
 
       wasActive = isActive;
     }
 
+    this._pressedThisFrame = presses > 0;
+    this._releasedThisFrame = releases > 0;
     this._value = this._aggregate(this._values);
     this._active = wasActive;
+    this._ticks.record(sample.clock, presses, releases);
   }
 
   /** Seed every bound channel with no batch entry this call directly from `sample.values` - see `_update`'s doc comment. */
@@ -191,5 +207,10 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
     this._pressedThisFrame = false;
     this._releasedThisFrame = false;
     this._seeded = false;
+  }
+
+  /** @internal */
+  public override _dropTickInput(): void {
+    this._ticks.drop();
   }
 }
