@@ -6,7 +6,9 @@ import {
   ChunkStreamer,
   packTile,
   TILE_TRANSFORM_IDENTITY,
-  type TileLayer,
+  TileLayer,
+  type TileOrientation,
+  TileProjection,
 } from '@codexo/exojs-tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -45,6 +47,114 @@ const describeWorld = (bridge: TileColliderStreamer): string =>
       [body.x, body.y, ...body.colliders.map(collider => `${collider.shape.type}@${collider.offsetX},${collider.offsetY}`)].join(':'),
     )
     .join('|');
+
+describe('TileColliderStreamer projections', () => {
+  const projectedLayer = (orientation: TileOrientation): TileLayer =>
+    new TileLayer({
+      id: 1,
+      name: 'ground',
+      width: 2,
+      height: 2,
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [solidTileset()],
+      projection: new TileProjection({ orientation, tileWidth: TILE, tileHeight: TILE, hexSideLength: TILE / 2 }),
+    });
+
+  describe.each(['staggered', 'hexagonal'] as const)('%s', orientation => {
+    it.each([false, true])('rejects construction without changing the world (resident tiles: %s)', resident => {
+      const layer = projectedLayer(orientation);
+      const physicsWorld = world();
+      const existing = physicsWorld.add(new PhysicsBody({ type: 'static', colliders: [{ shape: new BoxShape(8, 8) }] }));
+      const cells = vi.fn(() => 'solid');
+      const accept = vi.fn(() => true);
+      const material = vi.fn(() => null);
+      const add = vi.spyOn(physicsWorld, 'add');
+      const destroyBody = vi.spyOn(physicsWorld, 'destroyBody');
+      const chunks = vi.spyOn(layer, 'loadedChunks');
+
+      if (resident) {
+        place(layer, layer.tilesets[0]!, 0, 0);
+      }
+
+      try {
+        expect(() => new TileColliderStreamer(physicsWorld, layer, { cells, accept, material })).toThrow(
+          /Tile collision works on rectangular logical cells, which staggered and hexagonal grids do not have/,
+        );
+        expect(physicsWorld.bodies).toEqual([existing]);
+        expect(existing.destroyed).toBe(false);
+        expect(existing.colliders).toHaveLength(1);
+        expect(add).not.toHaveBeenCalled();
+        expect(destroyBody).not.toHaveBeenCalled();
+        expect(chunks).not.toHaveBeenCalled();
+        expect(cells).not.toHaveBeenCalled();
+        expect(accept).not.toHaveBeenCalled();
+        expect(material).not.toHaveBeenCalled();
+
+        place(layer, layer.tilesets[0]!, 1, 1);
+        physicsWorld.step(1 / 60);
+
+        expect(physicsWorld.bodies).toEqual([existing]);
+        expect(add).not.toHaveBeenCalled();
+        expect(cells).not.toHaveBeenCalled();
+      } finally {
+        layer.destroy();
+        physicsWorld.destroy();
+      }
+    });
+  });
+
+  it.each(['orthogonal', 'isometric'] as const)('accepts %s and preserves streaming and teardown', orientation => {
+    const layer = projectedLayer(orientation);
+    const physicsWorld = world();
+    const existing = physicsWorld.add(new PhysicsBody({ type: 'static', position: { x: -100, y: -100 } }));
+    const cells = vi.fn(() => null);
+
+    place(layer, layer.tilesets[0]!, 0, 0);
+
+    const bridge = new TileColliderStreamer(physicsWorld, layer, { cells });
+
+    try {
+      expect(physicsWorld.bodies).toEqual([existing]);
+      expect(cells).not.toHaveBeenCalled();
+
+      bridge.sync();
+
+      const built = [...bridge.bodies()];
+
+      expect(built).toHaveLength(1);
+      expect(colliderCount(bridge)).toBeGreaterThan(0);
+      expect(physicsWorld.bodies).toHaveLength(2);
+
+      bridge.sync();
+
+      expect([...bridge.bodies()]).toEqual(built);
+
+      layer.clearTileAt(0, 0);
+      bridge.sync();
+
+      expect(bridge.bodyCount).toBe(0);
+      expect(physicsWorld.bodies).toEqual([existing]);
+
+      place(layer, layer.tilesets[0]!, 0, 0);
+      bridge.sync();
+
+      expect(bridge.bodyCount).toBe(1);
+
+      bridge.destroy();
+      bridge.destroy();
+      bridge.sync();
+
+      expect(bridge.bodyCount).toBe(0);
+      expect(physicsWorld.bodies).toEqual([existing]);
+      expect(existing.destroyed).toBe(false);
+    } finally {
+      bridge.destroy();
+      layer.destroy();
+      physicsWorld.destroy();
+    }
+  });
+});
 
 describe('TileColliderStreamer lifecycle', () => {
   it('builds one body per resident chunk', () => {
