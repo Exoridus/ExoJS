@@ -591,6 +591,20 @@ export class AudioSystem {
    * yourself as part of your own teardown.
    */
   public destroy(): void {
+    this._destroy(error => {
+      logger.error('AudioSystem.destroy(): a voice threw while being stopped.', {
+        source: 'AudioSystem',
+        ...(error instanceof Error && { error }),
+      });
+    });
+  }
+
+  /**
+   * @internal {@link AudioSystem.destroy}, handing each voice's failure to
+   * `onFailure` instead of logging it - for an owner that reports teardown
+   * failures through its own error pipeline.
+   */
+  public _destroy(onFailure: (error: unknown) => void): void {
     // Set before the drain so nothing can start new playback from an `onEnd`
     // handler, which is also what bounds the loop below.
     this._destroyed = true;
@@ -647,10 +661,7 @@ export class AudioSystem {
     this._registered.clear();
 
     for (const error of failures) {
-      logger.error('AudioSystem.destroy(): a voice threw while being stopped.', {
-        source: 'AudioSystem',
-        ...(error instanceof Error && { error }),
-      });
+      onFailure(error);
     }
   }
 

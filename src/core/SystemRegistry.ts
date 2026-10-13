@@ -564,6 +564,20 @@ export class SystemRegistry implements Destroyable {
    * closes.
    */
   public destroy(): void {
+    this._destroy(error => {
+      logger.error('SystemRegistry.destroy(): a system threw while being destroyed.', {
+        source: 'SystemRegistry',
+        ...(error instanceof Error && { error }),
+      });
+    });
+  }
+
+  /**
+   * @internal {@link SystemRegistry.destroy}, handing each system's failure
+   * to `onFailure` instead of logging it - for an owner that reports teardown
+   * failures through its own error pipeline.
+   */
+  public _destroy(onFailure: (error: unknown) => void): void {
     const remaining = [...this._registrations.values()].filter(registration => registration.active).sort((a, b) => b.sequence - a.sequence);
     const failures: unknown[] = [];
 
@@ -588,10 +602,7 @@ export class SystemRegistry implements Destroyable {
     this.onRemove.destroy();
 
     for (const error of failures) {
-      logger.error('SystemRegistry.destroy(): a system threw while being destroyed.', {
-        source: 'SystemRegistry',
-        ...(error instanceof Error && { error }),
-      });
+      onFailure(error);
     }
   }
 
