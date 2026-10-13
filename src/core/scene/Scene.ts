@@ -468,6 +468,13 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * objects, bind input, register interaction roots, start scene audio.
    * Override in subclass.
    *
+   * Not called when {@link Scene.lifecycleSignal} has been aborted by the
+   * time `load()` completes - the navigation preparing the scene was aborted
+   * or failed before its commit (the application stopped or was destroyed, a
+   * transition ended early), or the preload preparing it was discarded. Such
+   * a scene never becomes active: {@link Scene.destroy} runs and
+   * {@link Scene.unload} does not.
+   *
    * Must be synchronous: `async init()` is a compile error (see
    * {@link Synchronous}) and, for callers the type system cannot reach, a
    * thrown lifecycle error that fails activation in **every** build. Put
