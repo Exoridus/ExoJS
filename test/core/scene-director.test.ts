@@ -1204,7 +1204,7 @@ describe('SceneDirector — destroy() / _dispose()', () => {
     destroySpy.mockRestore();
   });
 
-  test('_dispose() waits for an in-flight preload to settle, then destroys it without concurrent teardown', async () => {
+  test('_dispose() waits for an in-flight preload to settle, then destroys it without concurrent teardown or init()', async () => {
     const app = createApplicationStub();
     let resolveLoad!: () => void;
     const initSpy = vi.fn();
@@ -1230,10 +1230,10 @@ describe('SceneDirector — destroy() / _dispose()', () => {
 
     resolveLoad();
 
-    await expect(preloadPromise).resolves.toBeUndefined(); // prepare() itself still succeeds
+    await expect(preloadPromise).resolves.toBeUndefined(); // a cancelled preload settles, it does not reject
     await disposePromise;
 
-    expect(initSpy).toHaveBeenCalledTimes(1); // prepare() ran to completion (reached Ready), not aborted mid-way
+    expect(initSpy).not.toHaveBeenCalled(); // cancelled before load() fulfilled: never initialized
     expect(destroySpy).toHaveBeenCalledTimes(1);
 
     destroySpy.mockRestore();
@@ -1574,7 +1574,7 @@ describe('SceneDirector — unload', () => {
     expect(stopSceneSpy).not.toHaveBeenCalled();
   });
 
-  test('unload() racing an in-flight preload() cancels it: waits for prepare() to settle, never destroys concurrently with prepare(), then still runs unload() (Ready-scope cleanup)', async () => {
+  test('unload() racing an in-flight preload() cancels it: waits for load() to settle, never destroys concurrently with it, and skips init() and unload()', async () => {
     const app = createApplicationStub();
     let resolveLoad!: () => void;
     const initSpy = vi.fn();
@@ -1603,11 +1603,11 @@ describe('SceneDirector — unload', () => {
 
     resolveLoad();
 
-    await expect(preloadPromise).resolves.toBeUndefined(); // prepare() itself still succeeds
+    await expect(preloadPromise).resolves.toBeUndefined(); // a cancelled preload settles, it does not reject
     await expect(unloadPromise).resolves.toBe(true);
 
-    expect(initSpy).toHaveBeenCalledTimes(1); // prepare() ran to completion (reached Ready), not aborted mid-way
-    expect(unloadHook).toHaveBeenCalledTimes(1); // Ready-scope cleanup: unload() DOES run
+    expect(initSpy).not.toHaveBeenCalled(); // cancelled before load() fulfilled: never initialized
+    expect(unloadHook).not.toHaveBeenCalled(); // failed-activation cleanup: a scene that never initialized is not unloaded
     expect(destroySpy).toHaveBeenCalledTimes(1);
 
     destroySpy.mockRestore();
@@ -1617,6 +1617,7 @@ describe('SceneDirector — unload', () => {
     const app = createApplicationStub();
     let resolveFirstLoad!: () => void;
     const firstUnloadHook = vi.fn(async () => {});
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
     const secondInit = vi.fn();
     let loadCallCount = 0;
     const RacyScene = makeSceneClass({
@@ -1645,14 +1646,16 @@ describe('SceneDirector — unload', () => {
 
     await Promise.all([firstPreload, cancellingUnload, secondPreload]);
 
-    expect(firstUnloadHook).toHaveBeenCalledTimes(1); // the cancelled entry's own scene was torn down
+    // The cancelled entry's own scene was torn down without ever initializing,
+    // so it is destroyed but not unloaded.
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(firstUnloadHook).not.toHaveBeenCalled();
     // `init` is one shared hook function reused across every RacyScene
     // instance (makeSceneClass assigns the same hooks object to each new
-    // instance) - it fires once per scene's own prepare() call, and both
-    // the cancelled first preload and the fresh second one run their own
-    // prepare() to completion independently (cancelling only gates what
-    // happens *after* prepare() settles, not during it), hence 2 calls.
-    expect(secondInit).toHaveBeenCalledTimes(2); // both the cancelled and the fresh preload reached Ready independently
+    // instance); only the fresh second preload reaches it.
+    expect(secondInit).toHaveBeenCalledTimes(1);
+
+    destroySpy.mockRestore();
 
     // The second preload is still available for a later change() to consume -
     // confirmed by its state, not yet activated:
@@ -1812,7 +1815,7 @@ describe('SceneDirector — transition session driving', () => {
     expect(manager.currentScene).toBeInstanceOf(OtherScene);
   });
 
-  test('a session that self-terminates (update() throws) mid-commit — after commitSwitch began its async prepare but before it resolved — does NOT activate the incoming scene once prepare later resolves (session-identity guard)', async () => {
+  test('a session that self-terminates (update() throws) mid-commit — after commitSwitch began its async prepare but before it resolved — neither initializes nor activates the incoming scene once its load() later resolves', async () => {
     const app = createApplicationStub();
     const First = makeSceneClass();
 
@@ -1874,15 +1877,17 @@ describe('SceneDirector — transition session driving', () => {
     // `_finishActiveSession`), not from a second error thrown by commitSwitch.
     await expect(navigation).rejects.toThrow('session update blew up mid-prepare');
 
-    // Now prepare finally resolves and commitSwitch's continuation resumes. Its
-    // The abort guard must hit the session-identity bail (generation is unchanged, so
-    // the generation term alone would MISS this) and dispose the freshly-prepared
-    // scope instead of activating it.
+    // Now load() finally resolves. The session that ended took its navigation
+    // with it (the generation is unchanged, so the generation term of the abort
+    // guard alone would MISS this), so the preparation is cancelled at the
+    // load()/init() boundary and torn down instead of activated.
     resolveLoad();
     await settle();
 
-    expect(incomingInit).toHaveBeenCalledTimes(1); // prepare did run to completion (reached Ready) ...
-    expect(manager.currentScene).toBe(firstInstance); // ... but the incoming scene was NEVER activated
+    // The ended session cancelled the preparation it was waiting on, so the
+    // incoming scene neither initializes nor activates.
+    expect(incomingInit).not.toHaveBeenCalled();
+    expect(manager.currentScene).toBe(firstInstance);
   });
 });
 
@@ -3083,15 +3088,24 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     // guards (SceneDirector's OWN handling of a rejected `_disposeScene()`
     // call in the abort race guard, independent of SceneScope's guarantee),
     // `scope.destroy()` itself is mocked to reject directly.
+    //
+    // An abort while load() is pending cancels the preparation before init()
+    // and never reaches the race guard. The guard discards a scope that did
+    // reach Ready, so the abort here comes from inside init() itself.
     const app = createApplicationStub();
     const First = makeSceneClass();
     let resolveLoad!: () => void;
     const disposalError = new Error('scope.destroy() blew up');
+    const reason = new SceneNavigationAbortedError();
+    let aborted: boolean | null = null;
     const Second = makeSceneClass({
       load: () =>
         new Promise<void>(resolve => {
           resolveLoad = resolve;
         }),
+      init: () => {
+        aborted = director._abortInFlightNavigation(reason);
+      },
     });
     const director = new SceneDirector(app, { first: First, second: Second });
 
@@ -3120,13 +3134,6 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     tick(director, app); // starts _performSessionCommit -> commitSwitch, now awaiting Second.load()
     await Promise.resolve();
 
-    // Aborted mid-prepare, exactly as the previous test.
-    const reason = new SceneNavigationAbortedError();
-
-    expect(director._abortInFlightNavigation(reason)).toBe(true);
-    await expect(navigation).rejects.toBe(reason);
-    expect(director.currentScene).toBe(firstInstance);
-
     const reportedErrors: Error[] = [];
 
     app.onError.add(error => reportedErrors.push(error));
@@ -3134,17 +3141,20 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     const destroySpy = vi.spyOn(SceneScope.prototype, 'destroy').mockRejectedValueOnce(disposalError);
 
     try {
-      // Let the suspended load() resolve - commitSwitch's continuation
-      // resumes in the background, observes the abort, and discards the
-      // freshly prepared Second scope via the race guard
+      // Let the suspended load() resolve: init() aborts the navigation, the
+      // scope still reaches Ready, and commitSwitch's continuation observes the
+      // abort and discards it via the race guard
       // (`_disposeScene(newScope, { dispatchStopScene: false })`). That
       // disposal rejects - this must surface through app.onError, not vanish
       // silently (`_performSessionCommit`'s own catch calling
       // `_finishActiveSession` again is a no-op - the session already
-      // settled via the abort above).
+      // settled via the abort).
       resolveLoad();
+      await expect(navigation).rejects.toBe(reason);
       await settle();
 
+      expect(aborted).toBe(true);
+      expect(destroySpy).toHaveBeenCalledTimes(1);
       expect(reportedErrors).toContain(disposalError);
       expect(director.currentScene).toBe(firstInstance);
     } finally {

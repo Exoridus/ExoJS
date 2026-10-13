@@ -369,7 +369,7 @@
             }
           ],
           "returnType": "Synchronous",
-          "description": "Optional synchronous setup hook. Runs once per activation, after the Promise returned by Scene.load has fulfilled and before the scene becomes active: register scene systems, connect stable scene objects, bind input, register interaction roots, start scene audio. Override in subclass. Must be synchronous: async init() is a compile error (see Synchronous) and, for callers the type system cannot reach, a thrown lifecycle error that fails activation in **every** build. Put asynchronous setup in Scene.load, which the engine awaits before init() runs."
+          "description": "Optional synchronous setup hook. Runs once per activation, after the Promise returned by Scene.load has fulfilled and before the scene becomes active: register scene systems, connect stable scene objects, bind input, register interaction roots, start scene audio. Override in subclass. Not called when Scene.lifecycleSignal has been aborted by the time load() completes - the navigation preparing the scene was aborted or failed before its commit (the application stopped or was destroyed, a transition ended early), or the preload preparing it was discarded. Such a scene never becomes active: Scene.destroy runs and Scene.unload does not. Must be synchronous: async init() is a compile error (see Synchronous) and, for callers the type system cannot reach, a thrown lifecycle error that fails activation in **every** build. Put asynchronous setup in Scene.load, which the engine awaits before init() runs."
         },
         {
           "name": "load",
