@@ -30,24 +30,28 @@ export const installExtensions = (app: Application, extensions: readonly Extensi
  * is what makes a repeated teardown a no-op rather than a second round of
  * disposal.
  *
- * Each disposer is guarded on its own and failures are logged rather than
- * rethrown - the same contract {@link SystemRegistry.destroy} keeps, and for
- * the same reason. Both call sites are unguarded steps of an ordered teardown
- * (`Application`'s managed-resource disposal and its constructor rollback), so
- * a throw here would strand everything scheduled behind it. An extension is
- * third-party code by definition, which makes a throwing disposer the case to
- * expect rather than a remote one.
+ * Each disposer is guarded on its own and failures go to `onFailure` rather
+ * than being rethrown - the same contract {@link SystemRegistry.destroy}
+ * keeps, and for the same reason. Both call sites are unguarded steps of an
+ * ordered teardown (`Application`'s managed-resource disposal and its
+ * constructor rollback), so a throw here would strand everything scheduled
+ * behind it. An extension is third-party code by definition, which makes a
+ * throwing disposer the case to expect rather than a remote one.
  * @internal
  */
-export const disposeExtensions = (disposers: ExtensionDisposer[]): void => {
+export const disposeExtensions = (disposers: ExtensionDisposer[], onFailure: (error: unknown) => void = logDisposerFailure): void => {
   while (disposers.length > 0) {
     try {
       disposers.pop()?.();
     } catch (error) {
-      logger.error('An extension disposer threw while the application was tearing down.', {
-        source: 'Application',
-        ...(error instanceof Error && { error }),
-      });
+      onFailure(error);
     }
   }
+};
+
+const logDisposerFailure = (error: unknown): void => {
+  logger.error('An extension disposer threw while the application was tearing down.', {
+    source: 'Application',
+    ...(error instanceof Error && { error }),
+  });
 };

@@ -460,13 +460,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           try {
             await this._disposeScene(newScope, { dispatchStopScene: false });
           } catch (error) {
-            const normalized = error instanceof Error ? error : new Error(String(error));
-
-            logger.error('SceneDirector.change() failed to dispose a Ready scope discarded by the navigation race guard.', {
-              source: 'SceneDirector',
-              error: normalized,
-            });
-            this._app.onError.dispatch(normalized);
+            this._reportFailure('SceneDirector.change() failed to dispose a Ready scope discarded by the navigation race guard.', error);
           }
 
           if (sessionAtStart === null) {
@@ -546,13 +540,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
                   },
                 )
                 .catch((disposeError: unknown) => {
-                  const normalized = disposeError instanceof Error ? disposeError : new Error(String(disposeError));
-
-                  logger.error('SceneDirector.change() failed to dispose an aborted claimed preload that could not be restored.', {
-                    source: 'SceneDirector',
-                    error: normalized,
-                  });
-                  this._app.onError.dispatch(normalized);
+                  this._reportFailure(
+                    'SceneDirector.change() failed to dispose an aborted claimed preload that could not be restored.',
+                    disposeError,
+                  );
                 }),
             );
           }
@@ -804,13 +795,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // a scope handed back now could be missed, so it is ended here instead.
       if (!committed && this._destroyed) {
         void this._trackTeardown(this._disposeScene(retainedScope)).catch((disposeError: unknown) => {
-          const normalized = disposeError instanceof Error ? disposeError : new Error(String(disposeError));
-
-          logger.error('SceneDirector.restore() failed to dispose a retained scene it could not hand back during teardown.', {
-            source: 'SceneDirector',
-            error: normalized,
-          });
-          this._app.onError.dispatch(normalized);
+          this._reportFailure(
+            'SceneDirector.restore() failed to dispose a retained scene it could not hand back during teardown.',
+            disposeError,
+          );
         });
       } else if (!committed) {
         this._retained.set(resolvedTarget, retainedScope);
@@ -1372,6 +1360,21 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   public async _dispose(): Promise<void> {
     this._destroyed = true;
 
+    // Every scene this director owns ends here, but their teardowns run one
+    // after another and the application may abandon the queue at its grace
+    // deadline. Aborting each signal only once its own teardown is reached
+    // would leave the scenes behind a hanging `unload()` with live signals
+    // forever, so all of them are told now.
+    this._activeScope?.scene._abortLifecycle();
+
+    for (const scope of this._retained.values()) {
+      scope.scene._abortLifecycle();
+    }
+
+    for (const entry of this._preloaded.values()) {
+      entry.scope.scene._abortLifecycle();
+    }
+
     // Abort any in-flight transition session first, through the same public
     // entry point every frame-loop stop uses. A no-op when nothing is
     // in flight; otherwise `_finishActiveSession` owns the full synchronous
@@ -1418,10 +1421,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         await this._disposeScene(activeScope);
       } catch (error) {
-        logger.error('SceneDirector.destroy() failed to unload the active scene.', {
-          source: 'SceneDirector',
-          ...(error instanceof Error && { error }),
-        });
+        this._reportFailure('SceneDirector.destroy() failed to unload the active scene.', error);
       }
     }
 
@@ -1433,10 +1433,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         await this._disposeScene(scope);
       } catch (error) {
-        logger.error('SceneDirector.destroy() failed to destroy a retained scene.', {
-          source: 'SceneDirector',
-          ...(error instanceof Error && { error }),
-        });
+        this._reportFailure('SceneDirector.destroy() failed to destroy a retained scene.', error);
       }
     }
 
@@ -1465,10 +1462,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         await this._disposeScene(entry.scope, { dispatchStopScene: false });
       } catch (error) {
-        logger.error('SceneDirector.destroy() failed to destroy a preloaded scene.', {
-          source: 'SceneDirector',
-          ...(error instanceof Error && { error }),
-        });
+        this._reportFailure('SceneDirector.destroy() failed to destroy a preloaded scene.', error);
       }
     }
 
@@ -1537,17 +1531,25 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Report an exception thrown by a lifecycle Signal listener - used as the
-   * `onError` callback for every `dispatchIsolated` call in this class:
-   * logged, then forwarded to
-   * {@link Application.onError}. Never propagates itself; `Signal.dispatchIsolated`
-   * additionally guards against a throwing `onError` callback, but this
-   * implementation does not throw regardless.
+   * `onError` callback for every `dispatchIsolated` call in this class.
    */
   private _reportLifecycleError(error: unknown): void {
+    this._reportFailure('A SceneDirector lifecycle signal listener threw.', error);
+  }
+
+  /**
+   * Log a failure, record it for `Application.destroyOutcome` while the
+   * application is being destroyed, and forward it to
+   * {@link Application.onError}. Never throws: isolated with a no-op callback,
+   * so a throwing `onError` listener cannot escape the teardown or session
+   * cleanup that reported the failure, nor skip what follows it.
+   */
+  private _reportFailure(message: string, error: unknown): void {
     const normalized = error instanceof Error ? error : new Error(String(error));
 
-    logger.error('A SceneDirector lifecycle signal listener threw.', { source: 'SceneDirector', error: normalized });
-    this._app.onError.dispatch(normalized);
+    logger.error(message, { source: 'SceneDirector', error: normalized });
+    this._app._teardownFailures?.push(normalized);
+    this._app.onError.dispatchIsolated(() => {}, normalized);
   }
 
   /**
@@ -2041,19 +2043,15 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         this._releaseTransitionResources(resources);
       } catch (error) {
-        this._app.onError.dispatchIsolated(() => {}, error instanceof Error ? error : new Error(String(error)));
+        this._reportFailure('SceneDirector: a transition failed to release its render resources.', error);
       }
 
       try {
         session.destroy();
       } catch (error) {
-        // dispatchIsolated with a no-op onError callback: an onError
-        // listener itself throwing must never propagate out of this method
-        // and skip `settle()` below - Signal.dispatchIsolated already
-        // isolates a throwing LISTENER; the no-op callback here additionally
-        // isolates a throwing onError CALLBACK, which a plain `.dispatch()`
-        // would not.
-        this._app.onError.dispatchIsolated(() => {}, error instanceof Error ? error : new Error(String(error)));
+        // Reported through the never-throwing path: a throwing onError
+        // listener must not propagate out of this method and skip `settle()`.
+        this._reportFailure('SceneDirector: a transition session threw while being destroyed.', error);
       }
 
       if (!outcome.ok) {

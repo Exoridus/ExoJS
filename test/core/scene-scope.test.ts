@@ -234,7 +234,7 @@ describe('SceneScope', () => {
 
       await expect(scope.prepare(undefined)).rejects.toThrow('init failed');
 
-      const systemsDestroySpy = vi.spyOn(scope.systems, 'destroy');
+      const systemsDestroySpy = vi.spyOn(scope.systems, '_destroy');
       const tweensDestroySpy = vi.spyOn(scope.tweens, 'destroy');
       const audioDestroySpy = vi.spyOn(scope.audio, 'destroy');
       const inputsDestroySpy = vi.spyOn(scope.inputs, 'destroy');
@@ -360,7 +360,7 @@ describe('SceneScope', () => {
         events.push('scene.unload');
       };
 
-      vi.spyOn(scope.systems, 'destroy').mockImplementation(() => events.push('systems.destroy'));
+      vi.spyOn(scope.systems, '_destroy').mockImplementation(() => events.push('systems.destroy'));
       vi.spyOn(scope.tweens, 'destroy').mockImplementation(() => events.push('tweens.destroy'));
       vi.spyOn(scope.audio, 'destroy').mockImplementation(() => events.push('audio.destroy'));
       vi.spyOn(scope.inputs, 'destroy').mockImplementation(() => events.push('inputs.destroy'));
