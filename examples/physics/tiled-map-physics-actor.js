@@ -29,7 +29,7 @@ class TiledMapPhysicsActorScene extends Scene {
     this.spritesheetData = spritesheetData;
   }
   init() {
-    this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 } });
+    this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 }, fixedDelta: this.app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
     this.mapNode = new TileMapNode(this.map);
     const collision = this.map.getObjectLayer('Collision');

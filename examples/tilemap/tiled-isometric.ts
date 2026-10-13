@@ -23,7 +23,7 @@ class IsometricScene extends Scene {
   private readonly worldRoot = new Container();
   private readonly selection = new Graphics();
   private readonly actor = new Graphics();
-  private readonly world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+  private world!: PhysicsWorld;
   private body!: PhysicsBody;
   private binding!: TilePhysicsBinding;
   private target = { x: 99, y: 99 };
@@ -34,6 +34,7 @@ class IsometricScene extends Scene {
   }
 
   override init(): void {
+    this.world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, fixedDelta: this.app.fixedTimeStep });
     this.worldRoot.setPosition(origin.x, origin.y).setScale(scale);
     this.worldRoot.addChild(new TileMapNode(this.map));
     const gameplay = this.map.getObjectLayer('Gameplay')!;

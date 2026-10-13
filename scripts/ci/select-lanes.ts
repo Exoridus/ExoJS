@@ -36,6 +36,7 @@ export interface LaneAreas {
   guides: boolean;
   siteData: boolean;
   createExoApp: boolean;
+  authoredMapFixture: boolean;
 }
 
 /** The concrete CI lanes those areas enable. */
@@ -454,11 +455,11 @@ export const CHECKED_README_PATHS: readonly string[] = [
  *                                        profile-only commit reaches no other
  *                                        area that runs a test.
  *
- *   - `packages/create-exo-app/templates/top-down/`
- *                                        the starter that
- *                                        `test/templates/top-down-consumer`
- *                                        plays end to end. The create-exo-app
- *                                        area only scaffolds and builds it, so a
+ *   - `packages/create-exo-app/templates/top-down/`, `.../platformer/`
+ *                                        the starters that
+ *                                        `test/templates/*-consumer` suites
+ *                                        play end to end. The create-exo-app
+ *                                        area only scaffolds and builds them, so a
  *                                        template-only change would otherwise
  *                                        never run the suite that plays it.
  *
@@ -493,12 +494,22 @@ const isSiteDataPath = (file: string): boolean => {
     return true;
   }
 
-  if (file.startsWith('packages/create-exo-app/templates/top-down/')) {
+  if (/^packages\/create-exo-app\/templates\/(?:top-down|platformer)\//.test(file)) {
     return true;
   }
 
   return false;
 };
+
+/**
+ * Authored-map fixture area: the top-down starter's map and atlas. A real
+ * WebGL2 test loads and renders exactly these files, but it runs in the WebGL2
+ * browser lane, which otherwise follows `engine` only; the unit lane's consumer
+ * suite (see `isSiteDataPath`) proves the map imports and plays, not that it
+ * draws. Gates that one browser lane and nothing else of `engine`.
+ */
+const isAuthoredMapFixturePath = (file: string): boolean =>
+  !isDocPath(file) && file.startsWith('packages/create-exo-app/templates/top-down/public/assets/');
 
 /**
  * create-exo-app area: the scaffolding CLI is a standalone package with no
@@ -564,6 +575,7 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let guides = false;
   let siteData = false;
   let createExoApp = false;
+  let authoredMapFixture = false;
 
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
@@ -613,12 +625,40 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
       createExoApp = true;
     }
 
-    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural && release && guides && siteData && createExoApp) {
+    if (!authoredMapFixture && isAuthoredMapFixturePath(file)) {
+      authoredMapFixture = true;
+    }
+
+    if (
+      engine &&
+      site &&
+      audioFx &&
+      tilemapWorker &&
+      exampleCatalog &&
+      benchStructural &&
+      release &&
+      guides &&
+      siteData &&
+      createExoApp &&
+      authoredMapFixture
+    ) {
       break;
     }
   }
 
-  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, siteData, createExoApp };
+  return {
+    engine,
+    site,
+    audioFx,
+    tilemapWorker,
+    exampleCatalog,
+    benchStructural,
+    release,
+    guides,
+    siteData,
+    createExoApp,
+    authoredMapFixture,
+  };
 };
 
 /**
@@ -638,18 +678,32 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
  *   - the unit lane also gates on `guides` (guide content under
  *     `site/src/content/**`, which the `test/site/guide-*` suites validate) and
  *     on `siteData` (the sources the remaining `test/site/**` suites read);
+ *   - the WebGL2 browser lane also gates on `authoredMapFixture` (the
+ *     starter's authored map, which a WebGL2 test renders);
  *   - create-exo-app-verify gates on `createExoApp`, independent of `engine`
  *     (the scaffolder has no engine or browser impact of its own).
  */
 export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
-  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, siteData, createExoApp } = areas;
+  const {
+    engine,
+    site,
+    audioFx,
+    tilemapWorker,
+    exampleCatalog,
+    benchStructural,
+    release,
+    guides,
+    siteData,
+    createExoApp,
+    authoredMapFixture,
+  } = areas;
 
   return {
     typecheck: true,
     lint: true,
     unit: engine || guides || siteData,
     coverage: engine,
-    browserWebgl2: engine,
+    browserWebgl2: engine || authoredMapFixture,
     browserWebgpu: engine,
     browserFirefox: engine,
     browserAudio: audioFx,

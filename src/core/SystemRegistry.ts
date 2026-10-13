@@ -237,8 +237,9 @@ export class SystemRegistry implements Destroyable {
 
   /**
    * Register `system`, returning it unchanged for fluent capture
-   * (`const world = app.systems.add(new PhysicsWorld())`). Adding the same
-   * object twice is a no-op. See the class docs for buffering timing.
+   * (`const world = app.systems.add(new PhysicsWorld({ fixedDelta: app.fixedTimeStep }))`).
+   * Adding the same object twice is a no-op. See the class docs for buffering
+   * timing.
    *
    * Takes ownership: the registry calls `system.destroy?.()` when it is
    * removed by the registry's own {@link SystemRegistry.destroy}, in reverse
