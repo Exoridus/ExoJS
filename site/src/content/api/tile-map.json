@@ -1613,7 +1613,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Tile draw order (Tiled renderorder). Informational."
+          "description": "Tile draw order (Tiled renderorder). Informational: orthogonal tile layers always draw in 'right-down' order."
         },
         {
           "name": "tileHeight",

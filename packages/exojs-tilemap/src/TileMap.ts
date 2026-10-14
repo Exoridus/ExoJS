@@ -49,7 +49,10 @@ export interface TileMapOptions {
    * Default `null`.
    */
   readonly backgroundColor?: number | null;
-  /** Tile draw order (Tiled `renderorder`), informational. Default `'right-down'`. */
+  /**
+   * Tile draw order (Tiled `renderorder`), informational: orthogonal tile layers
+   * always draw in `'right-down'` order. Default `'right-down'`.
+   */
   readonly renderOrder?: string;
   /** Map-level properties (copied and frozen). */
   readonly properties?: TileProperties;
@@ -140,7 +143,7 @@ export class TileMap {
   public readonly class: string;
   /** Map background colour as `0xRRGGBB`, or `null`. Informational. */
   public readonly backgroundColor: number | null;
-  /** Tile draw order (Tiled `renderorder`). Informational. */
+  /** Tile draw order (Tiled `renderorder`). Informational: orthogonal tile layers always draw in `'right-down'` order. */
   public readonly renderOrder: string;
 
   /** Map-level properties (immutable). */
