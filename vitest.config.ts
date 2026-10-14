@@ -8,6 +8,7 @@ import { webdriverio } from '@vitest/browser-webdriverio';
 import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
 import { CHROMIUM_WEBGL2_ARGS, CHROMIUM_WEBGPU_ARGS, FIREFOX_WEBGL2_PREFS } from './scripts/ci/browser-profiles.ts';
+import { fileProgressReporterPlugin } from './scripts/ci/file-progress-reporter.ts';
 import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands.ts';
 import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink.ts';
 
@@ -117,7 +118,7 @@ const realShaderPlugin = createShaderPlugin();
 const sharedViteOptions = {
   resolve: { alias: aliasConfig, conditions: srcConditions },
   ssr: { resolve: { conditions: srcConditions } },
-  plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
+  plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin, fileProgressReporterPlugin()],
   define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
 };
 
