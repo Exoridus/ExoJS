@@ -141,9 +141,11 @@ const atlasLayout = (options: AtlasTileSetOptions): TileSetLayout => {
  * frozen thereafter.
  *
  * Multiple tilesets are supported per {@link TileMap}; each carries its own
- * tile dimensions, spacing, and optional per-tile metadata. Tiles of an atlas
- * set batch into one draw per chunk; an image collection costs one draw per
- * change of image in a chunk's draw order, so prefer atlases for dense layers.
+ * tile dimensions, spacing, and optional per-tile metadata. Tiles that stay
+ * inside their cells batch into one draw per texture and chunk, so an atlas
+ * costs one draw where a collection costs one per image. Artwork that overhangs
+ * its cell, and the tiles drawn over it, keep cell order, and each change of
+ * texture in that order costs another draw, so prefer atlases for dense layers.
  * @advanced
  */
 export class TileSet {

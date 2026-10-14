@@ -86,10 +86,53 @@ describe('image-collection chunk geometry', () => {
 
     const pages = buildChunkPages(layer.getChunk(0, 0)!, [ground, props], 32, 32);
 
-    // Runs of the same texture merge; a change of texture starts a new page.
-    expect(pages.map(page => page.texture)).toEqual([tree.texture, ground.texture!.texture, rock.texture]);
-    expect(pages.map(page => page.quads.length)).toEqual([1, 1, 2]);
-    expect(pages.map(page => page.tileset)).toEqual([props, ground, props]);
+    // The tree reaches over the next cell, so it and the ground drawn there keep
+    // cell order; the rocks overlap nothing and batch ahead of both.
+    expect(pages.map(page => page.texture)).toEqual([rock.texture, tree.texture, ground.texture!.texture]);
+    expect(pages.map(page => page.quads.length)).toEqual([2, 1, 1]);
+    expect(pages.map(page => page.tileset)).toEqual([props, props, ground]);
+  });
+
+  it('batches in-cell tiles by texture ahead of overhanging images that cover nothing drawn after them', () => {
+    const rock = image(32, 32);
+    const tree = image(32, 96);
+    const props = new TileSet({ name: 'props', tileWidth: 32, tileHeight: 96, tileImages: [rock, tree] });
+    const ground = atlas();
+    const layer = layerOf([ground, props], 4, 2);
+
+    for (let x = 0; x < 4; x++) {
+      layer.setTileAt(x, 0, { tileset: ground, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+    }
+
+    layer.setTileAt(0, 1, { tileset: props, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
+    layer.setTileAt(1, 1, { tileset: ground, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
+    layer.setTileAt(2, 1, { tileset: props, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+    layer.setTileAt(3, 1, { tileset: props, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
+
+    const pages = buildChunkPages(layer.getChunk(0, 0)!, [ground, props], 32, 32);
+
+    // The trees reach only up, over ground drawn before them, so every in-cell
+    // tile batches by texture and the trees follow in cell order.
+    expect(pages.map(page => page.texture)).toEqual([ground.texture!.texture, rock.texture, tree.texture]);
+    expect(pages.map(page => page.quads.length)).toEqual([5, 1, 2]);
+  });
+
+  it('keeps an in-cell image under an earlier overhang in cell order after it', () => {
+    const rock = image(32, 32);
+    const bush = image(64, 32);
+    const props = new TileSet({ name: 'props', tileWidth: 64, tileHeight: 32, tileImages: [rock, bush] });
+    const layer = layerOf([props], 3, 1);
+
+    layer.setTileAt(0, 0, { tileset: props, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
+    layer.setTileAt(1, 0, { tileset: props, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+    layer.setTileAt(2, 0, { tileset: props, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+
+    const pages = buildChunkPages(layer.getChunk(0, 0)!, [props], 32, 32);
+
+    // The bush reaches over cell 1, so the rock there stays after it; the rock on
+    // cell 2 overlaps nothing and batches ahead.
+    expect(pages.map(page => page.texture)).toEqual([rock.texture, bush.texture, rock.texture]);
+    expect(pages.map(page => page.quads.map(quad => quad.x0))).toEqual([[64], [0], [32]]);
   });
 
   it('skips a cell whose collection id has no image', () => {

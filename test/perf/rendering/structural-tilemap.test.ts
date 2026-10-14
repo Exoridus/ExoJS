@@ -6,7 +6,11 @@
  * per chunk cost one page (draw) each. Cached chunk geometry means a camera pan
  * rebuilds nothing, and a single tile edit rebuilds exactly one chunk.
  */
+import { TileSet } from '@codexo/exojs-tilemap';
 import { describe, expect, it } from 'vitest';
+
+import { Texture } from '#rendering/texture/Texture';
+import { TextureRegion } from '#rendering/texture/TextureRegion';
 
 import { createWebGl2Harness, measureFrame, type WebGl2Harness } from './harness';
 import {
@@ -139,6 +143,33 @@ describe('structural — Tilemap', () => {
       });
 
       expect(result.rebuilds).toBe(1);
+
+      scene.node.destroy();
+    });
+  });
+  it('ground under tall-only collection trees → one draw for the ground, one for the trees', () => {
+    withTilemapHarness(harness => {
+      const treeTexture = new Texture();
+
+      treeTexture.setSize(16, 48);
+
+      const trees = new TileSet({
+        name: 'trees',
+        tileWidth: 16,
+        tileHeight: 48,
+        tileImages: [new TextureRegion(treeTexture, { x: 0, y: 0, width: 16, height: 48 })],
+      });
+      // Every ninth cell holds a tree reaching two cells up; the rest is ground.
+      const scene = buildTilemapScene({
+        widthTiles: 32,
+        heightTiles: 32,
+        chunkSize: 32,
+        tilesets: [...makeTilesets(1), trees],
+        tilesetAssign: (tx, ty) => ((tx * 7 + ty * 3) % 9 === 0 ? 1 : 0),
+      });
+      fitView(harness, scene);
+
+      expect(measureWithRebuilds(harness, scene).drawCalls).toBe(2);
 
       scene.node.destroy();
     });
