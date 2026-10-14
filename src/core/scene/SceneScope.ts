@@ -541,7 +541,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.systems._destroy(error => errors.push(error)));
     this._guard(errors, () => this.tweens.destroy());
     this._guard(errors, () => this.coroutines.destroy());
-    this._guard(errors, () => this.audio.destroy());
+    this._guard(errors, () => this.audio._destroy(error => errors.push(error)));
     this._guard(errors, () => this.animations.destroy());
     this._guard(errors, () => this.inputs.destroy());
     this._guard(errors, () => this.interaction.destroy());
@@ -597,7 +597,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.systems._destroy(error => errors.push(error)));
     this._guard(errors, () => this.tweens.destroy());
     this._guard(errors, () => this.coroutines.destroy());
-    this._guard(errors, () => this.audio.destroy());
+    this._guard(errors, () => this.audio._destroy(error => errors.push(error)));
     this._guard(errors, () => this.animations.destroy());
     this._guard(errors, () => this.inputs.destroy());
     this._guard(errors, () => this.interaction.destroy());
