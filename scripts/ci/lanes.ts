@@ -280,7 +280,10 @@ export const LANES: readonly Lane[] = [
     id: 'package',
     stage: 'verify',
     when: 'packageVerify',
-    run: 'pnpm size && pnpm size:summary && pnpm verify:exports && pnpm verify:declaration-imports && pnpm verify:declaration-semantics && pnpm verify:lockstep && pnpm verify:release-matrix && pnpm verify:publish',
+    // The external consumer installs the packed tarballs into a project outside
+    // the repository, so a public API or runtime change is proven against what
+    // npm would ship, not only against the source tree.
+    run: 'pnpm size && pnpm size:summary && pnpm verify:exports && pnpm verify:declaration-imports && pnpm verify:declaration-semantics && pnpm verify:lockstep && pnpm verify:release-matrix && pnpm verify:publish && pnpm verify:external-consumers',
     dist: true,
   },
   {
