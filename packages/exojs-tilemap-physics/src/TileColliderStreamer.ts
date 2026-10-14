@@ -113,6 +113,11 @@ export class TileColliderStreamer {
   private _destroyed = false;
 
   public constructor(world: PhysicsWorld, layer: TileLayer, options: TileColliderOptions = {}) {
+    if (layer.projection.staggered) {
+      // Reuse the geometry builder's grid rejection without building supported layers.
+      buildTileCollisionGeometry(layer);
+    }
+
     this._world = world;
     this._layer = layer;
     this._options = options;
