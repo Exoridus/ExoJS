@@ -605,17 +605,40 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * structural root, and the attachment to `app`/`scope`. Called once by
    * `SceneScope` immediately after `scene.destroy()`, on both the normal
    * teardown path and the failed-activation cleanup path.
+   *
+   * A throwing tracked resource or node `destroy()` does not stop the steps
+   * after it: every step runs, then the first failure is rethrown, or an
+   * `AggregateError` when several steps failed.
    * @internal
    */
   public _teardownInternals(): void {
-    this._destroyScope.destroy();
+    let failures: unknown[] | null = null;
+
+    try {
+      this._destroyScope.destroy();
+    } catch (error) {
+      failures = [error];
+    }
+
     this.onActivate.destroy();
     this.onSuspend.destroy();
     this.onPause.destroy();
     this.onResume.destroy();
-    this._root.destroy();
+
+    try {
+      this._root.destroy();
+    } catch (error) {
+      (failures ??= []).push(error);
+    }
+
     this._app = null;
     this._scope = null;
+
+    if (failures !== null) {
+      throw failures.length === 1
+        ? failures[0]
+        : new AggregateError(failures, '[ExoJS] Scene teardown: several engine-owned cleanup steps threw.');
+    }
   }
 
   /** Make `container` the top of a component tree belonging to this scene. */
