@@ -1,4 +1,4 @@
-import { parseArgList, parseArgs } from '../src/shared/args';
+import { parseArgList, parseArgs, unclaimedArgs } from '../src/shared/args';
 
 /**
  * `bench:compare` takes one `--rendering` / `--physics` path per benchmark run,
@@ -36,5 +36,23 @@ describe('parseArgList', () => {
 
   test('takes a value whole, so a path containing a comma survives', () => {
     expect(parseArgList(['--rendering=C:/runs/a,b/results.json'], 'rendering')).toEqual(['C:/runs/a,b/results.json']);
+  });
+});
+
+describe('unclaimedArgs', () => {
+  test('reports the tokens no flag took as its value, in the order given', () => {
+    expect(unclaimedArgs(['--rendering', 'run-1.json', 'run-2.json', 'run-3.json'])).toEqual(['run-2.json', 'run-3.json']);
+  });
+
+  test('is empty when every token is a flag or the value of the flag before it', () => {
+    expect(unclaimedArgs(['--rendering', '1.json', '--rendering=2.json', '--profile', '--out', 'a.md'])).toEqual([]);
+  });
+
+  test('reports a token after a joined flag, which takes no separate value', () => {
+    expect(unclaimedArgs(['--rendering=1.json', '2.json'])).toEqual(['2.json']);
+  });
+
+  test('reports a leading token that precedes every flag', () => {
+    expect(unclaimedArgs(['stray.json', '--profile'])).toEqual(['stray.json']);
   });
 });

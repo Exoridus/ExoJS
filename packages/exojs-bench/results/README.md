@@ -22,9 +22,11 @@ For diagnosis, narrowing counts, scenarios, or other workload settings is useful
 
 ```sh
 pnpm --filter @codexo/exojs-bench bench:compare --profile \
-  --rendering run-1/rendering/results.json run-2/rendering/results.json run-3/rendering/results.json \
-  --physics run-1/physics/results.json run-2/physics/results.json run-3/physics/results.json
+  --rendering run-1/rendering/results.json --rendering run-2/rendering/results.json --rendering run-3/rendering/results.json \
+  --physics run-1/physics/results.json --physics run-2/physics/results.json --physics run-3/physics/results.json
 ```
+
+Each results file needs its own `--rendering` or `--physics` flag. The command refuses a path that follows another path without a flag of its own.
 
 Follow the command's output path and validation diagnostics. Do not rename a profile to disguise a different machine or splice measurements from different runs into it. The comparison code selects the eligible loads and verdicts; the README does not define an alternative calculation.
 
