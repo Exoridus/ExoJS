@@ -48,6 +48,9 @@ export interface BodyOwner {
  * body with {@link applyForce}, {@link applyTorque} and {@link applyImpulse}, or
  * set {@link linearVelocityX}/{@link linearVelocityY}/{@link angularVelocity}
  * directly; reposition it (teleport, no velocity) with {@link setTransform}.
+ * The force, torque, impulse and transform methods wake a sleeping body; the
+ * velocity fields are plain fields and do not, so call {@link wake} before
+ * steering a body that may have fallen asleep by writing its velocity.
  */
 export class PhysicsBody {
   public readonly type: BodyType;
@@ -72,11 +75,11 @@ export class PhysicsBody {
   /** Inverse rotational inertia (`0` = no angular response). */
   public invInertia = 0;
 
-  /** Linear velocity X in px/s. */
+  /** Linear velocity X in px/s. Writing it does not wake a sleeping body. */
   public linearVelocityX = 0;
-  /** Linear velocity Y in px/s. */
+  /** Linear velocity Y in px/s. Writing it does not wake a sleeping body. */
   public linearVelocityY = 0;
-  /** Angular velocity in rad/s. */
+  /** Angular velocity in rad/s. Writing it does not wake a sleeping body. */
   public angularVelocity = 0;
 
   /** When `false`, this body is never put to sleep. Default `true`. */

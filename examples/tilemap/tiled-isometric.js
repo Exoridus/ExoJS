@@ -81,6 +81,8 @@ class IsometricScene extends Scene {
     }
     const projection = this.map.projection;
     this.target = { x: (tx + 0.5) * projection.logicalTileWidth, y: (ty + 0.5) * projection.logicalTileHeight };
+    // The actor falls asleep once it stops at a target, and writing its velocity does not wake it.
+    this.body.wake();
     this.selection.clear();
     this.selection.fillColor = new Color(255, 234, 126, 0.25);
     this.selection.lineColor = new Color(255, 234, 126);

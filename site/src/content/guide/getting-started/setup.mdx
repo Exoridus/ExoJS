@@ -70,7 +70,7 @@ npm run preview
 npm install --save-exact @codexo/exojs
 ```
 
-Use the package's ESM entry point from your bundler. TypeScript declarations are included. Pin compatible exact versions for any official runtime packages you add.
+Use the package's ESM entry point from your bundler. TypeScript declarations are included and resolve with `"moduleResolution": "bundler"`, the setting the starters use; `node16` and `nodenext` resolution are not supported. Pin compatible exact versions for any official runtime packages you add.
 
 A canvas can be supplied or created by the application:
 

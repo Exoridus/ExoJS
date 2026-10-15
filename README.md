@@ -120,7 +120,7 @@ For a bundler-based application:
 npm install --save-exact @codexo/exojs
 ```
 
-The package provides ESM and TypeScript declarations. It also includes script-tag bundles:
+The package provides ESM and TypeScript declarations. TypeScript projects resolve the declarations with `"moduleResolution": "bundler"`; `node16` and `nodenext` resolution are not supported. The package also includes script-tag bundles:
 
 | Bundle                  | Contents                                                                                             |
 | ----------------------- | ---------------------------------------------------------------------------------------------------- |
