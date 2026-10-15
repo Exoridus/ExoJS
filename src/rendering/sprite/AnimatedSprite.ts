@@ -408,7 +408,9 @@ export class AnimatedSprite extends Sprite {
    * is not part of an application's scene tree, or to step playback manually.
    * Dispatches `onFrame` for each frame boundary crossed and `onComplete` when
    * the clip completes its final {@link AnimatedSpriteClipDefinition.repeat}
-   * cycle.
+   * cycle. A handler that pauses, stops, plays another clip or destroys the sprite
+   * ends the advance at that frame: the rest of `deltaSeconds` is not played,
+   * and a later {@link resume} starts the paused frame's hold afresh.
    */
   public update(deltaSeconds: number): this {
     if (!this._playing || this._currentClipName === null) {
@@ -462,6 +464,11 @@ export class AnimatedSprite extends Sprite {
           // Normalized clips always hold at least one frame.
           this._applyFrame(clip, 0);
           this.onFrame.dispatch(this._currentClipName, 0);
+
+          if (this._isInterrupted(clip)) {
+            break;
+          }
+
           threshold = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDuration;
           continue;
         }
@@ -482,6 +489,11 @@ export class AnimatedSprite extends Sprite {
       // In-bounds: nextFrame < frames.length.
       this._applyFrame(clip, this._currentFrameIndex);
       this.onFrame.dispatch(this._currentClipName, this._currentFrameIndex);
+
+      if (this._isInterrupted(clip)) {
+        break;
+      }
+
       threshold = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDuration;
     }
 
@@ -537,6 +549,22 @@ export class AnimatedSprite extends Sprite {
     }
 
     return new AnimatedSprite(spritesheet.texture, clips);
+  }
+
+  /**
+   * Whether an `onFrame` handler changed playback under the advance loop in
+   * {@link update}. A pause discards the time still owed to the run, so the
+   * paused frame holds for its full duration once resumed rather than replaying
+   * the remainder of the interrupted update.
+   */
+  private _isInterrupted(clip: NormalizedAnimatedSpriteClip): boolean {
+    if (!this._playing) {
+      this._elapsedFrameTime = seconds(0);
+
+      return true;
+    }
+
+    return this._currentClipName === null || this._clips.get(this._currentClipName) !== clip;
   }
 
   /**

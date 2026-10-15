@@ -2585,7 +2585,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Advance playback by deltaSeconds - seconds, the same unit as Tween.update, and the unit a Time delta reports through delta.seconds. Clip authoring stays in its own units: AnimatedSpriteClipDefinition.frameDurations is still seconds per frame and fps is still frames per second. Called automatically once per frame by the owning AnimationSystem for a playing, attached sprite - call it yourself only for a sprite that is not part of an application's scene tree, or to step playback manually. Dispatches onFrame for each frame boundary crossed and onComplete when the clip completes its final AnimatedSpriteClipDefinition.repeat cycle."
+          "description": "Advance playback by deltaSeconds - seconds, the same unit as Tween.update, and the unit a Time delta reports through delta.seconds. Clip authoring stays in its own units: AnimatedSpriteClipDefinition.frameDurations is still seconds per frame and fps is still frames per second. Called automatically once per frame by the owning AnimationSystem for a playing, attached sprite - call it yourself only for a sprite that is not part of an application's scene tree, or to step playback manually. Dispatches onFrame for each frame boundary crossed and onComplete when the clip completes its final AnimatedSpriteClipDefinition.repeat cycle. A handler that pauses, stops, plays another clip or destroys the sprite ends the advance at that frame: the rest of deltaSeconds is not played, and a later resume starts the paused frame's hold afresh."
         },
         {
           "name": "updateBounds",
