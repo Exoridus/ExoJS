@@ -589,4 +589,106 @@ describe('AnimatedSprite', () => {
       expect(frameSpy).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('playback changes from an onFrame handler', () => {
+    const createLongClipSprite = (): AnimatedSprite =>
+      new AnimatedSprite(null, {
+        walk: { frames: [...createFrames(), new Rectangle(48, 0, 16, 16), new Rectangle(64, 0, 16, 16)], fps: 10 },
+        idle: { frames: createFrames(), fps: 10 },
+      });
+
+    test('pause() stops the remaining frames of the same update', () => {
+      const sprite = createLongClipSprite();
+      const frames: number[] = [];
+
+      sprite.play('walk');
+      sprite.onFrame.add((_clip, frame) => {
+        frames.push(frame);
+
+        if (frame === 1) {
+          sprite.pause();
+        }
+      });
+
+      sprite.update(seconds(450));
+
+      expect(frames).toEqual([1]);
+      expect(sprite.currentFrame).toBe(1);
+      expect(sprite.playing).toBe(false);
+    });
+
+    test('pause() on a wrapped frame stops the remaining frames of the same update', () => {
+      const sprite = new AnimatedSprite(null, { loop: { frames: createFrames(), fps: 10 } });
+      const frames: number[] = [];
+
+      sprite.play('loop');
+      sprite.onFrame.add((_clip, frame) => {
+        frames.push(frame);
+
+        if (frame === 0) {
+          sprite.pause();
+        }
+      });
+
+      sprite.update(seconds(550));
+
+      expect(frames).toEqual([1, 2, 0]);
+      expect(sprite.currentFrame).toBe(0);
+    });
+
+    test('resuming after a pause from onFrame does not replay the time the pause cut off', () => {
+      const sprite = createLongClipSprite();
+
+      sprite.play('walk');
+      sprite.onFrame.add((_clip, frame) => {
+        if (frame === 1) {
+          sprite.pause();
+        }
+      });
+
+      sprite.update(seconds(450));
+      sprite.resume();
+      sprite.update(seconds(50));
+
+      expect(sprite.currentFrame).toBe(1);
+    });
+
+    test('play() of another clip continues from that clip, not the one being advanced', () => {
+      const sprite = createLongClipSprite();
+      const events: string[] = [];
+
+      sprite.play('walk');
+      sprite.onFrame.add((clip, frame) => {
+        events.push(`${clip}:${frame}`);
+
+        if (clip === 'walk' && frame === 1) {
+          sprite.play('idle');
+        }
+      });
+
+      sprite.update(seconds(450));
+
+      expect(events).toEqual(['walk:1', 'idle:0']);
+      expect(sprite.currentClip).toBe('idle');
+      expect(sprite.currentFrame).toBe(0);
+    });
+
+    test('destroy() ends the update without touching the released frames or signals', () => {
+      const sprite = createLongClipSprite();
+      const frames: number[] = [];
+
+      sprite.play('walk');
+      sprite.onFrame.add((_clip, frame) => {
+        frames.push(frame);
+
+        if (frame === 1) {
+          sprite.destroy();
+        }
+      });
+
+      expect(() => sprite.update(seconds(450))).not.toThrow();
+      expect(frames).toEqual([1]);
+      expect(sprite.destroyed).toBe(true);
+    });
+  });
 });
