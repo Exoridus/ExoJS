@@ -112,7 +112,9 @@ describe('RendererRegistry', () => {
 
     expect(() => {
       registry.resolve(new BaseDrawable());
-    }).toThrow('No renderer registered for BaseDrawable.');
+    }).toThrow(
+      'No renderer registered for BaseDrawable. If it comes from an ExoJS extension, pass that extension in ApplicationOptions.extensions; importing the package does not install it.',
+    );
   });
 
   test('resolves the nearest registered prototype renderer', () => {
