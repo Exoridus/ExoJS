@@ -9,6 +9,7 @@ import type { Mock } from 'vitest';
 
 import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
+import { SceneNavigationAbortedError } from '#core/scene/sceneErrors';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {
@@ -137,6 +138,52 @@ const createApp = (): Application =>
     },
   });
 
+const deferred = (): { promise: Promise<void>; resolve: () => void } => {
+  let resolve = (): void => {};
+  const promise = new Promise<void>(done => {
+    resolve = done;
+  });
+
+  return { promise, resolve };
+};
+
+const parkedScene = async (kind: 'retained' | 'preloaded') => {
+  const started = deferred();
+  const release = deferred();
+  const events: string[] = [];
+  const scenes: Scene[] = [];
+
+  class ParkedScene extends Scene {
+    public override init(): void {
+      scenes.push(this);
+    }
+
+    public override async unload(): Promise<void> {
+      events.push('unload');
+      started.resolve();
+      await release.promise;
+      events.push('unloaded');
+    }
+
+    public override destroy(): void {
+      events.push('destroy');
+    }
+  }
+
+  const app = new Application({ backend: { type: 'webgl2' }, scenes: { parked: ParkedScene, plain: PlainScene } });
+
+  if (kind === 'retained') {
+    await app.scenes.change(ParkedScene);
+    await app.scenes.change(PlainScene, { suspendCurrent: true });
+  } else {
+    await app.scenes.preload(ParkedScene);
+  }
+
+  const resources = [vi.spyOn(app.loader, 'destroy'), vi.spyOn(app.input, 'destroy'), vi.spyOn(app.backend, 'destroy')];
+
+  return { app, target: ParkedScene, scene: scenes[0]!, started: started.promise, release: release.resolve, events, resources };
+};
+
 let rafSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
@@ -221,6 +268,93 @@ describe('Application.destroy() scene-teardown grace period', () => {
     vi.useRealTimers();
   });
 
+  test.each([false, true])('keeps a cancelling preload owned until load settles (load fails: %s)', async fails => {
+    const started = deferred();
+    const release = deferred();
+    const events: string[] = [];
+
+    class LoadingScene extends Scene {
+      public override async load(): Promise<void> {
+        started.resolve();
+        await release.promise;
+
+        if (fails) {
+          throw new Error('load failed');
+        }
+      }
+
+      public override unload(): void {
+        events.push('unload');
+      }
+
+      public override destroy(): void {
+        events.push('destroy');
+      }
+    }
+
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { loading: LoadingScene } });
+    const preload = app.scenes.preload(LoadingScene);
+    const prepared = preload.catch((error: unknown) => error);
+
+    await started.promise;
+
+    const resources = [vi.spyOn(app.loader, 'destroy'), vi.spyOn(app.backend, 'destroy')];
+    const unloaded = app.scenes.unload(LoadingScene, { instance: 'preloaded' });
+    const destroyed = app.destroy();
+
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(app.state).toBe(ApplicationState.Destroying);
+
+      for (const resource of resources) {
+        expect(resource).not.toHaveBeenCalled();
+      }
+    } finally {
+      release.resolve();
+      await Promise.all([prepared, unloaded, destroyed]);
+    }
+
+    expect(events).toEqual(fails ? ['destroy'] : ['unload', 'destroy']);
+
+    for (const resource of resources) {
+      expect(resource).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  test('an all-instance unload interrupted by destruction leaves the remaining instance owned', async () => {
+    const { app, target, started, release, events, resources } = await parkedScene('retained');
+
+    await app.scenes.preload(target);
+
+    const unloaded = app.scenes.unload(target, { instance: 'all' });
+    const rejected = unloaded.catch((error: unknown) => error);
+
+    await started;
+
+    const destroyed = app.destroy();
+
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(app.state).toBe(ApplicationState.Destroying);
+
+      for (const resource of resources) {
+        expect(resource).not.toHaveBeenCalled();
+      }
+    } finally {
+      release();
+      await Promise.all([rejected, destroyed]);
+    }
+
+    await expect(rejected).resolves.toBeInstanceOf(SceneNavigationAbortedError);
+    expect(events).toEqual(['unload', 'unloaded', 'destroy', 'unload', 'unloaded', 'destroy']);
+
+    for (const resource of resources) {
+      expect(resource).toHaveBeenCalledTimes(1);
+    }
+  });
+
   test('a never-settling unload() no longer pins the application: teardown proceeds after the grace period', async () => {
     const app = createApp();
     const onError = vi.fn();
@@ -262,6 +396,164 @@ describe('Application.destroy() scene-teardown grace period', () => {
     await app.destroy();
 
     expect(app.state).toBe(ApplicationState.Destroyed);
+  });
+});
+
+describe('Application.destroy() owns parked scene cleanup', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test.each(['retained', 'preloaded'] as const)('tracks unload(%s) before a teardown callback can destroy the application', async kind => {
+    const { app, target, scene, started, release, events, resources } = await parkedScene(kind);
+    let destroyed = Promise.resolve();
+    let destructionStarted = false;
+
+    const destroy = (): void => {
+      destructionStarted = true;
+      destroyed = app.destroy();
+    };
+
+    if (kind === 'retained') {
+      app.scenes.onStopScene.add(stopped => {
+        if (stopped === scene) {
+          destroy();
+        }
+      });
+    } else {
+      scene.lifecycleSignal.addEventListener('abort', destroy, { once: true });
+    }
+
+    const unloaded = app.scenes.unload(target, { instance: kind });
+
+    try {
+      await started;
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(destructionStarted).toBe(true);
+      expect(app.state).toBe(ApplicationState.Destroying);
+
+      for (const resource of resources) {
+        expect(resource).not.toHaveBeenCalled();
+      }
+    } finally {
+      release();
+      await Promise.all([unloaded, destroyed]);
+    }
+
+    expect(events).toEqual(['unload', 'unloaded', 'destroy']);
+
+    for (const resource of resources) {
+      expect(resource).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  test.each(['retained', 'preloaded'] as const)('unload(%s) rejects once application destruction begins', async kind => {
+    const { app, target, started, release, events, resources } = await parkedScene(kind);
+    const destroyed = app.destroy();
+    const unloaded = app.scenes.unload(target, { instance: kind });
+    let unloadError: unknown = null;
+
+    void unloaded.catch((error: unknown) => {
+      unloadError = error;
+    });
+
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(unloadError).toBeInstanceOf(SceneNavigationAbortedError);
+      await started;
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(app.state).toBe(ApplicationState.Destroying);
+
+      for (const resource of resources) {
+        expect(resource).not.toHaveBeenCalled();
+      }
+    } finally {
+      release();
+      await Promise.allSettled([destroyed, unloaded]);
+    }
+
+    expect(events).toEqual(['unload', 'unloaded', 'destroy']);
+
+    for (const resource of resources) {
+      expect(resource).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  test.each(['retained', 'preloaded'] as const)('waits for an earlier unload(%s) before releasing owned resources', async kind => {
+    const { app, target, started, release, events, resources } = await parkedScene(kind);
+    const unloaded = app.scenes.unload(target, { instance: kind });
+
+    await started;
+
+    const destroyed = app.destroy();
+
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(app.state).toBe(ApplicationState.Destroying);
+      expect(events).toEqual(['unload']);
+
+      for (const resource of resources) {
+        expect(resource).not.toHaveBeenCalled();
+      }
+    } finally {
+      release();
+      await Promise.all([unloaded, destroyed]);
+    }
+
+    expect(events).toEqual(['unload', 'unloaded', 'destroy']);
+
+    for (const resource of resources) {
+      expect(resource).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  test.each(['retained', 'preloaded'] as const)('bounds an earlier unload(%s) by the shutdown grace period', async kind => {
+    const { app, target, started, release, events, resources } = await parkedScene(kind);
+    const onError = vi.fn();
+
+    app.onError.add(onError);
+
+    const unloaded = app.scenes.unload(target, { instance: kind });
+
+    await started;
+
+    const destroyed = app.destroy();
+
+    try {
+      await vi.advanceTimersByTimeAsync(graceMs - 1);
+
+      expect(app.state).toBe(ApplicationState.Destroying);
+
+      for (const resource of resources) {
+        expect(resource).not.toHaveBeenCalled();
+      }
+
+      await vi.advanceTimersByTimeAsync(1);
+      await destroyed;
+
+      expect(app.state).toBe(ApplicationState.Destroyed);
+      expect(events).toEqual(['unload']);
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining('gave up waiting for scene teardown') as string }),
+      );
+
+      for (const resource of resources) {
+        expect(resource).toHaveBeenCalledTimes(1);
+      }
+    } finally {
+      release();
+      await Promise.all([unloaded, destroyed]);
+    }
+
+    expect(events).toEqual(['unload', 'unloaded', 'destroy']);
   });
 });
 
