@@ -208,6 +208,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private _preparingScene: Scene | null = null;
   private _navigationGeneration = 0;
   private _destroyed = false;
+  private _frameOpen = false;
+  /** The scope whose frame window is open - not necessarily the active one by the time the frame closes. */
+  private _frameScope: SceneScope | null = null;
+  private _frameBoundary: { readonly reached: Promise<void>; readonly release: () => void } | null = null;
 
   /** Fires whenever the active scene changes (set or clear). Payload is the new scene, or `null` when cleared. */
   public readonly onChangeScene = new Signal<[Scene | null]>();
@@ -293,6 +297,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * returned promise additionally waits for the outgoing scope's permanent
    * teardown to fully settle (skipped when `suspendCurrent` is set, since
    * there is nothing to tear down).
+   *
+   * The switch never lands inside a running frame. Requested while a frame is
+   * being dispatched - from a scene hook, a behaviour, a system, an input
+   * signal or a transition session - it commits once that frame has
+   * finished: the outgoing scene completes the frame it started, and the
+   * incoming scene first takes part in the next one.
    *
    * An optional `transition` (see {@link ChangeSceneOptions.transition}) drives
    * the switch through a {@link SceneTransitionSession}: the atomic commit
@@ -552,7 +562,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       };
 
       await (transition === undefined || transition === null
-        ? commitDiscard()
+        ? this._commitAtFrameBoundary(commitDiscard)
         : this._runTransitionedAction(commitDiscard, context, transition));
       await this._awaitPendingOutgoingTeardown();
     });
@@ -637,7 +647,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `init()` do not run again. Shares the same atomic
    * commit boundary and optional {@link SceneTransition} behavior as
    * {@link SceneDirector.change} - see its doc comment for the exact
-   * guarantee.
+   * guarantee. Called outside a frame without a transition, the switch has
+   * happened by the time this returns; called while a frame is being
+   * dispatched, it waits for that frame to finish, like every other
+   * navigation.
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
    * navigation is already in flight; with {@link RetainedSceneNotFoundError}
@@ -651,6 +664,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     if (retainedScope === undefined) {
       throw new RetainedSceneNotFoundError(resolvedTarget.name);
+    }
+
+    // Left in `_retained` for the teardown in flight to end; claimed now, it
+    // could only be handed back after that teardown has already read it.
+    if (this._destroyed) {
+      throw new SceneNavigationAbortedError();
     }
 
     // Eager, synchronous claim: removed from `_retained` before any `await`
@@ -715,7 +734,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           this._registry.defaultTransitions.get(resolvedTarget),
         );
 
-        await (resolvedTransition === null ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, resolvedTransition));
+        await (resolvedTransition === null
+          ? this._commitAtFrameBoundary(commitSwitch)
+          : this._runTransitionedAction(commitSwitch, context, resolvedTransition));
         await this._awaitPendingOutgoingTeardown();
       });
     } catch (error) {
@@ -731,7 +752,19 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // the scope disposed) by `_stopAndClearActiveScene()` before
       // this catch runs - re-adding it here would put a disposed scope back
       // into `_retained` as if it were still reactivatable.
-      if (!committed) {
+      // A director already tearing down has read `_retained` or is about to;
+      // a scope handed back now could be missed, so it is ended here instead.
+      if (!committed && this._destroyed) {
+        void this._trackTeardown(this._disposeScene(retainedScope)).catch((disposeError: unknown) => {
+          const normalized = disposeError instanceof Error ? disposeError : new Error(String(disposeError));
+
+          logger.error('SceneDirector.restore() failed to dispose a retained scene it could not hand back during teardown.', {
+            source: 'SceneDirector',
+            error: normalized,
+          });
+          this._app.onError.dispatch(normalized);
+        });
+      } else if (!committed) {
         this._retained.set(resolvedTarget, retainedScope);
       }
 
@@ -803,7 +836,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * priority order. `options.transition` only materializes for an
    * active-scope match (a retained or preloaded match has nothing visible on
    * screen to transition, and always runs the direct, non-transitioned
-   * teardown path).
+   * teardown path). Discarding the active scene is a navigation: requested
+   * while a frame is being dispatched, it takes effect once that frame has
+   * finished, as described for {@link SceneDirector.change}.
    *
    * Returns `false` if nothing matched `target` at all. Rejects with
    * {@link AmbiguousSceneInstanceError} when `options.instance` is omitted
@@ -925,7 +960,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Pause the active scene. Its `fixedUpdate`/`update` stop running, but
    * `draw` keeps rendering - the canonical "pause menu drawn over a frozen
-   * world" shape. Input and interaction are not both gated the same way:
+   * world" shape. A pause requested while the scene is inside a fixed step
+   * or frame phase - from the scene, a behaviour, a scene system or a world
+   * callback - lets that step or phase finish on the scene, its behaviours
+   * and its systems, and stops everything after it; a pause requested before
+   * the scene's first step of a frame prevents every step of that frame.
+   * Input and interaction are not both gated the same way:
    * a {@link SceneInputs} binding whose {@link SceneAvailability} `when`
    * option is left at its default (`'active'`) stops dispatching while
    * paused, but {@link SceneInteraction.observe}/{@link SceneInteraction.scope}
@@ -1145,16 +1185,79 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * No-op when no scene is active.
    */
   public _beginFrame(): void {
-    this._activeScope?._beginFrame();
+    this._frameOpen = true;
+    this._frameScope = this._activeScope;
+    this._frameScope?._beginFrame();
   }
 
   /**
-   * @internal Drains the active scope's systems registry buffered
-   * mutations, closing this frame's window - forwards to
-   * {@link SystemRegistry._endFrame}. No-op when no scene is active.
+   * @internal Closes the window {@link SceneDirector._beginFrame} opened, on
+   * the scope it was opened on - even when that scope stopped being the
+   * active one during the frame - then releases the navigation commits that
+   * were requested while the frame was being dispatched.
    */
   public _endFrame(): void {
-    this._activeScope?._endFrame();
+    // The frame stays open while the scope applies what it buffered: a
+    // registry listener that navigates from there is still inside the frame.
+    try {
+      this._frameScope?._endFrame();
+    } finally {
+      const boundary = this._frameBoundary;
+
+      this._frameOpen = false;
+      this._frameScope = null;
+      this._frameBoundary = null;
+      boundary?.release();
+    }
+  }
+
+  /**
+   * The frame boundary a commit requested now has to wait for, or `null`
+   * when no frame is being dispatched and the commit may run at once.
+   */
+  private _pendingFrameBoundary(): Promise<void> | null {
+    if (!this._frameOpen) {
+      return null;
+    }
+
+    if (this._frameBoundary === null) {
+      let release!: () => void;
+      const reached = new Promise<void>(resolve => {
+        release = resolve;
+      });
+
+      this._frameBoundary = { reached, release };
+    }
+
+    return this._frameBoundary.reached;
+  }
+
+  /**
+   * Run a direct (session-less) navigation's `commit` once no frame is being
+   * dispatched. Requested mid-frame, the commit waits for that frame's
+   * boundary, so the outgoing scene finishes the frame it started and the
+   * incoming one first takes part in the next. A stop or teardown in the
+   * same frame - before or after the request - ends the wait in
+   * {@link SceneNavigationAbortedError} instead of a commit.
+   */
+  private async _commitAtFrameBoundary(commit: () => Promise<void>): Promise<void> {
+    if (this._destroyed) {
+      throw new SceneNavigationAbortedError();
+    }
+
+    const boundary = this._pendingFrameBoundary();
+
+    if (boundary !== null) {
+      const generation = this._navigationGeneration;
+
+      await boundary;
+
+      if (this._destroyed || this._navigationGeneration !== generation) {
+        throw new SceneNavigationAbortedError();
+      }
+    }
+
+    await commit();
   }
 
   /**
@@ -1703,6 +1806,21 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     if (environment === null || commit === null) {
       return;
+    }
+
+    // A session asks for its commit from inside the frame it is driven by
+    // (`update()`/`render()`, or `createSession()` of a navigation requested
+    // mid-frame); the switch itself still waits for that frame's boundary. A
+    // session that ends meanwhile has already settled its navigation without
+    // a commit.
+    const boundary = this._pendingFrameBoundary();
+
+    if (boundary !== null) {
+      await boundary;
+
+      if (this._activeEnvironment !== environment || this._destroyed) {
+        return;
+      }
     }
 
     try {

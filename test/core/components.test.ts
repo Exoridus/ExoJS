@@ -729,10 +729,20 @@ describe('Mutation during dispatch (CMP-04)', () => {
     expect(scope.scene.query(Ticker).size).toBe(2);
   });
 
-  test('pausing from a behaviour stops the rest of the pass', async () => {
+  test('pausing from a behaviour lets the rest of the pass finish and stops the next one', async () => {
     const { scope, log, tickers } = await setup(2);
 
     tickers[0]!.onUpdate = () => scope.pause();
+    frame(scope);
+    frame(scope);
+
+    expect(updates(log)).toEqual(['t0:update', 't1:update']);
+  });
+
+  test('suspending the scene from a behaviour stops the rest of the pass', async () => {
+    const { scope, log, tickers } = await setup(2);
+
+    tickers[0]!.onUpdate = () => scope.suspend();
     frame(scope);
 
     expect(updates(log)).toEqual(['t0:update']);

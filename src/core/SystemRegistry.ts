@@ -344,16 +344,32 @@ export class SystemRegistry implements Destroyable {
       return;
     }
 
-    for (const mutation of this._pending) {
-      if (isPendingAdd(mutation)) {
-        this._pendingAdds.delete(mutation.system);
-        this._insert(mutation.system, mutation.options);
-      } else {
-        this._finalizeRemoval(mutation.registration);
+    // Taken off the queue before anything is applied: an onAdd/onRemove
+    // listener that throws must neither leave the rest of the frame's
+    // mutations unapplied nor have the next boundary apply them a second time.
+    const pending = this._pending.splice(0);
+    let failed = false;
+    let failure: unknown;
+
+    for (const mutation of pending) {
+      try {
+        if (isPendingAdd(mutation)) {
+          this._pendingAdds.delete(mutation.system);
+          this._insert(mutation.system, mutation.options);
+        } else {
+          this._finalizeRemoval(mutation.registration);
+        }
+      } catch (error) {
+        if (!failed) {
+          failed = true;
+          failure = error;
+        }
       }
     }
 
-    this._pending.length = 0;
+    if (failed) {
+      throw failure;
+    }
   }
 
   /**

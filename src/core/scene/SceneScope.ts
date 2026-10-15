@@ -109,7 +109,6 @@ export class SceneScope<Data = unknown> {
     const runtime = new ComponentRuntime({
       scene: this.scene as Scene,
       isLive: () => this._state === SceneState.Active,
-      isTicking: () => this._state === SceneState.Active && !this._paused,
       reportError: error => this._reportError(error),
     });
 
@@ -350,6 +349,14 @@ export class SceneScope<Data = unknown> {
     this.systems._preFrame(delta);
   }
 
+  /**
+   * Run one fixed step on the scene hook, its behaviours, then its systems,
+   * gated to `Active` and unpaused. The gate is taken once per step: a pause
+   * requested inside the step lets the step finish on all three, so a
+   * command issued in it is never left waiting for a world step that only
+   * runs after resume. Ending the scope (stop, destroy) inside the step skips
+   * whatever of it is still ahead.
+   */
   public fixedUpdate(step: Seconds): void {
     if (this._state !== SceneState.Active || this._paused) {
       return;
@@ -370,7 +377,10 @@ export class SceneScope<Data = unknown> {
     }
 
     this._components?.fixedUpdate(step);
-    this.systems._fixedUpdate(step);
+
+    if (this._state === SceneState.Active) {
+      this.systems._fixedUpdate(step);
+    }
 
     if (__DEV__) {
       Perf.clearMarks(fixedUpdateStartMark);
@@ -379,9 +389,10 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Forward one frame's update to the scene and its systems, gated to
-   * `Active` and unpaused. Throws in every build if `Scene.update` returns a
-   * thenable - the hook must be synchronous.
+   * Forward one frame's update to the scene, its behaviours and its systems,
+   * gated to `Active` and unpaused with the same once-per-phase gate as
+   * {@link SceneScope.fixedUpdate}. Throws in every build if `Scene.update`
+   * returns a thenable - the hook must be synchronous.
    */
   public update(delta: Seconds): void {
     if (this._state !== SceneState.Active || this._paused) {
@@ -403,7 +414,10 @@ export class SceneScope<Data = unknown> {
     }
 
     this._components?.update(delta);
-    this.systems._update(delta);
+
+    if (this._state === SceneState.Active) {
+      this.systems._update(delta);
+    }
 
     if (__DEV__) {
       Perf.clearMarks(updateStartMark);
@@ -436,8 +450,10 @@ export class SceneScope<Data = unknown> {
       this._requireSynchronousFrameHook(result, 'draw');
     }
 
-    this.systems._draw(context);
-    this.scene._peekUI()?._render(context);
+    if (this._state === SceneState.Active) {
+      this.systems._draw(context);
+      this.scene._peekUI()?._render(context);
+    }
 
     if (__DEV__) {
       Perf.clearMarks(drawStartMark);
@@ -467,9 +483,11 @@ export class SceneScope<Data = unknown> {
 
   /** @internal Closes the window {@link SceneScope._beginFrame} opened and applies what it buffered. */
   public _endFrame(): void {
-    this._inFrame = false;
-    this.systems._endFrame();
-    this._components?.endFrame();
+    try {
+      this.systems._endFrame();
+    } finally {
+      this._closeComponentFrame();
+    }
   }
 
   /**
@@ -568,9 +586,9 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * A scope that stops being the active one mid-frame never receives that
-   * frame's {@link SceneScope._endFrame} - the director forwards it to the
-   * scope active by then - so it applies what its runtime buffered itself.
+   * Close the component half of the frame window at most once: from
+   * {@link SceneScope._endFrame}, or earlier from {@link SceneScope.suspend}
+   * when the scope is retained while its window is still open.
    */
   private _closeComponentFrame(): void {
     if (this._inFrame) {
