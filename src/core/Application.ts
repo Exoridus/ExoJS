@@ -1903,6 +1903,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this._destroyPromise;
     }
 
+    // Publish the shared result before stopping navigation or aborting scene
+    // lifetimes: either can synchronously call destroy() again.
+    let finish!: () => void;
+
+    this._destroyPromise = new Promise<void>(resolve => {
+      finish = resolve;
+    });
+
     // Opened before the frame loop stops: aborting the navigation in flight
     // runs transition teardown synchronously, and its failures belong to this
     // outcome too.
@@ -1921,13 +1929,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._setState(ApplicationState.Destroying);
 
-    this._destroyPromise = this._disposeManagedResources()
+    void this._disposeManagedResources()
       .catch((error: unknown) => {
         this._reportTeardownError(error);
       })
       .then(() => {
         this._destroyOutcome ??= this._sealDestroyOutcome();
         this._setState(ApplicationState.Destroyed);
+        finish();
       });
 
     return this._destroyPromise;
