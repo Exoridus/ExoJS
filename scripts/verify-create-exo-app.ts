@@ -74,6 +74,7 @@ const EXPECTED_FILES: Record<TemplateName, string[]> = {
     'vite.config.ts',
     'src/main.ts',
     'src/level.ts',
+    'src/actor.ts',
     'src/scenes/TopDownScene.ts',
     'src/scenes/ProceduralMapScene.ts',
     'src/scenes/TiledMapScene.ts',

@@ -23,7 +23,7 @@ export const TEMPLATE_DESCRIPTIONS: Record<TemplateName, string> = {
   minimal: 'smallest TypeScript ExoJS app with one Scene and one visible object',
   'game-starter': 'keyboard-controlled game loop starter with Scene structure',
   platformer: 'side-scroller with physics bodies, camera follow and a forgiving jump',
-  'top-down': 'tilemap, physics and click-to-move pathfinding, procedural or from Tiled',
+  'top-down': 'a Tiled map whose walls and doors drive physics and click-to-move pathfinding',
   'ui-app': 'settings screen built from the UI widgets in core',
   'audio-reactive': 'AudioAnalyser-driven shapes and animations',
 };
