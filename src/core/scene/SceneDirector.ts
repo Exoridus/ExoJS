@@ -171,7 +171,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * EVERY scene teardown this Director has started that has not settled yet -
    * `change()`/`restore()`'s outgoing scope, `_clearScene()`'s discard, and
-   * `_stopAndClearActiveScene()`'s. Entries remove themselves as they settle.
+   * `_stopAndClearActiveScene()`'s, and explicit `unload()` calls for parked
+   * scenes. Entries remove themselves as they settle.
    *
    * Separate from `_pendingOutgoingTeardown` because the two answer different
    * questions, and conflating them is a bug: a navigation that commits while
@@ -184,7 +185,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * making an ordinary `change()` wait on an unrelated, possibly
    * never-settling teardown, so the two are tracked apart.
    */
-  private readonly _pendingTeardowns = new Set<Promise<void>>();
+  private readonly _pendingTeardowns = new Set<Promise<unknown>>();
   private _sessionResources: TransitionResources | null = null;
   private _inputGateDepth = 0;
   private _navigationInFlight = false;
@@ -318,7 +319,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * registry key) when `target` is not present in
    * `ApplicationOptions.scenes`; with {@link RetainedSceneConflictError}
    * when `target` already has a retained instance (restore or unload it
-   * first).
+   * first); with {@link SceneNavigationAbortedError} when the application
+   * stops or is destroyed before the switch commits, or was already being
+   * destroyed when this was called.
    */
   public async change<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
   public async change<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
@@ -654,7 +657,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
    * navigation is already in flight; with {@link RetainedSceneNotFoundError}
-   * when `target` has no retained instance.
+   * when `target` has no retained instance; with
+   * {@link SceneNavigationAbortedError} under the same conditions as
+   * {@link SceneDirector.change}.
    */
   public async restore<K extends RegistryKeyOf<Registry>>(target: K, options?: RestoreSceneOptions): Promise<this>;
   public async restore<C extends NavigableSceneConstructor<Registry>>(target: C, options?: RestoreSceneOptions): Promise<this>;
@@ -791,9 +796,17 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * data always wins, never silently ignored.
    *
    * Rejects with {@link UnregisteredSceneError} (dev builds) when `target` is
-   * not present in `ApplicationOptions.scenes`.
+   * not present in `ApplicationOptions.scenes`; with
+   * {@link SceneNavigationAbortedError} once the application is being
+   * destroyed.
    */
   public async preload<C extends AnySceneConstructor>(target: C, ...args: PreloadArgs<InferSceneData<C>>): Promise<void> {
+    // A scene prepared now would land in `_preloaded` after teardown has
+    // already ended every entry there.
+    if (this._destroyed) {
+      throw new SceneNavigationAbortedError();
+    }
+
     const { data } = resolvePreloadArgs(args);
     const existing = this._preloaded.get(target);
 
@@ -844,9 +857,14 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * {@link AmbiguousSceneInstanceError} when `options.instance` is omitted
    * and more than one candidate exists; with {@link SceneInstanceNotFoundError}
    * when `options.instance` names a specific kind that doesn't exist for
-   * `target`.
+   * `target`; with {@link SceneNavigationAbortedError} once application
+   * destruction has begun.
    */
   public async unload<C extends AnySceneConstructor>(target: C, options: UnloadOptions = {}): Promise<boolean> {
+    if (this._destroyed) {
+      throw new SceneNavigationAbortedError();
+    }
+
     const preloadEntry = this._preloaded.get(target);
     const candidates: SceneInstanceKind[] = [
       ...(this._activeScopeTarget === target ? (['active'] as const) : []),
@@ -890,6 +908,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   private async _unloadInstance(target: AnySceneConstructor, kind: SceneInstanceKind, options: UnloadOptions): Promise<boolean> {
+    // An 'all' request can resume here after destruction began while its
+    // previous instance was still unloading.
+    if (this._destroyed) {
+      throw new SceneNavigationAbortedError();
+    }
+
     if (kind === 'retained') {
       const scope = this._retained.get(target);
 
@@ -898,13 +922,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       }
 
       this._retained.delete(target);
-      await this._disposeScene(scope);
+      await this._trackTeardown(() => this._disposeScene(scope));
 
       return true;
     }
 
     if (kind === 'preloaded') {
-      return this._unloadPreloaded(target);
+      return this._trackTeardown(() => this._unloadPreloaded(target));
     }
 
     if (this._activeScopeTarget !== target) {
@@ -1632,6 +1656,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * {@link SceneDirector._dispose}, which must always be able to proceed.
    */
   private async _runWithNavigation(action: () => Promise<void>): Promise<void> {
+    if (this._destroyed) {
+      throw new SceneNavigationAbortedError();
+    }
+
     if (this._navigationInFlight) {
       throw new ConcurrentSceneNavigationError();
     }
@@ -1684,7 +1712,23 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * must not surface as an unhandled rejection - while leaving `teardown`
    * itself free to reject for whoever does await it.
    */
-  private _trackTeardown(teardown: Promise<void>): Promise<void> {
+  private _trackTeardown<T>(work: Promise<T> | (() => Promise<T>)): Promise<T> {
+    let begin: (() => void) | undefined;
+    const teardown =
+      typeof work === 'function'
+        ? new Promise<T>((resolve, reject) => {
+            begin = (): void => {
+              try {
+                resolve(work());
+              } catch (error) {
+                reject(error instanceof Error ? error : new Error(String(error)));
+              }
+            };
+          })
+        : work;
+
+    // Teardown callbacks can synchronously destroy the application, so its
+    // ownership must be visible before any callback runs.
     this._pendingTeardowns.add(teardown);
 
     void teardown
@@ -1692,6 +1736,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       .finally(() => {
         this._pendingTeardowns.delete(teardown);
       });
+
+    begin?.();
 
     return teardown;
   }

@@ -68,16 +68,18 @@ export class ConcurrentSceneNavigationError extends Error {
 }
 
 /**
- * Thrown to reject a `change()`/`restore()`/`unload()` call whose transition
- * session was still in flight when the {@link Application} frame loop
- * stopped (a fatal frame error, or `stop()`/`destroy()` called mid-transition)
- * - the session cannot progress without frame callbacks, so the navigation
- * is aborted rather than left to hang forever. Any
- * claimed preload/retained entry is restored, not discarded.
+ * Thrown to reject a `change()`/`restore()`/`unload()` call that the
+ * {@link Application} stopping or being destroyed overtook before it
+ * committed: a transition session still in flight when the frame loop stopped
+ * (a fatal frame error, or `stop()`/`destroy()` called mid-transition), a
+ * commit still waiting for the end of the frame it was requested in, or a
+ * request - `preload()` included - made once destruction has begun. Any
+ * claimed preload/retained entry is restored, not discarded, unless the
+ * director is being destroyed, in which case it is ended with it.
  */
 export class SceneNavigationAbortedError extends Error {
   public constructor() {
-    super('Navigation aborted: the application stopped, or was destroyed, while a transition was in flight.');
+    super('Navigation aborted: the application stopped, or was destroyed, before the navigation committed.');
     this.name = 'SceneNavigationAbortedError';
   }
 }
