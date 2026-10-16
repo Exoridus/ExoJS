@@ -236,7 +236,7 @@ describe('SceneScope', () => {
 
       const systemsDestroySpy = vi.spyOn(scope.systems, '_destroy');
       const tweensDestroySpy = vi.spyOn(scope.tweens, 'destroy');
-      const audioDestroySpy = vi.spyOn(scope.audio, 'destroy');
+      const audioDestroySpy = vi.spyOn(scope.audio, '_destroy');
       const inputsDestroySpy = vi.spyOn(scope.inputs, 'destroy');
       const interactionDestroySpy = vi.spyOn(scope.interaction, 'destroy');
 
@@ -362,7 +362,7 @@ describe('SceneScope', () => {
 
       vi.spyOn(scope.systems, '_destroy').mockImplementation(() => events.push('systems.destroy'));
       vi.spyOn(scope.tweens, 'destroy').mockImplementation(() => events.push('tweens.destroy'));
-      vi.spyOn(scope.audio, 'destroy').mockImplementation(() => events.push('audio.destroy'));
+      vi.spyOn(scope.audio, '_destroy').mockImplementation(() => events.push('audio.destroy'));
       vi.spyOn(scope.inputs, 'destroy').mockImplementation(() => events.push('inputs.destroy'));
       vi.spyOn(scope.interaction, 'destroy').mockImplementation(() => events.push('interaction.destroy'));
       vi.mocked(app.interaction.detachRoot).mockImplementation(() => {
