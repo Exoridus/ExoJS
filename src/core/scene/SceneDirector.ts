@@ -1456,7 +1456,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         await entry.ready;
       } catch {
-        // prepare() failed - _runPreloadPrepare()'s own catch already ran
+        // prepare() failed - _prepareScene() already ran
         // the failed-preparation cleanup. Nothing further to do.
         continue;
       }
@@ -1598,23 +1598,19 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previous, next, scene as Scene),
     ),
   ): Promise<SceneScope<Data> | null> {
-    let prepared: boolean;
-
     try {
-      prepared = await scope.prepare(data);
+      if (await scope.prepare(data)) {
+        return scope;
+      }
     } catch (error) {
       scope.destroyFailedActivation();
 
       throw error;
     }
 
-    if (!prepared) {
-      scope.destroyFailedActivation();
+    scope.destroyFailedActivation();
 
-      return null;
-    }
-
-    return scope;
+    return null;
   }
 
   /**
@@ -1624,7 +1620,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * reaches the commit boundary almost immediately since there's nothing
    * left to await). If `ready` rejects, the preload's own preparation
    * failure already ran the ordinary failed-preparation cleanup
-   * (`_runPreloadPrepare`'s catch, see above) - nothing further to restore
+   * (`_prepareScene`'s failure path) - nothing further to restore
    * here, this call simply propagates the same rejection `change()` would
    * have produced for a fresh `prepare()` failure.
    */
@@ -1662,31 +1658,19 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * ask for, and every canceller only waits for `ready` to settle.
    */
   private async _runPreloadPrepare(target: AnySceneConstructor, entry: PreloadEntry, scene: Scene, data: unknown): Promise<void> {
-    let scope: SceneScope | null;
+    let prepared = false;
 
     try {
-      scope = await this._prepareScene(scene, data, entry.scope);
-    } catch (error) {
-      if (this._preloaded.get(target) === entry) {
+      prepared = (await this._prepareScene(scene, data, entry.scope)) !== null;
+    } finally {
+      if (!prepared && this._preloaded.get(target) === entry) {
         this._preloaded.delete(target);
       }
-
-      throw error;
     }
 
-    if (scope === null) {
-      if (this._preloaded.get(target) === entry) {
-        this._preloaded.delete(target);
-      }
-
-      return;
+    if (prepared && entry.status !== 'cancelling') {
+      entry.status = 'ready';
     }
-
-    if (entry.status === 'cancelling') {
-      return;
-    }
-
-    entry.status = 'ready';
   }
 
   /**
@@ -1697,7 +1681,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * cleanup" path (`unload()` runs, `onStopScene` does not). One still inside
    * `load()` when discarded is cancelled before `init()` and already torn
    * down by its own preparation. A failed `prepare()`
-   * already cleaned itself up via `_runPreloadPrepare`'s own catch above -
+   * already cleaned itself up via `_prepareScene`'s failure path -
    * nothing further to do in that case.
    */
   private _discardStalePreload(entry: PreloadEntry): void {
