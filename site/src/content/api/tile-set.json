@@ -1,6 +1,6 @@
 {
   "title": "TileSet",
-  "description": "A resolved tileset: either a uniform grid of tiles within one texture atlas, or a collection of separate tile images. Does **not** own its textures - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter. Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata. Tiles of an atlas set batch into one draw per chunk; an image collection costs one draw per change of image in a chunk's draw order, so prefer atlases for dense layers.",
+  "description": "A resolved tileset: either a uniform grid of tiles within one texture atlas, or a collection of separate tile images. Does **not** own its textures - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter. Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata. Tiles that stay inside their cells batch into one draw per texture and chunk, so an atlas costs one draw where a collection costs one per image. Artwork that overhangs its cell, and the tiles drawn over it, keep cell order, and each change of texture in that order costs another draw, so prefer atlases for dense layers.",
   "symbol": "TileSet",
   "kind": "class",
   "subsystem": "tilemap",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A resolved tileset: either a uniform grid of tiles within one texture atlas, or a collection of separate tile images.",
         "Does **not** own its textures - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter.",
-        "Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata. Tiles of an atlas set batch into one draw per chunk; an image collection costs one draw per change of image in a chunk's draw order, so prefer atlases for dense layers."
+        "Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata. Tiles that stay inside their cells batch into one draw per texture and chunk, so an atlas costs one draw where a collection costs one per image. Artwork that overhangs its cell, and the tiles drawn over it, keep cell order, and each change of texture in that order costs another draw, so prefer atlases for dense layers."
       ],
       "importLine": "import { TileSet } from '@codexo/exojs-tilemap'",
       "sourceLink": null
