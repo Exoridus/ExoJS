@@ -401,6 +401,58 @@ describe('reading order', () => {
 });
 
 describe('several readers', () => {
+  test('a pause inside a step preserves its button and sequence occurrences for later readers', async () => {
+    const { app, scene, frame } = await setup();
+    const combo = scene.inputs.attach(new ActionMap({ combo: new SequenceAction([Keyboard.A, Keyboard.B]) }));
+    const seen: Array<[string, number, number, number]> = [];
+
+    const read = (owner: string): void => {
+      const tick = scene.controls.jump.tick;
+
+      seen.push([owner, tick.pressCount, tick.releaseCount, combo.combo.tick.triggerCount]);
+    };
+
+    class Reader extends BehaviorComponent {
+      public override fixedUpdate(): void {
+        read('behavior');
+      }
+    }
+
+    const node = new Container();
+
+    node.addComponent(new Reader());
+    scene.root.addChild(node);
+    scene.systems.add({ fixedUpdate: () => read('system') });
+
+    scene.onFixed = (): void => {
+      read('scene');
+
+      if (scene.steps.length === 1) {
+        app.scenes.pause();
+      }
+    };
+
+    tapKey('Space');
+    tapKey('KeyA');
+    tapKey('KeyB');
+    frame(STEP_MS * 3);
+
+    expect(seen).toEqual([
+      ['scene', 1, 1, 1],
+      ['behavior', 1, 1, 1],
+      ['system', 1, 1, 1],
+    ]);
+
+    app.scenes.resume();
+    frame(STEP_MS);
+
+    expect(seen.slice(3)).toEqual([
+      ['scene', 0, 0, 0],
+      ['behavior', 0, 0, 0],
+      ['system', 0, 0, 0],
+    ]);
+  });
+
   test('two consumers of the same step read the same occurrences; neither takes them from the other', async () => {
     const { scene, frame } = await setup();
     const seen: Array<[string, number]> = [];
