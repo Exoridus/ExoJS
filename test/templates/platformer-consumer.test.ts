@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { Application, Signal } from '@codexo/exojs';
+import { Application, Signal, Sprite } from '@codexo/exojs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type GlyphAtlasPool, resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -229,6 +229,19 @@ afterEach(async () => {
 });
 
 describe('platformer starter on the fixed-step clock', () => {
+  it('keeps every floor and raised platform tile in the scene graph', async () => {
+    const game = await play();
+    const tiles = game.scene().player.sprite.parent!.children.filter((node): node is Sprite => node instanceof Sprite);
+    const floor = tiles.filter(tile => tile.y === 736);
+    const raised = tiles.filter(tile => tile.y === 160);
+
+    expect(floor).toHaveLength(60);
+    expect(floor.map(tile => tile.x)).toEqual(Array.from({ length: 60 }, (_, column) => 32 + column * 64));
+    expect(raised.map(tile => tile.x)).toEqual([2848, 2912, 2976, 3040]);
+    expect([...floor, ...raised].every(tile => tile.width === 64 && tile.height === 64)).toBe(true);
+    expect(game.errors).toEqual([]);
+  });
+
   it('jumps equally high whether the display runs at 60 Hz or 144 Hz, for a full and for a cut-short jump', async () => {
     for (const holdSteps of [24, 5]) {
       const heights: number[] = [];
