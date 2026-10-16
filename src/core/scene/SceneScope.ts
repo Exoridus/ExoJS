@@ -161,9 +161,23 @@ export class SceneScope<Data = unknown> {
    * has been disposed. Throws the original `load()`/`init()` error, or a
    * lifecycle error when `init()` returns a thenable - in every build, not
    * only in development (it must be synchronous).
+   *
+   * Resolves `false` without running `init()` when {@link Scene.lifecycleSignal}
+   * has been aborted by the time `load()` completes: the preparation was
+   * cancelled, the scope never reaches `Ready`, and the caller owns its
+   * {@link SceneScope.destroyFailedActivation}. A `load()` that rejects keeps
+   * its own error even then.
    */
-  public async prepare(data: Data): Promise<void> {
+  public async prepare(data: Data): Promise<boolean> {
     await this.scene.load(data);
+
+    // Cancellation cannot interrupt a load() that ignores the signal, but it
+    // has to stop here: init() is where a scene starts audio, binds input and
+    // registers with application-wide facilities, none of which a scene that
+    // will never activate may do.
+    if (this.scene.lifecycleSignal.aborted) {
+      return false;
+    }
 
     const result = this.scene.init(data) as unknown;
 
@@ -179,6 +193,8 @@ export class SceneScope<Data = unknown> {
 
     this._state = SceneState.Ready;
     this._onStateChange(previous, this._state);
+
+    return true;
   }
 
   /**

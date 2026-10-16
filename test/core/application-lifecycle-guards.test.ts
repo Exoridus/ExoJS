@@ -164,9 +164,9 @@ describe('Application lifecycle guards', () => {
     await changePromise;
     await flush(20);
 
-    expect(events.indexOf('incoming.init')).toBeGreaterThanOrEqual(0);
-    expect(events.indexOf('incoming.init')).toBeLessThan(events.indexOf('destroy settled'));
-    expect(events.indexOf('incoming.destroy')).toBeLessThan(events.indexOf('destroy settled'));
+    // Cancelled while still inside load(): torn down before destroy() settles,
+    // without ever initializing or unloading.
+    expect(events).toEqual(['incoming.destroy', 'destroy settled']);
   });
 
   test('a manual update() while the loop is live does not schedule a second frame chain', async () => {

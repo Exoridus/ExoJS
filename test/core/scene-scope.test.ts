@@ -203,7 +203,7 @@ describe('SceneScope', () => {
       const scene = new Scene();
       const scope = new SceneScope(app, scene);
 
-      await expect(scope.prepare(undefined)).resolves.toBeUndefined();
+      await expect(scope.prepare(undefined)).resolves.toBe(true);
     });
 
     test('an async init() override fails activation with a clear lifecycle error', async () => {
