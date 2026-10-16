@@ -538,7 +538,7 @@ export class SceneScope<Data = unknown> {
 
     const errors: unknown[] = [];
 
-    this._guard(errors, () => this.systems.destroy());
+    this._guard(errors, () => this.systems._destroy(error => errors.push(error)));
     this._guard(errors, () => this.tweens.destroy());
     this._guard(errors, () => this.coroutines.destroy());
     this._guard(errors, () => this.audio.destroy());
@@ -594,7 +594,7 @@ export class SceneScope<Data = unknown> {
       await this._guardAsync(errors, () => this.scene.unload());
     }
 
-    this._guard(errors, () => this.systems.destroy());
+    this._guard(errors, () => this.systems._destroy(error => errors.push(error)));
     this._guard(errors, () => this.tweens.destroy());
     this._guard(errors, () => this.coroutines.destroy());
     this._guard(errors, () => this.audio.destroy());
@@ -704,6 +704,7 @@ export class SceneScope<Data = unknown> {
     const normalized = error instanceof Error ? error : new Error(String(error));
 
     logger.error('A SceneScope lifecycle stage failed.', { source: 'SceneScope', error: normalized });
+    this._app._teardownFailures?.push(normalized);
     // Isolated: a throwing listener must not escape a teardown documented
     // never to throw, hide the remaining failures from the other listeners, or
     // replace the activation error a failed prepare() rethrows.

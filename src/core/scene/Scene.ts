@@ -128,7 +128,11 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * Aborted the moment this scene's permanent teardown begins - before
    * {@link Scene.unload} is called, and also on the paths where `unload()`
    * never runs at all (a failed activation, a preload cancelled before it was
-   * ever consumed, {@link Application.destroy}).
+   * ever consumed). {@link Application.destroy} aborts it for every scene the
+   * application owns as soon as it is called, even for a scene whose own
+   * teardown has to wait behind another scene's; a retained scene a
+   * `restore()` in flight is handing back follows once that navigation
+   * settles.
    *
    * Pass it to anything that takes an `AbortSignal` - `fetch()` above all -
    * so work started in {@link Scene.load} stops when the scene goes away
@@ -139,7 +143,8 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * This is what keeps teardown bounded: `Application.destroy()` waits a fixed
    * grace period for scene teardown and then proceeds without it. A scene
    * whose asynchronous work watches this signal settles well inside that
-   * window; one that ignores it can be abandoned mid-teardown.
+   * window; one that ignores it can be abandoned mid-teardown, which
+   * {@link Application.destroyOutcome} then reports as `forced`.
    *
    * @example
    * ```ts
@@ -621,13 +626,11 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * @internal
    */
   public _teardownInternals(): void {
-    let failures: unknown[] | null = null;
-
-    try {
-      this._destroyScope.destroy();
-    } catch (error) {
-      failures = [error];
-    }
+    // Collected rather than left to `DestroyScope.destroy()`, which swallows
+    // tracked-resource failures in production builds: scene teardown reports
+    // them in every build.
+    const trackedFailure = this._destroyScope._destroyCollectingFailures();
+    let failures: unknown[] | null = trackedFailure === null ? null : [trackedFailure];
 
     this.onActivate.destroy();
     this.onSuspend.destroy();

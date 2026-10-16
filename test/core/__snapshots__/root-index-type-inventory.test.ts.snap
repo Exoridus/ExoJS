@@ -27,6 +27,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "AnyShader: type alias",
   "AnySpriteMaterial: type alias",
   "Application: class",
+  "ApplicationDestroyOutcome: interface",
+  "ApplicationDestroyStatus: type alias",
   "ApplicationLike: type alias",
   "ApplicationOf: type alias",
   "ApplicationOptions: interface",
