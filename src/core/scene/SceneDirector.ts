@@ -6,6 +6,7 @@ import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
+import { prepareSceneScope } from './prepareSceneScope';
 import { Scene } from './Scene';
 import { SceneTransitionLifecycleError } from './sceneErrors';
 import {
@@ -1598,19 +1599,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previous, next, scene as Scene),
     ),
   ): Promise<SceneScope<Data> | null> {
-    try {
-      if (await scope.prepare(data)) {
-        return scope;
-      }
-    } catch (error) {
-      scope.destroyFailedActivation();
-
-      throw error;
-    }
-
-    scope.destroyFailedActivation();
-
-    return null;
+    return prepareSceneScope(scope, data);
   }
 
   /**
