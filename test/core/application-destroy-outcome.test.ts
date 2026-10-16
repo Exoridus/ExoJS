@@ -186,6 +186,43 @@ afterEach(() => {
 });
 
 describe('Application.destroyOutcome before and during teardown', () => {
+  test('a lifecycle abort listener reentering destroy shares the pending teardown and its resource lifetime', async () => {
+    const app = createApp();
+    const unload = deferred();
+    let nested: Promise<void> | undefined;
+
+    control.unload.set('a', () => unload.promise);
+    control.init.set('a', scene => {
+      scene.lifecycleSignal.addEventListener('abort', () => {
+        nested = app.destroy();
+      });
+    });
+    await app.scenes.change(SceneA);
+
+    const backendDestroy = recordBackendDestroy(app);
+    const loaderDestroy = vi.spyOn(app.loader, 'destroy');
+    const pending = app.destroy();
+
+    try {
+      expect(nested).toBe(pending);
+      await flush();
+
+      expect(app.state).toBe(ApplicationState.Destroying);
+      expect(app.destroyOutcome).toBeNull();
+      expect(backendDestroy).not.toHaveBeenCalled();
+      expect(loaderDestroy).not.toHaveBeenCalled();
+    } finally {
+      unload.resolve();
+      await Promise.all([pending, nested]);
+    }
+
+    expect(backendDestroy).toHaveBeenCalledTimes(1);
+    expect(loaderDestroy).toHaveBeenCalledTimes(1);
+    expect(control.events.filter(event => event === 'a.unload')).toHaveLength(1);
+    expect(control.events.filter(event => event === 'a.destroy')).toHaveLength(1);
+    expect(app.destroyOutcome).toEqual({ status: 'completed', errors: [] });
+  });
+
   test('is null before destroy() and while the returned Promise is pending', async () => {
     const app = createApp();
     const unload = deferred();
