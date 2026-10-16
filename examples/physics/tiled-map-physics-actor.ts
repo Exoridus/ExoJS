@@ -46,7 +46,7 @@ class TiledMapPhysicsActorScene extends Scene {
   }
 
   override init(): void {
-    this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 } });
+    this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 }, fixedDelta: this.app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
     this.mapNode = new TileMapNode(this.map);
 

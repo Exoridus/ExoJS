@@ -36,7 +36,7 @@ class JointShadowsScene extends Scene {
     for (let y = 80; y < 720; y += 80) {
       this.backdrop.drawLine(0, y, 1280, y);
     }
-    this.world = new PhysicsWorld({ gravity: { x: 0, y: 560 } });
+    this.world = new PhysicsWorld({ gravity: { x: 0, y: 560 }, fixedDelta: this.app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
     this.lighting = new LightmapLighting(this.app, { ambient: new Color(42, 46, 66), lightResolution: 0.5, shadowResolution: 256 });
     this.systems.add(this.lighting);

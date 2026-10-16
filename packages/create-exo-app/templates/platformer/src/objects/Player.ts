@@ -1,5 +1,5 @@
 import type { Seconds, Spritesheet } from '@codexo/exojs';
-import { Sprite } from '@codexo/exojs';
+import { type Sprite } from '@codexo/exojs';
 import type { PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { BoxShape } from '@codexo/exojs-physics';
 
@@ -24,14 +24,18 @@ const COYOTE_TIME = 0.1 as Seconds;
  */
 const JUMP_BUFFER = 0.12 as Seconds;
 
-/** Multiplier applied to upward velocity when jump is released early, for a variable-height jump. */
+/**
+ * Share of its upward velocity a rising player keeps per 1/60 s once jump is
+ * released, for a variable-height jump. Scaled by the step length, so the arc
+ * is the same at any fixed-step rate.
+ */
 const JUMP_CUT = 0.45;
 
 export interface PlayerInput {
-  readonly left: boolean;
-  readonly right: boolean;
+  /** Horizontal direction, -1 (left) to 1 (right); only its sign is used. */
+  readonly move: number;
   readonly jumpHeld: boolean;
-  /** True only on the frame the jump key went down. */
+  /** True only in the fixed step a jump press was delivered to. */
   readonly jumpPressed: boolean;
 }
 
@@ -70,6 +74,9 @@ export class Player {
       friction: 0,
       restitution: 0,
     });
+    // A sleeping body ignores velocity written onto it, and a player standing
+    // still falls asleep within a second; the next run or jump would do nothing.
+    this.body.allowSleep = false;
   }
 
   public get grounded(): boolean {
@@ -81,8 +88,12 @@ export class Player {
     return this._world.rayCast(origin, { x: 0, y: 1 }, undefined, 8) !== null;
   }
 
-  public update(delta: Seconds, input: PlayerInput): void {
-    const grounded = this.grounded;
+  /** Advances the player by one fixed step, before the world integrates it. */
+  public fixedUpdate(delta: Seconds, input: PlayerInput): void {
+    // Rising is never standing: at a fast fixed step the first step of a jump
+    // can still end within the ground ray's reach, and re-arming coyote time
+    // there would allow a second jump in mid-air.
+    const grounded = this.body.linearVelocityY >= -1 && this.grounded;
 
     this._coyote = grounded ? COYOTE_TIME : (Math.max(0, this._coyote - delta) as Seconds);
     this._buffered = input.jumpPressed ? JUMP_BUFFER : (Math.max(0, this._buffered - delta) as Seconds);
@@ -98,7 +109,7 @@ export class Player {
 
     // Releasing jump while still rising cuts the arc short.
     if (!input.jumpHeld && this.body.linearVelocityY < 0) {
-      this.body.linearVelocityY *= JUMP_CUT;
+      this.body.linearVelocityY *= JUMP_CUT ** (delta * 60);
     }
 
     this._updateFrame(grounded);
@@ -113,7 +124,7 @@ export class Player {
   }
 
   private _applyHorizontal(delta: Seconds, input: PlayerInput): void {
-    const direction = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+    const direction = Math.sign(input.move);
     const velocity = this.body.linearVelocityX;
 
     if (direction === 0) {
