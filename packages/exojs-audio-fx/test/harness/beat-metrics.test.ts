@@ -50,6 +50,7 @@ const makeState = (tempo: number, timeSec: number, confidence = 0.8): StateMessa
   barLength: 4,
   timeSignature: { numerator: 4, denominator: 4 },
   lookahead: [],
+  lookaheadRevision: 0,
   nextBeatTime: timeSec + 60 / tempo,
   nextDownbeatTime: timeSec + 4 * (60 / tempo),
 });

@@ -479,7 +479,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The next eight beats, extrapolated from the last tracked beat at the current tempo and numbered from the bar position that follows it. Predictions, not analysed audio: a tempo change or break is not anticipated."
         },
         {
           "name": "nextBeatTime",
@@ -887,7 +887,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Dispatched with the first entry of each new lookahead schedule. The detector computes a schedule once per tracked beat, so a listener hears about every upcoming beat once, not on every state update. A newer schedule supersedes the times an earlier one predicted for the same beats, and one replaced before the main thread received it is skipped. Nothing is dispatched while the detector coasts through silence."
         },
         {
           "name": "onDownbeat",

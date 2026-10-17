@@ -234,6 +234,9 @@ class BeatDetectorProcessor extends DisposableProcessor {
   private _beatsSinceAuthLock: number;
 
   private _lookahead: UpcomingBeatInline[];
+  // State messages repeat a schedule until the next beat replaces it. The
+  // revision, not a comparison of its times, tells a new schedule from a repeat.
+  private _lookaheadRevision: number;
 
   private _rms: number;
   private _onsetStrength: number;
@@ -373,6 +376,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
 
     // Lookahead
     this._lookahead = [];
+    this._lookaheadRevision = 0;
 
     // RMS / onset state
     this._rms = 0;
@@ -1344,7 +1348,8 @@ class BeatDetectorProcessor extends DisposableProcessor {
 
     for (let i = 0; i < 8; i++) {
       const t = lastBeatTime + (i + 1) * beatInterval;
-      const bp = ((barPos - 1 + i) % barLen) + 1;
+      // _barPosition already names the beat just emitted; entry i is the beat i + 1 after it.
+      const bp = ((barPos + i) % barLen) + 1;
       lookahead.push({
         audioTime: t,
         tempo: this._bestBpm,
@@ -1354,6 +1359,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     }
 
     this._lookahead = lookahead;
+    this._lookaheadRevision++;
   }
 
   private _computeBandEnergy(): BandEnergyInline {
@@ -1427,6 +1433,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
       barLength: this._activeTs === '3/4' ? 3 : 4,
       timeSignature: this._activeTs === '3/4' ? { numerator: 3, denominator: 4 } : { numerator: 4, denominator: 4 },
       lookahead: this._lookahead,
+      lookaheadRevision: this._lookaheadRevision,
       nextBeatTime: settled ? nextBeatTime : 0,
       nextDownbeatTime: settled ? nextDownbeatTime : 0,
     });

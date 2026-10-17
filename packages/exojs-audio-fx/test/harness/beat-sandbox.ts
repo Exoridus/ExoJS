@@ -56,6 +56,7 @@ export interface StateMessage {
   barLength: number;
   timeSignature: { numerator: number; denominator: number };
   lookahead: Array<{ audioTime: number; tempo: number; isDownbeat: boolean; beatInBar: number }>;
+  lookaheadRevision: number;
   nextBeatTime: number;
   nextDownbeatTime: number;
 }
@@ -169,6 +170,8 @@ export const buildBeatProcessor = (): BeatProcessorCtor => {
  * @param options.startFrame        Context frame the first block is rendered at,
  *   modelling a node created on a context that has already been running.
  *   Default 0.
+ * @param options.prepare           Called with the constructed processor before
+ *   the first block, to put it into a state no fixture reaches on its own.
  */
 export const runDetector = (
   samples: Float32Array,
@@ -176,9 +179,10 @@ export const runDetector = (
     processorOptions?: Record<string, unknown>;
     blockSize?: number;
     startFrame?: number;
+    prepare?: (processor: Record<string, unknown>) => void;
   } = {},
 ): { messages: WorkletMessage[] } => {
-  const { blockSize = 128, processorOptions = {}, startFrame = 0 } = options;
+  const { blockSize = 128, processorOptions = {}, startFrame = 0, prepare } = options;
 
   // Build (or reuse cached) processor class
   if (!_processorCtor) {
@@ -204,6 +208,8 @@ export const runDetector = (
   proc.port.postMessage = (m: unknown) => {
     messages.push({ ...(m as Record<string, unknown>), _audioTimeSec: blockStartSec } as WorkletMessage);
   };
+
+  prepare?.(proc as unknown as Record<string, unknown>);
 
   const n = samples.length;
 

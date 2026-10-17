@@ -772,6 +772,74 @@ describe('BeatDetector', () => {
     });
   });
 
+  // ---- onBeatPredicted ----
+
+  describe('onBeatPredicted', () => {
+    const schedule = (lookaheadRevision: number, firstTime: number): Record<string, unknown> => ({
+      type: 'state',
+      tempo: 120,
+      beatPhase: 0,
+      confidence: 0.8,
+      gridStability: 0.8,
+      tempoCandidates: [],
+      rms: 0.3,
+      onsetStrength: 1,
+      bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
+      barPosition: 4,
+      barLength: 4,
+      timeSignature: { numerator: 4, denominator: 4 },
+      lookahead: [
+        { audioTime: firstTime, tempo: 120, isDownbeat: true, beatInBar: 1 },
+        { audioTime: firstTime + 0.5, tempo: 120, isDownbeat: false, beatInBar: 2 },
+      ],
+      lookaheadRevision,
+      nextBeatTime: firstTime,
+      nextDownbeatTime: firstTime,
+    });
+
+    it('dispatches once per schedule, not on every state update repeating it', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const handler = vi.fn();
+      d.onBeatPredicted.add(handler);
+
+      simulateMessage(d, schedule(1, 1));
+      simulateMessage(d, schedule(1, 1));
+      simulateMessage(d, schedule(1, 1));
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenLastCalledWith(expect.objectContaining({ audioTime: 1, beatInBar: 1 }));
+      d.destroy();
+    });
+
+    it('dispatches a new schedule even when it predicts the same time', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const handler = vi.fn();
+      d.onBeatPredicted.add(handler);
+
+      simulateMessage(d, schedule(1, 1));
+      simulateMessage(d, schedule(2, 1));
+
+      expect(handler).toHaveBeenCalledTimes(2);
+      d.destroy();
+    });
+
+    it('skips a schedule replaced before it was delivered', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const handler = vi.fn();
+      d.onBeatPredicted.add(handler);
+
+      simulateMessage(d, schedule(1, 1));
+      simulateMessage(d, schedule(3, 2));
+
+      expect(handler).toHaveBeenCalledTimes(2);
+      expect(handler).toHaveBeenLastCalledWith(expect.objectContaining({ audioTime: 2 }));
+      d.destroy();
+    });
+  });
+
   // ---- Destroy ----
 
   describe('destroy', () => {
